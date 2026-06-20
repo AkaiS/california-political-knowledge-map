@@ -2,7 +2,7 @@ import sqlite3
 import os
 from typing import List, Dict, Any
 
-DEFAULT_DB_PATH = "calmatters_stories.db"
+DEFAULT_DB_PATH = "document_store.db"
 
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     """
