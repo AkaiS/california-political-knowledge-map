@@ -24,5 +24,9 @@ Implement the ingestion pipeline that coordinates loading stories from SQLite, e
 
 ## Blocked by
 
-- [Issue 1: CLI Setup and Neo4j Database Clear Action](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/01-neo4j-clear.md)
-- [Issue 2: Extraction Prompts, Pydantic Validation, and Pydantic AI Integration](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/02-entity-extraction-validation.md)
+- [Issue 1: CLI Setup and Neo4j Database Clear Action](file:///Users/akaisenghor/Projects/california-political-knowledge-map/issues/01-neo4j-clear.md)
+- [Issue 2: Extraction Prompts, Pydantic Validation, and Pydantic AI Integration](file:///Users/akaisenghor/Projects/california-political-knowledge-map/issues/02-entity-extraction-validation.md)
+
+## Comments
+
+- **2026-06-24**: Implemented and verified via `/tdd`. All 28 tests pass successfully.

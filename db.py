@@ -78,3 +78,23 @@ def get_last_n_stories(n: int = 5, db_path: str = DEFAULT_DB_PATH) -> List[Dict[
         return [dict(row) for row in rows]
     finally:
         conn.close()
+
+def get_all_stories(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
+    """
+    Retrieves all stories from the database that have non-empty content.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, url, category, author, published_date, summary, content, created_at
+            FROM stories
+            WHERE content IS NOT NULL AND content != ''
+            ORDER BY id ASC
+        """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
