@@ -17,16 +17,12 @@ Implement the ingestion pipeline that coordinates loading stories from SQLite, e
 
 ## Acceptance criteria
 
-- [ ] Command line action `python playground.py run` runs successfully over all articles in SQLite.
-- [ ] Nodes are inserted idempotently into Neo4j (no duplicates are created for the same name and label on repeated runs).
-- [ ] Relationships link the correct nodes and are written idempotently.
-- [ ] Unit tests verify the end-to-end integration: querying SQLite, iterating through records, executing mocked Pydantic AI agent runs, and calling Neo4j drivers with the correct Cypher statements.
+- [x] Command line action `python playground.py run` runs successfully over all articles in SQLite.
+- [x] Nodes are inserted idempotently into Neo4j (no duplicates are created for the same name and label on repeated runs).
+- [x] Relationships link the correct nodes and are written idempotently.
+- [x] Unit tests verify the end-to-end integration: querying SQLite, iterating through records, executing mocked Pydantic AI agent runs, and calling Neo4j drivers with the correct Cypher statements.
 
 ## Blocked by
 
 - [Issue 1: CLI Setup and Neo4j Database Clear Action](file:///Users/akaisenghor/Projects/california-political-knowledge-map/issues/01-neo4j-clear.md)
 - [Issue 2: Extraction Prompts, Pydantic Validation, and Pydantic AI Integration](file:///Users/akaisenghor/Projects/california-political-knowledge-map/issues/02-entity-extraction-validation.md)
-
-## Comments
-
-- **2026-06-24**: Implemented and verified via `/tdd`. All 28 tests pass successfully.
