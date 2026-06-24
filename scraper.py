@@ -41,6 +41,9 @@ CALMATTERS_SCHEMA = {
     ]
 }
 
+
+# eventually rewrite to retrieve the most recent data in DB and retrieve newer than that
+# additionally, make this more news organization agnostic
 async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
     """
     Fetches the 5 most recent political stories from CalMatters using Crawl4AI.
@@ -109,4 +112,29 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
             })
             
         # Return the 5 most recent stories (the page list starts with the newest first)
-        return processed_stories[:5]
+        top_stories = processed_stories[:5]
+        
+        if top_stories:
+            story_urls = [story["url"] for story in top_stories]
+            logger.info(f"Crawling {len(story_urls)} article bodies concurrently...")
+            
+            # Configure crawl run for article bodies
+            article_config = CrawlerRunConfig(
+                cache_mode=CacheMode.BYPASS,
+                css_selector="div.entry-content"
+            )
+            
+            # Crawl all URLs in parallel
+            article_results = await crawler.arun_many(urls=story_urls, config=article_config)
+            
+            # Map content back to stories
+            for story, article_result in zip(top_stories, article_results):
+                if article_result.success:
+                    story["content"] = (article_result.markdown or "").strip()
+                else:
+                    logger.warning(f"Failed to crawl article content for {story['url']}: {article_result.error_message}")
+                    story["content"] = ""
+        else:
+            logger.warning("No politics stories found to crawl.")
+            
+        return top_stories
