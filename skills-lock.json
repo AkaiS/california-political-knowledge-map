@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "building-pydantic-ai-agents": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/building-pydantic-ai-agents/SKILL.md",
+      "computedHash": "59c47b8c678a4bcb179ce8e6efc58a2551d0f015705cb69fbf7968568f2e1bdf"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "sourceType": "github",

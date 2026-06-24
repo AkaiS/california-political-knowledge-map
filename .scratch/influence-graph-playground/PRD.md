@@ -25,9 +25,10 @@ Build `playground.py`, a dedicated command-line interface that reads scraped new
 ### Modules & Configuration
 - **Script**: A new script `playground.py` that serves as the entry point for running the extraction, loading prompt configurations, executing Cypher queries, and calculating embeddings.
 - **Prompt Source**: `extraction_prompt.txt` at the repository root.
-- **Data Validation**: Pydantic v2 schemas to define nodes (name, label, properties) and relationships (source, target, type, properties).
+- **Agent Framework**: Pydantic AI for structured output generation, dynamic prompting, validation retry handling, and developer testing model overrides.
+- **Data Validation**: Pydantic v2 schemas defining nodes (name, label, properties) and relationships (source, target, type, properties), configured as the `output_type` for the Pydantic AI agent.
 - **Graph Database Client**: Neo4j Python client configured via `.env` credentials (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`).
-- **Embedding Client**: Local Ollama HTTP or client wrapper calling the `/api/embeddings` or `/api/embed` endpoint with the `embeddinggemma` model.
+- **Embedding Client**: Pydantic AI `Embedder` configured with an OpenAI-compatible model pointing to local Ollama and utilizing the `embeddinggemma` model.
 
 ### Neo4j Schema
 - Extraction results will map to custom node labels (e.g., `PoliticalActor`, `Organization`, `PublicPolicyMeasure`) and custom relationship types dynamically defined by the extraction prompt.
@@ -43,12 +44,12 @@ The `playground.py` script will support different actions, for example:
 
 ### Seams for Testing
 To ensure the playground is testable, we will implement testing at the following boundaries (seams):
-- **Ollama API Seam**: The function calling local Ollama (`extract_entities_from_text` and `get_embedding`) will accept an optional API client/url parameter or respect standard request mocking, allowing us to mock LLM extraction payloads and embedding vectors.
+- **Pydantic AI Agent Seam**: We will utilize Pydantic AI's built-in `TestModel` or `FunctionModel` configuration override features during unit testing to avoid any live LLM server requests and to test the pipeline against deterministic outputs.
 - **Database Ingestion Seam**: The Neo4j ingestion layer will be structured as isolated functions that take Neo4j drivers/sessions, permitting us to mock database writes and test the exact Cypher query structures generated.
 - **Cosine Similarity Seam**: A pure helper function for computing cosine similarity between two float vectors, allowing us to unit test the similarity logic without hitting live databases or models.
 
 ### Test Coverage
-- Unit tests will assert Pydantic model validation of raw extraction outputs (validating edge cases of missing properties, empty names, or invalid relation links).
+- Unit tests will assert Pydantic model validation of extraction outputs using mocked agent models, validating edge cases of missing properties, empty names, or invalid relation links.
 - Tests will verify that the similarity logic correctly groups close pairs and ignores distant pairs.
 
 ## Out of Scope

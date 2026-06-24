@@ -2,6 +2,7 @@
 - Language: Python 3.13.5
 - Data validation: Pydantic v2
 - LLM Providers: 
+- Agent Framework: Pydantic AI
 - Evals Framework: 
 - Orchestration: 
 - DB: neo4j (Graph Database), (semantic cache / msg queue)

@@ -20,9 +20,9 @@ Implement the ingestion pipeline that coordinates loading stories from SQLite, e
 - [ ] Command line action `python playground.py run` runs successfully over all articles in SQLite.
 - [ ] Nodes are inserted idempotently into Neo4j (no duplicates are created for the same name and label on repeated runs).
 - [ ] Relationships link the correct nodes and are written idempotently.
-- [ ] Unit tests verify the end-to-end integration: querying SQLite, iterating through records, executing mock Ollama extractions, and calling Neo4j drivers with the correct Cypher statements.
+- [ ] Unit tests verify the end-to-end integration: querying SQLite, iterating through records, executing mocked Pydantic AI agent runs, and calling Neo4j drivers with the correct Cypher statements.
 
 ## Blocked by
 
 - [Issue 1: CLI Setup and Neo4j Database Clear Action](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/01-neo4j-clear.md)
-- [Issue 2: Extraction Prompts, Pydantic Validation, and Ollama Extraction Integration](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/02-entity-extraction-validation.md)
+- [Issue 2: Extraction Prompts, Pydantic Validation, and Pydantic AI Integration](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/02-entity-extraction-validation.md)
