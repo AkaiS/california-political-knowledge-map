@@ -3,6 +3,8 @@ import os
 import sys
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
+from extraction import extract_entities
+from db import get_last_n_stories
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -66,6 +68,10 @@ def main(args=None):
     subparsers = parser.add_subparsers(dest="action", required=True)
     subparsers.add_parser("clear", help="Clear all nodes and relationships from Neo4j")
     
+    run_parser = subparsers.add_parser("run", help="Run entity extraction")
+    run_parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without saving to Neo4j")
+    run_parser.add_argument("--text", type=str, help="Process this text instead of the database content")
+    
     parsed_args = parser.parse_args(args)
     
     if parsed_args.action == "clear":
@@ -90,6 +96,34 @@ def main(args=None):
         finally:
             if manager:
                 manager.close()
+    elif parsed_args.action == "run":
+        if parsed_args.dry_run:
+            text_to_process = None
+            if parsed_args.text:
+                text_to_process = parsed_args.text
+            else:
+                stories = get_last_n_stories(1)
+                if stories and stories[0].get("content"):
+                    text_to_process = stories[0]["content"]
+                else:
+                    text_to_process = (
+                        "Governor Gavin Newsom signed Assembly Bill 5 (AB-5) into law today, "
+                        "a major public policy measure supported by the California Labor Federation. "
+                        "The legislation was heavily opposed by the California Chamber of Commerce "
+                        "and several gig economy corporations, including Uber and Lyft."
+                    )
+            
+            print("Starting entity extraction dry-run...")
+            try:
+                result = extract_entities(text_to_process)
+                print("\nValidated Extraction Result (JSON):")
+                print(result.model_dump_json(indent=2))
+            except Exception as e:
+                print(f"Extraction failed: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            print("Neo4j database write integration is not implemented yet. Use --dry-run.", file=sys.stderr)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

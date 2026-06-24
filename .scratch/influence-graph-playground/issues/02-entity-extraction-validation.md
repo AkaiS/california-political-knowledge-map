@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: ready-for-human
 
 # Issue 2: Extraction Prompts, Pydantic Validation, and Pydantic AI Integration
 
@@ -18,10 +18,10 @@ Create the prompt-based entity extraction and validation layers. This consists o
 
 ## Acceptance criteria
 
-- [ ] `extraction_prompt.txt` is loaded dynamically from the root and supplied as instructions to the agent.
-- [ ] Pydantic v2 models validate node names, node labels, relationship sources, targets, types, and dynamic metadata fields.
-- [ ] Command line dry-run runs successfully and outputs validated JSON from the Pydantic AI agent.
-- [ ] Unit tests assert that the prompt is correctly assembled and mock agent executions correctly validate correct structures and handle validation failures gracefully via the testing models.
+- [x] `extraction_prompt.txt` is loaded dynamically from the root and supplied as instructions to the agent.
+- [x] Pydantic v2 models validate node names, node labels, relationship sources, targets, types, and dynamic metadata fields.
+- [x] Command line dry-run runs successfully and outputs validated JSON from the Pydantic AI agent.
+- [x] Unit tests assert that the prompt is correctly assembled and mock agent executions correctly validate correct structures and handle validation failures gracefully via the testing models.
 
 ## Blocked by
 

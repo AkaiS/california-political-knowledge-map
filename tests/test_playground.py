@@ -113,3 +113,59 @@ def test_cli_clear_connection_error(capsys):
         captured = capsys.readouterr()
         assert "Connection Error:" in (captured.err + captured.out)
         assert "Could not connect to Neo4j database" in (captured.err + captured.out)
+
+from extraction import ExtractionResult, Node, Relationship
+
+def test_cli_run_dry_run_with_text(capsys):
+    mock_result = ExtractionResult(
+        nodes=[Node(name="Gavin Newsom", label="PoliticalActor")],
+        relationships=[]
+    )
+    with patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+        try:
+            main(["run", "--dry-run", "--text", "My custom text"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_extract.assert_called_once_with("My custom text")
+        captured = capsys.readouterr()
+        assert "Gavin Newsom" in captured.out
+        assert "PoliticalActor" in captured.out
+
+def test_cli_run_dry_run_fallback_text(capsys):
+    mock_result = ExtractionResult(
+        nodes=[Node(name="Fallback Actor", label="PoliticalActor")],
+        relationships=[]
+    )
+    with patch("playground.get_last_n_stories", return_value=[]), \
+         patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+        try:
+            main(["run", "--dry-run"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_extract.assert_called_once()
+        called_args, _ = mock_extract.call_args
+        assert len(called_args[0]) > 0
+        
+        captured = capsys.readouterr()
+        assert "Fallback Actor" in captured.out
+
+def test_cli_run_dry_run_sqlite_text(capsys):
+    mock_result = ExtractionResult(
+        nodes=[Node(name="SQLite Actor", label="PoliticalActor")],
+        relationships=[]
+    )
+    mock_stories = [{"title": "My Title", "content": "Article body about politics"}]
+    with patch("playground.get_last_n_stories", return_value=mock_stories), \
+         patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+        try:
+            main(["run", "--dry-run"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_extract.assert_called_once_with("Article body about politics")
+        
+        captured = capsys.readouterr()
+        assert "SQLite Actor" in captured.out
+
