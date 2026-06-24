@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: ready-for-human
 
 # Issue 4: Ontology Node Labels Inspection Command
 
@@ -15,9 +15,9 @@ Implement a query mechanism to inspect the generated ontology:
 
 ## Acceptance criteria
 
-- [ ] Command line action `python playground.py analyze` prints a list of distinct node labels in the Neo4j database.
-- [ ] Retrieval query functions correctly and prints empty or graceful messages when no labels exist.
-- [ ] Unit tests cover database query execution and formatting of node labels from Neo4j session responses.
+- [x] Command line action `python playground.py analyze` prints a list of distinct node labels in the Neo4j database.
+- [x] Retrieval query functions correctly and prints empty or graceful messages when no labels exist.
+- [x] Unit tests cover database query execution and formatting of node labels from Neo4j session responses.
 
 ## Blocked by
 

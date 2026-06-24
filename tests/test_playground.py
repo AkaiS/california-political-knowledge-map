@@ -316,5 +316,127 @@ def test_cli_run_integration_all_stories(capsys):
         captured = capsys.readouterr()
         assert "Successfully processed 2 stories" in captured.out
 
+def test_get_distinct_labels_success():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    
+    def fake_execute_read(func, *args, **kwargs):
+        return func(mock_tx, *args, **kwargs)
+    mock_session.execute_read.side_effect = fake_execute_read
+    
+    mock_record1 = {"label": "PoliticalActor"}
+    mock_record2 = {"label": "Organization"}
+    mock_tx.run.return_value = [mock_record1, mock_record2]
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    labels = manager.get_distinct_labels()
+    
+    assert labels == ["Organization", "PoliticalActor"]
+    mock_driver.session.assert_called_once()
+    mock_session.execute_read.assert_called_once()
+    mock_tx.run.assert_called_once_with("CALL db.labels() YIELD label RETURN label")
+
+def test_get_distinct_labels_empty():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    
+    def fake_execute_read(func, *args, **kwargs):
+        return func(mock_tx, *args, **kwargs)
+    mock_session.execute_read.side_effect = fake_execute_read
+    
+    mock_tx.run.return_value = []
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    labels = manager.get_distinct_labels()
+    assert labels == []
+    mock_tx.run.assert_called_once_with("CALL db.labels() YIELD label RETURN label")
+
+def test_get_distinct_labels_failure():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_read.side_effect = Exception("Query timed out")
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    with pytest.raises(Neo4jConnectionError) as exc_info:
+        manager.get_distinct_labels()
+    assert "Failed to retrieve node labels from Neo4j" in str(exc_info.value)
+
+def test_cli_analyze_success(capsys):
+    with patch("playground.Neo4jManager") as MockManager:
+        mock_instance = MockManager.return_value
+        mock_instance.get_distinct_labels.return_value = ["Organization", "PoliticalActor"]
+        
+        try:
+            main(["analyze"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        MockManager.assert_called_once()
+        mock_instance.get_distinct_labels.assert_called_once()
+        mock_instance.close.assert_called_once()
+        
+        captured = capsys.readouterr()
+        assert "Distinct node labels" in captured.out
+        assert "- Organization" in captured.out
+        assert "- PoliticalActor" in captured.out
+
+def test_cli_analyze_empty(capsys):
+    with patch("playground.Neo4jManager") as MockManager:
+        mock_instance = MockManager.return_value
+        mock_instance.get_distinct_labels.return_value = []
+        
+        try:
+            main(["analyze"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        MockManager.assert_called_once()
+        mock_instance.get_distinct_labels.assert_called_once()
+        mock_instance.close.assert_called_once()
+        
+        captured = capsys.readouterr()
+        assert "No node labels found in the database." in captured.out
+
+def test_cli_analyze_connection_error(capsys):
+    with patch("playground.Neo4jManager") as MockManager:
+        mock_instance = MockManager.return_value
+        mock_instance.get_distinct_labels.side_effect = Neo4jConnectionError("Could not connect to Neo4j database")
+        
+        with pytest.raises(SystemExit) as exc_info:
+            main(["analyze"])
+        assert exc_info.value.code == 1
+        
+        captured = capsys.readouterr()
+        assert "Connection Error:" in (captured.err + captured.out)
+        assert "Could not connect to Neo4j database" in (captured.err + captured.out)
+
+
+
 
 

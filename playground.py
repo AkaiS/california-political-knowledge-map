@@ -95,6 +95,18 @@ class Neo4jManager:
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest extraction result to Neo4j: {e}")
 
+    def get_distinct_labels(self):
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _get_labels_tx(tx):
+                    result = tx.run("CALL db.labels() YIELD label RETURN label")
+                    return [record["label"] for record in result]
+                labels = session.execute_read(_get_labels_tx)
+                return sorted(labels)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to retrieve node labels from Neo4j: {e}")
+
     def close(self):
         if self._driver is not None:
             self._driver.close()
@@ -108,6 +120,7 @@ def main(args=None):
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
     subparsers.add_parser("clear", help="Clear all nodes and relationships from Neo4j")
+    subparsers.add_parser("analyze", help="Inspect and list distinct node labels in the Neo4j database")
     
     run_parser = subparsers.add_parser("run", help="Run entity extraction")
     run_parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without saving to Neo4j")
@@ -125,6 +138,33 @@ def main(args=None):
             manager = Neo4jManager(uri=uri, username=username, password=password)
             manager.clear_database()
             print("Neo4j database cleared successfully.")
+        except Neo4jConfigError as e:
+            print(f"Configuration Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Neo4jConnectionError as e:
+            print(f"Connection Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        finally:
+            if manager:
+                manager.close()
+    elif parsed_args.action == "analyze":
+        uri = os.environ.get("NEO4J_URI")
+        username = os.environ.get("NEO4J_USERNAME")
+        password = os.environ.get("NEO4J_PASSWORD")
+        
+        manager = None
+        try:
+            manager = Neo4jManager(uri=uri, username=username, password=password)
+            labels = manager.get_distinct_labels()
+            if labels:
+                print("Distinct node labels:")
+                for label in labels:
+                    print(f"- {label}")
+            else:
+                print("No node labels found in the database.")
         except Neo4jConfigError as e:
             print(f"Configuration Error: {e}", file=sys.stderr)
             sys.exit(1)
