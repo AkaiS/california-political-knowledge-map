@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 # Issue 5: Cosine Similarity Duplicate Identification via Ollama Embeddings
 
@@ -19,10 +19,10 @@ Implement the semantic similarity analysis to support Entity Resolution:
 
 ## Acceptance criteria
 
-- [ ] Command line action `python playground.py analyze` generates embeddings and displays a list of potential duplicate node pairs with similarity scores > 0.85.
-- [ ] Calculations are isolated to pairs of nodes with matching labels.
-- [ ] Cosine similarity helper is covered by unit tests verifying correct mathematical results.
-- [ ] Offline unit tests mock the Pydantic AI `Embedder` and the Neo4j database node queries, verifying that the analyzer identifies the correct candidate duplicate pairs.
+- [x] Command line action `python playground.py analyze` generates embeddings and displays a list of potential duplicate node pairs with similarity scores > 0.85.
+- [x] Calculations are isolated to pairs of nodes with matching labels.
+- [x] Cosine similarity helper is covered by unit tests verifying correct mathematical results.
+- [x] Offline unit tests mock the Pydantic AI `Embedder` and the Neo4j database node queries, verifying that the analyzer identifies the correct candidate duplicate pairs.
 
 ## Blocked by
 

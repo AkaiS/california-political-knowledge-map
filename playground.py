@@ -2,10 +2,14 @@ import argparse
 import os
 import sys
 import re
+import math
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 from extraction import extract_entities, ExtractionResult
 from db import get_last_n_stories, get_all_stories
+from pydantic_ai import Embedder
+from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -14,6 +18,33 @@ class Neo4jConfigError(ValueError):
 class Neo4jConnectionError(Exception):
     """Raised when there is an error connecting to or interacting with Neo4j."""
     pass
+
+def cosine_similarity(v1: list[float], v2: list[float]) -> float:
+    if len(v1) != len(v2):
+        raise ValueError("Vectors must be of the same dimension.")
+    dot_product = sum(x * y for x, y in zip(v1, v2))
+    mag1 = math.sqrt(sum(x * x for x in v1))
+    mag2 = math.sqrt(sum(x * x for x in v2))
+    if mag1 == 0.0 or mag2 == 0.0:
+        return 0.0
+    return dot_product / (mag1 * mag2)
+
+def get_embedding_embedder() -> Embedder:
+    load_dotenv()
+    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_embedding_model = os.environ.get("OLLAMA_EMBEDDING_MODEL", "embeddinggemma")
+    
+    provider = OpenAIProvider(
+        base_url=f"{ollama_base_url}/v1",
+        api_key="ollama",
+    )
+    
+    model = OpenAIEmbeddingModel(
+        ollama_embedding_model,
+        provider=provider,
+    )
+    
+    return Embedder(model)
 
 IDENTIFIER_REGEX = re.compile(r"^[A-Za-z0-9_]+$")
 
@@ -107,6 +138,19 @@ class Neo4jManager:
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to retrieve node labels from Neo4j: {e}")
 
+    def get_nodes_by_label(self, label: str):
+        if not IDENTIFIER_REGEX.match(label):
+            raise ValueError(f"Invalid character in node label: {label}")
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _get_nodes_tx(tx):
+                    result = tx.run(f"MATCH (n:{label}) RETURN n.name as name")
+                    return [record["name"] for record in result]
+                return session.execute_read(_get_nodes_tx)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to retrieve nodes for label '{label}': {e}")
+
     def close(self):
         if self._driver is not None:
             self._driver.close()
@@ -163,6 +207,28 @@ def main(args=None):
                 print("Distinct node labels:")
                 for label in labels:
                     print(f"- {label}")
+                
+                embedder = None
+                for label in labels:
+                    nodes = manager.get_nodes_by_label(label)
+                    if len(nodes) >= 2:
+                        if embedder is None:
+                            embedder = get_embedding_embedder()
+                        import asyncio
+                        res = asyncio.run(embedder.embed_documents(nodes))
+                        embeddings = res.embeddings
+                        
+                        duplicates = []
+                        for i in range(len(nodes)):
+                            for j in range(i + 1, len(nodes)):
+                                sim = cosine_similarity(embeddings[i], embeddings[j])
+                                if sim > 0.85:
+                                    duplicates.append((nodes[i], nodes[j], sim))
+                        
+                        if duplicates:
+                            print(f"\nPotential duplicates in label '{label}':")
+                            for n1, n2, sim in duplicates:
+                                print(f"- '{n1}' and '{n2}' (Similarity: {sim:.2f})")
             else:
                 print("No node labels found in the database.")
         except Neo4jConfigError as e:

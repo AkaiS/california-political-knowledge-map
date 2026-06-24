@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from playground import Neo4jManager, Neo4jConfigError, Neo4jConnectionError, main
+from playground import Neo4jManager, Neo4jConfigError, Neo4jConnectionError, main, cosine_similarity, get_embedding_embedder
 
 def test_missing_uri_raises_error():
     with pytest.raises(Neo4jConfigError) as exc_info:
@@ -436,7 +436,174 @@ def test_cli_analyze_connection_error(capsys):
         assert "Connection Error:" in (captured.err + captured.out)
         assert "Could not connect to Neo4j database" in (captured.err + captured.out)
 
+def test_cosine_similarity_exact_match():
+    v1 = [1.0, 2.0, 3.0]
+    v2 = [1.0, 2.0, 3.0]
+    assert pytest.approx(cosine_similarity(v1, v2)) == 1.0
 
+def test_cosine_similarity_opposite():
+    v1 = [1.0, 0.0]
+    v2 = [-1.0, 0.0]
+    assert pytest.approx(cosine_similarity(v1, v2)) == -1.0
 
+def test_cosine_similarity_orthogonal():
+    v1 = [1.0, 0.0]
+    v2 = [0.0, 1.0]
+    assert pytest.approx(cosine_similarity(v1, v2)) == 0.0
 
+def test_cosine_similarity_arbitrary():
+    v1 = [3.0, 4.0]
+    v2 = [4.0, 3.0]
+    # Cosine similarity = (3*4 + 4*3) / (sqrt(3^2+4^2) * sqrt(4^2+3^2))
+    # = (12+12) / (5 * 5) = 24 / 25 = 0.96
+    assert pytest.approx(cosine_similarity(v1, v2)) == 0.96
 
+def test_cosine_similarity_zero_vector():
+    assert cosine_similarity([0.0, 0.0], [1.0, 2.0]) == 0.0
+    assert cosine_similarity([1.0, 2.0], [0.0, 0.0]) == 0.0
+    assert cosine_similarity([0.0, 0.0], [0.0, 0.0]) == 0.0
+
+def test_cosine_similarity_dimension_mismatch():
+    with pytest.raises(ValueError) as exc_info:
+        cosine_similarity([1.0, 2.0], [1.0, 2.0, 3.0])
+    assert "Vectors must be of the same dimension" in str(exc_info.value)
+
+def test_get_nodes_by_label_success():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    
+    def fake_execute_read(func, *args, **kwargs):
+        return func(mock_tx, *args, **kwargs)
+    mock_session.execute_read.side_effect = fake_execute_read
+    
+    mock_tx.run.return_value = [{"name": "Gavin Newsom"}, {"name": "Jerry Brown"}]
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    nodes = manager.get_nodes_by_label("PoliticalActor")
+    
+    assert nodes == ["Gavin Newsom", "Jerry Brown"]
+    mock_driver.session.assert_called_once()
+    mock_session.execute_read.assert_called_once()
+    mock_tx.run.assert_called_once_with("MATCH (n:PoliticalActor) RETURN n.name as name")
+
+def test_get_nodes_by_label_invalid_identifier():
+    mock_driver = MagicMock()
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    with pytest.raises(ValueError) as exc_info:
+        manager.get_nodes_by_label("Political;Actor")
+    assert "Invalid character in node label" in str(exc_info.value)
+
+def test_get_nodes_by_label_failure():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_read.side_effect = Exception("Neo4j database query failed")
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    with pytest.raises(Neo4jConnectionError) as exc_info:
+        manager.get_nodes_by_label("PoliticalActor")
+    assert "Failed to retrieve nodes for label" in str(exc_info.value)
+
+def test_get_embedding_embedder():
+    import os
+    with patch.dict(os.environ, {
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "OLLAMA_EMBEDDING_MODEL": "embeddinggemma"
+    }):
+        embedder = get_embedding_embedder()
+        assert embedder is not None
+        assert embedder.model.model_name == "embeddinggemma"
+
+def test_cli_analyze_duplicates_found(capsys):
+    mock_manager = MagicMock()
+    mock_manager.get_distinct_labels.return_value = ["PoliticalActor"]
+    mock_manager.get_nodes_by_label.return_value = ["Gavin Newsom", "Gavin Newsome", "Jerry Brown"]
+    
+    mock_embedder = MagicMock()
+    mock_embedding_result = MagicMock()
+    mock_embedding_result.embeddings = [
+        [1.0, 0.0, 0.0],  # Gavin Newsom
+        [0.9, 0.1, 0.0],  # Gavin Newsome
+        [0.0, 1.0, 0.0]   # Jerry Brown
+    ]
+    async def fake_embed_documents(inputs, settings=None):
+        return mock_embedding_result
+    mock_embedder.embed_documents.side_effect = fake_embed_documents
+
+    with patch("playground.Neo4jManager", return_value=mock_manager), \
+         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+        try:
+            main(["analyze"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+    captured = capsys.readouterr()
+    assert "Distinct node labels:" in captured.out
+    assert "- PoliticalActor" in captured.out
+    assert "Potential duplicates in label 'PoliticalActor':" in captured.out
+    assert "Gavin Newsom" in captured.out
+    assert "Gavin Newsome" in captured.out
+    assert "Jerry Brown" not in captured.out
+
+def test_cli_analyze_no_duplicates(capsys):
+    mock_manager = MagicMock()
+    mock_manager.get_distinct_labels.return_value = ["PoliticalActor"]
+    mock_manager.get_nodes_by_label.return_value = ["Gavin Newsom", "Jerry Brown"]
+    
+    mock_embedder = MagicMock()
+    mock_embedding_result = MagicMock()
+    mock_embedding_result.embeddings = [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0]
+    ]
+    async def fake_embed_documents(inputs, settings=None):
+        return mock_embedding_result
+    mock_embedder.embed_documents.side_effect = fake_embed_documents
+
+    with patch("playground.Neo4jManager", return_value=mock_manager), \
+         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+        try:
+            main(["analyze"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+    captured = capsys.readouterr()
+    assert "Distinct node labels:" in captured.out
+    assert "- PoliticalActor" in captured.out
+    assert "Potential duplicates" not in captured.out
+
+def test_cli_analyze_too_few_nodes(capsys):
+    mock_manager = MagicMock()
+    mock_manager.get_distinct_labels.return_value = ["PoliticalActor"]
+    mock_manager.get_nodes_by_label.return_value = ["Gavin Newsom"]
+    
+    mock_embedder = MagicMock()
+    with patch("playground.Neo4jManager", return_value=mock_manager), \
+         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+        try:
+            main(["analyze"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+    mock_embedder.embed_documents.assert_not_called()
+    captured = capsys.readouterr()
+    assert "Distinct node labels:" in captured.out
