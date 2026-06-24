@@ -1,0 +1,30 @@
+Status: ready-for-agent
+
+# Issue 5: Cosine Similarity Duplicate Identification via Ollama Embeddings
+
+## Parent
+
+- [PRD.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/PRD.md)
+
+## What to build
+
+Implement the semantic similarity analysis to support Entity Resolution:
+- Create a local Ollama HTTP wrapper to call the `/api/embeddings` or `/api/embed` endpoint using the `embeddinggemma` model.
+- Write a pure helper function to calculate the cosine similarity between two float vectors.
+- Query Neo4j to retrieve all nodes, grouping them by their label.
+- For all nodes within each label, compute name embeddings via Ollama.
+- Calculate cosine similarity pairwise for all nodes sharing a label.
+- Output pairs with similarity > 0.85 to the terminal under the `analyze` CLI subcommand to identify potential duplicates.
+- Ensure the embedding and similarity steps can be fully mocked for unit testing, avoiding any live server requirements.
+
+## Acceptance criteria
+
+- [ ] Command line action `python playground.py analyze` generates embeddings and displays a list of potential duplicate node pairs with similarity scores > 0.85.
+- [ ] Calculations are isolated to pairs of nodes with matching labels.
+- [ ] Cosine similarity helper is covered by unit tests verifying correct mathematical results.
+- [ ] Offline unit tests mock the Ollama embedding client and the Neo4j database node queries, verifying that the analyzer identifies the correct candidate duplicate pairs.
+
+## Blocked by
+
+- [Issue 1: CLI Setup and Neo4j Database Clear Action](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/01-neo4j-clear.md)
+- [Issue 3: End-to-End SQLite to Neo4j Ingestion Command](file:///Users/akaisenghor/Projects/california-political-knowledge-map/.scratch/influence-graph-playground/issues/03-ingestion-pipeline.md)
