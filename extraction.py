@@ -60,8 +60,8 @@ class ExtractionResult(BaseModel):
 
 import os
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.models.ollama import OllamaModel
+from pydantic_ai.providers.ollama import OllamaProvider
 from dotenv import load_dotenv
 
 PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extraction_prompt.txt")
@@ -73,17 +73,20 @@ def load_instructions() -> str:
     else:
         return "Extract entities and relationships from California politics stories."
 
-def get_extraction_agent(defer_check: bool = True) -> Agent:
+def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     load_dotenv()
     ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model = os.environ.get("OLLAMA_MODEL", "gemma4:31b")
     
-    provider = OpenAIProvider(
-        base_url=f"{ollama_base_url}/v1",
-        api_key="ollama",
+    base_url = ollama_base_url
+    if not base_url.endswith("/v1"):
+        base_url = f"{base_url}/v1"
+        
+    provider = OllamaProvider(
+        base_url=base_url,
     )
     
-    model = OpenAIChatModel(
+    model = OllamaModel(
         model_name=ollama_model,
         provider=provider,
     )
@@ -95,6 +98,7 @@ def get_extraction_agent(defer_check: bool = True) -> Agent:
         output_type=ExtractionResult,
         instructions=instructions,
         defer_model_check=defer_check,
+        retries=retries,
     )
 
 def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
