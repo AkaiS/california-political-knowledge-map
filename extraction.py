@@ -19,7 +19,7 @@ class Node(BaseModel):
 class Relationship(BaseModel):
     source: str = Field(..., description="Source node name")
     target: str = Field(..., description="Target node name")
-    type: str = Field(..., description="Relationship type")
+    relationship_type: str = Field(..., description="Relationship type")
     properties: Dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
 
     @field_validator("source", "target", mode="before")
@@ -32,9 +32,9 @@ class Relationship(BaseModel):
             raise ValueError("Must be a non-empty string")
         return cleaned
 
-    @field_validator("type", mode="before")
+    @field_validator("relationship_type", mode="before")
     @classmethod
-    def clean_and_normalize_type(cls, v: Any) -> str:
+    def clean_and_normalize_relationship_type(cls, v: Any) -> str:
         if not isinstance(v, str):
             raise ValueError("Must be a string")
         cleaned = v.strip().upper()
