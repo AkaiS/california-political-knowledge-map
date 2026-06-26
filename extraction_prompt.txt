@@ -13,7 +13,7 @@ For each entity, extract:
   - For `Organization`: `description`, `type` (e.g. "Super PAC", "Labor Union"), `industry`.
   - For `PublicPolicyMeasure`: `description`, `bill_number` (e.g. "AB-5"), `year`.
 
-Identify and extract relationships between these entities. Valid relationship types include:
+Identify and extract relationships between these entities. Valid relationship types (stored in the schema as `relationship_type`) include:
 - `SUPPORTED`: An entity endorsing, advocating for, or supporting a policy measure.
 - `OPPOSED`: An entity opposing or contesting a policy measure.
 - `FUNDED`: An entity providing financial support or campaign contributions to another entity. Include properties like `amount` and `date` in the relationship properties.

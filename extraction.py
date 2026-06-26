@@ -66,6 +66,18 @@ from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from dotenv import load_dotenv
 from pydantic_ai.capabilities import Hooks
+from pydantic_ai.models.openai import OpenAIChatModel
+
+# monkey patch to get around content ollama rejecting content = <nil> on retries 
+_original = OpenAIChatModel._MapModelResponseContext._into_message_param
+
+def _patched(self):
+    result = _original(self)
+    if result is not None and result.get("content") is None:
+        result["content"] = ""
+    return result
+
+OpenAIChatModel._MapModelResponseContext._into_message_param = _patched
 
 PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extraction_prompt.txt")
 
@@ -117,7 +129,7 @@ def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
         instructions=instructions,
         defer_model_check=defer_check,
         retries=retries,
-        capabilities=[hooks]
+        capabilities=[hooks],
     )
 
 def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
