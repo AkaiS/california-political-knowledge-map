@@ -1,11 +1,41 @@
 import json
 import logging
 from typing import List, Dict, Any
+from urllib.parse import urljoin, urlparse
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, JsonCssExtractionStrategy
+from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def clean_and_resolve_url(base_url: str, link_url: str) -> str | None:
+    """
+    Cleans and resolves a hyperlink URL relative to a base URL.
+    Only allows http/https schemes, removes fragments/anchors, and skips self-links.
+    """
+    try:
+        link_stripped = link_url.strip()
+        if link_stripped.startswith("#") or not link_stripped:
+            return None
+            
+        resolved = urljoin(base_url, link_stripped)
+        parsed = urlparse(resolved)
+        if parsed.scheme in ("http", "https"):
+            cleaned = parsed._replace(fragment="").geturl()
+            
+            # Skip self-links
+            base_parsed = urlparse(base_url)
+            base_cleaned = base_parsed._replace(fragment="").geturl()
+            if cleaned == base_cleaned:
+                return None
+                
+            return cleaned
+    except Exception:
+        pass
+    return None
+
 
 # CSS selector schema for CalMatters stories on category pages
 CALMATTERS_LISTING_SCHEMA = {
@@ -73,7 +103,7 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
     url = "https://calmatters.org/category/politics/"
     
     # 1. Define the extraction strategy
-    listing_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_SCHEMA, verbose=False)
+    listing_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_LISTING_SCHEMA, verbose=False)
     
     # 2. Configure the crawler run parameters
     run_config = CrawlerRunConfig(
@@ -140,7 +170,7 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
             story_urls = [story["url"] for story in top_stories]
             logger.info(f"Crawling {len(story_urls)} article bodies concurrently...")
 
-            article_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_ARTICLE_SCHEMA, verbose=False)
+            article_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_ARTICLE_LINKS_SCHEMA, verbose=False)
 
             # Configure crawl run for article bodies
             article_config = CrawlerRunConfig(
@@ -165,16 +195,44 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
             # Crawl all URLs in parallel
             article_results = await crawler.arun_many(urls=story_urls, config=article_config)
 
-            extracted_data = extraction_strategy.extract('', result.cleaned_html)
-            links = extracted_data[0]['links']
-            
             # Map content back to stories
             for story, article_result in zip(top_stories, article_results):
                 if article_result.success:
                     story["content"] = (article_result.markdown or "").strip()
+                    
+                    # Extract links using JsonCssExtractionStrategy
+                    html_content = article_result.cleaned_html or article_result.html or ""
+                    try:
+                        raw_data = article_extraction_strategy.extract(story["url"], html_content)
+                        if isinstance(raw_data, str):
+                            extracted = json.loads(raw_data)
+                        else:
+                            extracted = raw_data
+                            
+                        raw_links = []
+                        if extracted and isinstance(extracted, list) and len(extracted) > 0:
+                            raw_links = extracted[0].get("links", [])
+                    except Exception as e:
+                        logger.error(f"Failed to extract links using JsonCssExtractionStrategy: {e}")
+                        raw_links = []
+                        
+                    links = []
+                    seen_urls = set()
+                    for link in raw_links:
+                        text = (link.get("text") or "").strip()
+                        url = (link.get("url") or "").strip()
+                        resolved_url = clean_and_resolve_url(story["url"], url)
+                        if resolved_url and resolved_url not in seen_urls:
+                            seen_urls.add(resolved_url)
+                            links.append({
+                                "text": text,
+                                "url": resolved_url
+                            })
+                    story["links"] = links
                 else:
                     logger.warning(f"Failed to crawl article content for {story['url']}: {article_result.error_message}")
                     story["content"] = ""
+                    story["links"] = []
         else:
             logger.warning("No politics stories found to crawl.")
             
