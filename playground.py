@@ -59,7 +59,7 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
         tx.run(query, name=node.name, source_url=source_url, properties=node.properties)
 
     for rel in extraction.relationships:
-        rel_type = rel.type
+        rel_type = rel.relationship_type
         if not IDENTIFIER_REGEX.match(rel_type):
             raise ValueError(f"Invalid character in relationship type: {rel_type}")
         

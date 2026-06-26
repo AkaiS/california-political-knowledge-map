@@ -218,7 +218,7 @@ def test_ingest_extraction_result_relationships():
             Relationship(
                 source="Gavin Newsom",
                 target="Democratic Party",
-                type="MEMBER_OF",
+                relationship_type="MEMBER_OF",
                 properties={"status": "Active"}
             )
         ]
@@ -265,7 +265,7 @@ def test_ingest_extraction_result_invalid_identifiers():
             Relationship(
                 source="Gavin Newsom",
                 target="Democratic Party",
-                type="MEMBER`OF"
+                relationship_type="MEMBER`OF"
             )
         ]
     )

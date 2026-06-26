@@ -59,12 +59,30 @@ class ExtractionResult(BaseModel):
         return self
 
 import os
-from pydantic_ai import Agent
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.messages import ModelResponse
+from pydantic_ai.models import ModelRequestContext
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from dotenv import load_dotenv
+from pydantic_ai.capabilities import Hooks
 
 PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extraction_prompt.txt")
+
+hooks = Hooks()
+
+@hooks.on.output_validate_error
+def log_model_retries(ctx: RunContext, /, *, output_context: Any, output: Any, error: Exception):
+    import json
+    print(f"Model validation failed and retried due to error: {error}")
+    if isinstance(output, dict):
+        try:
+            print(f"Model response (raw): {json.dumps(output, indent=2)}")
+        except Exception:
+            print(f"Model response (raw): {output}")
+    else:
+        print(f"Model response (raw): {output}")
+    raise error
 
 def load_instructions() -> str:
     if os.path.exists(PROMPT_PATH):
@@ -99,11 +117,13 @@ def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
         instructions=instructions,
         defer_model_check=defer_check,
         retries=retries,
+        capabilities=[hooks]
     )
 
 def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
     if agent is None:
         agent = get_extraction_agent()
+    
     result = agent.run_sync(text)
     return result.output
 

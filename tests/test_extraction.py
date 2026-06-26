@@ -18,40 +18,40 @@ def test_relationship_validation_valid():
     rel = Relationship(
         source="Gavin Newsom",
         target="Democratic Party",
-        type="member_of",
+        relationship_type="member_of",
         properties={"since": "2000"}
     )
     assert rel.source == "Gavin Newsom"
     assert rel.target == "Democratic Party"
-    assert rel.type == "MEMBER_OF"  # uppercase normalization
+    assert rel.relationship_type == "MEMBER_OF"  # uppercase normalization
     assert rel.properties == {"since": "2000"}
 
 def test_relationship_validation_invalid_empty():
     with pytest.raises(ValidationError):
-        Relationship(source=" ", target="Democratic Party", type="MEMBER_OF")
+        Relationship(source=" ", target="Democratic Party", relationship_type="MEMBER_OF")
     with pytest.raises(ValidationError):
-        Relationship(source="Gavin Newsom", target=" ", type="MEMBER_OF")
+        Relationship(source="Gavin Newsom", target=" ", relationship_type="MEMBER_OF")
     with pytest.raises(ValidationError):
-        Relationship(source="Gavin Newsom", target="Democratic Party", type=" ")
+        Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type=" ")
 
 def test_extraction_result_valid():
     node1 = Node(name="Gavin Newsom", label="PoliticalActor")
     node2 = Node(name="Democratic Party", label="Organization")
-    rel = Relationship(source="Gavin Newsom", target="Democratic Party", type="MEMBER_OF")
+    rel = Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER_OF")
     res = ExtractionResult(nodes=[node1, node2], relationships=[rel])
     assert len(res.nodes) == 2
     assert len(res.relationships) == 1
 
 def test_extraction_result_invalid_relationship_source():
     node1 = Node(name="Democratic Party", label="Organization")
-    rel = Relationship(source="Gavin Newsom", target="Democratic Party", type="MEMBER_OF")
+    rel = Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER_OF")
     with pytest.raises(ValidationError) as exc_info:
         ExtractionResult(nodes=[node1], relationships=[rel])
     assert "Relationship source 'Gavin Newsom' not found in defined nodes" in str(exc_info.value)
 
 def test_extraction_result_invalid_relationship_target():
     node1 = Node(name="Gavin Newsom", label="PoliticalActor")
-    rel = Relationship(source="Gavin Newsom", target="Democratic Party", type="MEMBER_OF")
+    rel = Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER_OF")
     with pytest.raises(ValidationError) as exc_info:
         ExtractionResult(nodes=[node1], relationships=[rel])
     assert "Relationship target 'Democratic Party' not found in defined nodes" in str(exc_info.value)
@@ -90,7 +90,7 @@ def test_extract_entities_success():
                         {"name": "Democratic Party", "label": "Organization"}
                     ],
                     "relationships": [
-                        {"source": "Gavin Newsom", "target": "Democratic Party", "type": "MEMBER_OF"}
+                        {"source": "Gavin Newsom", "target": "Democratic Party", "relationship_type": "MEMBER_OF"}
                     ]
                 },
                 tool_call_id="call_1"
@@ -117,7 +117,7 @@ def test_extract_entities_validation_failure():
                         {"name": "Gavin Newsom", "label": "PoliticalActor"}
                     ],
                     "relationships": [
-                        {"source": "Gavin Newsom", "target": "Democratic Party", "type": "MEMBER_OF"}
+                        {"source": "Gavin Newsom", "target": "Democratic Party", "relationship_type": "MEMBER_OF"}
                     ]
                 },
                 tool_call_id="call_2"
