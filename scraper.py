@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # CSS selector schema for CalMatters stories on category pages
-CALMATTERS_SCHEMA = {
+CALMATTERS_LISTING_SCHEMA = {
     "name": "CalMatters Politics Stories",
     "baseSelector": "article.archive-stories",
     "fields": [
@@ -40,6 +40,28 @@ CALMATTERS_SCHEMA = {
         }
     ]
 }
+CALMATTERS_ARTICLE_LINKS_SCHEMA = {
+    "name": "CalMatters Article Holistic",
+    "baseSelector": "div.entry-content",
+    "fields": [
+        {
+            "name": "links",
+            "selector": "a",
+            "type": "nested_list",
+            "fields": [
+                {
+                    "name": "text",
+                    "type": "text"
+                },
+                {
+                    "name": "url",
+                    "type": "attribute",
+                    "attribute": "href"
+                }
+            ]
+        }
+    ]
+}
 
 
 # eventually rewrite to retrieve the most recent data in DB and retrieve newer than that
@@ -51,12 +73,12 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
     url = "https://calmatters.org/category/politics/"
     
     # 1. Define the extraction strategy
-    extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_SCHEMA, verbose=False)
+    listing_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_SCHEMA, verbose=False)
     
     # 2. Configure the crawler run parameters
     run_config = CrawlerRunConfig(
         cache_mode=CacheMode.BYPASS,  # Get fresh content
-        extraction_strategy=extraction_strategy
+        extraction_strategy=listing_extraction_strategy
     )
     
     logger.info(f"Crawling CalMatters politics page: {url}")
@@ -117,15 +139,34 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
         if top_stories:
             story_urls = [story["url"] for story in top_stories]
             logger.info(f"Crawling {len(story_urls)} article bodies concurrently...")
-            
+
+            article_extraction_strategy = JsonCssExtractionStrategy(CALMATTERS_ARTICLE_SCHEMA, verbose=False)
+
             # Configure crawl run for article bodies
             article_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS,
-                css_selector="div.entry-content"
+                css_selector="div.entry-content",
+                markdown_generator=DefaultMarkdownGenerator(
+                    options={
+                        "ignore_links": True
+                    }
+                ),
+                excluded_tags=['aside', 'figure'],
+                excluded_selector=(
+                    "div.wp-block-newspack-blocks-wp-block-newspack-ads-blocks-ad-unit, "
+                    "div.newspack_global_ad, "
+                    "section.below-content, "
+                    ".wp-block-newspack-blocks-homepage-articles, "
+                    ".after-article-engagement, "
+                    ".cm-read-next-eoa"
+                )
             )
             
             # Crawl all URLs in parallel
             article_results = await crawler.arun_many(urls=story_urls, config=article_config)
+
+            extracted_data = extraction_strategy.extract('', result.cleaned_html)
+            links = extracted_data[0]['links']
             
             # Map content back to stories
             for story, article_result in zip(top_stories, article_results):
