@@ -99,13 +99,13 @@ def test_invalid_parameters():
     with pytest.raises(ValueError, match="chunk_size must be a positive integer"):
         chunk_article("some text", chunk_size=-5)
         
-    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 1.0"):
+    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 0.5"):
         chunk_article("some text", chunk_overlap_pct=-0.1)
         
-    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 1.0"):
-        chunk_article("some text", chunk_overlap_pct=1.0)
+    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 0.5"):
+        chunk_article("some text", chunk_overlap_pct=0.5)
         
-    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 1.0"):
+    with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 0.5"):
         chunk_article("some text", chunk_overlap_pct=1.5)
 
 

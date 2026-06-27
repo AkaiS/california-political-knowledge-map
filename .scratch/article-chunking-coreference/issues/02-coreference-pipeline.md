@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## What to build
 
@@ -12,11 +12,11 @@ The pipeline must:
 
 ## Acceptance criteria
 
-- [ ] Coreference Resolution annotator agent successfully identifies and tags pronouns using the `<ref>` tag markup schema.
-- [ ] Critic agent reviews annotations and correctly raises issues for incorrect reference mappings.
-- [ ] Python orchestrator retries up to 3 times on critic failure, and falls back gracefully to the original text.
-- [ ] Python replacement function successfully translates tags to clean plain text.
-- [ ] Mocked unit tests verify the annotation, critic feedback loop, retries, and tag-to-plaintext substitution.
+- [x] Coreference Resolution annotator agent successfully identifies and tags pronouns using the `<ref>` tag markup schema.
+- [x] Critic agent reviews annotations and correctly raises issues for incorrect reference mappings.
+- [x] Python orchestrator retries up to 3 times on critic failure, and falls back gracefully to the original text.
+- [x] Python replacement function successfully translates tags to clean plain text.
+- [x] Mocked unit tests verify the annotation, critic feedback loop, retries, and tag-to-plaintext substitution.
 
 ## Blocked by
 
