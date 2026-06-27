@@ -18,7 +18,7 @@ We will build a pipeline that:
 1. Preprocesses the **Source Article** text with a **Coreference Resolution** LLM agent to tag vague pronouns with `<ref entity='Entity Name'>pronoun</ref>` tags.
 2. Validates annotations using a **Coreference Critic** LLM agent with a self-correcting feedback loop.
 3. Resolves the tags to plain text (replacing pronouns with canonical entity names) before chunking.
-4. Splits the clean, resolved text into **Article Chunks** using a recursive character text splitter with a 10% overlap.
+4. Splits the clean, resolved text into **Article Chunks** using Chonkie's `RecursiveChunker` and `OverlapRefinery` (character-based, with 10% overlap).
 5. Runs **Entity Extraction** independently on each chunk.
 6. Ingests the Article Chunks, Articles, and entities into Neo4j with structural relationships, vector embeddings, and a vector index.
 
@@ -44,8 +44,8 @@ We will build a pipeline that:
 - **Tag Substitution**: A Python helper that processes the approved Annotated Article and replaces every `<ref entity="Entity Name">pronoun</ref>` tag with `Entity Name`, producing clean plain text for downstream chunking.
 
 ### Chunking Module
-- **Recursive Text Splitter**: Splits the resolved text recursively using delimiters (such as double newlines, single newlines, spaces, and empty strings) to keep paragraphs and sentences intact.
-- **Configurable Parameters**: Reads `CHUNK_SIZE` and `CHUNK_OVERLAP_PCT` (defaults to 1000 characters and 10% overlap) from the environment (`.env`).
+- **Chonkie-based Chunking**: Splits the resolved text recursively using `chonkie.RecursiveChunker` (hierarchical splitting with delimiters like paragraphs, sentences, and words) and `chonkie.OverlapRefinery` (for prefix overlap).
+- **Configurable Parameters**: Reads `CHUNK_SIZE` and `CHUNK_OVERLAP_PCT` (defaults to 1000 characters and 0.10 or 10% overlap) from the environment (`.env`).
 
 ### Neo4j Graph Database Integration
 - **Article Nodes**: Creates `(:Article)` nodes uniquely identified by `url`, setting properties `title`, `author`, and `published_date`.
@@ -61,7 +61,7 @@ We will build a pipeline that:
 
 ### Seams for Testing
 1. **Coreference Seam**: Test the coreference resolution, critic check, and self-correction loop in isolation by mocking the LLM responses.
-2. **Splitting Seam**: Test the recursive text splitter with various inputs to verify that chunk sizes and the 10% overlap are correctly calculated, without invoking any LLMs or databases.
+2. **Splitting Seam**: Test the Chonkie-based chunking configuration with various inputs to verify that chunk sizes and the 10% overlap are correctly applied, without invoking any LLMs or databases.
 3. **Graph Ingestion Seam**: Test the Neo4j ingestion function using mock database transactions to verify that the generated Cypher queries create the correct `(:Article)`, `(:Chunk)`, and `[:MENTIONED_IN]` / `[:BELONGS_TO]` structures, and that relationship edges receive the `source_chunk_id` property.
 
 ### Prior Art

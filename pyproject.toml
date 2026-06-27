@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.27.0",
     "crawl4ai>=0.9.0",
     "pydantic-ai>=2.0.0",
+    "chonkie>=1.6.8",
 ]
 
 [dependency-groups]

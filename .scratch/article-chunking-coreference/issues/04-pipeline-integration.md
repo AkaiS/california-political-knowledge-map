@@ -6,7 +6,7 @@ Integrate the coreference resolution, text chunking, and Neo4j schema ingestion 
 
 The integrated flow for processing a story must:
 1. Resolve coreferences on the story's `content` to produce clean plain text.
-2. Split the clean plain text into `Article Chunks`.
+2. Split the clean plain text into `Article Chunks` using the Chonkie-based chunking utility.
 3. Generate vector embeddings for each chunk.
 4. Save the `(:Article)` node (merging on `url` and setting `title`, `author`, `published_date`).
 5. Save each `(:Chunk)` node (merging on `url + "#chunk_" + index` and setting `text`, `chunk_index`, `embedding`), linking them via `(Chunk)-[:BELONGS_TO]->(Article)`.
