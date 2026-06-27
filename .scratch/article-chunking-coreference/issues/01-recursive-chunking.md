@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## What to build
 
@@ -10,11 +10,11 @@ The chunker utility must:
 
 ## Acceptance criteria
 
-- [ ] The utility correctly initializes `chonkie.RecursiveChunker` and `chonkie.OverlapRefinery` using the character tokenizer.
-- [ ] Chunks are recursively split at natural boundaries without the base chunk size exceeding `CHUNK_SIZE` characters.
-- [ ] Overlap between consecutive chunks is configured correctly via `OverlapRefinery` using `CHUNK_OVERLAP_PCT` as context size.
-- [ ] The utility reads chunk size and overlap settings from environment variables (`CHUNK_SIZE` and `CHUNK_OVERLAP_PCT`) with safe defaults (1000 size, 0.10 overlap).
-- [ ] Unit tests verify correctness on edge cases (e.g. extremely short texts, texts with no spaces, texts exactly matching chunk size).
+- [x] The utility correctly initializes `chonkie.RecursiveChunker` and `chonkie.OverlapRefinery` using the character tokenizer.
+- [x] Chunks are recursively split at natural boundaries without the base chunk size exceeding `CHUNK_SIZE` characters.
+- [x] Overlap between consecutive chunks is configured correctly via `OverlapRefinery` using `CHUNK_OVERLAP_PCT` as context size.
+- [x] The utility reads chunk size and overlap settings from environment variables (`CHUNK_SIZE` and `CHUNK_OVERLAP_PCT`) with safe defaults (1000 size, 0.10 overlap).
+- [x] Unit tests verify correctness on edge cases (e.g. extremely short texts, texts with no spaces, texts exactly matching chunk size).
 
 ## Blocked by
 
