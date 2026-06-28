@@ -125,8 +125,30 @@ def test_cli_clear_connection_error(capsys):
         assert "Could not connect to Neo4j database" in (captured.err + captured.out)
 
 from extraction import ExtractionResult, Node, Relationship
+from chunking import ArticleChunk
 
-def test_cli_run_dry_run_with_text(capsys):
+@pytest.fixture
+def mock_pipeline_deps():
+    mock_embedder = MagicMock()
+    async def fake_embed(texts, settings=None):
+        res = MagicMock()
+        res.embeddings = [[0.1] * 768] * len(texts)
+        return res
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    with patch("playground.resolve_coreferences", side_effect=lambda x: x) as mock_resolve, \
+         patch("playground.replace_tags_with_entities", side_effect=lambda x: x) as mock_replace, \
+         patch("playground.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
+         patch("playground.get_embedding_embedder", return_value=mock_embedder) as mock_get_embedder:
+        yield {
+            "resolve": mock_resolve,
+            "replace": mock_replace,
+            "chunk": mock_chunk,
+            "get_embedder": mock_get_embedder,
+            "embedder": mock_embedder
+        }
+
+def test_cli_run_dry_run_with_text(capsys, mock_pipeline_deps):
     mock_result = ExtractionResult(
         nodes=[Node(name="Gavin Newsom", label="PoliticalActor")],
         relationships=[]
@@ -142,7 +164,7 @@ def test_cli_run_dry_run_with_text(capsys):
         assert "Gavin Newsom" in captured.out
         assert "PoliticalActor" in captured.out
 
-def test_cli_run_dry_run_fallback_text(capsys):
+def test_cli_run_dry_run_fallback_text(capsys, mock_pipeline_deps):
     mock_result = ExtractionResult(
         nodes=[Node(name="Fallback Actor", label="PoliticalActor")],
         relationships=[]
@@ -161,7 +183,7 @@ def test_cli_run_dry_run_fallback_text(capsys):
         captured = capsys.readouterr()
         assert "Fallback Actor" in captured.out
 
-def test_cli_run_dry_run_sqlite_text(capsys):
+def test_cli_run_dry_run_sqlite_text(capsys, mock_pipeline_deps):
     mock_result = ExtractionResult(
         nodes=[Node(name="SQLite Actor", label="PoliticalActor")],
         relationships=[]
@@ -283,7 +305,7 @@ def test_ingest_extraction_result_invalid_identifiers():
         ingest_extraction_result(mock_tx, extraction_bad_rel)
     assert "Invalid character in relationship type" in str(exc_info.value)
 
-def test_cli_run_integration_all_stories(capsys):
+def test_cli_run_integration_all_stories(capsys, mock_pipeline_deps):
     mock_stories = [
         {"title": "Story 1", "url": "http://example.com/1", "content": "Content 1"},
         {"title": "Story 2", "url": "http://example.com/2", "content": "Content 2"}
@@ -313,18 +335,152 @@ def test_cli_run_integration_all_stories(capsys):
         MockManager.assert_called_once()
         mock_get_all.assert_called_once()
         
+        assert mock_pipeline_deps["resolve"].call_count == 2
+        assert mock_pipeline_deps["chunk"].call_count == 2
+        
         assert mock_extract.call_count == 2
         mock_extract.assert_any_call("Content 1")
         mock_extract.assert_any_call("Content 2")
         
-        assert mock_manager_instance.ingest_extraction.call_count == 2
-        mock_manager_instance.ingest_extraction.assert_any_call(mock_result1, source_url="http://example.com/1")
-        mock_manager_instance.ingest_extraction.assert_any_call(mock_result2, source_url="http://example.com/2")
+        assert mock_manager_instance.ingest_article.call_count == 2
+        mock_manager_instance.ingest_article.assert_any_call(
+            url="http://example.com/1",
+            title="Story 1",
+            author=None,
+            published_date=None
+        )
+        mock_manager_instance.ingest_article.assert_any_call(
+            url="http://example.com/2",
+            title="Story 2",
+            author=None,
+            published_date=None
+        )
+        
+        assert mock_manager_instance.ingest_chunk.call_count == 2
+        mock_manager_instance.ingest_chunk.assert_any_call(
+            url="http://example.com/1",
+            chunk_id="http://example.com/1#chunk_0",
+            text="Content 1",
+            chunk_index=0,
+            embedding=[0.1] * 768
+        )
+        mock_manager_instance.ingest_chunk.assert_any_call(
+            url="http://example.com/2",
+            chunk_id="http://example.com/2#chunk_0",
+            text="Content 2",
+            chunk_index=0,
+            embedding=[0.1] * 768
+        )
+        
+        assert mock_manager_instance.ingest_chunk_extraction.call_count == 2
+        mock_manager_instance.ingest_chunk_extraction.assert_any_call(
+            chunk_id="http://example.com/1#chunk_0",
+            extraction=mock_result1
+        )
+        mock_manager_instance.ingest_chunk_extraction.assert_any_call(
+            chunk_id="http://example.com/2#chunk_0",
+            extraction=mock_result2
+        )
         
         mock_manager_instance.close.assert_called_once()
         
         captured = capsys.readouterr()
         assert "Successfully processed 2 stories" in captured.out
+
+def test_cli_run_pipeline_integration(mock_pipeline_deps):
+    mock_story = {
+        "id": 1,
+        "title": "Pipeline News",
+        "url": "http://example.com/pipeline",
+        "author": "Alice",
+        "published_date": "2026-06-28",
+        "content": "Newsom signed AB-5. He was happy."
+    }
+    
+    mock_pipeline_deps["resolve"].side_effect = None
+    mock_pipeline_deps["resolve"].return_value = "Gavin Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy."
+    mock_pipeline_deps["replace"].side_effect = None
+    mock_pipeline_deps["replace"].return_value = "Gavin Newsom signed AB-5. Gavin Newsom was happy."
+    
+    mock_chunks = [
+        ArticleChunk(text="Gavin Newsom signed AB-5.", start_index=0, end_index=25, index=0),
+        ArticleChunk(text="Gavin Newsom was happy.", start_index=26, end_index=49, index=1)
+    ]
+    mock_pipeline_deps["chunk"].side_effect = None
+    mock_pipeline_deps["chunk"].return_value = mock_chunks
+    
+    mock_extraction_chunk0 = ExtractionResult(
+        nodes=[
+            Node(name="Gavin Newsom", label="PoliticalActor"),
+            Node(name="AB-5", label="PublicPolicy")
+        ],
+        relationships=[
+            Relationship(source="Gavin Newsom", target="AB-5", relationship_type="SIGNED")
+        ]
+    )
+    mock_extraction_chunk1 = ExtractionResult(
+        nodes=[Node(name="Gavin Newsom", label="PoliticalActor")],
+        relationships=[]
+    )
+    
+    def mock_extract(text, *args, **kwargs):
+        if "signed" in text:
+            return mock_extraction_chunk0
+        elif "happy" in text:
+            return mock_extraction_chunk1
+        return ExtractionResult(nodes=[], relationships=[])
+        
+    with patch("playground.Neo4jManager") as MockManager, \
+         patch("playground.get_all_stories", return_value=[mock_story]), \
+         patch("playground.extract_entities", side_effect=mock_extract) as mock_extract_entities:
+         
+        mock_manager_instance = MockManager.return_value
+        
+        main(["run"])
+        
+        mock_pipeline_deps["resolve"].assert_called_once_with("Newsom signed AB-5. He was happy.")
+        mock_pipeline_deps["replace"].assert_called_once_with("Gavin Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy.")
+        mock_pipeline_deps["chunk"].assert_called_once_with("Gavin Newsom signed AB-5. Gavin Newsom was happy.")
+        mock_pipeline_deps["get_embedder"].assert_called_once()
+        
+        mock_manager_instance.ingest_article.assert_called_once_with(
+            url="http://example.com/pipeline",
+            title="Pipeline News",
+            author="Alice",
+            published_date="2026-06-28"
+        )
+        
+        assert mock_manager_instance.ingest_chunk.call_count == 2
+        mock_manager_instance.ingest_chunk.assert_any_call(
+            url="http://example.com/pipeline",
+            chunk_id="http://example.com/pipeline#chunk_0",
+            text="Gavin Newsom signed AB-5.",
+            chunk_index=0,
+            embedding=[0.1] * 768
+        )
+        mock_manager_instance.ingest_chunk.assert_any_call(
+            url="http://example.com/pipeline",
+            chunk_id="http://example.com/pipeline#chunk_1",
+            text="Gavin Newsom was happy.",
+            chunk_index=1,
+            embedding=[0.1] * 768
+        )
+        
+        assert mock_extract_entities.call_count == 2
+        mock_extract_entities.assert_any_call("Gavin Newsom signed AB-5.")
+        mock_extract_entities.assert_any_call("Gavin Newsom was happy.")
+        
+        assert mock_manager_instance.ingest_chunk_extraction.call_count == 2
+        mock_manager_instance.ingest_chunk_extraction.assert_any_call(
+            chunk_id="http://example.com/pipeline#chunk_0",
+            extraction=mock_extraction_chunk0
+        )
+        mock_manager_instance.ingest_chunk_extraction.assert_any_call(
+            chunk_id="http://example.com/pipeline#chunk_1",
+            extraction=mock_extraction_chunk1
+        )
+        
+        mock_manager_instance.close.assert_called_once()
 
 def test_get_distinct_labels_success():
     mock_driver = MagicMock()
@@ -626,7 +782,8 @@ def test_connect_creates_and_verifies_vector_index():
     mock_driver.session.return_value.__enter__.return_value = mock_session
     
     # Mock return value for SHOW INDEXES query
-    mock_result = [{"name": "chunk_vector_index"}]
+    mock_result = MagicMock()
+    mock_result.peek.return_value = {"name": "chunk_vector_index"}
     mock_session.run.return_value = mock_result
     
     manager = Neo4jManager(

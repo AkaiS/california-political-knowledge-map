@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class Node(BaseModel):
     name: str = Field(..., description="Canonical name of the entity")
@@ -41,8 +41,6 @@ class Relationship(BaseModel):
         if not cleaned:
             raise ValueError("Must be a non-empty string")
         return cleaned
-
-from pydantic import model_validator
 
 class ExtractionResult(BaseModel):
     nodes: List[Node] = Field(default_factory=list, description="Extracted entities")
