@@ -88,6 +88,7 @@ class Neo4jManager:
         self.username = username
         self.password = password
         self._driver = driver
+        self._index_ensured = False
 
     def connect(self):
         if self._driver is None:
@@ -104,7 +105,111 @@ class Neo4jManager:
         except Exception as e:
             raise Neo4jConnectionError(f"Could not connect to Neo4j database: {e}")
         
+        if not self._index_ensured:
+            self._ensure_vector_index()
+            self._index_ensured = True
+        
         return self._driver
+
+    def _ensure_vector_index(self):
+        dimension = int(os.environ.get("EMBEDDING_DIMENSION", "768"))
+        try:
+            with self._driver.session() as session:
+                query = f"""
+                CREATE VECTOR INDEX chunk_vector_index IF NOT EXISTS
+                FOR (c:Chunk)
+                ON (c.embedding)
+                OPTIONS {{
+                  indexConfig: {{
+                    `vector.dimensions`: {dimension},
+                    `vector.similarity_function`: 'cosine'
+                  }}
+                }}
+                """
+                session.run(query)
+                
+                result = session.run("SHOW INDEXES YIELD name WHERE name = 'chunk_vector_index'")
+                exists = result.peek() is not None
+                if not exists:
+                    raise Neo4jConnectionError("Vector index 'chunk_vector_index' was not created successfully.")
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to create or verify vector index: {e}")
+
+    def ingest_article(self, url: str, title: str | None = None, author: str | None = None, published_date: str | None = None) -> None:
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _tx(tx):
+                    query = """
+                    MERGE (a:Article {url: $url})
+                    SET a.title = $title, a.author = $author, a.published_date = $published_date
+                    """
+                    tx.run(query, url=url, title=title, author=author, published_date=published_date)
+                session.execute_write(_tx)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to ingest Article to Neo4j: {e}")
+
+    def ingest_chunk(self, url: str, chunk_id: str, text: str, chunk_index: int, embedding: list[float]) -> None:
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _tx(tx):
+                    query = """
+                    MATCH (a:Article {url: $url})
+                    MERGE (c:Chunk {id: $chunk_id})
+                    SET c.text = $text, c.chunk_index = $chunk_index, c.embedding = $embedding
+                    MERGE (c)-[:BELONGS_TO]->(a)
+                    """
+                    tx.run(query, url=url, chunk_id=chunk_id, text=text, chunk_index=chunk_index, embedding=embedding)
+                session.execute_write(_tx)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to ingest Chunk to Neo4j: {e}")
+
+    def ingest_chunk_extraction(self, chunk_id: str, extraction: ExtractionResult) -> None:
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _tx(tx):
+                    node_labels = {}
+                    for node in extraction.nodes:
+                        label = node.label
+                        if not IDENTIFIER_REGEX.match(label):
+                            raise ValueError(f"Invalid character in node label: {label}")
+                        node_labels[node.name] = label
+                        
+                        # Merge node
+                        query = f"MERGE (n:{label} {{name: $name}}) SET n += $properties"
+                        tx.run(query, name=node.name, properties=node.properties)
+                        
+                        # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
+                        mention_query = f"""
+                        MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{name: $name}})
+                        MERGE (n)-[:MENTIONED_IN]->(c)
+                        """
+                        tx.run(mention_query, chunk_id=chunk_id, name=node.name)
+
+                    for rel in extraction.relationships:
+                        rel_type = rel.relationship_type
+                        if not IDENTIFIER_REGEX.match(rel_type):
+                            raise ValueError(f"Invalid character in relationship type: {rel_type}")
+                        
+                        src_label = node_labels.get(rel.source, "")
+                        tgt_label = node_labels.get(rel.target, "")
+                        
+                        src_clause = f":{src_label}" if src_label else ""
+                        tgt_clause = f":{tgt_label}" if tgt_label else ""
+                        
+                        query = (
+                            f"MATCH (src{src_clause} {{name: $src_name}}), (tgt{tgt_clause} {{name: $tgt_name}}) "
+                            f"MERGE (src)-[r:{rel_type}]->(tgt) "
+                            f"SET r.source_chunk_id = $chunk_id, r += $properties"
+                        )
+                        tx.run(query, src_name=rel.source, tgt_name=rel.target, chunk_id=chunk_id, properties=rel.properties)
+                session.execute_write(_tx)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")
+
+
 
     def clear_database(self):
         driver = self.connect()

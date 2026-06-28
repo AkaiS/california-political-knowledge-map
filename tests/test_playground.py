@@ -2,6 +2,16 @@ import pytest
 from unittest.mock import MagicMock, patch
 from playground import Neo4jManager, Neo4jConfigError, Neo4jConnectionError, main, cosine_similarity, get_embedding_embedder
 
+@pytest.fixture(autouse=True)
+def mock_ensure_vector_index(request):
+    if "no_mock_ensure_index" in request.keywords:
+        yield
+    else:
+        with patch("playground.Neo4jManager._ensure_vector_index", create=True) as m:
+            yield m
+
+
+
 def test_missing_uri_raises_error():
     with pytest.raises(Neo4jConfigError) as exc_info:
         Neo4jManager(uri="", username="neo4j", password="password")
@@ -607,3 +617,167 @@ def test_cli_analyze_too_few_nodes(capsys):
     mock_embedder.embed_documents.assert_not_called()
     captured = capsys.readouterr()
     assert "Distinct node labels:" in captured.out
+
+@pytest.mark.no_mock_ensure_index
+def test_connect_creates_and_verifies_vector_index():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    
+    # Mock return value for SHOW INDEXES query
+    mock_result = [{"name": "chunk_vector_index"}]
+    mock_session.run.return_value = mock_result
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    manager.connect()
+    
+    assert mock_session.run.call_count == 2
+    
+    # 1. Check create index Cypher
+    create_query = mock_session.run.call_args_list[0][0][0]
+    assert "CREATE VECTOR INDEX chunk_vector_index" in create_query
+    assert "FOR (c:Chunk)" in create_query
+    assert "ON (c.embedding)" in create_query
+    assert "768" in create_query
+    
+    # 2. Check verify index Cypher
+    verify_query = mock_session.run.call_args_list[1][0][0]
+    assert "SHOW INDEXES" in verify_query
+    assert "chunk_vector_index" in verify_query
+
+def test_ingest_article():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func, *args, **kwargs: func(mock_tx, *args, **kwargs)
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    manager.ingest_article(
+        url="http://example.com/1",
+        title="Breaking News",
+        author="John Doe",
+        published_date="2026-06-27"
+    )
+    
+    mock_tx.run.assert_called_once()
+    query = mock_tx.run.call_args[0][0]
+    kwargs = mock_tx.run.call_args[1]
+    
+    assert "MERGE (a:Article {url: $url})" in query
+    assert "SET a.title = $title" in query
+    assert "a.author = $author" in query
+    assert "a.published_date = $published_date" in query
+    assert kwargs["url"] == "http://example.com/1"
+    assert kwargs["title"] == "Breaking News"
+    assert kwargs["author"] == "John Doe"
+    assert kwargs["published_date"] == "2026-06-27"
+
+def test_ingest_chunk():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func, *args, **kwargs: func(mock_tx, *args, **kwargs)
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    manager.ingest_chunk(
+        url="http://example.com/1",
+        chunk_id="http://example.com/1#chunk_0",
+        text="Gavin Newsom did something.",
+        chunk_index=0,
+        embedding=[0.1, 0.2, 0.3]
+    )
+    
+    mock_tx.run.assert_called_once()
+    query = mock_tx.run.call_args[0][0]
+    kwargs = mock_tx.run.call_args[1]
+    
+    assert "MERGE (c:Chunk {id: $chunk_id})" in query
+    assert "SET c.text = $text" in query
+    assert "c.chunk_index = $chunk_index" in query
+    assert "c.embedding = $embedding" in query
+    assert "MERGE (c)-[:BELONGS_TO]->(a)" in query
+    assert kwargs["url"] == "http://example.com/1"
+    assert kwargs["chunk_id"] == "http://example.com/1#chunk_0"
+    assert kwargs["text"] == "Gavin Newsom did something."
+    assert kwargs["chunk_index"] == 0
+    assert kwargs["embedding"] == [0.1, 0.2, 0.3]
+
+def test_ingest_chunk_extraction():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func, *args, **kwargs: func(mock_tx, *args, **kwargs)
+    
+    manager = Neo4jManager(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    extraction = ExtractionResult(
+        nodes=[
+            Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"}),
+            Node(name="Democratic Party", label="Organization")
+        ],
+        relationships=[
+            Relationship(
+                source="Gavin Newsom",
+                target="Democratic Party",
+                relationship_type="MEMBER_OF",
+                properties={"status": "active"}
+            )
+        ]
+    )
+    
+    manager.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction
+    )
+    
+    # Expected: 2 node merges, 2 mentions, 1 relationship merge = 5 tx runs
+    assert mock_tx.run.call_count == 5
+    
+    # Inspect calls
+    calls = [call[0][0] for call in mock_tx.run.call_args_list]
+    assert any("MERGE (n:PoliticalActor" in q for q in calls)
+    assert any("MERGE (n:Organization" in q for q in calls)
+    assert any("[:MENTIONED_IN]" in q for q in calls)
+    assert any("MERGE (src)-[r:MEMBER_OF]->(tgt)" in q for q in calls)
+    assert any("r.source_chunk_id = $chunk_id" in q for q in calls)
+    
+    # Check that relationship query actually uses the chunk_id parameter
+    found_rel_kwargs = False
+    for call in mock_tx.run.call_args_list:
+        kwargs = call[1]
+        if "chunk_id" in kwargs and kwargs.get("chunk_id") == "http://example.com/1#chunk_0" and "src_name" in kwargs:
+            found_rel_kwargs = True
+            break
+    assert found_rel_kwargs
+
+
