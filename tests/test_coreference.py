@@ -26,7 +26,8 @@ def test_replace_tags_with_entities_no_tags():
 
 from pydantic_ai import ModelResponse, ToolCallPart, TextPart
 from pydantic_ai.models.function import FunctionModel
-from coreference import get_annotator_agent, get_critic_agent, CriticValidation
+from coreference import get_annotator_agent, get_critic_agent
+from schemas import CriticValidation
 
 def test_get_annotator_agent():
     agent = get_annotator_agent(defer_check=True)

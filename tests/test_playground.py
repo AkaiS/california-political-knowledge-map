@@ -124,8 +124,7 @@ def test_cli_clear_connection_error(capsys):
         assert "Connection Error:" in (captured.err + captured.out)
         assert "Could not connect to Neo4j database" in (captured.err + captured.out)
 
-from extraction import ExtractionResult, Node, Relationship
-from chunking import ArticleChunk
+from schemas import ExtractionResult, Node, Relationship, ArticleChunk
 
 @pytest.fixture
 def mock_pipeline_deps():

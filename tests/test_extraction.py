@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from extraction import Node, Relationship, ExtractionResult
+from schemas import Node, Relationship, ExtractionResult
 
 def test_node_validation_valid():
     node = Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"})

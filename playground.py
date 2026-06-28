@@ -5,7 +5,8 @@ import re
 import math
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from extraction import extract_entities, ExtractionResult
+from extraction import extract_entities
+from schemas import ExtractionResult
 from db import get_last_n_stories, get_all_stories
 from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel

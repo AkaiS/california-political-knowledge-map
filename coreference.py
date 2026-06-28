@@ -1,15 +1,11 @@
 import os
 import re
 from typing import List
-from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from dotenv import load_dotenv
-
-class CriticValidation(BaseModel):
-    is_valid: bool = Field(..., description="True if all reference tags are correct and there are no hallucinated or incorrect entities. False if there are issues.")
-    issues: List[str] = Field(default_factory=list, description="A list of specific errors or corrections required for incorrect annotations.")
+from schemas import CriticValidation
 
 def replace_tags_with_entities(annotated_text: str) -> str:
     # Pattern to match <ref entity="Canonical Name">pronoun</ref>

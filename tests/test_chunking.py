@@ -1,5 +1,6 @@
 import pytest
-from chunking import chunk_article, ArticleChunk
+from chunking import chunk_article
+from schemas import ArticleChunk
 
 def test_default_chunking_behavior():
     # A text of about 3000 characters (3x the default chunk size of 1000)

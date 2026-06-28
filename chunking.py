@@ -1,18 +1,11 @@
 import os
 from typing import List, Optional
-from pydantic import BaseModel
 from chonkie import RecursiveChunker, OverlapRefinery
+from schemas import ArticleChunk
 
 # Safe defaults
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP_PCT = 0.10
-
-class ArticleChunk(BaseModel):
-    text: str
-    start_index: int
-    end_index: int
-    index: int
-    context: Optional[str] = None
 
 def chunk_article(
     text: str,
