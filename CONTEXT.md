@@ -25,6 +25,11 @@ _Avoid_: Named Entity Recognition, parsing, data extraction
 The interactive command-line interface implemented in `playground.py` used to execute prompt-guided entity extraction on Source Articles, enabling the user to inspect and refine the schema before Neo4j ingestion.
 _Avoid_: Test environment, testing script, sandbox, trial run
 
+**Graph Database Adapter**:
+The module implemented in `graph_db.py` that abstracts the Neo4j database, managing connections, index validation, and ingestion of Source Articles, Article Chunks, and Extracted Entities.
+_Avoid_: Database manager, Neo4j client, direct driver wrapper
+
+
 
 **Entity Resolution**:
 The process of identifying, measuring semantic similarity between, and merging nodes that represent the same real-world political actor, organization, or measure.
