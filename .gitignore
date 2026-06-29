@@ -4,3 +4,4 @@ __pycache__/*
 *.pyc
 .agents/*
 manual_checks/*
+*/generate_report.py
