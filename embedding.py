@@ -1,11 +1,14 @@
 import math
 import os
+import asyncio
 from dotenv import load_dotenv
 from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
 from config import settings
+from typing import List
+from schemas import ArticleChunk
 
 def cosine_similarity(v1: list[float], v2: list[float]) -> float:
     if len(v1) != len(v2):
@@ -38,10 +41,6 @@ def get_embedding_embedder() -> Embedder:
     
     return Embedder(model, settings=EmbeddingSettings(dimension=settings.embedding.dimension))
 
-
-import asyncio
-from typing import List
-from schemas import ArticleChunk
 
 class PydanticAIEmbeddingAdapter:
     """Concrete adapter for embeddings that conforms to the EmbeddingAdapter protocol."""
