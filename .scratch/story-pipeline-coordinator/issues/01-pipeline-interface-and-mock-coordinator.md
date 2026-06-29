@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,12 +14,13 @@ Create a comprehensive unit test suite that tests the coordinator's flow, loggin
 
 ## Acceptance criteria
 
-- [ ] `SourceArticle` and `PipelineResult` Pydantic models are defined in `schemas/` and exported via `schemas/__init__.py`.
-- [ ] `DatabaseAdapter`, `EmbeddingAdapter`, `CoreferenceAdapter`, and `EntityExtractionAdapter` python `Protocol`s are defined in `pipeline.py`.
-- [ ] `StoryPipeline` coordinator class is defined in `pipeline.py` and accepts the four protocols in its constructor.
-- [ ] `StoryPipeline.run()` implements the correct sequential flow: Coreference -> Chunking -> Embedding -> Extraction -> Ingestion.
-- [ ] Under `dry_run=True`, `StoryPipeline.run()` returns a structured `PipelineResult` and does not call any database adapter method.
-- [ ] Unit tests verify end-to-end execution, logging, and error handling of `StoryPipeline` using mock adapters.
+- [x] `SourceArticle` and `PipelineResult` Pydantic models are defined in `schemas/` and exported via `schemas/__init__.py`.
+- [x] `DatabaseAdapter`, `EmbeddingAdapter`, `CoreferenceAdapter`, and `EntityExtractionAdapter` python `Protocol`s are defined in `pipeline.py`.
+- [x] `StoryPipeline` coordinator class is defined in `pipeline.py` and accepts the four protocols in its constructor.
+- [x] `StoryPipeline.run()` implements the correct sequential flow: Coreference -> Chunking -> Embedding -> Extraction -> Ingestion.
+- [x] Under `dry_run=True`, `StoryPipeline.run()` returns a structured `PipelineResult` and does not call any database adapter method.
+- [x] Unit tests verify end-to-end execution, logging, and error handling of `StoryPipeline` using mock adapters.
+
 
 ## Blocked by
 
