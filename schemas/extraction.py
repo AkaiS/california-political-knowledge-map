@@ -17,8 +17,8 @@ class Node(BaseModel):
         return cleaned
 
 class Relationship(BaseModel):
-    source: str = Field(..., description="Source node name")
-    target: str = Field(..., description="Target node name")
+    source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
+    target: str = Field(..., description="Target node name. Do NOT name this key 'target_name', it must be 'target'.")
     relationship_type: str = Field(..., description="Relationship type")
     properties: Dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
 
