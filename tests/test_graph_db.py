@@ -1,14 +1,14 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from graph_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
-from schemas import ExtractionResult, Node, Relationship, SourceArticle, ArticleChunk
+from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
+from knowledge_map.schemas import ExtractionResult, Node, Relationship, SourceArticle, ArticleChunk
 
 @pytest.fixture(autouse=True)
 def mock_ensure_vector_index(request):
     if "no_mock_ensure_index" in request.keywords:
         yield
     else:
-        with patch("graph_db.Neo4jAdapter._ensure_vector_index", create=True) as m:
+        with patch("knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index", create=True) as m:
             yield m
 
 def test_missing_uri_raises_error():
@@ -155,33 +155,20 @@ def test_ingest_extraction_result_relationships():
     assert rel_kwargs["properties"] == {"status": "Active"}
 
 def test_ingest_extraction_result_invalid_identifiers():
-    mock_tx = MagicMock()
-    
-    # 1. Invalid node label
-    extraction_bad_label = ExtractionResult(
-        nodes=[Node(name="Gavin Newsom", label="Political`Actor")],
-        relationships=[]
-    )
-    with pytest.raises(ValueError) as exc_info:
-        ingest_extraction_result(mock_tx, extraction_bad_label)
+    from pydantic import ValidationError
+
+    # 1. Invalid node label raises ValidationError
+    with pytest.raises(ValidationError) as exc_info:
+        Node(name="Gavin Newsom", label="Political`Actor")
     assert "Invalid character in node label" in str(exc_info.value)
     
-    # 2. Invalid relationship type
-    extraction_bad_rel = ExtractionResult(
-        nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor"),
-            Node(name="Democratic Party", label="Organization")
-        ],
-        relationships=[
-            Relationship(
-                source="Gavin Newsom",
-                target="Democratic Party",
-                relationship_type="MEMBER`OF"
-            )
-        ]
-    )
-    with pytest.raises(ValueError) as exc_info:
-        ingest_extraction_result(mock_tx, extraction_bad_rel)
+    # 2. Invalid relationship type raises ValidationError
+    with pytest.raises(ValidationError) as exc_info:
+        Relationship(
+            source="Gavin Newsom",
+            target="Democratic Party",
+            relationship_type="MEMBER`OF"
+        )
     assert "Invalid character in relationship type" in str(exc_info.value)
 
 def test_get_distinct_labels_success():

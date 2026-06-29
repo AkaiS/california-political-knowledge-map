@@ -1,6 +1,6 @@
 import os
 import pytest
-from db import init_db, save_story, get_all_stories
+from knowledge_map.adapters.sqlite_db import init_db, save_story, get_all_stories
 
 def test_get_all_stories(tmp_path):
     db_file = tmp_path / "test_stories.db"
@@ -80,7 +80,7 @@ def test_story_links_table_schema(tmp_path):
 
 
 def test_save_story_with_links(tmp_path):
-    from db import get_story_links
+    from knowledge_map.adapters.sqlite_db import get_story_links
     db_file = tmp_path / "test_stories.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -119,7 +119,7 @@ def test_save_story_with_links(tmp_path):
 
 
 def test_save_story_links_uniqueness(tmp_path):
-    from db import get_story_links
+    from knowledge_map.adapters.sqlite_db import get_story_links
     db_file = tmp_path / "test_stories.db"
     db_path = str(db_file)
     init_db(db_path)

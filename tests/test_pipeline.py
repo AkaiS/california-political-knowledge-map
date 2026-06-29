@@ -1,17 +1,17 @@
 import pytest
-from schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node
-from pipeline import (
+from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node
+from knowledge_map.core.pipeline import (
     StoryPipeline,
     DatabaseAdapter,
     EmbeddingAdapter,
     CoreferenceAdapter,
     EntityExtractionAdapter,
 )
-from embedding import PydanticAIEmbeddingAdapter
-from coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
-from extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
+from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
+from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
+from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
 from unittest.mock import MagicMock, patch
-from graph_db import Neo4jAdapter
+from knowledge_map.adapters.neo4j_db import Neo4jAdapter
 from pydantic_ai import ModelResponse, ToolCallPart, TextPart
 from pydantic_ai.models.function import FunctionModel
 
@@ -321,7 +321,7 @@ def test_pipeline_with_neo4j_adapter():
         content="This is integration test content."
     )
     
-    with patch("graph_db.Neo4jAdapter._ensure_vector_index"):
+    with patch("knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index"):
         result = pipeline.run(article, dry_run=False)
     
     assert isinstance(result, PipelineResult)

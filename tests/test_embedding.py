@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from embedding import cosine_similarity, get_embedding_embedder
+from knowledge_map.adapters.embedding import cosine_similarity, get_embedding_embedder
 
 def test_cosine_similarity_exact_match():
     v1 = [1.0, 2.0, 3.0]
@@ -46,8 +46,8 @@ def test_get_embedding_embedder():
 
 
 from unittest.mock import MagicMock
-from schemas import ArticleChunk
-from embedding import PydanticAIEmbeddingAdapter
+from knowledge_map.schemas import ArticleChunk
+from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 
 def test_pydantic_ai_embedding_adapter_success():
     mock_embedder = MagicMock()

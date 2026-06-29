@@ -1,5 +1,5 @@
 import pytest
-from coreference import replace_tags_with_entities
+from knowledge_map.adapters.coreference import replace_tags_with_entities
 
 def test_replace_tags_with_entities_basic():
     # Test double quotes
@@ -26,8 +26,8 @@ def test_replace_tags_with_entities_no_tags():
 
 from pydantic_ai import ModelResponse, ToolCallPart, TextPart
 from pydantic_ai.models.function import FunctionModel
-from coreference import get_annotator_agent, get_critic_agent
-from schemas import CriticValidation
+from knowledge_map.adapters.coreference import get_annotator_agent, get_critic_agent
+from knowledge_map.schemas import CriticValidation
 
 def test_get_annotator_agent():
     agent = get_annotator_agent(defer_check=True)
@@ -60,7 +60,7 @@ def test_get_critic_agent():
         assert result.output.is_valid is True
         assert result.output.issues == []
 
-from coreference import resolve_coreferences
+from knowledge_map.adapters.coreference import resolve_coreferences
 
 def test_resolve_coreferences_immediate_success():
     annotator_agent = get_annotator_agent(defer_check=True)
@@ -176,7 +176,7 @@ def test_resolve_coreferences_failure_fallback_original_text():
         assert annotator_calls == 4
 
 
-from coreference import PydanticAICoreferenceAdapter
+from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
 
 def test_pydantic_ai_coreference_adapter_success():
     annotator_agent = get_annotator_agent(defer_check=True)

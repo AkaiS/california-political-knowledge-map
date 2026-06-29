@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -15,6 +16,13 @@ class Node(BaseModel):
         if not cleaned:
             raise ValueError("Must be a non-empty string")
         return cleaned
+
+    @field_validator("label")
+    @classmethod
+    def validate_label(cls, v: str) -> str:
+        if not re.match(r"^[A-Za-z0-9_]+$", v):
+            raise ValueError(f"Invalid character in node label: {v}")
+        return v
 
 class Relationship(BaseModel):
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
@@ -41,6 +49,13 @@ class Relationship(BaseModel):
         if not cleaned:
             raise ValueError("Must be a non-empty string")
         return cleaned
+
+    @field_validator("relationship_type")
+    @classmethod
+    def validate_relationship_type(cls, v: str) -> str:
+        if not re.match(r"^[A-Za-z0-9_]+$", v):
+            raise ValueError(f"Invalid character in relationship type: {v}")
+        return v
 
 class ExtractionResult(BaseModel):
     nodes: List[Node] = Field(default_factory=list, description="Extracted entities")

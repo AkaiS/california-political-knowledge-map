@@ -4,19 +4,19 @@ import sys
 import re
 import math
 from dotenv import load_dotenv
-from db import get_last_n_stories, get_all_stories
+from knowledge_map.adapters.sqlite_db import get_last_n_stories, get_all_stories
 import asyncio
-from config import settings
+from knowledge_map.config import settings
 
-from graph_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
-from embedding import get_embedding_embedder, cosine_similarity
+from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.adapters.embedding import get_embedding_embedder, cosine_similarity
 
 # StoryPipeline and adapters
-from schemas import SourceArticle
-from embedding import PydanticAIEmbeddingAdapter
-from coreference import PydanticAICoreferenceAdapter
-from extraction import PydanticAIEntityExtractionAdapter
-from pipeline import StoryPipeline
+from knowledge_map.schemas import SourceArticle
+from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
+from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
+from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
+from knowledge_map.core.pipeline import StoryPipeline
 
 # Alias for backward compatibility
 Neo4jManager = Neo4jAdapter

@@ -1,7 +1,7 @@
 import re
 from neo4j import GraphDatabase
-from schemas import ExtractionResult, SourceArticle, ArticleChunk
-from config import settings
+from knowledge_map.schemas import ExtractionResult, SourceArticle, ArticleChunk
+from knowledge_map.config import settings
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -10,23 +10,16 @@ class Neo4jConfigError(ValueError):
 class Neo4jConnectionError(Exception):
     """Raised when there is an error connecting to or interacting with Neo4j."""
     pass
-
-IDENTIFIER_REGEX = re.compile(r"^[A-Za-z0-9_]+$")
-
 def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str | None = None):
     node_labels = {}
     for node in extraction.nodes:
         label = node.label
-        if not IDENTIFIER_REGEX.match(label):
-            raise ValueError(f"Invalid character in node label: {label}")
         node_labels[node.name] = label
         query = f"MERGE (n:{label} {{name: $name}}) SET n.source_url = $source_url, n += $properties"
         tx.run(query, name=node.name, source_url=source_url, properties=node.properties)
 
     for rel in extraction.relationships:
         rel_type = rel.relationship_type
-        if not IDENTIFIER_REGEX.match(rel_type):
-            raise ValueError(f"Invalid character in relationship type: {rel_type}")
         
         src_label = node_labels.get(rel.source, "")
         tgt_label = node_labels.get(rel.target, "")
@@ -157,8 +150,6 @@ class Neo4jAdapter:
                     node_labels = {}
                     for node in extraction.nodes:
                         label = node.label
-                        if not IDENTIFIER_REGEX.match(label):
-                            raise ValueError(f"Invalid character in node label: {label}")
                         node_labels[node.name] = label
                         
                         # Merge node
@@ -174,8 +165,6 @@ class Neo4jAdapter:
 
                     for rel in extraction.relationships:
                         rel_type = rel.relationship_type
-                        if not IDENTIFIER_REGEX.match(rel_type):
-                            raise ValueError(f"Invalid character in relationship type: {rel_type}")
                         
                         src_label = node_labels.get(rel.source, "")
                         tgt_label = node_labels.get(rel.target, "")
@@ -226,7 +215,7 @@ class Neo4jAdapter:
             raise Neo4jConnectionError(f"Failed to retrieve node labels from Neo4j: {e}")
 
     def get_nodes_by_label(self, label: str):
-        if not IDENTIFIER_REGEX.match(label):
+        if not re.match(r"^[A-Za-z0-9_]+$", label):
             raise ValueError(f"Invalid character in node label: {label}")
         driver = self.connect()
         try:

@@ -1,7 +1,7 @@
 import logging
 from typing import Protocol, List, Optional
-from schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult
-from chunking import chunk_article
+from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult
+from knowledge_map.utils.chunking import chunk_article
 
 logger = logging.getLogger(__name__)
 

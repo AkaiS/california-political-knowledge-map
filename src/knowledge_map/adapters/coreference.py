@@ -5,7 +5,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from dotenv import load_dotenv
-from schemas import CriticValidation
+from knowledge_map.schemas import CriticValidation
 
 def replace_tags_with_entities(annotated_text: str) -> str:
     # Pattern to match <ref entity="Canonical Name">pronoun</ref>

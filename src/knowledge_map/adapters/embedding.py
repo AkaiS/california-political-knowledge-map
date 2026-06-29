@@ -6,9 +6,9 @@ from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
-from config import settings
+from knowledge_map.config import settings
 from typing import List
-from schemas import ArticleChunk
+from knowledge_map.schemas import ArticleChunk
 
 def cosine_similarity(v1: list[float], v2: list[float]) -> float:
     if len(v1) != len(v2):

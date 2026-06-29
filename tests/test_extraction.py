@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from schemas import Node, Relationship, ExtractionResult
+from knowledge_map.schemas import Node, Relationship, ExtractionResult
 
 def test_node_validation_valid():
     node = Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"})
@@ -13,6 +13,15 @@ def test_node_validation_invalid_empty():
         Node(name="   ", label="PoliticalActor")
     with pytest.raises(ValidationError):
         Node(name="Gavin Newsom", label=" ")
+
+def test_node_validation_invalid_characters():
+    with pytest.raises(ValidationError) as exc_info:
+        Node(name="Gavin Newsom", label="Political-Actor")
+    assert "Invalid character in node label" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        Node(name="Gavin Newsom", label="Political Actor")
+    assert "Invalid character in node label" in str(exc_info.value)
 
 def test_relationship_validation_valid():
     rel = Relationship(
@@ -33,6 +42,15 @@ def test_relationship_validation_invalid_empty():
         Relationship(source="Gavin Newsom", target=" ", relationship_type="MEMBER_OF")
     with pytest.raises(ValidationError):
         Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type=" ")
+
+def test_relationship_validation_invalid_characters():
+    with pytest.raises(ValidationError) as exc_info:
+        Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER-OF")
+    assert "Invalid character in relationship type" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER OF")
+    assert "Invalid character in relationship type" in str(exc_info.value)
 
 def test_extraction_result_valid():
     node1 = Node(name="Gavin Newsom", label="PoliticalActor")
@@ -57,26 +75,26 @@ def test_extraction_result_invalid_relationship_target():
     assert "Relationship target 'Democratic Party' not found in defined nodes" in str(exc_info.value)
 
 from unittest.mock import patch
-from extraction import load_instructions, get_extraction_agent
+from knowledge_map.adapters.extraction import load_instructions, get_extraction_agent
 
 def test_load_instructions(tmp_path):
     prompt_file = tmp_path / "extraction_prompt.txt"
     prompt_content = "Please extract entities and relationships carefully."
     prompt_file.write_text(prompt_content)
     
-    with patch("extraction.PROMPT_PATH", str(prompt_file)):
+    with patch("knowledge_map.adapters.extraction.PROMPT_PATH", str(prompt_file)):
         instructions = load_instructions()
         assert instructions == prompt_content
 
 def test_get_extraction_agent():
-    with patch("extraction.load_instructions", return_value="Custom test prompt"):
+    with patch("knowledge_map.adapters.extraction.load_instructions", return_value="Custom test prompt"):
         agent = get_extraction_agent(defer_check=True)
         assert agent.output_type == ExtractionResult
         assert "Custom test prompt" in agent._instructions
 
 from pydantic_ai import ModelResponse, ToolCallPart, UnexpectedModelBehavior
 from pydantic_ai.models.function import FunctionModel
-from extraction import extract_entities
+from knowledge_map.adapters.extraction import extract_entities
 
 def test_extract_entities_success():
     def mock_model(messages, info):
@@ -130,7 +148,7 @@ def test_extract_entities_validation_failure():
             extract_entities("Some text", agent=agent)
 
 
-from extraction import PydanticAIEntityExtractionAdapter
+from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 
 def test_pydantic_ai_entity_extraction_adapter_success():
     def mock_model(messages, info):

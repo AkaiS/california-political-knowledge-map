@@ -1,12 +1,12 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, patch, MagicMock
-from scraper import fetch_last_5_politics_stories
+from knowledge_map.utils.scraper import fetch_last_5_politics_stories
 
 # We will test clean_and_resolve_url if exported, or verify it indirectly.
 # Let's import it if we place it in scraper.py, or define it in scraper.py.
 # To make it testable, we'll design scraper.py to expose it.
-from scraper import clean_and_resolve_url
+from knowledge_map.utils.scraper import clean_and_resolve_url
 
 def test_clean_and_resolve_url():
     base_url = "https://calmatters.org/politics/some-story/"
@@ -83,7 +83,7 @@ async def test_fetch_last_5_politics_stories_success():
     mock_crawler_instance.arun_many.return_value = [mock_article_result_1, mock_article_result_2]
 
     # Patch AsyncWebCrawler context manager
-    with patch("scraper.AsyncWebCrawler") as MockCrawlerClass:
+    with patch("knowledge_map.utils.scraper.AsyncWebCrawler") as MockCrawlerClass:
         # Mocking the async context manager protocol:
         # async with AsyncWebCrawler() as crawler:
         MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance

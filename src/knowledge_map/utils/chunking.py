@@ -1,9 +1,8 @@
 import os
 from typing import List, Optional
 from chonkie import RecursiveChunker, OverlapRefinery
-from schemas import ArticleChunk
-
-from config import settings
+from knowledge_map.schemas import ArticleChunk
+from knowledge_map.config import settings
 
 def chunk_article(
     text: str,

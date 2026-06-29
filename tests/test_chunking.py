@@ -1,6 +1,6 @@
 import pytest
-from chunking import chunk_article
-from schemas import ArticleChunk
+from knowledge_map.utils.chunking import chunk_article
+from knowledge_map.schemas import ArticleChunk
 
 def test_default_chunking_behavior():
     # A text of about 3000 characters (3x the default chunk size of 1000)
@@ -31,7 +31,7 @@ def test_default_chunking_behavior():
             assert c.context is None
 
 def test_config_overrides(monkeypatch):
-    from config import settings
+    from knowledge_map.config import settings
     monkeypatch.setattr(settings.chunking, "size", 150)
     monkeypatch.setattr(settings.chunking, "overlap_pct", 0.20)
     

@@ -1,17 +1,17 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from playground import main, Neo4jManager, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.cli.playground import main, Neo4jManager, Neo4jConfigError, Neo4jConnectionError
 
 @pytest.fixture(autouse=True)
 def mock_ensure_vector_index(request):
     if "no_mock_ensure_index" in request.keywords:
         yield
     else:
-        with patch("graph_db.Neo4jAdapter._ensure_vector_index", create=True) as m:
+        with patch("knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index", create=True) as m:
             yield m
 
 def test_cli_clear_success(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         
         try:
@@ -27,7 +27,7 @@ def test_cli_clear_success(capsys):
         assert "Neo4j database cleared successfully" in captured.out
 
 def test_cli_clear_config_error(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         MockAdapter.side_effect = Neo4jConfigError("NEO4J_URI environment variable is missing or empty.")
         
         with pytest.raises(SystemExit) as exc_info:
@@ -39,7 +39,7 @@ def test_cli_clear_config_error(capsys):
         assert "NEO4J_URI environment variable is missing" in (captured.err + captured.out)
 
 def test_cli_clear_connection_error(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         mock_instance.clear_database.side_effect = Neo4jConnectionError("Could not connect to Neo4j database")
         
@@ -51,13 +51,13 @@ def test_cli_clear_connection_error(capsys):
         assert "Connection Error:" in (captured.err + captured.out)
         assert "Could not connect to Neo4j database" in (captured.err + captured.out)
 
-from schemas import ExtractionResult, Node, Relationship, ArticleChunk
+from knowledge_map.schemas import ExtractionResult, Node, Relationship, ArticleChunk
 
 @pytest.fixture
 def mock_pipeline_deps():
-    with patch("coreference.PydanticAICoreferenceAdapter.resolve", side_effect=lambda x: x) as mock_resolve, \
-         patch("pipeline.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
-         patch("embedding.PydanticAIEmbeddingAdapter.process_chunks", side_effect=lambda chunks: [[0.1] * 768] * len(chunks)) as mock_process_chunks:
+    with patch("knowledge_map.adapters.coreference.PydanticAICoreferenceAdapter.resolve", side_effect=lambda x: x) as mock_resolve, \
+         patch("knowledge_map.core.pipeline.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", side_effect=lambda chunks: [[0.1] * 768] * len(chunks)) as mock_process_chunks:
         yield {
             "resolve": mock_resolve,
             "chunk": mock_chunk,
@@ -69,7 +69,7 @@ def test_cli_run_dry_run_with_text(capsys, mock_pipeline_deps):
         nodes=[Node(name="Gavin Newsom", label="PoliticalActor")],
         relationships=[]
     )
-    with patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
+    with patch("knowledge_map.adapters.extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run", "--text", "My custom text"])
         except SystemExit as e:
@@ -85,8 +85,8 @@ def test_cli_run_dry_run_fallback_text(capsys, mock_pipeline_deps):
         nodes=[Node(name="Fallback Actor", label="PoliticalActor")],
         relationships=[]
     )
-    with patch("playground.get_last_n_stories", return_value=[]), \
-         patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
+    with patch("knowledge_map.cli.playground.get_last_n_stories", return_value=[]), \
+         patch("knowledge_map.adapters.extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run"])
         except SystemExit as e:
@@ -105,8 +105,8 @@ def test_cli_run_dry_run_sqlite_text(capsys, mock_pipeline_deps):
         relationships=[]
     )
     mock_stories = [{"title": "My Title", "content": "Article body about politics"}]
-    with patch("playground.get_last_n_stories", return_value=mock_stories), \
-         patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
+    with patch("knowledge_map.cli.playground.get_last_n_stories", return_value=mock_stories), \
+         patch("knowledge_map.adapters.extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run"])
         except SystemExit as e:
@@ -133,9 +133,9 @@ def test_cli_run_integration_all_stories(capsys, mock_pipeline_deps):
             return mock_result2
         raise ValueError(f"Unexpected content: {text}")
         
-    with patch("playground.Neo4jAdapter") as MockAdapter, \
-         patch("playground.get_all_stories", return_value=mock_stories) as mock_get_all, \
-         patch("extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=side_effect) as mock_extract:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter, \
+         patch("knowledge_map.cli.playground.get_all_stories", return_value=mock_stories) as mock_get_all, \
+         patch("knowledge_map.adapters.extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=side_effect) as mock_extract:
          
         mock_manager_instance = MockAdapter.return_value
         
@@ -237,9 +237,9 @@ def test_cli_run_pipeline_integration(mock_pipeline_deps):
             return mock_extraction_chunk1
         return ExtractionResult(nodes=[], relationships=[])
         
-    with patch("playground.Neo4jAdapter") as MockAdapter, \
-         patch("playground.get_all_stories", return_value=[mock_story]), \
-         patch("extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=mock_extract) as mock_extract_entities:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter, \
+         patch("knowledge_map.cli.playground.get_all_stories", return_value=[mock_story]), \
+         patch("knowledge_map.adapters.extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=mock_extract) as mock_extract_entities:
          
         mock_manager_instance = MockAdapter.return_value
         
@@ -286,7 +286,7 @@ def test_cli_run_pipeline_integration(mock_pipeline_deps):
         mock_manager_instance.close.assert_called_once()
 
 def test_cli_analyze_success(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         mock_instance.get_distinct_labels.return_value = ["Organization", "PoliticalActor"]
         
@@ -305,7 +305,7 @@ def test_cli_analyze_success(capsys):
         assert "- PoliticalActor" in captured.out
 
 def test_cli_analyze_empty(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         mock_instance.get_distinct_labels.return_value = []
         
@@ -322,7 +322,7 @@ def test_cli_analyze_empty(capsys):
         assert "No node labels found in the database." in captured.out
 
 def test_cli_analyze_connection_error(capsys):
-    with patch("playground.Neo4jAdapter") as MockAdapter:
+    with patch("knowledge_map.cli.playground.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         mock_instance.get_distinct_labels.side_effect = Neo4jConnectionError("Could not connect to Neo4j database")
         
@@ -350,8 +350,8 @@ def test_cli_analyze_duplicates_found(capsys):
         return mock_embedding_result
     mock_embedder.embed_documents.side_effect = fake_embed_documents
 
-    with patch("playground.Neo4jAdapter", return_value=mock_manager), \
-         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+    with patch("knowledge_map.cli.playground.Neo4jAdapter", return_value=mock_manager), \
+         patch("knowledge_map.cli.playground.get_embedding_embedder", return_value=mock_embedder):
         try:
             main(["analyze"])
         except SystemExit as e:
@@ -380,8 +380,8 @@ def test_cli_analyze_no_duplicates(capsys):
         return mock_embedding_result
     mock_embedder.embed_documents.side_effect = fake_embed_documents
 
-    with patch("playground.Neo4jAdapter", return_value=mock_manager), \
-         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+    with patch("knowledge_map.cli.playground.Neo4jAdapter", return_value=mock_manager), \
+         patch("knowledge_map.cli.playground.get_embedding_embedder", return_value=mock_embedder):
         try:
             main(["analyze"])
         except SystemExit as e:
@@ -398,8 +398,8 @@ def test_cli_analyze_too_few_nodes(capsys):
     mock_manager.get_nodes_by_label.return_value = ["Gavin Newsom"]
     
     mock_embedder = MagicMock()
-    with patch("playground.Neo4jAdapter", return_value=mock_manager), \
-         patch("playground.get_embedding_embedder", return_value=mock_embedder):
+    with patch("knowledge_map.cli.playground.Neo4jAdapter", return_value=mock_manager), \
+         patch("knowledge_map.cli.playground.get_embedding_embedder", return_value=mock_embedder):
         try:
             main(["analyze"])
         except SystemExit as e:

@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from schemas import ExtractionResult
+from knowledge_map.schemas import ExtractionResult
 
 import os
 from pydantic_ai import Agent, RunContext
@@ -22,7 +22,11 @@ def _patched(self):
 
 OpenAIChatModel._MapModelResponseContext._into_message_param = _patched
 
-PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extraction_prompt.txt")
+PROMPT_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "resources",
+    "extraction_prompt.txt"
+)
 
 hooks = Hooks()
 
