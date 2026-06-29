@@ -3,9 +3,7 @@ from typing import List, Optional
 from chonkie import RecursiveChunker, OverlapRefinery
 from schemas import ArticleChunk
 
-# Safe defaults
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP_PCT = 0.10
+from config import settings
 
 def chunk_article(
     text: str,
@@ -13,18 +11,10 @@ def chunk_article(
     chunk_overlap_pct: Optional[float] = None
 ) -> List[ArticleChunk]:
     if chunk_size is None:
-        env_chunk_size = os.environ.get("CHUNK_SIZE")
-        if env_chunk_size is not None:
-            chunk_size = int(env_chunk_size)
-        else:
-            chunk_size = DEFAULT_CHUNK_SIZE
+        chunk_size = settings.chunking.size
             
     if chunk_overlap_pct is None:
-        env_overlap = os.environ.get("CHUNK_OVERLAP_PCT")
-        if env_overlap is not None:
-            chunk_overlap_pct = float(env_overlap)
-        else:
-            chunk_overlap_pct = DEFAULT_CHUNK_OVERLAP_PCT
+        chunk_overlap_pct = settings.chunking.overlap_pct
             
     if chunk_size <= 0:
         raise ValueError("chunk_size must be a positive integer")

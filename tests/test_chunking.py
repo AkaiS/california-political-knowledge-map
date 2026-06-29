@@ -30,9 +30,10 @@ def test_default_chunking_behavior():
         else:
             assert c.context is None
 
-def test_env_var_overrides(monkeypatch):
-    monkeypatch.setenv("CHUNK_SIZE", "150")
-    monkeypatch.setenv("CHUNK_OVERLAP_PCT", "0.20")
+def test_config_overrides(monkeypatch):
+    from config import settings
+    monkeypatch.setattr(settings.chunking, "size", 150)
+    monkeypatch.setattr(settings.chunking, "overlap_pct", 0.20)
     
     sentence = "Governor Gavin Newsom announced a new legislative proposal today regarding California water infrastructure projects. "
     text = sentence * 5

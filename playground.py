@@ -14,6 +14,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from coreference import resolve_coreferences, replace_tags_with_entities
 from chunking import chunk_article
 import asyncio
+from config import settings
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -116,7 +117,7 @@ class Neo4jManager:
         return self._driver
 
     def _ensure_vector_index(self):
-        dimension = int(os.environ.get("EMBEDDING_DIMENSION", "768"))
+        dimension = settings.embedding.dimension
         try:
             with self._driver.session() as session:
                 query = f"""
