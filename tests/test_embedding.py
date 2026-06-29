@@ -43,3 +43,46 @@ def test_get_embedding_embedder():
         embedder = get_embedding_embedder()
         assert embedder is not None
         assert embedder.model.model_name == "embeddinggemma"
+
+
+from unittest.mock import MagicMock
+from schemas import ArticleChunk
+from embedding import PydanticAIEmbeddingAdapter
+
+def test_pydantic_ai_embedding_adapter_success():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        return [[0.1] * 768] * len(documents)
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+    chunks = [
+        ArticleChunk(text="Chunk 1 text", start_index=0, end_index=12, index=0),
+        ArticleChunk(text="Chunk 2 text", start_index=13, end_index=25, index=1)
+    ]
+    
+    result = adapter.process_chunks(chunks)
+    assert len(result) == 2
+    assert result[0] == [0.1] * 768
+    assert result[1] == [0.1] * 768
+    mock_embedder.embed_documents.assert_called_once_with(["Chunk 1 text", "Chunk 2 text"])
+
+def test_pydantic_ai_embedding_adapter_empty():
+    mock_embedder = MagicMock()
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+    result = adapter.process_chunks([])
+    assert result == []
+    mock_embedder.embed_documents.assert_not_called()
+
+def test_pydantic_ai_embedding_adapter_dimension_mismatch():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        return [[0.1] * 128] * len(documents)  # default config is 768
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+    chunks = [ArticleChunk(text="Some text", start_index=0, end_index=9, index=0)]
+    
+    with pytest.raises(ValueError, match="Embedding dimension mismatch"):
+        adapter.process_chunks(chunks)
+

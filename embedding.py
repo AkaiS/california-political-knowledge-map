@@ -37,3 +37,32 @@ def get_embedding_embedder() -> Embedder:
     )
     
     return Embedder(model, settings=EmbeddingSettings(dimension=settings.embedding.dimension))
+
+
+import asyncio
+from typing import List
+from schemas import ArticleChunk
+
+class PydanticAIEmbeddingAdapter:
+    """Concrete adapter for embeddings that conforms to the EmbeddingAdapter protocol."""
+    
+    def __init__(self, embedder: Embedder | None = None) -> None:
+        self.embedder = embedder or get_embedding_embedder()
+
+    def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
+        if not chunks:
+            return []
+            
+        texts = [chunk.text for chunk in chunks]
+        embeddings = asyncio.run(self.embedder.embed_documents(texts))
+        
+        expected_dim = settings.embedding.dimension
+        for i, emb in enumerate(embeddings):
+            if len(emb) != expected_dim:
+                raise ValueError(
+                    f"Embedding dimension mismatch at chunk {i}: "
+                    f"expected {expected_dim}, got {len(emb)}"
+                )
+                
+        return embeddings
+

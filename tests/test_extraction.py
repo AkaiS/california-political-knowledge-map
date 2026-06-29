@@ -130,5 +130,33 @@ def test_extract_entities_validation_failure():
             extract_entities("Some text", agent=agent)
 
 
+from extraction import PydanticAIEntityExtractionAdapter
+
+def test_pydantic_ai_entity_extraction_adapter_success():
+    def mock_model(messages, info):
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "nodes": [
+                        {"name": "Gavin Newsom", "label": "PoliticalActor"}
+                    ],
+                    "relationships": []
+                },
+                tool_call_id="call_3"
+            )
+        ])
+        
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(mock_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        result = adapter.extract("Some text")
+        assert len(result.nodes) == 1
+        assert result.nodes[0].name == "Gavin Newsom"
+        assert len(result.relationships) == 0
+
+
+
 
 

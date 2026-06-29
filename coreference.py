@@ -128,3 +128,27 @@ def resolve_coreferences(
             # Reached max retries, fall back to the original text
             return text
 
+
+class PydanticAICoreferenceAdapter:
+    """Concrete adapter for coreference resolution that conforms to the CoreferenceAdapter protocol."""
+
+    def __init__(
+        self,
+        annotator_agent: Agent | None = None,
+        critic_agent: Agent | None = None,
+        max_retries: int = 3
+    ) -> None:
+        self.annotator_agent = annotator_agent
+        self.critic_agent = critic_agent
+        self.max_retries = max_retries
+
+    def resolve(self, content: str) -> str:
+        annotated_text = resolve_coreferences(
+            content,
+            annotator_agent=self.annotator_agent,
+            critic_agent=self.critic_agent,
+            max_retries=self.max_retries
+        )
+        return replace_tags_with_entities(annotated_text)
+
+

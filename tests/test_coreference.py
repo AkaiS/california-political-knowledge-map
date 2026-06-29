@@ -176,3 +176,35 @@ def test_resolve_coreferences_failure_fallback_original_text():
         assert annotator_calls == 4
 
 
+from coreference import PydanticAICoreferenceAdapter
+
+def test_pydantic_ai_coreference_adapter_success():
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    
+    def mock_annotator(messages, info):
+        return ModelResponse(parts=[TextPart(content="Gavin Newsom signed a bill. <ref entity=\"Gavin Newsom\">He</ref> was happy.")])
+        
+    def mock_critic(messages, info):
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "is_valid": True,
+                    "issues": []
+                },
+                tool_call_id="call_1"
+            )
+        ])
+        
+    with annotator_agent.override(model=FunctionModel(mock_annotator)), critic_agent.override(model=FunctionModel(mock_critic)):
+        adapter = PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent
+        )
+        result = adapter.resolve("Gavin Newsom signed a bill. He was happy.")
+        assert result == "Gavin Newsom signed a bill. Gavin Newsom was happy."
+
+
+

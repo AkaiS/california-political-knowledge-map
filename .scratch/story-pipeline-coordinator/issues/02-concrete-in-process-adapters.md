@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Parent
 
@@ -15,10 +15,10 @@ Verify these concrete adapters function correctly within our pipeline tests by u
 
 ## Acceptance criteria
 
-- [ ] `EmbeddingAdapter` is implemented in `embedding.py`, conforming to the protocol, and includes dimension check validation against `settings.embedding.dimension`.
-- [ ] `CoreferenceAdapter` is implemented in `coreference.py`, conforming to the protocol, and executes pronoun resolution and cleanup.
-- [ ] `EntityExtractionAdapter` is implemented in `extraction.py`, conforming to the protocol, and runs extraction over text chunks.
-- [ ] Pipeline tests are updated to integrate concrete adapters, mocking only the underlying OpenAI/Ollama LLM responses.
+- [x] `EmbeddingAdapter` is implemented in `embedding.py`, conforming to the protocol, and includes dimension check validation against `settings.embedding.dimension`.
+- [x] `CoreferenceAdapter` is implemented in `coreference.py`, conforming to the protocol, and executes pronoun resolution and cleanup.
+- [x] `EntityExtractionAdapter` is implemented in `extraction.py`, conforming to the protocol, and runs extraction over text chunks.
+- [x] Pipeline tests are updated to integrate concrete adapters, mocking only the underlying OpenAI/Ollama LLM responses.
 
 ## Blocked by
 

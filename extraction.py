@@ -83,4 +83,15 @@ def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
     return result.output
 
 
+class PydanticAIEntityExtractionAdapter:
+    """Concrete adapter for entity extraction that conforms to the EntityExtractionAdapter protocol."""
+
+    def __init__(self, agent: Agent | None = None) -> None:
+        self.agent = agent or get_extraction_agent()
+
+    def extract(self, chunk_text: str) -> ExtractionResult:
+        return extract_entities(chunk_text, agent=self.agent)
+
+
+
 
