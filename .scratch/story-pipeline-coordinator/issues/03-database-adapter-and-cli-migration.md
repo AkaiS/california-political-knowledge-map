@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Parent
 
@@ -12,11 +12,11 @@ Refactor `playground.py` (and any other entrypoints) to instantiate the concrete
 
 ## Acceptance criteria
 
-- [ ] `Neo4jAdapter` methods conform to `DatabaseAdapter` protocol signatures, accepting `SourceArticle` and `ArticleChunk` models.
-- [ ] Direct dependency imports on embedding clients or extraction details are removed from `playground.py`.
-- [ ] `playground.py` instantiates `StoryPipeline` with concrete adapter dependencies.
-- [ ] Refactored CLI commands (`run` and `run --dry-run`) execute successfully, verifying the entire end-to-end flow.
-- [ ] Integration tests verify the connection between `StoryPipeline` and the refactored database adapter.
+- [x] `Neo4jAdapter` methods conform to `DatabaseAdapter` protocol signatures, accepting `SourceArticle` and `ArticleChunk` models.
+- [x] Direct dependency imports on embedding clients or extraction details are removed from `playground.py`.
+- [x] `playground.py` instantiates `StoryPipeline` with concrete adapter dependencies.
+- [x] Refactored CLI commands (`run` and `run --dry-run`) execute successfully, verifying the entire end-to-end flow.
+- [x] Integration tests verify the connection between `StoryPipeline` and the refactored database adapter.
 
 ## Blocked by
 

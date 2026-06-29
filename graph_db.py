@@ -1,6 +1,6 @@
 import re
 from neo4j import GraphDatabase
-from schemas import ExtractionResult
+from schemas import ExtractionResult, SourceArticle, ArticleChunk
 from config import settings
 
 class Neo4jConfigError(ValueError):
@@ -100,7 +100,7 @@ class Neo4jAdapter:
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to create or verify vector index: {e}")
 
-    def ingest_article(self, url: str, title: str | None = None, author: str | None = None, published_date: str | None = None) -> None:
+    def ingest_article(self, article: SourceArticle) -> None:
         driver = self.connect()
         try:
             with driver.session() as session:
@@ -109,13 +109,25 @@ class Neo4jAdapter:
                     MERGE (a:Article {url: $url})
                     SET a.title = $title, a.author = $author, a.published_date = $published_date
                     """
-                    tx.run(query, url=url, title=title, author=author, published_date=published_date)
+                    tx.run(
+                        query,
+                        url=article.url,
+                        title=article.title,
+                        author=article.author,
+                        published_date=article.published_date
+                    )
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest Article to Neo4j: {e}")
 
-    def ingest_chunk(self, url: str, chunk_id: str, text: str, chunk_index: int, embedding: list[float]) -> None:
+    def ingest_chunk(
+        self,
+        article: SourceArticle,
+        chunk: ArticleChunk,
+        embedding: list[float]
+    ) -> None:
         driver = self.connect()
+        chunk_id = f"{article.url}#chunk_{chunk.index}"
         try:
             with driver.session() as session:
                 def _tx(tx):
@@ -125,7 +137,14 @@ class Neo4jAdapter:
                     SET c.text = $text, c.chunk_index = $chunk_index, c.embedding = $embedding
                     MERGE (c)-[:BELONGS_TO]->(a)
                     """
-                    tx.run(query, url=url, chunk_id=chunk_id, text=text, chunk_index=chunk_index, embedding=embedding)
+                    tx.run(
+                        query,
+                        url=article.url,
+                        chunk_id=chunk_id,
+                        text=chunk.text,
+                        chunk_index=chunk.index,
+                        embedding=embedding
+                    )
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest Chunk to Neo4j: {e}")

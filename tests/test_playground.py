@@ -55,23 +55,13 @@ from schemas import ExtractionResult, Node, Relationship, ArticleChunk
 
 @pytest.fixture
 def mock_pipeline_deps():
-    mock_embedder = MagicMock()
-    async def fake_embed(texts, settings=None):
-        res = MagicMock()
-        res.embeddings = [[0.1] * 768] * len(texts)
-        return res
-    mock_embedder.embed_documents.side_effect = fake_embed
-
-    with patch("playground.resolve_coreferences", side_effect=lambda x: x) as mock_resolve, \
-         patch("playground.replace_tags_with_entities", side_effect=lambda x: x) as mock_replace, \
-         patch("playground.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
-         patch("playground.get_embedding_embedder", return_value=mock_embedder) as mock_get_embedder:
+    with patch("coreference.PydanticAICoreferenceAdapter.resolve", side_effect=lambda x: x) as mock_resolve, \
+         patch("pipeline.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
+         patch("embedding.PydanticAIEmbeddingAdapter.process_chunks", side_effect=lambda chunks: [[0.1] * 768] * len(chunks)) as mock_process_chunks:
         yield {
             "resolve": mock_resolve,
-            "replace": mock_replace,
             "chunk": mock_chunk,
-            "get_embedder": mock_get_embedder,
-            "embedder": mock_embedder
+            "process_chunks": mock_process_chunks
         }
 
 def test_cli_run_dry_run_with_text(capsys, mock_pipeline_deps):
@@ -79,7 +69,7 @@ def test_cli_run_dry_run_with_text(capsys, mock_pipeline_deps):
         nodes=[Node(name="Gavin Newsom", label="PoliticalActor")],
         relationships=[]
     )
-    with patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+    with patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run", "--text", "My custom text"])
         except SystemExit as e:
@@ -96,7 +86,7 @@ def test_cli_run_dry_run_fallback_text(capsys, mock_pipeline_deps):
         relationships=[]
     )
     with patch("playground.get_last_n_stories", return_value=[]), \
-         patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+         patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run"])
         except SystemExit as e:
@@ -116,7 +106,7 @@ def test_cli_run_dry_run_sqlite_text(capsys, mock_pipeline_deps):
     )
     mock_stories = [{"title": "My Title", "content": "Article body about politics"}]
     with patch("playground.get_last_n_stories", return_value=mock_stories), \
-         patch("playground.extract_entities", return_value=mock_result) as mock_extract:
+         patch("extraction.PydanticAIEntityExtractionAdapter.extract", return_value=mock_result) as mock_extract:
         try:
             main(["run", "--dry-run"])
         except SystemExit as e:
@@ -145,7 +135,7 @@ def test_cli_run_integration_all_stories(capsys, mock_pipeline_deps):
         
     with patch("playground.Neo4jAdapter") as MockAdapter, \
          patch("playground.get_all_stories", return_value=mock_stories) as mock_get_all, \
-         patch("playground.extract_entities", side_effect=side_effect) as mock_extract:
+         patch("extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=side_effect) as mock_extract:
          
         mock_manager_instance = MockAdapter.return_value
         
@@ -165,43 +155,40 @@ def test_cli_run_integration_all_stories(capsys, mock_pipeline_deps):
         mock_extract.assert_any_call("Content 2")
         
         assert mock_manager_instance.ingest_article.call_count == 2
-        mock_manager_instance.ingest_article.assert_any_call(
-            url="http://example.com/1",
-            title="Story 1",
-            author=None,
-            published_date=None
-        )
-        mock_manager_instance.ingest_article.assert_any_call(
-            url="http://example.com/2",
-            title="Story 2",
-            author=None,
-            published_date=None
-        )
+        
+        # Verify first ingest_article call
+        called_art1 = mock_manager_instance.ingest_article.call_args_list[0][0][0]
+        assert called_art1.url == "http://example.com/1"
+        assert called_art1.title == "Story 1"
+        
+        # Verify second ingest_article call
+        called_art2 = mock_manager_instance.ingest_article.call_args_list[1][0][0]
+        assert called_art2.url == "http://example.com/2"
+        assert called_art2.title == "Story 2"
         
         assert mock_manager_instance.ingest_chunk.call_count == 2
-        mock_manager_instance.ingest_chunk.assert_any_call(
-            url="http://example.com/1",
-            chunk_id="http://example.com/1#chunk_0",
-            text="Content 1",
-            chunk_index=0,
-            embedding=[0.1] * 768
-        )
-        mock_manager_instance.ingest_chunk.assert_any_call(
-            url="http://example.com/2",
-            chunk_id="http://example.com/2#chunk_0",
-            text="Content 2",
-            chunk_index=0,
-            embedding=[0.1] * 768
-        )
+        # Verify first ingest_chunk call
+        called_art1_chunk, called_chunk1, called_emb1 = mock_manager_instance.ingest_chunk.call_args_list[0][0]
+        assert called_art1_chunk.url == "http://example.com/1"
+        assert called_chunk1.text == "Content 1"
+        assert called_chunk1.index == 0
+        assert called_emb1 == [0.1] * 768
+        
+        # Verify second ingest_chunk call
+        called_art2_chunk, called_chunk2, called_emb2 = mock_manager_instance.ingest_chunk.call_args_list[1][0]
+        assert called_art2_chunk.url == "http://example.com/2"
+        assert called_chunk2.text == "Content 2"
+        assert called_chunk2.index == 0
+        assert called_emb2 == [0.1] * 768
         
         assert mock_manager_instance.ingest_chunk_extraction.call_count == 2
         mock_manager_instance.ingest_chunk_extraction.assert_any_call(
-            chunk_id="http://example.com/1#chunk_0",
-            extraction=mock_result1
+            "http://example.com/1#chunk_0",
+            mock_result1
         )
         mock_manager_instance.ingest_chunk_extraction.assert_any_call(
-            chunk_id="http://example.com/2#chunk_0",
-            extraction=mock_result2
+            "http://example.com/2#chunk_0",
+            mock_result2
         )
         
         mock_manager_instance.close.assert_called_once()
@@ -220,9 +207,7 @@ def test_cli_run_pipeline_integration(mock_pipeline_deps):
     }
     
     mock_pipeline_deps["resolve"].side_effect = None
-    mock_pipeline_deps["resolve"].return_value = "Gavin Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy."
-    mock_pipeline_deps["replace"].side_effect = None
-    mock_pipeline_deps["replace"].return_value = "Gavin Newsom signed AB-5. Gavin Newsom was happy."
+    mock_pipeline_deps["resolve"].return_value = "Gavin Newsom signed AB-5. Gavin Newsom was happy."
     
     mock_chunks = [
         ArticleChunk(text="Gavin Newsom signed AB-5.", start_index=0, end_index=25, index=0),
@@ -254,39 +239,35 @@ def test_cli_run_pipeline_integration(mock_pipeline_deps):
         
     with patch("playground.Neo4jAdapter") as MockAdapter, \
          patch("playground.get_all_stories", return_value=[mock_story]), \
-         patch("playground.extract_entities", side_effect=mock_extract) as mock_extract_entities:
+         patch("extraction.PydanticAIEntityExtractionAdapter.extract", side_effect=mock_extract) as mock_extract_entities:
          
         mock_manager_instance = MockAdapter.return_value
         
         main(["run"])
         
         mock_pipeline_deps["resolve"].assert_called_once_with("Newsom signed AB-5. He was happy.")
-        mock_pipeline_deps["replace"].assert_called_once_with("Gavin Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy.")
         mock_pipeline_deps["chunk"].assert_called_once_with("Gavin Newsom signed AB-5. Gavin Newsom was happy.")
-        mock_pipeline_deps["get_embedder"].assert_called_once()
         
-        mock_manager_instance.ingest_article.assert_called_once_with(
-            url="http://example.com/pipeline",
-            title="Pipeline News",
-            author="Alice",
-            published_date="2026-06-28"
-        )
+        assert mock_manager_instance.ingest_article.call_count == 1
+        called_art = mock_manager_instance.ingest_article.call_args[0][0]
+        assert called_art.url == "http://example.com/pipeline"
+        assert called_art.title == "Pipeline News"
+        assert called_art.author == "Alice"
+        assert called_art.published_date == "2026-06-28"
         
         assert mock_manager_instance.ingest_chunk.call_count == 2
-        mock_manager_instance.ingest_chunk.assert_any_call(
-            url="http://example.com/pipeline",
-            chunk_id="http://example.com/pipeline#chunk_0",
-            text="Gavin Newsom signed AB-5.",
-            chunk_index=0,
-            embedding=[0.1] * 768
-        )
-        mock_manager_instance.ingest_chunk.assert_any_call(
-            url="http://example.com/pipeline",
-            chunk_id="http://example.com/pipeline#chunk_1",
-            text="Gavin Newsom was happy.",
-            chunk_index=1,
-            embedding=[0.1] * 768
-        )
+        
+        called_art1_chunk, called_chunk1, called_emb1 = mock_manager_instance.ingest_chunk.call_args_list[0][0]
+        assert called_art1_chunk.url == "http://example.com/pipeline"
+        assert called_chunk1.text == "Gavin Newsom signed AB-5."
+        assert called_chunk1.index == 0
+        assert called_emb1 == [0.1] * 768
+        
+        called_art2_chunk, called_chunk2, called_emb2 = mock_manager_instance.ingest_chunk.call_args_list[1][0]
+        assert called_art2_chunk.url == "http://example.com/pipeline"
+        assert called_chunk2.text == "Gavin Newsom was happy."
+        assert called_chunk2.index == 1
+        assert called_emb2 == [0.1] * 768
         
         assert mock_extract_entities.call_count == 2
         mock_extract_entities.assert_any_call("Gavin Newsom signed AB-5.")
@@ -294,12 +275,12 @@ def test_cli_run_pipeline_integration(mock_pipeline_deps):
         
         assert mock_manager_instance.ingest_chunk_extraction.call_count == 2
         mock_manager_instance.ingest_chunk_extraction.assert_any_call(
-            chunk_id="http://example.com/pipeline#chunk_0",
-            extraction=mock_extraction_chunk0
+            "http://example.com/pipeline#chunk_0",
+            mock_extraction_chunk0
         )
         mock_manager_instance.ingest_chunk_extraction.assert_any_call(
-            chunk_id="http://example.com/pipeline#chunk_1",
-            extraction=mock_extraction_chunk1
+            "http://example.com/pipeline#chunk_1",
+            mock_extraction_chunk1
         )
         
         mock_manager_instance.close.assert_called_once()

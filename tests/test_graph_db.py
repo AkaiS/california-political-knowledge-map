@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from graph_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
-from schemas import ExtractionResult, Node, Relationship
+from schemas import ExtractionResult, Node, Relationship, SourceArticle, ArticleChunk
 
 @pytest.fixture(autouse=True)
 def mock_ensure_vector_index(request):
@@ -360,12 +360,14 @@ def test_ingest_article():
         driver=mock_driver
     )
     
-    manager.ingest_article(
+    article = SourceArticle(
         url="http://example.com/1",
         title="Breaking News",
         author="John Doe",
-        published_date="2026-06-27"
+        published_date="2026-06-27",
+        content="Article content"
     )
+    manager.ingest_article(article)
     
     mock_tx.run.assert_called_once()
     query = mock_tx.run.call_args[0][0]
@@ -395,11 +397,22 @@ def test_ingest_chunk():
         driver=mock_driver
     )
     
-    manager.ingest_chunk(
+    article = SourceArticle(
         url="http://example.com/1",
-        chunk_id="http://example.com/1#chunk_0",
+        title="Breaking News",
+        content="Article content"
+    )
+    
+    chunk = ArticleChunk(
         text="Gavin Newsom did something.",
-        chunk_index=0,
+        start_index=0,
+        end_index=27,
+        index=0
+    )
+    
+    manager.ingest_chunk(
+        article=article,
+        chunk=chunk,
         embedding=[0.1, 0.2, 0.3]
     )
     

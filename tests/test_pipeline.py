@@ -10,7 +10,8 @@ from pipeline import (
 from embedding import PydanticAIEmbeddingAdapter
 from coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
 from extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+from graph_db import Neo4jAdapter
 from pydantic_ai import ModelResponse, ToolCallPart, TextPart
 from pydantic_ai.models.function import FunctionModel
 
@@ -286,5 +287,48 @@ def test_pipeline_with_concrete_adapters():
     assert db.articles[0].url == "http://test.com/concrete"
     assert len(db.chunks) == len(result.chunks)
     assert len(db.extractions) == len(result.chunks)
+
+
+def test_pipeline_with_neo4j_adapter():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func, *args, **kwargs: func(mock_tx, *args, **kwargs)
+    
+    db_adapter = Neo4jAdapter(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    
+    pipeline = StoryPipeline(
+        db_adapter=db_adapter,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+    )
+    
+    article = SourceArticle(
+        url="http://example.com/integration",
+        title="Integration Title",
+        content="This is integration test content."
+    )
+    
+    with patch("graph_db.Neo4jAdapter._ensure_vector_index"):
+        result = pipeline.run(article, dry_run=False)
+    
+    assert isinstance(result, PipelineResult)
+    assert mock_tx.run.call_count >= 2
+    queries = [call[0][0] for call in mock_tx.run.call_args_list]
+    assert any("MERGE (a:Article {url: $url})" in q for q in queries)
+    assert any("MERGE (c:Chunk {id: $chunk_id})" in q for q in queries)
+
 
 
