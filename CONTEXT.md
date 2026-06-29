@@ -5,7 +5,7 @@ Domain model for mapping political influence networks in California from scraped
 ## Language
 
 **Source Article**:
-A news story or report scraped from local news outlets containing political coverage and influence data.
+A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.
 _Avoid_: News piece, document, post, feed
 
 **Article Chunk**:
@@ -26,7 +26,7 @@ The interactive command-line interface implemented in `playground.py` used to ex
 _Avoid_: Test environment, testing script, sandbox, trial run
 
 **Graph Database Adapter**:
-The module implemented in `graph_db.py` that abstracts the Neo4j database, managing connections, index validation, and ingestion of Source Articles, Article Chunks, and Extracted Entities.
+The database adapter protocol and its concrete implementation (Neo4jAdapter) that abstracts the Neo4j database, managing connections, index validation, and ingestion of Source Articles, Article Chunks, and Extracted Entities.
 _Avoid_: Database manager, Neo4j client, direct driver wrapper
 
 
@@ -46,6 +46,27 @@ _Avoid_: Tagged text, parsed story
 **Coreference Critic**:
 An LLM agent that reviews and validates the annotated coreferences in an Annotated Article to ensure semantic accuracy and prevent incorrect reference mapping before chunking.
 _Avoid_: Critic agent, checker, validator
+
+**Story Pipeline**:
+A synchronous pipeline coordinator that orchestrates the coreference resolution, chunking, embedding generation, entity extraction, and persistence steps for a Source Article.
+_Avoid_: Ingestion runner, story processor
+
+**Pipeline Result**:
+A structured domain model returning the outcome of a Story Pipeline execution, containing the processed chunks and extracted entities (useful for dry runs and validation).
+_Avoid_: Processing report, output dict
+
+**Embedding Adapter**:
+The adapter protocol and its concrete implementation that handles vector embedding calculations and dimension checks for Article Chunks.
+_Avoid_: Embedder helper, vector utility
+
+**Coreference Adapter**:
+The adapter protocol and its concrete implementation that handles pronoun resolution and entity tagging on a Source Article.
+_Avoid_: Resolver wrapper, coref helper
+
+**Entity Extraction Adapter**:
+The adapter protocol and its concrete implementation that extracts entities and relationships from Article Chunks.
+_Avoid_: Extractor model, agent helper
+
 
 
 
