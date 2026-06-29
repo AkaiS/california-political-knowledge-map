@@ -291,6 +291,13 @@ def process_story(
     if chunk_texts:
         res = asyncio.run(embedder.embed_documents(chunk_texts))
         embeddings = res.embeddings
+        expected_dim = settings.embedding.dimension
+        if embeddings and len(embeddings[0]) != expected_dim:
+            raise ValueError(
+                f"Embedding dimension mismatch. The embedding model returned vectors of size "
+                f"{len(embeddings[0])}, but Neo4j index is configured for size {expected_dim}. "
+                f"Please update EMBEDDING_DIMENSION in your .env file to match the model's native output."
+            )
     else:
         embeddings = []
 
