@@ -11,6 +11,7 @@ from db import get_last_n_stories, get_all_stories
 from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.embeddings import EmbeddingSettings
 from coreference import resolve_coreferences, replace_tags_with_entities
 from chunking import chunk_article
 import asyncio
@@ -49,7 +50,7 @@ def get_embedding_embedder() -> Embedder:
         provider=provider,
     )
     
-    return Embedder(model)
+    return Embedder(model, settings=EmbeddingSettings(dimension=settings.embedding.dimension))
 
 IDENTIFIER_REGEX = re.compile(r"^[A-Za-z0-9_]+$")
 
