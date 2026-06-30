@@ -13,6 +13,24 @@ def replace_tags_with_entities(annotated_text: str) -> str:
     pattern = r"<ref\s+entity=['\"](.*?)['\"]>(.*?)</ref>"
     return re.sub(pattern, r"\1", annotated_text, flags=re.DOTALL | re.IGNORECASE)
 
+def strip_ref_tags(annotated_text: str) -> str:
+    # Pattern to match <ref entity="Canonical Name">pronoun</ref>
+    # Supports single/double quotes, spaces around '=' and attributes, case-insensitive
+    pattern = r"<ref\s+entity\s*=\s*['\"](.*?)['\"]\s*>(.*?)</ref>"
+    return re.sub(pattern, r"\2", annotated_text, flags=re.DOTALL | re.IGNORECASE)
+
+def normalize_whitespace(text: str) -> str:
+    # Collapses multiple consecutive whitespace/newline characters into single spaces
+    # and trims leading/trailing whitespace
+    return re.sub(r"\s+", " ", text).strip()
+
+def check_structural_identity(original_text: str, annotated_text: str) -> bool:
+    normalized_original = normalize_whitespace(original_text)
+    stripped_annotated = strip_ref_tags(annotated_text)
+    normalized_annotated = normalize_whitespace(stripped_annotated)
+    return normalized_original == normalized_annotated
+
+
 def _get_model():
     load_dotenv()
     ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -106,7 +124,23 @@ def resolve_coreferences(
     
     retry_count = 0
     while True:
-        # Critic validation pass
+        # Check structural identity immediately after annotator runs
+        if not check_structural_identity(text, annotated_text):
+            if retry_count < max_retries:
+                retry_count += 1
+                feedback = (
+                    "Structural mismatch detected: the annotated text structure must exactly match "
+                    "the original text structure (excluding <ref> tags). Do not add, remove, or modify "
+                    "any other words or punctuation. Please output the complete updated annotated text."
+                )
+                run_result = annotator_agent.run_sync(feedback, message_history=run_result.all_messages())
+                annotated_text = clean_annotated_text(run_result.output)
+                continue
+            else:
+                # Reached max retries, fall back to the original text
+                return text
+
+        # Critic validation pass (bypassed if structural check fails)
         critic_input = f"Please review the annotated text against the original text.\n\nOriginal text:\n{text}\n\nAnnotated text:\n{annotated_text}"
         critic_result = critic_agent.run_sync(critic_input)
         validation = critic_result.output
