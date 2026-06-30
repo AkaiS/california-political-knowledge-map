@@ -107,11 +107,55 @@ def clean_annotated_text(text: str) -> str:
             text = "\n".join(lines).strip()
     return text
 
+class CoreferenceResolutionError(Exception):
+    def __init__(
+        self,
+        original_text: str,
+        annotated_text: str,
+        validation_issues: List[str],
+        failure_type: str,
+        retry_count: int,
+        metadata: dict
+    ) -> None:
+        self.original_text = original_text
+        self.annotated_text = annotated_text
+        self.validation_issues = validation_issues
+        self.failure_type = failure_type
+        self.retry_count = retry_count
+        self.metadata = metadata
+        super().__init__(f"Coreference resolution failed: {failure_type}")
+
+def get_agent_metadata(agent: Agent | None) -> dict:
+    if agent is None:
+        return {}
+    
+    model_name = "unknown"
+    if agent.model:
+        model_name = getattr(agent.model, "model_name", str(agent.model))
+        
+    system_prompt = ""
+    if agent.instructions:
+        if isinstance(agent.instructions, str):
+            system_prompt = agent.instructions
+        elif callable(agent.instructions):
+            try:
+                system_prompt = agent.instructions()
+            except Exception:
+                system_prompt = str(agent.instructions)
+                
+    return {
+        "model": model_name,
+        "temperature": 0.0,
+        "prompt_version": "1.0",
+        "system_prompt": system_prompt
+    }
+
 def resolve_coreferences(
     text: str,
     annotator_agent: Agent | None = None,
     critic_agent: Agent | None = None,
-    max_retries: int = 3
+    max_retries: int = 3,
+    raise_on_failure: bool = False
 ) -> str:
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
@@ -137,7 +181,16 @@ def resolve_coreferences(
                 annotated_text = clean_annotated_text(run_result.output)
                 continue
             else:
-                # Reached max retries, fall back to the original text
+                # Reached max retries, fall back or raise
+                if raise_on_failure:
+                    raise CoreferenceResolutionError(
+                        original_text=text,
+                        annotated_text=annotated_text,
+                        validation_issues=["Structural mismatch detected: annotated text structure must exactly match original text structure (excluding <ref> tags)."],
+                        failure_type="structural_mismatch",
+                        retry_count=retry_count,
+                        metadata=get_agent_metadata(annotator_agent)
+                    )
                 return text
 
         # Critic validation pass (bypassed if structural check fails)
@@ -159,7 +212,16 @@ def resolve_coreferences(
             run_result = annotator_agent.run_sync(feedback, message_history=run_result.all_messages())
             annotated_text = clean_annotated_text(run_result.output)
         else:
-            # Reached max retries, fall back to the original text
+            # Reached max retries, fall back or raise
+            if raise_on_failure:
+                raise CoreferenceResolutionError(
+                    original_text=text,
+                    annotated_text=annotated_text,
+                    validation_issues=validation.issues,
+                    failure_type="critic_rejection",
+                    retry_count=retry_count,
+                    metadata=get_agent_metadata(annotator_agent)
+                )
             return text
 
 
@@ -181,8 +243,10 @@ class PydanticAICoreferenceAdapter:
             content,
             annotator_agent=self.annotator_agent,
             critic_agent=self.critic_agent,
-            max_retries=self.max_retries
+            max_retries=self.max_retries,
+            raise_on_failure=True
         )
         return replace_tags_with_entities(annotated_text)
+
 
 

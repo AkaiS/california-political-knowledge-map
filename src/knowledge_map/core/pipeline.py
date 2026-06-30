@@ -36,6 +36,22 @@ class EntityExtractionAdapter(Protocol):
     def extract(self, chunk_text: str) -> ExtractionResult:
         ...
 
+class DeadLetterQueueAdapter(Protocol):
+    def log_failure(
+        self,
+        url: str,
+        title: str,
+        original_text: str,
+        annotated_text: str,
+        validation_issues: List[str],
+        failure_type: str,
+        retry_count: int,
+        metadata: dict
+    ) -> None:
+        ...
+
+from knowledge_map.adapters.coreference import CoreferenceResolutionError
+
 class StoryPipeline:
     def __init__(
         self,
@@ -43,18 +59,34 @@ class StoryPipeline:
         embedding_adapter: EmbeddingAdapter,
         coreference_adapter: CoreferenceAdapter,
         extraction_adapter: EntityExtractionAdapter,
+        dlq_adapter: Optional[DeadLetterQueueAdapter] = None,
     ) -> None:
         self.db_adapter = db_adapter
         self.embedding_adapter = embedding_adapter
         self.coreference_adapter = coreference_adapter
         self.extraction_adapter = extraction_adapter
+        self.dlq_adapter = dlq_adapter
 
     def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
         
         # 1. Resolve coreferences
         logger.info("Resolving coreferences...")
-        resolved_text = self.coreference_adapter.resolve(article.content)
+        try:
+            resolved_text = self.coreference_adapter.resolve(article.content)
+        except CoreferenceResolutionError as e:
+            if self.dlq_adapter:
+                self.dlq_adapter.log_failure(
+                    url=article.url,
+                    title=article.title or "",
+                    original_text=e.original_text,
+                    annotated_text=e.annotated_text,
+                    validation_issues=e.validation_issues,
+                    failure_type=e.failure_type,
+                    retry_count=e.retry_count,
+                    metadata=e.metadata
+                )
+            raise e
 
         # 2. Chunking
         logger.info("Chunking text...")

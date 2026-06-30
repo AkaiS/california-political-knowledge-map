@@ -331,4 +331,83 @@ def test_pipeline_with_neo4j_adapter():
     assert any("MERGE (c:Chunk {id: $chunk_id})" in q for q in queries)
 
 
+from knowledge_map.adapters.coreference import CoreferenceResolutionError
+
+class MockDeadLetterQueueAdapter:
+    def __init__(self):
+        self.failures = []
+
+    def log_failure(
+        self,
+        url: str,
+        title: str,
+        original_text: str,
+        annotated_text: str,
+        validation_issues: list[str],
+        failure_type: str,
+        retry_count: int,
+        metadata: dict
+    ) -> None:
+        self.failures.append({
+            "url": url,
+            "title": title,
+            "original_text": original_text,
+            "annotated_text": annotated_text,
+            "validation_issues": validation_issues,
+            "failure_type": failure_type,
+            "retry_count": retry_count,
+            "metadata": metadata
+        })
+
+def test_pipeline_coreference_failure_logs_to_dlq():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    dlq = MockDeadLetterQueueAdapter()
+
+    # Stub the resolve method to raise CoreferenceResolutionError
+    def raise_coref_error(content):
+        raise CoreferenceResolutionError(
+            original_text=content,
+            annotated_text="mismatched text",
+            validation_issues=["Test structural issue"],
+            failure_type="structural_mismatch",
+            retry_count=3,
+            metadata={"model": "gemma"}
+        )
+    coref.resolve = raise_coref_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        dlq_adapter=dlq
+    )
+
+    article = SourceArticle(
+        url="http://test.com/failure-dlq",
+        title="Failed Article",
+        content="Gavin Newsom went home."
+    )
+
+    # Asserts that pipeline propagates the CoreferenceResolutionError
+    with pytest.raises(CoreferenceResolutionError):
+        pipeline.run(article)
+
+    # Asserts that the DLQ logged the failure correctly
+    assert len(dlq.failures) == 1
+    failure = dlq.failures[0]
+    assert failure["url"] == "http://test.com/failure-dlq"
+    assert failure["title"] == "Failed Article"
+    assert failure["original_text"] == "Gavin Newsom went home."
+    assert failure["annotated_text"] == "mismatched text"
+    assert failure["validation_issues"] == ["Test structural issue"]
+    assert failure["failure_type"] == "structural_mismatch"
+    assert failure["retry_count"] == 3
+    assert failure["metadata"] == {"model": "gemma"}
+
+
+
 

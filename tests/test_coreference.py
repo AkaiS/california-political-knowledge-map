@@ -346,11 +346,80 @@ def test_check_structural_identity():
         "He signed a bill.",
         '<ref entity="Gavin Newsom">He</ref> signed a new bill.'
     ) is False
-    # Structural mismatch (missing word)
     assert check_structural_identity(
         "He signed a bill.",
         '<ref entity="Gavin Newsom">He</ref> signed.'
     ) is False
+
+
+from knowledge_map.adapters.coreference import CoreferenceResolutionError
+
+def test_resolve_coreferences_raises_on_critic_failure():
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    
+    annotator_calls = 0
+    def mock_annotator(messages, info):
+        nonlocal annotator_calls
+        annotator_calls += 1
+        return ModelResponse(parts=[TextPart(content="Gavin Newsom signed a bill. <ref entity=\"Gavin Newsom\">He</ref> was happy.")])
+        
+    def mock_critic(messages, info):
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "is_valid": False,
+                    "issues": ["Invalid entity mapping."]
+                },
+                tool_call_id="call_1"
+            )
+        ])
+        
+    with annotator_agent.override(model=FunctionModel(mock_annotator)), critic_agent.override(model=FunctionModel(mock_critic)):
+        with pytest.raises(CoreferenceResolutionError) as exc_info:
+            resolve_coreferences(
+                "Gavin Newsom signed a bill. He was happy.",
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
+                max_retries=2,
+                raise_on_failure=True
+            )
+        
+        err = exc_info.value
+        assert err.failure_type == "critic_rejection"
+        assert err.retry_count == 2
+        assert err.validation_issues == ["Invalid entity mapping."]
+        assert err.original_text == "Gavin Newsom signed a bill. He was happy."
+        assert err.annotated_text == "Gavin Newsom signed a bill. <ref entity=\"Gavin Newsom\">He</ref> was happy."
+        assert "model" in err.metadata
+        assert "system_prompt" in err.metadata
+
+def test_resolve_coreferences_raises_on_structural_failure():
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    
+    def mock_annotator(messages, info):
+        return ModelResponse(parts=[TextPart(content="Gavin Newsom signed a bill. He happy.")])
+        
+    with annotator_agent.override(model=FunctionModel(mock_annotator)):
+        with pytest.raises(CoreferenceResolutionError) as exc_info:
+            resolve_coreferences(
+                "Gavin Newsom signed a bill. He was happy.",
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
+                max_retries=1,
+                raise_on_failure=True
+            )
+        
+        err = exc_info.value
+        assert err.failure_type == "structural_mismatch"
+        assert err.retry_count == 1
+        assert any("structural" in issue.lower() or "structure" in issue.lower() for issue in err.validation_issues)
+        assert err.original_text == "Gavin Newsom signed a bill. He was happy."
+        assert err.annotated_text == "Gavin Newsom signed a bill. He happy."
+
 
 
 

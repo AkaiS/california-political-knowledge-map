@@ -124,15 +124,19 @@ def main(args=None):
             else:
                 db_adapter = Neo4jAdapter(uri=uri, username=username, password=password)
                 
+            from knowledge_map.adapters.dlq import LocalFileDLQAdapter
+            
             embedding_adapter = PydanticAIEmbeddingAdapter()
             coreference_adapter = PydanticAICoreferenceAdapter()
             extraction_adapter = PydanticAIEntityExtractionAdapter()
+            dlq_adapter = LocalFileDLQAdapter()
             
             pipeline = StoryPipeline(
                 db_adapter=db_adapter,
                 embedding_adapter=embedding_adapter,
                 coreference_adapter=coreference_adapter,
-                extraction_adapter=extraction_adapter
+                extraction_adapter=extraction_adapter,
+                dlq_adapter=dlq_adapter
             )
             
             def run_pipeline_story(story_dict: dict, dry_run: bool):
