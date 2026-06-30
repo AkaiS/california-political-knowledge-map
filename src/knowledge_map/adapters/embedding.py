@@ -66,3 +66,11 @@ class PydanticAIEmbeddingAdapter:
                 
         return embeddings
 
+    def health_check(self) -> bool:
+        try:
+            result = asyncio.run(self.embedder.embed_documents(["health_check"]))
+            return bool(result and result.embeddings)
+        except Exception:
+            return False
+
+

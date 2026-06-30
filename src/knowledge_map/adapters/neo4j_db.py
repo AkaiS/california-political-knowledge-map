@@ -242,3 +242,14 @@ class Neo4jAdapter:
                 self._driver.close()
             finally:
                 self._driver = None
+
+    def health_check(self) -> bool:
+        try:
+            driver = self.connect()
+            with driver.session() as session:
+                result = session.run("RETURN 1")
+                val = result.single()[0]
+                return val == 1
+        except Exception:
+            return False
+

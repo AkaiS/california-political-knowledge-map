@@ -24,16 +24,28 @@ class DatabaseAdapter(Protocol):
     ) -> None:
         ...
 
+    def health_check(self) -> bool:
+        ...
+
 class EmbeddingAdapter(Protocol):
     def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
+        ...
+
+    def health_check(self) -> bool:
         ...
 
 class CoreferenceAdapter(Protocol):
     def resolve(self, content: str) -> str:
         ...
 
+    def health_check(self) -> bool:
+        ...
+
 class EntityExtractionAdapter(Protocol):
     def extract(self, chunk_text: str) -> ExtractionResult:
+        ...
+
+    def health_check(self) -> bool:
         ...
 
 class DeadLetterQueueAdapter(Protocol):

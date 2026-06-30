@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import json
 from dotenv import load_dotenv
 
 from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
@@ -29,6 +30,9 @@ def main(args=None):
 
     # Analyze subcommand
     subparsers.add_parser("analyze", help="Inspect and list distinct node labels in the Neo4j database")
+
+    # Janitor subcommand
+    subparsers.add_parser("janitor", help="Perform a health check on the locked component and release lock if healthy")
 
     parsed_args = parser.parse_args(args)
 
@@ -151,6 +155,67 @@ def main(args=None):
         finally:
             if manager:
                 manager.close()
+
+    elif parsed_args.action == "janitor":
+        from knowledge_map.config import settings
+        lock_file_path = settings.batch_ingestion.lock_file_path
+        
+        if not os.path.exists(lock_file_path):
+            print("No active pipeline lock found. Exiting.")
+            sys.exit(0)
+            
+        try:
+            with open(lock_file_path, "r") as f:
+                lock_data = json.load(f)
+        except Exception as e:
+            print(f"Error reading lock file: {e}", file=sys.stderr)
+            sys.exit(1)
+            
+        component = lock_data.get("component")
+        if not component:
+            print("Error: lock file does not specify 'component' key.", file=sys.stderr)
+            sys.exit(1)
+            
+        print(f"Active lock detected due to component: '{component}'")
+        
+        adapter = None
+        if component == "embedding":
+            adapter = PydanticAIEmbeddingAdapter()
+        elif component == "coreference":
+            adapter = PydanticAICoreferenceAdapter()
+        elif component == "extraction":
+            adapter = PydanticAIEntityExtractionAdapter()
+        elif component == "database":
+            uri = os.environ.get("NEO4J_URI")
+            username = os.environ.get("NEO4J_USERNAME")
+            password = os.environ.get("NEO4J_PASSWORD")
+            adapter = Neo4jAdapter(uri=uri, username=username, password=password)
+        else:
+            print(f"Error: Unknown component '{component}' in lock file.", file=sys.stderr)
+            sys.exit(1)
+            
+        print(f"Running health check probe for component '{component}'...")
+        try:
+            is_healthy = adapter.health_check()
+        except Exception as e:
+            print(f"Health check probe raised an exception: {e}", file=sys.stderr)
+            is_healthy = False
+        finally:
+            if hasattr(adapter, "close") and callable(adapter.close):
+                adapter.close()
+                
+        if is_healthy:
+            print(f"Component '{component}' health check passed! Deleting lock file...")
+            try:
+                os.remove(lock_file_path)
+                print(f"Deleted pipeline lock file: {lock_file_path}")
+                sys.exit(0)
+            except Exception as e:
+                print(f"Error deleting lock file: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            print(f"Error: Component '{component}' health check failed. Pipeline remains locked.", file=sys.stderr)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

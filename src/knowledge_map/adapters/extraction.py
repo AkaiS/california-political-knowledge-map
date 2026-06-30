@@ -142,6 +142,19 @@ class PydanticAIEntityExtractionAdapter:
                 metadata=metadata
             )
 
+    def health_check(self) -> bool:
+        try:
+            agent = self.agent or get_extraction_agent()
+            result = agent.run_sync(
+                "health_check",
+                output_type=str,
+                model_settings={"max_tokens": 1}
+            )
+            return bool(result and result.output)
+        except Exception:
+            return False
+
+
 
 
 

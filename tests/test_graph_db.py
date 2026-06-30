@@ -506,3 +506,37 @@ def test_context_manager_failure_closes_driver():
             pass
             
     mock_driver.close.assert_called_once()
+
+def test_neo4j_adapter_health_check_success():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_result = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.run.return_value = mock_result
+    mock_result.single.return_value = [1]
+    
+    manager = Neo4jAdapter(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    assert manager.health_check() is True
+    mock_session.run.assert_called_once_with("RETURN 1")
+
+def test_neo4j_adapter_health_check_failure():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.run.side_effect = Exception("Cypher query failed")
+    
+    manager = Neo4jAdapter(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    assert manager.health_check() is False
+

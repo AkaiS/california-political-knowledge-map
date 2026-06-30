@@ -1,6 +1,12 @@
 import pytest
 from pydantic import ValidationError
 from knowledge_map.schemas import Node, Relationship, ExtractionResult
+from pydantic_ai import TextPart
+
+from pydantic_ai import ModelResponse, ToolCallPart, UnexpectedModelBehavior
+from pydantic_ai.models.function import FunctionModel
+from knowledge_map.adapters.extraction import extract_entities
+from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 
 def test_node_validation_valid():
     node = Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"})
@@ -74,8 +80,6 @@ def test_extraction_result_invalid_relationship_target():
         ExtractionResult(nodes=[node1], relationships=[rel])
     assert "Relationship target 'Democratic Party' not found in defined nodes" in str(exc_info.value)
 
-from unittest.mock import patch
-from knowledge_map.adapters.extraction import load_instructions, get_extraction_agent
 
 def test_load_instructions(tmp_path):
     prompt_file = tmp_path / "extraction_prompt.txt"
@@ -91,10 +95,6 @@ def test_get_extraction_agent():
         agent = get_extraction_agent(defer_check=True)
         assert agent.output_type == ExtractionResult
         assert "Custom test prompt" in agent._instructions
-
-from pydantic_ai import ModelResponse, ToolCallPart, UnexpectedModelBehavior
-from pydantic_ai.models.function import FunctionModel
-from knowledge_map.adapters.extraction import extract_entities
 
 def test_extract_entities_success():
     def mock_model(messages, info):
@@ -147,9 +147,6 @@ def test_extract_entities_validation_failure():
         with pytest.raises(UnexpectedModelBehavior):
             extract_entities("Some text", agent=agent)
 
-
-from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
-
 def test_pydantic_ai_entity_extraction_adapter_success():
     def mock_model(messages, info):
         tool_name = info.output_tools[0].name
@@ -173,6 +170,25 @@ def test_pydantic_ai_entity_extraction_adapter_success():
         assert len(result.nodes) == 1
         assert result.nodes[0].name == "Gavin Newsom"
         assert len(result.relationships) == 0
+
+def test_pydantic_ai_entity_extraction_adapter_health_check_success():
+    def mock_model(messages, info):
+        return ModelResponse(parts=[TextPart(content="ok")])
+        
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(mock_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        assert adapter.health_check() is True
+
+def test_pydantic_ai_entity_extraction_adapter_health_check_failure():
+    def mock_model(messages, info):
+        raise RuntimeError("Extraction model call failed")
+        
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(mock_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        assert adapter.health_check() is False
+
 
 
 

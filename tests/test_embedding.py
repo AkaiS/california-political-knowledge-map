@@ -90,4 +90,25 @@ def test_pydantic_ai_embedding_adapter_dimension_mismatch():
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         adapter.process_chunks(chunks)
 
+def test_pydantic_ai_embedding_adapter_health_check_success():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        return MockResult([[0.1] * 768])
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+    assert adapter.health_check() is True
+    mock_embedder.embed_documents.assert_called_once_with(["health_check"])
+
+def test_pydantic_ai_embedding_adapter_health_check_failure():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        raise RuntimeError("API Connection failed")
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+    assert adapter.health_check() is False
+    mock_embedder.embed_documents.assert_called_once_with(["health_check"])
+
+
 

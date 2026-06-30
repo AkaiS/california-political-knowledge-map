@@ -420,6 +420,27 @@ def test_resolve_coreferences_raises_on_structural_failure():
         assert err.original_text == "Gavin Newsom signed a bill. He was happy."
         assert err.annotated_text == "Gavin Newsom signed a bill. He happy."
 
+def test_pydantic_ai_coreference_adapter_health_check_success():
+    annotator_agent = get_annotator_agent(defer_check=True)
+    
+    def mock_model(messages, info):
+        return ModelResponse(parts=[TextPart(content="ok")])
+        
+    with annotator_agent.override(model=FunctionModel(mock_model)):
+        adapter = PydanticAICoreferenceAdapter(annotator_agent=annotator_agent)
+        assert adapter.health_check() is True
+
+def test_pydantic_ai_coreference_adapter_health_check_failure():
+    annotator_agent = get_annotator_agent(defer_check=True)
+    
+    def mock_model(messages, info):
+        raise RuntimeError("LLM Connection failed")
+        
+    with annotator_agent.override(model=FunctionModel(mock_model)):
+        adapter = PydanticAICoreferenceAdapter(annotator_agent=annotator_agent)
+        assert adapter.health_check() is False
+
+
 
 
 
