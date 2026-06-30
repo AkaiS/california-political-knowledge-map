@@ -159,6 +159,9 @@ def main(args=None):
                     print(f"Running pipeline for story: {title or url}")
                 
                 result = pipeline.run(article, dry_run=dry_run)
+                if dry_run:
+                    for idx, chunk in enumerate(result.chunks):
+                        print(f"Chunk {idx} extraction: {result.extractions[idx].model_dump_json()}")
 
             if parsed_args.dry_run:
                 story = {}

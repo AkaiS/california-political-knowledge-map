@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -17,14 +17,15 @@ Build a new `BatchIngestionService` class that handles the sequential orchestrat
 
 ## Acceptance criteria
 
-- [ ] A unified CLI entrypoint is created at `src/knowledge_map/cli/main.py` and exposed via the `ca-map` script entry point in `pyproject.toml`.
-- [ ] The CLI supports the `ingest` subcommand.
-- [ ] A configuration model `BatchIngestionSettings` is added to `src/knowledge_map/config.py` with settings for retries, backoff, and locking.
-- [ ] `BatchIngestionService` is implemented to retrieve only stories with `status = 'UNPROCESSED'` and non-empty content.
-- [ ] The ingestion loop processes stories sequentially, invoking the pipeline for each.
-- [ ] Ingestion status transitions correctly from `UNPROCESSED` -> `PROCESSING` -> `COMPLETED` for successful articles.
-- [ ] Comprehensive unit tests verify the sequential processing behavior, status updates, CLI argument parsing, and settings loading.
+- [x] A unified CLI entrypoint is created at `src/knowledge_map/cli/main.py` and exposed via the `ca-map` script entry point in `pyproject.toml`.
+- [x] The CLI supports the `ingest` subcommand.
+- [x] A configuration model `BatchIngestionSettings` is added to `src/knowledge_map/config.py` with settings for retries, backoff, and locking.
+- [x] `BatchIngestionService` is implemented to retrieve only stories with `status = 'UNPROCESSED'` and non-empty content.
+- [x] The ingestion loop processes stories sequentially, invoking the pipeline for each.
+- [x] Ingestion status transitions correctly from `UNPROCESSED` -> `PROCESSING` -> `COMPLETED` for successful articles.
+- [x] Comprehensive unit tests verify the sequential processing behavior, status updates, CLI argument parsing, and settings loading.
 
 ## Blocked by
 
 None - can start immediately
+

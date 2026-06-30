@@ -135,6 +135,27 @@ def get_all_stories(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
         conn.close()
 
 
+def get_unprocessed_stories(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
+    """
+    Retrieves all stories from the database where status is 'UNPROCESSED' and content is non-empty.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, url, category, author, published_date, summary, content, created_at, status
+            FROM stories
+            WHERE status = 'UNPROCESSED' AND content IS NOT NULL AND content != ''
+            ORDER BY id ASC
+        """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+
 def get_story_links(story_id: int, db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
     Retrieves all links associated with a specific story.

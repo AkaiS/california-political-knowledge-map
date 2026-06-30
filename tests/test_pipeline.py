@@ -205,10 +205,14 @@ def test_pipeline_error_handling():
 
 
 def test_pipeline_with_concrete_adapters():
+    class MockResult:
+        def __init__(self, embeddings):
+            self.embeddings = embeddings
+
     # 1. Mock embedder
     mock_embedder = MagicMock()
     async def fake_embed(documents):
-        return [[0.1] * 768] * len(documents)
+        return MockResult([[0.1] * 768] * len(documents))
     mock_embedder.embed_documents.side_effect = fake_embed
     embedding_adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
 

@@ -49,10 +49,14 @@ from unittest.mock import MagicMock
 from knowledge_map.schemas import ArticleChunk
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 
+class MockResult:
+    def __init__(self, embeddings):
+        self.embeddings = embeddings
+
 def test_pydantic_ai_embedding_adapter_success():
     mock_embedder = MagicMock()
     async def fake_embed(documents):
-        return [[0.1] * 768] * len(documents)
+        return MockResult([[0.1] * 768] * len(documents))
     mock_embedder.embed_documents.side_effect = fake_embed
 
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
@@ -77,7 +81,7 @@ def test_pydantic_ai_embedding_adapter_empty():
 def test_pydantic_ai_embedding_adapter_dimension_mismatch():
     mock_embedder = MagicMock()
     async def fake_embed(documents):
-        return [[0.1] * 128] * len(documents)  # default config is 768
+        return MockResult([[0.1] * 128] * len(documents))  # default config is 768
     mock_embedder.embed_documents.side_effect = fake_embed
 
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
@@ -85,4 +89,5 @@ def test_pydantic_ai_embedding_adapter_dimension_mismatch():
     
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         adapter.process_chunks(chunks)
+
 

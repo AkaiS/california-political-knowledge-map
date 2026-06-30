@@ -16,6 +16,9 @@ dependencies = [
     "chonkie>=1.6.8",
 ]
 
+[project.scripts]
+ca-map = "knowledge_map.cli.main:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
