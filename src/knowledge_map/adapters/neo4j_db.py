@@ -48,6 +48,13 @@ class Neo4jAdapter:
         self._driver = driver
         self._index_ensured = False
 
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def connect(self):
         if self._driver is None:
             try:
@@ -60,12 +67,14 @@ class Neo4jAdapter:
         
         try:
             self._driver.verify_connectivity()
+            if not self._index_ensured:
+                self._ensure_vector_index()
+                self._index_ensured = True
         except Exception as e:
+            self.close()
+            if isinstance(e, Neo4jConnectionError):
+                raise
             raise Neo4jConnectionError(f"Could not connect to Neo4j database: {e}")
-        
-        if not self._index_ensured:
-            self._ensure_vector_index()
-            self._index_ensured = True
         
         return self._driver
 
@@ -229,5 +238,7 @@ class Neo4jAdapter:
 
     def close(self):
         if self._driver is not None:
-            self._driver.close()
-            self._driver = None
+            try:
+                self._driver.close()
+            finally:
+                self._driver = None
