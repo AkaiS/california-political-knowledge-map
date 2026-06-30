@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -16,12 +16,12 @@ Create a Dead Letter Queue (DLQ) using the adapter pattern to capture detailed i
 
 ## Acceptance criteria
 
-- [ ] `DeadLetterQueueAdapter` protocol is defined.
-- [ ] `LocalFileDLQAdapter` is implemented to write JSON documents to `.scratch/coreference_dlq/`.
-- [ ] Filenames are generated using `{domain}_{url_hash}_{timestamp}_{failure_type}_retry_{retry_count}.json` to avoid collision/length issues.
-- [ ] JSON payload schema matches all fields in the PRD (url, title, original_text, failed annotated_text, validation_issues, failure_type, timestamp, agent metadata).
-- [ ] Filesystem write errors are caught, a warning is logged, and the error is reraised to allow the pipeline to crash.
-- [ ] Unit tests verify successful DLQ file creation, formatting, naming conventions, and file-write failure behavior.
+- [x] `DeadLetterQueueAdapter` protocol is defined.
+- [x] `LocalFileDLQAdapter` is implemented to write JSON documents to `.scratch/coreference_dlq/`.
+- [x] Filenames are generated using `{domain}_{url_hash}_{timestamp}_{failure_type}_retry_{retry_count}.json` to avoid collision/length issues.
+- [x] JSON payload schema matches all fields in the PRD (url, title, original_text, failed annotated_text, validation_issues, failure_type, timestamp, agent metadata).
+- [x] Filesystem write errors are caught, a warning is logged, and the error is reraised to allow the pipeline to crash.
+- [x] Unit tests verify successful DLQ file creation, formatting, naming conventions, and file-write failure behavior.
 
 ## Blocked by
 
