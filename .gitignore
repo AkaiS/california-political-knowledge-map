@@ -5,3 +5,4 @@ __pycache__/*
 .agents/*
 manual_checks/*
 */generate_report.py
+.scratch/coreference_dlq/*
