@@ -57,11 +57,13 @@ from knowledge_map.schemas import ExtractionResult, Node, Relationship, ArticleC
 def mock_pipeline_deps():
     with patch("knowledge_map.adapters.coreference.PydanticAICoreferenceAdapter.resolve", side_effect=lambda x: x) as mock_resolve, \
          patch("knowledge_map.core.pipeline.chunk_article", side_effect=lambda text: [ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)]) as mock_chunk, \
-         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", side_effect=lambda chunks: [[0.1] * 768] * len(chunks)) as mock_process_chunks:
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", side_effect=lambda chunks: [[0.1] * 768] * len(chunks)) as mock_process_chunks, \
+         patch("knowledge_map.adapters.sqlite_db.SQLiteStatusTracker.update_status") as mock_update_status:
         yield {
             "resolve": mock_resolve,
             "chunk": mock_chunk,
-            "process_chunks": mock_process_chunks
+            "process_chunks": mock_process_chunks,
+            "update_status": mock_update_status
         }
 
 def test_cli_run_dry_run_with_text(capsys, mock_pipeline_deps):

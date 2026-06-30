@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -21,13 +21,13 @@ Implement status tracking for articles processed by the ingestion pipeline in SQ
 
 ## Acceptance criteria
 
-- [ ] Article statuses are defined (`UNPROCESSED`, `PROCESSING`, `COMPLETED`, `FAILED_DLQ`, `SYSTEM_ERROR`).
-- [ ] SQLite database schema is migrated to support `status` column on `stories` table.
-- [ ] `update_story_status(url, status)` is implemented in the sqlite db adapter (`sqlite_db.py`).
-- [ ] A `StatusTracker` protocol or adapter interface is defined for status updates.
-- [ ] `StoryPipeline` is updated to accept a status tracker dependency and `StoryPipeline.run()` updates the status to `PROCESSING` on start, `COMPLETED` on success, `FAILED_DLQ` on coreference retry exhaustion, and `SYSTEM_ERROR` on any exception or DLQ write failure.
-- [ ] In dry run mode, no SQLite status changes are written.
-- [ ] Integration/unit tests verify the status state machine transitions under success, retry exhaustion, filesystem failure, and random exception scenarios.
+- [x] Article statuses are defined (`UNPROCESSED`, `PROCESSING`, `COMPLETED`, `FAILED_DLQ`, `SYSTEM_ERROR`).
+- [x] SQLite database schema is migrated to support `status` column on `stories` table.
+- [x] `update_story_status(url, status)` is implemented in the sqlite db adapter (`sqlite_db.py`).
+- [x] A `StatusTracker` protocol or adapter interface is defined for status updates.
+- [x] `StoryPipeline` is updated to accept a status tracker dependency and `StoryPipeline.run()` updates the status to `PROCESSING` on start, `COMPLETED` on success, `FAILED_DLQ` on coreference retry exhaustion, and `SYSTEM_ERROR` on any exception or DLQ write failure.
+- [x] In dry run mode, no SQLite status changes are written.
+- [x] Integration/unit tests verify the status state machine transitions under success, retry exhaustion, filesystem failure, and random exception scenarios.
 
 ## Blocked by
 

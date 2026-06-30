@@ -145,3 +145,135 @@ def test_save_story_links_uniqueness(tmp_path):
     assert len(links) == 2
     assert {link["url"] for link in links} == {"http://example.com/target-1", "http://example.com/target-2"}
 
+
+def test_sqlite_status_column(tmp_path):
+    from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
+    db_file = tmp_path / "test_stories.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Save a story
+    story = {
+        "title": "Test Status Default",
+        "url": "http://example.com/status-test",
+        "category": "Politics",
+        "content": "Some content."
+    }
+    save_story(story, db_path=db_path)
+    
+    # Check default status is 'UNPROCESSED'
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == "UNPROCESSED"
+    finally:
+        conn.close()
+
+
+def test_sqlite_status_migration(tmp_path):
+    # 1. Create a DB with the old schema (no status column)
+    db_file = tmp_path / "test_migration.db"
+    db_path = str(db_file)
+    
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE stories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE,
+                category TEXT,
+                author TEXT,
+                published_date TEXT,
+                summary TEXT,
+                content TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Insert a story before migration
+        cursor.execute("""
+            INSERT INTO stories (title, url, content)
+            VALUES (?, ?, ?)
+        """, ("Pre-migration Story", "http://example.com/pre", "Content"))
+        conn.commit()
+    finally:
+        conn.close()
+        
+    # 2. Run init_db which should migrate it
+    init_db(db_path)
+    
+    # 3. Check if status column exists and default values are set for existing rows
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM stories WHERE url = ?", ("http://example.com/pre",))
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == "UNPROCESSED"
+    finally:
+        conn.close()
+
+
+def test_update_story_status(tmp_path):
+    from knowledge_map.adapters.sqlite_db import update_story_status
+    db_file = tmp_path / "test_update_status.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    story = {
+        "title": "Test Story Status",
+        "url": "http://example.com/update-test",
+        "content": "Content"
+    }
+    save_story(story, db_path=db_path)
+    
+    # Update status to PROCESSING
+    update_story_status(story["url"], "PROCESSING", db_path=db_path)
+    
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        assert cursor.fetchone()[0] == "PROCESSING"
+        
+        # Update to COMPLETED
+        update_story_status(story["url"], "COMPLETED", db_path=db_path)
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        assert cursor.fetchone()[0] == "COMPLETED"
+    finally:
+        conn.close()
+
+
+def test_sqlite_status_tracker(tmp_path):
+    from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
+    db_file = tmp_path / "test_tracker.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    story = {
+        "title": "Test Tracker Story",
+        "url": "http://example.com/tracker-test",
+        "content": "Content"
+    }
+    save_story(story, db_path=db_path)
+    
+    tracker = SQLiteStatusTracker(db_path=db_path)
+    tracker.update_status(story["url"], "PROCESSING")
+    
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        assert cursor.fetchone()[0] == "PROCESSING"
+    finally:
+        conn.close()
+
+

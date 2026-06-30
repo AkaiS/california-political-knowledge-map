@@ -55,6 +55,13 @@ class MockEntityExtractionAdapter:
             relationships=[]
         )
 
+class MockStatusTracker:
+    def __init__(self):
+        self.updates = []
+
+    def update_status(self, url: str, status: str) -> None:
+        self.updates.append((url, status))
+
 def test_pipeline_dry_run():
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
@@ -66,6 +73,7 @@ def test_pipeline_dry_run():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
     )
 
     article = SourceArticle(
@@ -100,6 +108,7 @@ def test_pipeline_persistence():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
     )
 
     article = SourceArticle(
@@ -147,6 +156,7 @@ def test_pipeline_logging(caplog):
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
     )
 
     article = SourceArticle(
@@ -181,6 +191,7 @@ def test_pipeline_error_handling():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
     )
 
     article = SourceArticle(
@@ -253,6 +264,7 @@ def test_pipeline_with_concrete_adapters():
         embedding_adapter=embedding_adapter,
         coreference_adapter=coreference_adapter,
         extraction_adapter=extraction_adapter,
+        status_tracker=MockStatusTracker(),
     )
 
     article = SourceArticle(
@@ -313,6 +325,7 @@ def test_pipeline_with_neo4j_adapter():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
     )
     
     article = SourceArticle(
@@ -383,6 +396,7 @@ def test_pipeline_coreference_failure_logs_to_dlq():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
         dlq_adapter=dlq
     )
 
@@ -407,6 +421,184 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     assert failure["failure_type"] == "structural_mismatch"
     assert failure["retry_count"] == 3
     assert failure["metadata"] == {"model": "gemma"}
+
+
+def test_pipeline_status_success():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+    )
+
+    article = SourceArticle(
+        url="http://test.com/success",
+        title="Success Title",
+        content="Success content."
+    )
+
+    result = pipeline.run(article, dry_run=False)
+    assert status_tracker.updates == [
+        ("http://test.com/success", "PROCESSING"),
+        ("http://test.com/success", "COMPLETED")
+    ]
+
+
+def test_pipeline_status_coref_failure():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    def raise_coref_error(content):
+        raise CoreferenceResolutionError(
+            original_text=content,
+            annotated_text="mismatched text",
+            validation_issues=["Test structural issue"],
+            failure_type="structural_mismatch",
+            retry_count=3,
+            metadata={"model": "gemma"}
+        )
+    coref.resolve = raise_coref_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+    )
+
+    article = SourceArticle(
+        url="http://test.com/coref-fail",
+        title="Coref Fail Title",
+        content="Coref fail content."
+    )
+
+    with pytest.raises(CoreferenceResolutionError):
+        pipeline.run(article, dry_run=False)
+
+    assert status_tracker.updates == [
+        ("http://test.com/coref-fail", "PROCESSING"),
+        ("http://test.com/coref-fail", "FAILED_DLQ")
+    ]
+
+
+def test_pipeline_status_unexpected_error():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    def raise_value_error(chunks):
+        raise ValueError("Embedding failure")
+    embedding.process_chunks = raise_value_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+    )
+
+    article = SourceArticle(
+        url="http://test.com/unexpected-fail",
+        title="Unexpected Fail Title",
+        content="Unexpected fail content."
+    )
+
+    with pytest.raises(ValueError, match="Embedding failure"):
+        pipeline.run(article, dry_run=False)
+
+    assert status_tracker.updates == [
+        ("http://test.com/unexpected-fail", "PROCESSING"),
+        ("http://test.com/unexpected-fail", "SYSTEM_ERROR")
+    ]
+
+
+def test_pipeline_status_dlq_failure():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    # Stub the resolve method to raise CoreferenceResolutionError
+    def raise_coref_error(content):
+        raise CoreferenceResolutionError(
+            original_text=content,
+            annotated_text="mismatched text",
+            validation_issues=["Test structural issue"],
+            failure_type="structural_mismatch",
+            retry_count=3,
+            metadata={"model": "gemma"}
+        )
+    coref.resolve = raise_coref_error
+
+    # Mock DLQ adapter to raise OSError on write failure
+    dlq = MockDeadLetterQueueAdapter()
+    def raise_os_error(*args, **kwargs):
+        raise OSError("Disk full")
+    dlq.log_failure = raise_os_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+        dlq_adapter=dlq
+    )
+
+    article = SourceArticle(
+        url="http://test.com/dlq-fail",
+        title="DLQ Fail Title",
+        content="DLQ fail content."
+    )
+
+    with pytest.raises(OSError, match="Disk full"):
+        pipeline.run(article, dry_run=False)
+
+    assert status_tracker.updates == [
+        ("http://test.com/dlq-fail", "PROCESSING"),
+        ("http://test.com/dlq-fail", "SYSTEM_ERROR")
+    ]
+
+
+def test_pipeline_status_dry_run():
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+    )
+
+    article = SourceArticle(
+        url="http://test.com/dry-run",
+        title="Dry Run Title",
+        content="Dry run content."
+    )
+
+    pipeline.run(article, dry_run=True)
+    assert status_tracker.updates == []
+
 
 
 

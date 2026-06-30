@@ -21,12 +21,20 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
+                status TEXT DEFAULT 'UNPROCESSED',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
         # Safe migration: add column 'content' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
+            
+        # Safe migration: add column 'status' if it's missing in an existing database
+        try:
+            cursor.execute("ALTER TABLE stories ADD COLUMN status TEXT DEFAULT 'UNPROCESSED'")
         except sqlite3.OperationalError:
             # Column already exists
             pass
@@ -145,5 +153,30 @@ def get_story_links(story_id: int, db_path: str = DEFAULT_DB_PATH) -> List[Dict[
         return [dict(row) for row in rows]
     finally:
         conn.close()
+
+
+def update_story_status(url: str, status: str, db_path: str = DEFAULT_DB_PATH) -> None:
+    """
+    Updates the status of a story in the SQLite database by its URL.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE stories SET status = ? WHERE url = ?",
+            (status, url)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+class SQLiteStatusTracker:
+    def __init__(self, db_path: str = DEFAULT_DB_PATH) -> None:
+        self.db_path = db_path
+
+    def update_status(self, url: str, status: str) -> None:
+        update_story_status(url, status, db_path=self.db_path)
+
 
 

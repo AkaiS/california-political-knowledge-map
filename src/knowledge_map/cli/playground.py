@@ -4,7 +4,7 @@ import sys
 import re
 import math
 from dotenv import load_dotenv
-from knowledge_map.adapters.sqlite_db import get_last_n_stories, get_all_stories
+from knowledge_map.adapters.sqlite_db import get_last_n_stories, get_all_stories, SQLiteStatusTracker
 import asyncio
 from knowledge_map.config import settings
 
@@ -130,12 +130,14 @@ def main(args=None):
             coreference_adapter = PydanticAICoreferenceAdapter()
             extraction_adapter = PydanticAIEntityExtractionAdapter()
             dlq_adapter = LocalFileDLQAdapter()
+            status_tracker = SQLiteStatusTracker()
             
             pipeline = StoryPipeline(
                 db_adapter=db_adapter,
                 embedding_adapter=embedding_adapter,
                 coreference_adapter=coreference_adapter,
                 extraction_adapter=extraction_adapter,
+                status_tracker=status_tracker,
                 dlq_adapter=dlq_adapter
             )
             

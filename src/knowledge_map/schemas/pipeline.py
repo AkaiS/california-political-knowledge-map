@@ -1,7 +1,16 @@
 from typing import Optional, List
+from enum import Enum
 from pydantic import BaseModel, Field
 from .chunking import ArticleChunk
 from .extraction import ExtractionResult
+
+class ArticleStatus(str, Enum):
+    UNPROCESSED = "UNPROCESSED"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED_DLQ = "FAILED_DLQ"
+    SYSTEM_ERROR = "SYSTEM_ERROR"
+
 
 class SourceArticle(BaseModel):
     url: str = Field(..., description="The URL of the source article")
