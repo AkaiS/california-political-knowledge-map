@@ -13,14 +13,14 @@ Additionally, if the coreference resolution fails (either due to structural mism
 We will improve the coreference resolution pipeline's reliability and observability by:
 1. Implementing a programmatic **Structural Identity Check** that runs immediately after annotation to ensure the text structure is unchanged.
 2. Creating a **Dead Letter Queue (DLQ)** using the adapter pattern (`LocalFileDLQAdapter`) to write detailed failure records as JSON files to `.scratch/coreference_dlq/` whenever a check fails.
-3. Tracking and updating the **Article Status** (`UNPROCESSED`, `PROCESSING`, `COMPLETED`, `FAILED_DLQ`, `SYSTEM_ERROR`) in the database adapter throughout the pipeline execution. If coreference resolution fails to resolve after max retries, we mark the article as `FAILED_DLQ` and stop processing it.
+3. Tracking and updating the **Article Status** (`UNPROCESSED`, `PROCESSING`, `COMPLETED`, `FAILED_DLQ`, `SYSTEM_ERROR`) in the SQLite database throughout the pipeline execution. If coreference resolution fails to resolve after max retries, we mark the article as `FAILED_DLQ` and stop processing it.
 
 ## User Stories
 
 1. As a system administrator, I want the coreference resolver to reject any annotations that modify the original text structure, so that we maintain exact content alignment.
 2. As an AI engineer, I want every coreference annotation check failure (structural or critic-based) to be written to a Dead Letter Queue (DLQ), so that I can audit and refine the LLM prompts using real failure cases.
 3. As a developer, I want DLQ files to be named using the article's domain and a URL hash, so that we avoid filename length limits and file system collisions.
-4. As a system operator, I want to see the status of each article in the Neo4j database (e.g. `PROCESSING`, `COMPLETED`, `FAILED_DLQ`), so that I can easily track progress and identify failures.
+4. As a system operator, I want to see the status of each article in the SQLite database (e.g. `PROCESSING`, `COMPLETED`, `FAILED_DLQ`), so that I can easily track progress and identify failures.
 5. As a developer, I want any DLQ file-write failure to log a warning but transition the article state to `SYSTEM_ERROR` and abort processing, so that infrastructure issues are immediately visible.
 
 ## Implementation Decisions
@@ -39,19 +39,22 @@ We will improve the coreference resolution pipeline's reliability and observabil
 
 ### Pipeline & Database Status Tracking
 - **State Machine**: Define article statuses: `UNPROCESSED`, `PROCESSING`, `COMPLETED`, `FAILED_DLQ`, `SYSTEM_ERROR`.
-- **Adapter Status Method**: Add `update_article_status(url, status)` to the `DatabaseAdapter` interface, implemented in `Neo4jAdapter` using a Cypher `MERGE`/`SET` query.
+- **SQLite Status Tracking**:
+  - Add a `status` column (defaulting to `UNPROCESSED`) to the `stories` table in SQLite schema (`sqlite_db.py`).
+  - Implement `update_story_status(url, status)` in the sqlite db adapter to persist status transitions in the SQLite database.
+  - Define a protocol/adapter interface for status tracking (e.g., `StatusTracker`) that `StoryPipeline` interacts with.
 - **Pipeline Orchestration**:
-  - Sets state to `PROCESSING` at start.
-  - Halts article processing if coreferences fail after max retries, updating state to `FAILED_DLQ`.
-  - Catches unexpected exceptions, marks state as `SYSTEM_ERROR`, and halts.
-  - Updates state to `COMPLETED` on successful ingestion.
+  - Sets state to `PROCESSING` at start in SQLite.
+  - Halts article processing if coreferences fail after max retries, updating state to `FAILED_DLQ` in SQLite.
+  - Catches unexpected exceptions, marks state as `SYSTEM_ERROR` in SQLite, and halts.
+  - Updates state to `COMPLETED` in SQLite on successful ingestion.
 
 ## Testing Decisions
 
 ### Seams for Testing
 - **Coreference Adapter Seam**: Test the validation/retry loop within the coreference adapter by mocking the annotator to return structurally modified text and verifying the correct retry count, feedback messages, and fallback behavior.
 - **Dead Letter Queue (DLQ) Seam**: Test `LocalFileDLQAdapter` using a temporary directory to verify that files are successfully written with correct structure and naming.
-- **Pipeline Status Seam**: Test `StoryPipeline.run` using mock adapters to assert that status transitions (`PROCESSING` -> `COMPLETED` / `FAILED_DLQ` / `SYSTEM_ERROR`) are executed in the database adapter under all scenarios.
+- **Pipeline Status Seam**: Test `StoryPipeline.run` using mock adapters to assert that status transitions (`PROCESSING` -> `COMPLETED` / `FAILED_DLQ` / `SYSTEM_ERROR`) are executed in the status tracker/SQLite adapter under all scenarios.
 
 ### Prior Art
 - `tests/test_coreference.py` contains tests that mock `pydantic_ai.Agent` runs using `FunctionModel` and verify retries.
