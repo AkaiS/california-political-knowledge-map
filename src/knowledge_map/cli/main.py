@@ -12,6 +12,8 @@ from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
+from knowledge_map.utils.console import ConsoleNotifier
+from knowledge_map.core.exceptions import PipelineLockError
 
 def main(args=None):
     load_dotenv()
@@ -69,15 +71,50 @@ def main(args=None):
 
             service = BatchIngestionService(pipeline=pipeline)
             service.run()
+            sys.exit(0)
 
+        except PipelineLockError as e:
+            from knowledge_map.config import settings
+            lock_path = settings.batch_ingestion.lock_file_path
+            component = "unknown"
+            timestamp = "unknown"
+            error_message = str(e)
+            if os.path.exists(lock_path):
+                try:
+                    with open(lock_path, "r") as f:
+                        data = json.load(f)
+                        component = data.get("component", "unknown")
+                        timestamp = data.get("timestamp", "unknown")
+                        error_message = data.get("error_message", str(e))
+                except Exception:
+                    pass
+            ConsoleNotifier.notify_lock_detected(
+                component=component,
+                lock_file_path=lock_path,
+                timestamp=timestamp,
+                error_message=error_message
+            )
+            sys.exit(1)
         except Neo4jConfigError as e:
-            print(f"Configuration Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Configuration Error",
+                message="Neo4j Configuration is invalid.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Neo4jConnectionError as e:
-            print(f"Connection Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Connection Error",
+                message="Failed to connect to Neo4j database.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Exception as e:
-            print(f"Unexpected Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Unexpected Error",
+                message="An unexpected system failure occurred.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         finally:
             if db_adapter:
@@ -93,14 +130,27 @@ def main(args=None):
             manager = Neo4jAdapter(uri=uri, username=username, password=password)
             manager.clear_database()
             print("Neo4j database cleared successfully.")
+            sys.exit(0)
         except Neo4jConfigError as e:
-            print(f"Configuration Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Configuration Error",
+                message="Neo4j Configuration is invalid.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Neo4jConnectionError as e:
-            print(f"Connection Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Connection Error",
+                message="Failed to connect to Neo4j database.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Exception as e:
-            print(f"Unexpected Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Unexpected Error",
+                message="An unexpected system failure occurred.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         finally:
             if manager:
@@ -143,14 +193,27 @@ def main(args=None):
                                 print(f"- '{n1}' and '{n2}' (Similarity: {sim:.2f})")
             else:
                 print("No node labels found in the database.")
+            sys.exit(0)
         except Neo4jConfigError as e:
-            print(f"Configuration Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Configuration Error",
+                message="Neo4j Configuration is invalid.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Neo4jConnectionError as e:
-            print(f"Connection Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Connection Error",
+                message="Failed to connect to Neo4j database.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         except Exception as e:
-            print(f"Unexpected Error: {e}", file=sys.stderr)
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Unexpected Error",
+                message="An unexpected system failure occurred.",
+                details={"Error": str(e)}
+            )
             sys.exit(1)
         finally:
             if manager:

@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -18,11 +18,11 @@ Integrate high-visibility operator alerts, map robust exit status codes across t
 
 ## Acceptance criteria
 
-- [ ] `ConsoleNotifier` prints eye-catching console banners for critical failures and locks.
-- [ ] The CLI returns non-zero exit codes for halts, rate-limit locks, and unrecoverable exceptions.
-- [ ] Administrative subcommands (`clear`, `analyze`) are fully migrated from `playground.py` to `src/knowledge_map/cli/main.py`.
-- [ ] The deprecated file `src/knowledge_map/cli/playground.py` is deleted.
-- [ ] CLI test suite is updated to cover the new subcommands in `src/knowledge_map/cli/main.py` and verify appropriate exit codes.
+- [x] `ConsoleNotifier` prints eye-catching console banners for critical failures and locks.
+- [x] The CLI returns non-zero exit codes for halts, rate-limit locks, and unrecoverable exceptions.
+- [x] Administrative subcommands (`clear`, `analyze`) are fully migrated from `playground.py` to `src/knowledge_map/cli/main.py`.
+- [x] The deprecated file `src/knowledge_map/cli/playground.py` is deleted.
+- [x] CLI test suite is updated to cover the new subcommands in `src/knowledge_map/cli/main.py` and verify appropriate exit codes.
 
 ## Blocked by
 

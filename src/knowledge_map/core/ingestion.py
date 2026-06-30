@@ -9,6 +9,7 @@ from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
 from knowledge_map.schemas import SourceArticle, ArticleStatus
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.exceptions import classify_exception, PipelineRateLimitError, PipelineLockError
+from knowledge_map.utils.console import ConsoleNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,12 @@ class BatchIngestionService:
                     
                     with open(self.settings.lock_file_path, "w") as f:
                         json.dump(lock_data, f, indent=2)
+
+                    ConsoleNotifier.notify_lock_triggered(
+                        component=e.component,
+                        lock_file_path=self.settings.lock_file_path,
+                        error_message=str(e)
+                    )
 
                     logger.error(
                         f"Reached 3 consecutive rate limit failures. "
