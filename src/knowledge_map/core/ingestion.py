@@ -3,8 +3,9 @@ from typing import Optional
 
 from knowledge_map.config import Settings, BatchIngestionSettings
 from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
-from knowledge_map.schemas import SourceArticle
+from knowledge_map.schemas import SourceArticle, ArticleStatus
 from knowledge_map.core.pipeline import StoryPipeline
+from knowledge_map.core.exceptions import classify_exception
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class BatchIngestionService:
         # Use settings module if none provided
         from knowledge_map.config import settings as global_settings
         self.settings = settings or global_settings.batch_ingestion
+        self.consecutive_failures = 0
 
     def run(self) -> None:
         """
@@ -35,15 +37,31 @@ class BatchIngestionService:
             title = story_dict.get("title") or url
             logger.info(f"[{idx}/{len(unprocessed)}] Processing story: {title}")
 
-            article = SourceArticle(
-                url=url,
-                title=story_dict.get("title"),
-                author=story_dict.get("author"),
-                published_date=story_dict.get("published_date"),
-                content=story_dict.get("content") or ""
-            )
+            try:
+                article = SourceArticle(
+                    url=url,
+                    title=story_dict.get("title"),
+                    author=story_dict.get("author"),
+                    published_date=story_dict.get("published_date"),
+                    content=story_dict.get("content") or ""
+                )
 
-            # In Issue 01, any exception from the pipeline propagates directly
-            self.pipeline.run(article)
+                self.pipeline.run(article)
+                # Success: reset consecutive failures
+                self.consecutive_failures = 0
+            except Exception as e:
+                if classify_exception(e):
+                    logger.warning(f"Non-breaking error processing story {title}: {e}")
+                else:
+                    self.consecutive_failures += 1
+                    logger.error(f"System error processing story {title} (consecutive: {self.consecutive_failures}): {e}")
+                    try:
+                        self.pipeline.status_tracker.update_status(url, ArticleStatus.SYSTEM_ERROR)
+                    except Exception as status_err:
+                        logger.error(f"Failed to update status to SYSTEM_ERROR: {status_err}")
+                    
+                    if self.consecutive_failures >= self.settings.consecutive_failures_limit:
+                        logger.error(f"Reached limit of {self.settings.consecutive_failures_limit} consecutive system errors. Aborting batch.")
+                        raise e
 
         logger.info("Batch ingestion run completed successfully.")

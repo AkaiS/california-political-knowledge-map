@@ -87,6 +87,23 @@ def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
     return result.output
 
 
+class ExtractionError(Exception):
+    def __init__(
+        self,
+        original_text: str,
+        validation_issues: list[str],
+        failure_type: str,
+        retry_count: int,
+        metadata: dict
+    ) -> None:
+        self.original_text = original_text
+        self.validation_issues = validation_issues
+        self.failure_type = failure_type
+        self.retry_count = retry_count
+        self.metadata = metadata
+        super().__init__(f"Entity extraction failed: {failure_type}")
+
+
 class PydanticAIEntityExtractionAdapter:
     """Concrete adapter for entity extraction that conforms to the EntityExtractionAdapter protocol."""
 
@@ -94,7 +111,36 @@ class PydanticAIEntityExtractionAdapter:
         self.agent = agent or get_extraction_agent()
 
     def extract(self, chunk_text: str) -> ExtractionResult:
-        return extract_entities(chunk_text, agent=self.agent)
+        try:
+            return extract_entities(chunk_text, agent=self.agent)
+        except Exception as e:
+            validation_issues = []
+            if hasattr(e, "errors") and callable(e.errors):
+                try:
+                    for err in e.errors():
+                        loc_str = " -> ".join(str(loc) for loc in err.get("loc", []))
+                        msg = err.get("msg", "Validation error")
+                        validation_issues.append(f"{loc_str}: {msg}")
+                except Exception:
+                    validation_issues = [str(e)]
+            if not validation_issues:
+                validation_issues = [str(e)]
+
+            metadata = {}
+            if hasattr(self.agent, "model"):
+                try:
+                    from knowledge_map.adapters.coreference import get_agent_metadata
+                    metadata = get_agent_metadata(self.agent)
+                except Exception:
+                    pass
+
+            raise ExtractionError(
+                original_text=chunk_text,
+                validation_issues=validation_issues,
+                failure_type="extraction_validation_failure",
+                retry_count=getattr(self.agent, "retries", 0),
+                metadata=metadata
+            )
 
 
 

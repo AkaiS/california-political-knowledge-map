@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -17,12 +17,12 @@ When a non-breaking failure occurs on an article:
 
 ## Acceptance criteria
 
-- [ ] Exception classification helper `classify_exception` identifies non-breaking errors such as `CoreferenceResolutionError` and `ExtractionError`.
-- [ ] Ingestion service handles non-breaking exceptions inside the sequential loop.
-- [ ] Non-breaking exceptions trigger logging to the DLQ via `DeadLetterQueueAdapter`.
-- [ ] Failed articles have their database status updated to `FAILED_DLQ`.
-- [ ] The batch ingestion loop continues processing subsequent articles after encountering a non-breaking error.
-- [ ] Mock-driven unit tests verify that simulated non-breaking errors log to the DLQ, update database status, and allow the loop to continue.
+- [x] Exception classification helper `classify_exception` identifies non-breaking errors such as `CoreferenceResolutionError` and `ExtractionError`.
+- [x] Ingestion service handles non-breaking exceptions inside the sequential loop.
+- [x] Non-breaking exceptions trigger logging to the DLQ via `DeadLetterQueueAdapter`.
+- [x] Failed articles have their database status updated to `FAILED_DLQ`.
+- [x] The batch ingestion loop continues processing subsequent articles after encountering a non-breaking error.
+- [x] Mock-driven unit tests verify that simulated non-breaking errors log to the DLQ, update database status, and allow the loop to continue.
 
 ## Blocked by
 

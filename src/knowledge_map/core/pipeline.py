@@ -55,6 +55,7 @@ class StatusTracker(Protocol):
         ...
 
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
+from knowledge_map.adapters.extraction import ExtractionError
 
 class StoryPipeline:
     def __init__(
@@ -99,6 +100,7 @@ class StoryPipeline:
 
                 if not dry_run:
                     self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
+                e.logged_to_dlq = True
                 raise e
 
             # 2. Chunking
@@ -137,7 +139,25 @@ class StoryPipeline:
                 extractions=extractions
             )
         except Exception as e:
-            if not isinstance(e, CoreferenceResolutionError):
+            if isinstance(e, ExtractionError):
+                if self.dlq_adapter:
+                    self.dlq_adapter.log_failure(
+                        url=article.url,
+                        title=article.title or "",
+                        original_text=e.original_text,
+                        annotated_text="",
+                        validation_issues=e.validation_issues,
+                        failure_type=e.failure_type,
+                        retry_count=e.retry_count,
+                        metadata=e.metadata
+                    )
+                if not dry_run:
+                    try:
+                        self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
+                    except Exception as status_err:
+                        logger.error(f"Failed to update status to FAILED_DLQ: {status_err}")
+                e.logged_to_dlq = True
+            elif not isinstance(e, CoreferenceResolutionError):
                 logger.error(f"Unexpected pipeline error: {e}")
                 if not dry_run:
                     try:

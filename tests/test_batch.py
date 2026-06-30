@@ -271,6 +271,213 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
         conn.close()
 
 
+def test_classify_exception():
+    from knowledge_map.core.exceptions import classify_exception
+    from knowledge_map.adapters.coreference import CoreferenceResolutionError
+    from knowledge_map.adapters.extraction import ExtractionError
+    from pydantic import ValidationError, BaseModel
+    
+    # 1. CoreferenceResolutionError should be classified as non-breaking
+    coref_err = CoreferenceResolutionError(
+        original_text="test",
+        annotated_text="test",
+        validation_issues=[],
+        failure_type="test",
+        retry_count=0,
+        metadata={}
+    )
+    assert classify_exception(coref_err) is True
+    
+    # 2. ExtractionError should be classified as non-breaking
+    extract_err = ExtractionError(
+        original_text="test",
+        validation_issues=[],
+        failure_type="test",
+        retry_count=0,
+        metadata={}
+    )
+    assert classify_exception(extract_err) is True
+    
+    # 3. ValidationError should be classified as breaking
+    class DummyModel(BaseModel):
+        val: int
+    with pytest.raises(ValidationError) as exc_info:
+        DummyModel(val="not an int")
+    assert classify_exception(exc_info.value) is False
+    
+    # 4. Standard exceptions should be classified as breaking
+    assert classify_exception(ValueError("some error")) is False
+    assert classify_exception(RuntimeError("system error")) is False
+
+
+def test_batch_ingestion_resilience_non_breaking(tmp_path):
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.adapters.coreference import CoreferenceResolutionError
+    from knowledge_map.config import BatchIngestionSettings
+    from unittest.mock import MagicMock
+    
+    db_file = tmp_path / "test_resilience_nb.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    story1 = {"title": "Story 1", "url": "http://example.com/1", "content": "Content 1"}
+    story2 = {"title": "Story 2", "url": "http://example.com/2", "content": "Content 2"}
+    save_story(story1, db_path=db_path)
+    save_story(story2, db_path=db_path)
+    
+    mock_pipeline = MagicMock()
+    
+    coref_err = CoreferenceResolutionError(
+        original_text="Content 1",
+        annotated_text="mismatch",
+        validation_issues=["mismatch"],
+        failure_type="structural_mismatch",
+        retry_count=3,
+        metadata={}
+    )
+    
+    def pipeline_run(article, *args, **kwargs):
+        if article.url == "http://example.com/1":
+            raise coref_err
+        return MagicMock()
+        
+    mock_pipeline.run.side_effect = pipeline_run
+    
+    settings = BatchIngestionSettings(db_path=db_path)
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+    
+    service.run()
+    
+    assert mock_pipeline.run.call_count == 2
+
+
+def test_batch_ingestion_resilience_extraction_error(tmp_path):
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.adapters.extraction import ExtractionError
+    from knowledge_map.config import BatchIngestionSettings
+    from unittest.mock import MagicMock
+    
+    db_file = tmp_path / "test_resilience_extract.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    story1 = {"title": "Story 1", "url": "http://example.com/1", "content": "Content 1"}
+    story2 = {"title": "Story 2", "url": "http://example.com/2", "content": "Content 2"}
+    save_story(story1, db_path=db_path)
+    save_story(story2, db_path=db_path)
+    
+    mock_pipeline = MagicMock()
+    
+    extract_err = ExtractionError(
+        original_text="Content 1",
+        validation_issues=["extraction failure"],
+        failure_type="extraction_validation_failure",
+        retry_count=3,
+        metadata={}
+    )
+    
+    def pipeline_run(article, *args, **kwargs):
+        if article.url == "http://example.com/1":
+            raise extract_err
+        return MagicMock()
+        
+    mock_pipeline.run.side_effect = pipeline_run
+    
+    settings = BatchIngestionSettings(db_path=db_path)
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+    
+    service.run()
+    
+    assert mock_pipeline.run.call_count == 2
+
+
+def test_batch_ingestion_consecutive_system_errors(tmp_path):
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.config import BatchIngestionSettings
+    from unittest.mock import MagicMock
+    
+    db_file = tmp_path / "test_system_errors.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 4 stories
+    for i in range(1, 5):
+        save_story({
+            "title": f"Story {i}",
+            "url": f"http://example.com/{i}",
+            "content": f"Content {i}"
+        }, db_path=db_path)
+        
+    mock_pipeline = MagicMock()
+    mock_status_tracker = MagicMock()
+    mock_pipeline.status_tracker = mock_status_tracker
+    
+    # pipeline.run will raise ValueError (a breaking system error)
+    mock_pipeline.run.side_effect = ValueError("System connection failed")
+    
+    # Set limit to 2
+    settings = BatchIngestionSettings(db_path=db_path, consecutive_failures_limit=2)
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+    
+    # When we run, it should raise ValueError after processing 2 stories
+    with pytest.raises(ValueError, match="System connection failed"):
+        service.run()
+        
+    # The pipeline should have been run exactly 2 times (limit is 2)
+    assert mock_pipeline.run.call_count == 2
+    
+    # Both stories should have had their status updated to SYSTEM_ERROR
+    assert mock_status_tracker.update_status.call_count == 2 # 2 for SYSTEM_ERROR
+    mock_status_tracker.update_status.assert_any_call("http://example.com/1", "SYSTEM_ERROR")
+    mock_status_tracker.update_status.assert_any_call("http://example.com/2", "SYSTEM_ERROR")
+
+
+def test_batch_ingestion_system_error_reset_on_success(tmp_path):
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.config import BatchIngestionSettings
+    from unittest.mock import MagicMock
+    
+    db_file = tmp_path / "test_system_error_reset.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 3 stories
+    for i in range(1, 4):
+        save_story({
+            "title": f"Story {i}",
+            "url": f"http://example.com/{i}",
+            "content": f"Content {i}"
+        }, db_path=db_path)
+        
+    mock_pipeline = MagicMock()
+    mock_status_tracker = MagicMock()
+    mock_pipeline.status_tracker = mock_status_tracker
+    
+    # Story 1 raises ValueError, Story 2 succeeds, Story 3 raises ValueError
+    # Limit is 2. Since 2 succeeds, consecutive_failures resets to 0. So Story 3 fails but doesn't abort.
+    def run_side_effect(article):
+        if article.url in ("http://example.com/1", "http://example.com/3"):
+            raise ValueError("Transient error")
+        return MagicMock()
+        
+    mock_pipeline.run.side_effect = run_side_effect
+    
+    settings = BatchIngestionSettings(db_path=db_path, consecutive_failures_limit=2)
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+    
+    service.run()
+    
+    # All 3 stories should have been processed
+    assert mock_pipeline.run.call_count == 3
+    assert service.consecutive_failures == 1 # ended on failure
+
+
+
+
 
 
 

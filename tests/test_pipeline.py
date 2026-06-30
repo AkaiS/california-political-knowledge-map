@@ -427,6 +427,98 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     assert failure["metadata"] == {"model": "gemma"}
 
 
+def test_pipeline_extraction_failure_logs_to_dlq():
+    from knowledge_map.adapters.extraction import ExtractionError
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    dlq = MockDeadLetterQueueAdapter()
+
+    # Stub the extract method to raise ExtractionError
+    def raise_extract_error(chunk_text):
+        raise ExtractionError(
+            original_text=chunk_text,
+            validation_issues=["Test extraction schema issue"],
+            failure_type="extraction_validation_failure",
+            retry_count=3,
+            metadata={"model": "gemma"}
+        )
+    extraction.extract = raise_extract_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+        dlq_adapter=dlq
+    )
+
+    article = SourceArticle(
+        url="http://test.com/failure-dlq-extract",
+        title="Failed Article Extract",
+        content="Gavin Newsom went home."
+    )
+
+    # Asserts that pipeline propagates the ExtractionError
+    with pytest.raises(ExtractionError):
+        pipeline.run(article)
+
+    # Asserts that the DLQ logged the failure correctly
+    assert len(dlq.failures) == 1
+    failure = dlq.failures[0]
+    assert failure["url"] == "http://test.com/failure-dlq-extract"
+    assert failure["title"] == "Failed Article Extract"
+    assert failure["original_text"] == "Gavin Newsom went home."
+    assert failure["annotated_text"] == ""
+    assert failure["validation_issues"] == ["Test extraction schema issue"]
+    assert failure["failure_type"] == "extraction_validation_failure"
+    assert failure["retry_count"] == 3
+    assert failure["metadata"] == {"model": "gemma"}
+
+
+def test_pipeline_status_extraction_failure():
+    from knowledge_map.adapters.extraction import ExtractionError
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    def raise_extract_error(chunk_text):
+        raise ExtractionError(
+            original_text=chunk_text,
+            validation_issues=["Test extraction schema issue"],
+            failure_type="extraction_validation_failure",
+            retry_count=3,
+            metadata={"model": "gemma"}
+        )
+    extraction.extract = raise_extract_error
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+    )
+
+    article = SourceArticle(
+        url="http://test.com/extract-fail",
+        title="Extract Fail Title",
+        content="Extract fail content."
+    )
+
+    with pytest.raises(ExtractionError):
+        pipeline.run(article, dry_run=False)
+
+    assert status_tracker.updates == [
+        ("http://test.com/extract-fail", "PROCESSING"),
+        ("http://test.com/extract-fail", "FAILED_DLQ")
+    ]
+
+
 def test_pipeline_status_success():
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
