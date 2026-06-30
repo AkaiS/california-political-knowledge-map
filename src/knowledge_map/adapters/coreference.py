@@ -134,14 +134,18 @@ def get_agent_metadata(agent: Agent | None) -> dict:
         model_name = getattr(agent.model, "model_name", str(agent.model))
         
     system_prompt = ""
-    if agent.instructions:
-        if isinstance(agent.instructions, str):
-            system_prompt = agent.instructions
-        elif callable(agent.instructions):
-            try:
-                system_prompt = agent.instructions()
-            except Exception:
-                system_prompt = str(agent.instructions)
+    # Safe resolution of static and dynamic instructions from Pydantic AI Agent
+    if hasattr(agent, "_instructions") and agent._instructions:
+        parts = []
+        for inst in agent._instructions:
+            if isinstance(inst, str):
+                parts.append(inst)
+            elif callable(inst):
+                try:
+                    parts.append(inst())
+                except Exception:
+                    parts.append(str(inst))
+        system_prompt = "\n\n".join(parts)
                 
     return {
         "model": model_name,

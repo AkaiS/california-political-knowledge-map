@@ -472,3 +472,37 @@ def test_ingest_chunk_extraction():
             found_rel_kwargs = True
             break
     assert found_rel_kwargs
+
+def test_context_manager_lifecycle():
+    mock_driver = MagicMock()
+    mock_driver.verify_connectivity.return_value = None
+    
+    manager = Neo4jAdapter(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    with manager as m:
+        assert m is manager
+        mock_driver.verify_connectivity.assert_called_once()
+        
+    mock_driver.close.assert_called_once()
+
+def test_context_manager_failure_closes_driver():
+    mock_driver = MagicMock()
+    mock_driver.verify_connectivity.side_effect = Exception("Connectivity failed")
+    
+    manager = Neo4jAdapter(
+        uri="bolt://localhost:7687",
+        username="neo4j",
+        password="password",
+        driver=mock_driver
+    )
+    
+    with pytest.raises(Neo4jConnectionError):
+        with manager:
+            pass
+            
+    mock_driver.close.assert_called_once()
