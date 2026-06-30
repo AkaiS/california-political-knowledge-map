@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -17,12 +17,12 @@ Implement individual adapter health checks and the janitor healing CLI command t
 
 ## Acceptance criteria
 
-- [ ] `health_check(self) -> bool` is added to all adapter protocols and concrete implementations.
-- [ ] Subcommand `janitor` is added to the unified CLI in `src/knowledge_map/cli/main.py`.
-- [ ] Janitor parses the locked component from `.scratch/pipeline.lock`.
-- [ ] Janitor runs the corresponding adapter's health check probe.
-- [ ] Lock file `.scratch/pipeline.lock` is deleted if and only if the health check probe returns `True`.
-- [ ] Unit tests verify adapter health check probes, lock parsing, and file deletion on success.
+- [x] `health_check(self) -> bool` is added to all adapter protocols and concrete implementations.
+- [x] Subcommand `janitor` is added to the unified CLI in `src/knowledge_map/cli/main.py`.
+- [x] Janitor parses the locked component from `.scratch/pipeline.lock`.
+- [x] Janitor runs the corresponding adapter's health check probe.
+- [x] Lock file `.scratch/pipeline.lock` is deleted if and only if the health check probe returns `True`.
+- [x] Unit tests verify adapter health check probes, lock parsing, and file deletion on success.
 
 ## Blocked by
 

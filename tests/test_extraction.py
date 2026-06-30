@@ -1,12 +1,17 @@
 import pytest
 from pydantic import ValidationError
+from unittest.mock import patch
 from knowledge_map.schemas import Node, Relationship, ExtractionResult
 from pydantic_ai import TextPart
 
 from pydantic_ai import ModelResponse, ToolCallPart, UnexpectedModelBehavior
 from pydantic_ai.models.function import FunctionModel
-from knowledge_map.adapters.extraction import extract_entities
-from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
+from knowledge_map.adapters.extraction import (
+    extract_entities,
+    PydanticAIEntityExtractionAdapter,
+    load_instructions,
+    get_extraction_agent,
+)
 
 def test_node_validation_valid():
     node = Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"})
