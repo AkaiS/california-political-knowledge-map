@@ -1,11 +1,14 @@
 import logging
+import os
+import json
+import datetime
 from typing import Optional
 
 from knowledge_map.config import Settings, BatchIngestionSettings
 from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
 from knowledge_map.schemas import SourceArticle, ArticleStatus
 from knowledge_map.core.pipeline import StoryPipeline
-from knowledge_map.core.exceptions import classify_exception
+from knowledge_map.core.exceptions import classify_exception, PipelineRateLimitError, PipelineLockError
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +23,17 @@ class BatchIngestionService:
         from knowledge_map.config import settings as global_settings
         self.settings = settings or global_settings.batch_ingestion
         self.consecutive_failures = 0
+        self.consecutive_rate_limit_failures = 0
 
     def run(self) -> None:
         """
         Runs the batch ingestion by fetching unprocessed stories and executing them through the pipeline.
         """
+        # Fail-Fast Startup lock check
+        if os.path.exists(self.settings.lock_file_path):
+            logger.error(f"Pipeline lock file found at {self.settings.lock_file_path}. Aborting startup.")
+            raise PipelineLockError(f"Pipeline is locked. Lock file exists at {self.settings.lock_file_path}")
+
         logger.info(f"Starting batch ingestion. Database path: {self.settings.db_path}")
         unprocessed = get_unprocessed_stories(self.settings.db_path)
         if not unprocessed:
@@ -49,6 +58,38 @@ class BatchIngestionService:
                 self.pipeline.run(article)
                 # Success: reset consecutive failures
                 self.consecutive_failures = 0
+                self.consecutive_rate_limit_failures = 0
+            except PipelineRateLimitError as e:
+                self.consecutive_rate_limit_failures += 1
+                logger.warning(
+                    f"Rate limit error processing story {title} "
+                    f"(consecutive rate limit failures: {self.consecutive_rate_limit_failures}): {e}"
+                )
+                try:
+                    self.pipeline.status_tracker.update_status(url, ArticleStatus.UNPROCESSED)
+                except Exception as status_err:
+                    logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
+                if self.consecutive_rate_limit_failures >= 3:
+                    lock_data = {
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "component": e.component,
+                        "error_message": str(e)
+                    }
+                    
+                    # Ensure directory exists
+                    os.makedirs(os.path.dirname(self.settings.lock_file_path), exist_ok=True)
+                    
+                    with open(self.settings.lock_file_path, "w") as f:
+                        json.dump(lock_data, f, indent=2)
+
+                    logger.error(
+                        f"Reached 3 consecutive rate limit failures. "
+                        f"Pipeline locked at {self.settings.lock_file_path}."
+                    )
+                    raise PipelineLockError(
+                        f"Pipeline locked due to consecutive rate limit failures on component: {e.component}"
+                    )
+                continue
             except Exception as e:
                 if classify_exception(e):
                     logger.warning(f"Non-breaking error processing story {title}: {e}")
@@ -65,3 +106,4 @@ class BatchIngestionService:
                         raise e
 
         logger.info("Batch ingestion run completed successfully.")
+

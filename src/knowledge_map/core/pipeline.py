@@ -56,6 +56,13 @@ class StatusTracker(Protocol):
 
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
+from knowledge_map.core.exceptions import (
+    classify_api_error,
+    get_retry_after,
+    PipelineException,
+    PipelineRateLimitError,
+    PipelineConnectivityError,
+)
 
 class StoryPipeline:
     def __init__(
@@ -66,6 +73,7 @@ class StoryPipeline:
         extraction_adapter: EntityExtractionAdapter,
         status_tracker: StatusTracker,
         dlq_adapter: Optional[DeadLetterQueueAdapter] = None,
+        settings = None,
     ) -> None:
         self.db_adapter = db_adapter
         self.embedding_adapter = embedding_adapter
@@ -73,6 +81,86 @@ class StoryPipeline:
         self.extraction_adapter = extraction_adapter
         self.status_tracker = status_tracker
         self.dlq_adapter = dlq_adapter
+        
+        # Load default batch ingestion settings if not explicitly passed
+        if settings is None:
+            from knowledge_map.config import settings as global_settings
+            self.settings = global_settings.batch_ingestion
+        else:
+            self.settings = settings
+
+    def _execute_with_retry(self, component: str, func, *args, **kwargs):
+        import time
+        max_retries = self.settings.max_retries
+        backoff_factor = self.settings.backoff_factor
+        rate_limit_wait_cap = self.settings.rate_limit_wait_cap
+        
+        connectivity_attempts = 0
+        rate_limit_attempts = 0
+        
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                err_type = classify_api_error(e)
+                
+                if err_type == "RATE_LIMIT":
+                    retry_after = get_retry_after(e)
+                    if retry_after is not None:
+                        if retry_after > rate_limit_wait_cap:
+                            logger.warning(
+                                f"[{component}] Rate limit Retry-After {retry_after}s exceeds "
+                                f"cap of {rate_limit_wait_cap}s. Skipping article."
+                            )
+                            raise PipelineRateLimitError(
+                                message=f"Rate limit Retry-After {retry_after}s exceeds cap of {rate_limit_wait_cap}s",
+                                component=component,
+                                original_exception=e
+                            )
+                        
+                        logger.info(f"[{component}] Rate limit hit. Sleeping for {retry_after}s (Retry-After) before retry.")
+                        time.sleep(retry_after)
+                        rate_limit_attempts += 1
+                        continue
+                    else:
+                        # Missing Retry-After header
+                        if rate_limit_attempts < max_retries:
+                            delay = 15 * (backoff_factor ** rate_limit_attempts)
+                            logger.info(
+                                f"[{component}] Rate limit hit (no Retry-After). "
+                                f"Sleeping for {delay}s (attempt {rate_limit_attempts + 1}/{max_retries}) before retry."
+                            )
+                            time.sleep(delay)
+                            rate_limit_attempts += 1
+                            continue
+                        else:
+                            logger.error(f"[{component}] Rate limit retries exhausted.")
+                            raise PipelineRateLimitError(
+                                message=f"Rate limit retries exhausted",
+                                component=component,
+                                original_exception=e
+                            )
+                            
+                elif err_type == "CONNECTIVITY":
+                    if connectivity_attempts < max_retries:
+                        delay = backoff_factor * (2 ** connectivity_attempts)
+                        logger.info(
+                            f"[{component}] Connectivity error. "
+                            f"Sleeping for {delay}s (attempt {connectivity_attempts + 1}/{max_retries}) before retry."
+                        )
+                        time.sleep(delay)
+                        connectivity_attempts += 1
+                        continue
+                    else:
+                        logger.error(f"[{component}] Connectivity retries exhausted.")
+                        raise PipelineConnectivityError(
+                            message=f"Connectivity retries exhausted",
+                            component=component,
+                            original_exception=e
+                        )
+                else:
+                    # Propagate other exceptions directly
+                    raise e
 
     def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
@@ -84,7 +172,7 @@ class StoryPipeline:
             # 1. Resolve coreferences
             logger.info("Resolving coreferences...")
             try:
-                resolved_text = self.coreference_adapter.resolve(article.content)
+                resolved_text = self._execute_with_retry("coreference", self.coreference_adapter.resolve, article.content)
             except CoreferenceResolutionError as e:
                 if self.dlq_adapter:
                     self.dlq_adapter.log_failure(
@@ -109,14 +197,14 @@ class StoryPipeline:
 
             # 3. Embedding
             logger.info("Generating embeddings...")
-            embeddings = self.embedding_adapter.process_chunks(chunks)
+            embeddings = self._execute_with_retry("embedding", self.embedding_adapter.process_chunks, chunks)
 
             # 4. Extraction
             logger.info("Extracting entities...")
             extractions = []
             for idx, chunk in enumerate(chunks):
                 logger.info(f"Extracting chunk {idx}...")
-                extraction = self.extraction_adapter.extract(chunk.text)
+                extraction = self._execute_with_retry("extraction", self.extraction_adapter.extract, chunk.text)
                 extractions.append(extraction)
 
             # 5. DB Persistence (skip if dry_run)
@@ -139,6 +227,13 @@ class StoryPipeline:
                 extractions=extractions
             )
         except Exception as e:
+            if not dry_run:
+                try:
+                    if isinstance(e, PipelineException):
+                        self.status_tracker.update_status(article.url, ArticleStatus.UNPROCESSED)
+                except Exception as status_err:
+                    logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
+
             if isinstance(e, ExtractionError):
                 if self.dlq_adapter:
                     self.dlq_adapter.log_failure(
@@ -157,7 +252,7 @@ class StoryPipeline:
                     except Exception as status_err:
                         logger.error(f"Failed to update status to FAILED_DLQ: {status_err}")
                 e.logged_to_dlq = True
-            elif not isinstance(e, CoreferenceResolutionError):
+            elif not isinstance(e, (CoreferenceResolutionError, PipelineException)):
                 logger.error(f"Unexpected pipeline error: {e}")
                 if not dry_run:
                     try:

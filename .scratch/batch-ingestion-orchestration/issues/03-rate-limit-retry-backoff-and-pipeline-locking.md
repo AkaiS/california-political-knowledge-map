@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -22,16 +22,16 @@ Build a comprehensive retry and backoff system for adapters, and implement conse
 
 ## Acceptance criteria
 
-- [ ] Exception classification helper identifies `RATE_LIMIT` and `CONNECTIVITY` error types.
-- [ ] Connectivity errors trigger up to 3 retries using progressive backoff.
-- [ ] Rate limits parse the `Retry-After` header to dynamically sleep.
-- [ ] Ingestion service skips the current article and proceeds if `Retry-After` exceeds the wait cap.
-- [ ] Rate limits without `Retry-After` headers trigger exponential backoff reaching at least 1 minute on the final attempt.
-- [ ] Ingestion service tracks consecutive rate limit failures and resets the count on successful article ingestion.
-- [ ] Ingestion halts and writes `.scratch/pipeline.lock` if consecutive rate limit failures reach 3.
-- [ ] Lock file contains JSON schema specifying: `timestamp`, `component`, and `error_message`.
-- [ ] Ingestion service checks for `.scratch/pipeline.lock` at startup and aborts execution if it exists.
-- [ ] Mock-driven unit tests verify progressive retries, backoff, skipping, consecutive error counting, lock file writing, and fail-fast behavior.
+- [x] Exception classification helper identifies `RATE_LIMIT` and `CONNECTIVITY` error types.
+- [x] Connectivity errors trigger up to 3 retries using progressive backoff.
+- [x] Rate limits parse the `Retry-After` header to dynamically sleep.
+- [x] Ingestion service skips the current article and proceeds if `Retry-After` exceeds the wait cap.
+- [x] Rate limits without `Retry-After` headers trigger exponential backoff reaching at least 1 minute on the final attempt.
+- [x] Ingestion service tracks consecutive rate limit failures and resets the count on successful article ingestion.
+- [x] Ingestion halts and writes `.scratch/pipeline.lock` if consecutive rate limit failures reach 3.
+- [x] Lock file contains JSON schema specifying: `timestamp`, `component`, and `error_message`.
+- [x] Ingestion service checks for `.scratch/pipeline.lock` at startup and aborts execution if it exists.
+- [x] Mock-driven unit tests verify progressive retries, backoff, skipping, consecutive error counting, lock file writing, and fail-fast behavior.
 
 ## Blocked by
 

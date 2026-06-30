@@ -476,6 +476,384 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
     assert service.consecutive_failures == 1 # ended on failure
 
 
+def test_exception_classification_and_parsing():
+    import httpx
+    from knowledge_map.core.exceptions import classify_api_error, get_retry_after
+
+    # 1. Test HTTP 429 Status Error -> RATE_LIMIT
+    resp_429 = httpx.Response(429, headers={"Retry-After": "45"})
+    err_429 = httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp_429)
+    assert classify_api_error(err_429) == "RATE_LIMIT"
+    assert get_retry_after(err_429) == 45
+
+    # 2. Test text/keyword based -> RATE_LIMIT
+    err_msg = ValueError("API rate limit exceeded. Too many requests.")
+    assert classify_api_error(err_msg) == "RATE_LIMIT"
+
+    # 3. Test HTTP connectivity errors -> CONNECTIVITY
+    err_conn = httpx.ConnectError("Connection refused")
+    assert classify_api_error(err_conn) == "CONNECTIVITY"
+
+    # 4. Test TimeoutError -> CONNECTIVITY
+    err_timeout = TimeoutError("Request timed out")
+    assert classify_api_error(err_timeout) == "CONNECTIVITY"
+
+    # 5. Test recursive cause check for rate limit
+    wrapped_err = ValueError("Something failed")
+    wrapped_err.__cause__ = err_429
+    assert classify_api_error(wrapped_err) == "RATE_LIMIT"
+    assert get_retry_after(wrapped_err) == 45
+
+
+def test_connectivity_retries_and_backoff():
+    import httpx
+    from knowledge_map.core.pipeline import StoryPipeline
+    from knowledge_map.core.exceptions import PipelineConnectivityError
+    from knowledge_map.config import BatchIngestionSettings
+    from knowledge_map.schemas import SourceArticle
+    from test_pipeline import (
+        MockDatabaseAdapter,
+        MockEmbeddingAdapter,
+        MockCoreferenceAdapter,
+        MockEntityExtractionAdapter,
+        MockStatusTracker,
+    )
+
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    settings = BatchIngestionSettings(max_retries=3, backoff_factor=2.0)
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+        settings=settings,
+    )
+
+    call_count = 0
+    def resolve_side_effect(content):
+        nonlocal call_count
+        call_count += 1
+        raise httpx.ConnectError("Connection refused")
+
+    coref.resolve = resolve_side_effect
+
+    article = SourceArticle(
+        url="http://test.com/conn-retry",
+        title="Conn Title",
+        content="Some content."
+    )
+
+    sleep_delays = []
+    with patch("time.sleep", side_effect=sleep_delays.append):
+        with pytest.raises(PipelineConnectivityError) as exc_info:
+            pipeline.run(article)
+
+    assert call_count == 4
+    assert sleep_delays == [2.0, 4.0, 8.0]
+    assert exc_info.value.component == "coreference"
+    assert isinstance(exc_info.value.original_exception, httpx.ConnectError)
+
+
+def test_rate_limit_retry_after_under_cap():
+    import httpx
+    from knowledge_map.core.pipeline import StoryPipeline
+    from knowledge_map.config import BatchIngestionSettings
+    from knowledge_map.schemas import SourceArticle
+    from test_pipeline import (
+        MockDatabaseAdapter,
+        MockEmbeddingAdapter,
+        MockCoreferenceAdapter,
+        MockEntityExtractionAdapter,
+        MockStatusTracker,
+    )
+
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    settings = BatchIngestionSettings(rate_limit_wait_cap=120)
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+        settings=settings,
+    )
+
+    call_count = 0
+    def resolve_side_effect(content):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            resp = httpx.Response(429, headers={"Retry-After": "45"})
+            raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
+        return "Gavin Newsom went home."
+
+    coref.resolve = resolve_side_effect
+
+    article = SourceArticle(
+        url="http://test.com/rate-under-cap",
+        title="Rate Title",
+        content="Gavin Newsom went home."
+    )
+
+    sleep_delays = []
+    with patch("time.sleep", side_effect=sleep_delays.append):
+        result = pipeline.run(article)
+
+    assert call_count == 2
+    assert sleep_delays == [45.0]
+    assert result.resolved_text == "Gavin Newsom went home."
+
+
+def test_rate_limit_retry_after_over_cap():
+    import httpx
+    from knowledge_map.core.pipeline import StoryPipeline
+    from knowledge_map.core.exceptions import PipelineRateLimitError
+    from knowledge_map.config import BatchIngestionSettings
+    from knowledge_map.schemas import SourceArticle
+    from test_pipeline import (
+        MockDatabaseAdapter,
+        MockEmbeddingAdapter,
+        MockCoreferenceAdapter,
+        MockEntityExtractionAdapter,
+        MockStatusTracker,
+    )
+
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    settings = BatchIngestionSettings(rate_limit_wait_cap=120)
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+        settings=settings,
+    )
+
+    def resolve_side_effect(content):
+        resp = httpx.Response(429, headers={"Retry-After": "150"})
+        raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
+
+    coref.resolve = resolve_side_effect
+
+    article = SourceArticle(
+        url="http://test.com/rate-over-cap",
+        title="Rate Title",
+        content="Gavin Newsom went home."
+    )
+
+    sleep_delays = []
+    with patch("time.sleep", side_effect=sleep_delays.append):
+        with pytest.raises(PipelineRateLimitError) as exc_info:
+            pipeline.run(article)
+
+    assert len(sleep_delays) == 0
+    assert exc_info.value.component == "coreference"
+    assert "exceeds cap" in str(exc_info.value)
+
+
+def test_rate_limit_without_retry_after():
+    import httpx
+    from knowledge_map.core.pipeline import StoryPipeline
+    from knowledge_map.core.exceptions import PipelineRateLimitError
+    from knowledge_map.config import BatchIngestionSettings
+    from knowledge_map.schemas import SourceArticle
+    from test_pipeline import (
+        MockDatabaseAdapter,
+        MockEmbeddingAdapter,
+        MockCoreferenceAdapter,
+        MockEntityExtractionAdapter,
+        MockStatusTracker,
+    )
+
+    db = MockDatabaseAdapter()
+    embedding = MockEmbeddingAdapter()
+    coref = MockCoreferenceAdapter()
+    extraction = MockEntityExtractionAdapter()
+    status_tracker = MockStatusTracker()
+
+    settings = BatchIngestionSettings(max_retries=3, backoff_factor=2.0)
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=embedding,
+        coreference_adapter=coref,
+        extraction_adapter=extraction,
+        status_tracker=status_tracker,
+        settings=settings,
+    )
+
+    call_count = 0
+    def resolve_side_effect(content):
+        nonlocal call_count
+        call_count += 1
+        resp = httpx.Response(429)
+        raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
+
+    coref.resolve = resolve_side_effect
+
+    article = SourceArticle(
+        url="http://test.com/rate-no-header",
+        title="Rate Title",
+        content="Gavin Newsom went home."
+    )
+
+    sleep_delays = []
+    with patch("time.sleep", side_effect=sleep_delays.append):
+        with pytest.raises(PipelineRateLimitError) as exc_info:
+            pipeline.run(article)
+
+    assert call_count == 4
+    assert sleep_delays == [15.0, 30.0, 60.0]
+    assert exc_info.value.component == "coreference"
+
+
+def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
+    import json
+    import os
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.core.exceptions import PipelineRateLimitError, PipelineLockError
+    from knowledge_map.config import BatchIngestionSettings
+    from knowledge_map.schemas import SourceArticle
+    from unittest.mock import MagicMock
+
+    db_file = tmp_path / "test_locking.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    # Save 4 stories
+    for i in range(1, 5):
+        save_story({
+            "title": f"Story {i}",
+            "url": f"http://example.com/{i}",
+            "content": f"Content {i}"
+        }, db_path=db_path)
+
+    mock_pipeline = MagicMock()
+    mock_status_tracker = MagicMock()
+    mock_pipeline.status_tracker = mock_status_tracker
+
+    # Pipeline will raise PipelineRateLimitError
+    rate_err = PipelineRateLimitError("Rate limit hit", component="embedding", original_exception=ValueError("429 Too Many Requests"))
+    mock_pipeline.run.side_effect = rate_err
+
+    lock_file = tmp_path / "pipeline.lock"
+    lock_file_path = str(lock_file)
+
+    settings = BatchIngestionSettings(
+        db_path=db_path,
+        consecutive_failures_limit=3,
+        lock_file_path=lock_file_path
+    )
+
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+
+    # Run the service. We expect it to raise PipelineLockError when consecutive rate limit failures hit 3
+    with pytest.raises(PipelineLockError) as exc_info:
+        service.run()
+
+    assert "locked" in str(exc_info.value).lower()
+
+    # Pipeline should have been run exactly 3 times
+    assert mock_pipeline.run.call_count == 3
+
+    # The lock file should exist
+    assert os.path.exists(lock_file_path)
+
+    # Check lock file JSON contents
+    with open(lock_file_path, "r") as f:
+        data = json.load(f)
+
+    assert "timestamp" in data
+    assert data["component"] == "embedding"
+    assert data["error_message"] == "Rate limit hit"
+
+    # Now let's test that a successful run resets the consecutive rate limit failures
+    os.remove(lock_file_path)
+
+    mock_pipeline.run.side_effect = None
+    call_count = 0
+    def run_side_effect(article):
+        nonlocal call_count
+        call_count += 1
+        if call_count in (1, 3): # Story 1 and 3 fail, Story 2 succeeds
+            raise PipelineRateLimitError("Rate limit hit", component="embedding", original_exception=ValueError("429"))
+        return MagicMock()
+
+    mock_pipeline.run.side_effect = run_side_effect
+    mock_pipeline.run.reset_mock()
+
+    db_file_reset = tmp_path / "test_locking_reset.db"
+    db_path_reset = str(db_file_reset)
+    init_db(db_path_reset)
+    for i in range(1, 4):
+         save_story({
+             "title": f"Story {i}",
+             "url": f"http://example.com/{i}",
+             "content": f"Content {i}"
+         }, db_path=db_path_reset)
+
+    settings_reset = BatchIngestionSettings(
+        db_path=db_path_reset,
+        lock_file_path=lock_file_path
+    )
+    service_reset = BatchIngestionService(pipeline=mock_pipeline, settings=settings_reset)
+
+    service_reset.run()
+
+    assert mock_pipeline.run.call_count == 3
+    assert not os.path.exists(lock_file_path)
+
+
+def test_batch_ingestion_startup_lock_check(tmp_path):
+    from knowledge_map.core.ingestion import BatchIngestionService
+    from knowledge_map.core.exceptions import PipelineLockError
+    from knowledge_map.config import BatchIngestionSettings
+    from unittest.mock import MagicMock
+
+    mock_pipeline = MagicMock()
+    lock_file = tmp_path / "pipeline.lock"
+    lock_file.write_text("locked content")
+    lock_file_path = str(lock_file)
+
+    settings = BatchIngestionSettings(
+        db_path=str(tmp_path / "dummy.db"),
+        lock_file_path=lock_file_path
+    )
+
+    service = BatchIngestionService(pipeline=mock_pipeline, settings=settings)
+
+    # Verify it raises PipelineLockError
+    with pytest.raises(PipelineLockError) as exc_info:
+        service.run()
+
+    assert "locked" in str(exc_info.value).lower()
+    # Verify no pipeline execution occurred
+    assert mock_pipeline.run.call_count == 0
+
+
+
+
+
+
+
+
 
 
 
