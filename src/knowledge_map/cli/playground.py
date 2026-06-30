@@ -152,32 +152,13 @@ def main(args=None):
                     published_date=story_dict.get("published_date"),
                     content=story_dict.get("content") or ""
                 )
-                
+
                 if dry_run:
-                    print(f"Resolving coreferences for story: {title or url}")
-                    print("Chunking story content...")
-                    result = pipeline.run(article, dry_run=True)
-                    print(f"Split into {len(result.chunks)} chunk(s).")
-                    print("Generating vector embeddings...")
-                    for idx, chunk in enumerate(result.chunks):
-                        chunk_id = f"{article.url}#chunk_{idx}"
-                        extraction = result.extractions[idx]
-                        print(f"\n--- Chunk {idx} (Dry Run) ---")
-                        print(f"Chunk ID: {chunk_id}")
-                        print(f"Chunk text snippet: {chunk.text[:120]}...")
-                        print("Extracting entities...")
-                        print("Validated Extraction Result (JSON):")
-                        print(extraction.model_dump_json(indent=2))
+                    print(f"Dry running pipeline for story: {title or url}")
                 else:
-                    print(f"Resolving coreferences for story: {title or url}")
-                    print("Chunking story content...")
-                    result = pipeline.run(article, dry_run=False)
-                    print(f"Split into {len(result.chunks)} chunk(s).")
-                    print("Generating vector embeddings...")
-                    for idx, chunk in enumerate(result.chunks):
-                        print(f"Ingesting Chunk {idx} node into Neo4j...")
-                        print(f"Extracting entities from Chunk {idx}...")
-                        print(f"Ingesting extraction for Chunk {idx} into Neo4j...")
+                    print(f"Running pipeline for story: {title or url}")
+                
+                result = pipeline.run(article, dry_run=dry_run)
 
             if parsed_args.dry_run:
                 story = {}

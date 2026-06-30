@@ -53,7 +53,8 @@ class PydanticAIEmbeddingAdapter:
             return []
             
         texts = [chunk.text for chunk in chunks]
-        embeddings = asyncio.run(self.embedder.embed_documents(texts))
+        result = asyncio.run(self.embedder.embed_documents(texts))
+        embeddings = result.embeddings
         
         expected_dim = settings.embedding.dimension
         for i, emb in enumerate(embeddings):
