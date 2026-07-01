@@ -195,9 +195,25 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
             # Crawl all URLs in parallel
             article_results = await crawler.arun_many(urls=story_urls, config=article_config)
 
-            # Map content back to stories
-            for story, article_result in zip(top_stories, article_results):
-                if article_result.success:
+            # Map content back to stories correctly matching URLs
+            results_by_url = {}
+            for res in article_results:
+                url_str = str(res.url) if hasattr(res, "url") and res.url else ""
+                results_by_url[url_str.rstrip('/')] = res
+
+            for story in top_stories:
+                story_url_key = story["url"].rstrip('/')
+                article_result = results_by_url.get(story_url_key)
+                if not article_result:
+                    # Fallback to index-based matching if URL lookup fails
+                    try:
+                        idx = top_stories.index(story)
+                        if idx < len(article_results):
+                            article_result = article_results[idx]
+                    except ValueError:
+                        pass
+
+                if article_result and article_result.success:
                     story["content"] = (article_result.markdown or "").strip()
                     
                     # Extract links using JsonCssExtractionStrategy
