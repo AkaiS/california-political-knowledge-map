@@ -4,6 +4,42 @@ Domain model for mapping political influence networks in California from scraped
 
 ## Language
 
+**Publication**:
+A structured domain definition representing a news outlet or data source, specifying its name, base URL, crawl politeness rules (e.g., delay, robots.txt conformance), and the HTML/CSS parsing schemas required to extract its listings and article bodies.
+_Avoid_: News site, outlet, source site
+
+**Publication Registry**:
+A static configuration file (`publications.yaml` or `publications.json`) at the project root defining registered Publications, including their base URLs, Politeness Policies, Discovery Strategies, and CSS schemas.
+_Avoid_: Database catalog, dynamic registry
+
+**Discovery Strategy**:
+An interface and implementation defining how article URLs are found for a Publication, such as parsing an XML sitemap or crawling paginated archive listings.
+_Avoid_: Crawler type, lookup method
+
+**Discovery State**:
+A persistent record stored in the SQLite database that tracks the dynamic operational progress of a Publication's archive crawl (e.g., the last processed page number or sitemap index), allowing crawls to resume.
+_Avoid_: Ingestion progress, scrap log, config state
+
+**Politeness Policy**:
+A configuration schema defined per Publication that dictates the crawling restrictions for its domain, including custom crawl delays, maximum concurrent requests, and robots.txt conformance rules.
+_Avoid_: Rate limit config, block policy
+
+**Concurrent Crawler**:
+A component responsible for orchestrating parallel scraping tasks across multiple Publications, ensuring that requests to different hosts occur concurrently while strictly respecting each domain's individual Politeness Policy.
+_Avoid_: Batch scraper, multi-threader
+
+**Incremental Scraping**:
+A scraping method that retrieves article metadata (like URLs) first and verifies their existence in the database before requesting or downloading the full article bodies, preventing redundant network requests.
+_Avoid_: Delta ingestion, double check
+
+**Archive Crawler**:
+A CLI subcommand (`ca-map scrape-archive`) designed to crawl the historical archives of registered Publications using their Discovery Strategies and tracking progress in the database via the Discovery State, terminating when there are no more pages or when it reaches a configurable historical cutoff (defaulting to 5 years).
+_Avoid_: Historical scraper, archive daemon
+
+**Update Scheduler**:
+A CLI subcommand (`ca-map update-sources`) meant to be executed by external orchestrators (like `cron` or `launchd`) on a 12-hour interval, which runs the Incremental Scraping pipeline for all registered Publications to discover and download new articles.
+_Avoid_: Cron jobs, timer loop, background worker daemon
+
 **Source Article**:
 A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.
 _Avoid_: News piece, document, post, feed
