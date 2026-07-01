@@ -184,7 +184,8 @@ def test_setup_logging(tmp_path):
     setup_logging(log_file_path=str(log_file), log_level=logging.DEBUG)
     
     root_logger = logging.getLogger()
-    assert len(root_logger.handlers) == 2
+    has_logfire = any(type(h).__name__ == "LogfireLoggingHandler" for h in root_logger.handlers)
+    assert len(root_logger.handlers) == (3 if has_logfire else 2)
     
     handler_types = [type(h).__name__ for h in root_logger.handlers]
     assert "StreamHandler" in handler_types

@@ -18,6 +18,7 @@ from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
+from knowledge_map.utils.telemetry import setup_telemetry
 
 def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int = logging.INFO):
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
@@ -37,8 +38,16 @@ def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int =
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
 
+    # Logfire Handler
+    try:
+        import logfire
+        root_logger.addHandler(logfire.LogfireLoggingHandler())
+    except ImportError:
+        pass
+
 def main(args=None):
     load_dotenv()
+    setup_telemetry()
     setup_logging()
 
     parser = argparse.ArgumentParser(

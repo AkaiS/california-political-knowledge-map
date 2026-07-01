@@ -14,6 +14,7 @@ dependencies = [
     "crawl4ai>=0.9.0",
     "pydantic-ai>=2.0.0",
     "chonkie>=1.6.8",
+    "logfire[system-metrics]>=4.37.0",
 ]
 
 [project.scripts]
