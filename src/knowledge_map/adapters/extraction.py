@@ -1,18 +1,20 @@
 from typing import Dict, Any, List
-from knowledge_map.schemas import ExtractionResult
-
+import json
 import os
 import logging
-logger = logging.getLogger(__name__)
-
+from dotenv import load_dotenv
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.models import ModelRequestContext
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
-from dotenv import load_dotenv
 from pydantic_ai.capabilities import Hooks
 from pydantic_ai.models.openai import OpenAIChatModel
+
+from knowledge_map.schemas import ExtractionResult
+from knowledge_map.adapters.coreference import get_agent_metadata
+
+logger = logging.getLogger(__name__)
 
 # monkey patch to get around content ollama rejecting content = <nil> on retries 
 _original = OpenAIChatModel._MapModelResponseContext._into_message_param
@@ -35,7 +37,6 @@ hooks = Hooks()
 
 @hooks.on.output_validate_error
 def log_model_retries(ctx: RunContext, /, *, output_context: Any, output: Any, error: Exception):
-    import json
     logger.debug(f"Model validation failed and retried due to error: {error}")
     if isinstance(output, dict):
         try:
@@ -132,7 +133,6 @@ class PydanticAIEntityExtractionAdapter:
             metadata = {}
             if hasattr(self.agent, "model"):
                 try:
-                    from knowledge_map.adapters.coreference import get_agent_metadata
                     metadata = get_agent_metadata(self.agent)
                 except Exception:
                     pass

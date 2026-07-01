@@ -4,7 +4,7 @@ import json
 import datetime
 from typing import Optional
 
-from knowledge_map.config import Settings, BatchIngestionSettings
+from knowledge_map.config import Settings, BatchIngestionSettings, settings as global_settings
 from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
 from knowledge_map.schemas import SourceArticle, ArticleStatus
 from knowledge_map.core.pipeline import StoryPipeline
@@ -21,7 +21,6 @@ class BatchIngestionService:
     ) -> None:
         self.pipeline = pipeline
         # Use settings module if none provided
-        from knowledge_map.config import settings as global_settings
         self.settings = settings or global_settings.batch_ingestion
         self.consecutive_failures = 0
         self.consecutive_rate_limit_failures = 0

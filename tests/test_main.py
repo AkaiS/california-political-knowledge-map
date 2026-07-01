@@ -2,11 +2,15 @@ import pytest
 import sys
 import os
 import json
+import logging
 from unittest.mock import patch, MagicMock
-from knowledge_map.cli.main import main
+from knowledge_map.cli.main import main, setup_logging
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.adapters.neo4j_db import Neo4jConfigError, Neo4jConnectionError
-from knowledge_map.core.exceptions import PipelineLockError
+from knowledge_map.core.exceptions import PipelineLockError, PipelineRateLimitError
+from knowledge_map.core.ingestion import BatchIngestionService
+from knowledge_map.adapters.sqlite_db import init_db, save_story
+from knowledge_map.config import BatchIngestionSettings
 
 def test_console_notifier_warning_banner(capsys):
     ConsoleNotifier.print_warning_banner("Test Title", "Test Message", {"key1": "val1"})
@@ -17,11 +21,6 @@ def test_console_notifier_warning_banner(capsys):
     assert "val1" in captured.err
 
 def test_batch_ingestion_rate_limit_lock_notifier(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.core.exceptions import PipelineRateLimitError
-    from knowledge_map.config import BatchIngestionSettings
-    
     db_file = tmp_path / "test_locking_alert.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -181,9 +180,6 @@ def test_cli_analyze_connection_error():
          )
 
 def test_setup_logging(tmp_path):
-    from knowledge_map.cli.main import setup_logging
-    import logging
-    
     log_file = tmp_path / "test_pipeline.log"
     setup_logging(log_file_path=str(log_file), log_level=logging.DEBUG)
     
@@ -206,7 +202,6 @@ def test_setup_logging(tmp_path):
         assert "DEBUG" in content
 
 def test_console_notifier_non_tty(caplog):
-    import logging
     with patch("sys.stderr.isatty", return_value=False):
         with caplog.at_level(logging.CRITICAL):
             ConsoleNotifier.print_warning_banner("Test Title", "Test Message", {"key1": "val1"})

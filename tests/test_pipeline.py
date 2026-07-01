@@ -1,5 +1,7 @@
 import pytest
+import logging
 from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node
+from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.core.pipeline import (
     StoryPipeline,
     DatabaseAdapter,
@@ -143,7 +145,6 @@ def test_pipeline_persistence():
     assert stored_extraction.nodes[0].name == "Test Actor"
 
 def test_pipeline_logging(caplog):
-    import logging
     caplog.set_level(logging.INFO)
 
     db = MockDatabaseAdapter()
@@ -431,7 +432,6 @@ def test_pipeline_coreference_failure_logs_to_dlq():
 
 
 def test_pipeline_extraction_failure_logs_to_dlq():
-    from knowledge_map.adapters.extraction import ExtractionError
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()
@@ -483,7 +483,6 @@ def test_pipeline_extraction_failure_logs_to_dlq():
 
 
 def test_pipeline_status_extraction_failure():
-    from knowledge_map.adapters.extraction import ExtractionError
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()

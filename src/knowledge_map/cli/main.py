@@ -3,9 +3,11 @@ import os
 import sys
 import json
 import logging
+import asyncio
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
+from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter, get_embedding_embedder, cosine_similarity
@@ -95,7 +97,6 @@ def main(args=None):
             sys.exit(0)
 
         except PipelineLockError as e:
-            from knowledge_map.config import settings
             lock_path = settings.batch_ingestion.lock_file_path
             component = "unknown"
             timestamp = "unknown"
@@ -197,7 +198,6 @@ def main(args=None):
                     if len(nodes) >= 2:
                         if embedder is None:
                             embedder = get_embedding_embedder()
-                        import asyncio
                         res = asyncio.run(embedder.embed_documents(nodes))
                         embeddings = res.embeddings
 
@@ -241,7 +241,6 @@ def main(args=None):
                 manager.close()
 
     elif parsed_args.action == "janitor":
-        from knowledge_map.config import settings
         lock_file_path = settings.batch_ingestion.lock_file_path
         
         if not os.path.exists(lock_file_path):

@@ -1,5 +1,7 @@
 import logging
+import time
 from typing import Protocol, List, Optional
+from knowledge_map.config import settings as global_settings
 from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
 from knowledge_map.utils.chunking import chunk_article
 
@@ -97,13 +99,11 @@ class StoryPipeline:
         
         # Load default batch ingestion settings if not explicitly passed
         if settings is None:
-            from knowledge_map.config import settings as global_settings
             self.settings = global_settings.batch_ingestion
         else:
             self.settings = settings
 
     def _execute_with_retry(self, component: str, func, *args, **kwargs):
-        import time
         max_retries = self.settings.max_retries
         backoff_factor = self.settings.backoff_factor
         rate_limit_wait_cap = self.settings.rate_limit_wait_cap

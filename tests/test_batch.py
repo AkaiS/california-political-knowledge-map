@@ -1,7 +1,42 @@
 import os
+import sys
+import json
+import sqlite3
 import pytest
-from unittest.mock import patch
+import httpx
+from unittest.mock import patch, MagicMock
+from pydantic import ValidationError, BaseModel
+
 from knowledge_map.config import Settings, BatchIngestionSettings
+from knowledge_map.adapters.sqlite_db import (
+    init_db,
+    save_story,
+    update_story_status,
+    get_unprocessed_stories,
+    SQLiteStatusTracker
+)
+from knowledge_map.adapters.coreference import CoreferenceResolutionError
+from knowledge_map.adapters.extraction import ExtractionError
+from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, Node
+from knowledge_map.core.pipeline import StoryPipeline
+from knowledge_map.core.ingestion import BatchIngestionService
+from knowledge_map.core.exceptions import (
+    classify_exception,
+    classify_api_error,
+    get_retry_after,
+    PipelineConnectivityError,
+    PipelineRateLimitError,
+    PipelineLockError
+)
+from knowledge_map.cli.main import main
+from test_pipeline import (
+    MockDatabaseAdapter,
+    MockEmbeddingAdapter,
+    MockCoreferenceAdapter,
+    MockEntityExtractionAdapter,
+    MockStatusTracker,
+    MockDeadLetterQueueAdapter
+)
 
 def test_batch_ingestion_settings_defaults():
     # Verify default values
@@ -38,12 +73,6 @@ def test_batch_ingestion_settings_env_override():
         assert batch_cfg.db_path == "test_db.db"
 
 def test_get_unprocessed_stories(tmp_path):
-    from knowledge_map.adapters.sqlite_db import (
-        init_db,
-        save_story,
-        update_story_status,
-        get_unprocessed_stories,
-    )
     db_file = tmp_path / "test_unprocessed.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -103,12 +132,6 @@ def test_get_unprocessed_stories(tmp_path):
 
 
 def test_batch_ingestion_service_sequential_run(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.schemas import SourceArticle
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
-
     db_file = tmp_path / "test_service.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -154,7 +177,6 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
 
 
 def test_cli_ingest_command():
-    from knowledge_map.cli.main import main
     
     with patch("knowledge_map.cli.main.BatchIngestionService") as MockService, \
          patch("knowledge_map.cli.main.Neo4jAdapter") as MockNeo4j, \
@@ -177,7 +199,6 @@ def test_cli_ingest_command():
 
 
 def test_cli_clear_command(capsys):
-    from knowledge_map.cli.main import main
     with patch("knowledge_map.cli.main.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         try:
@@ -192,7 +213,6 @@ def test_cli_clear_command(capsys):
 
 
 def test_cli_analyze_command(capsys):
-    from knowledge_map.cli.main import main
     with patch("knowledge_map.cli.main.Neo4jAdapter") as MockAdapter:
         mock_instance = MockAdapter.return_value
         mock_instance.get_distinct_labels.return_value = ["PoliticalActor"]
@@ -209,12 +229,6 @@ def test_cli_analyze_command(capsys):
 
 
 def test_batch_ingestion_service_status_transitions(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story, SQLiteStatusTracker
-    from knowledge_map.core.pipeline import StoryPipeline
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import ArticleChunk, ExtractionResult, Node
-    
     class LocalMockDatabaseAdapter:
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
@@ -272,11 +286,6 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
 
 
 def test_classify_exception():
-    from knowledge_map.core.exceptions import classify_exception
-    from knowledge_map.adapters.coreference import CoreferenceResolutionError
-    from knowledge_map.adapters.extraction import ExtractionError
-    from pydantic import ValidationError, BaseModel
-    
     # 1. CoreferenceResolutionError should be classified as non-breaking
     coref_err = CoreferenceResolutionError(
         original_text="test",
@@ -311,12 +320,6 @@ def test_classify_exception():
 
 
 def test_batch_ingestion_resilience_non_breaking(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.adapters.coreference import CoreferenceResolutionError
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
-    
     db_file = tmp_path / "test_resilience_nb.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -353,12 +356,6 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
 
 
 def test_batch_ingestion_resilience_extraction_error(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.adapters.extraction import ExtractionError
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
-    
     db_file = tmp_path / "test_resilience_extract.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -394,11 +391,6 @@ def test_batch_ingestion_resilience_extraction_error(tmp_path):
 
 
 def test_batch_ingestion_consecutive_system_errors(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
-    
     db_file = tmp_path / "test_system_errors.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -436,11 +428,6 @@ def test_batch_ingestion_consecutive_system_errors(tmp_path):
 
 
 def test_batch_ingestion_system_error_reset_on_success(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
-    
     db_file = tmp_path / "test_system_error_reset.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -477,8 +464,6 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
 
 
 def test_exception_classification_and_parsing():
-    import httpx
-    from knowledge_map.core.exceptions import classify_api_error, get_retry_after
 
     # 1. Test HTTP 429 Status Error -> RATE_LIMIT
     resp_429 = httpx.Response(429, headers={"Retry-After": "45"})
@@ -506,19 +491,6 @@ def test_exception_classification_and_parsing():
 
 
 def test_connectivity_retries_and_backoff():
-    import httpx
-    from knowledge_map.core.pipeline import StoryPipeline
-    from knowledge_map.core.exceptions import PipelineConnectivityError
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import SourceArticle
-    from test_pipeline import (
-        MockDatabaseAdapter,
-        MockEmbeddingAdapter,
-        MockCoreferenceAdapter,
-        MockEntityExtractionAdapter,
-        MockStatusTracker,
-    )
-
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()
@@ -562,18 +534,6 @@ def test_connectivity_retries_and_backoff():
 
 
 def test_rate_limit_retry_after_under_cap():
-    import httpx
-    from knowledge_map.core.pipeline import StoryPipeline
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import SourceArticle
-    from test_pipeline import (
-        MockDatabaseAdapter,
-        MockEmbeddingAdapter,
-        MockCoreferenceAdapter,
-        MockEntityExtractionAdapter,
-        MockStatusTracker,
-    )
-
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()
@@ -617,19 +577,6 @@ def test_rate_limit_retry_after_under_cap():
 
 
 def test_rate_limit_retry_after_over_cap():
-    import httpx
-    from knowledge_map.core.pipeline import StoryPipeline
-    from knowledge_map.core.exceptions import PipelineRateLimitError
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import SourceArticle
-    from test_pipeline import (
-        MockDatabaseAdapter,
-        MockEmbeddingAdapter,
-        MockCoreferenceAdapter,
-        MockEntityExtractionAdapter,
-        MockStatusTracker,
-    )
-
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()
@@ -669,19 +616,6 @@ def test_rate_limit_retry_after_over_cap():
 
 
 def test_rate_limit_without_retry_after():
-    import httpx
-    from knowledge_map.core.pipeline import StoryPipeline
-    from knowledge_map.core.exceptions import PipelineRateLimitError
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import SourceArticle
-    from test_pipeline import (
-        MockDatabaseAdapter,
-        MockEmbeddingAdapter,
-        MockCoreferenceAdapter,
-        MockEntityExtractionAdapter,
-        MockStatusTracker,
-    )
-
     db = MockDatabaseAdapter()
     embedding = MockEmbeddingAdapter()
     coref = MockCoreferenceAdapter()
@@ -724,14 +658,6 @@ def test_rate_limit_without_retry_after():
 
 
 def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
-    import json
-    import os
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.adapters.sqlite_db import init_db, save_story
-    from knowledge_map.core.exceptions import PipelineRateLimitError, PipelineLockError
-    from knowledge_map.config import BatchIngestionSettings
-    from knowledge_map.schemas import SourceArticle
-    from unittest.mock import MagicMock
 
     db_file = tmp_path / "test_locking.db"
     db_path = str(db_file)
@@ -822,10 +748,6 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
 
 
 def test_batch_ingestion_startup_lock_check(tmp_path):
-    from knowledge_map.core.ingestion import BatchIngestionService
-    from knowledge_map.core.exceptions import PipelineLockError
-    from knowledge_map.config import BatchIngestionSettings
-    from unittest.mock import MagicMock
 
     mock_pipeline = MagicMock()
     lock_file = tmp_path / "pipeline.lock"

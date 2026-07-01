@@ -1,6 +1,8 @@
 import pytest
-from unittest.mock import patch
-from knowledge_map.adapters.embedding import cosine_similarity, get_embedding_embedder
+import os
+from unittest.mock import patch, MagicMock
+from knowledge_map.adapters.embedding import cosine_similarity, get_embedding_embedder, PydanticAIEmbeddingAdapter
+from knowledge_map.schemas import ArticleChunk
 
 def test_cosine_similarity_exact_match():
     v1 = [1.0, 2.0, 3.0]
@@ -35,7 +37,6 @@ def test_cosine_similarity_dimension_mismatch():
     assert "Vectors must be of the same dimension" in str(exc_info.value)
 
 def test_get_embedding_embedder():
-    import os
     with patch.dict(os.environ, {
         "OLLAMA_BASE_URL": "http://localhost:11434",
         "OLLAMA_EMBEDDING_MODEL": "embeddinggemma"
@@ -45,9 +46,6 @@ def test_get_embedding_embedder():
         assert embedder.model.model_name == "embeddinggemma"
 
 
-from unittest.mock import MagicMock
-from knowledge_map.schemas import ArticleChunk
-from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 
 class MockResult:
     def __init__(self, embeddings):
