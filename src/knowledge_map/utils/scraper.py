@@ -6,7 +6,6 @@ from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, JsonCssExtrac
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 
 # Set up basic logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

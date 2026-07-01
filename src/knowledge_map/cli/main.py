@@ -2,6 +2,8 @@ import argparse
 import os
 import sys
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
@@ -15,8 +17,27 @@ from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 
+def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int = logging.INFO):
+    os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_logger.handlers.clear()
+
+    # Console Handler
+    console_handler = logging.StreamHandler()
+    console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
+
+    # File Handler
+    file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=5)
+    file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s:%(lineno)d] %(message)s")
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+
 def main(args=None):
     load_dotenv()
+    setup_logging()
 
     parser = argparse.ArgumentParser(
         description="California Political Influence GraphRAG Engine - Production CLI"

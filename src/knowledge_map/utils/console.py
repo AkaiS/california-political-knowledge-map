@@ -1,12 +1,23 @@
 import sys
+import logging
 from typing import Optional, Dict
+
+logger = logging.getLogger("knowledge_map.notifications")
 
 class ConsoleNotifier:
     @staticmethod
     def print_warning_banner(title: str, message: str, details: Optional[Dict[str, str]] = None) -> None:
         """
-        Prints a distinct, high-visibility warning block/banner to sys.stderr.
+        Prints a distinct, high-visibility warning block/banner to sys.stderr
+        or standard logging if sys.stderr is not a TTY.
         """
+        if not sys.stderr.isatty():
+            details_str = ""
+            if details:
+                details_str = " | Details: " + ", ".join(f"{k}={v}" for k, v in details.items())
+            logger.critical(f"[{title.upper()}] {message}{details_str}")
+            return
+
         border_char = "="
         width = 80
         header = f" {title.upper()} "

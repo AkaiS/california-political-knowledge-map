@@ -64,6 +64,7 @@ class LocalFileDLQAdapter:
             os.makedirs(self.directory, exist_ok=True)
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
+            return filename
         except OSError as e:
             logger.warning(f"Failed to write DLQ record to filesystem: {e}", exc_info=True)
             raise e

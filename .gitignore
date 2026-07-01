@@ -6,3 +6,4 @@ __pycache__/*
 manual_checks/*
 */generate_report.py
 .scratch/coreference_dlq/*
+.scratch/pipeline.log

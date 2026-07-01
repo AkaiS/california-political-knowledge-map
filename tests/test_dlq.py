@@ -22,7 +22,7 @@ def test_dlq_adapter_success(tmp_path):
         "system_prompt": "You are a coref resolver"
     }
     
-    adapter.log_failure(
+    res = adapter.log_failure(
         url=url,
         title=title,
         original_text=original_text,
@@ -39,6 +39,7 @@ def test_dlq_adapter_success(tmp_path):
     assert len(files) == 1
     
     filename = files[0]
+    assert res == filename
     # Check naming conventions: {domain}_{url_hash}_{timestamp}_{failure_type}_retry_{retry_count}.json
     parts = filename.split("_")
     assert len(parts) >= 6

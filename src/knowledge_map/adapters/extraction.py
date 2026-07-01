@@ -2,6 +2,9 @@ from typing import Dict, Any, List
 from knowledge_map.schemas import ExtractionResult
 
 import os
+import logging
+logger = logging.getLogger(__name__)
+
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.models import ModelRequestContext
@@ -33,14 +36,14 @@ hooks = Hooks()
 @hooks.on.output_validate_error
 def log_model_retries(ctx: RunContext, /, *, output_context: Any, output: Any, error: Exception):
     import json
-    print(f"Model validation failed and retried due to error: {error}")
+    logger.debug(f"Model validation failed and retried due to error: {error}")
     if isinstance(output, dict):
         try:
-            print(f"Model response (raw): {json.dumps(output, indent=2)}")
+            logger.debug(f"Model response (raw): {json.dumps(output, indent=2)}")
         except Exception:
-            print(f"Model response (raw): {output}")
+            logger.debug(f"Model response (raw): {output}")
     else:
-        print(f"Model response (raw): {output}")
+        logger.debug(f"Model response (raw): {output}")
     raise error
 
 def load_instructions() -> str:

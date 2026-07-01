@@ -179,3 +179,40 @@ def test_cli_analyze_connection_error():
              message="Failed to connect to Neo4j database.",
              details={"Error": "Conn failed"}
          )
+
+def test_setup_logging(tmp_path):
+    from knowledge_map.cli.main import setup_logging
+    import logging
+    
+    log_file = tmp_path / "test_pipeline.log"
+    setup_logging(log_file_path=str(log_file), log_level=logging.DEBUG)
+    
+    root_logger = logging.getLogger()
+    assert len(root_logger.handlers) == 2
+    
+    handler_types = [type(h).__name__ for h in root_logger.handlers]
+    assert "StreamHandler" in handler_types
+    assert "RotatingFileHandler" in handler_types
+    
+    test_logger = logging.getLogger("test_setup_logging_logger")
+    test_logger.debug("test log message")
+    
+    for h in root_logger.handlers:
+        h.close()
+        
+    with open(log_file, "r") as f:
+        content = f.read()
+        assert "test log message" in content
+        assert "DEBUG" in content
+
+def test_console_notifier_non_tty(caplog):
+    import logging
+    with patch("sys.stderr.isatty", return_value=False):
+        with caplog.at_level(logging.CRITICAL):
+            ConsoleNotifier.print_warning_banner("Test Title", "Test Message", {"key1": "val1"})
+            
+        assert len(caplog.records) == 1
+        record = caplog.records[0]
+        assert record.levelname == "CRITICAL"
+        assert "[TEST TITLE] Test Message" in record.message
+        assert "key1=val1" in record.message

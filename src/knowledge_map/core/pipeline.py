@@ -59,7 +59,7 @@ class DeadLetterQueueAdapter(Protocol):
         failure_type: str,
         retry_count: int,
         metadata: dict
-    ) -> None:
+    ) -> str:
         ...
 
 class StatusTracker(Protocol):
@@ -186,8 +186,9 @@ class StoryPipeline:
             try:
                 resolved_text = self._execute_with_retry("coreference", self.coreference_adapter.resolve, article.content)
             except CoreferenceResolutionError as e:
+                dlq_id = "N/A"
                 if self.dlq_adapter:
-                    self.dlq_adapter.log_failure(
+                    dlq_id = self.dlq_adapter.log_failure(
                         url=article.url,
                         title=article.title or "",
                         original_text=e.original_text,
@@ -197,6 +198,11 @@ class StoryPipeline:
                         retry_count=e.retry_count,
                         metadata=e.metadata
                     )
+                logger.error(
+                    f"Coreference resolution failed. Reason: {e.failure_type}. "
+                    f"Issues: {e.validation_issues}. "
+                    f"Archived in DLQ: {dlq_id}"
+                )
 
                 if not dry_run:
                     self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
@@ -247,8 +253,9 @@ class StoryPipeline:
                     logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
 
             if isinstance(e, ExtractionError):
+                dlq_id = "N/A"
                 if self.dlq_adapter:
-                    self.dlq_adapter.log_failure(
+                    dlq_id = self.dlq_adapter.log_failure(
                         url=article.url,
                         title=article.title or "",
                         original_text=e.original_text,
@@ -258,6 +265,11 @@ class StoryPipeline:
                         retry_count=e.retry_count,
                         metadata=e.metadata
                     )
+                logger.error(
+                    f"Entity extraction failed. Reason: {e.failure_type}. "
+                    f"Issues: {e.validation_issues}. "
+                    f"Archived in DLQ: {dlq_id}"
+                )
                 if not dry_run:
                     try:
                         self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
