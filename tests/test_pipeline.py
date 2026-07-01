@@ -363,7 +363,8 @@ class MockDeadLetterQueueAdapter:
         validation_issues: list[str],
         failure_type: str,
         retry_count: int,
-        metadata: dict
+        metadata: dict,
+        error_category: str = "coreference"
     ) -> None:
         self.failures.append({
             "url": url,
@@ -373,7 +374,8 @@ class MockDeadLetterQueueAdapter:
             "validation_issues": validation_issues,
             "failure_type": failure_type,
             "retry_count": retry_count,
-            "metadata": metadata
+            "metadata": metadata,
+            "error_category": error_category
         })
 
 def test_pipeline_coreference_failure_logs_to_dlq():
@@ -425,6 +427,7 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     assert failure["failure_type"] == "structural_mismatch"
     assert failure["retry_count"] == 3
     assert failure["metadata"] == {"model": "gemma"}
+    assert failure["error_category"] == "coreference"
 
 
 def test_pipeline_extraction_failure_logs_to_dlq():
@@ -476,6 +479,7 @@ def test_pipeline_extraction_failure_logs_to_dlq():
     assert failure["failure_type"] == "extraction_validation_failure"
     assert failure["retry_count"] == 3
     assert failure["metadata"] == {"model": "gemma"}
+    assert failure["error_category"] == "extraction"
 
 
 def test_pipeline_status_extraction_failure():

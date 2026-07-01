@@ -8,7 +8,7 @@ import hashlib
 logger = logging.getLogger(__name__)
 
 class LocalFileDLQAdapter:
-    def __init__(self, directory: str = ".scratch/coreference_dlq") -> None:
+    def __init__(self, directory: str = ".scratch/dlq") -> None:
         self.directory = directory
 
     def log_failure(
@@ -20,8 +20,9 @@ class LocalFileDLQAdapter:
         validation_issues: list[str],
         failure_type: str,
         retry_count: int,
-        metadata: dict
-    ) -> None:
+        metadata: dict,
+        error_category: str = "coreference"
+    ) -> str:
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         
         # Parse domain from URL
@@ -45,7 +46,8 @@ class LocalFileDLQAdapter:
         failure_type_clean = failure_type.replace("_", "-")
         
         filename = f"{domain_clean}_{url_hash}_{timestamp_safe}_{failure_type_clean}_retry_{retry_count}.json"
-        filepath = os.path.join(self.directory, filename)
+        target_dir = os.path.join(self.directory, error_category)
+        filepath = os.path.join(target_dir, filename)
         
         payload = {
             "url": url,
@@ -61,10 +63,10 @@ class LocalFileDLQAdapter:
         
         try:
             # Ensure the directory exists
-            os.makedirs(self.directory, exist_ok=True)
+            os.makedirs(target_dir, exist_ok=True)
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
-            return filename
+            return os.path.join(error_category, filename)
         except OSError as e:
             logger.warning(f"Failed to write DLQ record to filesystem: {e}", exc_info=True)
             raise e

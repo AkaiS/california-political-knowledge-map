@@ -243,14 +243,44 @@ class PydanticAICoreferenceAdapter:
         self.max_retries = max_retries
 
     def resolve(self, content: str) -> str:
-        annotated_text = resolve_coreferences(
-            content,
-            annotator_agent=self.annotator_agent,
-            critic_agent=self.critic_agent,
-            max_retries=self.max_retries,
-            raise_on_failure=True
-        )
-        return replace_tags_with_entities(annotated_text)
+        try:
+            annotated_text = resolve_coreferences(
+                content,
+                annotator_agent=self.annotator_agent,
+                critic_agent=self.critic_agent,
+                max_retries=self.max_retries,
+                raise_on_failure=True
+            )
+            return replace_tags_with_entities(annotated_text)
+        except CoreferenceResolutionError:
+            raise
+        except Exception as e:
+            validation_issues = []
+            if hasattr(e, "errors") and callable(e.errors):
+                try:
+                    for err in e.errors():
+                        loc_str = " -> ".join(str(loc) for loc in err.get("loc", []))
+                        msg = err.get("msg", "Validation error")
+                        validation_issues.append(f"{loc_str}: {msg}")
+                except Exception:
+                    validation_issues = [str(e)]
+            if not validation_issues:
+                validation_issues = [str(e)]
+
+            metadata = {}
+            try:
+                metadata = get_agent_metadata(self.annotator_agent)
+            except Exception:
+                pass
+
+            raise CoreferenceResolutionError(
+                original_text=content,
+                annotated_text="",
+                validation_issues=validation_issues,
+                failure_type="coreference_validation_failure",
+                retry_count=self.max_retries,
+                metadata=metadata
+            )
 
     def health_check(self) -> bool:
         try:

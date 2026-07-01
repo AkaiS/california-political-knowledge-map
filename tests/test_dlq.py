@@ -33,13 +33,17 @@ def test_dlq_adapter_success(tmp_path):
         metadata=metadata
     )
     
-    # Assert directory was created and contains exactly one file
+    # Assert directory was created and contains exactly one subdirectory (coreference)
     assert os.path.exists(dlq_dir)
-    files = os.listdir(dlq_dir)
+    subdirs = os.listdir(dlq_dir)
+    assert "coreference" in subdirs
+    
+    category_dir = dlq_dir / "coreference"
+    files = os.listdir(category_dir)
     assert len(files) == 1
     
     filename = files[0]
-    assert res == filename
+    assert res == os.path.join("coreference", filename)
     # Check naming conventions: {domain}_{url_hash}_{timestamp}_{failure_type}_retry_{retry_count}.json
     parts = filename.split("_")
     assert len(parts) >= 6
@@ -53,7 +57,7 @@ def test_dlq_adapter_success(tmp_path):
     assert parts[-1] == f"{retry_count}.json"
     
     # Read payload and assert contents
-    filepath = dlq_dir / filename
+    filepath = category_dir / filename
     with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
         
@@ -66,6 +70,34 @@ def test_dlq_adapter_success(tmp_path):
     assert data["retry_count"] == retry_count
     assert data["metadata"] == metadata
     assert "timestamp" in data
+
+def test_dlq_adapter_custom_category(tmp_path):
+    dlq_dir = tmp_path / "dlq"
+    adapter = LocalFileDLQAdapter(directory=str(dlq_dir))
+    
+    res = adapter.log_failure(
+        url="http://example.com/extraction-err",
+        title="Extraction Failure",
+        original_text="Some bad extraction text",
+        annotated_text="",
+        validation_issues=["Missing field schema"],
+        failure_type="schema_mismatch",
+        retry_count=1,
+        metadata={},
+        error_category="extraction"
+    )
+    
+    assert os.path.exists(dlq_dir)
+    subdirs = os.listdir(dlq_dir)
+    assert "extraction" in subdirs
+    
+    category_dir = dlq_dir / "extraction"
+    files = os.listdir(category_dir)
+    assert len(files) == 1
+    
+    filename = files[0]
+    assert res == os.path.join("extraction", filename)
+    assert "schema-mismatch" in filename
 
 def test_dlq_adapter_write_failure(tmp_path, caplog):
     import logging
