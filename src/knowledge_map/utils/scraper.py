@@ -187,7 +187,8 @@ async def fetch_last_5_politics_stories() -> List[Dict[str, Any]]:
                     "section.below-content, "
                     ".wp-block-newspack-blocks-homepage-articles, "
                     ".after-article-engagement, "
-                    ".cm-read-next-eoa"
+                    ".cm-read-next-eoa, "
+                    ".calmatters-summary"
                 )
             )
             
