@@ -9,8 +9,8 @@ A structured domain definition representing a news outlet or data source, specif
 _Avoid_: News site, outlet, source site
 
 **Publication Registry**:
-A static configuration file (`publications.yaml` or `publications.json`) at the project root defining registered Publications, including their base URLs, Politeness Policies, Discovery Strategies, and CSS schemas.
-_Avoid_: Database catalog, dynamic registry
+A persistent database store (a SQLite table) holding registered Publications, specifying their base URLs, Politeness Policies, Discovery Strategies, and crawl parameters.
+_Avoid_: Static registry, config file registry
 
 **Discovery Strategy**:
 An interface and implementation defining how article URLs are found for a Publication, such as parsing an XML sitemap or crawling paginated archive listings.
@@ -39,6 +39,34 @@ _Avoid_: Historical scraper, archive daemon
 **Update Scheduler**:
 A CLI subcommand (`ca-map update-sources`) meant to be executed by external orchestrators (like `cron` or `launchd`) on a 12-hour interval, which runs the Incremental Scraping pipeline for all registered Publications to discover and download new articles.
 _Avoid_: Cron jobs, timer loop, background worker daemon
+
+**Article Validator**:
+A component that validates scraped article content using structural constraints and compares it against a heuristic baseline (provided by `newspaper4k`) to detect extraction failures or layout drift.
+_Avoid_: Schema checker, parser tester
+
+**Selector Healing Pipeline**:
+An LLM-driven process triggered automatically when an article fails validation, which analyzes the raw HTML and the heuristic baseline to generate new selector candidates, presenting a preview for human verification before activation.
+_Avoid_: Selector fixer, auto-repairer
+
+**Publication Bootstrapper**:
+An LLM-driven process that initializes a new Publication by analyzing a sample of raw article HTML files and their heuristic baselines to discover selector candidates, presenting them for human verification before registration.
+_Avoid_: Source creator, template writer
+
+**Selector Version**:
+A specific iteration of HTML/CSS scraping selectors for a Publication, associated with a time validity window (`valid_from` and `valid_to` timestamps) to support parsing historical variations of a website's layout.
+_Avoid_: Schema revision, css version
+
+**Selector Store**:
+The persistent database store (a SQLite table) holding all Selector Versions, allowing the crawler to query the active selectors for any article's publication or crawl date.
+_Avoid_: Selector registry, selector catalog
+
+**Raw HTML Store**:
+A persistent store (e.g., local files or a dedicated SQLite table) that records the exact raw HTML content of scraped articles, primarily used to support asynchronous self-healing, debugging, and offline re-scraping when selectors change.
+_Avoid_: Page cache, web archive
+
+**Relevance Document**:
+A concatenated text representation of a discovered page's metadata (including title, meta description, keywords, and tags) used to run local BM25 relevance filters before committing to a full article body download.
+_Avoid_: Search index, article body copy
 
 **Source Article**:
 A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.
