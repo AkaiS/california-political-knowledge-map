@@ -15,8 +15,11 @@ def setup_telemetry() -> None:
         # Check if running in a testing environment (pytest/unittest)
         is_testing = (
             "pytest" in sys.modules
-            or "unittest" in sys.modules
             or os.environ.get("PYTEST_CURRENT_TEST") is not None
+            or (
+                "unittest" in sys.modules
+                and any("unittest" in arg or "pytest" in arg for arg in sys.argv)
+            )
         )
         
         # Disable remote exporting in test suite runs by default
