@@ -222,86 +222,53 @@ class StoryPipeline:
                 extractions=extractions
             )
         except Exception as e:
-            if not dry_run:
-                try:
-                    if isinstance(e, PipelineException):
-                        self.status_tracker.update_status(article.url, ArticleStatus.UNPROCESSED)
-                except Exception as status_err:
-                    logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
-
-            if isinstance(e, CoreferenceResolutionError):
-                dlq_id = "N/A"
-                if self.dlq_adapter:
-                    try:
-                        dlq_id = self.dlq_adapter.log_failure(
-                            url=article.url,
-                            title=article.title or "",
-                            original_text=e.original_text,
-                            annotated_text=e.annotated_text,
-                            validation_issues=e.validation_issues,
-                            failure_type=e.failure_type,
-                            retry_count=e.retry_count,
-                            metadata=e.metadata,
-                            error_category="coreference"
-                        )
-                    except Exception as dlq_err:
-                        logger.error(f"Failed to log coreference failure to DLQ: {dlq_err}")
-                        if not dry_run:
-                            try:
-                                self.status_tracker.update_status(article.url, ArticleStatus.SYSTEM_ERROR)
-                            except Exception as status_err:
-                                logger.error(f"Failed to update status to SYSTEM_ERROR: {status_err}")
-                        raise dlq_err
-                logger.error(
-                    f"Coreference resolution failed. Reason: {e.failure_type}. "
-                    f"Issues: {e.validation_issues}. "
-                    f"Archived in DLQ: {dlq_id}"
-                )
-                if not dry_run:
-                    try:
-                        self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
-                    except Exception as status_err:
-                        logger.error(f"Failed to update status to FAILED_DLQ: {status_err}")
-                e.logged_to_dlq = True
-            elif isinstance(e, ExtractionError):
-                dlq_id = "N/A"
-                if self.dlq_adapter:
-                    try:
-                        dlq_id = self.dlq_adapter.log_failure(
-                            url=article.url,
-                            title=article.title or "",
-                            original_text=e.original_text,
-                            annotated_text="",
-                            validation_issues=e.validation_issues,
-                            failure_type=e.failure_type,
-                            retry_count=e.retry_count,
-                            metadata=e.metadata,
-                            error_category="extraction"
-                        )
-                    except Exception as dlq_err:
-                        logger.error(f"Failed to log extraction failure to DLQ: {dlq_err}")
-                        if not dry_run:
-                            try:
-                                self.status_tracker.update_status(article.url, ArticleStatus.SYSTEM_ERROR)
-                            except Exception as status_err:
-                                logger.error(f"Failed to update status to SYSTEM_ERROR: {status_err}")
-                        raise dlq_err
-                logger.error(
-                    f"Entity extraction failed. Reason: {e.failure_type}. "
-                    f"Issues: {e.validation_issues}. "
-                    f"Archived in DLQ: {dlq_id}"
-                )
-                if not dry_run:
-                    try:
-                        self.status_tracker.update_status(article.url, ArticleStatus.FAILED_DLQ)
-                    except Exception as status_err:
-                        logger.error(f"Failed to update status to FAILED_DLQ: {status_err}")
-                e.logged_to_dlq = True
-            elif not isinstance(e, PipelineException):
-                logger.error(f"Unexpected pipeline error: {e}")
-                if not dry_run:
-                    try:
-                        self.status_tracker.update_status(article.url, ArticleStatus.SYSTEM_ERROR)
-                    except Exception as status_err:
-                        logger.error(f"Failed to update status to SYSTEM_ERROR: {status_err}")
+            self._handle_pipeline_failure(e, article, dry_run)
             raise e
+
+    def _safe_update_status(self, url: str, status: ArticleStatus) -> None:
+        try:
+            self.status_tracker.update_status(url, status)
+        except Exception as status_err:
+            logger.error(f"Failed to update status to {status}: {status_err}")
+
+    def _handle_pipeline_failure(self, e: Exception, article: SourceArticle, dry_run: bool) -> None:
+        if not dry_run:
+            if isinstance(e, PipelineException):
+                self._safe_update_status(article.url, ArticleStatus.UNPROCESSED)
+
+        if isinstance(e, (CoreferenceResolutionError, ExtractionError)):
+            error_cat = "coreference" if isinstance(e, CoreferenceResolutionError) else "extraction"
+            annotated = getattr(e, "annotated_text", "")
+            dlq_id = "N/A"
+            if self.dlq_adapter:
+                try:
+                    dlq_id = self.dlq_adapter.log_failure(
+                        url=article.url,
+                        title=article.title or "",
+                        original_text=e.original_text,
+                        annotated_text=annotated,
+                        validation_issues=e.validation_issues,
+                        failure_type=e.failure_type,
+                        retry_count=e.retry_count,
+                        metadata=e.metadata,
+                        error_category=error_cat
+                    )
+                except Exception as dlq_err:
+                    logger.error(f"Failed to log {error_cat} failure to DLQ: {dlq_err}")
+                    if not dry_run:
+                        self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
+                    raise dlq_err
+
+            logger.error(
+                f"{error_cat.capitalize()} failure. Reason: {e.failure_type}. "
+                f"Issues: {e.validation_issues}. "
+                f"Archived in DLQ: {dlq_id}"
+            )
+            if not dry_run:
+                self._safe_update_status(article.url, ArticleStatus.FAILED_DLQ)
+            e.logged_to_dlq = True
+
+        elif not isinstance(e, PipelineException):
+            logger.error(f"Unexpected pipeline error: {e}")
+            if not dry_run:
+                self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
