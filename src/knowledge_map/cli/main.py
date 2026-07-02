@@ -8,7 +8,8 @@ from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 from knowledge_map.config import settings
-from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker
+from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker, register_publication
+from knowledge_map.core.bootstrapper import bootstrap_publication_stub
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter, get_embedding_embedder, cosine_similarity
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
@@ -67,6 +68,18 @@ def main(args=None):
 
     # Janitor subcommand
     subparsers.add_parser("janitor", help="Perform a health check on the locked component and release lock if healthy")
+
+    # Register-publication subcommand
+    register_parser = subparsers.add_parser("register-publication", help="Register a new Publication in the database")
+    register_parser.add_argument("--id", required=True, help="Unique publication identifier (e.g. 'calmatters')")
+    register_parser.add_argument("--name", required=True, help="Human-readable publication name (e.g. 'CalMatters')")
+    register_parser.add_argument("--base-url", required=True, help="Base URL of the publication (e.g. 'https://calmatters.org')")
+    register_parser.add_argument("--crawl-delay", type=float, default=2.0, help="Crawl delay in seconds")
+    register_parser.add_argument("--max-concurrency", type=int, default=2, help="Maximum concurrent requests")
+    register_parser.add_argument("--use-robots-txt", action="store_true", default=True, help="Respect robots.txt (default)")
+    register_parser.add_argument("--no-robots-txt", action="store_false", dest="use_robots_txt", help="Do not respect robots.txt")
+    register_parser.add_argument("--discovery-config-json", help="JSON string of discovery configuration parameters")
+    register_parser.add_argument("--archive-cutoff-years", type=int, default=5, help="Number of years of historical archive to crawl")
 
     parsed_args = parser.parse_args(args)
 
@@ -307,6 +320,47 @@ def main(args=None):
                 sys.exit(1)
         else:
             print(f"Error: Component '{component}' health check failed. Pipeline remains locked.", file=sys.stderr)
+            sys.exit(1)
+
+    elif parsed_args.action == "register-publication":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        
+        # Ensure database is initialized with publications table
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+        
+        # If discovery config json is provided, validate it's valid JSON
+        discovery_config = parsed_args.discovery_config_json
+        if discovery_config:
+            try:
+                json.loads(discovery_config)
+            except json.JSONDecodeError as e:
+                print(f"Error: Invalid JSON for discovery config: {e}", file=sys.stderr)
+                sys.exit(1)
+                
+        try:
+            register_publication(
+                pub_id=parsed_args.id,
+                name=parsed_args.name,
+                base_url=parsed_args.base_url,
+                crawl_delay=parsed_args.crawl_delay,
+                max_concurrency=parsed_args.max_concurrency,
+                use_robots_txt=parsed_args.use_robots_txt,
+                discovery_config_json=discovery_config,
+                archive_cutoff_years=parsed_args.archive_cutoff_years,
+                db_path=db_path
+            )
+            print(f"Successfully registered publication '{parsed_args.id}'.")
+            
+            # Invoke the bootstrapper stub seam
+            bootstrap_publication_stub(parsed_args.id)
+            sys.exit(0)
+        except ValueError as e:
+            # Handle duplicate ID or validation errors cleanly
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected database error: {e}", file=sys.stderr)
             sys.exit(1)
 
 if __name__ == "__main__":

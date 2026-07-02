@@ -1,6 +1,6 @@
 # 01. Publication Registry table & `register-publication` CLI
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -16,11 +16,11 @@ Table creation belongs with the existing database initialization so a fresh data
 
 ## Acceptance criteria
 
-- [ ] `publications` table is created on database initialization with the exact PRD schema, including circuit-breaker columns and defaults
-- [ ] `ca-map register-publication` registers a Publication with id, name, base URL, politeness fields, and discovery config, and is idempotent-safe (re-registering an existing id fails with a clear error rather than silently overwriting)
-- [ ] Registered Publications can be queried back with all fields intact
-- [ ] Bootstrapper invocation point exists as a stub with a note referencing its deferral
-- [ ] Tests cover table creation, CLI parsing, successful registration, and duplicate-id handling
+- [x] `publications` table is created on database initialization with the exact PRD schema, including circuit-breaker columns and defaults
+- [x] `ca-map register-publication` registers a Publication with id, name, base URL, politeness fields, and discovery config, and is idempotent-safe (re-registering an existing id fails with a clear error rather than silently overwriting)
+- [x] Registered Publications can be queried back with all fields intact
+- [x] Bootstrapper invocation point exists as a stub with a note referencing its deferral
+- [x] Tests cover table creation, CLI parsing, successful registration, and duplicate-id handling
 
 ## Blocked by
 

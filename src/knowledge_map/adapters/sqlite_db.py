@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 DEFAULT_DB_PATH = "document_store.db"
 
@@ -22,6 +22,23 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 summary TEXT,
                 content TEXT,
                 status TEXT DEFAULT 'UNPROCESSED',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Create publications table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS publications (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                base_url TEXT NOT NULL,
+                crawl_delay REAL DEFAULT 2.0,
+                max_concurrency INTEGER DEFAULT 2,
+                use_robots_txt BOOLEAN DEFAULT 1,
+                discovery_config_json TEXT,
+                archive_cutoff_years INTEGER DEFAULT 5,
+                validation_paused BOOLEAN DEFAULT 0,
+                failure_points INTEGER DEFAULT 0,
+                healing_in_progress BOOLEAN DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -198,6 +215,96 @@ class SQLiteStatusTracker:
 
     def update_status(self, url: str, status: str) -> None:
         update_story_status(url, status, db_path=self.db_path)
+
+
+def register_publication(
+    pub_id: str,
+    name: str,
+    base_url: str,
+    crawl_delay: float = 2.0,
+    max_concurrency: int = 2,
+    use_robots_txt: bool = True,
+    discovery_config_json: str = None,
+    archive_cutoff_years: int = 5,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Registers a new Publication in the database.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        
+        # Check if the publication ID already exists
+        cursor.execute("SELECT id FROM publications WHERE id = ?", (pub_id,))
+        if cursor.fetchone() is not None:
+            raise ValueError(f"Publication with ID '{pub_id}' is already registered.")
+            
+        cursor.execute("""
+            INSERT INTO publications (
+                id, name, base_url, crawl_delay, max_concurrency, 
+                use_robots_txt, discovery_config_json, archive_cutoff_years
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            pub_id, name, base_url, crawl_delay, max_concurrency,
+            1 if use_robots_txt else 0, discovery_config_json, archive_cutoff_years
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _row_to_pub_dict(row: sqlite3.Row) -> Dict[str, Any]:
+    """Helper to convert database Row to Dict with proper boolean types."""
+    d = dict(row)
+    # Convert booleans
+    d["use_robots_txt"] = bool(d["use_robots_txt"])
+    d["validation_paused"] = bool(d["validation_paused"])
+    d["healing_in_progress"] = bool(d["healing_in_progress"])
+    return d
+
+
+def get_publication(pub_id: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a publication by its ID. Returns None if not found.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, name, base_url, crawl_delay, max_concurrency,
+                   use_robots_txt, discovery_config_json, archive_cutoff_years,
+                   validation_paused, failure_points, healing_in_progress, created_at
+            FROM publications WHERE id = ?
+        """, (pub_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return _row_to_pub_dict(row)
+    finally:
+        conn.close()
+
+
+def get_all_publications(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
+    """
+    Retrieves all registered publications.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, name, base_url, crawl_delay, max_concurrency,
+                   use_robots_txt, discovery_config_json, archive_cutoff_years,
+                   validation_paused, failure_points, healing_in_progress, created_at
+            FROM publications
+            ORDER BY id ASC
+        """)
+        rows = cursor.fetchall()
+        return [_row_to_pub_dict(row) for row in rows]
+    finally:
+        conn.close()
 
 
 
