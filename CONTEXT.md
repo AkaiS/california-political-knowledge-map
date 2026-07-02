@@ -5,11 +5,11 @@ Domain model for mapping political influence networks in California from scraped
 ## Language
 
 **Publication**:
-A structured domain definition representing a news outlet or data source, specifying its name, base URL, crawl politeness rules (e.g., delay, robots.txt conformance), and the HTML/CSS parsing schemas required to extract its listings and article bodies.
+A structured domain definition representing a news outlet or data source, specifying its identity, crawl parameters, politeness policies, discovery strategies, and tracking metrics such as validation failure points.
 _Avoid_: News site, outlet, source site
 
 **Publication Registry**:
-A persistent database store (a SQLite table) holding registered Publications, specifying their base URLs, Politeness Policies, Discovery Strategies, and crawl parameters.
+A persistent database store (the `publications` table) holding registered Publications, allowing their configurations to be queried, modified, and tracked dynamically at runtime.
 _Avoid_: Static registry, config file registry
 
 **Discovery Strategy**:
@@ -19,6 +19,14 @@ _Avoid_: Crawler type, lookup method
 **Discovery State**:
 A persistent record stored in the SQLite database that tracks the dynamic operational progress of a Publication's archive crawl (e.g., the last processed page number or sitemap index), allowing crawls to resume.
 _Avoid_: Ingestion progress, scrap log, config state
+
+**Listing Page Discovery**:
+A discovery method (Strategy A) that crawls configured listing or category pages, extracts all internal hyperlinks, and applies URL filters (path blocklists and anchor text heuristics) to discover candidate article URLs.
+_Avoid_: Page scrounger, link list crawl
+
+**Domain Map Discovery**:
+A discovery method (Strategy B) that utilizes Crawl4AI's DomainMapper to discover all URLs under a publication's domain and subdomains, filtering them to discover candidate article URLs.
+_Avoid_: Domain spider, site mapping
 
 **Politeness Policy**:
 A configuration schema defined per Publication that dictates the crawling restrictions for its domain, including custom crawl delays, maximum concurrent requests, and robots.txt conformance rules.
@@ -32,6 +40,10 @@ _Avoid_: Batch scraper, multi-threader
 A scraping method that retrieves article metadata (like URLs) first and verifies their existence in the database before requesting or downloading the full article bodies, preventing redundant network requests.
 _Avoid_: Delta ingestion, double check
 
+**Anchor Text Heuristics**:
+A filtering rule applied to discovered listing page links that discards links with short or non-descriptive anchor text to eliminate navigation menu items and index links.
+_Avoid_: Link text check, title filter
+
 **Archive Crawler**:
 A CLI subcommand (`ca-map scrape-archive`) designed to crawl the historical archives of registered Publications using their Discovery Strategies and tracking progress in the database via the Discovery State, terminating when there are no more pages or when it reaches a configurable historical cutoff (defaulting to 5 years).
 _Avoid_: Historical scraper, archive daemon
@@ -41,32 +53,52 @@ A CLI subcommand (`ca-map update-sources`) meant to be executed by external orch
 _Avoid_: Cron jobs, timer loop, background worker daemon
 
 **Article Validator**:
-A component that validates scraped article content using structural constraints and compares it against a heuristic baseline (provided by `newspaper4k`) to detect extraction failures or layout drift.
+A component that validates extracted article content by comparing CSS-parsed attributes against a ground-truth baseline (JSON-LD headline, author, publish date, word count) or falling back to heuristic sanity checks (link density and stopword ratio). Articles whose HTML contains no JSON-LD at all are marked unvalidatable rather than failed, since no ground truth exists to validate or heal against.
 _Avoid_: Schema checker, parser tester
 
 **Selector Healing Pipeline**:
-An LLM-driven process triggered automatically when an article fails validation, which analyzes the raw HTML and the heuristic baseline to generate new selector candidates, presenting a preview for human verification before activation.
+An asynchronous, LLM-driven process (a Generator/Critic team loop) triggered when a Publication's Validation Circuit Breaker trips, which parses preprocessed cleaned HTML and ground-truth metadata to propose new selectors for developer review.
 _Avoid_: Selector fixer, auto-repairer
 
 **Publication Bootstrapper**:
-An LLM-driven process that initializes a new Publication by analyzing a sample of raw article HTML files and their heuristic baselines to discover selector candidates, presenting them for human verification before registration.
+An LLM-driven process that initializes a new Publication by analyzing a sample of raw article HTML files and their JSON-LD metadata to discover selector candidates, presenting them for human verification before registration.
 _Avoid_: Source creator, template writer
 
+**Article Selector**:
+A CSS selector definition targeting elements of a single article page (title, author, publish date, body text) to extract structured story content.
+_Avoid_: Page selector, content parser
+
 **Selector Version**:
-A specific iteration of HTML/CSS scraping selectors for a Publication, associated with a time validity window (`valid_from` and `valid_to` timestamps) to support parsing historical variations of a website's layout.
+A specific iteration of HTML/CSS scraping selectors for a Publication, associated with a success validity window (earliest and latest success fetch dates) to support parsing historical variations of a website's layout.
 _Avoid_: Schema revision, css version
 
 **Selector Store**:
-The persistent database store (a SQLite table) holding all Selector Versions, allowing the crawler to query the active selectors for any article's publication or crawl date.
+The persistent database store (the `publication_selectors` table) holding versioned CSS selectors mapped to execution success windows.
 _Avoid_: Selector registry, selector catalog
 
-**Raw HTML Store**:
-A persistent store (e.g., local files or a dedicated SQLite table) that records the exact raw HTML content of scraped articles, primarily used to support asynchronous self-healing, debugging, and offline re-scraping when selectors change.
-_Avoid_: Page cache, web archive
+**Selector Proposal**:
+A candidate set of Article Selectors produced by the Selector Healing Pipeline or Publication Bootstrapper, persisted in the SQLite database (the `selector_proposals` table) and awaiting developer review before promotion to the Selector Store.
+_Avoid_: Proposal file, selector draft, candidate report
 
-**Relevance Document**:
-A concatenated text representation of a discovered page's metadata (including title, meta description, keywords, and tags) used to run local BM25 relevance filters before committing to a full article body download.
-_Avoid_: Search index, article body copy
+**Raw HTML Store**:
+A persistent database store (the `scraped_html_cache` table) holding the raw HTML content of scraped articles to support asynchronous self-healing, offline re-scraping, and validation recovery before being purged after 30 days.
+_Avoid_: Page cache, web archive, HTML file cache
+
+**Relevance Filter**:
+A multi-stage pipeline component that filters discovered URLs using a path blocklist and evaluates extracted metadata (headlines and descriptions) against target keywords to determine California political relevance.
+_Avoid_: Topic classifier, page filter
+
+**Relevance Status**:
+The classification assigned to a discovered article URL, which determines whether the article is scraped (`RELEVANT`), discarded (`IRRELEVANT`), or cached for future embeddings-based classification (`INCONCLUSIVE`).
+_Avoid_: Relevance score, category
+
+**Validation Circuit Breaker**:
+A safety mechanism that automatically pauses the validation pipeline for a Publication if its validation failure points reach or exceed the threshold, triggering a single Selector Healing Pipeline run while allowing raw scraping to continue.
+_Avoid_: Breaker, validator pause
+
+**Recovery Check**:
+An automatic validation check run on the specific article that triggered a Selector Healing Pipeline execution, triggered when a new selector version is approved/promoted, which resets the failure points to 0 and resumes active validation if successful.
+_Avoid_: Cache retry, selector sweep
 
 **Source Article**:
 A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.

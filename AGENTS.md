@@ -3,7 +3,7 @@
 - Data validation: Pydantic v2
 - LLM Providers: 
 - Agent Framework: Pydantic AI
-- Evals Framework: 
+- Evals Framework: pydantic-evals
 - Orchestration: 
 - DB: neo4j (Graph Database), (semantic cache / msg queue)
 - LLM Tooling:
