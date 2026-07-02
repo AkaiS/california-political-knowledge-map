@@ -42,6 +42,18 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Create publication_selectors table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS publication_selectors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                publication_id TEXT NOT NULL,
+                selectors_json TEXT NOT NULL,
+                earliest_success_date DATETIME,
+                latest_success_date DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+            )
+        """)
         # Safe migration: add column 'content' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
@@ -305,6 +317,100 @@ def get_all_publications(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]
         return [_row_to_pub_dict(row) for row in rows]
     finally:
         conn.close()
+
+
+def insert_selector_version(
+    publication_id: str,
+    selectors_json: str,
+    earliest_success_date: str,
+    latest_success_date: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> int:
+    """
+    Inserts a new Selector Version into the database.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO publication_selectors (
+                publication_id, selectors_json, earliest_success_date, latest_success_date
+            ) VALUES (?, ?, ?, ?)
+        """, (publication_id, selectors_json, earliest_success_date, latest_success_date))
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def get_selector_versions(
+    publication_id: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> List[Dict[str, Any]]:
+    """
+    Retrieves all selector versions for a given publication.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, publication_id, selectors_json, earliest_success_date, latest_success_date, created_at
+            FROM publication_selectors
+            WHERE publication_id = ?
+            ORDER BY id ASC
+        """, (publication_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def update_selector_window(
+    selector_version_id: int,
+    earliest_success_date: str,
+    latest_success_date: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Updates the success window boundaries of a selector version.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publication_selectors
+            SET earliest_success_date = ?,
+                latest_success_date = ?
+            WHERE id = ?
+        """, (earliest_success_date, latest_success_date, selector_version_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_selector_version_by_id(
+    selector_version_id: int,
+    db_path: str = DEFAULT_DB_PATH
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a single selector version by its ID.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, publication_id, selectors_json, earliest_success_date, latest_success_date, created_at
+            FROM publication_selectors
+            WHERE id = ?
+        """, (selector_version_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 
 
 

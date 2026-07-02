@@ -1,6 +1,6 @@
 # 02. Selector Store & success-window proximity selection
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,11 +14,11 @@ Implement Selector Version selection per the PRD's "Selector Selection & Fallbac
 
 ## Acceptance criteria
 
-- [ ] `publication_selectors` table is created on database initialization with the PRD schema
-- [ ] Selector Versions can be inserted with an initial success window and retrieved per Publication
-- [ ] Selection returns versions ordered by success-window proximity for a given fetch date, with distance 0 for in-window dates
-- [ ] A successful extraction widens the version's success window; a failure falls back to the next-closest version
-- [ ] Tests cover proximity ordering (in-window, before-window, after-window, ties), window widening, and fallback exhaustion
+- [x] `publication_selectors` table is created on database initialization with the PRD schema
+- [x] Selector Versions can be inserted with an initial success window and retrieved per Publication
+- [x] Selection returns versions ordered by success-window proximity for a given fetch date, with distance 0 for in-window dates
+- [x] A successful extraction widens the version's success window; a failure falls back to the next-closest version
+- [x] Tests cover proximity ordering (in-window, before-window, after-window, ties), window widening, and fallback exhaustion
 
 ## Blocked by
 
