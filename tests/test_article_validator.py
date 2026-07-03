@@ -623,7 +623,7 @@ def test_circuit_breaker_trips(tmp_path):
         assert pub["failure_points"] == 12
         
         # Verify healing seam was triggered exactly once with correct arguments
-        mock_healing.assert_called_once_with("testpub", "https://testpub.com/fail4")
+        mock_healing.assert_called_once_with("testpub", "https://testpub.com/fail4", db_path=db_path)
 
 
 def test_circuit_breaker_skips_paused_publications(tmp_path):
@@ -705,6 +705,7 @@ def test_circuit_breaker_skips_paused_publications(tmp_path):
 
 def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path):
     from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
     from knowledge_map.adapters.sqlite_db import (
         init_db,
         register_publication,
@@ -784,7 +785,8 @@ def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path
     # Trip it first
     for i in range(4):
         cache_scraped_html(f"https://testpub.com/fail{i}", "testpub", html_fail, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    with patch("knowledge_map.core.validation.trigger_selector_healing_stub") as mock_healing:
+        service.validate_pending_articles()
     
     pub = get_publication("testpub", db_path=db_path)
     assert pub["validation_paused"] is True

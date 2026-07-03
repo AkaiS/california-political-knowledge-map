@@ -23,15 +23,23 @@ from knowledge_map.core.selectors import (
 
 logger = logging.getLogger(__name__)
 
-def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str) -> None:
+def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Seam for invoking the Selector Healing Pipeline when the circuit breaker trips.
-    Implementation is deferred to issue 08.
     """
     logger.info(
         f"Circuit Breaker tripped for publication '{publication_id}' "
         f"due to article '{tripping_article_url}'. Triggering Selector Healing Pipeline."
     )
+    import threading
+    import asyncio
+    from knowledge_map.core.healing import run_selector_healing_flow
+    
+    def thread_target():
+        asyncio.run(run_selector_healing_flow(publication_id, tripping_article_url, db_path=db_path))
+        
+    t = threading.Thread(target=thread_target, name=f"healing-{publication_id}")
+    t.start()
 
 try:
     import logfire
@@ -548,7 +556,7 @@ class ArticleValidatorService:
                         )
                         if new_points >= 10:
                             pause_publication_validation(publication_id, url, db_path=self.db_path)
-                            trigger_selector_healing_stub(publication_id, url)
+                            trigger_selector_healing_stub(publication_id, url, db_path=self.db_path)
 
                 elif status == "UNVALIDATABLE":
                     logger.info(f"Article '{url}' marked UNVALIDATABLE (missing JSON-LD).")

@@ -122,6 +122,22 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
             )
         """)
+        # Create selector_proposals table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS selector_proposals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                publication_id TEXT NOT NULL,
+                selectors_json TEXT NOT NULL,       -- Candidate article selectors (title, author, date, body)
+                trigger_article_url TEXT NOT NULL,  -- The VALIDATION_FAILED article that tripped the breaker (Recovery Check target)
+                status TEXT CHECK(status IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'HEALING_FAILED')) DEFAULT 'PENDING_REVIEW',
+                critic_iterations INTEGER,          -- Number of Generator/Critic iterations consumed
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                resolved_at DATETIME,
+                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+            )
+        """)
+        # Reset all healing_in_progress flags to 0 on startup
+        cursor.execute("UPDATE publications SET healing_in_progress = 0")
         conn.commit()
     finally:
         conn.close()
@@ -707,6 +723,73 @@ def unpause_publication_validation(
         conn.commit()
     finally:
         conn.close()
+
+
+def insert_selector_proposal(
+    publication_id: str,
+    selectors_json: str,
+    trigger_article_url: str,
+    status: str,
+    critic_iterations: int,
+    db_path: str = DEFAULT_DB_PATH
+) -> int:
+    """
+    Inserts a new Selector Proposal into the database and returns its ID.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO selector_proposals (
+                publication_id, selectors_json, trigger_article_url, status, critic_iterations
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (publication_id, selectors_json, trigger_article_url, status, critic_iterations))
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def has_unresolved_selector_proposal(
+    pub_id: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> bool:
+    """
+    Returns True if an unresolved selector proposal (PENDING_REVIEW or HEALING_FAILED) exists for a publication.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 1 FROM selector_proposals
+            WHERE publication_id = ? AND status IN ('PENDING_REVIEW', 'HEALING_FAILED')
+            LIMIT 1
+        """, (pub_id,))
+        return cursor.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def set_publication_healing_in_progress(
+    pub_id: str,
+    in_progress: bool,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Sets the healing_in_progress flag (0 or 1) for a publication.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publications
+            SET healing_in_progress = ?
+            WHERE id = ?
+        """, (1 if in_progress else 0, pub_id))
+        conn.commit()
+    finally:
+        conn.close()
+
 
 
 

@@ -1,6 +1,6 @@
 # 08. Selector Healing Pipeline (Generator/Critic, `selector_proposals`)
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -16,12 +16,12 @@ Concurrency guards: set `healing_in_progress` during the loop and clear it on co
 
 ## Acceptance criteria
 
-- [ ] `selector_proposals` table is created on database initialization with the PRD schema
-- [ ] A breaker trip launches one healing run against the tripping article only, with HTML preprocessing applied before any LLM call
-- [ ] The Generator/Critic loop caps at 3 iterations, producing a `PENDING_REVIEW` proposal on Critic approval or a `HEALING_FAILED` row plus critical warning and console alert on exhaustion
-- [ ] Triggers are skipped while an unresolved proposal exists or `healing_in_progress` is set; the flag is always cleared at loop end
-- [ ] Startup resets all `healing_in_progress` flags to 0
-- [ ] Tests cover the loop with mocked LLM calls, preprocessing output, single-proposal enforcement, exhaustion handling, and the startup reset
+- [x] `selector_proposals` table is created on database initialization with the PRD schema
+- [x] A breaker trip launches one healing run against the tripping article only, with HTML preprocessing applied before any LLM call
+- [x] The Generator/Critic loop caps at 3 iterations, producing a `PENDING_REVIEW` proposal on Critic approval or a `HEALING_FAILED` row plus critical warning and console alert on exhaustion
+- [x] Triggers are skipped while an unresolved proposal exists or `healing_in_progress` is set; the flag is always cleared at loop end
+- [x] Startup resets all `healing_in_progress` flags to 0
+- [x] Tests cover the loop with mocked LLM calls, preprocessing output, single-proposal enforcement, exhaustion handling, and the startup reset
 
 ## Blocked by
 
