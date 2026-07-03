@@ -13,6 +13,12 @@ from knowledge_map.config import settings
 
 logger = logging.getLogger(__name__)
 
+try:
+    import logfire
+except ImportError:
+    logfire = None
+
+
 class PolitenessLimiter:
     """
     Limits the crawl rate and concurrency for a publication.
@@ -207,91 +213,181 @@ class ListingPageDiscoveryService:
             return False
 
     async def discover_and_scrape_for_publication(self, pub: Dict[str, Any]) -> List[str]:
+        from contextlib import nullcontext
         pub_id = pub["id"]
-        base_url = pub["base_url"]
-        crawl_delay = pub.get("crawl_delay", 2.0)
-        max_concurrency = pub.get("max_concurrency", 2)
-        use_robots_txt = pub.get("use_robots_txt", True)
+        
+        span_ctx = logfire.span("scrape_publication", publication_id=pub_id, crawl_type="incremental") if logfire else nullcontext()
+        with span_ctx:
+            base_url = pub["base_url"]
+            crawl_delay = pub.get("crawl_delay", 2.0)
+            max_concurrency = pub.get("max_concurrency", 2)
+            use_robots_txt = pub.get("use_robots_txt", True)
 
-        listing_urls = self._get_listing_urls(pub)
-        if not listing_urls:
-            logger.warning(f"No listing_urls configured for publication '{pub_id}'")
-            return []
+            listing_urls = self._get_listing_urls(pub)
+            if not listing_urls:
+                logger.warning(f"No listing_urls configured for publication '{pub_id}'")
+                return []
 
-        blocklist = self._get_blocklist(pub)
-        limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
+            blocklist = self._get_blocklist(pub)
+            limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
 
-        run_config = CrawlerRunConfig(
-            cache_mode=CacheMode.BYPASS,
-            check_robots_txt=use_robots_txt
-        )
+            run_config = CrawlerRunConfig(
+                cache_mode=CacheMode.BYPASS,
+                check_robots_txt=use_robots_txt
+            )
 
-        candidate_urls = []
-        async with AsyncWebCrawler() as crawler:
-            for url in listing_urls:
-                async with limiter:
-                    logger.info(f"Crawling listing page '{url}' for publication '{pub_id}'")
-                    result = await crawler.arun(url=url, config=run_config)
-                    if not result.success:
-                        logger.error(f"Failed to crawl listing page '{url}': {result.error_message}")
-                        continue
-                    
-                    # Extract links
-                    links_dict = getattr(result, "links", {}) or {}
-                    internal_links = links_dict.get("internal", [])
-                    external_links = links_dict.get("external", [])
-                    all_links = internal_links + external_links
-                    
-                    for link in all_links:
-                        href = link.get("href")
-                        text = link.get("text")
-                        if not href:
-                            continue
-                        
-                        from knowledge_map.utils.scraper import clean_and_resolve_url
-                        resolved_url = clean_and_resolve_url(base_url, href)
-                        if not resolved_url:
-                            continue
-                        
-                        if not self._is_same_domain(base_url, resolved_url):
-                            continue
+            candidate_urls = []
+            links_found_count = 0
+            blocklist_filtered_count = 0
+            anchor_filtered_count = 0
+            
+            has_successful_response = False
 
-                        if not should_keep_url(resolved_url, text, blocklist, apply_anchor_heuristics=True):
-                            continue
-                        
-                        if is_url_known(resolved_url, db_path=self.db_path):
-                            continue
-                            
-                        if resolved_url not in candidate_urls:
-                            candidate_urls.append(resolved_url)
-
-        # Fetch candidate URLs
-        scraped_urls = []
-        if candidate_urls:
-            logger.info(f"Discovered {len(candidate_urls)} candidate articles for '{pub_id}'")
             async with AsyncWebCrawler() as crawler:
-                async def fetch_and_cache(url: str):
+                for url in listing_urls:
                     async with limiter:
-                        logger.info(f"Fetching candidate article '{url}' for '{pub_id}'")
-                        res = await crawler.arun(url=url, config=run_config)
-                        if res.success:
-                            raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                        logger.info(f"Crawling listing page '{url}' for publication '{pub_id}'")
+                        result = await crawler.arun(url=url, config=run_config)
+                        if not result.success:
+                            logger.error(f"Failed to crawl listing page '{url}': {result.error_message}")
+                            continue
+                        
+                        status_code = getattr(result, "status_code", None)
+                        if status_code is None or status_code == 200:
+                            has_successful_response = True
+                        
+                        # Extract links
+                        links_dict = getattr(result, "links", {}) or {}
+                        internal_links = links_dict.get("internal", [])
+                        external_links = links_dict.get("external", [])
+                        all_links = internal_links + external_links
+                        
+                        links_found_count += len(all_links)
+                        
+                        for link in all_links:
+                            href = link.get("href")
+                            text = link.get("text")
+                            if not href:
+                                continue
                             
-                            from knowledge_map.core.relevance import check_relevance
-                            status, metadata = check_relevance(raw_html)
+                            from knowledge_map.utils.scraper import clean_and_resolve_url
+                            resolved_url = clean_and_resolve_url(base_url, href)
+                            if not resolved_url:
+                                continue
                             
-                            if status == "RELEVANT":
-                                cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
-                                scraped_urls.append(url)
-                            else:
-                                save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
-                                logger.info(f"Rejected candidate article '{url}' with status '{status}'")
-                        else:
-                            logger.error(f"Failed to fetch candidate '{url}': {res.error_message}")
+                            if not self._is_same_domain(base_url, resolved_url):
+                                logger.info("URL discarded: %s", resolved_url, extra={
+                                    "url": resolved_url,
+                                    "publication_id": pub_id,
+                                    "filter_reason": "external_domain"
+                                })
+                                continue
 
-                await asyncio.gather(*(fetch_and_cache(url) for url in candidate_urls))
-                
-        return scraped_urls
+                            # Check blocklist first
+                            is_blocklist_hit = False
+                            try:
+                                parsed = urlparse(resolved_url)
+                                path = parsed.path
+                                for segment in blocklist:
+                                    if segment in path:
+                                        is_blocklist_hit = True
+                                        break
+                            except Exception as e:
+                                logger.error(f"Error parsing URL '{resolved_url}' for path blocklist: {e}")
+                                continue
+
+                            if is_blocklist_hit:
+                                blocklist_filtered_count += 1
+                                logger.info("URL discarded: %s", resolved_url, extra={
+                                    "url": resolved_url,
+                                    "publication_id": pub_id,
+                                    "filter_reason": "blocklist_hit"
+                                })
+                                continue
+
+                            # Check anchor heuristics next
+                            is_anchor_heuristic_dropped = False
+                            if not text:
+                                is_anchor_heuristic_dropped = True
+                            else:
+                                cleaned_text = text.strip()
+                                words = cleaned_text.split()
+                                if len(words) < 5 or len(cleaned_text) < 25:
+                                    is_anchor_heuristic_dropped = True
+
+                            if is_anchor_heuristic_dropped:
+                                anchor_filtered_count += 1
+                                logger.info("URL discarded: %s", resolved_url, extra={
+                                    "url": resolved_url,
+                                    "publication_id": pub_id,
+                                    "filter_reason": "anchor_heuristic_dropped"
+                                })
+                                continue
+                            
+                            if is_url_known(resolved_url, db_path=self.db_path):
+                                logger.info("URL discarded: %s", resolved_url, extra={
+                                    "url": resolved_url,
+                                    "publication_id": pub_id,
+                                    "filter_reason": "already_known"
+                                })
+                                continue
+                                
+                            if resolved_url not in candidate_urls:
+                                candidate_urls.append(resolved_url)
+
+            # Discovery stats logging
+            new_candidates_found_count = len(candidate_urls)
+            logger.info("Discovery stats for publication %s: links_found=%d, blocklist_filtered=%d, anchor_filtered=%d, new_candidates=%d",
+                        pub_id, links_found_count, blocklist_filtered_count, anchor_filtered_count, new_candidates_found_count,
+                        extra={
+                            "publication_id": pub_id,
+                            "links_found": links_found_count,
+                            "blocklist_filtered": blocklist_filtered_count,
+                            "anchor_filtered": anchor_filtered_count,
+                            "new_candidates_found": new_candidates_found_count
+                        })
+
+            # Check for discovery drift warning
+            if has_successful_response and not candidate_urls:
+                from knowledge_map.utils.console import ConsoleNotifier
+                ConsoleNotifier.notify_discovery_drift(pub_id, listing_urls[0] if listing_urls else base_url)
+
+            # Fetch candidate URLs
+            scraped_urls = []
+            if candidate_urls:
+                logger.info(f"Discovered {len(candidate_urls)} candidate articles for '{pub_id}'")
+                async with AsyncWebCrawler() as crawler:
+                    async def fetch_and_cache(url: str):
+                        async with limiter:
+                            logger.info(f"Fetching candidate article '{url}' for '{pub_id}'")
+                            res = await crawler.arun(url=url, config=run_config)
+                            if res.success:
+                                raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                                
+                                from knowledge_map.core.relevance import check_relevance
+                                status, metadata = check_relevance(raw_html)
+                                
+                                # Structured log for relevance check outcome
+                                logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
+                                    "url": url,
+                                    "publication_id": pub_id,
+                                    "relevance_status": status,
+                                    "headline": metadata.get("headline"),
+                                    "description": metadata.get("description")
+                                })
+
+                                if status == "RELEVANT":
+                                    cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                                    scraped_urls.append(url)
+                                else:
+                                    save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                                    logger.info(f"Rejected candidate article '{url}' with status '{status}'")
+                            else:
+                                logger.error(f"Failed to fetch candidate '{url}': {res.error_message}")
+
+                    await asyncio.gather(*(fetch_and_cache(url) for url in candidate_urls))
+                    
+            return scraped_urls
 
     async def discover_and_scrape_all(self) -> Dict[str, List[str]]:
         from knowledge_map.adapters.sqlite_db import get_all_publications
@@ -313,122 +409,186 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
     filters them, and resumes progress from a persisted Discovery State.
     """
     async def run_archive_crawl(self, pub: Dict[str, Any]) -> List[str]:
+        from contextlib import nullcontext
         from knowledge_map.adapters.sqlite_db import (
             get_discovery_state,
             save_discovery_state
         )
         
         pub_id = pub["id"]
-        base_url = pub["base_url"]
-        crawl_delay = pub.get("crawl_delay", 2.0)
-        max_concurrency = pub.get("max_concurrency", 2)
-        use_robots_txt = pub.get("use_robots_txt", True)
-
-        # 1. Try to load existing discovery state
-        state = get_discovery_state(pub_id, db_path=self.db_path)
-        if not state:
-            logger.info(f"No existing discovery state for '{pub_id}'. Initializing DomainMapper scan...")
-            
-            # Extract domain from base_url
-            parsed_base = urlparse(base_url)
-            domain = parsed_base.netloc
-            if domain.startswith("www."):
-                domain = domain[4:]
-                
-            # Perform DomainMapper scan
-            mapper = DomainMapper()
-            try:
-                results = await mapper.scan(domain=domain)
-                discovered_urls = [r["url"] for r in results if r.get("url")]
-            finally:
-                await mapper.close()
-
-            # Filter discovered URLs
-            blocklist = self._get_blocklist(pub)
-            filtered_urls = []
-            for url in discovered_urls:
-                if not self._is_same_domain(base_url, url):
-                    continue
-                # Bypassing anchor text heuristics: apply_anchor_heuristics = False
-                if not should_keep_url(url, anchor_text=None, blocklist=blocklist, apply_anchor_heuristics=False):
-                    continue
-                filtered_urls.append(url)
-
-            state = {
-                "urls": filtered_urls,
-                "current_index": 0,
-                "cutoff_reached": False
-            }
-            save_discovery_state(pub_id, state, db_path=self.db_path)
-
-        # 2. Process URLs from current_index
-        scraped_urls = []
-        if state.get("cutoff_reached", False):
-            logger.info(f"Archive crawl for '{pub_id}' already hit the historical cutoff.")
-            return scraped_urls
-
-        # Calculate cutoff date
-        cutoff_years = pub.get("archive_cutoff_years", 5)
-        now = datetime.now(timezone.utc)
-        cutoff_date = now - timedelta(days=365 * cutoff_years)
-
-        limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
-        run_config = CrawlerRunConfig(
-            cache_mode=CacheMode.BYPASS,
-            check_robots_txt=use_robots_txt
-        )
-
-        chunk_size = max(1, max_concurrency)
         
-        async with AsyncWebCrawler() as crawler:
-            while state["current_index"] < len(state["urls"]):
-                if state.get("cutoff_reached", False):
-                    break
+        span_ctx = logfire.span("scrape_publication", publication_id=pub_id, crawl_type="archive") if logfire else nullcontext()
+        with span_ctx:
+            base_url = pub["base_url"]
+            crawl_delay = pub.get("crawl_delay", 2.0)
+            max_concurrency = pub.get("max_concurrency", 2)
+            use_robots_txt = pub.get("use_robots_txt", True)
 
-                # Get next chunk
-                chunk = state["urls"][state["current_index"] : state["current_index"] + chunk_size]
+            # 1. Try to load existing discovery state
+            state = get_discovery_state(pub_id, db_path=self.db_path)
+            
+            links_found_count = 0
+            blocklist_filtered_count = 0
+            anchor_filtered_count = 0
+            new_candidates_found_count = 0
+
+            if not state:
+                logger.info(f"No existing discovery state for '{pub_id}'. Initializing DomainMapper scan...")
                 
-                async def process_url(url: str) -> bool:
-                    # Return True if cutoff is reached
-                    if is_url_known(url, db_path=self.db_path):
-                        return False
+                # Extract domain from base_url
+                parsed_base = urlparse(base_url)
+                domain = parsed_base.netloc
+                if domain.startswith("www."):
+                    domain = domain[4:]
                     
-                    async with limiter:
-                        logger.info(f"Archive crawl: fetching candidate '{url}' for '{pub_id}'")
-                        res = await crawler.arun(url=url, config=run_config)
-                        if not res.success:
-                            logger.error(f"Archive crawl: failed to fetch '{url}': {res.error_message}")
-                            return False
+                # Perform DomainMapper scan
+                mapper = DomainMapper()
+                try:
+                    results = await mapper.scan(domain=domain)
+                    discovered_urls = [r["url"] for r in results if r.get("url")]
+                finally:
+                    await mapper.close()
 
-                        raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
-                        
-                        # Check historical cutoff
-                        pub_date = extract_published_date(raw_html)
-                        if pub_date and pub_date < cutoff_date:
-                            logger.info(f"Archive crawl: met article older than cutoff ({pub_date} < {cutoff_date}). Reached cutoff.")
-                            return True
+                links_found_count = len(discovered_urls)
 
-                        # Apply Relevance Filter
-                        from knowledge_map.core.relevance import check_relevance
-                        status, metadata = check_relevance(raw_html)
+                # Filter discovered URLs
+                blocklist = self._get_blocklist(pub)
+                filtered_urls = []
+                for url in discovered_urls:
+                    if not self._is_same_domain(base_url, url):
+                        logger.info("URL discarded: %s", url, extra={
+                            "url": url,
+                            "publication_id": pub_id,
+                            "filter_reason": "external_domain"
+                        })
+                        continue
+                    
+                    is_blocklist_hit = False
+                    try:
+                        parsed = urlparse(url)
+                        path = parsed.path
+                        for segment in blocklist:
+                            if segment in path:
+                                is_blocklist_hit = True
+                                break
+                    except Exception:
+                        pass
 
-                        if status == "RELEVANT":
-                            cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
-                            scraped_urls.append(url)
-                        else:
-                            save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
-                            logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}'")
+                    if is_blocklist_hit:
+                        blocklist_filtered_count += 1
+                        logger.info("URL discarded: %s", url, extra={
+                            "url": url,
+                            "publication_id": pub_id,
+                            "filter_reason": "blocklist_hit"
+                        })
+                        continue
+                    
+                    filtered_urls.append(url)
 
-                    return False
-
-                # Process the chunk concurrently
-                results = await asyncio.gather(*(process_url(url) for url in chunk))
-
-                # Increment index and save state
-                state["current_index"] += len(chunk)
-                if any(results):
-                    state["cutoff_reached"] = True
-                
+                state = {
+                    "urls": filtered_urls,
+                    "current_index": 0,
+                    "cutoff_reached": False
+                }
                 save_discovery_state(pub_id, state, db_path=self.db_path)
+            else:
+                links_found_count = len(state.get("urls", []))
 
-        return scraped_urls
+            # 2. Process URLs from current_index
+            scraped_urls = []
+            if state.get("cutoff_reached", False):
+                logger.info(f"Archive crawl for '{pub_id}' already hit the historical cutoff.")
+                return scraped_urls
+
+            # Calculate cutoff date
+            cutoff_years = pub.get("archive_cutoff_years", 5)
+            now = datetime.now(timezone.utc)
+            cutoff_date = now - timedelta(days=365 * cutoff_years)
+
+            limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
+            run_config = CrawlerRunConfig(
+                cache_mode=CacheMode.BYPASS,
+                check_robots_txt=use_robots_txt
+            )
+
+            chunk_size = max(1, max_concurrency)
+            
+            async with AsyncWebCrawler() as crawler:
+                while state["current_index"] < len(state["urls"]):
+                    if state.get("cutoff_reached", False):
+                        break
+
+                    # Get next chunk
+                    chunk = state["urls"][state["current_index"] : state["current_index"] + chunk_size]
+                    
+                    async def process_url(url: str) -> bool:
+                        nonlocal new_candidates_found_count
+                        # Return True if cutoff is reached
+                        if is_url_known(url, db_path=self.db_path):
+                            logger.info("URL discarded: %s", url, extra={
+                                "url": url,
+                                "publication_id": pub_id,
+                                "filter_reason": "already_known"
+                            })
+                            return False
+                        
+                        new_candidates_found_count += 1
+                        async with limiter:
+                            logger.info(f"Archive crawl: fetching candidate '{url}' for '{pub_id}'")
+                            res = await crawler.arun(url=url, config=run_config)
+                            if not res.success:
+                                logger.error(f"Archive crawl: failed to fetch '{url}': {res.error_message}")
+                                return False
+
+                            raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                            
+                            # Check historical cutoff
+                            pub_date = extract_published_date(raw_html)
+                            if pub_date and pub_date < cutoff_date:
+                                logger.info(f"Archive crawl: met article older than cutoff ({pub_date} < {cutoff_date}). Reached cutoff.")
+                                return True
+
+                            # Apply Relevance Filter
+                            from knowledge_map.core.relevance import check_relevance
+                            status, metadata = check_relevance(raw_html)
+
+                            # Structured log for relevance check outcome
+                            logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
+                                "url": url,
+                                "publication_id": pub_id,
+                                "relevance_status": status,
+                                "headline": metadata.get("headline"),
+                                "description": metadata.get("description")
+                            })
+
+                            if status == "RELEVANT":
+                                cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                                scraped_urls.append(url)
+                            else:
+                                save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                                logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}'")
+
+                        return False
+
+                    # Process the chunk concurrently
+                    results = await asyncio.gather(*(process_url(url) for url in chunk))
+
+                    # Increment index and save state
+                    state["current_index"] += len(chunk)
+                    if any(results):
+                        state["cutoff_reached"] = True
+                    
+                    save_discovery_state(pub_id, state, db_path=self.db_path)
+
+            # Discovery stats logging
+            logger.info("Discovery stats for publication %s (archive): links_found=%d, blocklist_filtered=%d, anchor_filtered=%d, new_candidates=%d",
+                        pub_id, links_found_count, blocklist_filtered_count, anchor_filtered_count, new_candidates_found_count,
+                        extra={
+                            "publication_id": pub_id,
+                            "links_found": links_found_count,
+                            "blocklist_filtered": blocklist_filtered_count,
+                            "anchor_filtered": anchor_filtered_count,
+                            "new_candidates_found": new_candidates_found_count
+                        })
+
+            return scraped_urls

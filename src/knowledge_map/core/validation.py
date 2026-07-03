@@ -22,6 +22,7 @@ from knowledge_map.core.selectors import (
 )
 
 logger = logging.getLogger(__name__)
+from knowledge_map.utils.console import ConsoleNotifier
 
 def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
     """
@@ -547,17 +548,26 @@ class ArticleValidatorService:
                         "content": extracted["body"]
                     }
                     save_story(story, db_path=self.db_path)
-                    logger.info(f"Successfully validated and saved story '{url}' to database.")
+                    logger.info("Validation outcome: VALIDATED", extra={
+                        "url": url,
+                        "publication_id": publication_id,
+                        "validation_status": "VALIDATED",
+                        "failure_points": 0,
+                        "errors": []
+                    })
                     
                     pub = get_publication(publication_id, db_path=self.db_path)
                     if pub and not pub.get("validation_paused"):
                         reset_publication_failure_points(publication_id, db_path=self.db_path)
 
                 elif status == "VALIDATION_FAILED":
-                    logger.warning(
-                        f"Validation failed for article '{url}' of publication '{publication_id}' "
-                        f"with failure weight {res['failure_points']}. Errors: {res['errors']}"
-                    )
+                    logger.info("Validation outcome: VALIDATION_FAILED", extra={
+                        "url": url,
+                        "publication_id": publication_id,
+                        "validation_status": "VALIDATION_FAILED",
+                        "failure_points": res["failure_points"],
+                        "errors": res["errors"]
+                    })
                     pub = get_publication(publication_id, db_path=self.db_path)
                     if pub and not pub.get("validation_paused"):
                         new_points = increment_publication_failure_points(
@@ -566,11 +576,26 @@ class ArticleValidatorService:
                             db_path=self.db_path
                         )
                         if new_points >= 10:
+                            logger.info("Circuit breaker state changed: ACTIVE -> PAUSED", extra={
+                                "publication_id": publication_id,
+                                "previous_state": "ACTIVE",
+                                "new_state": "PAUSED",
+                                "reason": "failure_points_reached",
+                                "tripping_url": url,
+                                "failure_points": new_points
+                            })
+                            ConsoleNotifier.notify_circuit_breaker_tripped(publication_id, url, new_points)
                             pause_publication_validation(publication_id, url, db_path=self.db_path)
                             trigger_selector_healing_stub(publication_id, url, db_path=self.db_path)
 
                 elif status == "UNVALIDATABLE":
-                    logger.info(f"Article '{url}' marked UNVALIDATABLE (missing JSON-LD).")
+                    logger.info("Validation outcome: UNVALIDATABLE", extra={
+                        "url": url,
+                        "publication_id": publication_id,
+                        "validation_status": "UNVALIDATABLE",
+                        "failure_points": 0,
+                        "errors": res.get("errors", ["No JSON-LD ground truth found"])
+                    })
 
                 res["url"] = url
                 res["publication_id"] = publication_id
@@ -583,6 +608,7 @@ class ArticleValidatorService:
                 logger.error(f"Error validating article '{url}': {e}", exc_info=True)
                 if span:
                     span.__exit__(type(e), e, e.__traceback__)
+
 
         return results
 
@@ -686,6 +712,14 @@ def run_recovery_check(
         # Reset failure points & unpause validation
         reset_publication_failure_points(publication_id, db_path=db_path)
         unpause_publication_validation(publication_id, db_path=db_path)
+        logger.info("Circuit breaker state changed: PAUSED -> ACTIVE", extra={
+            "publication_id": publication_id,
+            "previous_state": "PAUSED",
+            "new_state": "ACTIVE",
+            "reason": "recovery_check_passed",
+            "tripping_url": None,
+            "failure_points": 0
+        })
         logger.info(f"Recovery Check passed for '{trigger_article_url}'. Publication validation is now ACTIVE.")
         return True
     else:

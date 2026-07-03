@@ -1,6 +1,6 @@
 # 12. Structured logging, Logfire spans & drift warnings
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -16,11 +16,11 @@ Complete the observability layer across the scraping pipeline per the PRD's "Str
 
 ## Acceptance criteria
 
-- [ ] Discovery, relevance, validation, and circuit-breaker events emit structured logs with the PRD's named fields, queryable in Logfire
-- [ ] Every discarded URL logs its specific filter reason
-- [ ] Custom spans wrap publication scrape runs and healing runs
-- [ ] A zero-candidate discovery result from a successful response emits a console drift warning; breaker trips emit a console warning banner
-- [ ] Tests assert log field presence/shape and warning emission for the drift and trip cases
+- [x] Discovery, relevance, validation, and circuit-breaker events emit structured logs with the PRD's named fields, queryable in Logfire
+- [x] Every discarded URL logs its specific filter reason
+- [x] Custom spans wrap publication scrape runs and healing runs
+- [x] A zero-candidate discovery result from a successful response emits a console drift warning; breaker trips emit a console warning banner
+- [x] Tests assert log field presence/shape and warning emission for the drift and trip cases
 
 ## Blocked by
 

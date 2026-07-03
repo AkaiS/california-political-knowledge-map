@@ -21,6 +21,12 @@ from knowledge_map.adapters.sqlite_db import (
 
 logger = logging.getLogger(__name__)
 
+try:
+    import logfire
+except ImportError:
+    logfire = None
+
+
 class ArticleSelectors(BaseModel):
     title: str
     author: str
@@ -139,6 +145,10 @@ async def run_selector_healing_flow(
 
     # Set healing_in_progress flag
     set_publication_healing_in_progress(publication_id, True, db_path=db_path)
+
+    span = logfire.span("heal_selectors", publication_id=publication_id, trigger_article_url=tripping_article_url) if logfire else None
+    if span:
+        span.__enter__()
 
     try:
         # Load raw HTML from cache
@@ -308,3 +318,5 @@ async def run_selector_healing_flow(
         logger.error(f"Error during selector healing loop: {e}", exc_info=True)
     finally:
         set_publication_healing_in_progress(publication_id, False, db_path=db_path)
+        if span:
+            span.__exit__(None, None, None)

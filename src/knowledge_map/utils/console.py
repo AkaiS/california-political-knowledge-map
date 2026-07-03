@@ -8,14 +8,17 @@ class ConsoleNotifier:
     @staticmethod
     def print_warning_banner(title: str, message: str, details: Optional[Dict[str, str]] = None) -> None:
         """
-        Prints a distinct, high-visibility warning block/banner to sys.stderr
-        or standard logging if sys.stderr is not a TTY.
+        Always logs a critical error, and additionally prints a high-visibility 
+        warning block to sys.stderr if it is a TTY.
         """
+        # 1. ALWAYS Log the critical error so it's never lost
+        details_str = ""
+        if details:
+            details_str = " | Details: " + ", ".join(f"{k}={v}" for k, v in details.items())
+        logger.critical(f"[{title.upper()}] {message}{details_str}")
+
+        # 2. ONLY do the visual flair if someone is watching
         if not sys.stderr.isatty():
-            details_str = ""
-            if details:
-                details_str = " | Details: " + ", ".join(f"{k}={v}" for k, v in details.items())
-            logger.critical(f"[{title.upper()}] {message}{details_str}")
             return
 
         border_char = "="
@@ -79,3 +82,35 @@ class ConsoleNotifier:
             message=message,
             details=details
         )
+
+    @classmethod
+    def notify_discovery_drift(cls, publication_id: str, url: str) -> None:
+        """
+        Notify when a discovery run returns 0 candidates from a successful response.
+        """
+        details = {
+            "Publication ID": publication_id,
+            "Listing URL": url,
+        }
+        cls.print_warning_banner(
+            title="Discovery Drift Warning",
+            message="Discovery run returned 0 candidate URLs from a successful (200 OK) response. Possible layout drift or over-restrictive filters.",
+            details=details
+        )
+
+    @classmethod
+    def notify_circuit_breaker_tripped(cls, publication_id: str, tripping_url: str, failure_points: int) -> None:
+        """
+        Notify when validation circuit breaker trips for a publication.
+        """
+        details = {
+            "Publication ID": publication_id,
+            "Tripping URL": tripping_url,
+            "Failure Points": str(failure_points),
+        }
+        cls.print_warning_banner(
+            title="Circuit Breaker Tripped",
+            message=f"Validation circuit breaker tripped for '{publication_id}'. Validation pipeline is now PAUSED.",
+            details=details
+        )
+
