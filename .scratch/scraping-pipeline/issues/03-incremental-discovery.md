@@ -1,6 +1,6 @@
 # 03. Incremental discovery & Raw HTML Store (`ca-map update-sources`)
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -16,12 +16,12 @@ In this slice every fetched candidate is cached as `PENDING`; the Relevance Filt
 
 ## Acceptance criteria
 
-- [ ] `scraped_html_cache` table is created on database initialization with the four-status CHECK constraint
-- [ ] `ca-map update-sources` discovers candidate links from listing pages and filters them through the path blocklist and Anchor Text Heuristics before any fetch
-- [ ] URLs already known to `scraped_html_cache`, `rejected_articles`, or `stories` are never re-fetched
-- [ ] Fetched articles are cached as `PENDING` with publication id and scrape timestamp
-- [ ] Politeness Policy (delay, concurrency, robots.txt) is honored per Publication
-- [ ] Tests cover link extraction, blocklist filtering, anchor heuristic word/char boundaries, skip-existing behavior, and cache writes (Crawl4AI mocked)
+- [x] `scraped_html_cache` table is created on database initialization with the four-status CHECK constraint
+- [x] `ca-map update-sources` discovers candidate links from listing pages and filters them through the path blocklist and Anchor Text Heuristics before any fetch
+- [x] URLs already known to `scraped_html_cache`, `rejected_articles`, or `stories` are never re-fetched
+- [x] Fetched articles are cached as `PENDING` with publication id and scrape timestamp
+- [x] Politeness Policy (delay, concurrency, robots.txt) is honored per Publication
+- [x] Tests cover link extraction, blocklist filtering, anchor heuristic word/char boundaries, skip-existing behavior, and cache writes (Crawl4AI mocked)
 
 ## Blocked by
 
