@@ -212,3 +212,30 @@ def test_console_notifier_non_tty(caplog):
         assert record.levelname == "CRITICAL"
         assert "[TEST TITLE] Test Message" in record.message
         assert "key1=val1" in record.message
+
+
+def test_cli_validate_articles_success(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from knowledge_map.adapters.sqlite_db import init_db
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_validate.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    with patch("knowledge_map.core.validation.ArticleValidatorService") as MockServiceClass:
+        mock_service_instance = MagicMock()
+        mock_service_instance.validate_pending_articles.return_value = [
+            {"status": "VALIDATED", "url": "https://test.com/1"},
+            {"status": "VALIDATION_FAILED", "url": "https://test.com/2"}
+        ]
+        MockServiceClass.return_value = mock_service_instance
+        
+        try:
+            main(["validate-articles"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_service_instance.validate_pending_articles.assert_called_once()

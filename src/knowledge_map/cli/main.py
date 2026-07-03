@@ -89,6 +89,9 @@ def main(args=None):
     archive_parser = subparsers.add_parser("scrape-archive", help="Run archive crawl using DomainMapper")
     archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
 
+    # Validate-articles subcommand
+    subparsers.add_parser("validate-articles", help="Run validation on pending articles in raw HTML cache")
+
     parsed_args = parser.parse_args(args)
 
     if parsed_args.action == "ingest":
@@ -389,6 +392,14 @@ def main(args=None):
                     print(f"  - {url}")
             else:
                 print(f"No new articles scraped for publication '{pub_id}'.")
+        
+        # Run validation on any pending articles
+        from knowledge_map.core.validation import ArticleValidatorService
+        val_service = ArticleValidatorService(db_path=db_path)
+        print("Running validation on pending articles...")
+        val_results = val_service.validate_pending_articles()
+        validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
+        print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
 
     elif parsed_args.action == "scrape-archive":
@@ -411,6 +422,30 @@ def main(args=None):
                 print(f"  - {url}")
         else:
             print("No new articles scraped during archive crawl.")
+            
+        # Run validation on any pending articles
+        from knowledge_map.core.validation import ArticleValidatorService
+        val_service = ArticleValidatorService(db_path=db_path)
+        print("Running validation on pending articles...")
+        val_results = val_service.validate_pending_articles()
+        validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
+        print(f"Validation complete: {validated_count} articles validated successfully.")
+        sys.exit(0)
+
+    elif parsed_args.action == "validate-articles":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        # Ensure database is initialized
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+        
+        from knowledge_map.core.validation import ArticleValidatorService
+        service = ArticleValidatorService(db_path=db_path)
+        print("Running validation on pending articles...")
+        results = service.validate_pending_articles()
+        validated_count = sum(1 for r in results if r["status"] == "VALIDATED")
+        failed_count = sum(1 for r in results if r["status"] == "VALIDATION_FAILED")
+        unval_count = sum(1 for r in results if r["status"] == "UNVALIDATABLE")
+        print(f"Validation complete: {validated_count} validated, {failed_count} validation failed, {unval_count} unvalidatable.")
         sys.exit(0)
 
 if __name__ == "__main__":

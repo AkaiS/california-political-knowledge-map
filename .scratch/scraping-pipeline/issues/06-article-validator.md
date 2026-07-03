@@ -1,6 +1,6 @@
 # 06. Article Validator (JSON-LD grounding, `UNVALIDATABLE`, `stories` handoff)
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -19,11 +19,11 @@ Articles with no JSON-LD at all are marked `UNVALIDATABLE` and skipped — they 
 
 ## Acceptance criteria
 
-- [ ] `PENDING` cache entries are validated using Selector Versions in proximity order with fallback
-- [ ] All four validation rules (title, author normalization + Damerau-Levenshtein, UTC date, word-count ratio with fallback sanity checks) behave per the PRD
-- [ ] Articles missing JSON-LD entirely are marked `UNVALIDATABLE` and excluded from failure handling
-- [ ] Valid articles are marked `VALIDATED` and appear in `stories` as `UNPROCESSED`; exhausted failures are marked `VALIDATION_FAILED` with a best-attempt failure classification
-- [ ] Tests cover every comparison rule with edge cases (multi-author strings, timezone offsets, missing `wordCount`, missing JSON-LD) using mocked JSON-LD structures
+- [x] `PENDING` cache entries are validated using Selector Versions in proximity order with fallback
+- [x] All four validation rules (title, author normalization + Damerau-Levenshtein, UTC date, word-count ratio with fallback sanity checks) behave per the PRD
+- [x] Articles missing JSON-LD entirely are marked `UNVALIDATABLE` and excluded from failure handling
+- [x] Valid articles are marked `VALIDATED` and appear in `stories` as `UNPROCESSED`; exhausted failures are marked `VALIDATION_FAILED` with a best-attempt failure classification
+- [x] Tests cover every comparison rule with edge cases (multi-author strings, timezone offsets, missing `wordCount`, missing JSON-LD) using mocked JSON-LD structures
 
 ## Blocked by
 
