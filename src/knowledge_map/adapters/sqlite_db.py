@@ -516,6 +516,59 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
         conn.close()
 
 
+def save_rejected_article(
+    url: str,
+    publication_id: str,
+    relevance_status: str,
+    metadata_json: Optional[Dict[str, Any]] = None,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Saves a rejected or inconclusive article to the rejected_articles table.
+    """
+    import json
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        meta_str = json.dumps(metadata_json) if metadata_json is not None else None
+        cursor.execute("""
+            INSERT OR REPLACE INTO rejected_articles (url, publication_id, relevance_status, metadata_json)
+            VALUES (?, ?, ?, ?)
+        """, (url, publication_id, relevance_status, meta_str))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a rejected article record by URL.
+    """
+    import json
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT url, publication_id, relevance_status, metadata_json, checked_at
+            FROM rejected_articles
+            WHERE url = ?
+        """, (url,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        d = dict(row)
+        if d["metadata_json"]:
+            try:
+                d["metadata_json"] = json.loads(d["metadata_json"])
+            except Exception:
+                pass
+        return d
+    finally:
+        conn.close()
+
+
+
 
 
 

@@ -237,7 +237,18 @@ async def test_listing_page_discovery_service(tmp_path):
     # 3. Mock CrawlResult for article page
     mock_article_result = MagicMock()
     mock_article_result.success = True
-    mock_article_result.html = "<html>scraped raw content</html>"
+    mock_article_result.html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "headline": "California Senate approves Newsom nominee"
+        }
+        </script>
+    </head>
+    <body>scraped raw content</body>
+    </html>
+    """
     
     # 4. Patch AsyncWebCrawler
     mock_crawler_instance = AsyncMock()
@@ -270,7 +281,7 @@ async def test_listing_page_discovery_service(tmp_path):
         cached = get_cached_html("https://test.com/politics/valid-story-1", db_path=db_path)
         assert cached is not None
         assert cached["publication_id"] == "testpub"
-        assert cached["raw_html"] == "<html>scraped raw content</html>"
+        assert "scraped raw content" in cached["raw_html"]
         assert cached["validation"] == "PENDING"
         
         # Verify check_robots_txt config was passed as True because use_robots_txt is True

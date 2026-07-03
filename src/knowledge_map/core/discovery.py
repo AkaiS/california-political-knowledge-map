@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
 
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
-from knowledge_map.adapters.sqlite_db import is_url_known, cache_scraped_html, DEFAULT_DB_PATH
+from knowledge_map.adapters.sqlite_db import is_url_known, cache_scraped_html, save_rejected_article, DEFAULT_DB_PATH
 from knowledge_map.config import settings
 
 logger = logging.getLogger(__name__)
@@ -190,8 +190,16 @@ class ListingPageDiscoveryService:
                         res = await crawler.arun(url=url, config=run_config)
                         if res.success:
                             raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
-                            cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
-                            scraped_urls.append(url)
+                            
+                            from knowledge_map.core.relevance import check_relevance
+                            status, metadata = check_relevance(raw_html)
+                            
+                            if status == "RELEVANT":
+                                cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                                scraped_urls.append(url)
+                            else:
+                                save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                                logger.info(f"Rejected candidate article '{url}' with status '{status}'")
                         else:
                             logger.error(f"Failed to fetch candidate '{url}': {res.error_message}")
 

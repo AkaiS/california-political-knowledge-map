@@ -14,12 +14,12 @@ After a candidate page is fetched, extract its JSON-LD `headline`/`description` 
 
 ## Acceptance criteria
 
-- [ ] `rejected_articles` table is created on database initialization with the PRD schema
-- [ ] Fetched candidates are classified `RELEVANT` / `IRRELEVANT` / `INCONCLUSIVE` from JSON-LD or meta-tag metadata against the keyword configuration
-- [ ] `RELEVANT` articles remain cached as `PENDING` without a second network request; rejected articles are recorded with their Relevance Status and metadata
-- [ ] Previously rejected URLs are skipped on subsequent `update-sources` runs (verifies the issue 03 skip-check end-to-end)
-- [ ] A documented hook exists for passing `INCONCLUSIVE` metadata to a future logistic regression classifier
-- [ ] Tests cover keyword matching, negative-topic rejection, inconclusive classification, meta-tag fallback, and rejected-article persistence
+- [x] `rejected_articles` table is created on database initialization with the PRD schema
+- [x] Fetched candidates are classified `RELEVANT` / `IRRELEVANT` / `INCONCLUSIVE` from JSON-LD or meta-tag metadata against the keyword configuration
+- [x] `RELEVANT` articles remain cached as `PENDING` without a second network request; rejected articles are recorded with their Relevance Status and metadata
+- [x] Previously rejected URLs are skipped on subsequent `update-sources` runs (verifies the issue 03 skip-check end-to-end)
+- [x] A documented hook exists for passing `INCONCLUSIVE` metadata to a future logistic regression classifier
+- [x] Tests cover keyword matching, negative-topic rejection, inconclusive classification, meta-tag fallback, and rejected-article persistence
 
 ## Blocked by
 
