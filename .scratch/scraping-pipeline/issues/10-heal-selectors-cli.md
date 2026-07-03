@@ -1,6 +1,6 @@
 # 10. `ca-map heal-selectors` CLI (`--retry`, `--context`)
 
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Parent
 
@@ -17,11 +17,11 @@ Any manual invocation implicitly bypasses the unresolved-proposal check and rese
 
 ## Acceptance criteria
 
-- [ ] `--retry` resolves the old proposal as `REJECTED` and re-runs healing with the failed selectors injected as negative context
-- [ ] `--context` propagates the developer's hint into the Generator prompt verbatim
-- [ ] Manual invocations bypass the unresolved-proposal guard and stale `healing_in_progress` flags
-- [ ] Invalid or missing `--publication` values produce a clear CLI error
-- [ ] Tests cover parser options, negative-context and custom-context propagation (mocked LLM), guard bypasses, and error handling
+- [x] `--retry` resolves the old proposal as `REJECTED` and re-runs healing with the failed selectors injected as negative context
+- [x] `--context` propagates the developer's hint into the Generator prompt verbatim
+- [x] Manual invocations bypass the unresolved-proposal guard and stale `healing_in_progress` flags
+- [x] Invalid or missing `--publication` values produce a clear CLI error
+- [x] Tests cover parser options, negative-context and custom-context propagation (mocked LLM), guard bypasses, and error handling
 
 ## Blocked by
 

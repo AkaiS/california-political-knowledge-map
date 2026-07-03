@@ -835,6 +835,31 @@ def resolve_selector_proposal(
         conn.close()
 
 
+def get_latest_selector_proposal(
+    pub_id: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the most recent selector proposal for a given publication.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, publication_id, selectors_json, trigger_article_url, status, critic_iterations, created_at, resolved_at
+            FROM selector_proposals
+            WHERE publication_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (pub_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+
 
 
 

@@ -98,6 +98,12 @@ def main(args=None):
     review_parser = subparsers.add_parser("review-selectors", help="Review unresolved selector proposals and promote/reject them")
     review_parser.add_argument("--manual", help="Path to JSON file containing manual selectors to promote")
 
+    # Heal-selectors subcommand
+    heal_selectors_parser = subparsers.add_parser("heal-selectors", help="Manually trigger or retry selector self-healing for a publication")
+    heal_selectors_parser.add_argument("--publication", required=True, help="ID of the publication to heal")
+    heal_selectors_parser.add_argument("--retry", action="store_true", help="Mark previous proposal rejected and retry healing with negative context")
+    heal_selectors_parser.add_argument("--context", help="Developer-supplied guidance/hint to append to the Generator prompt")
+
     parsed_args = parser.parse_args(args)
 
     if parsed_args.action == "ingest":
@@ -607,6 +613,65 @@ def main(args=None):
 
             print("\nAll proposals processed.")
             sys.exit(0)
+
+    elif parsed_args.action == "heal-selectors":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import (
+            init_db,
+            get_publication,
+            set_publication_healing_in_progress,
+            resolve_selector_proposal,
+            get_latest_selector_proposal
+        )
+        init_db(db_path)
+
+        pub_id = parsed_args.publication
+        pub = get_publication(pub_id, db_path=db_path)
+        if not pub:
+            print(f"Error: Publication '{pub_id}' not found.", file=sys.stderr)
+            sys.exit(1)
+
+        custom_context = parsed_args.context
+        retry_negative_selectors = None
+        tripping_article_url = None
+
+        if parsed_args.retry:
+            proposal = get_latest_selector_proposal(pub_id, db_path=db_path)
+            if not proposal:
+                print(f"Error: No selector proposal found to retry for publication '{pub_id}'.", file=sys.stderr)
+                sys.exit(1)
+
+            tripping_article_url = proposal["trigger_article_url"]
+            retry_negative_selectors = proposal["selectors_json"]
+
+            # Mark the old proposal as REJECTED
+            resolve_selector_proposal(proposal["id"], "REJECTED", db_path=db_path)
+            print(f"Marking selector proposal {proposal['id']} as REJECTED.")
+        else:
+            tripping_article_url = pub.get("tripping_article_url")
+            if not tripping_article_url:
+                # Fall back to latest proposal's tripping article URL if present
+                proposal = get_latest_selector_proposal(pub_id, db_path=db_path)
+                if proposal:
+                    tripping_article_url = proposal["trigger_article_url"]
+                else:
+                    print(f"Error: Publication '{pub_id}' does not have a tripping article URL.", file=sys.stderr)
+                    sys.exit(1)
+
+        print(f"Running selector healing for publication '{pub_id}' on article '{tripping_article_url}'...")
+        # Reset healing_in_progress flag first to bypass guards
+        set_publication_healing_in_progress(pub_id, False, db_path=db_path)
+
+        from knowledge_map.core.healing import run_selector_healing_flow
+        asyncio.run(run_selector_healing_flow(
+            publication_id=pub_id,
+            tripping_article_url=tripping_article_url,
+            db_path=db_path,
+            custom_context=custom_context,
+            retry_negative_selectors=retry_negative_selectors,
+            bypass_guards=True
+        ))
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
