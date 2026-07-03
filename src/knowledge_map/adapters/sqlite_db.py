@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 from typing import List, Dict, Any, Optional
 
 DEFAULT_DB_PATH = "document_store.db"
@@ -102,6 +103,15 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(story_id) REFERENCES stories(id) ON DELETE CASCADE,
                 UNIQUE(story_id, url)
+            )
+        """)
+        # Create publication_discovery_state table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS publication_discovery_state (
+                publication_id TEXT PRIMARY KEY,
+                state_json TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
             )
         """)
         conn.commit()
@@ -564,6 +574,41 @@ def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[D
             except Exception:
                 pass
         return d
+    finally:
+        conn.close()
+
+
+def get_discovery_state(pub_id: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the discovery state for a publication. Returns None if not found.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT state_json FROM publication_discovery_state WHERE publication_id = ?
+        """, (pub_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return json.loads(row[0])
+    finally:
+        conn.close()
+
+
+def save_discovery_state(pub_id: str, state: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> None:
+    """
+    Saves or updates the discovery state for a publication.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        state_str = json.dumps(state)
+        cursor.execute("""
+            INSERT OR REPLACE INTO publication_discovery_state (publication_id, state_json, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, (pub_id, state_str))
+        conn.commit()
     finally:
         conn.close()
 

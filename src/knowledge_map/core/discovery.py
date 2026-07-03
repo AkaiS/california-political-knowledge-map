@@ -3,8 +3,11 @@ import logging
 import asyncio
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
+from datetime import datetime, timezone, timedelta
+import dateutil.parser
+from bs4 import BeautifulSoup
 
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, DomainMapper
 from knowledge_map.adapters.sqlite_db import is_url_known, cache_scraped_html, save_rejected_article, DEFAULT_DB_PATH
 from knowledge_map.config import settings
 
@@ -76,6 +79,89 @@ def should_keep_url(
             return False
 
     return True
+
+
+def _find_date_recursive(data: Any) -> Optional[str]:
+    """
+    Recursively search for date keys in a JSON-like structure.
+    """
+    date_keys = {"datepublished", "datemodified", "datecreated", "uploaddate"}
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k.lower() in date_keys and isinstance(v, str):
+                return v
+        for v in data.values():
+            res = _find_date_recursive(v)
+            if res is not None:
+                return res
+    elif isinstance(data, list):
+        for item in data:
+            res = _find_date_recursive(item)
+            if res is not None:
+                return res
+    return None
+
+
+def extract_published_date(html: str) -> Optional[datetime]:
+    """
+    Extracts the publish date from raw HTML.
+    Looks in JSON-LD blocks first, then falls back to meta tags and time tags.
+    Returns a timezone-aware UTC datetime.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    
+    # 1. Parse JSON-LD blocks
+    json_ld_scripts = soup.find_all("script", type="application/ld+json")
+    for script in json_ld_scripts:
+        if not script.string:
+            continue
+        try:
+            data = json.loads(script.string.strip())
+            date_str = _find_date_recursive(data)
+            if date_str:
+                dt = dateutil.parser.parse(date_str)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc)
+        except Exception:
+            continue
+            
+    # 2. Fallback to meta tags
+    meta_names = [
+        "article:published_time",
+        "publish-date",
+        "pubdate",
+        "date",
+        "og:pubdate",
+        "og:article:published_time",
+        "sailthru.date",
+        "parsely-pub-date",
+        "dc.date.issued",
+        "cxenseparse:repubdate"
+    ]
+    for meta_name in meta_names:
+        meta = soup.find("meta", attrs={"name": meta_name}) or soup.find("meta", attrs={"property": meta_name})
+        if meta and meta.get("content"):
+            try:
+                dt = dateutil.parser.parse(meta.get("content").strip())
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc)
+            except Exception:
+                continue
+
+    # 3. Fallback to time tag
+    time_tag = soup.find("time")
+    if time_tag and time_tag.get("datetime"):
+        try:
+            dt = dateutil.parser.parse(time_tag.get("datetime").strip())
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except Exception:
+            pass
+            
+    return None
 
 
 class ListingPageDiscoveryService:
@@ -219,3 +305,130 @@ class ListingPageDiscoveryService:
                 logger.error(f"Error scraping publication '{pub['id']}': {e}")
                 results[pub["id"]] = []
         return results
+
+
+class ArchiveDiscoveryService(ListingPageDiscoveryService):
+    """
+    Crawls publication historical archives using DomainMapper to discover all URLs,
+    filters them, and resumes progress from a persisted Discovery State.
+    """
+    async def run_archive_crawl(self, pub: Dict[str, Any]) -> List[str]:
+        from knowledge_map.adapters.sqlite_db import (
+            get_discovery_state,
+            save_discovery_state
+        )
+        
+        pub_id = pub["id"]
+        base_url = pub["base_url"]
+        crawl_delay = pub.get("crawl_delay", 2.0)
+        max_concurrency = pub.get("max_concurrency", 2)
+        use_robots_txt = pub.get("use_robots_txt", True)
+
+        # 1. Try to load existing discovery state
+        state = get_discovery_state(pub_id, db_path=self.db_path)
+        if not state:
+            logger.info(f"No existing discovery state for '{pub_id}'. Initializing DomainMapper scan...")
+            
+            # Extract domain from base_url
+            parsed_base = urlparse(base_url)
+            domain = parsed_base.netloc
+            if domain.startswith("www."):
+                domain = domain[4:]
+                
+            # Perform DomainMapper scan
+            mapper = DomainMapper()
+            try:
+                results = await mapper.scan(domain=domain)
+                discovered_urls = [r["url"] for r in results if r.get("url")]
+            finally:
+                await mapper.close()
+
+            # Filter discovered URLs
+            blocklist = self._get_blocklist(pub)
+            filtered_urls = []
+            for url in discovered_urls:
+                if not self._is_same_domain(base_url, url):
+                    continue
+                # Bypassing anchor text heuristics: apply_anchor_heuristics = False
+                if not should_keep_url(url, anchor_text=None, blocklist=blocklist, apply_anchor_heuristics=False):
+                    continue
+                filtered_urls.append(url)
+
+            state = {
+                "urls": filtered_urls,
+                "current_index": 0,
+                "cutoff_reached": False
+            }
+            save_discovery_state(pub_id, state, db_path=self.db_path)
+
+        # 2. Process URLs from current_index
+        scraped_urls = []
+        if state.get("cutoff_reached", False):
+            logger.info(f"Archive crawl for '{pub_id}' already hit the historical cutoff.")
+            return scraped_urls
+
+        # Calculate cutoff date
+        cutoff_years = pub.get("archive_cutoff_years", 5)
+        now = datetime.now(timezone.utc)
+        cutoff_date = now - timedelta(days=365 * cutoff_years)
+
+        limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
+        run_config = CrawlerRunConfig(
+            cache_mode=CacheMode.BYPASS,
+            check_robots_txt=use_robots_txt
+        )
+
+        chunk_size = max(1, max_concurrency)
+        
+        async with AsyncWebCrawler() as crawler:
+            while state["current_index"] < len(state["urls"]):
+                if state.get("cutoff_reached", False):
+                    break
+
+                # Get next chunk
+                chunk = state["urls"][state["current_index"] : state["current_index"] + chunk_size]
+                
+                async def process_url(url: str) -> bool:
+                    # Return True if cutoff is reached
+                    if is_url_known(url, db_path=self.db_path):
+                        return False
+                    
+                    async with limiter:
+                        logger.info(f"Archive crawl: fetching candidate '{url}' for '{pub_id}'")
+                        res = await crawler.arun(url=url, config=run_config)
+                        if not res.success:
+                            logger.error(f"Archive crawl: failed to fetch '{url}': {res.error_message}")
+                            return False
+
+                        raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                        
+                        # Check historical cutoff
+                        pub_date = extract_published_date(raw_html)
+                        if pub_date and pub_date < cutoff_date:
+                            logger.info(f"Archive crawl: met article older than cutoff ({pub_date} < {cutoff_date}). Reached cutoff.")
+                            return True
+
+                        # Apply Relevance Filter
+                        from knowledge_map.core.relevance import check_relevance
+                        status, metadata = check_relevance(raw_html)
+
+                        if status == "RELEVANT":
+                            cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                            scraped_urls.append(url)
+                        else:
+                            save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                            logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}'")
+
+                    return False
+
+                # Process the chunk concurrently
+                results = await asyncio.gather(*(process_url(url) for url in chunk))
+
+                # Increment index and save state
+                state["current_index"] += len(chunk)
+                if any(results):
+                    state["cutoff_reached"] = True
+                
+                save_discovery_state(pub_id, state, db_path=self.db_path)
+
+        return scraped_urls

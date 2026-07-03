@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker, register_publication
 from knowledge_map.core.bootstrapper import bootstrap_publication_stub
-from knowledge_map.core.discovery import ListingPageDiscoveryService
+from knowledge_map.core.discovery import ListingPageDiscoveryService, ArchiveDiscoveryService
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter, get_embedding_embedder, cosine_similarity
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
@@ -84,6 +84,10 @@ def main(args=None):
 
     # Update-sources subcommand
     subparsers.add_parser("update-sources", help="Run incremental scraping/discovery for registered publications")
+
+    # Scrape-archive subcommand
+    archive_parser = subparsers.add_parser("scrape-archive", help="Run archive crawl using DomainMapper")
+    archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
 
     parsed_args = parser.parse_args(args)
 
@@ -385,6 +389,28 @@ def main(args=None):
                     print(f"  - {url}")
             else:
                 print(f"No new articles scraped for publication '{pub_id}'.")
+        sys.exit(0)
+
+    elif parsed_args.action == "scrape-archive":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        # Ensure database is initialized
+        from knowledge_map.adapters.sqlite_db import init_db, get_publication
+        init_db(db_path)
+        
+        pub = get_publication(parsed_args.publication_id, db_path=db_path)
+        if not pub:
+            print(f"Error: Publication '{parsed_args.publication_id}' not found.", file=sys.stderr)
+            sys.exit(1)
+            
+        service = ArchiveDiscoveryService(db_path=db_path)
+        print(f"Starting archive crawl for publication '{parsed_args.publication_id}'...")
+        results = asyncio.run(service.run_archive_crawl(pub))
+        if results:
+            print(f"Scraped {len(results)} new articles during archive crawl:")
+            for url in results:
+                print(f"  - {url}")
+        else:
+            print("No new articles scraped during archive crawl.")
         sys.exit(0)
 
 if __name__ == "__main__":

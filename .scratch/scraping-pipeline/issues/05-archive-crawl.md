@@ -1,6 +1,6 @@
 # 05. Archive crawl & Discovery State (`ca-map scrape-archive`)
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,12 +14,12 @@ The crawl discovers URLs under a Publication's domain, applies the pre-fetch pat
 
 ## Acceptance criteria
 
-- [ ] `publication_discovery_state` table is created on database initialization with the PRD schema
-- [ ] `ca-map scrape-archive` discovers URLs via `DomainMapper`, applies blocklist and relevance filtering, and caches relevant articles as `PENDING`
-- [ ] Anchor Text Heuristics are not applied on this path
-- [ ] Progress persists to Discovery State during the crawl, and a re-run resumes from it instead of starting over
-- [ ] The crawl stops at the configured historical cutoff
-- [ ] Tests cover domain-mapping discovery (mocked), Discovery State persistence and resumption, and cutoff termination
+- [x] `publication_discovery_state` table is created on database initialization with the PRD schema
+- [x] `ca-map scrape-archive` discovers URLs via `DomainMapper`, applies blocklist and relevance filtering, and caches relevant articles as `PENDING`
+- [x] Anchor Text Heuristics are not applied on this path
+- [x] Progress persists to Discovery State during the crawl, and a re-run resumes from it instead of starting over
+- [x] The crawl stops at the configured historical cutoff
+- [x] Tests cover domain-mapping discovery (mocked), Discovery State persistence and resumption, and cutoff termination
 
 ## Blocked by
 
