@@ -1,6 +1,6 @@
 # 11. `ca-map purge-cache` retention command
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,11 +14,11 @@ Per the PRD's "HTML Cache Retention": null out `raw_html` for `VALIDATED` rows 3
 
 ## Acceptance criteria
 
-- [ ] Eligible `VALIDATED` rows (story `COMPLETED` more than 30 days ago) have `raw_html` set to NULL while their status row remains
-- [ ] Eligible `UNVALIDATABLE` rows (validated more than 30 days ago) are purged the same way
-- [ ] `VALIDATION_FAILED` and `PENDING` rows are never touched
-- [ ] The command prints a summary of purged row counts and is safe to run repeatedly
-- [ ] Tests cover each status's eligibility rules, the 30-day boundary, and idempotent re-runs
+- [x] Eligible `VALIDATED` rows (story `COMPLETED` more than 30 days ago) have `raw_html` set to NULL while their status row remains
+- [x] Eligible `UNVALIDATABLE` rows (validated more than 30 days ago) are purged the same way
+- [x] `VALIDATION_FAILED` and `PENDING` rows are never touched
+- [x] The command prints a summary of purged row counts and is safe to run repeatedly
+- [x] Tests cover each status's eligibility rules, the 30-day boundary, and idempotent re-runs
 
 ## Blocked by
 

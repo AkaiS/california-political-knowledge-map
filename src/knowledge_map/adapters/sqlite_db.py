@@ -23,6 +23,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 summary TEXT,
                 content TEXT,
                 status TEXT DEFAULT 'UNPROCESSED',
+                completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -89,6 +90,13 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
         # Safe migration: add column 'status' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN status TEXT DEFAULT 'UNPROCESSED'")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
+
+        # Safe migration: add column 'completed_at' if it's missing in stories table
+        try:
+            cursor.execute("ALTER TABLE stories ADD COLUMN completed_at DATETIME")
         except sqlite3.OperationalError:
             # Column already exists
             pass
@@ -266,13 +274,20 @@ def update_story_status(url: str, status: str, db_path: str = DEFAULT_DB_PATH) -
     """
     Updates the status of a story in the SQLite database by its URL.
     """
+    status_str = status.value if hasattr(status, "value") else str(status)
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE stories SET status = ? WHERE url = ?",
-            (status, url)
-        )
+        if status_str == "COMPLETED":
+            cursor.execute(
+                "UPDATE stories SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE url = ?",
+                (status_str, url)
+            )
+        else:
+            cursor.execute(
+                "UPDATE stories SET status = ?, completed_at = NULL WHERE url = ?",
+                (status_str, url)
+            )
         conn.commit()
     finally:
         conn.close()
@@ -855,6 +870,48 @@ def get_latest_selector_proposal(
         """, (pub_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
+    """
+    Applies the Raw HTML Store retention policy to purge raw HTML from the cache.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Purge VALIDATED rows older than 30 days based on their completed story status
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET raw_html = NULL
+            WHERE validation = 'VALIDATED'
+              AND url IN (
+                  SELECT url FROM stories
+                  WHERE status = 'COMPLETED'
+                    AND completed_at < datetime('now', '-30 days')
+              )
+              AND raw_html IS NOT NULL
+        """)
+        validated_count = cursor.rowcount
+        
+        # 2. Purge UNVALIDATABLE rows older than 30 days
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET raw_html = NULL
+            WHERE validation = 'UNVALIDATABLE'
+              AND validation_date < datetime('now', '-30 days')
+              AND raw_html IS NOT NULL
+        """)
+        unvalidatable_count = cursor.rowcount
+        
+        conn.commit()
+        return {
+            "validated": validated_count,
+            "unvalidatable": unvalidatable_count,
+            "total": validated_count + unvalidatable_count
+        }
     finally:
         conn.close()
 

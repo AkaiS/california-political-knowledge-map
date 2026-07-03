@@ -104,6 +104,9 @@ def main(args=None):
     heal_selectors_parser.add_argument("--retry", action="store_true", help="Mark previous proposal rejected and retry healing with negative context")
     heal_selectors_parser.add_argument("--context", help="Developer-supplied guidance/hint to append to the Generator prompt")
 
+    # Purge-cache subcommand
+    subparsers.add_parser("purge-cache", help="Purge eligible raw HTML cache rows according to retention policy")
+
     parsed_args = parser.parse_args(args)
 
     if parsed_args.action == "ingest":
@@ -671,6 +674,18 @@ def main(args=None):
             retry_negative_selectors=retry_negative_selectors,
             bypass_guards=True
         ))
+        sys.exit(0)
+
+    elif parsed_args.action == "purge-cache":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import init_db, purge_html_cache
+        init_db(db_path)
+        
+        print("Purging raw HTML cache...")
+        counts = purge_html_cache(db_path=db_path)
+        print(f"Purged {counts['validated']} validated rows.")
+        print(f"Purged {counts['unvalidatable']} unvalidatable rows.")
+        print(f"Total rows purged: {counts['total']}.")
         sys.exit(0)
 
 if __name__ == "__main__":
