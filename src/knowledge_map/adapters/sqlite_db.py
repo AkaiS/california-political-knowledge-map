@@ -54,6 +54,29 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
             )
         """)
+        # Create scraped_html_cache table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS scraped_html_cache (
+                url TEXT PRIMARY KEY,
+                publication_id TEXT NOT NULL,
+                raw_html TEXT,
+                validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
+                validation_date DATETIME,
+                scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+            )
+        """)
+        # Create rejected_articles table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS rejected_articles (
+                url TEXT PRIMARY KEY,
+                publication_id TEXT NOT NULL,
+                relevance_status TEXT CHECK(relevance_status IN ('IRRELEVANT', 'INCONCLUSIVE')) NOT NULL,
+                metadata_json TEXT,
+                checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+            )
+        """)
         # Safe migration: add column 'content' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
@@ -409,6 +432,89 @@ def get_selector_version_by_id(
         return dict(row) if row else None
     finally:
         conn.close()
+
+
+def cache_scraped_html(
+    url: str,
+    publication_id: str,
+    raw_html: str,
+    validation: str = "PENDING",
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Caches scraped raw HTML in scraped_html_cache table.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO scraped_html_cache (url, publication_id, raw_html, validation, validation_date)
+            VALUES (?, ?, ?, ?, NULL)
+        """, (url, publication_id, raw_html, validation))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a cached raw HTML record by URL.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT url, publication_id, raw_html, validation, validation_date, scraped_at
+            FROM scraped_html_cache
+            WHERE url = ?
+        """, (url,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def update_cached_html_status(url: str, validation: str, db_path: str = DEFAULT_DB_PATH) -> None:
+    """
+    Updates the validation status and sets validation_date to CURRENT_TIMESTAMP.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET validation = ?, validation_date = CURRENT_TIMESTAMP
+            WHERE url = ?
+        """, (validation, url))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
+    """
+    Checks if a URL is already present in stories, scraped_html_cache, or rejected_articles.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        # Check stories
+        cursor.execute("SELECT 1 FROM stories WHERE url = ?", (url,))
+        if cursor.fetchone() is not None:
+            return True
+        # Check scraped_html_cache
+        cursor.execute("SELECT 1 FROM scraped_html_cache WHERE url = ?", (url,))
+        if cursor.fetchone() is not None:
+            return True
+        # Check rejected_articles
+        cursor.execute("SELECT 1 FROM rejected_articles WHERE url = ?", (url,))
+        if cursor.fetchone() is not None:
+            return True
+        return False
+    finally:
+        conn.close()
+
 
 
 

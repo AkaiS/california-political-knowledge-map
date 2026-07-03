@@ -33,6 +33,10 @@ class BatchIngestionSettings(BaseModel):
         default_factory=lambda: os.environ.get("SQLITE_DB_PATH", "document_store.db"),
         description="Path to SQLite database"
     )
+    url_path_blocklist: list[str] = Field(
+        default=["/sports/", "/recipes/", "/obituaries/", "/author/", "/category/", "/tag/", "/search/"],
+        description="Global fallback URL path blocklist"
+    )
 
 class Settings(BaseModel):
     chunking: ChunkingSettings = ChunkingSettings()
