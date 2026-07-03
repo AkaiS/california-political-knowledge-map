@@ -1,6 +1,6 @@
 # 09. `ca-map review-selectors`, promotion & Recovery Check
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,12 +14,12 @@ Promotion (approved or manual) registers the selectors as a new Selector Version
 
 ## Acceptance criteria
 
-- [ ] Unresolved proposals are listed with an extraction preview against the cached page, and y/n input marks the row `APPROVED` or `REJECTED` with `resolved_at`
-- [ ] Approval registers a Selector Version with its success window seeded from the recovery article's fetch date
-- [ ] The Recovery Check runs on the triggering article; success resets points to 0 and unpauses, failure leaves the Publication `PAUSED`
-- [ ] `--manual` promotes selectors from a JSON file and enforces the same Recovery Check with no bypass
-- [ ] After unpausing, `VALIDATION_FAILED` articles are validated before newer `PENDING` articles
-- [ ] Tests cover the review flow, promotion, Recovery Check pass/fail paths, manual promotion, and post-recovery prioritization
+- [x] Unresolved proposals are listed with an extraction preview against the cached page, and y/n input marks the row `APPROVED` or `REJECTED` with `resolved_at`
+- [x] Approval registers a Selector Version with its success window seeded from the recovery article's fetch date
+- [x] The Recovery Check runs on the triggering article; success resets points to 0 and unpauses, failure leaves the Publication `PAUSED`
+- [x] `--manual` promotes selectors from a JSON file and enforces the same Recovery Check with no bypass
+- [x] After unpausing, `VALIDATION_FAILED` articles are validated before newer `PENDING` articles
+- [x] Tests cover the review flow, promotion, Recovery Check pass/fail paths, manual promotion, and post-recovery prioritization
 
 ## Blocked by
 

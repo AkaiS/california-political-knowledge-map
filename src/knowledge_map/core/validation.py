@@ -481,8 +481,19 @@ class ArticleValidatorService:
                 SELECT c.url, c.publication_id, c.raw_html, c.scraped_at
                 FROM scraped_html_cache c
                 JOIN publications p ON c.publication_id = p.id
-                WHERE c.validation = 'PENDING' AND p.validation_paused = 0
-                ORDER BY c.scraped_at ASC
+                WHERE p.validation_paused = 0
+                  AND (
+                    c.validation = 'PENDING'
+                    OR (
+                      c.validation = 'VALIDATION_FAILED'
+                      AND c.validation_date < (
+                        SELECT COALESCE(MAX(created_at), '1970-01-01 00:00:00')
+                        FROM publication_selectors
+                        WHERE publication_id = p.id
+                      )
+                    )
+                  )
+                ORDER BY CASE WHEN c.validation = 'VALIDATION_FAILED' THEN 0 ELSE 1 END ASC, c.scraped_at ASC
             """)
             rows = cursor.fetchall()
         finally:
@@ -603,3 +614,82 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
         "body": body_text,
         "body_element": body_el
     }
+
+
+def run_recovery_check(
+    publication_id: str,
+    trigger_article_url: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> bool:
+    """
+    Runs the Recovery Check on the article that triggered selector healing.
+    If validation passes, resets publication failure points to 0, sets validation to active,
+    updates the article's validation status, and saves the article.
+    Returns True if validation succeeded, False otherwise.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT raw_html, scraped_at
+            FROM scraped_html_cache
+            WHERE url = ?
+        """, (trigger_article_url,))
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row or not row["raw_html"]:
+        logger.error(f"Recovery article '{trigger_article_url}' not found in raw HTML cache.")
+        return False
+
+    raw_html = row["raw_html"]
+    scraped_at_str = row["scraped_at"]
+    from knowledge_map.core.selectors import parse_db_datetime
+    scraped_at = parse_db_datetime(scraped_at_str) if scraped_at_str else datetime.datetime.now(datetime.timezone.utc)
+
+    # Run validation
+    validator = ArticleValidatorService(db_path=db_path)
+    res = validator.validate_article(trigger_article_url, publication_id, raw_html, scraped_at)
+    status = res["status"]
+
+    update_cached_html_status(trigger_article_url, status, db_path=db_path)
+
+    if status == "VALIDATED":
+        # Widen selector version window
+        version_id = res.get("selector_version_id")
+        if version_id:
+            widen_selector_version_window(version_id, scraped_at, db_path=db_path)
+
+        # Extract and save story
+        extracted = res["extracted"]
+        normalized_authors = normalize_author_string(extracted["author"])
+        author_field = ", ".join(normalized_authors) if normalized_authors else None
+
+        parsed_dt = parse_date_string(extracted["date"])
+        if parsed_dt:
+            from knowledge_map.core.selectors import format_datetime_utc
+            pub_date_str = format_datetime_utc(parsed_dt)
+        else:
+            pub_date_str = extracted["date"]
+
+        story = {
+            "title": extracted["title"],
+            "url": trigger_article_url,
+            "author": author_field,
+            "published_date": pub_date_str,
+            "content": extracted["body"]
+        }
+        save_story(story, db_path=db_path)
+
+        # Reset failure points & unpause validation
+        reset_publication_failure_points(publication_id, db_path=db_path)
+        unpause_publication_validation(publication_id, db_path=db_path)
+        logger.info(f"Recovery Check passed for '{trigger_article_url}'. Publication validation is now ACTIVE.")
+        return True
+    else:
+        # Failure leaves the publication paused
+        logger.warning(f"Recovery Check failed for '{trigger_article_url}'. Errors: {res.get('errors')}. Publication remains PAUSED.")
+        return False
+

@@ -791,6 +791,51 @@ def set_publication_healing_in_progress(
         conn.close()
 
 
+def get_unresolved_proposals(
+    db_path: str = DEFAULT_DB_PATH
+) -> List[Dict[str, Any]]:
+    """
+    Retrieves all unresolved selector proposals from the database.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, publication_id, selectors_json, trigger_article_url, status, critic_iterations, created_at
+            FROM selector_proposals
+            WHERE resolved_at IS NULL AND status IN ('PENDING_REVIEW', 'HEALING_FAILED')
+            ORDER BY id ASC
+        """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def resolve_selector_proposal(
+    proposal_id: int,
+    status: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Resolves a Selector Proposal by updating its status and setting resolved_at to the current timestamp.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE selector_proposals
+            SET status = ?,
+                resolved_at = datetime('now')
+            WHERE id = ?
+        """, (status, proposal_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+
 
 
 

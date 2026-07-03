@@ -4,6 +4,8 @@ import sys
 import json
 import logging
 import asyncio
+import sqlite3
+import datetime
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
@@ -91,6 +93,10 @@ def main(args=None):
 
     # Validate-articles subcommand
     subparsers.add_parser("validate-articles", help="Run validation on pending articles in raw HTML cache")
+
+    # Review-selectors subcommand
+    review_parser = subparsers.add_parser("review-selectors", help="Review unresolved selector proposals and promote/reject them")
+    review_parser.add_argument("--manual", help="Path to JSON file containing manual selectors to promote")
 
     parsed_args = parser.parse_args(args)
 
@@ -447,6 +453,160 @@ def main(args=None):
         unval_count = sum(1 for r in results if r["status"] == "UNVALIDATABLE")
         print(f"Validation complete: {validated_count} validated, {failed_count} validation failed, {unval_count} unvalidatable.")
         sys.exit(0)
+
+    elif parsed_args.action == "review-selectors":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+
+        from knowledge_map.core.validation import run_recovery_check, extract_fields
+        from knowledge_map.adapters.sqlite_db import (
+            get_unresolved_proposals,
+            resolve_selector_proposal
+        )
+        from knowledge_map.core.selectors import add_selector_version, parse_db_datetime
+        from knowledge_map.schemas.selectors import ArticleSelectors
+
+        if parsed_args.manual:
+            # Manual Promotion Flow
+            manual_path = parsed_args.manual
+            if not os.path.exists(manual_path):
+                print(f"Error: Manual selectors file '{manual_path}' not found.", file=sys.stderr)
+                sys.exit(1)
+
+            try:
+                with open(manual_path, "r") as f:
+                    config = json.load(f)
+            except Exception as e:
+                print(f"Error: Failed to parse JSON file '{manual_path}': {e}", file=sys.stderr)
+                sys.exit(1)
+
+            url = config.get("url")
+            selectors_dict = config.get("selectors")
+            if not url or not selectors_dict:
+                print("Error: JSON must contain 'url' and 'selectors' keys.", file=sys.stderr)
+                sys.exit(1)
+
+            # Query raw_html and scraped_at and publication_id from scraped_html_cache
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT publication_id, raw_html, scraped_at
+                    FROM scraped_html_cache
+                    WHERE url = ?
+                """, (url,))
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                print(f"Error: Article '{url}' not found in scraped HTML cache. It must name a validation-failed article.", file=sys.stderr)
+                sys.exit(1)
+
+            publication_id = config.get("publication_id") or row["publication_id"]
+            scraped_at_str = row["scraped_at"]
+            scraped_at = parse_db_datetime(scraped_at_str)
+
+            try:
+                selectors = ArticleSelectors(**selectors_dict)
+            except Exception as e:
+                print(f"Error: Selectors format is invalid: {e}", file=sys.stderr)
+                sys.exit(1)
+
+            print(f"Promoting manual selectors for publication '{publication_id}' against recovery article '{url}'...")
+            add_selector_version(publication_id, selectors, scraped_at, scraped_at, db_path=db_path)
+
+            success = run_recovery_check(publication_id, url, db_path=db_path)
+            if success:
+                print(f"Recovery Check passed! Validation for publication '{publication_id}' is now ACTIVE.")
+                sys.exit(0)
+            else:
+                print(f"Recovery Check failed! Validation for publication '{publication_id}' remains PAUSED.", file=sys.stderr)
+                sys.exit(1)
+
+        else:
+            # Interactive Review Flow
+            proposals = get_unresolved_proposals(db_path=db_path)
+            if not proposals:
+                print("No unresolved selector proposals found.")
+                sys.exit(0)
+
+            print(f"Found {len(proposals)} unresolved selector proposal(s):")
+            for proposal in proposals:
+                prop_id = proposal["id"]
+                pub_id = proposal["publication_id"]
+                url = proposal["trigger_article_url"]
+                status = proposal["status"]
+                iterations = proposal["critic_iterations"]
+                selectors_data = json.loads(proposal["selectors_json"])
+
+                print("\n" + "="*60)
+                print(f"Proposal ID: {prop_id} (Status: {status}, Critic Iterations: {iterations})")
+                print(f"Publication: {pub_id}")
+                print(f"Triggering Article: {url}")
+                print("-" * 60)
+                print(f"Proposed Selectors:")
+                for k, v in selectors_data.items():
+                    print(f"  {k}: {v}")
+                print("-" * 60)
+
+                # Fetch raw html to extract preview
+                conn = sqlite3.connect(db_path)
+                conn.row_factory = sqlite3.Row
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT raw_html, scraped_at FROM scraped_html_cache WHERE url = ?", (url,))
+                    cache_row = cursor.fetchone()
+                finally:
+                    conn.close()
+
+                if cache_row and cache_row["raw_html"]:
+                    try:
+                        selectors = ArticleSelectors(**selectors_data)
+                        extracted = extract_fields(cache_row["raw_html"], selectors)
+                        print("Extraction Preview:")
+                        print(f"  Title: '{extracted.get('title')}'")
+                        print(f"  Author: '{extracted.get('author')}'")
+                        print(f"  Date: '{extracted.get('date')}'")
+                        body_snip = extracted.get('body', '')
+                        if len(body_snip) > 200:
+                            body_snip = body_snip[:200] + "..."
+                        print(f"  Body: '{body_snip}'")
+                    except Exception as e:
+                        print(f"Warning: Failed to preview extraction: {e}")
+                else:
+                    print("Warning: Raw HTML for the triggering article was not found in cache. Cannot preview.")
+
+                print("-" * 60)
+                while True:
+                    ans = input("Approve this proposal? (y/yes, n/no, s/skip): ").strip().lower()
+                    if ans in ("y", "yes"):
+                        resolve_selector_proposal(prop_id, "APPROVED", db_path=db_path)
+                        scraped_at = parse_db_datetime(cache_row["scraped_at"]) if cache_row else datetime.datetime.now(datetime.timezone.utc)
+                        selectors = ArticleSelectors(**selectors_data)
+                        add_selector_version(pub_id, selectors, scraped_at, scraped_at, db_path=db_path)
+                        print(f"Proposal {prop_id} APPROVED. Registered new Selector Version.")
+                        print("Running Recovery Check...")
+                        success = run_recovery_check(pub_id, url, db_path=db_path)
+                        if success:
+                            print(f"Recovery Check passed! Validation for publication '{pub_id}' is now ACTIVE.")
+                        else:
+                            print(f"Recovery Check failed! Validation for publication '{pub_id}' remains PAUSED.")
+                        break
+                    elif ans in ("n", "no"):
+                        resolve_selector_proposal(prop_id, "REJECTED", db_path=db_path)
+                        print(f"Proposal {prop_id} REJECTED.")
+                        break
+                    elif ans in ("s", "skip"):
+                        print(f"Proposal {prop_id} skipped.")
+                        break
+                    else:
+                        print("Invalid input. Please enter 'y', 'n', or 's'.")
+
+            print("\nAll proposals processed.")
+            sys.exit(0)
 
 if __name__ == "__main__":
     main()
