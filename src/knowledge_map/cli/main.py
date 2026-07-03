@@ -31,10 +31,10 @@ def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int =
     root_logger.handlers.clear()
 
     # Console Handler
-    console_handler = logging.StreamHandler()
-    console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
+    # console_handler = logging.StreamHandler()
+    # console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    # console_handler.setFormatter(console_formatter)
+    # root_logger.addHandler(console_handler)
 
     # File Handler
     file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=5)

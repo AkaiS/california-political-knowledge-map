@@ -276,7 +276,7 @@ class ListingPageDiscoveryService:
                                 continue
                             
                             if not self._is_same_domain(base_url, resolved_url):
-                                logger.info("URL discarded: %s", resolved_url, extra={
+                                logger.info("URL discarded: %s because of external domain", resolved_url, extra={
                                     "url": resolved_url,
                                     "publication_id": pub_id,
                                     "filter_reason": "external_domain"
@@ -298,7 +298,7 @@ class ListingPageDiscoveryService:
 
                             if is_blocklist_hit:
                                 blocklist_filtered_count += 1
-                                logger.info("URL discarded: %s", resolved_url, extra={
+                                logger.info("URL discarded: %s because of URL path blocklist", resolved_url, extra={
                                     "url": resolved_url,
                                     "publication_id": pub_id,
                                     "filter_reason": "blocklist_hit"
@@ -317,7 +317,7 @@ class ListingPageDiscoveryService:
 
                             if is_anchor_heuristic_dropped:
                                 anchor_filtered_count += 1
-                                logger.info("URL discarded: %s", resolved_url, extra={
+                                logger.info("URL discarded: %s because of link anchor text is too short", resolved_url, extra={
                                     "url": resolved_url,
                                     "publication_id": pub_id,
                                     "filter_reason": "anchor_heuristic_dropped"
@@ -325,7 +325,7 @@ class ListingPageDiscoveryService:
                                 continue
                             
                             if is_url_known(resolved_url, db_path=self.db_path):
-                                logger.info("URL discarded: %s", resolved_url, extra={
+                                logger.info("URL discarded: %s because it is already known", resolved_url, extra={
                                     "url": resolved_url,
                                     "publication_id": pub_id,
                                     "filter_reason": "already_known"
