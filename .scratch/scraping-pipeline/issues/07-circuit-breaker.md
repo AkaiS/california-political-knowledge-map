@@ -1,6 +1,6 @@
 # 07. Validation Circuit Breaker (points, trip, pause, reset)
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -14,13 +14,13 @@ While `PAUSED`: routine validation of `PENDING` entries is skipped entirely, cra
 
 ## Acceptance criteria
 
-- [ ] Failure points accumulate with correct weights and best-attempt classification; `UNVALIDATABLE` articles add no points
-- [ ] A successful validation during `ACTIVE` resets points to 0
-- [ ] Points reaching 10 set the Publication to `PAUSED` and record the tripping article
-- [ ] While `PAUSED`, `PENDING` validation is skipped but `update-sources` / `scrape-archive` continue caching raw HTML
-- [ ] Successes while `PAUSED` do not reset points or unpause
-- [ ] A healing-trigger seam fires exactly once per trip (stubbed until issue 08)
-- [ ] Tests cover point accumulation/reset, trip threshold, pause skip behavior, and paused-state success handling
+- [x] Failure points accumulate with correct weights and best-attempt classification; `UNVALIDATABLE` articles add no points
+- [x] A successful validation during `ACTIVE` resets points to 0
+- [x] Points reaching 10 set the Publication to `PAUSED` and record the tripping article
+- [x] While `PAUSED`, `PENDING` validation is skipped but `update-sources` / `scrape-archive` continue caching raw HTML
+- [x] Successes while `PAUSED` do not reset points or unpause
+- [x] A healing-trigger seam fires exactly once per trip (stubbed until issue 08)
+- [x] Tests cover point accumulation/reset, trip threshold, pause skip behavior, and paused-state success handling
 
 ## Blocked by
 

@@ -339,3 +339,462 @@ def test_article_validator_service(tmp_path):
     versions = get_selector_versions_by_proximity("calmatters", now, db_path=db_path)
     v = next(x for x in versions if x.id == version_id)
     assert v.earliest_success_date <= now
+
+
+def test_circuit_breaker_points_accumulation(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_publication
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_cb_accumulation.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    
+    # 2. Add selector version
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="testpub",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    # Validation failed article (Ground truth mismatch: title mismatch) -> should add 3 points
+    html_gt_mismatch = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Mismatched Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">
+            This is a very good article. The weather in California is beautiful and Newsom signed a bill.
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Validation failed article (Fallback failure: wordCount is absent and link density fails) -> should add 1 point
+    html_fallback_fail = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Expected Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">
+            <a href="/1">link1</a> <a href="/2">link2</a> <a href="/3">link3</a> <a href="/4">link4</a>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Unvalidatable article -> should add 0 points
+    html_unval = """
+    <html>
+    <body>
+        <h1 class="entry-title">Expected Title</h1>
+    </body>
+    </html>
+    """
+    
+    service = ArticleValidatorService(db_path=db_path)
+    
+    # First, validate the GT mismatch article
+    cache_scraped_html("https://testpub.com/gt-mismatch", "testpub", html_gt_mismatch, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["failure_points"] == 3
+    
+    # Next, validate the fallback fail article (should add 1 point -> total 4)
+    cache_scraped_html("https://testpub.com/fallback-fail", "testpub", html_fallback_fail, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["failure_points"] == 4
+    
+    # Next, validate the unvalidatable article (should add 0 points -> total 4)
+    cache_scraped_html("https://testpub.com/unval", "testpub", html_unval, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["failure_points"] == 4
+
+
+def test_circuit_breaker_reset_on_success(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_publication
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_cb_reset.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="testpub",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    # 1. Failed article (adds 3 points)
+    html_fail = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Mismatched Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text.</div>
+    </body>
+    </html>
+    """
+    
+    # 2. Successful article
+    html_success = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Expected Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    service = ArticleValidatorService(db_path=db_path)
+    
+    # Fail first
+    cache_scraped_html("https://testpub.com/fail", "testpub", html_fail, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["failure_points"] == 3
+    
+    # Succeed next -> should reset points to 0
+    cache_scraped_html("https://testpub.com/success", "testpub", html_success, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["failure_points"] == 0
+
+
+def test_circuit_breaker_trips(tmp_path):
+    from unittest.mock import patch
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_publication
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_cb_trip.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="testpub",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    # 4 articles that will fail ground-truth validation (each adds 3 points)
+    html_fail = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Mismatched Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text.</div>
+    </body>
+    </html>
+    """
+    
+    urls = [
+        "https://testpub.com/fail1",
+        "https://testpub.com/fail2",
+        "https://testpub.com/fail3",
+        "https://testpub.com/fail4"
+    ]
+    
+    service = ArticleValidatorService(db_path=db_path)
+    
+    # Cache all 4 articles
+    for url in urls:
+        cache_scraped_html(url, "testpub", html_fail, validation="PENDING", db_path=db_path)
+        
+    with patch("knowledge_map.core.validation.trigger_selector_healing_stub") as mock_healing:
+        service.validate_pending_articles()
+        
+        # Verify that the circuit breaker tripped
+        pub = get_publication("testpub", db_path=db_path)
+        assert pub["validation_paused"] is True
+        # The 4th article is the one that tripped it (the last one validated)
+        # Because ORDER BY scraped_at ASC, and we cached them sequentially.
+        assert pub["tripping_article_url"] == "https://testpub.com/fail4"
+        assert pub["failure_points"] == 12
+        
+        # Verify healing seam was triggered exactly once with correct arguments
+        mock_healing.assert_called_once_with("testpub", "https://testpub.com/fail4")
+
+
+def test_circuit_breaker_skips_paused_publications(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html,
+        pause_publication_validation
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_cb_skip.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Register testpub1 (active) and testpub2 (paused)
+    register_publication("testpub1", "Test Pub 1", "https://testpub1.com", db_path=db_path)
+    register_publication("testpub2", "Test Pub 2", "https://testpub2.com", db_path=db_path)
+    
+    pause_publication_validation("testpub2", "https://testpub2.com/tripped", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    for pub_id in ["testpub1", "testpub2"]:
+        add_selector_version(
+            publication_id=pub_id,
+            selectors=selectors,
+            earliest_success_date=now - timedelta(days=1),
+            latest_success_date=now + timedelta(days=1),
+            db_path=db_path
+        )
+        
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Expected Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url_active = "https://testpub1.com/good"
+    url_paused = "https://testpub2.com/good"
+    
+    cache_scraped_html(url_active, "testpub1", html_good, validation="PENDING", db_path=db_path)
+    cache_scraped_html(url_paused, "testpub2", html_good, validation="PENDING", db_path=db_path)
+    
+    service = ArticleValidatorService(db_path=db_path)
+    service.validate_pending_articles()
+    
+    # Active publication's article should be validated
+    cached_active = get_cached_html(url_active, db_path=db_path)
+    assert cached_active["validation"] == "VALIDATED"
+    
+    # Paused publication's article should still be PENDING
+    cached_paused = get_cached_html(url_paused, db_path=db_path)
+    assert cached_paused["validation"] == "PENDING"
+
+
+def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_publication
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_cb_paused_success.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="testpub",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    # 4 articles that will fail ground-truth validation (each adds 3 points to trip it)
+    html_fail = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Mismatched Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text.</div>
+    </body>
+    </html>
+    """
+    
+    # Successful article
+    html_success = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Expected Title",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"}
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Expected Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    service = ArticleValidatorService(db_path=db_path)
+    
+    # Trip it first
+    for i in range(4):
+        cache_scraped_html(f"https://testpub.com/fail{i}", "testpub", html_fail, validation="PENDING", db_path=db_path)
+    service.validate_pending_articles()
+    
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["validation_paused"] is True
+    assert pub["failure_points"] == 12
+    
+    # Now execute a successful validation manually
+    res = service.validate_article("https://testpub.com/success", "testpub", html_success, now)
+    assert res["status"] == "VALIDATED"
+    
+    # Verify that the publication remains paused and points are not reset
+    pub = get_publication("testpub", db_path=db_path)
+    assert pub["validation_paused"] is True
+    assert pub["failure_points"] == 12

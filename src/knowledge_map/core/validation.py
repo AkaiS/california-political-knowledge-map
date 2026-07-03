@@ -9,7 +9,12 @@ from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
     save_story,
     update_cached_html_status,
-    DEFAULT_DB_PATH
+    DEFAULT_DB_PATH,
+    get_publication,
+    increment_publication_failure_points,
+    reset_publication_failure_points,
+    pause_publication_validation,
+    unpause_publication_validation
 )
 from knowledge_map.core.selectors import (
     get_selector_versions_by_proximity,
@@ -17,6 +22,16 @@ from knowledge_map.core.selectors import (
 )
 
 logger = logging.getLogger(__name__)
+
+def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str) -> None:
+    """
+    Seam for invoking the Selector Healing Pipeline when the circuit breaker trips.
+    Implementation is deferred to issue 08.
+    """
+    logger.info(
+        f"Circuit Breaker tripped for publication '{publication_id}' "
+        f"due to article '{tripping_article_url}'. Triggering Selector Healing Pipeline."
+    )
 
 try:
     import logfire
@@ -455,10 +470,11 @@ class ArticleValidatorService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT url, publication_id, raw_html, scraped_at
-                FROM scraped_html_cache
-                WHERE validation = 'PENDING'
-                ORDER BY scraped_at ASC
+                SELECT c.url, c.publication_id, c.raw_html, c.scraped_at
+                FROM scraped_html_cache c
+                JOIN publications p ON c.publication_id = p.id
+                WHERE c.validation = 'PENDING' AND p.validation_paused = 0
+                ORDER BY c.scraped_at ASC
             """)
             rows = cursor.fetchall()
         finally:
@@ -513,11 +529,27 @@ class ArticleValidatorService:
                     }
                     save_story(story, db_path=self.db_path)
                     logger.info(f"Successfully validated and saved story '{url}' to database.")
+                    
+                    pub = get_publication(publication_id, db_path=self.db_path)
+                    if pub and not pub.get("validation_paused"):
+                        reset_publication_failure_points(publication_id, db_path=self.db_path)
+
                 elif status == "VALIDATION_FAILED":
                     logger.warning(
                         f"Validation failed for article '{url}' of publication '{publication_id}' "
                         f"with failure weight {res['failure_points']}. Errors: {res['errors']}"
                     )
+                    pub = get_publication(publication_id, db_path=self.db_path)
+                    if pub and not pub.get("validation_paused"):
+                        new_points = increment_publication_failure_points(
+                            publication_id,
+                            res["failure_points"],
+                            db_path=self.db_path
+                        )
+                        if new_points >= 10:
+                            pause_publication_validation(publication_id, url, db_path=self.db_path)
+                            trigger_selector_healing_stub(publication_id, url)
+
                 elif status == "UNVALIDATABLE":
                     logger.info(f"Article '{url}' marked UNVALIDATABLE (missing JSON-LD).")
 

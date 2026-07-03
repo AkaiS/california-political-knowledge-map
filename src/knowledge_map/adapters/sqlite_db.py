@@ -40,6 +40,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 validation_paused BOOLEAN DEFAULT 0,
                 failure_points INTEGER DEFAULT 0,
                 healing_in_progress BOOLEAN DEFAULT 0,
+                tripping_article_url TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -88,6 +89,13 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
         # Safe migration: add column 'status' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN status TEXT DEFAULT 'UNPROCESSED'")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
+            
+        # Safe migration: add column 'tripping_article_url' if it's missing in publications table
+        try:
+            cursor.execute("ALTER TABLE publications ADD COLUMN tripping_article_url TEXT")
         except sqlite3.OperationalError:
             # Column already exists
             pass
@@ -320,7 +328,7 @@ def get_publication(pub_id: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dic
         cursor.execute("""
             SELECT id, name, base_url, crawl_delay, max_concurrency,
                    use_robots_txt, discovery_config_json, archive_cutoff_years,
-                   validation_paused, failure_points, healing_in_progress, created_at
+                   validation_paused, failure_points, healing_in_progress, tripping_article_url, created_at
             FROM publications WHERE id = ?
         """, (pub_id,))
         row = cursor.fetchone()
@@ -342,7 +350,7 @@ def get_all_publications(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]
         cursor.execute("""
             SELECT id, name, base_url, crawl_delay, max_concurrency,
                    use_robots_txt, discovery_config_json, archive_cutoff_years,
-                   validation_paused, failure_points, healing_in_progress, created_at
+                   validation_paused, failure_points, healing_in_progress, tripping_article_url, created_at
             FROM publications
             ORDER BY id ASC
         """)
@@ -608,6 +616,94 @@ def save_discovery_state(pub_id: str, state: Dict[str, Any], db_path: str = DEFA
             INSERT OR REPLACE INTO publication_discovery_state (publication_id, state_json, updated_at)
             VALUES (?, ?, CURRENT_TIMESTAMP)
         """, (pub_id, state_str))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def increment_publication_failure_points(
+    pub_id: str,
+    points_to_add: int,
+    db_path: str = DEFAULT_DB_PATH
+) -> int:
+    """
+    Increments the failure points for a publication and returns the updated count.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publications
+            SET failure_points = failure_points + ?
+            WHERE id = ?
+        """, (points_to_add, pub_id))
+        conn.commit()
+        
+        cursor.execute("SELECT failure_points FROM publications WHERE id = ?", (pub_id,))
+        row = cursor.fetchone()
+        return row[0] if row else 0
+    finally:
+        conn.close()
+
+
+def reset_publication_failure_points(
+    pub_id: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Resets failure points to 0 for a publication.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publications
+            SET failure_points = 0
+            WHERE id = ?
+        """, (pub_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def pause_publication_validation(
+    pub_id: str,
+    tripping_article_url: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Pauses validation for a publication and records the tripping article URL.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publications
+            SET validation_paused = 1,
+                tripping_article_url = ?
+            WHERE id = ?
+        """, (tripping_article_url, pub_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def unpause_publication_validation(
+    pub_id: str,
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Unpauses validation for a publication and resets the tripping article URL to NULL.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE publications
+            SET validation_paused = 0,
+                tripping_article_url = NULL
+            WHERE id = ?
+        """, (pub_id,))
         conn.commit()
     finally:
         conn.close()
