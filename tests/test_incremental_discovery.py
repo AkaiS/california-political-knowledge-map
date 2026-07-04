@@ -1,5 +1,6 @@
 import sqlite3
 import pytest
+import logging
 from knowledge_map.adapters.sqlite_db import init_db
 
 def test_db_schema_initialization(tmp_path):
@@ -311,6 +312,157 @@ def test_cli_update_sources(tmp_path, monkeypatch):
             assert e.code == 0
             
         mock_service_instance.discover_and_scrape_all.assert_called_once()
+
+
+def test_matches_category_simple():
+    from knowledge_map.core.discovery import matches_category
+    
+    # 1. Exact match with a single valid category
+    assert matches_category("https://calmatters.org/politics/some-slug", ["politics"]) is True
+    assert matches_category("https://calmatters.org/housing/some-slug", ["politics"]) is False
+
+
+def test_matches_category_multiple_and_case_insensitive():
+    from knowledge_map.core.discovery import matches_category
+    
+    # Verify case-insensitive match
+    assert matches_category("https://calmatters.org/Politics/some-slug", ["politics"]) is True
+    # Verify multiple categories
+    assert matches_category("https://calmatters.org/housing/some-slug", ["politics", "housing"]) is True
+    # Verify case-insensitivity on configuration array
+    assert matches_category("https://calmatters.org/housing/some-slug", ["POLITICS", "HOUSING"]) is True
+
+
+def test_matches_category_segment_exclusion():
+    from knowledge_map.core.discovery import matches_category
+    
+    # 1. Final segment (article name slug) must be ignored:
+    # URL has "politics" only at the end - shouldn't match "politics"
+    assert matches_category("https://calmatters.org/politics", ["politics"]) is False
+    assert matches_category("https://calmatters.org/news/politics", ["politics"]) is False
+    
+    # 2. Exact segment match (preceding segments match exactly):
+    # "/sports/.../immigration-officer/" does not match "immigration"
+    assert matches_category("https://calmatters.org/sports/immigration-officer", ["immigration"]) is False
+    assert matches_category("https://calmatters.org/sports/immigration/some-slug", ["immigration"]) is True
+
+
+def test_matches_category_bypass():
+    from knowledge_map.core.discovery import matches_category
+    
+    # Bypass when valid_categories is empty list or None
+    assert matches_category("https://calmatters.org/sports/immigration-officer", []) is True
+    assert matches_category("https://calmatters.org/sports/immigration-officer", None) is True
+    assert matches_category("https://calmatters.org/flat-slug", []) is True
+    assert matches_category("https://calmatters.org/flat-slug", None) is True
+
+
+@pytest.mark.anyio
+async def test_discovery_service_category_filtering(tmp_path, caplog):
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        get_publication
+    )
+    from knowledge_map.core.discovery import ListingPageDiscoveryService
+    
+    db_file = tmp_path / "test_discovery_category.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Register publication with valid_categories configured
+    register_publication(
+        pub_id="testpub_cat",
+        name="Test Category Pub",
+        base_url="https://test.com",
+        crawl_delay=0.01,
+        max_concurrency=2,
+        use_robots_txt=True,
+        discovery_config_json='{"listing_urls": ["https://test.com/news"], "url_path_blocklist": ["/ignore/"], "valid_categories": ["politics", "housing"]}',
+        db_path=db_path
+    )
+    
+    # Mock listing page links
+    mock_listing_result = MagicMock()
+    mock_listing_result.success = True
+    mock_listing_result.links = {
+        "internal": [
+            # 1. Valid politics category
+            {"href": "https://test.com/politics/valid-politics-story", "text": "This is a valid long link text description"},
+            # 2. Valid housing category
+            {"href": "https://test.com/housing/valid-housing-story", "text": "This is a valid long link text description"},
+            # 3. Invalid sports category (should mismatch)
+            {"href": "https://test.com/sports/invalid-sports-story", "text": "This is a valid long link text description"},
+            # 4. Blocklisted (blocklist checks first)
+            {"href": "https://test.com/ignore/politics/blocked-story", "text": "This is a valid long link text description"},
+            # 5. Politics as final slug only (should mismatch)
+            {"href": "https://test.com/politics", "text": "This is a valid long link text description"},
+            # 6. Flat URL structure (should mismatch since categories are configured)
+            {"href": "https://test.com/about-us", "text": "This is a valid long link text description"}
+        ]
+    }
+    
+    # Mock article results
+    mock_article_result = MagicMock()
+    mock_article_result.success = True
+    mock_article_result.html = "<html><body>Relevant content</body></html>"
+    
+    mock_crawler_instance = AsyncMock()
+    async def mock_arun(url, config=None):
+        if url == "https://test.com/news":
+            return mock_listing_result
+        else:
+            return mock_article_result
+            
+    mock_crawler_instance.arun.side_effect = mock_arun
+    
+    with patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass, \
+         patch("knowledge_map.core.relevance.check_relevance") as MockCheckRelevance, \
+         caplog.at_level(logging.INFO):
+        MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
+        MockCheckRelevance.return_value = ("RELEVANT", {"headline": "California story", "description": "some desc"})
+        
+        service = ListingPageDiscoveryService(db_path=db_path)
+        pub = get_publication("testpub_cat", db_path=db_path)
+        
+        scraped_urls = await service.discover_and_scrape_for_publication(pub)
+        
+        # Verify only valid categories stories were scraped
+        assert set(scraped_urls) == {
+            "https://test.com/politics/valid-politics-story",
+            "https://test.com/housing/valid-housing-story"
+        }
+        
+        # Verify that blocklist is checked before category filter:
+        # https://test.com/ignore/politics/blocked-story contains politics, but is blocklisted first.
+        # Check logs for reasons
+        mismatch_logs = [r for r in caplog.records if getattr(r, "filter_reason", None) == "category_mismatch"]
+        blocklist_logs = [r for r in caplog.records if getattr(r, "filter_reason", None) == "blocklist_hit"]
+        
+        # The blocklisted URL should be in blocklist_logs
+        assert any("blocked-story" in log.url for log in blocklist_logs)
+        # Verify blocklisted url was not checked as category mismatch
+        assert not any("blocked-story" in log.url for log in mismatch_logs)
+        
+        # 3 urls should be in mismatch_logs: sports story, flat about-us URL, and politics final segment URL
+        assert len(mismatch_logs) == 3
+        mismatched_urls = {log.url for log in mismatch_logs}
+        assert "https://test.com/sports/invalid-sports-story" in mismatched_urls
+        assert "https://test.com/politics" in mismatched_urls
+        assert "https://test.com/about-us" in mismatched_urls
+        
+        # Check the discovery stats log
+        stats_log = [r for r in caplog.records if "Discovery stats for publication" in r.message]
+        assert len(stats_log) == 1
+        assert getattr(stats_log[0], "category_filtered", 0) == 3
+        assert getattr(stats_log[0], "blocklist_filtered", 0) == 1
+        assert getattr(stats_log[0], "new_candidates_found", 0) == 2
+
+
+
+
+
 
 
 

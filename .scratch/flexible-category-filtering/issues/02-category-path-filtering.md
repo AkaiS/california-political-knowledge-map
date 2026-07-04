@@ -1,6 +1,6 @@
 # 02. Per-Publication Category Path Filtering
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -20,12 +20,12 @@ Instead of requiring strict path prefix matching, the crawler should check if an
 
 ## Acceptance criteria
 
-- [ ] `valid_categories` list is correctly parsed from the publication's `discovery_config_json`.
-- [ ] Category segment matching ignores the final segment (the article name slug) of the URL path.
-- [ ] Category segment matching uses exact, case-insensitive matches for the preceding segments (e.g. `/housing/` matches category `housing`, but `/sports/.../immigration-officer/` does not match `immigration`).
-- [ ] If `valid_categories` is not configured or is empty, URLs with flat paths or mismatching paths are not filtered out by this check.
-- [ ] Discarded URLs due to category mismatches are logged with a structured log containing `filter_reason = 'category_mismatch'`.
-- [ ] Unit tests cover exact segment matching, last segment exclusion, bypass behavior when list is empty, and proper precedence (blocklist checked first).
+- [x] `valid_categories` list is correctly parsed from the publication's `discovery_config_json`.
+- [x] Category segment matching ignores the final segment (the article name slug) of the URL path.
+- [x] Category segment matching uses exact, case-insensitive matches for the preceding segments (e.g. `/housing/` matches category `housing`, but `/sports/.../immigration-officer/` does not match `immigration`).
+- [x] If `valid_categories` is not configured or is empty, URLs with flat paths or mismatching paths are not filtered out by this check.
+- [x] Discarded URLs due to category mismatches are logged with a structured log containing `filter_reason = 'category_mismatch'`.
+- [x] Unit tests cover exact segment matching, last segment exclusion, bypass behavior when list is empty, and proper precedence (blocklist checked first).
 
 ## Blocked by
 

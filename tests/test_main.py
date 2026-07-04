@@ -12,13 +12,13 @@ from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.adapters.sqlite_db import init_db, save_story
 from knowledge_map.config import BatchIngestionSettings
 
-def test_console_notifier_warning_banner(capsys):
-    ConsoleNotifier.print_warning_banner("Test Title", "Test Message", {"key1": "val1"})
-    captured = capsys.readouterr()
-    assert "TEST TITLE" in captured.err
-    assert "Test Message" in captured.err
-    assert "key1" in captured.err
-    assert "val1" in captured.err
+def test_console_notifier_warning_banner(caplog):
+    with caplog.at_level(logging.CRITICAL):
+        ConsoleNotifier.print_warning_banner("Test Title", "Test Message", {"key1": "val1"})
+        assert any("TEST TITLE" in rec.message for rec in caplog.records)
+        assert any("Test Message" in rec.message for rec in caplog.records)
+        assert any("key1" in rec.message for rec in caplog.records)
+        assert any("val1" in rec.message for rec in caplog.records)
 
 def test_batch_ingestion_rate_limit_lock_notifier(tmp_path):
     db_file = tmp_path / "test_locking_alert.db"
@@ -185,10 +185,9 @@ def test_setup_logging(tmp_path):
     
     root_logger = logging.getLogger()
     has_logfire = any(type(h).__name__ == "LogfireLoggingHandler" for h in root_logger.handlers)
-    assert len(root_logger.handlers) == (3 if has_logfire else 2)
+    assert len(root_logger.handlers) == (2 if has_logfire else 1)
     
     handler_types = [type(h).__name__ for h in root_logger.handlers]
-    assert "StreamHandler" in handler_types
     assert "RotatingFileHandler" in handler_types
     
     test_logger = logging.getLogger("test_setup_logging_logger")

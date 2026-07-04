@@ -452,3 +452,97 @@ def test_cli_scrape_archive_missing_pub(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         main(["scrape-archive", "--publication-id", "nonexistent"])
     assert exc_info.value.code == 1
+
+
+@pytest.mark.anyio
+async def test_archive_crawl_category_filtering(tmp_path, caplog):
+    import logging
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        get_publication,
+        get_discovery_state
+    )
+    from knowledge_map.core.discovery import ArchiveDiscoveryService
+
+    db_file = tmp_path / "test_archive_cat.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    register_publication(
+        pub_id="testpub_cat",
+        name="Test Category Pub",
+        base_url="https://test.com",
+        crawl_delay=0.01,
+        max_concurrency=2,
+        use_robots_txt=False,
+        discovery_config_json='{"valid_categories": ["politics"]}',
+        db_path=db_path
+    )
+
+    # 1. Mock DomainMapper scan return value
+    mock_scan_results = [
+        {"url": "https://test.com/politics/relevant-1"}, # matches
+        {"url": "https://test.com/opinion/blocked-story"}, # mismatched segment
+        {"url": "https://test.com/about-us"}            # flat structure (mismatch)
+    ]
+    mock_mapper_instance = AsyncMock()
+    mock_mapper_instance.scan.return_value = mock_scan_results
+
+    # 2. Mock CrawlResult for article pages
+    mock_res = MagicMock()
+    mock_res.success = True
+    mock_res.html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "headline": "Governor Newsom Signs Bill",
+            "description": "Politics details.",
+            "datePublished": "2026-07-02T12:00:00Z"
+        }
+        </script>
+    </head>
+    </html>
+    """
+
+    mock_crawler_instance = AsyncMock()
+    mock_crawler_instance.arun.return_value = mock_res
+
+    with patch("knowledge_map.core.discovery.DomainMapper") as MockMapperClass, \
+         patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass, \
+         patch("knowledge_map.core.relevance.check_relevance") as MockCheckRelevance, \
+         caplog.at_level(logging.INFO):
+        
+        MockMapperClass.return_value = mock_mapper_instance
+        MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
+        MockCheckRelevance.return_value = ("RELEVANT", {"headline": "A", "description": "B"})
+
+        service = ArchiveDiscoveryService(db_path=db_path)
+        pub = get_publication("testpub_cat", db_path=db_path)
+
+        scraped_urls = await service.run_archive_crawl(pub)
+
+        # Verify only matched URL was scraped
+        assert scraped_urls == ["https://test.com/politics/relevant-1"]
+
+        # Verify blocklist and category filtering excluded mismatched URLs from discovery state
+        state = get_discovery_state("testpub_cat", db_path=db_path)
+        assert state is not None
+        assert state["urls"] == ["https://test.com/politics/relevant-1"]
+        assert state["current_index"] == 1
+
+        # Check logs for mismatch reason
+        mismatch_logs = [r for r in caplog.records if getattr(r, "filter_reason", None) == "category_mismatch"]
+        assert len(mismatch_logs) == 2
+        mismatched_urls = {log.url for log in mismatch_logs}
+        assert "https://test.com/opinion/blocked-story" in mismatched_urls
+        assert "https://test.com/about-us" in mismatched_urls
+
+        # Check stats log
+        stats_log = [r for r in caplog.records if "Discovery stats for publication" in r.message]
+        assert len(stats_log) == 1
+        assert getattr(stats_log[0], "category_filtered", 0) == 2
+        assert getattr(stats_log[0], "new_candidates_found", 0) == 1
+

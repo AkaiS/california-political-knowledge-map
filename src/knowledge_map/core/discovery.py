@@ -87,6 +87,30 @@ def should_keep_url(
     return True
 
 
+def matches_category(url: str, valid_categories: Optional[List[str]]) -> bool:
+    """
+    Checks if any path segment (excluding the last segment) matches the valid categories list.
+    If valid_categories is empty or None, the check is bypassed.
+    """
+    if not valid_categories:
+        return True
+    try:
+        parsed = urlparse(url)
+        segments = [s for s in parsed.path.split('/') if s]
+        if not segments:
+            return False
+        remaining = segments[:-1]
+        valid_set = {cat.lower() for cat in valid_categories}
+        for segment in remaining:
+            if segment.lower() in valid_set:
+                return True
+        return False
+    except Exception as e:
+        logger.error(f"Error checking category filter for URL '{url}': {e}")
+        return False
+
+
+
 def _find_date_recursive(data: Any) -> Optional[str]:
     """
     Recursively search for date keys in a JSON-like structure.
@@ -189,6 +213,17 @@ class ListingPageDiscoveryService:
                 pass
         return settings.batch_ingestion.url_path_blocklist
 
+    def _get_valid_categories(self, pub: Dict[str, Any]) -> Optional[List[str]]:
+        discovery_config_json = pub.get("discovery_config_json")
+        if discovery_config_json:
+            try:
+                config = json.loads(discovery_config_json)
+                if "valid_categories" in config and isinstance(config["valid_categories"], list):
+                    return config["valid_categories"]
+            except Exception:
+                pass
+        return None
+
     def _get_listing_urls(self, pub: Dict[str, Any]) -> List[str]:
         discovery_config_json = pub.get("discovery_config_json")
         if discovery_config_json:
@@ -229,6 +264,7 @@ class ListingPageDiscoveryService:
                 return []
 
             blocklist = self._get_blocklist(pub)
+            valid_categories = self._get_valid_categories(pub)
             limiter = PolitenessLimiter(crawl_delay=crawl_delay, max_concurrency=max_concurrency)
 
             run_config = CrawlerRunConfig(
@@ -239,6 +275,7 @@ class ListingPageDiscoveryService:
             candidate_urls = []
             links_found_count = 0
             blocklist_filtered_count = 0
+            category_filtered_count = 0
             anchor_filtered_count = 0
             
             has_successful_response = False
@@ -305,6 +342,16 @@ class ListingPageDiscoveryService:
                                 })
                                 continue
 
+                            # Check category path matching
+                            if not matches_category(resolved_url, valid_categories):
+                                category_filtered_count += 1
+                                logger.info("URL discarded: %s because of category mismatch", resolved_url, extra={
+                                    "url": resolved_url,
+                                    "publication_id": pub_id,
+                                    "filter_reason": "category_mismatch"
+                                })
+                                continue
+
                             # Check anchor heuristics next
                             is_anchor_heuristic_dropped = False
                             if not text:
@@ -337,12 +384,13 @@ class ListingPageDiscoveryService:
 
             # Discovery stats logging
             new_candidates_found_count = len(candidate_urls)
-            logger.info("Discovery stats for publication %s: links_found=%d, blocklist_filtered=%d, anchor_filtered=%d, new_candidates=%d",
-                        pub_id, links_found_count, blocklist_filtered_count, anchor_filtered_count, new_candidates_found_count,
+            logger.info("Discovery stats for publication %s: links_found=%d, blocklist_filtered=%d, category_filtered=%d, anchor_filtered=%d, new_candidates=%d",
+                        pub_id, links_found_count, blocklist_filtered_count, category_filtered_count, anchor_filtered_count, new_candidates_found_count,
                         extra={
                             "publication_id": pub_id,
                             "links_found": links_found_count,
                             "blocklist_filtered": blocklist_filtered_count,
+                            "category_filtered": category_filtered_count,
                             "anchor_filtered": anchor_filtered_count,
                             "new_candidates_found": new_candidates_found_count
                         })
@@ -429,6 +477,7 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
             
             links_found_count = 0
             blocklist_filtered_count = 0
+            category_filtered_count = 0
             anchor_filtered_count = 0
             new_candidates_found_count = 0
 
@@ -453,6 +502,7 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
 
                 # Filter discovered URLs
                 blocklist = self._get_blocklist(pub)
+                valid_categories = self._get_valid_categories(pub)
                 filtered_urls = []
                 for url in discovered_urls:
                     if not self._is_same_domain(base_url, url):
@@ -480,6 +530,16 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                             "url": url,
                             "publication_id": pub_id,
                             "filter_reason": "blocklist_hit"
+                        })
+                        continue
+
+                    # Check category path matching
+                    if not matches_category(url, valid_categories):
+                        category_filtered_count += 1
+                        logger.info("URL discarded: %s because of category mismatch", url, extra={
+                            "url": url,
+                            "publication_id": pub_id,
+                            "filter_reason": "category_mismatch"
                         })
                         continue
                     
@@ -581,12 +641,13 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                     save_discovery_state(pub_id, state, db_path=self.db_path)
 
             # Discovery stats logging
-            logger.info("Discovery stats for publication %s (archive): links_found=%d, blocklist_filtered=%d, anchor_filtered=%d, new_candidates=%d",
-                        pub_id, links_found_count, blocklist_filtered_count, anchor_filtered_count, new_candidates_found_count,
+            logger.info("Discovery stats for publication %s (archive): links_found=%d, blocklist_filtered=%d, category_filtered=%d, anchor_filtered=%d, new_candidates=%d",
+                        pub_id, links_found_count, blocklist_filtered_count, category_filtered_count, anchor_filtered_count, new_candidates_found_count,
                         extra={
                             "publication_id": pub_id,
                             "links_found": links_found_count,
                             "blocklist_filtered": blocklist_filtered_count,
+                            "category_filtered": category_filtered_count,
                             "anchor_filtered": anchor_filtered_count,
                             "new_candidates_found": new_candidates_found_count
                         })
