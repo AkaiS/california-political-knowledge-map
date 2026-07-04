@@ -349,6 +349,107 @@ def register_publication(
         conn.close()
 
 
+def update_publication(
+    pub_id: str,
+    name: Optional[str] = None,
+    base_url: Optional[str] = None,
+    crawl_delay: Optional[float] = None,
+    max_concurrency: Optional[int] = None,
+    use_robots_txt: Optional[bool] = None,
+    discovery_config_json: Optional[str] = None,
+    archive_cutoff_years: Optional[int] = None,
+    categories: Optional[List[str]] = None,
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
+    """
+    Updates an existing publication in the database.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        
+        # Check if the publication ID exists
+        cursor.execute("""
+            SELECT id, name, base_url, crawl_delay, max_concurrency, 
+                   use_robots_txt, discovery_config_json, archive_cutoff_years
+            FROM publications WHERE id = ?
+        """, (pub_id,))
+        row = cursor.fetchone()
+        if row is None:
+            raise ValueError(f"Publication with ID '{pub_id}' is not registered.")
+            
+        current_pub = dict(row)
+        
+        # Build update sets
+        update_fields = []
+        params = []
+        
+        if name is not None:
+            update_fields.append("name = ?")
+            params.append(name)
+            
+        if base_url is not None:
+            update_fields.append("base_url = ?")
+            params.append(base_url)
+            
+        if crawl_delay is not None:
+            update_fields.append("crawl_delay = ?")
+            params.append(crawl_delay)
+            
+        if max_concurrency is not None:
+            update_fields.append("max_concurrency = ?")
+            params.append(max_concurrency)
+            
+        if use_robots_txt is not None:
+            update_fields.append("use_robots_txt = ?")
+            params.append(1 if use_robots_txt else 0)
+            
+        if archive_cutoff_years is not None:
+            update_fields.append("archive_cutoff_years = ?")
+            params.append(archive_cutoff_years)
+            
+        current_config = {}
+        if current_pub.get("discovery_config_json"):
+            try:
+                current_config = json.loads(current_pub["discovery_config_json"])
+            except json.JSONDecodeError:
+                pass
+                
+        new_config = None
+        
+        if discovery_config_json is not None:
+            try:
+                new_config = json.loads(discovery_config_json)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON in discovery_config_json: {e}")
+        elif categories is not None or "valid_categories" in current_config:
+            new_config = current_config.copy()
+            
+        if categories is not None:
+            if new_config is None:
+                new_config = {}
+            if categories:
+                new_config["valid_categories"] = categories
+            else:
+                new_config.pop("valid_categories", None)
+        elif new_config is not None and "valid_categories" in current_config:
+            new_config["valid_categories"] = current_config["valid_categories"]
+            
+        if new_config is not None or discovery_config_json is not None:
+            val = json.dumps(new_config) if new_config else None
+            update_fields.append("discovery_config_json = ?")
+            params.append(val)
+            
+        if update_fields:
+            params.append(pub_id)
+            query = f"UPDATE publications SET {', '.join(update_fields)} WHERE id = ?"
+            cursor.execute(query, tuple(params))
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def _row_to_pub_dict(row: sqlite3.Row) -> Dict[str, Any]:
     """Helper to convert database Row to Dict with proper boolean types."""
     d = dict(row)

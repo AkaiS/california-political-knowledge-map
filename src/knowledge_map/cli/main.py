@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 from knowledge_map.config import settings
-from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker, register_publication
+from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker, register_publication, update_publication
 from knowledge_map.core.bootstrapper import bootstrap_publication_stub
 from knowledge_map.core.discovery import ListingPageDiscoveryService, ArchiveDiscoveryService
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
@@ -84,6 +84,19 @@ def main(args=None):
     register_parser.add_argument("--discovery-config-json", help="JSON string of discovery configuration parameters")
     register_parser.add_argument("--archive-cutoff-years", type=int, default=5, help="Number of years of historical archive to crawl")
     register_parser.add_argument("--categories", nargs="+", help="Space-separated list of valid categories for the publication")
+
+    # Update-publication subcommand
+    update_pub_parser = subparsers.add_parser("update-publication", help="Update an existing Publication in the database")
+    update_pub_parser.add_argument("--id", required=True, help="Unique publication identifier (e.g. 'calmatters')")
+    update_pub_parser.add_argument("--name", help="Human-readable publication name")
+    update_pub_parser.add_argument("--base-url", help="Base URL of the publication")
+    update_pub_parser.add_argument("--crawl-delay", type=float, help="Crawl delay in seconds")
+    update_pub_parser.add_argument("--max-concurrency", type=int, help="Maximum concurrent requests")
+    update_pub_parser.add_argument("--use-robots-txt", action="store_true", default=None, help="Respect robots.txt")
+    update_pub_parser.add_argument("--no-robots-txt", action="store_false", dest="use_robots_txt", help="Do not respect robots.txt")
+    update_pub_parser.add_argument("--discovery-config-json", help="JSON string of discovery configuration parameters")
+    update_pub_parser.add_argument("--archive-cutoff-years", type=int, help="Number of years of historical archive to crawl")
+    update_pub_parser.add_argument("--categories", nargs="*", help="Space-separated list of valid categories (pass empty to clear)")
 
     # Update-sources subcommand
     subparsers.add_parser("update-sources", help="Run incremental scraping/discovery for registered publications")
@@ -385,6 +398,45 @@ def main(args=None):
             sys.exit(0)
         except ValueError as e:
             # Handle duplicate ID or validation errors cleanly
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected database error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif parsed_args.action == "update-publication":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        
+        # Ensure database is initialized with publications table
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+        
+        # If discovery config json is provided, validate it's valid JSON
+        discovery_config = parsed_args.discovery_config_json
+        if discovery_config:
+            try:
+                json.loads(discovery_config)
+            except json.JSONDecodeError as e:
+                print(f"Error: Invalid JSON for discovery config: {e}", file=sys.stderr)
+                sys.exit(1)
+                
+        try:
+            update_publication(
+                pub_id=parsed_args.id,
+                name=parsed_args.name,
+                base_url=parsed_args.base_url,
+                crawl_delay=parsed_args.crawl_delay,
+                max_concurrency=parsed_args.max_concurrency,
+                use_robots_txt=parsed_args.use_robots_txt,
+                discovery_config_json=discovery_config,
+                archive_cutoff_years=parsed_args.archive_cutoff_years,
+                db_path=db_path,
+                categories=parsed_args.categories
+            )
+            print(f"Successfully updated publication '{parsed_args.id}'.")
+            sys.exit(0)
+        except ValueError as e:
+            # Handle non-existent ID or validation errors cleanly
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:

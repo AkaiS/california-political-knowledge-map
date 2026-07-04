@@ -331,5 +331,172 @@ def test_cli_register_publication_with_categories(tmp_path, monkeypatch):
         mock_bootstrap.assert_called_once_with("calmatters")
 
 
+def test_update_publication_success(tmp_path):
+    from knowledge_map.adapters.sqlite_db import register_publication, get_publication, update_publication
+    import json
+    
+    db_file = tmp_path / "test_publications_update.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 1. Register base publication
+    register_publication(
+        pub_id="calmatters",
+        name="CalMatters",
+        base_url="https://calmatters.org",
+        crawl_delay=2.0,
+        max_concurrency=2,
+        use_robots_txt=True,
+        discovery_config_json='{"listing_urls": ["https://calmatters.org/news/"]}',
+        archive_cutoff_years=5,
+        categories=["housing", "politics"],
+        db_path=db_path
+    )
+    
+    # 2. Perform partial update of fields
+    update_publication(
+        pub_id="calmatters",
+        name="CalMatters Updated",
+        crawl_delay=3.5,
+        use_robots_txt=False,
+        db_path=db_path
+    )
+    
+    pub = get_publication("calmatters", db_path=db_path)
+    assert pub is not None
+    assert pub["name"] == "CalMatters Updated"
+    assert pub["crawl_delay"] == 3.5
+    assert pub["use_robots_txt"] is False
+    # Verify categories and other fields are preserved
+    assert pub["max_concurrency"] == 2
+    config = json.loads(pub["discovery_config_json"])
+    assert config["listing_urls"] == ["https://calmatters.org/news/"]
+    assert config["valid_categories"] == ["housing", "politics"]
+    
+    # 3. Update categories only
+    update_publication(
+        pub_id="calmatters",
+        categories=["education"],
+        db_path=db_path
+    )
+    pub = get_publication("calmatters", db_path=db_path)
+    config = json.loads(pub["discovery_config_json"])
+    assert config["valid_categories"] == ["education"]
+    assert config["listing_urls"] == ["https://calmatters.org/news/"]
+    
+    # 4. Clear categories
+    update_publication(
+        pub_id="calmatters",
+        categories=[],
+        db_path=db_path
+    )
+    pub = get_publication("calmatters", db_path=db_path)
+    config = json.loads(pub["discovery_config_json"])
+    assert "valid_categories" not in config
+    assert config["listing_urls"] == ["https://calmatters.org/news/"]
+
+    # 5. Overwrite config JSON string, ensuring valid_categories is not there (since it was cleared)
+    update_publication(
+        pub_id="calmatters",
+        discovery_config_json='{"sitemap_urls": ["https://calmatters.org/sitemap.xml"]}',
+        db_path=db_path
+    )
+    pub = get_publication("calmatters", db_path=db_path)
+    config = json.loads(pub["discovery_config_json"])
+    assert config == {"sitemap_urls": ["https://calmatters.org/sitemap.xml"]}
+    assert "valid_categories" not in config
+    assert "listing_urls" not in config
+
+    # 6. Re-add categories
+    update_publication(
+        pub_id="calmatters",
+        categories=["environment"],
+        db_path=db_path
+    )
+    
+    # 7. Overwrite config JSON string, ensuring valid_categories (which is now environment) is preserved
+    update_publication(
+        pub_id="calmatters",
+        discovery_config_json='{"sitemap_urls": ["https://calmatters.org/new-sitemap.xml"]}',
+        db_path=db_path
+    )
+    pub = get_publication("calmatters", db_path=db_path)
+    config = json.loads(pub["discovery_config_json"])
+    assert config["sitemap_urls"] == ["https://calmatters.org/new-sitemap.xml"]
+    assert config["valid_categories"] == ["environment"]
+
+
+def test_update_publication_nonexistent_fails(tmp_path):
+    from knowledge_map.adapters.sqlite_db import update_publication
+    import pytest
+    
+    db_file = tmp_path / "test_publications_update_err.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    with pytest.raises(ValueError) as excinfo:
+        update_publication(pub_id="nonexistent", name="Fails", db_path=db_path)
+    assert "is not registered" in str(excinfo.value)
+
+
+def test_cli_update_publication_success(tmp_path, monkeypatch):
+    from knowledge_map.cli.main import main
+    from knowledge_map.adapters.sqlite_db import register_publication, get_publication
+    import json
+    
+    db_file = tmp_path / "test_cli_update.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication(
+        pub_id="calmatters",
+        name="CalMatters",
+        base_url="https://calmatters.org",
+        db_path=db_path
+    )
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    try:
+        main([
+            "update-publication",
+            "--id", "calmatters",
+            "--name", "CalMatters Updated",
+            "--categories", "politics", "environment",
+            "--crawl-delay", "4.5"
+        ])
+    except SystemExit as e:
+        assert e.code == 0
+        
+    pub = get_publication("calmatters", db_path=db_path)
+    assert pub is not None
+    assert pub["name"] == "CalMatters Updated"
+    assert pub["crawl_delay"] == 4.5
+    config = json.loads(pub["discovery_config_json"])
+    assert config["valid_categories"] == ["politics", "environment"]
+
+
+def test_cli_update_publication_nonexistent_fails(tmp_path, monkeypatch, capsys):
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_update_fail.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    with pytest.raises(SystemExit) as exc_info:
+        main([
+            "update-publication",
+            "--id", "nonexistent",
+            "--name", "Does Not Exist"
+        ])
+    assert exc_info.value.code == 1
+    
+    captured = capsys.readouterr()
+    assert "is not registered" in captured.err or "is not registered" in captured.out or "is not registered" in captured.err.lower() or "is not registered" in captured.out.lower()
+
+
+
 
 
