@@ -1,6 +1,6 @@
 # 01. URL Normalization & Tracking Token Sanitization
 
-Status: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -24,10 +24,10 @@ Modify the URL resolution logic to strip standard marketing/tracking query param
 
 ## Acceptance criteria
 
-- [ ] `clean_and_resolve_url` in `src/knowledge_map/utils/scraper.py` strips all standard marketing, referral, and tracking query parameters (`utm_*`, `fbclid`, `gclid`, `ref`, `amp`).
-- [ ] Non-tracking query parameters (like `id` or `p` for routing) are preserved in the resolved URL.
-- [ ] Fragment/hash components (e.g. `#comments`) are stripped from the resolved URL.
-- [ ] Unit tests verify normalization of URLs with mixed routing and tracking parameters (e.g. `https://test.com/path?utm_source=feed&id=456#anchor` resolves to `https://test.com/path?id=456`).
+- [x] `clean_and_resolve_url` in `src/knowledge_map/utils/scraper.py` strips all standard marketing, referral, and tracking query parameters (`utm_*`, `fbclid`, `gclid`, `ref`, `amp`).
+- [x] Non-tracking query parameters (like `id` or `p` for routing) are preserved in the resolved URL.
+- [x] Fragment/hash components (e.g. `#comments`) are stripped from the resolved URL.
+- [x] Unit tests verify normalization of URLs with mixed routing and tracking parameters (e.g. `https://test.com/path?utm_source=feed&id=456#anchor` resolves to `https://test.com/path?id=456`).
 
 ## Blocked by
 
