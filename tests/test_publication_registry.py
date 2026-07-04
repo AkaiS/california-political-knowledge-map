@@ -217,3 +217,119 @@ def test_cli_register_publication_duplicate_fails(tmp_path, monkeypatch, capsys)
     # Check that a clean message is printed
     captured = capsys.readouterr()
     assert "already registered" in captured.err or "already registered" in captured.out or "already registered" in captured.err.lower() or "already registered" in captured.out.lower()
+
+
+def test_register_publication_with_categories_tracer(tmp_path):
+    from knowledge_map.adapters.sqlite_db import register_publication, get_publication
+    import json
+    
+    db_file = tmp_path / "test_publications.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Register with categories
+    register_publication(
+        pub_id="calmatters",
+        name="CalMatters",
+        base_url="https://calmatters.org",
+        categories=["housing", "politics"],
+        db_path=db_path
+    )
+    
+    pub = get_publication("calmatters", db_path=db_path)
+    assert pub is not None
+    assert pub["discovery_config_json"] is not None
+    config = json.loads(pub["discovery_config_json"])
+    assert config == {"valid_categories": ["housing", "politics"]}
+
+
+def test_register_publication_merges_categories(tmp_path):
+    from knowledge_map.adapters.sqlite_db import register_publication, get_publication
+    import json
+    
+    db_file = tmp_path / "test_publications.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Register with categories and existing discovery_config_json
+    register_publication(
+        pub_id="calmatters",
+        name="CalMatters",
+        base_url="https://calmatters.org",
+        discovery_config_json='{"listing_urls": ["https://calmatters.org/news/"]}',
+        categories=["housing", "politics"],
+        db_path=db_path
+    )
+    
+    pub = get_publication("calmatters", db_path=db_path)
+    assert pub is not None
+    assert pub["discovery_config_json"] is not None
+    config = json.loads(pub["discovery_config_json"])
+    assert config == {
+        "listing_urls": ["https://calmatters.org/news/"],
+        "valid_categories": ["housing", "politics"]
+    }
+
+
+def test_register_publication_preserves_config_when_categories_none(tmp_path):
+    from knowledge_map.adapters.sqlite_db import register_publication, get_publication
+    import json
+    
+    db_file = tmp_path / "test_publications.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Register with categories=None and existing discovery_config_json (containing valid_categories)
+    register_publication(
+        pub_id="calmatters",
+        name="CalMatters",
+        base_url="https://calmatters.org",
+        discovery_config_json='{"listing_urls": ["https://calmatters.org/news/"], "valid_categories": ["housing"]}',
+        categories=None,
+        db_path=db_path
+    )
+    
+    pub = get_publication("calmatters", db_path=db_path)
+    assert pub is not None
+    assert pub["discovery_config_json"] is not None
+    config = json.loads(pub["discovery_config_json"])
+    assert config == {
+        "listing_urls": ["https://calmatters.org/news/"],
+        "valid_categories": ["housing"]
+    }
+
+
+def test_cli_register_publication_with_categories(tmp_path, monkeypatch):
+    from knowledge_map.cli.main import main
+    from knowledge_map.adapters.sqlite_db import get_publication
+    import json
+    
+    db_file = tmp_path / "test_cli_pub.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    with patch("knowledge_map.cli.main.bootstrap_publication_stub") as mock_bootstrap:
+        try:
+            main([
+                "register-publication",
+                "--id", "calmatters",
+                "--name", "CalMatters",
+                "--base-url", "https://calmatters.org",
+                "--categories", "housing", "politics"
+            ])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        pub = get_publication("calmatters", db_path=db_path)
+        assert pub is not None
+        assert pub["discovery_config_json"] is not None
+        config = json.loads(pub["discovery_config_json"])
+        assert config == {"valid_categories": ["housing", "politics"]}
+        
+        mock_bootstrap.assert_called_once_with("calmatters")
+
+
+
+

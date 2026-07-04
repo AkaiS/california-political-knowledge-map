@@ -308,13 +308,24 @@ def register_publication(
     crawl_delay: float = 2.0,
     max_concurrency: int = 2,
     use_robots_txt: bool = True,
-    discovery_config_json: str = None,
+    discovery_config_json: Optional[str] = None,
     archive_cutoff_years: int = 5,
-    db_path: str = DEFAULT_DB_PATH
+    db_path: str = DEFAULT_DB_PATH,
+    categories: Optional[List[str]] = None
 ) -> None:
     """
     Registers a new Publication in the database.
     """
+    if categories is not None:
+        config = {}
+        if discovery_config_json:
+            try:
+                config = json.loads(discovery_config_json)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON in discovery_config_json: {e}")
+        config["valid_categories"] = categories
+        discovery_config_json = json.dumps(config)
+
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()

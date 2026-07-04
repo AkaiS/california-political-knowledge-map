@@ -83,6 +83,7 @@ def main(args=None):
     register_parser.add_argument("--no-robots-txt", action="store_false", dest="use_robots_txt", help="Do not respect robots.txt")
     register_parser.add_argument("--discovery-config-json", help="JSON string of discovery configuration parameters")
     register_parser.add_argument("--archive-cutoff-years", type=int, default=5, help="Number of years of historical archive to crawl")
+    register_parser.add_argument("--categories", nargs="+", help="Space-separated list of valid categories for the publication")
 
     # Update-sources subcommand
     subparsers.add_parser("update-sources", help="Run incremental scraping/discovery for registered publications")
@@ -374,7 +375,8 @@ def main(args=None):
                 use_robots_txt=parsed_args.use_robots_txt,
                 discovery_config_json=discovery_config,
                 archive_cutoff_years=parsed_args.archive_cutoff_years,
-                db_path=db_path
+                db_path=db_path,
+                categories=parsed_args.categories
             )
             print(f"Successfully registered publication '{parsed_args.id}'.")
             

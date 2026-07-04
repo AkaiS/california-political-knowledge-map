@@ -9,7 +9,7 @@ During URL discovery from publication listing pages (e.g., crawling category pag
 ## Solution
 
 We will implement a looser, more flexible, publication-dependent category matching filter during the pre-fetch phase of URL discovery.
-1. Add a `valid_categories` list to each publication's `discovery_config_json`.
+1. Add a `valid_categories` list to each publication's `discovery_config_json`, and provide a registration mechanism (CLI and Python API) to configure it.
 2. When filtering discovered links on a listing page, check if any of the URL's path segments (excluding the last segment, which is the article name) exactly match any of the publication's `valid_categories` (case-insensitive).
 3. If `valid_categories` is omitted or empty for a publication, bypass the category check entirely (allowing publications with flat URL structures to crawl all same-domain links).
 4. Update the URL resolution utility to normalize URLs by stripping marketing and tracking query parameters (e.g., `utm_*`, `fbclid`, `gclid`, `ref`, `amp`) while preserving critical routing query parameters (like `id` or `p`).
@@ -22,11 +22,14 @@ We will implement a looser, more flexible, publication-dependent category matchi
 4. As a crawler, I want to bypass the category match filter if no `valid_categories` are configured for a publication, so that I can discover articles on publications that use flat URL structures (without category path segments).
 5. As a database ingest pipeline, I want all candidate URLs to be normalized (stripping tracking tokens like `utm_source` and `fbclid`) before checking if they exist in the cache or stories table, so that we prevent duplicate fetches and storage of the same article under different tracking URLs.
 6. As a crawler, I want to perform exact segment matching against category names, so that substring matches (like `/sports/.../immigration-officer/` matching the category `immigration`) do not cause irrelevant articles to bypass pre-fetch filtering.
+7. As a developer, I want to configure a publication's valid categories directly when registering it via the CLI or Python API, rather than manually formatting a complex JSON string.
 
 ## Implementation Decisions
 
-- **Configuration Schema**:
+- **Configuration Schema & Registration**:
   We will add an optional `valid_categories` array to the JSON schema in the `discovery_config_json` field of the `publications` SQLite table.
+  The Python API `register_publication` will accept an optional `categories: Optional[List[str]] = None` parameter. If provided, it will merge/write these categories to the `discovery_config_json`.
+  The CLI command `register-publication` will support a `--categories` argument (space-separated list of strings) that forwards to the Python API.
 - **Link Normalization**:
   The `clean_and_resolve_url` utility function in `src/knowledge_map/utils/scraper.py` will be modified or will call a new helper to strip standard campaign/tracking query parameters (`utm_*`, `fbclid`, `gclid`, `ref`, `amp`) and fragment identifiers, while preserving other query parameters.
 - **Category Filter Logic**:
@@ -48,13 +51,17 @@ We will implement a looser, more flexible, publication-dependent category matchi
   - Verify that category segment checks exclude the last segment (article slug) and use exact, case-insensitive matches.
   - Verify that when `valid_categories` is empty or omitted, URLs with flat paths or mismatching categories are not filtered out by the category check.
   - Verify that blocklist filtering takes precedence over category matching.
+  - Verify that both the Python API and CLI allow registering publications with categories and that they are correctly merged into the SQLite database.
 - **Modules to Test**:
   - `clean_and_resolve_url` in [scraper.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/utils/scraper.py) (normalisation and query parameter filtering).
   - `ListingPageDiscoveryService` / `should_keep_url` helper in [discovery.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/core/discovery.py) (category filtering, last segment exclusion, flat URL opt-out).
+  - `register_publication` in [sqlite_db.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/adapters/sqlite_db.py) and `register-publication` CLI subcommand in [main.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/cli/main.py).
 - **Prior Art**:
   - Existing tests in [test_incremental_discovery.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/tests/test_incremental_discovery.py) test the `PolitenessLimiter`, `url_filtering` (with `should_keep_url`), and mock listing crawl responses. We will extend `test_url_filtering` and add tests for `clean_and_resolve_url` in `test_scraper.py`.
+  - Existing tests in [test_publication_registry.py](file:///Users/akaisenghor/Projects/california-political-knowledge-map/tests/test_publication_registry.py) test the publication registration API and CLI.
 
 ## Out of Scope
 
 - Extracting category tags dynamically from page content using LLMs or machine learning during the *discovery* phase (this remains a metadata-based check during the validation phase).
-- Automatic discovery of a publication's categories (valid categories must be configured manually during publication registration).
+- Automatic discovery of a publication's categories during crawling.
+
