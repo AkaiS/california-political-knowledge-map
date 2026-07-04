@@ -460,6 +460,81 @@ async def test_discovery_service_category_filtering(tmp_path, caplog):
         assert getattr(stats_log[0], "new_candidates_found", 0) == 2
 
 
+@pytest.mark.anyio
+async def test_listing_page_discovery_soup_fallback_text(tmp_path):
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from knowledge_map.adapters.sqlite_db import init_db, register_publication
+    from knowledge_map.core.discovery import ListingPageDiscoveryService
+    
+    db_file = tmp_path / "test_soup_fallback.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication(
+        pub_id="testpub",
+        name="Test Pub",
+        base_url="https://test.com",
+        discovery_config_json='{"listing_urls": ["https://test.com"]}',
+        db_path=db_path
+    )
+    
+    # Mock listing result: the Crawl4AI result has empty text in its links,
+    # but the html has a tags with rich nested text.
+    mock_listing_result = MagicMock()
+    mock_listing_result.success = True
+    mock_listing_result.links = {
+        "internal": [
+            # Candidate 1: Crawl4AI says text is empty, but HTML contains rich nested text.
+            # (Heuristic requires at least 25 characters / 5 words)
+            {"href": "https://test.com/politics/nested-text-story", "text": ""}
+        ]
+    }
+    mock_listing_result.html = """
+    <html>
+    <body>
+        <a href="https://test.com/politics/nested-text-story">
+            <h3>California Senate Approves Newsom Nominee for High Court</h3>
+        </a>
+    </body>
+    </html>
+    """
+    
+    mock_article_result = MagicMock()
+    mock_article_result.success = True
+    mock_article_result.html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "headline": "California Senate approves Newsom nominee"
+        }
+        </script>
+    </head>
+    <body>scraped raw content</body>
+    </html>
+    """
+    
+    mock_crawler_instance = AsyncMock()
+    async def mock_arun(url, config=None):
+        if url == "https://test.com":
+            return mock_listing_result
+        else:
+            return mock_article_result
+    mock_crawler_instance.arun.side_effect = mock_arun
+    
+    with patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass:
+        MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
+        
+        service = ListingPageDiscoveryService(db_path=db_path)
+        from knowledge_map.adapters.sqlite_db import get_publication
+        pub = get_publication("testpub", db_path=db_path)
+        
+        scraped_urls = await service.discover_and_scrape_for_publication(pub)
+        # Should be scraped because the fallback gets the text "California Senate Approves Newsom Nominee for High Court" (>= 25 chars and >= 5 words)
+        assert scraped_urls == ["https://test.com/politics/nested-text-story"]
+
+
+
 
 
 

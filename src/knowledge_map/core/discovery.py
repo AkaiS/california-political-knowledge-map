@@ -293,6 +293,27 @@ class ListingPageDiscoveryService:
                         if status_code is None or status_code == 200:
                             has_successful_response = True
                         
+                        # Parse HTML using BeautifulSoup to build an href-to-text fallback map.
+                        # This works around cases where Crawl4AI does not capture anchor text inside nested elements.
+                        href_to_text = {}
+                        raw_html = getattr(result, "html", None) or getattr(result, "cleaned_html", None)
+                        if raw_html:
+                            try:
+                                html_soup = BeautifulSoup(raw_html, "html.parser")
+                                from knowledge_map.utils.scraper import clean_and_resolve_url
+                                for a_tag in html_soup.find_all("a", href=True):
+                                    raw_href = a_tag["href"]
+                                    a_text = a_tag.get_text(separator=" ", strip=True)
+                                    if a_text:
+                                        if raw_href not in href_to_text or len(a_text) > len(href_to_text[raw_href]):
+                                            href_to_text[raw_href] = a_text
+                                        resolved_raw = clean_and_resolve_url(base_url, raw_href)
+                                        if resolved_raw:
+                                            if resolved_raw not in href_to_text or len(a_text) > len(href_to_text[resolved_raw]):
+                                                href_to_text[resolved_raw] = a_text
+                            except Exception as e:
+                                logger.warning(f"Failed to parse listing page HTML for link text fallback: {e}")
+
                         # Extract links
                         links_dict = getattr(result, "links", {}) or {}
                         internal_links = links_dict.get("internal", [])
@@ -311,6 +332,12 @@ class ListingPageDiscoveryService:
                             resolved_url = clean_and_resolve_url(base_url, href)
                             if not resolved_url:
                                 continue
+
+                            # Fallback to BeautifulSoup extracted text if crawler text is empty or too short
+                            if not text or len(text.strip()) < 25:
+                                bs_text = href_to_text.get(href) or href_to_text.get(resolved_url)
+                                if bs_text:
+                                    text = bs_text
                             
                             if not self._is_same_domain(base_url, resolved_url):
                                 logger.info("URL discarded: %s because of external domain", resolved_url, extra={
@@ -364,10 +391,11 @@ class ListingPageDiscoveryService:
 
                             if is_anchor_heuristic_dropped:
                                 anchor_filtered_count += 1
-                                logger.info("URL discarded: %s because of link anchor text is too short", resolved_url, extra={
+                                logger.info("URL discarded: %s because link anchor text is too short. Text: '%s'", resolved_url, text or "", extra={
                                     "url": resolved_url,
                                     "publication_id": pub_id,
-                                    "filter_reason": "anchor_heuristic_dropped"
+                                    "filter_reason": "anchor_heuristic_dropped",
+                                    "anchor_text": text
                                 })
                                 continue
                             
