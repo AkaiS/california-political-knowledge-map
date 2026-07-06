@@ -8,6 +8,7 @@ import sqlite3
 import datetime
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
+import structlog
 
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import SQLiteStatusTracker, register_publication, update_publication
@@ -24,30 +25,85 @@ from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
 
+def add_record_metadata(logger, name, event_dict):
+    """
+    Extract useful attributes from the standard LogRecord if present.
+    This works for both standard logging calls and structlog calls
+    processed by ProcessorFormatter.
+    """
+    record = event_dict.get("_record")
+    if record:
+        event_dict["logger"] = record.name
+        event_dict["filename"] = record.filename
+        event_dict["lineno"] = record.lineno
+        event_dict["level"] = record.levelname
+    return event_dict
+
+class IgnoreStructlogFilter(logging.Filter):
+    """
+    Filter to ignore log records that originated from structlog,
+    preventing duplicate logs in logfire.
+    """
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, tuple) and len(record.msg) == 2 and isinstance(record.msg[0], dict):
+            return False
+        return True
+
 def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int = logging.INFO):
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
     root_logger.handlers.clear()
 
-    # Console Handler
-    # console_handler = logging.StreamHandler()
-    # console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
-    # console_handler.setFormatter(console_formatter)
-    # root_logger.addHandler(console_handler)
+    structlog_processors = [
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.dict_tracebacks,
+        structlog.processors.TimeStamper(fmt="iso"),
+    ]
 
-    # File Handler
+    has_logfire = False
+    try:
+        import logfire
+        structlog_processors.append(logfire.StructlogProcessor())
+        has_logfire = True
+    except ImportError:
+        pass
+
+    structlog.configure(
+        processors=structlog_processors + [
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
     file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=5)
-    file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s:%(lineno)d] %(message)s")
+    file_formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=[
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.ExtraAdder(),
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.dict_tracebacks,
+        ],
+        processors=[
+            add_record_metadata,
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.processors.JSONRenderer(),
+        ]
+    )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
 
-    # Logfire Handler
-    try:
-        import logfire
-        root_logger.addHandler(logfire.LogfireLoggingHandler())
-    except ImportError:
-        pass
+    if has_logfire:
+        logfire_handler = logfire.LogfireLoggingHandler()
+        logfire_handler.addFilter(IgnoreStructlogFilter())
+        root_logger.addHandler(logfire_handler)
 
 def main(args=None):
     load_dotenv()
