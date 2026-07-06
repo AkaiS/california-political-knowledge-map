@@ -514,7 +514,7 @@ class ArticleValidatorService:
             from knowledge_map.core.selectors import parse_db_datetime
             scraped_at = parse_db_datetime(row["scraped_at"]) if row["scraped_at"] else datetime.datetime.now(datetime.timezone.utc)
 
-            span = logfire.span("validate_article", url=url, publication_id=publication_id) if logfire else None
+            span = logfire.span(f"Validating Article: {url}", url=url, publication_id=publication_id) if logfire else None
             if span:
                 span.__enter__()
 

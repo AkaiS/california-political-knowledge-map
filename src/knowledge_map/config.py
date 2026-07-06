@@ -49,13 +49,14 @@ settings = Settings()
 POLITICAL_RELEVANCE_KEYWORDS = [
     "california", "sacramento", "newsom", "legislature", "assembly", "senate",
     "lobbyist", "lobbying", "election", "ballot", "veto", "governor", "democrat",
-    "republican", "gop", "mayor", "city council", "supervisors", "proposition", "prop"
+    "republican", "gop", "mayor", "city council", "supervisors", "proposition", "prop", "tax",
+    "industry", "energy", "housing", "climate", "transportation", "education"
 ]
 
 NEGATIVE_RELEVANCE_KEYWORDS = [
     "sports", "lifestyle", "recipe", "food", "dining", "travel", "obituary",
     "obituaries", "fashion", "entertainment", "movie", "concert", "music",
-    "horoscope", "real estate", "housing market", "crossword", "weather", "gardening"
+    "horoscope", "crossword", "weather", "gardening"
 ]
 
 SECONDARY_RELEVANCE_KEYWORDS = [
