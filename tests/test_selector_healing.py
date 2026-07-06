@@ -415,3 +415,109 @@ async def test_generator_critic_loop_exhaustion(tmp_path):
     # Verify healing_in_progress is cleared
     pub = get_publication("testpub", db_path=db_path)
     assert pub["healing_in_progress"] is False
+
+
+@pytest.mark.anyio
+async def test_generator_critic_loop_programmatic_lock_in(tmp_path):
+    db_file = tmp_path / "test_lock_in.db"
+    db_path = str(db_file)
+    
+    init_db(db_path)
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    
+    html = """
+    <html>
+    <body>
+        <h1 class="entry-title">Expected Headline</h1>
+        <span class="author">By John Doe</span>
+        <time class="pubdate" datetime="2026-07-06T12:00:00Z">July 6, 2026</time>
+        <div class="content">This is a long article content with multiple stopwords so it validates cleanly.</div>
+    </body>
+    </html>
+    """
+    cache_scraped_html("https://testpub.com/art1", "testpub", html, validation="VALIDATION_FAILED", db_path=db_path)
+    
+    generator_calls = 0
+    def mock_generator_model(messages, info):
+        nonlocal generator_calls
+        generator_calls += 1
+        tool_name = info.output_tools[0].name
+        
+        if generator_calls == 1:
+            # Iteration 1: correct metadata, wrong body
+            args = {
+                "title": "h1.entry-title",
+                "author": "span.author",
+                "date": "time.pubdate",
+                "body": "div.wrong"
+            }
+        else:
+            # Iteration 2: wrong metadata (simulating model regression), correct body
+            args = {
+                "title": "h1.wrong",
+                "author": "span.wrong",
+                "date": "time.wrong",
+                "body": "div.content"
+            }
+            
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args=args,
+                tool_call_id=f"call_{generator_calls}"
+            )
+        ])
+        
+    critic_calls = 0
+    def mock_critic_model(messages, info):
+        nonlocal critic_calls
+        critic_calls += 1
+        tool_name = info.output_tools[0].name
+        
+        # Reject first time due to body, approve second time
+        is_valid = False if critic_calls == 1 else True
+        issues = ["Body selector extracted nothing"] if critic_calls == 1 else []
+        
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "is_valid": is_valid,
+                    "issues": issues
+                },
+                tool_call_id=f"call_{critic_calls + 10}"
+            )
+        ])
+        
+    generator_agent = get_generator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    
+    with generator_agent.override(model=FunctionModel(mock_generator_model)), \
+         critic_agent.override(model=FunctionModel(mock_critic_model)):
+         
+        await run_selector_healing_flow(
+            publication_id="testpub",
+            tripping_article_url="https://testpub.com/art1",
+            db_path=db_path,
+            generator_agent=generator_agent,
+            critic_agent=critic_agent
+        )
+        
+    # Verify iteration count is 2 and final proposal contains the locked-in metadata selectors AND corrected body selector
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM selector_proposals WHERE publication_id = 'testpub'")
+    row = cursor.fetchone()
+    conn.close()
+    
+    assert row is not None
+    assert row["status"] == "PENDING_REVIEW"
+    assert row["critic_iterations"] == 2
+    
+    selectors = json.loads(row["selectors_json"])
+    assert selectors["title"] == "h1.entry-title"
+    assert selectors["author"] == "span.author"
+    assert selectors["date"] == "time.pubdate"
+    assert selectors["body"] == "div.content"
+

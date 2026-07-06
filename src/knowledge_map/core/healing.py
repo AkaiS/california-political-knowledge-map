@@ -2,7 +2,8 @@ import os
 import json
 import logging
 import sqlite3
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from pydantic_ai import Agent
@@ -17,6 +18,12 @@ from knowledge_map.adapters.sqlite_db import (
     insert_selector_proposal,
     has_unresolved_selector_proposal,
     set_publication_healing_in_progress
+)
+from knowledge_map.core.validation import (
+    edit_distance_ratio,
+    normalize_author_string,
+    parse_date_string,
+    ENGLISH_STOPWORDS
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +43,92 @@ class ArticleSelectors(BaseModel):
 class CriticFeedback(BaseModel):
     is_valid: bool
     issues: List[str]
+
+
+def validate_field(field: str, value: Any, gt: Dict[str, Any], body_element: Optional[Any] = None) -> Tuple[bool, str]:
+    if field == "title":
+        ext_title = value or ""
+        gt_headline = gt.get("headline")
+        if gt_headline:
+            if not ext_title.strip():
+                return False, "Extracted title was empty."
+            ratio = edit_distance_ratio(ext_title.strip().lower(), gt_headline.strip().lower())
+            if ratio < 0.90:
+                return False, f"Title mismatch: ratio {ratio:.3f} < 0.90 ('{ext_title}' vs '{gt_headline}')"
+        return True, ""
+
+    elif field == "author":
+        ext_author_raw = value or ""
+        gt_authors = gt.get("authors")
+        if gt_authors:
+            if not ext_author_raw.strip():
+                return False, "Extracted author was empty."
+            normalized_gt = []
+            for a in gt_authors:
+                normalized_gt.extend(normalize_author_string(a))
+            normalized_ext = normalize_author_string(ext_author_raw)
+            for gt_a in normalized_gt:
+                matched = False
+                for ext_a in normalized_ext:
+                    if edit_distance_ratio(gt_a, ext_a) >= 0.90:
+                        matched = True
+                        break
+                if not matched:
+                    return False, f"Author mismatch: JSON-LD author '{gt_a}' not matched in CSS extraction '{ext_author_raw}'"
+        return True, ""
+
+    elif field == "date":
+        ext_date_raw = value
+        gt_date_raw = gt.get("datePublished")
+        if gt_date_raw:
+            if not ext_date_raw:
+                return False, "Extracted date was empty."
+            gt_dt = parse_date_string(gt_date_raw)
+            ext_dt = parse_date_string(ext_date_raw)
+            if not gt_dt or not ext_dt:
+                return False, f"Date parsing failed: JSON-LD date '{gt_date_raw}' parsed as {gt_dt}, Extracted date '{ext_date_raw}' parsed as {ext_dt}"
+            else:
+                gt_day = gt_dt.astimezone(timezone.utc).date()
+                ext_day = ext_dt.astimezone(timezone.utc).date()
+                if gt_day != ext_day:
+                    return False, f"Date mismatch: JSON-LD date '{gt_day}' != Extracted date '{ext_day}'"
+        return True, ""
+
+    elif field == "body":
+        ext_body = value or ""
+        gt_word_count = gt.get("wordCount")
+        if gt_word_count is not None:
+            if gt_word_count > 0:
+                if not ext_body.strip():
+                    return False, "Extracted body was empty."
+                ext_word_count = len(ext_body.split())
+                ratio = ext_word_count / gt_word_count
+                if ratio < 0.9 or ratio > 1.1:
+                    return False, f"Body word count ratio {ratio:.3f} outside [0.9, 1.1] ({ext_word_count} vs {gt_word_count})"
+        else:
+            if not ext_body.strip():
+                return False, "Extracted body was empty."
+            if body_element:
+                total_text = body_element.get_text()
+                total_chars = len(total_text)
+                anchor_chars = sum(len(a.get_text()) for a in body_element.find_all('a'))
+                link_density = anchor_chars / total_chars if total_chars > 0 else 0.0
+                if link_density >= 0.15:
+                    return False, f"Fallback link density failure: {link_density:.3f} >= 0.15"
+                cleaned_words = [w.strip(".,!?;:()[]{}'\"").lower() for w in total_text.split()]
+                cleaned_words = [w for w in cleaned_words if w]
+                if not cleaned_words:
+                    return False, "Fallback stopword ratio failure: No words found in body"
+                else:
+                    stopword_count = sum(1 for w in cleaned_words if w in ENGLISH_STOPWORDS)
+                    stopword_ratio = stopword_count / len(cleaned_words)
+                    if stopword_ratio <= 0.25:
+                        return False, f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25"
+            else:
+                return False, "No body element found for fallback checks"
+        return True, ""
+
+    return False, "Unknown field"
 
 
 def preprocess_html(html: str) -> str:
@@ -205,6 +298,13 @@ async def run_selector_healing_flow(
             f"{custom_context_str}"
         )
 
+        confirmed_selectors = {
+            "title": None,
+            "author": None,
+            "date": None,
+            "body": None,
+        }
+
         run_result = None
         iteration = 0
         max_iterations = 3
@@ -213,18 +313,37 @@ async def run_selector_healing_flow(
 
         while iteration < max_iterations:
             iteration += 1
+            
+            # Construct prompt for the current iteration
+            current_prompt = prompt
+            
+            # If we have confirmed selectors, instruct the generator to retain them
+            if any(confirmed_selectors.values()):
+                locked_selectors_str = (
+                    "\n\nIMPORTANT: The following selectors have already been VERIFIED AS CORRECT. "
+                    "You MUST keep these selectors EXACTLY as they are in your output:\n"
+                    + "\n".join(f"- {field}: '{sel}'" for field, sel in confirmed_selectors.items() if sel)
+                )
+                current_prompt += locked_selectors_str
+
             if iteration == 1:
-                run_result = await generator.run(prompt)
+                run_result = await generator.run(current_prompt)
             else:
-                run_result = await generator.run(prompt, message_history=run_result.all_messages())
+                run_result = await generator.run(current_prompt, message_history=run_result.all_messages())
 
             last_selectors = run_result.output
+
+            # Programmatically override any confirmed selectors
+            for field, confirmed_sel in confirmed_selectors.items():
+                if confirmed_sel:
+                    setattr(last_selectors, field, confirmed_sel)
 
             # Extract content from HTML using proposed selectors
             extracted_title = ""
             extracted_author = ""
             extracted_date = ""
             extracted_body = ""
+            body_el = None
             try:
                 soup = BeautifulSoup(cleaned_html, "html.parser")
                 if last_selectors.title:
@@ -235,13 +354,31 @@ async def run_selector_healing_flow(
                     extracted_author = el.get_text().strip() if el else ""
                 if last_selectors.date:
                     el = soup.select_one(last_selectors.date)
-                    extracted_date = el.get_text().strip() if el else ""
+                    if el:
+                        if el.name == "time" and el.has_attr("datetime"):
+                            extracted_date = el["datetime"].strip()
+                        else:
+                            extracted_date = el.get_text().strip()
                 if last_selectors.body:
-                    el = soup.select_one(last_selectors.body)
-                    extracted_body = el.get_text().strip() if el else ""
+                    body_el = soup.select_one(last_selectors.body)
+                    extracted_body = body_el.get_text().strip() if body_el else ""
             except Exception as e:
                 prompt = f"An error occurred when parsing with your selectors: {e}. Please correct them and try again."
                 continue
+
+            # Run programmatic validation for each field
+            field_validity = {}
+            field_errors = {}
+            for field in ["title", "author", "date", "body"]:
+                val = {
+                    "title": extracted_title,
+                    "author": extracted_author,
+                    "date": extracted_date,
+                    "body": extracted_body
+                }[field]
+                is_valid_field, err = validate_field(field, val, gt, body_element=body_el)
+                field_validity[field] = is_valid_field
+                field_errors[field] = err
 
             # Run Critic Validation
             critic_input = (
@@ -266,14 +403,32 @@ async def run_selector_healing_flow(
             critic_result = await critic.run(critic_input)
             validation = critic_result.output
 
-            if validation.is_valid:
+            # Determine overall success: must pass both programmatic and critic checks
+            all_programmatic_passed = all(field_validity.values())
+            if all_programmatic_passed and validation.is_valid:
                 approved = True
                 break
             else:
+                # Lock in verified selectors that passed both programmatic and critic checks
+                critic_issues = validation.issues or []
+                for field in ["title", "author", "date", "body"]:
+                    has_prog_error = not field_validity[field]
+                    has_crit_issue = any(field in issue.lower() for issue in critic_issues)
+                    if not has_prog_error and not has_crit_issue:
+                        confirmed_selectors[field] = getattr(last_selectors, field)
+
+                # Construct feedback prompt for the next iteration
+                feedback_messages = []
+                for field, err in field_errors.items():
+                    if err:
+                        feedback_messages.append(f"- Programmatic validation error for '{field}': {err}")
+                for issue in critic_issues:
+                    feedback_messages.append(f"- Critic feedback: {issue}")
+
                 prompt = (
-                    f"The Critic rejected your proposed selectors due to these issues:\n"
-                    + "\n".join(f"- {issue}" for issue in validation.issues)
-                    + "\n\nPlease adjust the CSS selectors and try again."
+                    "Some proposed selectors failed validation. Please adjust the CSS selectors and try again.\n"
+                    "Errors encountered:\n"
+                    + "\n".join(feedback_messages)
                 )
 
         if approved and last_selectors:
