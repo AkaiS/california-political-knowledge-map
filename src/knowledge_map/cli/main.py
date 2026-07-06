@@ -689,10 +689,8 @@ def main(args=None):
                         print(f"  Title: '{extracted.get('title')}'")
                         print(f"  Author: '{extracted.get('author')}'")
                         print(f"  Date: '{extracted.get('date')}'")
-                        body_snip = extracted.get('body', '')
-                        if len(body_snip) > 200:
-                            body_snip = body_snip[:200] + "..."
-                        print(f"  Body: '{body_snip}'")
+                        body = extracted.get('body', '')
+                        print(f"  Body: '{body}'")
                     except Exception as e:
                         print(f"Warning: Failed to preview extraction: {e}")
                 else:
