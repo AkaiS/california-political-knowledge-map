@@ -27,20 +27,39 @@ from knowledge_map.utils.console import ConsoleNotifier
 def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Seam for invoking the Selector Healing Pipeline when the circuit breaker trips.
+    Spawns a detached background process to perform healing without blocking the CLI.
     """
     logger.info(
         f"Circuit Breaker tripped for publication '{publication_id}' "
         f"due to article '{tripping_article_url}'. Triggering Selector Healing Pipeline."
     )
-    import threading
-    import asyncio
-    from knowledge_map.core.healing import run_selector_healing_flow
-    
-    def thread_target():
-        asyncio.run(run_selector_healing_flow(publication_id, tripping_article_url, db_path=db_path))
-        
-    t = threading.Thread(target=thread_target, name=f"healing-{publication_id}")
-    t.start()
+    import subprocess
+    import sys
+
+    cmd = [
+        sys.executable,
+        "-c",
+        "import sys, asyncio; from knowledge_map.cli.main import setup_logging; setup_logging(); from knowledge_map.core.healing import run_selector_healing_flow; asyncio.run(run_selector_healing_flow(sys.argv[1], sys.argv[2], db_path=sys.argv[3]))",
+        publication_id,
+        tripping_article_url,
+        db_path
+    ]
+
+    popen_kwargs = {}
+    if sys.platform == "win32":
+        # Windows detached process flags
+        CREATE_NO_WINDOW = 0x08000000
+        DETACHED_PROCESS = 0x00000008
+        popen_kwargs["creationflags"] = CREATE_NO_WINDOW | DETACHED_PROCESS
+    else:
+        # POSIX detached process flags
+        popen_kwargs["start_new_session"] = True
+
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **popen_kwargs)
+        logger.info(f"Successfully spawned detached selector healing process for '{publication_id}'.")
+    except Exception as e:
+        logger.error(f"Failed to spawn selector healing process: {e}", exc_info=True)
 
 try:
     import logfire
