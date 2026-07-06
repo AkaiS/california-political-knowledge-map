@@ -518,6 +518,7 @@ class ArticleValidatorService:
             if span:
                 span.__enter__()
 
+            circuit_breaker_tripped = False
             try:
                 res = self.validate_article(url, publication_id, raw_html, scraped_at)
                 status = res["status"]
@@ -587,6 +588,7 @@ class ArticleValidatorService:
                             ConsoleNotifier.notify_circuit_breaker_tripped(publication_id, url, new_points)
                             pause_publication_validation(publication_id, url, db_path=self.db_path)
                             trigger_selector_healing_stub(publication_id, url, db_path=self.db_path)
+                            circuit_breaker_tripped = True
 
                 elif status == "UNVALIDATABLE":
                     logger.info("Validation outcome: UNVALIDATABLE", extra={
@@ -608,6 +610,9 @@ class ArticleValidatorService:
                 logger.error(f"Error validating article '{url}': {e}", exc_info=True)
                 if span:
                     span.__exit__(type(e), e, e.__traceback__)
+
+            if circuit_breaker_tripped:
+                break
 
 
         return results
