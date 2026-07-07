@@ -191,7 +191,6 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "2. author: The author(s) name(s).\n"
         "3. date: The publication date.\n"
         "4. body: The main body text of the article (excluding sidebars, ads, headers, footers, and other navigation).\n\n"
-        "WARNING! Avoid gathering summary sections as part of the body.\n"
         "You will be provided with the target ground-truth metadata (which may have headline, datePublished, authors) to help you match elements.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema.\n"
         "Ensure the selectors are precise and resilient. Avoid overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based selectors work."
