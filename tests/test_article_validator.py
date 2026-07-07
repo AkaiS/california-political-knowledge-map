@@ -7,7 +7,8 @@ from knowledge_map.core.validation import (
     extract_json_ld_ground_truth,
     validate_extraction,
     ArticleValidatorService,
-    clean_and_normalize_text
+    clean_and_normalize_text,
+    count_words
 )
 
 def test_edit_distance_ratio():
@@ -951,5 +952,13 @@ def test_extract_json_ld_author_resolution_priority():
     gt = extract_json_ld_ground_truth(html)
     assert gt is not None
     assert gt["authors"] == ["Wendy Fry"]
+
+
+def test_count_words():
+    assert count_words("") == 0
+    assert count_words(None) == 0
+    assert count_words("Hello world") == 2
+    assert count_words("  Hello   world \n test  ") == 3
+
 
 

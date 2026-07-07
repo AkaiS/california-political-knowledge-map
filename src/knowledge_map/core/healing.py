@@ -26,7 +26,8 @@ from knowledge_map.core.validation import (
     ENGLISH_STOPWORDS,
     clean_and_normalize_text,
     extract_fields,
-    validate_extraction
+    validate_extraction,
+    count_words
 )
 
 logger = logging.getLogger(__name__)
@@ -418,6 +419,13 @@ async def run_selector_healing_flow(
             }
 
             # Run Critic Validation
+            ext_body = extracted.get("body") or ""
+            ext_word_count = count_words(ext_body)
+            gt_word_count = gt.get("wordCount")
+            ratio_str = ""
+            if gt_word_count and gt_word_count > 0:
+                ratio_str = f" ({ext_word_count / gt_word_count * 100:.1f}% of expected)"
+
             critic_input = (
                 f"Validation request:\n"
                 f"Proposed Selectors:\n"
@@ -429,12 +437,13 @@ async def run_selector_healing_flow(
                 f"- Extracted Title: '{extracted.get('title', '')}'\n"
                 f"- Extracted Author: '{extracted.get('author', '')}'\n"
                 f"- Extracted Date: '{extracted.get('date', '')}'\n"
-                f"- Extracted Body: '{extracted.get('body', '')}'\n\n"
+                f"- Extracted Body: '{ext_body}'\n"
+                f"- Extracted Word Count: {ext_word_count}{ratio_str}\n\n"
                 f"Ground-Truth Metadata:\n"
                 f"- Headline: {gt.get('headline', '')}\n"
                 f"- Publication Date: {gt.get('datePublished', '')}\n"
                 f"- Authors: {', '.join(gt.get('authors', []))}\n"
-                f"- Expected Word Count: {gt.get('wordCount', '')}\n"
+                f"- Expected Word Count: {gt_word_count or 'N/A'}\n"
             )
 
             critic_result = await critic.run(critic_input)

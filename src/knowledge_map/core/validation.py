@@ -380,6 +380,14 @@ ENGLISH_STOPWORDS = {
     "again", "further", "once"
 }
 
+def count_words(text: str) -> int:
+    """
+    Consistently count words in a body of text.
+    """
+    if not text:
+        return 0
+    return len(text.split())
+
 def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) -> Tuple[bool, Dict[str, str], int]:
     """
     Validates CSS-extracted content against JSON-LD ground truth per validation rules.
@@ -443,8 +451,7 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
     # 4. Body Validation
     gt_word_count = ground_truth.get("wordCount")
     ext_body = extracted.get("body") or ""
-    ext_words = ext_body.split()
-    ext_word_count = len(ext_words)
+    ext_word_count = count_words(ext_body)
     
     if gt_word_count is not None:
         # JSON-LD wordCount exists
