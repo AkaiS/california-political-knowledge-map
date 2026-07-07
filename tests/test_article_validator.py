@@ -6,7 +6,8 @@ from knowledge_map.core.validation import (
     parse_date_string,
     extract_json_ld_ground_truth,
     validate_extraction,
-    ArticleValidatorService
+    ArticleValidatorService,
+    clean_and_normalize_text
 )
 
 def test_edit_distance_ratio():
@@ -20,6 +21,22 @@ def test_edit_distance_ratio():
     # Case sensitive distance check
     assert edit_distance_ratio("hello", "Hello") == pytest.approx(0.8)
 
+def test_clean_and_normalize_text():
+    # HTML decoding
+    assert clean_and_normalize_text("Hello &amp; World") == "Hello & World"
+    assert clean_and_normalize_text("John&#39;s Project") == "John's Project"
+    
+    # Unicode whitespace normalization
+    assert clean_and_normalize_text("Hello\xa0World") == "Hello World"
+    assert clean_and_normalize_text("Hello\u2002World") == "Hello World"
+    
+    # Multiple whitespace collapse and stripping
+    assert clean_and_normalize_text("  Hello   World  ") == "Hello World"
+    assert clean_and_normalize_text("Hello\n\tWorld") == "Hello World"
+    
+    # Combined HTML + Unicode + whitespace
+    assert clean_and_normalize_text(" &amp;  Hello\xa0\xa0World&#39;s   ") == "& Hello World's"
+
 def test_author_normalization():
     # Stripping filler words and normalization
     assert normalize_author_string("By Ana B. Ibarra") == ["ana b. ibarra"]
@@ -29,6 +46,10 @@ def test_author_normalization():
     assert normalize_author_string("John Doe, Jane Smith, and Bob Jones") == ["john doe", "jane smith", "bob jones"]
     # Empty author
     assert normalize_author_string("") == []
+    
+    # HTML entities and Unicode whitespace in authors
+    assert normalize_author_string("By Ana&amp;nbsp;B.&nbsp;Ibarra") == ["ana b. ibarra"]
+    assert normalize_author_string("John&#39;s Doe\xa0Staff") == ["john's doe"]
 
 def test_date_parsing_and_comparison():
     import datetime
@@ -133,6 +154,25 @@ def test_validate_extraction():
         "body_element": BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")
     }
     valid, errors, points = validate_extraction(extracted_good, ground_truth)
+    assert valid is True
+    assert len(errors) == 0
+    assert points == 0
+
+    # 1b. Success with HTML entities and Unicode non-breaking spaces in title & author
+    ground_truth_dirty = {
+        "headline": "Governor Newsom Signs Major&nbsp;Climate Bill",
+        "datePublished": "2026-07-02T18:11:34-07:00",
+        "authors": ["Ana&nbsp;B.&nbsp;Ibarra", "John&#39;s Doe"],
+        "wordCount": 100
+    }
+    extracted_dirty = {
+        "title": "Governor Newsom Signs Major Climate Bill",
+        "date": "2026-07-02T18:11:34-07:00",
+        "author": "By Ana B. Ibarra and John's Doe",
+        "body": " ".join(["word"] * 100),
+        "body_element": BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")
+    }
+    valid, errors, points = validate_extraction(extracted_dirty, ground_truth_dirty)
     assert valid is True
     assert len(errors) == 0
     assert points == 0

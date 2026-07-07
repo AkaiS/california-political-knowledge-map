@@ -1,4 +1,6 @@
 import re
+import html
+import unicodedata
 import datetime
 import json
 import sqlite3
@@ -107,6 +109,21 @@ def edit_distance_ratio(s1: str, s2: str) -> float:
     return 1.0 - (dist / max(len(s1), len(s2)))
 
 
+def clean_and_normalize_text(text: str) -> str:
+    """
+    Decodes HTML entities and normalizes Unicode whitespace in a string.
+    Collapses multiple whitespace characters into single spaces and strips leading/trailing space.
+    """
+    if not text:
+        return ""
+    # Double unescape to handle double-encoded entities safely
+    decoded = html.unescape(text)
+    decoded = html.unescape(decoded)
+    normalized = unicodedata.normalize("NFKC", decoded)
+    cleaned = re.sub(r"\s+", " ", normalized)
+    return cleaned.strip()
+
+
 def normalize_author_string(author_str: str) -> List[str]:
     """
     Normalizes an author string:
@@ -117,8 +134,8 @@ def normalize_author_string(author_str: str) -> List[str]:
     if not author_str:
         return []
 
-    # Strip leading/trailing whitespace
-    cleaned = author_str.strip()
+    # HTML decode and unicode normalize/clean the author string
+    cleaned = clean_and_normalize_text(author_str)
 
     # Case-insensitive replacement of known filler patterns/words.
     # We use regex to remove these filler words case-insensitively with word boundaries.
@@ -334,7 +351,10 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
     gt_headline = ground_truth.get("headline")
     ext_title = extracted.get("title") or ""
     if gt_headline:
-        ratio = edit_distance_ratio(ext_title.strip().lower(), gt_headline.strip().lower())
+        ratio = edit_distance_ratio(
+            clean_and_normalize_text(ext_title).lower(),
+            clean_and_normalize_text(gt_headline).lower()
+        )
         if ratio < 0.90:
             errors.append(f"Title mismatch: ratio {ratio:.3f} < 0.90 ('{ext_title}' vs '{gt_headline}')")
             points = 3
