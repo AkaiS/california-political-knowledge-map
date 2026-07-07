@@ -280,18 +280,31 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
         
     candidates.sort(key=type_priority)
     
-    def resolve_author_name(author_node: Any) -> Optional[str]:
+    def resolve_author_names(author_node: Any) -> List[str]:
+        if not author_node:
+            return []
         if isinstance(author_node, str):
-            return author_node
+            return [author_node]
+        if isinstance(author_node, list):
+            names = []
+            for item in author_node:
+                names.extend(resolve_author_names(item))
+            return names
         if isinstance(author_node, dict):
             name = author_node.get("name")
             if name:
-                return name
+                if isinstance(name, list):
+                    return [str(n) for n in name if n]
+                return [str(name)]
             node_id = author_node.get("@id")
             if node_id and node_id in id_map:
                 resolved = id_map[node_id]
-                return resolved.get("name")
-        return None
+                resolved_name = resolved.get("name")
+                if resolved_name:
+                    if isinstance(resolved_name, list):
+                        return [str(n) for n in resolved_name if n]
+                    return [str(resolved_name)]
+        return []
     
     for c in candidates:
         headline = c.get("headline")
@@ -302,15 +315,7 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
         if headline or date_pub:
             parsed_authors = []
             if author:
-                if isinstance(author, list):
-                    for a in author:
-                        resolved_name = resolve_author_name(a)
-                        if resolved_name:
-                            parsed_authors.append(resolved_name)
-                else:
-                    resolved_name = resolve_author_name(author)
-                    if resolved_name:
-                        parsed_authors.append(resolved_name)
+                parsed_authors.extend(resolve_author_names(author))
             
             # Sanitize word count
             parsed_wc = None
@@ -685,8 +690,8 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
     title_el = soup.select_one(selectors.title) if selectors.title else None
     title = title_el.get_text().strip() if title_el else ""
     
-    author_el = soup.select_one(selectors.author) if selectors.author else None
-    author = author_el.get_text().strip() if author_el else ""
+    author_els = soup.select(selectors.author) if selectors.author else []
+    author = ", ".join(el.get_text().strip() for el in author_els) if author_els else ""
     
     date_el = soup.select_one(selectors.date) if selectors.date else None
     date_val = ""

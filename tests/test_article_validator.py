@@ -1037,5 +1037,63 @@ def test_fallback_individual_elements():
     assert points == 0
 
 
+def test_extract_fields_multiple_authors():
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.validation import extract_fields
+
+    html = """
+    <html>
+    <body>
+        <div class="authors">
+            <span class="author-name">Jane Doe</span>
+            <span class="author-name">John Smith</span>
+        </div>
+    </body>
+    </html>
+    """
+    selectors = ArticleSelectors(
+        title="",
+        author="span.author-name",
+        date="",
+        body=""
+    )
+    extracted = extract_fields(html, selectors)
+    assert extracted["author"] == "Jane Doe, John Smith"
+
+
+def test_extract_json_ld_multiple_authors_edge_cases():
+    from knowledge_map.core.validation import extract_json_ld_ground_truth
+
+    # Test nested lists, lists of names inside object, and typical array of person objects
+    html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Multiple Authors Test",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": [
+                {
+                    "@type": "Person",
+                    "name": ["Ana B. Ibarra", "John Doe"]
+                },
+                {
+                    "@type": "Person",
+                    "name": "Jane Smith"
+                }
+            ]
+        }
+        </script>
+    </head>
+    </html>
+    """
+    gt = extract_json_ld_ground_truth(html)
+    assert gt is not None
+    assert gt["authors"] == ["Ana B. Ibarra", "John Doe", "Jane Smith"]
+
+
+
 
 

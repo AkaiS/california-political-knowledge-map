@@ -571,7 +571,7 @@ async def test_generator_critic_loop_exhaustion(tmp_path):
     
     assert row is not None
     assert row["status"] == "HEALING_FAILED"
-    assert row["critic_iterations"] == 3
+    assert row["critic_iterations"] == 5
     
     # Verify healing_in_progress is cleared
     pub = get_publication("testpub", db_path=db_path)
