@@ -430,30 +430,39 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         # Fallback sanity checks on body_elements
         body_elements = extracted.get("body_elements") or []
         if body_elements:
+            # Check if there is any word at all across all elements to preserve empty body error behavior
             total_text = "\n\n".join(el.get_text() for el in body_elements)
-            total_chars = len(total_text)
+            total_words = [w.strip(".,!?;:()[]{}'\"").lower() for w in total_text.split()]
+            total_words = [w for w in total_words if w]
             
-            # Link density
-            anchor_chars = sum(sum(len(a.get_text()) for a in el.find_all('a')) for el in body_elements)
-            link_density = anchor_chars / total_chars if total_chars > 0 else 0.0
-            
-            if link_density >= 0.15:
-                field_errors["body"] = f"Fallback link density failure: {link_density:.3f} >= 0.15"
-                points = max(points, 1)
-                
-            # Stopword ratio
-            cleaned_words = [w.strip(".,!?;:()[]{}'\"").lower() for w in total_text.split()]
-            cleaned_words = [w for w in cleaned_words if w]
-            
-            if not cleaned_words:
+            if not total_words:
                 field_errors["body"] = "Fallback stopword ratio failure: No words found in body"
                 points = max(points, 1)
             else:
-                stopword_count = sum(1 for w in cleaned_words if w in ENGLISH_STOPWORDS)
-                stopword_ratio = stopword_count / len(cleaned_words)
-                if stopword_ratio <= 0.25:
-                    field_errors["body"] = f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25"
-                    points = max(points, 1)
+                # Validate each element individually
+                for el in body_elements:
+                    el_text = el.get_text()
+                    cleaned_words = [w.strip(".,!?;:()[]{}'\"").lower() for w in el_text.split()]
+                    cleaned_words = [w for w in cleaned_words if w]
+                    
+                    if not cleaned_words:
+                        continue  # Skip elements with no text
+                        
+                    el_chars = len(el_text)
+                    anchor_chars = sum(len(a.get_text()) for a in el.find_all('a'))
+                    link_density = anchor_chars / el_chars if el_chars > 0 else 0.0
+                    
+                    if link_density >= 0.15:
+                        field_errors["body"] = f"Fallback link density failure: {link_density:.3f} >= 0.15"
+                        points = max(points, 1)
+                        break
+                        
+                    stopword_count = sum(1 for w in cleaned_words if w in ENGLISH_STOPWORDS)
+                    stopword_ratio = stopword_count / len(cleaned_words)
+                    if stopword_ratio <= 0.25:
+                        field_errors["body"] = f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25"
+                        points = max(points, 1)
+                        break
         else:
             field_errors["body"] = "No body elements found for fallback checks"
             points = max(points, 1)

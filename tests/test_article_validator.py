@@ -961,4 +961,81 @@ def test_count_words():
     assert count_words("  Hello   world \n test  ") == 3
 
 
+def test_fallback_individual_elements():
+    from bs4 import BeautifulSoup
+    from knowledge_map.core.validation import validate_extraction
+    
+    # Base ground truth without wordCount to trigger fallback validation
+    ground_truth_no_wc = {
+        "headline": "Test Individual Elements",
+        "datePublished": "2026-07-02T18:11:34-07:00",
+        "authors": ["John Doe"],
+        "wordCount": None
+    }
+    
+    # 1. Test case where one element is good and another element has high link density (bad)
+    # The good element: 20 words, no links.
+    # The bad element: 10 words, all inside links (1.0 link density).
+    good_html = "<div>The legislative assembly met today in Sacramento to discuss new rules. It was a very productive session for all.</div>"
+    bad_link_html = "<div>" + "".join(f"<a href='/url'>{w}</a> " for w in ["visit", "us", "now", "click", "here", "read", "more", "online", "source", "link"]) + "</div>"
+    
+    extracted_diluted_links = {
+        "title": "Test Individual Elements",
+        "date": "2026-07-02T18:11:34-07:00",
+        "author": "John Doe",
+        "body": "The legislative assembly met today in Sacramento to discuss new rules. It was a very productive session for all. visit us now click here read more online source link",
+        "body_elements": [
+            BeautifulSoup(good_html, "html.parser"),
+            BeautifulSoup(bad_link_html, "html.parser")
+        ]
+    }
+    
+    # Under individual validation, this MUST fail because the second element has link density >= 0.15
+    valid, errors, points = validate_extraction(extracted_diluted_links, ground_truth_no_wc)
+    assert valid is False
+    assert "body" in errors
+    assert "Fallback link density failure" in errors["body"]
+    assert points == 1
+    
+    # 2. Test case where one element is good and another element has low stopword ratio (bad)
+    # The good element: 20 words, lots of stopwords (e.g. "the", "in", "to", "it", "was", "for").
+    # The bad element: 10 words, zero stopwords (only keywords).
+    bad_stopword_html = "<div>Newsom legislature Sacramento environment environment environment environment bills laws budget</div>"
+    
+    extracted_diluted_stopwords = {
+        "title": "Test Individual Elements",
+        "date": "2026-07-02T18:11:34-07:00",
+        "author": "John Doe",
+        "body": "The legislative assembly met today in Sacramento to discuss new rules. Newsom legislature Sacramento environment environment environment environment bills laws budget",
+        "body_elements": [
+            BeautifulSoup(good_html, "html.parser"),
+            BeautifulSoup(bad_stopword_html, "html.parser")
+        ]
+    }
+    
+    # Under individual validation, this MUST fail because the second element has stopword ratio <= 0.25
+    valid, errors, points = validate_extraction(extracted_diluted_stopwords, ground_truth_no_wc)
+    assert valid is False
+    assert "body" in errors
+    assert "Fallback stopword ratio failure" in errors["body"]
+    assert points == 1
+
+    # 3. Test case with empty elements (which should be skipped without causing failure)
+    empty_html = "<div>   </div>"
+    extracted_with_empty = {
+        "title": "Test Individual Elements",
+        "date": "2026-07-02T18:11:34-07:00",
+        "author": "John Doe",
+        "body": "The legislative assembly met today in Sacramento to discuss new rules. It was a very productive session for all.",
+        "body_elements": [
+            BeautifulSoup(good_html, "html.parser"),
+            BeautifulSoup(empty_html, "html.parser")
+        ]
+    }
+    valid, errors, points = validate_extraction(extracted_with_empty, ground_truth_no_wc)
+    assert valid is True
+    assert points == 0
+
+
+
 
