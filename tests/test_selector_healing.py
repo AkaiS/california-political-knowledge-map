@@ -207,6 +207,42 @@ def test_make_selector_absolute():
     assert missing_sel == ".does-not-exist"
 
 
+def test_make_selector_absolute_dynamic_ids():
+    from knowledge_map.core.healing import make_selector_absolute
+    
+    html = """
+    <html>
+    <body>
+        <div class="site-container" id="site-wrapper">
+            <div class="content-col" id="col-1">
+                <article class="post-content" id="post-38571">
+                    <header class="story-header" id="header-2">
+                        <h1 class="title">Headline</h1>
+                    </header>
+                    <div class="entry-content" id="content-9281">
+                        <p>Paragraph 1</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # post-38571 and content-9281 are dynamic.
+    # col-1 is stable (only 1 digit, no dynamic keyword).
+    # header-2 is stable (only 1 digit, no dynamic keyword).
+    # site-wrapper is stable (no digits).
+    
+    # 1. Title: should traverse past post-38571 up to header-2 (since header-2 is stable and closer than col-1/site-wrapper)
+    title_sel = make_selector_absolute(html, "h1.title")
+    assert title_sel == "#header-2 > h1.title"
+    
+    # 2. Body: should traverse past content-9281 and post-38571 up to col-1 (since col-1 is stable)
+    body_sel = make_selector_absolute(html, "div.entry-content p")
+    assert body_sel == "#col-1 > article.post-content > div.entry-content > p"
+
+
 def test_init_db_resets_healing_in_progress(tmp_path):
     db_file = tmp_path / "test_init_db.db"
     db_path = str(db_file)
