@@ -840,3 +840,116 @@ def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path
     pub = get_publication("testpub", db_path=db_path)
     assert pub["validation_paused"] is True
     assert pub["failure_points"] == 12
+
+
+def test_extract_json_ld_author_resolution():
+    # Test JSON-LD with @graph containing referenced authors
+    html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "NewsArticle",
+              "headline": "Private prison company sells two of California’s immigrant detention centers",
+              "datePublished": "2026-07-06T19:43:19+00:00",
+              "author": [
+                {"@id": "https://calmatters.org/#/schema/person/e0c38bba12c1c115fd22ef4e5db7124d"},
+                {"@id": "https://calmatters.org/#/schema/person/1d0455c44130b374153aa2e8312e9c44"}
+              ]
+            },
+            {
+              "@type": "Person",
+              "@id": "https://calmatters.org/#/schema/person/e0c38bba12c1c115fd22ef4e5db7124d",
+              "name": "Wendy Fry"
+            },
+            {
+              "@type": "Person",
+              "@id": "https://calmatters.org/#/schema/person/1d0455c44130b374153aa2e8312e9c44",
+              "name": "Nigel Duara"
+            }
+          ]
+        }
+        </script>
+    </head>
+    </html>
+    """
+    gt = extract_json_ld_ground_truth(html)
+    assert gt is not None
+    assert gt["headline"] == "Private prison company sells two of California’s immigrant detention centers"
+    assert gt["authors"] == ["Wendy Fry", "Nigel Duara"]
+
+    # Test cross-script resolution
+    html_cross_script = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          "headline": "Cross Script Test",
+          "datePublished": "2026-07-06T19:43:19+00:00",
+          "author": {
+            "@id": "https://calmatters.org/#/schema/person/resolved-later"
+          }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Person",
+          "@id": "https://calmatters.org/#/schema/person/resolved-later",
+          "name": "Jane Doe"
+        }
+        </script>
+    </head>
+    </html>
+    """
+    gt_cross = extract_json_ld_ground_truth(html_cross_script)
+    assert gt_cross is not None
+    assert gt_cross["headline"] == "Cross Script Test"
+    assert gt_cross["authors"] == ["Jane Doe"]
+
+
+def test_extract_json_ld_author_resolution_priority():
+    # Test that a smaller node with type "Person" and "name" overrides a larger node without them
+    html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "NewsArticle",
+              "headline": "Test Priority Resolution",
+              "datePublished": "2026-07-06T19:43:19+00:00",
+              "author": {
+                "@id": "https://calmatters.org/#/schema/person/priority-test"
+              }
+            },
+            {
+              "@id": "https://calmatters.org/#/schema/person/priority-test",
+              "description": "A very long description that is indeed very long and makes this node have many keys, but lacks name.",
+              "url": "https://calmatters.org/author/priority-test/",
+              "jobTitle": "Investigative Reporter",
+              "sameAs": ["https://x.com/priority-test", "https://facebook.com/priority-test"]
+            },
+            {
+              "@type": "Person",
+              "@id": "https://calmatters.org/#/schema/person/priority-test",
+              "name": "Wendy Fry"
+            }
+          ]
+        }
+        </script>
+    </head>
+    </html>
+    """
+    gt = extract_json_ld_ground_truth(html)
+    assert gt is not None
+    assert gt["authors"] == ["Wendy Fry"]
+
+

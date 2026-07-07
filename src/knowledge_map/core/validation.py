@@ -228,9 +228,40 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
     json_ld_scripts = soup.find_all("script", type="application/ld+json")
     
     candidates = []
+    id_map = {}
     
+    def get_node_rank(node: Dict[str, Any]) -> int:
+        if not isinstance(node, dict) or not node.get("@id"):
+            return 0
+        has_name = "name" in node
+        node_type = node.get("@type")
+        is_person = False
+        if isinstance(node_type, str):
+            is_person = (node_type == "Person")
+        elif isinstance(node_type, list):
+            is_person = any(t == "Person" for t in node_type)
+        if has_name and is_person:
+            return 3
+        if has_name:
+            return 2
+        return 1
+
     def process_node(node: Any):
         if isinstance(node, dict):
+            node_id = node.get("@id")
+            if node_id and isinstance(node_id, str):
+                new_rank = get_node_rank(node)
+                existing = id_map.get(node_id)
+                if existing is None:
+                    id_map[node_id] = node
+                else:
+                    existing_rank = get_node_rank(existing)
+                    if new_rank > existing_rank:
+                        id_map[node_id] = node
+                    elif new_rank == existing_rank:
+                        if len(node) > len(existing):
+                            id_map[node_id] = node
+            
             node_type = node.get("@type")
             if isinstance(node_type, str) and node_type in ("NewsArticle", "BlogPosting", "Article", "WebPage"):
                 candidates.append(node)
@@ -286,6 +317,19 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
         
     candidates.sort(key=type_priority)
     
+    def resolve_author_name(author_node: Any) -> Optional[str]:
+        if isinstance(author_node, str):
+            return author_node
+        if isinstance(author_node, dict):
+            name = author_node.get("name")
+            if name:
+                return name
+            node_id = author_node.get("@id")
+            if node_id and node_id in id_map:
+                resolved = id_map[node_id]
+                return resolved.get("name")
+        return None
+    
     for c in candidates:
         headline = c.get("headline")
         date_pub = c.get("datePublished")
@@ -295,20 +339,15 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
         if headline or date_pub:
             parsed_authors = []
             if author:
-                if isinstance(author, str):
-                    parsed_authors.append(author)
-                elif isinstance(author, dict):
-                    name = author.get("name")
-                    if name:
-                        parsed_authors.append(name)
-                elif isinstance(author, list):
+                if isinstance(author, list):
                     for a in author:
-                        if isinstance(a, str):
-                            parsed_authors.append(a)
-                        elif isinstance(a, dict):
-                            name = a.get("name")
-                            if name:
-                                parsed_authors.append(name)
+                        resolved_name = resolve_author_name(a)
+                        if resolved_name:
+                            parsed_authors.append(resolved_name)
+                else:
+                    resolved_name = resolve_author_name(author)
+                    if resolved_name:
+                        parsed_authors.append(resolved_name)
             
             # Sanitize word count
             parsed_wc = None
