@@ -54,34 +54,27 @@ class CriticFeedback(BaseModel):
 
 def preprocess_html(html: str) -> str:
     """
-    Cleans raw HTML by first attempting to grab an article element, then
-    stripping non-article tags and removing all attributes except 'class'
-    and 'id' to reduce token consumption and noise.
+    Cleans raw HTML by stripping non-structural/heavy tags (like script, style, svg)
+    and removing all attributes except key semantic and styling ones to reduce
+    token consumption while preserving layout structure.
     """
     if not html:
         return ""
     root = BeautifulSoup(html, "html.parser")
     
-    # Try to grab the first article element
-    # article = soup.find("article")
-    # root = article if article else soup
-
-    # Strip specified tags
-    for tag in root(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img", "aside", "figure"]):
+    # Strip heavy non-structural/noisy tags
+    for tag in root(["head", "script", "style", "svg", "iframe", "img"]):
         tag.decompose()
         
-    # Strip all attributes except class and id
+    # Strip all attributes except allowed semantic & layout ones
+    allowed_attrs = {"class", "id", "datetime", "itemprop", "itemtype", "itemscope", "name", "role"}
+    
     elements = root.find_all(True)
     if isinstance(root, Tag) and root.name != "[document]":
         elements = [root] + elements
         
     for tag in elements:
-        new_attrs = {}
-        if tag.has_attr("id"):
-            new_attrs["id"] = tag["id"]
-        if tag.has_attr("class"):
-            new_attrs["class"] = tag["class"]
-        tag.attrs = new_attrs
+        tag.attrs = {k: v for k, v in tag.attrs.items() if k in allowed_attrs}
         
     return str(root)
 
@@ -404,7 +397,7 @@ async def run_selector_healing_flow(
 
             # Extract content from HTML using proposed selectors
             try:
-                extracted = extract_fields(cleaned_html, last_selectors)
+                extracted = extract_fields(raw_html, last_selectors)
             except Exception as e:
                 prompt = f"An error occurred when parsing with your selectors: {e}. Please correct them and try again."
                 continue

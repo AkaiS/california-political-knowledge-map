@@ -39,7 +39,8 @@ def test_preprocess_html_with_article():
         <nav class="main-nav">Navigation</nav>
         <article class="article-content" id="art-id" data-extra="remove-me">
             <h1 class="entry-title" id="art-title" data-large-attr="large-value-that-we-strip">Actual Title</h1>
-            <span class="author">By Author Name</span>
+            <span class="author" itemprop="author">By Author Name</span>
+            <time class="date" datetime="2026-07-07">July 7, 2026</time>
             <svg>svg block</svg>
             <noscript>noscript block</noscript>
             <iframe src="ad.html"></iframe>
@@ -57,23 +58,25 @@ def test_preprocess_html_with_article():
     cleaned = preprocess_html(raw_html)
     soup = BeautifulSoup(cleaned, "html.parser")
     
-    # Verify the root is the article and its attributes are cleaned
+    # Verify the article exists and its key attributes are cleaned but class/id are preserved
     article = soup.find("article")
     assert article is not None
     assert article.get("class") == ["article-content"]
     assert article.get("id") == "art-id"
     assert "data-extra" not in article.attrs
     
-    # Verify stripped tags inside/outside
+    # Verify heavy stripped tags inside/outside
     assert soup.find("head") is None
     assert soup.find("script") is None
     assert soup.find("style") is None
     assert soup.find("svg") is None
-    assert soup.find("noscript") is None
-    assert soup.find("footer") is None
-    assert soup.find("nav") is None
     assert soup.find("iframe") is None
     assert soup.find("img") is None
+    
+    # Verify layout & structural elements are PRESERVED (not stripped)
+    assert soup.find("footer") is not None
+    assert soup.find("nav") is not None
+    assert soup.find("noscript") is not None
     
     # Verify the body and its cleaned attributes
     body = soup.find("body")
@@ -89,6 +92,15 @@ def test_preprocess_html_with_article():
     assert h1.get("id") == "art-title"
     assert "data-large-attr" not in h1.attrs
 
+    # Verify semantic attributes (itemprop, datetime) are preserved
+    author_span = soup.find("span", class_="author")
+    assert author_span is not None
+    assert author_span.get("itemprop") == "author"
+
+    date_time = soup.find("time")
+    assert date_time is not None
+    assert date_time.get("datetime") == "2026-07-07"
+
 
 def test_preprocess_html_fallback_no_article():
     raw_html = """
@@ -102,7 +114,8 @@ def test_preprocess_html_fallback_no_article():
         <nav class="main-nav">Navigation</nav>
         <div class="article-content">
             <h1 class="entry-title" id="art-title" data-large-attr="large-value-that-we-strip">Actual Title</h1>
-            <span class="author">By Author Name</span>
+            <span class="author" itemprop="author">By Author Name</span>
+            <time class="date" datetime="2026-07-07">July 7, 2026</time>
             <svg>svg block</svg>
             <noscript>noscript block</noscript>
             <iframe src="ad.html"></iframe>
@@ -125,11 +138,13 @@ def test_preprocess_html_fallback_no_article():
     assert soup.find("script") is None
     assert soup.find("style") is None
     assert soup.find("svg") is None
-    assert soup.find("noscript") is None
-    assert soup.find("footer") is None
-    assert soup.find("nav") is None
     assert soup.find("iframe") is None
     assert soup.find("img") is None
+    
+    # Verify layout & structural elements are PRESERVED
+    assert soup.find("footer") is not None
+    assert soup.find("nav") is not None
+    assert soup.find("noscript") is not None
     
     # Verify attributes: class and id are kept, others are stripped
     body = soup.find("body")
@@ -144,6 +159,15 @@ def test_preprocess_html_fallback_no_article():
     assert h1.get("class") == ["entry-title"]
     assert h1.get("id") == "art-title"
     assert "data-large-attr" not in h1.attrs
+
+    # Verify semantic attributes (itemprop, datetime) are preserved
+    author_span = soup.find("span", class_="author")
+    assert author_span is not None
+    assert author_span.get("itemprop") == "author"
+
+    date_time = soup.find("time")
+    assert date_time is not None
+    assert date_time.get("datetime") == "2026-07-07"
 
 
 def test_init_db_resets_healing_in_progress(tmp_path):
