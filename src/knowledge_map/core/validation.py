@@ -357,6 +357,8 @@ def extract_json_ld_ground_truth(html: str) -> Optional[Dict[str, Any]]:
                 except ValueError:
                     pass
             
+            headline = clean_and_normalize_text(headline)
+
             return {
                 "headline": headline,
                 "datePublished": date_pub,

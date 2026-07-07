@@ -23,7 +23,8 @@ from knowledge_map.core.healing import (
     get_generator_agent,
     get_critic_agent,
     ArticleSelectors,
-    CriticFeedback
+    CriticFeedback,
+    annotate_ground_truth
 )
 
 def test_preprocess_html_with_article():
@@ -578,4 +579,97 @@ async def test_generator_critic_loop_programmatic_lock_in(tmp_path):
     assert selectors["author"] == "span.author"
     assert selectors["date"] == "time.pubdate"
     assert selectors["body"] == "div.content"
+
+
+def test_annotate_ground_truth():
+    # 1. Headline, Date (time tag with datetime), and Author
+    html = """
+    <div>
+        <h1 class="title-class">The Silicon Valley Crisis</h1>
+        <span class="byline">By John Doe</span>
+        <time class="date-class" datetime="2026-07-06T12:00:00Z">July 6</time>
+    </div>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    gt = {
+        "headline": "The Silicon Valley Crisis",
+        "datePublished": "2026-07-06T12:00:00Z",
+        "authors": ["John Doe"]
+    }
+
+    annotate_ground_truth(soup, gt)
+
+    title_el = soup.find(attrs={"data-is-title-gt": "true"})
+    assert title_el is not None
+    assert title_el.name == "h1"
+    assert title_el.get_text() == "The Silicon Valley Crisis"
+
+    author_el = soup.find(attrs={"data-is-author-gt": "true"})
+    assert author_el is not None
+    assert author_el.name == "span"
+    assert author_el.get_text() == "By John Doe"
+
+    date_el = soup.find(attrs={"data-is-date-gt": "true"})
+    assert date_el is not None
+    assert date_el.name == "time"
+    assert date_el["datetime"] == "2026-07-06T12:00:00Z"
+
+
+def test_annotate_ground_truth_variants():
+    # Test date in plain text format and multiple authors in a single tag
+    html = """
+    <div>
+        <div class="article-title">Silicon Valley’s Crisis!</div>
+        <div class="meta">Published: June 18, 2026</div>
+        <div class="authors">By Jane Doe and John Smith</div>
+    </div>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    gt = {
+        "headline": "Silicon Valley's Crisis",
+        "datePublished": "2026-06-18T00:00:00Z",
+        "authors": ["Jane Doe", "John Smith"]
+    }
+
+    annotate_ground_truth(soup, gt)
+
+    title_el = soup.find(attrs={"data-is-title-gt": "true"})
+    assert title_el is not None
+    assert title_el.get_text() == "Silicon Valley’s Crisis!"
+
+    date_el = soup.find(attrs={"data-is-date-gt": "true"})
+    assert date_el is not None
+    assert "June 18, 2026" in date_el.get_text()
+
+    author_els = soup.find_all(attrs={"data-is-author-gt": "true"})
+    assert len(author_els) > 0
+    assert any("Jane Doe" in el.get_text() for el in author_els)
+
+
+def test_annotate_ground_truth_nested_authors():
+    # Test multiple authors in nested tags
+    html = """
+    <div class="authors">
+        <span class="author-link">Jane Doe</span> and 
+        <span class="author-link">John Smith</span>
+    </div>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    gt = {
+        "headline": "Test Title",
+        "datePublished": "2026-06-18T00:00:00Z",
+        "authors": ["Jane Doe", "John Smith"]
+    }
+    annotate_ground_truth(soup, gt)
+
+    # We should have annotated the two inner span tags, not the parent div
+    author_spans = soup.find_all("span", attrs={"data-is-author-gt": "true"})
+    assert len(author_spans) == 2
+    texts = [span.get_text() for span in author_spans]
+    assert "Jane Doe" in texts
+    assert "John Smith" in texts
+
+    parent_div = soup.find("div", class_="authors")
+    assert not parent_div.has_attr("data-is-author-gt")
+
 

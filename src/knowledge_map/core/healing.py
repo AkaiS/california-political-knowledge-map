@@ -169,6 +169,129 @@ def preprocess_html(html: str) -> str:
     return str(root)
 
 
+def _annotate_title(soup: BeautifulSoup, gt_title: str) -> None:
+    if not gt_title:
+        return
+    gt_clean = clean_and_normalize_text(gt_title).lower()
+    if not gt_clean:
+        return
+
+    best_tag = None
+    best_ratio = 0.0
+
+    for tag in soup.find_all(True):
+        if tag.name in ["script", "style", "html", "body"]:
+            continue
+        text = clean_and_normalize_text(tag.get_text())
+        if not text:
+            continue
+        ratio = edit_distance_ratio(text.lower(), gt_clean)
+        if ratio >= 0.90:
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_tag = tag
+            elif ratio == best_ratio and best_tag:
+                if best_tag in tag.parents:
+                    best_tag = tag
+
+    if best_tag:
+        best_tag["data-is-title-gt"] = "true"
+
+
+def _annotate_date(soup: BeautifulSoup, gt_date_raw: str) -> None:
+    if not gt_date_raw:
+        return
+    gt_dt = parse_date_string(gt_date_raw)
+    if not gt_dt:
+        return
+    gt_day = gt_dt.astimezone(timezone.utc).date()
+
+    best_tag = None
+
+    for tag in soup.find_all(True):
+        if tag.name in ["script", "style", "html", "body"]:
+            continue
+
+        if tag.name == "time" and tag.has_attr("datetime"):
+            dt_attr = parse_date_string(tag["datetime"])
+            if dt_attr and dt_attr.astimezone(timezone.utc).date() == gt_day:
+                best_tag = tag
+                break
+
+        text = tag.get_text().strip()
+        if text and len(text) < 100:
+            import re
+            cleaned_text = re.sub(
+                r'^(published|posted|updated|date|on|at|modified|created)\b\s*(on|at)?\s*:?\s*',
+                '',
+                text,
+                flags=re.IGNORECASE
+            ).strip()
+            dt_text = parse_date_string(cleaned_text)
+            if dt_text and dt_text.astimezone(timezone.utc).date() == gt_day:
+                if not best_tag or tag in best_tag.descendants or (best_tag not in tag.descendants):
+                    best_tag = tag
+
+    if best_tag:
+        best_tag["data-is-date-gt"] = "true"
+
+
+def _annotate_authors(soup: BeautifulSoup, gt_authors: List[str]) -> None:
+    if not gt_authors:
+        return
+
+    normalized_gts = []
+    for a in gt_authors:
+        normalized_gts.extend(normalize_author_string(a))
+
+    for gt_author in normalized_gts:
+        best_tag = None
+        best_ratio = 0.0
+        for tag in soup.find_all(True):
+            if tag.name in ["script", "style", "html", "body"]:
+                continue
+            text = tag.get_text().strip()
+            if not text:
+                continue
+            normalized_exts = normalize_author_string(text)
+            for ext in normalized_exts:
+                ratio = edit_distance_ratio(ext, gt_author)
+                if ratio >= 0.90:
+                    if ratio > best_ratio:
+                        best_ratio = ratio
+                        best_tag = tag
+                    elif ratio == best_ratio and best_tag:
+                        if best_tag in tag.parents:
+                            best_tag = tag
+        if best_tag:
+            best_tag["data-is-author-gt"] = "true"
+
+
+def annotate_ground_truth(soup: BeautifulSoup, gt: Dict[str, Any]) -> None:
+    """
+    Finds and annotates the ground truth title, author, and date elements in the soup
+    with special data attributes:
+      - data-is-title-gt="true"
+      - data-is-author-gt="true"
+      - data-is-date-gt="true"
+    This makes it easier for the generator LLM to identify the target elements.
+    """
+    # 1. Title
+    headline = gt.get("headline")
+    if headline:
+        _annotate_title(soup, headline)
+
+    # 2. Date
+    date_pub = gt.get("datePublished")
+    if date_pub:
+        _annotate_date(soup, date_pub)
+
+    # 3. Authors
+    authors = gt.get("authors")
+    if authors:
+        _annotate_authors(soup, authors)
+
+
 def _get_model():
     load_dotenv()
     ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -191,9 +314,13 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "2. author: The author(s) name(s).\n"
         "3. date: The publication date.\n"
         "4. body: The main body text of the article (excluding sidebars, ads, headers, footers, and other navigation).\n\n"
-        "You will be provided with the target ground-truth metadata (which may have headline, datePublished, authors) to help you match elements.\n"
-        "Output the selectors as CSS selectors in the structured format matching the output schema.\n"
-        "Ensure the selectors are precise and resilient. Avoid overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based selectors work."
+        "To guide you, we have programmatically located the ground-truth elements in the HTML and annotated them with helper attributes:\n"
+        "- 'data-is-title-gt=\"true\"' marks the article title.\n"
+        "- 'data-is-author-gt=\"true\"' marks the author byline.\n"
+        "- 'data-is-date-gt=\"true\"' marks the publication date.\n\n"
+        "You MUST prioritize targeting these annotated elements when generating selectors for title, author, and date. "
+        "Keep your selectors simple, precise, and resilient, avoiding overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based or ID selectors work.\n"
+        "Output the selectors as CSS selectors in the structured format matching the output schema."
     )
     return Agent(
         model,
@@ -287,6 +414,10 @@ async def run_selector_healing_flow(
 
         # Preprocess HTML
         cleaned_html = preprocess_html(raw_html)
+        if cleaned_html:
+            cleaned_soup = BeautifulSoup(cleaned_html, "html.parser")
+            annotate_ground_truth(cleaned_soup, gt)
+            cleaned_html = str(cleaned_soup)
 
         # Initialize Agents
         generator = generator_agent or get_generator_agent()
