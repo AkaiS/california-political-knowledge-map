@@ -73,10 +73,10 @@ def test_preprocess_html_with_article():
     assert soup.find("iframe") is None
     assert soup.find("img") is None
     
-    # Verify layout & structural elements are PRESERVED (not stripped)
-    assert soup.find("footer") is not None
-    assert soup.find("nav") is not None
-    assert soup.find("noscript") is not None
+    # Verify layout & structural elements are stripped again
+    assert soup.find("footer") is None
+    assert soup.find("nav") is None
+    assert soup.find("noscript") is None
     
     # Verify the body and its cleaned attributes
     body = soup.find("body")
@@ -141,10 +141,10 @@ def test_preprocess_html_fallback_no_article():
     assert soup.find("iframe") is None
     assert soup.find("img") is None
     
-    # Verify layout & structural elements are PRESERVED
-    assert soup.find("footer") is not None
-    assert soup.find("nav") is not None
-    assert soup.find("noscript") is not None
+    # Verify layout & structural elements are stripped again
+    assert soup.find("footer") is None
+    assert soup.find("nav") is None
+    assert soup.find("noscript") is None
     
     # Verify attributes: class and id are kept, others are stripped
     body = soup.find("body")
@@ -168,6 +168,43 @@ def test_preprocess_html_fallback_no_article():
     date_time = soup.find("time")
     assert date_time is not None
     assert date_time.get("datetime") == "2026-07-07"
+
+
+def test_make_selector_absolute():
+    from knowledge_map.core.healing import make_selector_absolute
+    
+    html = """
+    <html>
+    <body>
+        <div class="main-content" id="main-id">
+            <header class="story-header">
+                <h1 class="title">Headline</h1>
+                <span class="author">By Author</span>
+            </header>
+            <div class="entry-content">
+                <p>Paragraph 1</p>
+                <p>Paragraph 2</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # 1. Test title
+    title_sel = make_selector_absolute(html, "h1.title")
+    assert title_sel == "#main-id > header.story-header > h1.title"
+    
+    # 2. Test author
+    author_sel = make_selector_absolute(html, "span.author")
+    assert author_sel == "#main-id > header.story-header > span.author"
+    
+    # 3. Test body (multiple paragraphs)
+    body_sel = make_selector_absolute(html, "div.entry-content p")
+    assert body_sel == "#main-id > div.entry-content > p"
+
+    # 4. Test missing selector fallback
+    missing_sel = make_selector_absolute(html, ".does-not-exist")
+    assert missing_sel == ".does-not-exist"
 
 
 def test_init_db_resets_healing_in_progress(tmp_path):
@@ -332,9 +369,9 @@ async def test_generator_critic_loop_immediate_success(tmp_path):
     assert row["trigger_article_url"] == "https://testpub.com/art1"
     
     selectors = json.loads(row["selectors_json"])
-    assert selectors["title"] == "h1.entry-title"
-    assert selectors["author"] == "span.author"
-    assert selectors["body"] == "div.content"
+    assert selectors["title"] == "body > h1.entry-title"
+    assert selectors["author"] == "body > span.author"
+    assert selectors["body"] == "body > div.content"
     
     # Verify healing_in_progress is cleared
     pub = get_publication("testpub", db_path=db_path)
@@ -430,7 +467,7 @@ async def test_generator_critic_loop_retry_success(tmp_path):
     assert row["critic_iterations"] == 2
     
     selectors = json.loads(row["selectors_json"])
-    assert selectors["title"] == "h1.entry-title"
+    assert selectors["title"] == "body > h1.entry-title"
 
 
 @pytest.mark.anyio
@@ -604,10 +641,10 @@ async def test_generator_critic_loop_programmatic_lock_in(tmp_path):
     assert row["critic_iterations"] == 2
     
     selectors = json.loads(row["selectors_json"])
-    assert selectors["title"] == "h1.entry-title"
-    assert selectors["author"] == "span.author"
-    assert selectors["date"] == "time.pubdate"
-    assert selectors["body"] == "div.content"
+    assert selectors["title"] == "body > h1.entry-title"
+    assert selectors["author"] == "body > span.author"
+    assert selectors["date"] == "body > time.pubdate"
+    assert selectors["body"] == "body > div.content"
 
 
 def test_annotate_ground_truth():
