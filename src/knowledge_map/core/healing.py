@@ -4,7 +4,7 @@ import logging
 import sqlite3
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timezone
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.models.ollama import OllamaModel
@@ -133,24 +133,36 @@ def validate_field(field: str, value: Any, gt: Dict[str, Any], body_element: Opt
 
 def preprocess_html(html: str) -> str:
     """
-    Cleans raw HTML by stripping non-article tags and removing all attributes
-    except 'class' and 'id' to reduce token consumption and noise.
+    Cleans raw HTML by first attempting to grab an article element, then
+    stripping non-article tags and removing all attributes except 'class'
+    and 'id' to reduce token consumption and noise.
     """
     if not html:
         return ""
     soup = BeautifulSoup(html, "html.parser")
+    
+    # Try to grab the first article element
+    article = soup.find("article")
+    root = article if article else soup
+
     # Strip specified tags
-    for tag in soup(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img"]):
+    for tag in root(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img", "header", "aside", "figure"]):
         tag.decompose()
+        
     # Strip all attributes except class and id
-    for tag in soup.find_all(True):
+    elements = root.find_all(True)
+    if isinstance(root, Tag) and root.name != "[document]":
+        elements = [root] + elements
+        
+    for tag in elements:
         new_attrs = {}
         if tag.has_attr("id"):
             new_attrs["id"] = tag["id"]
         if tag.has_attr("class"):
             new_attrs["class"] = tag["class"]
         tag.attrs = new_attrs
-    return str(soup)
+        
+    return str(root)
 
 
 def _get_model():
@@ -175,6 +187,7 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "2. author: The author(s) name(s).\n"
         "3. date: The publication date.\n"
         "4. body: The main body text of the article (excluding sidebars, ads, headers, footers, and other navigation).\n\n"
+        "WARNING! Avoid gathering summary sections.\n"
         "You will be provided with the target ground-truth metadata (which may have headline, datePublished, authors) to help you match elements.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema.\n"
         "Ensure the selectors are precise and resilient. Avoid overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based selectors work."

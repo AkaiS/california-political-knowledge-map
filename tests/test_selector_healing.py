@@ -26,7 +26,7 @@ from knowledge_map.core.healing import (
     CriticFeedback
 )
 
-def test_preprocess_html():
+def test_preprocess_html_with_article():
     raw_html = """
     <html>
     <head>
@@ -36,7 +36,7 @@ def test_preprocess_html():
     </head>
     <body class="main-body" id="page-body" data-tracking="123" style="margin: 0;">
         <nav class="main-nav">Navigation</nav>
-        <article class="article-content">
+        <article class="article-content" id="art-id" data-extra="remove-me">
             <h1 class="entry-title" id="art-title" data-large-attr="large-value-that-we-strip">Actual Title</h1>
             <span class="author">By Author Name</span>
             <svg>svg block</svg>
@@ -48,6 +48,64 @@ def test_preprocess_html():
                 <p>Second paragraph of the article.</p>
             </div>
         </article>
+        <footer class="footer">Footer content</footer>
+    </body>
+    </html>
+    """
+    
+    cleaned = preprocess_html(raw_html)
+    soup = BeautifulSoup(cleaned, "html.parser")
+    
+    # Verify the root is the article and its attributes are cleaned
+    article = soup.find("article")
+    assert article is not None
+    assert article.get("class") == ["article-content"]
+    assert article.get("id") == "art-id"
+    assert "data-extra" not in article.attrs
+    
+    # Verify stripped tags inside/outside
+    assert soup.find("head") is None
+    assert soup.find("script") is None
+    assert soup.find("style") is None
+    assert soup.find("svg") is None
+    assert soup.find("noscript") is None
+    assert soup.find("footer") is None
+    assert soup.find("nav") is None
+    assert soup.find("iframe") is None
+    assert soup.find("img") is None
+    
+    # Body was outside article, so it should not be in the parsed tree
+    assert soup.find("body") is None
+    
+    h1 = soup.find("h1")
+    assert h1 is not None
+    assert h1.get("class") == ["entry-title"]
+    assert h1.get("id") == "art-title"
+    assert "data-large-attr" not in h1.attrs
+
+
+def test_preprocess_html_fallback_no_article():
+    raw_html = """
+    <html>
+    <head>
+        <title>Article Title</title>
+        <style>body { color: red; }</style>
+        <script>console.log("hello");</script>
+    </head>
+    <body class="main-body" id="page-body" data-tracking="123" style="margin: 0;">
+        <nav class="main-nav">Navigation</nav>
+        <div class="article-content">
+            <h1 class="entry-title" id="art-title" data-large-attr="large-value-that-we-strip">Actual Title</h1>
+            <span class="author">By Author Name</span>
+            <svg>svg block</svg>
+            <noscript>noscript block</noscript>
+            <iframe src="ad.html"></iframe>
+            <img src="img.jpg" />
+            <div class="content-body">
+                <p>First paragraph of the article.</p>
+                <p>Second paragraph of the article.</p>
+            </div>
+        </div>
         <footer class="footer">Footer content</footer>
     </body>
     </html>
