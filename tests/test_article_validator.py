@@ -652,7 +652,7 @@ def test_circuit_breaker_trips(tmp_path):
     for url in urls:
         cache_scraped_html(url, "testpub", html_fail, validation="PENDING", db_path=db_path)
         
-    with patch("knowledge_map.core.validation.trigger_selector_healing_stub") as mock_healing:
+    with patch("knowledge_map.core.healing.trigger_selector_healing_stub") as mock_healing:
         service.validate_pending_articles()
         
         # Verify that the circuit breaker tripped
@@ -826,7 +826,7 @@ def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path
     # Trip it first
     for i in range(4):
         cache_scraped_html(f"https://testpub.com/fail{i}", "testpub", html_fail, validation="PENDING", db_path=db_path)
-    with patch("knowledge_map.core.validation.trigger_selector_healing_stub") as mock_healing:
+    with patch("knowledge_map.core.healing.trigger_selector_healing_stub") as mock_healing:
         service.validate_pending_articles()
     
     pub = get_publication("testpub", db_path=db_path)

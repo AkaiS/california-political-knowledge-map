@@ -214,7 +214,7 @@ async def test_validation_outcomes_and_circuit_breaker(test_db, caplog, capsys):
     validator = ArticleValidatorService(db_path=test_db)
 
     with patch("knowledge_map.core.validation.logfire", create=True) as mock_logfire, \
-         patch("knowledge_map.core.validation.trigger_selector_healing_stub") as mock_healing, \
+         patch("knowledge_map.core.healing.trigger_selector_healing_stub") as mock_healing, \
          caplog.at_level(logging.INFO):
 
         

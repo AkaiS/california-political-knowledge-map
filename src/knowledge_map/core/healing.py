@@ -49,7 +49,47 @@ class CriticFeedback(BaseModel):
     issues: List[str]
 
 
+def trigger_selector_healing_stub(publication_id: str, tripping_article_url: str, db_path: str = DEFAULT_DB_PATH) -> None:
+    """
+    Seam for invoking the Selector Healing Pipeline when the circuit breaker trips.
+    Spawns a detached background process to perform healing without blocking the CLI.
+    """
+    logger.info(
+        f"Circuit Breaker tripped for publication '{publication_id}' "
+        f"due to article '{tripping_article_url}'. Triggering Selector Healing Pipeline."
+    )
+    import subprocess
+    import sys
 
+    cmd = [
+        sys.executable,
+        "-m",
+        "knowledge_map.core.healing_runner",
+        publication_id,
+        tripping_article_url,
+        db_path
+    ]
+
+    popen_kwargs = {}
+    if sys.platform == "win32":
+        # Windows detached process flags
+        CREATE_NO_WINDOW = 0x08000000
+        DETACHED_PROCESS = 0x00000008
+        popen_kwargs["creationflags"] = CREATE_NO_WINDOW | DETACHED_PROCESS
+    else:
+        # POSIX detached process flags
+        popen_kwargs["start_new_session"] = True
+
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **popen_kwargs)
+        logger.info(f"Successfully spawned detached selector healing process for '{publication_id}'.")
+    except Exception as e:
+        logger.error(f"Failed to spawn selector healing process: {e}", exc_info=True)
+
+try:
+    import logfire
+except ImportError:
+    logfire = None
 
 
 def preprocess_html(html: str) -> str:
