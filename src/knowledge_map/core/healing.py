@@ -235,7 +235,7 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "- 'data-is-title-gt=\"true\"' marks the article title.\n"
         "- 'data-is-author-gt=\"true\"' marks the author byline.\n"
         "- 'data-is-date-gt=\"true\"' marks the publication date.\n\n"
-        "You MUST prioritize targeting these annotated elements when generating selectors for title, author, and date. "
+        "You MUST prioritize targeting these annotated elements when generating selectors for title, author, and date. However, YOU MAY NOT hardcode any of these attributes into your selectors. "
         "Keep your selectors simple, precise, and resilient, avoiding overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based or ID selectors work.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema."
     )
@@ -260,7 +260,7 @@ def get_critic_agent(defer_check: bool = True) -> Agent:
         "Validate the proposed selectors and extracted content against the following criteria:\n"
         "1. Presence: Check that title, author, date, and body selectors successfully extracted non-empty content.\n"
         "2. Cleanliness: Check that the extracted title, author, date, and body do not contain HTML, navigation links, header/footer boilerplate, or ad text.\n"
-        "3. Length and Coverage: The body text must contain actual paragraphs of the article and have a length consistent with a full news article (if ground-truth wordCount is present, check that the extracted body word count is close/reasonable, usually within 80-120% ratio).\n\n"
+        "3. Length and Coverage: The body text must contain actual paragraphs of the article and have a length consistent with a full news article (if ground-truth wordCount is present, check that the extracted body word count is close/reasonable, usually within 90-110% ratio).\n\n"
         "Return structured feedback:\n"
         "- is_valid: True if selectors successfully extract clean, correct content. False otherwise.\n"
         "- issues: A list of specific issues found if is_valid is False (e.g. 'Extracted title was empty', 'Extracted body contained header links'). If is_valid is True, this must be empty."

@@ -467,7 +467,7 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         # Fallback sanity checks on body_elements
         body_elements = extracted.get("body_elements") or []
         if body_elements:
-            total_text = "\n".join(el.get_text() for el in body_elements)
+            total_text = "\n\n".join(el.get_text() for el in body_elements)
             total_chars = len(total_text)
             
             # Link density
@@ -724,7 +724,7 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
             date_val = date_el.get_text().strip()
             
     body_els = soup.select(selectors.body) if selectors.body else []
-    body_text = "\n".join(el.get_text().strip() for el in body_els) if body_els else ""
+    body_text = "\n\n".join(el.get_text().strip() for el in body_els) if body_els else ""
     
     return {
         "title": title,
