@@ -484,7 +484,7 @@ async def run_selector_healing_flow(
 
         run_result = None
         iteration = 0
-        max_iterations = 3
+        max_iterations = 5
         last_selectors = None
         absolute_selectors = None
         approved = False
