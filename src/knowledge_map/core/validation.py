@@ -380,12 +380,12 @@ ENGLISH_STOPWORDS = {
     "again", "further", "once"
 }
 
-def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) -> Tuple[bool, List[str], int]:
+def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) -> Tuple[bool, Dict[str, str], int]:
     """
     Validates CSS-extracted content against JSON-LD ground truth per validation rules.
-    Returns a tuple of (is_valid, error_messages, failure_points).
+    Returns a tuple of (is_valid, field_errors, failure_points).
     """
-    errors = []
+    field_errors = {}
     points = 0
     
     # 1. Title Validation
@@ -397,7 +397,7 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
             clean_and_normalize_text(gt_headline).lower()
         )
         if ratio < 0.90:
-            errors.append(f"Title mismatch: ratio {ratio:.3f} < 0.90 ('{ext_title}' vs '{gt_headline}')")
+            field_errors["title"] = f"Title mismatch: ratio {ratio:.3f} < 0.90 ('{ext_title}' vs '{gt_headline}')"
             points = 3
             
     # 2. Author Validation
@@ -419,7 +419,7 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
                     matched = True
                     break
             if not matched:
-                errors.append(f"Author mismatch: JSON-LD author '{gt_a}' not matched in CSS extraction '{ext_author_raw}'")
+                field_errors["author"] = f"Author mismatch: JSON-LD author '{gt_a}' not matched in CSS extraction '{ext_author_raw}'"
                 points = 3
                 
     # 3. Date Validation
@@ -431,13 +431,13 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         ext_dt = parse_date_string(ext_date_raw)
         
         if not gt_dt or not ext_dt:
-            errors.append(f"Date parsing failed: JSON-LD date '{gt_date_raw}' parsed as {gt_dt}, Extracted date '{ext_date_raw}' parsed as {ext_dt}")
+            field_errors["date"] = f"Date parsing failed: JSON-LD date '{gt_date_raw}' parsed as {gt_dt}, Extracted date '{ext_date_raw}' parsed as {ext_dt}"
             points = 3
         else:
             gt_day = gt_dt.astimezone(datetime.timezone.utc).date()
             ext_day = ext_dt.astimezone(datetime.timezone.utc).date()
             if gt_day != ext_day:
-                errors.append(f"Date mismatch: JSON-LD date '{gt_day}' != Extracted date '{ext_day}'")
+                field_errors["date"] = f"Date mismatch: JSON-LD date '{gt_day}' != Extracted date '{ext_day}'"
                 points = 3
                 
     # 4. Body Validation
@@ -451,24 +451,24 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         if gt_word_count > 0:
             ratio = ext_word_count / gt_word_count
             if ratio < 0.9 or ratio > 1.1:
-                errors.append(f"Body word count ratio {ratio:.3f} outside [0.9, 1.1] ({ext_word_count} vs {gt_word_count})")
+                field_errors["body"] = f"Body word count ratio {ratio:.3f} outside [0.9, 1.1] ({ext_word_count} vs {gt_word_count})"
                 points = 3
         else:
             # If wordCount is 0 or negative in JSON-LD, skip ratio
             pass
     else:
-        # Fallback sanity checks on body_element
-        body_el = extracted.get("body_element")
-        if body_el:
-            total_text = body_el.get_text()
+        # Fallback sanity checks on body_elements
+        body_elements = extracted.get("body_elements") or []
+        if body_elements:
+            total_text = "\n".join(el.get_text() for el in body_elements)
             total_chars = len(total_text)
             
             # Link density
-            anchor_chars = sum(len(a.get_text()) for a in body_el.find_all('a'))
+            anchor_chars = sum(sum(len(a.get_text()) for a in el.find_all('a')) for el in body_elements)
             link_density = anchor_chars / total_chars if total_chars > 0 else 0.0
             
             if link_density >= 0.15:
-                errors.append(f"Fallback link density failure: {link_density:.3f} >= 0.15")
+                field_errors["body"] = f"Fallback link density failure: {link_density:.3f} >= 0.15"
                 points = max(points, 1)
                 
             # Stopword ratio
@@ -476,20 +476,20 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
             cleaned_words = [w for w in cleaned_words if w]
             
             if not cleaned_words:
-                errors.append("Fallback stopword ratio failure: No words found in body")
+                field_errors["body"] = "Fallback stopword ratio failure: No words found in body"
                 points = max(points, 1)
             else:
                 stopword_count = sum(1 for w in cleaned_words if w in ENGLISH_STOPWORDS)
                 stopword_ratio = stopword_count / len(cleaned_words)
                 if stopword_ratio <= 0.25:
-                    errors.append(f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25")
+                    field_errors["body"] = f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25"
                     points = max(points, 1)
         else:
-            errors.append("No body element found for fallback checks")
+            field_errors["body"] = "No body elements found for fallback checks"
             points = max(points, 1)
             
-    is_valid = len(errors) == 0
-    return is_valid, errors, points
+    is_valid = len(field_errors) == 0
+    return is_valid, field_errors, points
 
 
 class ArticleValidatorService:
@@ -526,7 +526,7 @@ class ArticleValidatorService:
 
         for v in versions:
             extracted = extract_fields(raw_html, v.selectors)
-            is_valid, errors, points = validate_extraction(extracted, gt)
+            is_valid, field_errors, points = validate_extraction(extracted, gt)
             if is_valid:
                 return {
                     "status": "VALIDATED",
@@ -536,6 +536,7 @@ class ArticleValidatorService:
                     "extracted": extracted
                 }
             else:
+                errors = list(field_errors.values())
                 if points < best_points:
                     best_points = points
                     best_attempt = v
@@ -715,15 +716,15 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
         else:
             date_val = date_el.get_text().strip()
             
-    body_el = soup.select_one(selectors.body) if selectors.body else None
-    body_text = body_el.get_text().strip() if body_el else ""
+    body_els = soup.select(selectors.body) if selectors.body else []
+    body_text = "\n".join(el.get_text().strip() for el in body_els) if body_els else ""
     
     return {
         "title": title,
         "author": author,
         "date": date_val,
         "body": body_text,
-        "body_element": body_el
+        "body_elements": body_els
     }
 
 

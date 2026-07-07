@@ -75,8 +75,13 @@ def test_preprocess_html_with_article():
     assert soup.find("iframe") is None
     assert soup.find("img") is None
     
-    # Body was outside article, so it should not be in the parsed tree
-    assert soup.find("body") is None
+    # Verify the body and its cleaned attributes
+    body = soup.find("body")
+    assert body is not None
+    assert body.get("class") == ["main-body"]
+    assert body.get("id") == "page-body"
+    assert "data-tracking" not in body.attrs
+    assert "style" not in body.attrs
     
     h1 = soup.find("h1")
     assert h1 is not None

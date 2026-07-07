@@ -151,7 +151,7 @@ def test_validate_extraction():
         "date": "2026-07-02T18:11:34-07:00",
         "author": "By Ana B. Ibarra and John Doe",
         "body": " ".join(["word"] * 100),
-        "body_element": BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")
+        "body_elements": [BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")]
     }
     valid, errors, points = validate_extraction(extracted_good, ground_truth)
     assert valid is True
@@ -170,7 +170,7 @@ def test_validate_extraction():
         "date": "2026-07-02T18:11:34-07:00",
         "author": "By Ana B. Ibarra and John's Doe",
         "body": " ".join(["word"] * 100),
-        "body_element": BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")
+        "body_elements": [BeautifulSoup("<div>" + " ".join(["word"] * 100) + "</div>", "html.parser")]
     }
     valid, errors, points = validate_extraction(extracted_dirty, ground_truth_dirty)
     assert valid is True
@@ -182,7 +182,7 @@ def test_validate_extraction():
     extracted_bad_title["title"] = "Sports Game Result"
     valid, errors, points = validate_extraction(extracted_bad_title, ground_truth)
     assert valid is False
-    assert any("Title mismatch" in e for e in errors)
+    assert "title" in errors
     assert points == 3
 
     # 3. Author mismatch failure (3 points)
@@ -190,7 +190,7 @@ def test_validate_extraction():
     extracted_bad_author["author"] = "By Jane Smith"
     valid, errors, points = validate_extraction(extracted_bad_author, ground_truth)
     assert valid is False
-    assert any("Author mismatch" in e for e in errors)
+    assert "author" in errors
     assert points == 3
 
     # 4. Date mismatch failure (3 points)
@@ -198,7 +198,7 @@ def test_validate_extraction():
     extracted_bad_date["date"] = "2026-07-04"
     valid, errors, points = validate_extraction(extracted_bad_date, ground_truth)
     assert valid is False
-    assert any("Date mismatch" in e for e in errors)
+    assert "date" in errors
     assert points == 3
 
     # 5. Word count ratio failure (3 points)
@@ -206,7 +206,7 @@ def test_validate_extraction():
     extracted_bad_wc["body"] = " ".join(["word"] * 50)  # 50 words instead of 100 (ratio 0.5)
     valid, errors, points = validate_extraction(extracted_bad_wc, ground_truth)
     assert valid is False
-    assert any("word count ratio" in e for e in errors)
+    assert "body" in errors
     assert points == 3
 
     # 6. Fallback sanity check success (no wordCount in JSON-LD)
@@ -220,7 +220,7 @@ def test_validate_extraction():
         "date": "2026-07-02T18:11:34-07:00",
         "author": "By Ana B. Ibarra and John Doe",
         "body": "The governor signed a bill today. It was a very good day for the environment and we are happy.",
-        "body_element": BeautifulSoup(body_html_good, "html.parser")
+        "body_elements": [BeautifulSoup(body_html_good, "html.parser")]
     }
     valid, errors, points = validate_extraction(extracted_fallback_good, ground_truth_no_wc)
     assert valid is True
@@ -229,19 +229,19 @@ def test_validate_extraction():
     # 7. Fallback failure: Link Density too high (1 point)
     body_html_bad_links = "<div>" + "".join(f"<a href='/url'>{w}</a> " for w in ["the", "governor", "signed", "a", "bill"]) + "</div>"
     extracted_fallback_bad_links = extracted_fallback_good.copy()
-    extracted_fallback_bad_links["body_element"] = BeautifulSoup(body_html_bad_links, "html.parser")
+    extracted_fallback_bad_links["body_elements"] = [BeautifulSoup(body_html_bad_links, "html.parser")]
     valid, errors, points = validate_extraction(extracted_fallback_bad_links, ground_truth_no_wc)
     assert valid is False
-    assert any("link density" in e for e in errors)
+    assert "body" in errors
     assert points == 1
 
     # 8. Fallback failure: Stopwords too low (1 point)
     body_html_bad_stopwords = "<div>Newsom legislature Sacramento environment environment environment environment</div>"
     extracted_fallback_bad_stopwords = extracted_fallback_good.copy()
-    extracted_fallback_bad_stopwords["body_element"] = BeautifulSoup(body_html_bad_stopwords, "html.parser")
+    extracted_fallback_bad_stopwords["body_elements"] = [BeautifulSoup(body_html_bad_stopwords, "html.parser")]
     valid, errors, points = validate_extraction(extracted_fallback_bad_stopwords, ground_truth_no_wc)
     assert valid is False
-    assert any("stopword ratio" in e for e in errors)
+    assert "body" in errors
     assert points == 1
 
 

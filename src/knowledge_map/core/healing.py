@@ -24,7 +24,9 @@ from knowledge_map.core.validation import (
     normalize_author_string,
     parse_date_string,
     ENGLISH_STOPWORDS,
-    clean_and_normalize_text
+    clean_and_normalize_text,
+    extract_fields,
+    validate_extraction
 )
 
 logger = logging.getLogger(__name__)
@@ -46,93 +48,7 @@ class CriticFeedback(BaseModel):
     issues: List[str]
 
 
-def validate_field(field: str, value: Any, gt: Dict[str, Any], body_element: Optional[Any] = None) -> Tuple[bool, str]:
-    if field == "title":
-        ext_title = value or ""
-        gt_headline = gt.get("headline")
-        if gt_headline:
-            if not ext_title.strip():
-                return False, "Extracted title was empty."
-            ratio = edit_distance_ratio(
-                clean_and_normalize_text(ext_title).lower(),
-                clean_and_normalize_text(gt_headline).lower()
-            )
-            if ratio < 0.90:
-                return False, f"Title mismatch: ratio {ratio:.3f} < 0.90 ('{ext_title}' vs '{gt_headline}')"
-        return True, ""
 
-    elif field == "author":
-        ext_author_raw = value or ""
-        gt_authors = gt.get("authors")
-        if gt_authors:
-            if not ext_author_raw.strip():
-                return False, "Extracted author was empty."
-            normalized_gt = []
-            for a in gt_authors:
-                normalized_gt.extend(normalize_author_string(a))
-            normalized_ext = normalize_author_string(ext_author_raw)
-            for gt_a in normalized_gt:
-                matched = False
-                for ext_a in normalized_ext:
-                    if edit_distance_ratio(gt_a, ext_a) >= 0.90:
-                        matched = True
-                        break
-                if not matched:
-                    return False, f"Author mismatch: JSON-LD author '{gt_a}' not matched in CSS extraction '{ext_author_raw}'"
-        return True, ""
-
-    elif field == "date":
-        ext_date_raw = value
-        gt_date_raw = gt.get("datePublished")
-        if gt_date_raw:
-            if not ext_date_raw:
-                return False, "Extracted date was empty."
-            gt_dt = parse_date_string(gt_date_raw)
-            ext_dt = parse_date_string(ext_date_raw)
-            if not gt_dt or not ext_dt:
-                return False, f"Date parsing failed: JSON-LD date '{gt_date_raw}' parsed as {gt_dt}, Extracted date '{ext_date_raw}' parsed as {ext_dt}"
-            else:
-                gt_day = gt_dt.astimezone(timezone.utc).date()
-                ext_day = ext_dt.astimezone(timezone.utc).date()
-                if gt_day != ext_day:
-                    return False, f"Date mismatch: JSON-LD date '{gt_day}' != Extracted date '{ext_day}'"
-        return True, ""
-
-    elif field == "body":
-        ext_body = value or ""
-        gt_word_count = gt.get("wordCount")
-        if gt_word_count is not None:
-            if gt_word_count > 0:
-                if not ext_body.strip():
-                    return False, "Extracted body was empty."
-                ext_word_count = len(ext_body.split())
-                ratio = ext_word_count / gt_word_count
-                if ratio < 0.9 or ratio > 1.1:
-                    return False, f"Body word count ratio {ratio:.3f} outside [0.9, 1.1] ({ext_word_count} vs {gt_word_count})"
-        else:
-            if not ext_body.strip():
-                return False, "Extracted body was empty."
-            if body_element:
-                total_text = body_element.get_text()
-                total_chars = len(total_text)
-                anchor_chars = sum(len(a.get_text()) for a in body_element.find_all('a'))
-                link_density = anchor_chars / total_chars if total_chars > 0 else 0.0
-                if link_density >= 0.15:
-                    return False, f"Fallback link density failure: {link_density:.3f} >= 0.15"
-                cleaned_words = [w.strip(".,!?;:()[]{}'\"").lower() for w in total_text.split()]
-                cleaned_words = [w for w in cleaned_words if w]
-                if not cleaned_words:
-                    return False, "Fallback stopword ratio failure: No words found in body"
-                else:
-                    stopword_count = sum(1 for w in cleaned_words if w in ENGLISH_STOPWORDS)
-                    stopword_ratio = stopword_count / len(cleaned_words)
-                    if stopword_ratio <= 0.25:
-                        return False, f"Fallback stopword ratio failure: {stopword_ratio:.3f} <= 0.25"
-            else:
-                return False, "No body element found for fallback checks"
-        return True, ""
-
-    return False, "Unknown field"
 
 
 def preprocess_html(html: str) -> str:
@@ -143,14 +59,14 @@ def preprocess_html(html: str) -> str:
     """
     if not html:
         return ""
-    soup = BeautifulSoup(html, "html.parser")
+    root = BeautifulSoup(html, "html.parser")
     
     # Try to grab the first article element
-    article = soup.find("article")
-    root = article if article else soup
+    # article = soup.find("article")
+    # root = article if article else soup
 
     # Strip specified tags
-    for tag in root(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img", "header", "aside", "figure"]):
+    for tag in root(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img", "aside", "figure"]):
         tag.decompose()
         
     # Strip all attributes except class and id
@@ -486,46 +402,20 @@ async def run_selector_healing_flow(
                     setattr(last_selectors, field, confirmed_sel)
 
             # Extract content from HTML using proposed selectors
-            extracted_title = ""
-            extracted_author = ""
-            extracted_date = ""
-            extracted_body = ""
-            body_el = None
             try:
-                soup = BeautifulSoup(cleaned_html, "html.parser")
-                if last_selectors.title:
-                    el = soup.select_one(last_selectors.title)
-                    extracted_title = el.get_text().strip() if el else ""
-                if last_selectors.author:
-                    el = soup.select_one(last_selectors.author)
-                    extracted_author = el.get_text().strip() if el else ""
-                if last_selectors.date:
-                    el = soup.select_one(last_selectors.date)
-                    if el:
-                        if el.name == "time" and el.has_attr("datetime"):
-                            extracted_date = el["datetime"].strip()
-                        else:
-                            extracted_date = el.get_text().strip()
-                if last_selectors.body:
-                    body_el = soup.select_one(last_selectors.body)
-                    extracted_body = body_el.get_text().strip() if body_el else ""
+                extracted = extract_fields(cleaned_html, last_selectors)
             except Exception as e:
                 prompt = f"An error occurred when parsing with your selectors: {e}. Please correct them and try again."
                 continue
 
-            # Run programmatic validation for each field
-            field_validity = {}
-            field_errors = {}
-            for field in ["title", "author", "date", "body"]:
-                val = {
-                    "title": extracted_title,
-                    "author": extracted_author,
-                    "date": extracted_date,
-                    "body": extracted_body
-                }[field]
-                is_valid_field, err = validate_field(field, val, gt, body_element=body_el)
-                field_validity[field] = is_valid_field
-                field_errors[field] = err
+            # Run programmatic validation
+            is_valid_extraction, field_errors, points = validate_extraction(extracted, gt)
+            
+            # Map back to field_validity
+            field_validity = {
+                field: field not in field_errors
+                for field in ["title", "author", "date", "body"]
+            }
 
             # Run Critic Validation
             critic_input = (
@@ -536,10 +426,10 @@ async def run_selector_healing_flow(
                 f"- date selector: {last_selectors.date}\n"
                 f"- body selector: {last_selectors.body}\n\n"
                 f"Extracted Content:\n"
-                f"- Extracted Title: '{extracted_title}'\n"
-                f"- Extracted Author: '{extracted_author}'\n"
-                f"- Extracted Date: '{extracted_date}'\n"
-                f"- Extracted Body: '{extracted_body}'\n\n"
+                f"- Extracted Title: '{extracted.get('title', '')}'\n"
+                f"- Extracted Author: '{extracted.get('author', '')}'\n"
+                f"- Extracted Date: '{extracted.get('date', '')}'\n"
+                f"- Extracted Body: '{extracted.get('body', '')}'\n\n"
                 f"Ground-Truth Metadata:\n"
                 f"- Headline: {gt.get('headline', '')}\n"
                 f"- Publication Date: {gt.get('datePublished', '')}\n"
