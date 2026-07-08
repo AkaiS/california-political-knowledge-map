@@ -709,6 +709,7 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
             "more of",
             "learn more",
             "most popular",
+            "in summary",
         )
         return any(cleaned.startswith(prefix) for prefix in promotional_prefixes)
     
