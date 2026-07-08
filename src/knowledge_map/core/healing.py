@@ -266,7 +266,7 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "Assume that the entire body can be captured with a single selector.\n"
         "Keep your selectors simple, precise, and resilient, avoiding overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based or ID selectors work. \n"
         "Do not use identifiers that are unique to the current page such as postid-12345, post-12345, article_12345, etc."
-        "Avoid boilerplate sections that start with: READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
+        "Avoid sections meant to direct the reader to another page. They include phrases such as: READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema."
     )
     return Agent(
