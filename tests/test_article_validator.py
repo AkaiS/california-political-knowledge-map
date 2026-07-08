@@ -1147,7 +1147,48 @@ def test_extract_fields_illegitimate_parent_filtering():
     assert "Footer paragraph." not in extracted["body"]
 
 
+def test_extract_fields_promotional_filtering():
+    from knowledge_map.core.validation import extract_fields
+    from knowledge_map.schemas.selectors import ArticleSelectors
 
+    html = """
+    <html>
+    <body>
+        <div class="main-content">
+            <h1 class="entry-title">Actual Headline</h1>
+            <div class="entry-content">
+                <p>Real paragraph 1.</p>
+                <p>READ NEXT: Governor signs new education bill</p>
+                <p>Real paragraph 2.</p>
+                <p>[Read Next] Some other title</p>
+                <p>*More News* from the legislature</p>
+                <p>Most Popular: The primary debates</p>
+                <p>Learn More about the campaign</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="",
+        date="",
+        body="p"
+    )
 
+    extracted = extract_fields(html, selectors)
 
+    # Check that actual body paragraphs are present
+    assert "Real paragraph 1." in extracted["body"]
+    assert "Real paragraph 2." in extracted["body"]
+
+    # Check that promotional/recommendation links are filtered out
+    assert "READ NEXT" not in extracted["body"]
+    assert "Some other title" not in extracted["body"]
+    assert "More News" not in extracted["body"]
+    assert "Most Popular" not in extracted["body"]
+    assert "Learn More" not in extracted["body"]
+
+    # Check number of elements in body_elements matches expected (which is 2)
+    assert len(extracted["body_elements"]) == 2

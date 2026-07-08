@@ -695,6 +695,23 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
     def has_illegitimate_ancestor(el) -> bool:
         return any(parent.name in ILLEGITIMATE_ANCESTORS for parent in el.parents)
     
+    # Helper to check if element starts with a promotional prefix (e.g., READ NEXT)
+    def is_promotional_element(el) -> bool:
+        text = el.get_text()
+        if not text:
+            return False
+        cleaned = text.strip().lower()
+        # Remove leading non-alphanumeric punctuation
+        cleaned = re.sub(r"^[^a-z0-9]+", "", cleaned).strip()
+        promotional_prefixes = (
+            "read next",
+            "more news",
+            "more of",
+            "learn more",
+            "most popular",
+        )
+        return any(cleaned.startswith(prefix) for prefix in promotional_prefixes)
+    
     title_el = soup.select_one(selectors.title) if selectors.title else None
     if title_el and has_illegitimate_ancestor(title_el):
         title_el = None
@@ -715,7 +732,10 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
             date_val = date_el.get_text().strip()
             
     body_els = soup.select(selectors.body) if selectors.body else []
-    body_els = [el for el in body_els if not has_illegitimate_ancestor(el)]
+    body_els = [
+        el for el in body_els 
+        if not has_illegitimate_ancestor(el) and not is_promotional_element(el)
+    ]
     body_text = "\n\n".join(el.get_text().strip() for el in body_els) if body_els else ""
     
     return {
