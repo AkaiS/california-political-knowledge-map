@@ -1094,6 +1094,60 @@ def test_extract_json_ld_multiple_authors_edge_cases():
     assert gt["authors"] == ["Ana B. Ibarra", "John Doe", "Jane Smith"]
 
 
+def test_extract_fields_illegitimate_parent_filtering():
+    from knowledge_map.core.validation import extract_fields
+    from knowledge_map.schemas.selectors import ArticleSelectors
+
+    html = """
+    <html>
+    <body>
+        <div class="main-content">
+            <h1 class="entry-title">Actual Headline</h1>
+            <span class="author">Real Author</span>
+            <time class="pubdate" datetime="2026-07-07">July 7, 2026</time>
+            <div class="entry-content">
+                <p>Real paragraph 1.</p>
+                <p>Real paragraph 2.</p>
+            </div>
+        </div>
+        <aside class="sidebar">
+            <h1 class="entry-title">Sidebar Title</h1>
+            <span class="author">Sidebar Author</span>
+            <div class="entry-content">
+                <p>Sidebar paragraph.</p>
+            </div>
+        </aside>
+        <footer class="footer">
+            <span class="author">Footer Author</span>
+            <p>Footer paragraph.</p>
+        </footer>
+    </body>
+    </html>
+    """
+
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time.pubdate",
+        body="p"
+    )
+
+    extracted = extract_fields(html, selectors)
+
+    # 1. Title: should ignore the one in <aside>
+    assert extracted["title"] == "Actual Headline"
+
+    # 2. Author: should ignore the ones in <aside> and <footer>
+    assert extracted["author"] == "Real Author"
+
+    # 3. Body: should only get the two paragraphs from the main-content
+    assert "Real paragraph 1." in extracted["body"]
+    assert "Real paragraph 2." in extracted["body"]
+    assert "Sidebar paragraph." not in extracted["body"]
+    assert "Footer paragraph." not in extracted["body"]
+
+
+
 
 
 

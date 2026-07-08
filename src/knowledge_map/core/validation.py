@@ -26,6 +26,8 @@ from knowledge_map.core.selectors import (
 logger = logging.getLogger(__name__)
 from knowledge_map.utils.console import ConsoleNotifier
 
+ILLEGITIMATE_ANCESTORS = {"aside", "nav", "footer"}
+
 try:
     import logfire
 except ImportError:
@@ -687,13 +689,22 @@ class ArticleValidatorService:
 def extract_fields(html: str, selectors) -> Dict[str, Any]:
     soup = BeautifulSoup(html, "html.parser")
     
+    # Helper to check if element has an illegitimate ancestor
+    def has_illegitimate_ancestor(el) -> bool:
+        return any(parent.name in ILLEGITIMATE_ANCESTORS for parent in el.parents)
+    
     title_el = soup.select_one(selectors.title) if selectors.title else None
+    if title_el and has_illegitimate_ancestor(title_el):
+        title_el = None
     title = title_el.get_text().strip() if title_el else ""
     
     author_els = soup.select(selectors.author) if selectors.author else []
+    author_els = [el for el in author_els if not has_illegitimate_ancestor(el)]
     author = ", ".join(el.get_text().strip() for el in author_els) if author_els else ""
     
     date_el = soup.select_one(selectors.date) if selectors.date else None
+    if date_el and has_illegitimate_ancestor(date_el):
+        date_el = None
     date_val = ""
     if date_el:
         if date_el.name == "time" and date_el.has_attr("datetime"):
@@ -702,6 +713,7 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
             date_val = date_el.get_text().strip()
             
     body_els = soup.select(selectors.body) if selectors.body else []
+    body_els = [el for el in body_els if not has_illegitimate_ancestor(el)]
     body_text = "\n\n".join(el.get_text().strip() for el in body_els) if body_els else ""
     
     return {

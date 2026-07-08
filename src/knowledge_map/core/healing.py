@@ -26,7 +26,8 @@ from knowledge_map.core.validation import (
     clean_and_normalize_text,
     extract_fields,
     validate_extraction,
-    count_words
+    count_words,
+    ILLEGITIMATE_ANCESTORS
 )
 
 logger = logging.getLogger(__name__)
@@ -101,8 +102,10 @@ def preprocess_html(html: str) -> str:
         return ""
     root = BeautifulSoup(html, "html.parser")
     
-    # Strip heavy and layout tags
-    for tag in root(["head", "script", "style", "svg", "noscript", "footer", "nav", "iframe", "img", "aside", "figure"]):
+    # Strip heavy and layout tags (dynamic illegitimate ancestors + static metadata/styling tags)
+    layout_tags = list(ILLEGITIMATE_ANCESTORS)
+    other_tags = ["head", "script", "style", "svg", "noscript", "iframe", "img", "figure"]
+    for tag in root(layout_tags + other_tags):
         tag.decompose()
         
     # Strip all attributes except allowed semantic & layout ones
