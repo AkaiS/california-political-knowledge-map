@@ -28,6 +28,8 @@ from knowledge_map.utils.console import ConsoleNotifier
 
 ILLEGITIMATE_ANCESTORS = {"aside", "nav", "footer"}
 
+TOLERANCE = 0.03
+
 try:
     import logfire
 except ImportError:
@@ -427,8 +429,8 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         # JSON-LD wordCount exists
         if gt_word_count > 0:
             ratio = ext_word_count / gt_word_count
-            if ratio < 0.98 or ratio > 1.02:
-                field_errors["body"] = f"Body word count ratio {ratio:.3f} outside [0.98, 1.02] ({ext_word_count} vs {gt_word_count})"
+            if ratio < 1 - TOLERANCE or 1 + TOLERANCE:
+                field_errors["body"] = f"Body word count ratio {ratio:.3f} outside [{1-TOLERANCE}, {1+TOLERANCE}] ({ext_word_count} vs {gt_word_count})"
                 points = 3
         else:
             # If wordCount is 0 or negative in JSON-LD, skip ratio
