@@ -57,29 +57,82 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
             )
         """)
-        # Create scraped_html_cache table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS scraped_html_cache (
-                url TEXT PRIMARY KEY,
-                publication_id TEXT NOT NULL,
-                raw_html TEXT,
-                validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
-                validation_date DATETIME,
-                scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
-            )
-        """)
-        # Create rejected_articles table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS rejected_articles (
-                url TEXT PRIMARY KEY,
-                publication_id TEXT NOT NULL,
-                relevance_status TEXT CHECK(relevance_status IN ('IRRELEVANT', 'INCONCLUSIVE')) NOT NULL,
-                metadata_json TEXT,
-                checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
-            )
-        """)
+        # Migration: check if scraped_html_cache exists and needs update
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scraped_html_cache'")
+        table_exists = cursor.fetchone() is not None
+        
+        has_headline = False
+        if table_exists:
+            cursor.execute("PRAGMA table_info(scraped_html_cache)")
+            columns = [row[1] for row in cursor.fetchall()]
+            has_headline = "headline" in columns
+
+        if table_exists and not has_headline:
+            if os.path.exists(db_path):
+                import shutil
+                shutil.copy2(db_path, db_path + ".backup")
+                
+            cursor.execute("ALTER TABLE scraped_html_cache RENAME TO scraped_html_cache_old")
+            
+            cursor.execute("""
+                CREATE TABLE scraped_html_cache (
+                    url TEXT PRIMARY KEY,
+                    publication_id TEXT NOT NULL,
+                    raw_html TEXT,
+                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')),
+                    validation_date DATETIME,
+                    scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    headline TEXT,
+                    description TEXT,
+                    embedding BLOB,
+                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')) DEFAULT 'RELEVANT',
+                    raw_metadata_json TEXT,
+                    FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+                )
+            """)
+            
+            cursor.execute("""
+                INSERT INTO scraped_html_cache (
+                    url, publication_id, raw_html, validation, validation_date, scraped_at, relevance_status
+                )
+                SELECT url, publication_id, raw_html, validation, validation_date, scraped_at, 'RELEVANT'
+                FROM scraped_html_cache_old
+            """)
+            
+            cursor.execute("DROP TABLE scraped_html_cache_old")
+            
+            # Check and migrate rejected_articles
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rejected_articles'")
+            rejected_exists = cursor.fetchone() is not None
+            if rejected_exists:
+                cursor.execute("SELECT url, publication_id, relevance_status, metadata_json, checked_at FROM rejected_articles")
+                rejected_rows = cursor.fetchall()
+                for r_url, r_pub_id, r_status, r_meta, r_checked in rejected_rows:
+                    r_validation = "PENDING_RELEVANCE" if r_status == "INCONCLUSIVE" else None
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO scraped_html_cache (
+                            url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
+                        ) VALUES (?, ?, NULL, ?, ?, ?, ?)
+                    """, (r_url, r_pub_id, r_validation, r_status, r_meta, r_checked))
+                cursor.execute("DROP TABLE rejected_articles")
+        else:
+            # Create scraped_html_cache table with new schema
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS scraped_html_cache (
+                    url TEXT PRIMARY KEY,
+                    publication_id TEXT NOT NULL,
+                    raw_html TEXT,
+                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')) DEFAULT 'PENDING',
+                    validation_date DATETIME,
+                    scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    headline TEXT,
+                    description TEXT,
+                    embedding BLOB,
+                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')) DEFAULT 'RELEVANT',
+                    raw_metadata_json TEXT,
+                    FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+                )
+            """)
         # Safe migration: add column 'content' if it's missing in an existing database
         try:
             cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
@@ -598,20 +651,32 @@ def get_selector_version_by_id(
 def cache_scraped_html(
     url: str,
     publication_id: str,
-    raw_html: str,
-    validation: str = "PENDING",
+    raw_html: Optional[str],
+    validation: Optional[str] = "PENDING",
+    headline: Optional[str] = None,
+    description: Optional[str] = None,
+    embedding: Optional[list[float]] = None,
+    relevance_status: str = "RELEVANT",
+    raw_metadata_json: Optional[dict[str, Any]] = None,
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
-    Caches scraped raw HTML in scraped_html_cache table.
+    Caches scraped raw HTML in scraped_html_cache table with optional metadata & embedding.
     """
+    import json
+    from knowledge_map.core.relevance import serialize_embedding
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
+        meta_str = json.dumps(raw_metadata_json) if raw_metadata_json is not None else None
+        embedding_blob = serialize_embedding(embedding)
         cursor.execute("""
-            INSERT OR REPLACE INTO scraped_html_cache (url, publication_id, raw_html, validation, validation_date)
-            VALUES (?, ?, ?, ?, NULL)
-        """, (url, publication_id, raw_html, validation))
+            INSERT OR REPLACE INTO scraped_html_cache (
+                url, publication_id, raw_html, validation, validation_date,
+                headline, description, embedding, relevance_status, raw_metadata_json
+            )
+            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
+        """, (url, publication_id, raw_html, validation, headline, description, embedding_blob, relevance_status, meta_str))
         conn.commit()
     finally:
         conn.close()
@@ -621,17 +686,30 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
     """
     Retrieves a cached raw HTML record by URL.
     """
+    import json
+    from knowledge_map.core.relevance import deserialize_embedding
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT url, publication_id, raw_html, validation, validation_date, scraped_at
+            SELECT url, publication_id, raw_html, validation, validation_date, scraped_at,
+                   headline, description, embedding, relevance_status, raw_metadata_json
             FROM scraped_html_cache
             WHERE url = ?
         """, (url,))
         row = cursor.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("raw_metadata_json"):
+            try:
+                d["raw_metadata_json"] = json.loads(d["raw_metadata_json"])
+            except Exception:
+                pass
+        if d.get("embedding"):
+            d["embedding"] = deserialize_embedding(d["embedding"])
+        return d
     finally:
         conn.close()
 
@@ -655,7 +733,7 @@ def update_cached_html_status(url: str, validation: str, db_path: str = DEFAULT_
 
 def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
-    Checks if a URL is already present in stories, scraped_html_cache, or rejected_articles.
+    Checks if a URL is already present in stories or scraped_html_cache.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -666,10 +744,6 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
             return True
         # Check scraped_html_cache
         cursor.execute("SELECT 1 FROM scraped_html_cache WHERE url = ?", (url,))
-        if cursor.fetchone() is not None:
-            return True
-        # Check rejected_articles
-        cursor.execute("SELECT 1 FROM rejected_articles WHERE url = ?", (url,))
         if cursor.fetchone() is not None:
             return True
         return False
@@ -685,17 +759,19 @@ def save_rejected_article(
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
-    Saves a rejected or inconclusive article to the rejected_articles table.
+    Saves a rejected or inconclusive article to the scraped_html_cache table.
     """
     import json
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
         meta_str = json.dumps(metadata_json) if metadata_json is not None else None
+        validation = "PENDING_RELEVANCE" if relevance_status == "INCONCLUSIVE" else None
         cursor.execute("""
-            INSERT OR REPLACE INTO rejected_articles (url, publication_id, relevance_status, metadata_json)
-            VALUES (?, ?, ?, ?)
-        """, (url, publication_id, relevance_status, meta_str))
+            INSERT OR REPLACE INTO scraped_html_cache (
+                url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
+            ) VALUES (?, ?, NULL, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (url, publication_id, validation, relevance_status, meta_str))
         conn.commit()
     finally:
         conn.close()
@@ -703,7 +779,7 @@ def save_rejected_article(
 
 def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
     """
-    Retrieves a rejected article record by URL.
+    Retrieves a rejected article record from scraped_html_cache by URL.
     """
     import json
     conn = sqlite3.connect(db_path)
@@ -711,9 +787,9 @@ def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[D
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT url, publication_id, relevance_status, metadata_json, checked_at
-            FROM rejected_articles
-            WHERE url = ?
+            SELECT url, publication_id, relevance_status, raw_metadata_json AS metadata_json, scraped_at AS checked_at
+            FROM scraped_html_cache
+            WHERE url = ? AND relevance_status IN ('IRRELEVANT', 'INCONCLUSIVE')
         """, (url,))
         row = cursor.fetchone()
         if row is None:
@@ -725,6 +801,45 @@ def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[D
             except Exception:
                 pass
         return d
+    finally:
+        conn.close()
+
+
+def update_relevance_status(
+    url: str,
+    status: str,
+    validation: Optional[str],
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Updates the relevance status and validation of a cached article.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET relevance_status = ?, validation = ?
+            WHERE url = ?
+        """, (status, validation, url))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def clear_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> None:
+    """
+    Clears the raw_html content of a cached article while keeping its metadata and embedding.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET raw_html = NULL
+            WHERE url = ?
+        """, (url,))
+        conn.commit()
     finally:
         conn.close()
 

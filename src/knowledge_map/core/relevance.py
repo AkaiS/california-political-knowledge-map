@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from typing import Dict, Any, Optional, Tuple
 from bs4 import BeautifulSoup
@@ -94,6 +95,30 @@ def has_word(text: str, keyword: str) -> bool:
     return bool(re.search(pattern, text))
 
 
+WEIGHTS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+    "src",
+    "knowledge_map",
+    "resources",
+    "classifier_weights.json"
+)
+
+_cached_weights = None
+
+def load_classifier_weights() -> Optional[Dict[str, Any]]:
+    global _cached_weights
+    if _cached_weights is not None:
+        return _cached_weights
+    if os.path.exists(WEIGHTS_PATH):
+        try:
+            with open(WEIGHTS_PATH, "r") as f:
+                _cached_weights = json.load(f)
+            return _cached_weights
+        except Exception:
+            pass
+    return None
+
+
 def classify_inconclusive_embeddings(headline: str, description: str) -> str:
     """
     Hook for future Logistic Regression embeddings-based classifier.
@@ -104,11 +129,39 @@ def classify_inconclusive_embeddings(headline: str, description: str) -> str:
     return "INCONCLUSIVE"
 
 
-def classify_article(headline: Optional[str], description: Optional[str]) -> str:
+def classify_article(
+    headline: Optional[str],
+    description: Optional[str],
+    embedding: Optional[list[float]] = None
+) -> str:
     """
     Classifies an article into RELEVANT, IRRELEVANT, or INCONCLUSIVE based on
-    its metadata matching configured keyword lists.
+    its metadata matching configured keyword lists or Logistic Regression model.
     """
+    import math
+    weights = load_classifier_weights()
+    if weights and embedding:
+        coef = weights.get("coefficients")
+        intercept = weights.get("intercept")
+        if isinstance(intercept, list):
+            intercept = intercept[0] if intercept else 0.0
+        elif intercept is None:
+            intercept = 0.0
+
+        if coef and len(embedding) == len(coef):
+            z = sum(w * x for w, x in zip(coef, embedding)) + intercept
+            try:
+                prob = 1.0 / (1.0 + math.exp(-z))
+            except OverflowError:
+                prob = 0.0 if z < 0 else 1.0
+
+            if prob >= 0.7:
+                return "RELEVANT"
+            elif prob < 0.3:
+                return "IRRELEVANT"
+            else:
+                return "INCONCLUSIVE"
+
     from knowledge_map.config import (
         POLITICAL_RELEVANCE_KEYWORDS,
         NEGATIVE_RELEVANCE_KEYWORDS,
@@ -133,12 +186,53 @@ def classify_article(headline: Optional[str], description: Optional[str]) -> str
     return "IRRELEVANT"
 
 
-def check_relevance(html: str) -> Tuple[str, Dict[str, Optional[str]]]:
+def check_relevance(html: str, embedding: Optional[list[float]] = None) -> Tuple[str, Dict[str, Optional[str]], Optional[list[float]]]:
     """
-    Extracts metadata and classifies the article relevance.
-    Returns a tuple of (relevance_status, metadata_dict).
+    Extracts metadata, optionally computes embedding, and classifies the article relevance.
+    Returns a 3-tuple of (relevance_status, metadata_dict, embedding).
     """
     meta = extract_metadata(html)
-    status = classify_article(meta["headline"], meta["description"])
-    return status, meta
+    headline = meta.get("headline")
+    description = meta.get("description")
+    
+    if embedding is None:
+        text_to_embed = f"{headline or ''} {description or ''}".strip()
+        if text_to_embed:
+            try:
+                from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
+                from knowledge_map.schemas import ArticleChunk
+                adapter = PydanticAIEmbeddingAdapter()
+                chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
+                embeddings = adapter.process_chunks([chunk])
+                if embeddings:
+                    embedding = embeddings[0]
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to generate embedding for relevance check: {e}")
+                
+    status = classify_article(headline, description, embedding)
+    return status, meta, embedding
+
+
+def serialize_embedding(embedding: Optional[list[float]]) -> Optional[bytes]:
+    """
+    Serializes a list of floats to a binary BLOB (bytes) of float32 values.
+    """
+    if embedding is None:
+        return None
+    import struct
+    return struct.pack(f"{len(embedding)}f", *embedding)
+
+
+def deserialize_embedding(blob: Optional[bytes]) -> Optional[list[float]]:
+    """
+    Deserializes a binary BLOB (bytes) of float32 values back to a list of floats.
+    """
+    if blob is None:
+        return None
+    import struct
+    n = len(blob) // 4
+    if n == 0:
+        return []
+    return list(struct.unpack(f"{n}f", blob))
 

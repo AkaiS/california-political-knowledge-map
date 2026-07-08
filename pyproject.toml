@@ -16,6 +16,7 @@ dependencies = [
     "chonkie>=1.6.8",
     "logfire[system-metrics]>=4.37.0",
     "structlog>=26.1.0",
+    "python-dateutil>=2.9.0.post0",
 ]
 
 [project.scripts]
@@ -23,11 +24,12 @@ ca-map = "knowledge_map.cli.main:main"
 
 [dependency-groups]
 dev = [
+    "ca-political-classifier",
     "pytest>=9.1.1",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "classifier/src"]
 filterwarnings = [
     "ignore::DeprecationWarning:pydantic_ai.*",
     "ignore::logfire._internal.config.LogfireNotConfiguredWarning",
@@ -42,3 +44,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/knowledge_map"]
+
+[tool.uv.workspace]
+members = ["classifier"]
+
+[tool.uv.sources]
+ca-political-classifier = { workspace = true, editable = true }

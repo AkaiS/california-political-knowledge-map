@@ -441,22 +441,47 @@ class ListingPageDiscoveryService:
                                 raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
                                 
                                 from knowledge_map.core.relevance import check_relevance
-                                status, metadata = check_relevance(raw_html)
-                                
+                                res = check_relevance(raw_html)
+                                if len(res) == 3:
+                                    status, metadata, embedding = res
+                                else:
+                                    status, metadata = res
+                                    embedding = None
+                                headline = metadata.get("headline")
+                                description = metadata.get("description")
+
                                 # Structured log for relevance check outcome
                                 logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
                                     "url": url,
                                     "publication_id": pub_id,
                                     "relevance_status": status,
-                                    "headline": metadata.get("headline"),
-                                    "description": metadata.get("description")
+                                    "headline": headline,
+                                    "description": description
                                 })
 
                                 if status == "RELEVANT":
-                                    cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                                    cache_scraped_html(
+                                        url, pub_id, raw_html, validation="PENDING",
+                                        headline=headline, description=description,
+                                        embedding=embedding, relevance_status=status,
+                                        raw_metadata_json=metadata, db_path=self.db_path
+                                    )
                                     scraped_urls.append(url)
+                                elif status == "INCONCLUSIVE":
+                                    cache_scraped_html(
+                                        url, pub_id, None, validation="PENDING_RELEVANCE",
+                                        headline=headline, description=description,
+                                        embedding=embedding, relevance_status=status,
+                                        raw_metadata_json=metadata, db_path=self.db_path
+                                    )
+                                    logger.info(f"Rejected candidate article '{url}' with status '{status}' (inconclusive)")
                                 else:
-                                    save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                                    cache_scraped_html(
+                                        url, pub_id, None, validation=None,
+                                        headline=headline, description=description,
+                                        embedding=embedding, relevance_status=status,
+                                        raw_metadata_json=metadata, db_path=self.db_path
+                                    )
                                     logger.info(f"Rejected candidate article '{url}' with status '{status}'")
                             else:
                                 logger.error(f"Failed to fetch candidate '{url}': {res.error_message}")
@@ -638,22 +663,47 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
 
                             # Apply Relevance Filter
                             from knowledge_map.core.relevance import check_relevance
-                            status, metadata = check_relevance(raw_html)
+                            res = check_relevance(raw_html)
+                            if len(res) == 3:
+                                status, metadata, embedding = res
+                            else:
+                                status, metadata = res
+                                embedding = None
+                            headline = metadata.get("headline")
+                            description = metadata.get("description")
 
                             # Structured log for relevance check outcome
                             logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
                                 "url": url,
                                 "publication_id": pub_id,
                                 "relevance_status": status,
-                                "headline": metadata.get("headline"),
-                                "description": metadata.get("description")
+                                "headline": headline,
+                                "description": description
                             })
 
                             if status == "RELEVANT":
-                                cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
+                                cache_scraped_html(
+                                    url, pub_id, raw_html, validation="PENDING",
+                                    headline=headline, description=description,
+                                    embedding=embedding, relevance_status=status,
+                                    raw_metadata_json=metadata, db_path=self.db_path
+                                )
                                 scraped_urls.append(url)
+                            elif status == "INCONCLUSIVE":
+                                cache_scraped_html(
+                                    url, pub_id, None, validation="PENDING_RELEVANCE",
+                                    headline=headline, description=description,
+                                    embedding=embedding, relevance_status=status,
+                                    raw_metadata_json=metadata, db_path=self.db_path
+                                )
+                                logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}' (inconclusive)")
                             else:
-                                save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
+                                cache_scraped_html(
+                                    url, pub_id, None, validation=None,
+                                    headline=headline, description=description,
+                                    embedding=embedding, relevance_status=status,
+                                    raw_metadata_json=metadata, db_path=self.db_path
+                                )
                                 logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}'")
 
                         return False

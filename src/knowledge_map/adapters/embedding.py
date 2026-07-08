@@ -48,12 +48,28 @@ class PydanticAIEmbeddingAdapter:
     def __init__(self, embedder: Embedder | None = None) -> None:
         self.embedder = embedder or get_embedding_embedder()
 
+    def _run_async(self, func, *args, **kwargs):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+            
+        if loop is not None and loop.is_running():
+            import concurrent.futures
+            def runner():
+                return asyncio.run(func(*args, **kwargs))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(runner)
+                return future.result()
+        else:
+            return asyncio.run(func(*args, **kwargs))
+
     def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
         if not chunks:
             return []
             
         texts = [chunk.text for chunk in chunks]
-        result = asyncio.run(self.embedder.embed_documents(texts))
+        result = self._run_async(self.embedder.embed_documents, texts)
         embeddings = result.embeddings
         
         expected_dim = settings.embedding.dimension
@@ -68,7 +84,7 @@ class PydanticAIEmbeddingAdapter:
 
     def health_check(self) -> bool:
         try:
-            result = asyncio.run(self.embedder.embed_documents(["health_check"]))
+            result = self._run_async(self.embedder.embed_documents, ["health_check"])
             return bool(result and result.embeddings)
         except Exception:
             return False

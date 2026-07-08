@@ -295,7 +295,9 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         assert rejected_irrelevant["relevance_status"] == "IRRELEVANT"
         assert rejected_irrelevant["metadata_json"]["headline"] == "Sports Baking Special"
         
-        assert get_cached_html("https://test.com/politics/irrelevant-2", db_path=db_path) is None
+        cached_irrelevant = get_cached_html("https://test.com/politics/irrelevant-2", db_path=db_path)
+        assert cached_irrelevant is not None
+        assert cached_irrelevant["raw_html"] is None
 
         # D. Verify inconclusive-3 is in rejected_articles with INCONCLUSIVE status, and HTML not cached
         rejected_inconclusive = get_rejected_article("https://test.com/local/inconclusive-3", db_path=db_path)
@@ -303,7 +305,9 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         assert rejected_inconclusive["relevance_status"] == "INCONCLUSIVE"
         assert rejected_inconclusive["metadata_json"]["headline"] == "Local transit update"
 
-        assert get_cached_html("https://test.com/local/inconclusive-3", db_path=db_path) is None
+        cached_inconclusive = get_cached_html("https://test.com/local/inconclusive-3", db_path=db_path)
+        assert cached_inconclusive is not None
+        assert cached_inconclusive["raw_html"] is None
 
         # E. Second run: listing page contains only the previously rejected/inconclusive URLs
         # They should be skipped and NOT fetched by crawl4ai again (using is_url_known)
