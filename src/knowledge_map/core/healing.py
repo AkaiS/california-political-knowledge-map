@@ -120,83 +120,6 @@ def preprocess_html(html: str) -> str:
     return str(root)
 
 
-# Patterns to match dynamic/article-specific IDs (e.g. post-38571, post38571, article-10293, content_9281, etc.)
-DYNAMIC_ID_PATTERNS = [
-    # Common dynamic prefix/suffix followed by a number
-    re.compile(r'(?:post|article|comment|entry|node|content|attachment|story|media|item|heading|block|feed|wrapper|container|p|div|section|id|pid)[-_]?\d+', re.IGNORECASE),
-    # Any ID containing a sequence of 3 or more digits (e.g. #post38571, #layout-2849, #article-193, #div-942)
-    re.compile(r'\d{3,}')
-]
-
-
-def is_dynamic_id(id_val: str) -> bool:
-    """
-    Checks if an ID is dynamic/article-specific rather than a stable layout anchor.
-    """
-    if not id_val:
-        return False
-    for pattern in DYNAMIC_ID_PATTERNS:
-        if pattern.search(id_val):
-            return True
-    return False
-
-
-def make_selector_absolute(html: str, selector: str) -> str:
-    """
-    Takes a CSS selector and HTML content, selects the elements in the content,
-    and returns a new CSS selector representing the absolute paths (using child `>`)
-    of the matched elements. This prevents the selector from matching similar
-    elements inside stripped elements (like footers, navs, or asides) when run against raw HTML.
-    """
-    if not selector:
-        return ""
-    soup = BeautifulSoup(html, "html.parser")
-    try:
-        elements = soup.select(selector)
-    except Exception:
-        return selector
-        
-    if not elements:
-        return selector
-        
-    absolute_selectors = []
-    for el in elements:
-        path = []
-        curr = el
-        while curr and curr.name != "[document]":
-            if curr.name == "body":
-                path.append("body")
-                break
-            if curr.has_attr("id") and curr["id"]:
-                id_val = str(curr["id"]).strip()
-                if id_val and not is_dynamic_id(id_val):
-                    path.append(f"#{id_val}")
-                    break
-                
-            part = curr.name
-            if curr.has_attr("class") and curr["class"]:
-                classes = curr["class"]
-                if isinstance(classes, list):
-                    clean_classes = [c.strip() for c in classes if c.strip()]
-                    if clean_classes:
-                        part += "." + ".".join(clean_classes)
-                else:
-                    c_str = str(classes).strip()
-                    if c_str:
-                        part += f".{c_str}"
-            path.append(part)
-            curr = curr.parent
-            
-        absolute_selectors.append(" > ".join(reversed(path)))
-        
-    # Deduplicate while preserving order
-    unique_selectors = []
-    for sel in absolute_selectors:
-        if sel not in unique_selectors:
-            unique_selectors.append(sel)
-            
-    return ", ".join(unique_selectors)
-
 
 def _annotate_title(soup: BeautifulSoup, gt_title: str) -> None:
     if not gt_title:
@@ -486,7 +409,6 @@ async def run_selector_healing_flow(
         iteration = 0
         max_iterations = 5
         last_selectors = None
-        absolute_selectors = None
         approved = False
 
         while iteration < max_iterations:
@@ -516,17 +438,9 @@ async def run_selector_healing_flow(
                 if confirmed_sel:
                     setattr(last_selectors, field, confirmed_sel)
 
-            # Convert proposed selectors to absolute paths based on cleaned_html structure
-            absolute_selectors = ArticleSelectors(
-                title=make_selector_absolute(cleaned_html, last_selectors.title),
-                author=make_selector_absolute(cleaned_html, last_selectors.author),
-                date=make_selector_absolute(cleaned_html, last_selectors.date),
-                body=make_selector_absolute(cleaned_html, last_selectors.body)
-            )
-
-            # Extract content from HTML using absolute selectors
+            # Extract content from HTML using proposed selectors on raw HTML
             try:
-                extracted = extract_fields(raw_html, absolute_selectors)
+                extracted = extract_fields(raw_html, last_selectors)
             except Exception as e:
                 prompt = f"An error occurred when parsing with your selectors: {e}. Please correct them and try again."
                 continue
@@ -551,10 +465,10 @@ async def run_selector_healing_flow(
             critic_input = (
                 f"Validation request:\n"
                 f"Proposed Selectors:\n"
-                f"- title selector: {absolute_selectors.title}\n"
-                f"- author selector: {absolute_selectors.author}\n"
-                f"- date selector: {absolute_selectors.date}\n"
-                f"- body selector: {absolute_selectors.body}\n\n"
+                f"- title selector: {last_selectors.title}\n"
+                f"- author selector: {last_selectors.author}\n"
+                f"- date selector: {last_selectors.date}\n"
+                f"- body selector: {last_selectors.body}\n\n"
                 f"Extracted Content:\n"
                 f"- Extracted Title: '{extracted.get('title', '')}'\n"
                 f"- Extracted Author: '{extracted.get('author', '')}'\n"
@@ -583,7 +497,7 @@ async def run_selector_healing_flow(
                     has_prog_error = not field_validity[field]
                     has_crit_issue = any(field in issue.lower() for issue in critic_issues)
                     if not has_prog_error and not has_crit_issue:
-                        confirmed_selectors[field] = getattr(absolute_selectors, field)
+                        confirmed_selectors[field] = getattr(last_selectors, field)
 
                 # Construct feedback prompt for the next iteration
                 feedback_messages = []
@@ -599,9 +513,9 @@ async def run_selector_healing_flow(
                     + "\n".join(feedback_messages)
                 )
 
-        if approved and absolute_selectors:
+        if approved and last_selectors:
             # Save as PENDING_REVIEW
-            selectors_dict = absolute_selectors.model_dump()
+            selectors_dict = last_selectors.model_dump()
             insert_selector_proposal(
                 publication_id=publication_id,
                 selectors_json=json.dumps(selectors_dict),
@@ -613,7 +527,7 @@ async def run_selector_healing_flow(
             logger.info(f"Selector healing completed successfully for '{publication_id}' after {iteration} iterations.")
         else:
             # Loop exhausted, save as HEALING_FAILED
-            selectors_dict = absolute_selectors.model_dump() if absolute_selectors else {"title": "", "author": "", "date": "", "body": ""}
+            selectors_dict = last_selectors.model_dump() if last_selectors else {"title": "", "author": "", "date": "", "body": ""}
             insert_selector_proposal(
                 publication_id=publication_id,
                 selectors_json=json.dumps(selectors_dict),
