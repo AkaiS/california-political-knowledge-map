@@ -429,7 +429,7 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
         # JSON-LD wordCount exists
         if gt_word_count > 0:
             ratio = ext_word_count / gt_word_count
-            if ratio < 1 - TOLERANCE or 1 + TOLERANCE:
+            if ratio < 1 - TOLERANCE or ratio > 1 + TOLERANCE:
                 field_errors["body"] = f"Body word count ratio {ratio:.3f} outside [{1-TOLERANCE}, {1+TOLERANCE}] ({ext_word_count} vs {gt_word_count})"
                 points = 3
         else:
