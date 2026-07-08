@@ -2,9 +2,7 @@ import os
 import re
 from typing import List
 from pydantic_ai import Agent
-from pydantic_ai.models.ollama import OllamaModel
-from pydantic_ai.providers.ollama import OllamaProvider
-from dotenv import load_dotenv
+from knowledge_map.utils.models import get_ollama_model
 from knowledge_map.schemas import CriticValidation
 
 def replace_tags_with_entities(annotated_text: str) -> str:
@@ -32,22 +30,7 @@ def check_structural_identity(original_text: str, annotated_text: str) -> bool:
 
 
 def _get_model():
-    load_dotenv()
-    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model = os.environ.get("OLLAMA_MODEL", "8k-gemma-e4b-extraction")
-    
-    base_url = ollama_base_url
-    if not base_url.endswith("/v1"):
-        base_url = f"{base_url}/v1"
-        
-    provider = OllamaProvider(
-        base_url=base_url,
-    )
-    
-    return OllamaModel(
-        model_name=ollama_model,
-        provider=provider,
-    )
+    return get_ollama_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
 
 def get_annotator_agent(defer_check: bool = True) -> Agent:
     model = _get_model()

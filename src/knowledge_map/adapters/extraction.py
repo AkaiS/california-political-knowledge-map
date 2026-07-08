@@ -2,12 +2,10 @@ from typing import Dict, Any, List
 import json
 import os
 import logging
-from dotenv import load_dotenv
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.models import ModelRequestContext
-from pydantic_ai.models.ollama import OllamaModel
-from pydantic_ai.providers.ollama import OllamaProvider
+from knowledge_map.utils.models import get_ollama_model
 from pydantic_ai.capabilities import Hooks
 from pydantic_ai.models.openai import OpenAIChatModel
 
@@ -55,22 +53,7 @@ def load_instructions() -> str:
         return "Extract entities and relationships from California politics stories."
 
 def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    load_dotenv()
-    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model = os.environ.get("OLLAMA_MODEL", "gemma4:31b")
-    
-    base_url = ollama_base_url
-    if not base_url.endswith("/v1"):
-        base_url = f"{base_url}/v1"
-        
-    provider = OllamaProvider(
-        base_url=base_url,
-    )
-    
-    model = OllamaModel(
-        model_name=ollama_model,
-        provider=provider,
-    )
+    model = get_ollama_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
     
     instructions = load_instructions()
     

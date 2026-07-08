@@ -8,9 +8,7 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.models.ollama import OllamaModel
-from pydantic_ai.providers.ollama import OllamaProvider
-from dotenv import load_dotenv
+from knowledge_map.utils.models import get_ollama_model
 
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
@@ -245,16 +243,7 @@ def annotate_ground_truth(soup: BeautifulSoup, gt: Dict[str, Any]) -> None:
 
 
 def _get_model():
-    load_dotenv()
-    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model = os.environ.get("OLLAMA_MODEL", "32k-gemma-e4b")
-    
-    base_url = ollama_base_url
-    if not base_url.endswith("/v1"):
-        base_url = f"{base_url}/v1"
-        
-    provider = OllamaProvider(base_url=base_url)
-    return OllamaModel(model_name=ollama_model, provider=provider)
+    return get_ollama_model("32k-gemma-e4b", "OLLAMA_MODEL_HEALING")
 
 
 def get_generator_agent(defer_check: bool = True) -> Agent:
