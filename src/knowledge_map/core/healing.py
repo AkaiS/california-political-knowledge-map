@@ -263,8 +263,10 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
         "- 'data-is-author-gt=\"true\"' marks the author byline.\n"
         "- 'data-is-date-gt=\"true\"' marks the publication date.\n\n"
         "You MUST prioritize targeting these annotated elements when generating selectors for title, author, and date. YOU MAY NOT hardcode any of these attributes into your selectors.\n"
+        "Assume that the entire body can be captured with a single selector.\n"
         "Keep your selectors simple, precise, and resilient, avoiding overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based or ID selectors work. \n"
-        "Avoid boilerplate sections like READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
+        "Do not use identifiers that are unique to the current page such as postid-12345, post-12345, article_12345, etc."
+        "Avoid boilerplate sections that start with: READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema."
     )
     return Agent(
@@ -288,7 +290,8 @@ def get_critic_agent(defer_check: bool = True) -> Agent:
         "Validate the proposed selectors and extracted content against the following criteria:\n"
         "1. Presence: Check that title, author, date, and body selectors successfully extracted non-empty content.\n"
         "2. Cleanliness: Check that the extracted title, author, date, and body do not contain HTML, navigation links, header/footer boilerplate, or ad text.\n"
-        "3. Length and Coverage: The body text must contain actual paragraphs of the article and have a length consistent with a full news article (if ground-truth wordCount is present, check that the extracted body word count is close/reasonable, usually within 97-103% ratio).\n\n"
+        "3. Length and Coverage: The body text must contain actual paragraphs of the article and have a length consistent with a full news article (if ground-truth wordCount is present, check that the extracted body word count is close/reasonable, usually within 95-105% ratio).\n\n"
+        "4. Inclusive: Ensure that proposed CSS selectors do not contain unique post or article IDs or slugs."
         "Return structured feedback:\n"
         "- is_valid: True if selectors successfully extract clean, correct content. False otherwise.\n"
         "- issues: A list of specific issues found if is_valid is False (e.g. 'Extracted title was empty', 'Extracted body contained header links'). If is_valid is True, this must be empty."

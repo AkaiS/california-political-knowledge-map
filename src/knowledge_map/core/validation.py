@@ -26,9 +26,9 @@ from knowledge_map.core.selectors import (
 logger = logging.getLogger(__name__)
 from knowledge_map.utils.console import ConsoleNotifier
 
-ILLEGITIMATE_ANCESTORS = {"aside", "nav", "footer"}
+ILLEGITIMATE_ANCESTORS = {"aside", "nav", "footer", "figure"}
 
-TOLERANCE = 0.03
+TOLERANCE = 0.05
 
 try:
     import logfire
