@@ -4,6 +4,7 @@ import json
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 from knowledge_map.core.relevance import deserialize_embedding
 
 DEFAULT_DB_PATH = "document_store.db"
@@ -59,19 +60,40 @@ def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
 
     print(f"Found {len(X)} samples for training.")
     
-    # Train Logistic Regression model
+    if len(X) < 5:
+        print(f"Cannot train Logistic Regression: insufficient data to train model. Only {len(X)} samples available.")
+        return
+
+    unique_classes, counts = np.unique(y, return_counts=True)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+    print(f"Split dataset into {len(X_train)} training samples and {len(X_test)} test samples.")
+    
+    # Train model on training split
     model = LogisticRegression(max_iter=1000, C=1.0)
-    model.fit(X, y)
-
-    # Evaluate on the training set (or print basic classification report)
-    y_pred = model.predict(X)
+    model.fit(X_train, y_train)
+    
+    # Evaluate on the training set
+    y_train_pred = model.predict(X_train)
     print("\n--- Training Set Evaluation Report ---")
-    print(classification_report(y, y_pred, target_names=["IRRELEVANT", "RELEVANT"]))
+    print(classification_report(y_train, y_train_pred, target_names=["IRRELEVANT", "RELEVANT"], zero_division=0))
+    
+    # Evaluate on the test set
+    y_test_pred = model.predict(X_test)
+    print("\n--- Test Set Evaluation Report ---")
+    print(classification_report(y_test, y_test_pred, target_names=["IRRELEVANT", "RELEVANT"], zero_division=0))
+    
+    # Retrain on the entire dataset for final model weights export
+    print(f"\nRetraining final model on all {len(X)} samples for weights export...")
+    final_model = LogisticRegression(max_iter=1000, C=1.0)
+    final_model.fit(X, y)
 
-    # Export weights
+    # Export weights of the final model trained on all available data
     weights = {
-        "coefficients": model.coef_[0].tolist(),
-        "intercept": model.intercept_.tolist(),
+        "coefficients": final_model.coef_[0].tolist(),
+        "intercept": final_model.intercept_.tolist(),
         "n_samples": len(X)
     }
 
