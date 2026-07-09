@@ -815,19 +815,20 @@ def main(args=None):
 
         if parsed_args.classifier_action == "label":
             from knowledge_map.adapters.sqlite_db import update_relevance_status
+            from knowledge_map.core.relevance import deserialize_embedding
             
             conn = sqlite3.connect(db_path)
             try:
                 cursor = conn.cursor()
                 if getattr(parsed_args, "review_all", False):
                     cursor.execute("""
-                        SELECT url, headline, description
+                        SELECT url, headline, description, embedding
                         FROM scraped_html_cache
                         WHERE relevance_label_source IS NULL OR relevance_label_source != 'HUMAN'
                     """)
                 else:
                     cursor.execute("""
-                        SELECT url, headline, description
+                        SELECT url, headline, description, embedding
                         FROM scraped_html_cache
                         WHERE validation = 'PENDING_RELEVANCE'
                     """)
@@ -845,7 +846,7 @@ def main(args=None):
             print(f"Found {len(rows)} articles requiring relevance labeling.")
             print("For each article, enter 'y' for RELEVANT, 'n' for IRRELEVANT, 's' to skip, or 'q' to quit.\n")
             
-            for url, headline, description in rows:
+            for url, headline, description, emb_blob in rows:
                 print("-" * 60)
                 print(f"URL: {url}")
                 print(f"Headline: {headline or 'N/A'}")
@@ -862,19 +863,20 @@ def main(args=None):
                         status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
                         validation = "PENDING" if choice == 'y' else None
                         
-                        # Generate embedding of headline + description
-                        text_to_embed = f"{headline or ''} {description or ''}".strip()
-                        embedding = None
-                        if text_to_embed:
-                            try:
-                                from knowledge_map.schemas import ArticleChunk
-                                adapter = PydanticAIEmbeddingAdapter()
-                                chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
-                                embeddings = adapter.process_chunks([chunk])
-                                if embeddings:
-                                    embedding = embeddings[0]
-                            except Exception as e:
-                                print(f"Warning: Failed to generate embedding: {e}")
+                        # Retrieve existing embedding or generate a new one if missing
+                        embedding = deserialize_embedding(emb_blob) if emb_blob else None
+                        if not embedding:
+                            text_to_embed = f"{headline or ''} {description or ''}".strip()
+                            if text_to_embed:
+                                try:
+                                    from knowledge_map.schemas import ArticleChunk
+                                    adapter = PydanticAIEmbeddingAdapter()
+                                    chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
+                                    embeddings = adapter.process_chunks([chunk])
+                                    if embeddings:
+                                        embedding = embeddings[0]
+                                except Exception as e:
+                                    print(f"Warning: Failed to generate embedding: {e}")
                                 
                         update_relevance_status(
                             url, 
@@ -909,8 +911,8 @@ def main(args=None):
             sys.exit(0)
 
         elif parsed_args.classifier_action == "reevaluate":
-            from knowledge_map.adapters.sqlite_db import update_relevance_status, deserialize_embedding
-            from knowledge_map.core.relevance import classify_article
+            from knowledge_map.adapters.sqlite_db import update_relevance_status
+            from knowledge_map.core.relevance import deserialize_embedding, classify_article
             
             conn = sqlite3.connect(db_path)
             try:
