@@ -50,6 +50,10 @@ class IgnoreStructlogFilter(logging.Filter):
         return True
 
 def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int = logging.INFO):
+    is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
+    if is_testing and log_file_path == ".scratch/pipeline.log":
+        return
+
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
@@ -176,6 +180,14 @@ def main(args=None):
 
     # Purge-cache subcommand
     subparsers.add_parser("purge-cache", help="Purge eligible raw HTML cache rows according to retention policy")
+
+    # Classifier subcommand
+    classifier_parser = subparsers.add_parser("classifier", help="Relevance classifier options (label, train, reevaluate)")
+    classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
+    label_parser = classifier_sub.add_parser("label", help="Run active learning labeling feedback loop")
+    label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
+    classifier_sub.add_parser("train", help="Train the classifier using scikit-learn LogisticRegression")
+    classifier_sub.add_parser("reevaluate", help="Reevaluate inconclusive/rejected records with the trained model")
 
     parsed_args = parser.parse_args(args)
 
@@ -522,7 +534,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         val_service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        val_results = val_service.validate_pending_articles()
+        val_results = asyncio.run(val_service.validate_pending_articles())
         validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
@@ -552,7 +564,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         val_service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        val_results = val_service.validate_pending_articles()
+        val_results = asyncio.run(val_service.validate_pending_articles())
         validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
@@ -566,7 +578,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        results = service.validate_pending_articles()
+        results = asyncio.run(service.validate_pending_articles())
         validated_count = sum(1 for r in results if r["status"] == "VALIDATED")
         failed_count = sum(1 for r in results if r["status"] == "VALIDATION_FAILED")
         unval_count = sum(1 for r in results if r["status"] == "UNVALIDATABLE")
@@ -795,6 +807,150 @@ def main(args=None):
         print(f"Purged {counts['unvalidatable']} unvalidatable rows.")
         print(f"Total rows purged: {counts['total']}.")
         sys.exit(0)
+
+    elif parsed_args.action == "classifier":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+
+        if parsed_args.classifier_action == "label":
+            from knowledge_map.adapters.sqlite_db import update_relevance_status
+            from knowledge_map.core.relevance import deserialize_embedding
+            
+            conn = sqlite3.connect(db_path)
+            try:
+                cursor = conn.cursor()
+                if getattr(parsed_args, "review_all", False):
+                    cursor.execute("""
+                        SELECT url, headline, description, embedding
+                        FROM scraped_html_cache
+                        WHERE relevance_label_source IS NULL OR relevance_label_source != 'HUMAN'
+                    """)
+                else:
+                    cursor.execute("""
+                        SELECT url, headline, description, embedding
+                        FROM scraped_html_cache
+                        WHERE validation = 'PENDING_RELEVANCE'
+                    """)
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+                
+            if not rows:
+                if getattr(parsed_args, "review_all", False):
+                    print("No articles with relevance_label_source != 'HUMAN' found to label.")
+                else:
+                    print("No articles with PENDING_RELEVANCE validation found to label.")
+                sys.exit(0)
+                
+            print(f"Found {len(rows)} articles requiring relevance labeling.")
+            print("For each article, enter 'y' for RELEVANT, 'n' for IRRELEVANT, 's' to skip, or 'q' to quit.\n")
+            
+            for url, headline, description, emb_blob in rows:
+                print("-" * 60)
+                print(f"URL: {url}")
+                print(f"Headline: {headline or 'N/A'}")
+                print(f"Description: {description or 'N/A'}")
+                print("-" * 60)
+                
+                while True:
+                    try:
+                        choice = input("Is this California politics? [y/n/s/q]: ").strip().lower()
+                    except (KeyboardInterrupt, EOFError):
+                        print("\nExiting labeling tool.")
+                        sys.exit(0)
+                    if choice in ('y', 'n'):
+                        status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
+                        validation = "PENDING" if choice == 'y' else None
+                        
+                        # Retrieve existing embedding or generate a new one if missing
+                        embedding = deserialize_embedding(emb_blob) if emb_blob else None
+                        if not embedding:
+                            text_to_embed = f"{headline or ''} {description or ''}".strip()
+                            if text_to_embed:
+                                try:
+                                    from knowledge_map.schemas import ArticleChunk
+                                    adapter = PydanticAIEmbeddingAdapter()
+                                    chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
+                                    embeddings = adapter.process_chunks([chunk])
+                                    if embeddings:
+                                        embedding = embeddings[0]
+                                except Exception as e:
+                                    print(f"Warning: Failed to generate embedding: {e}")
+                                
+                        update_relevance_status(
+                            url, 
+                            status, 
+                            validation, 
+                            relevance_label_source="HUMAN", 
+                            headline=headline,
+                            description=description,
+                            embedding=embedding,
+                            db_path=db_path
+                        )
+                        print(f"Labeled: {status} -> validation: {validation}")
+                        break
+                    elif choice == 's':
+                        print("Skipped.")
+                        break
+                    elif choice == 'q':
+                        print("Exiting labeling tool.")
+                        sys.exit(0)
+                    else:
+                        print("Invalid input. Please enter 'y', 'n', 's', or 'q'.")
+            sys.exit(0)
+
+        elif parsed_args.classifier_action == "train":
+            try:
+                from classifier.trainer import train_classifier
+            except ImportError:
+                print("Error: ca-political-classifier package is not installed or scikit-learn is missing. Run `uv sync` to install.")
+                sys.exit(1)
+            
+            train_classifier(db_path=db_path)
+            sys.exit(0)
+
+        elif parsed_args.classifier_action == "reevaluate":
+            from knowledge_map.adapters.sqlite_db import update_relevance_status
+            from knowledge_map.core.relevance import deserialize_embedding, classify_article
+            
+            conn = sqlite3.connect(db_path)
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT url, headline, description, embedding, relevance_status
+                    FROM scraped_html_cache
+                    WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
+                """)
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+                
+            if not rows:
+                print("No inconclusive or irrelevant records found to reevaluate.")
+                sys.exit(0)
+                
+            transition_count = 0
+            for url, headline, description, emb_blob, old_status in rows:
+                embedding = deserialize_embedding(emb_blob)
+                if not embedding:
+                    continue
+                    
+                new_status = classify_article(headline, description, embedding)
+                if new_status != old_status:
+                    if new_status == "RELEVANT":
+                        new_validation = "PENDING"
+                    elif new_status == "INCONCLUSIVE":
+                        new_validation = "PENDING_RELEVANCE"
+                    else:
+                        new_validation = None
+                        
+                    update_relevance_status(url, new_status, new_validation, db_path=db_path)
+                    print(f"URL: {url} transitioned: {old_status} -> {new_status} (validation: {new_validation})")
+                    transition_count += 1
+                    
+            print(f"Reevaluation completed. {transition_count} records transitioned to new states.")
+            sys.exit(0)
 
 if __name__ == "__main__":
     main()

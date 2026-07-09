@@ -17,9 +17,9 @@ def test_db_schema_initialization(tmp_path):
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scraped_html_cache'")
         assert cursor.fetchone() is not None
         
-        # Verify rejected_articles table exists
+        # Verify rejected_articles table does NOT exist
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rejected_articles'")
-        assert cursor.fetchone() is not None
+        assert cursor.fetchone() is None
         
         # Verify columns of scraped_html_cache
         cursor.execute("PRAGMA table_info(scraped_html_cache)")
@@ -30,15 +30,11 @@ def test_db_schema_initialization(tmp_path):
         assert "validation" in columns
         assert "validation_date" in columns
         assert "scraped_at" in columns
-        
-        # Verify columns of rejected_articles
-        cursor.execute("PRAGMA table_info(rejected_articles)")
-        columns_rejected = {col[1]: col[2].upper() for col in cursor.fetchall()}
-        assert "url" in columns_rejected
-        assert "publication_id" in columns_rejected
-        assert "relevance_status" in columns_rejected
-        assert "metadata_json" in columns_rejected
-        assert "checked_at" in columns_rejected
+        assert "headline" in columns
+        assert "description" in columns
+        assert "embedding" in columns
+        assert "relevance_status" in columns
+        assert "raw_metadata_json" in columns
         
     finally:
         conn.close()
@@ -102,16 +98,8 @@ def test_database_helpers(tmp_path):
     
     # 6. Check in rejected_articles
     assert not is_url_known(url_3, db_path=db_path)
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO rejected_articles (url, publication_id, relevance_status) VALUES (?, ?, ?)",
-            (url_3, "testpub", "IRRELEVANT")
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    from knowledge_map.adapters.sqlite_db import save_rejected_article
+    save_rejected_article(url_3, "testpub", "IRRELEVANT", db_path=db_path)
     assert is_url_known(url_3, db_path=db_path)
 
 
@@ -284,6 +272,7 @@ async def test_listing_page_discovery_service(tmp_path):
         assert cached["publication_id"] == "testpub"
         assert "scraped raw content" in cached["raw_html"]
         assert cached["validation"] == "PENDING"
+        assert cached["relevance_status"] == "PENDING"
         
         # Verify check_robots_txt config was passed as True because use_robots_txt is True
         # Let's inspect arun calls
@@ -418,10 +407,8 @@ async def test_discovery_service_category_filtering(tmp_path, caplog):
     mock_crawler_instance.arun.side_effect = mock_arun
     
     with patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass, \
-         patch("knowledge_map.core.relevance.check_relevance") as MockCheckRelevance, \
          caplog.at_level(logging.INFO):
         MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
-        MockCheckRelevance.return_value = ("RELEVANT", {"headline": "California story", "description": "some desc"})
         
         service = ListingPageDiscoveryService(db_path=db_path)
         pub = get_publication("testpub_cat", db_path=db_path)
@@ -433,6 +420,13 @@ async def test_discovery_service_category_filtering(tmp_path, caplog):
             "https://test.com/politics/valid-politics-story",
             "https://test.com/housing/valid-housing-story"
         }
+        
+        # Verify they were cached with PENDING relevance
+        from knowledge_map.adapters.sqlite_db import get_cached_html
+        for url in scraped_urls:
+            cached = get_cached_html(url, db_path=db_path)
+            assert cached is not None
+            assert cached["relevance_status"] == "PENDING"
         
         # Verify that blocklist is checked before category filter:
         # https://test.com/ignore/politics/blocked-story contains politics, but is blocklisted first.

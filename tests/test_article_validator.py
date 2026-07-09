@@ -10,6 +10,14 @@ from knowledge_map.core.validation import (
     clean_and_normalize_text,
     count_words
 )
+from unittest.mock import patch
+
+@pytest.fixture(autouse=True)
+def mock_relevance_agent():
+    from knowledge_map.core.relevance_agent import RelevanceClassification
+    mock_res = RelevanceClassification(classification="RELEVANT")
+    with patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_res) as mock_fn:
+        yield mock_fn
 
 def test_edit_distance_ratio():
     # Identical strings
@@ -246,7 +254,8 @@ def test_validate_extraction():
     assert points == 1
 
 
-def test_article_validator_service(tmp_path):
+@pytest.mark.anyio
+async def test_article_validator_service(tmp_path):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -355,7 +364,7 @@ def test_article_validator_service(tmp_path):
     
     # 4. Run validator service
     service = ArticleValidatorService(db_path=db_path)
-    results = service.validate_pending_articles()
+    results = await service.validate_pending_articles()
     
     # 5. Assert outcomes
     # Validate cache statuses
@@ -382,7 +391,8 @@ def test_article_validator_service(tmp_path):
     assert v.earliest_success_date <= now
 
 
-def test_circuit_breaker_points_accumulation(tmp_path):
+@pytest.mark.anyio
+async def test_circuit_breaker_points_accumulation(tmp_path):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -476,24 +486,25 @@ def test_circuit_breaker_points_accumulation(tmp_path):
     
     # First, validate the GT mismatch article
     cache_scraped_html("https://testpub.com/gt-mismatch", "testpub", html_gt_mismatch, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     pub = get_publication("testpub", db_path=db_path)
     assert pub["failure_points"] == 3
     
     # Next, validate the fallback fail article (should add 1 point -> total 4)
     cache_scraped_html("https://testpub.com/fallback-fail", "testpub", html_fallback_fail, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     pub = get_publication("testpub", db_path=db_path)
     assert pub["failure_points"] == 4
     
     # Next, validate the unvalidatable article (should add 0 points -> total 4)
     cache_scraped_html("https://testpub.com/unval", "testpub", html_unval, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     pub = get_publication("testpub", db_path=db_path)
     assert pub["failure_points"] == 4
 
 
-def test_circuit_breaker_reset_on_success(tmp_path):
+@pytest.mark.anyio
+async def test_circuit_breaker_reset_on_success(tmp_path):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -573,18 +584,19 @@ def test_circuit_breaker_reset_on_success(tmp_path):
     
     # Fail first
     cache_scraped_html("https://testpub.com/fail", "testpub", html_fail, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     pub = get_publication("testpub", db_path=db_path)
     assert pub["failure_points"] == 3
     
     # Succeed next -> should reset points to 0
     cache_scraped_html("https://testpub.com/success", "testpub", html_success, validation="PENDING", db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     pub = get_publication("testpub", db_path=db_path)
     assert pub["failure_points"] == 0
 
 
-def test_circuit_breaker_trips(tmp_path):
+@pytest.mark.anyio
+async def test_circuit_breaker_trips(tmp_path):
     from unittest.mock import patch
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
@@ -653,7 +665,7 @@ def test_circuit_breaker_trips(tmp_path):
         cache_scraped_html(url, "testpub", html_fail, validation="PENDING", db_path=db_path)
         
     with patch("knowledge_map.core.healing.trigger_selector_healing_stub") as mock_healing:
-        service.validate_pending_articles()
+        await service.validate_pending_articles()
         
         # Verify that the circuit breaker tripped
         pub = get_publication("testpub", db_path=db_path)
@@ -667,7 +679,8 @@ def test_circuit_breaker_trips(tmp_path):
         mock_healing.assert_called_once_with("testpub", "https://testpub.com/fail4", db_path=db_path)
 
 
-def test_circuit_breaker_skips_paused_publications(tmp_path):
+@pytest.mark.anyio
+async def test_circuit_breaker_skips_paused_publications(tmp_path):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -733,7 +746,7 @@ def test_circuit_breaker_skips_paused_publications(tmp_path):
     cache_scraped_html(url_paused, "testpub2", html_good, validation="PENDING", db_path=db_path)
     
     service = ArticleValidatorService(db_path=db_path)
-    service.validate_pending_articles()
+    await service.validate_pending_articles()
     
     # Active publication's article should be validated
     cached_active = get_cached_html(url_active, db_path=db_path)
@@ -744,7 +757,8 @@ def test_circuit_breaker_skips_paused_publications(tmp_path):
     assert cached_paused["validation"] == "PENDING"
 
 
-def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path):
+@pytest.mark.anyio
+async def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path):
     from datetime import datetime, timezone, timedelta
     from unittest.mock import patch
     from knowledge_map.adapters.sqlite_db import (
@@ -827,7 +841,7 @@ def test_circuit_breaker_success_while_paused_does_not_reset_or_unpause(tmp_path
     for i in range(4):
         cache_scraped_html(f"https://testpub.com/fail{i}", "testpub", html_fail, validation="PENDING", db_path=db_path)
     with patch("knowledge_map.core.healing.trigger_selector_healing_stub") as mock_healing:
-        service.validate_pending_articles()
+        await service.validate_pending_articles()
     
     pub = get_publication("testpub", db_path=db_path)
     assert pub["validation_paused"] is True
@@ -1370,4 +1384,441 @@ def test_run_recovery_check_saves_links(tmp_path):
     assert len(links) == 1
     assert links[0]["text"] == "Energy Bill"
     assert links[0]["url"] == "https://example.com/energy"
+@pytest.mark.anyio
+async def test_post_extraction_relevance_logistic_regression_relevant(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch, AsyncMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html,
+        get_all_stories
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_relevance_lr.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 1. Register publication
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    # 2. Add selector version
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    # 3. Cache PENDING HTML
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Governor Newsom Signs Housing Bill",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Governor Newsom Signs Housing Bill</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/politics/newsom-housing"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    # 4. Mock classifier weights and prediction to be RELEVANT
+    dummy_weights = {"coefficients": [1.0], "intercept": 0.0, "n_samples": 10}
+    mock_embedding = [0.1] * 768
+    
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.core.validation.classify_article", return_value="RELEVANT"):
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+    # 5. Assert outcomes
+    # Validate cache status
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] == "VALIDATED"
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "MODEL"
+    
+    # Validate story insertion with status UNPROCESSED
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    assert stories[0]["url"] == url
+    assert stories[0]["status"] == "UNPROCESSED"
+
+
+@pytest.mark.anyio
+async def test_post_extraction_relevance_logistic_regression_irrelevant(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html,
+        get_all_stories
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_relevance_lr_irrel.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "A Cookie Recipe",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">A Cookie Recipe</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/lifestyle/cookie-recipe"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    dummy_weights = {"coefficients": [1.0], "intercept": 0.0, "n_samples": 10}
+    mock_embedding = [0.1] * 768
+    
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.core.validation.classify_article", return_value="IRRELEVANT"):
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+    # Assert outcomes
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] is None
+    assert cached["relevance_status"] == "IRRELEVANT"
+    assert cached["relevance_label_source"] == "MODEL"
+    
+    # Story should be inserted with status IRRELEVANT
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    assert stories[0]["url"] == url
+    assert stories[0]["status"] == "IRRELEVANT"
+
+
+@pytest.mark.anyio
+async def test_post_extraction_relevance_logistic_regression_inconclusive_fallback(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch, AsyncMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html,
+        get_all_stories
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    from knowledge_map.core.relevance_agent import RelevanceClassification
+    
+    db_file = tmp_path / "test_relevance_lr_inconcl.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Sacramento Assembly Bill Debate",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Sacramento Assembly Bill Debate</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/politics/sacramento-debate"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    dummy_weights = {"coefficients": [1.0], "intercept": 0.0, "n_samples": 10}
+    mock_embedding = [0.1] * 768
+    
+    # Mock LLM response
+    mock_agent_res = RelevanceClassification(classification="RELEVANT")
+    
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.core.validation.classify_article", return_value="INCONCLUSIVE"), \
+         patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_agent_res) as mock_classify_llm:
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+        # Verify LLM fallback was called
+        mock_classify_llm.assert_called_once_with("Sacramento Assembly Bill Debate", "This is a body text. Stopword stopword stopword stopword stopword.", db_path=db_path)
+        
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] == "VALIDATED"
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "LLM"
+    
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    assert stories[0]["status"] == "UNPROCESSED"
+
+
+@pytest.mark.anyio
+async def test_post_extraction_relevance_no_weights_fallback(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html,
+        get_all_stories
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    from knowledge_map.core.relevance_agent import RelevanceClassification
+    
+    db_file = tmp_path / "test_relevance_no_weights.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Irrelevant Lifestyle Post",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Irrelevant Lifestyle Post</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/lifestyle/some-post"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    mock_agent_res = RelevanceClassification(classification="IRRELEVANT")
+    
+    # load_classifier_weights returns None (no weights)
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=None), \
+         patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_agent_res) as mock_classify_llm:
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+        mock_classify_llm.assert_called_once_with("Irrelevant Lifestyle Post", "This is a body text. Stopword stopword stopword stopword stopword.", db_path=db_path)
+        
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] is None
+    assert cached["relevance_status"] == "IRRELEVANT"
+    assert cached["relevance_label_source"] == "LLM"
+    
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    assert stories[0]["status"] == "IRRELEVANT"
+
+
+@pytest.mark.anyio
+async def test_post_extraction_relevance_embedding_heading_description(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_relevance_heading_desc.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Target Article Title",
+            "description": "Target Article Description",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Target Article Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/politics/newsom-housing"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    dummy_weights = {"coefficients": [1.0], "intercept": 0.0, "n_samples": 10}
+    mock_embedding = [0.2] * 768
+    
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]) as mock_embed, \
+         patch("knowledge_map.core.validation.classify_article", return_value="RELEVANT") as mock_classify:
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+        # Verify embedding was generated for heading + description
+        mock_embed.assert_called_once()
+        called_args = mock_embed.call_args[0][0]
+        assert len(called_args) == 1
+        assert called_args[0].text == "Target Article Title Target Article Description"
+        
+        # Verify classify_article was called with headline + description
+        mock_classify.assert_called_once_with("Target Article Title", "Target Article Description", mock_embedding)
+        
+    # Verify cached row in DB has headline, description, and embedding updated
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Target Article Title"
+    assert cached["description"] == "Target Article Description"
+    assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
+
+
+
+
+
+
+
 

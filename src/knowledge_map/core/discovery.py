@@ -439,27 +439,15 @@ class ListingPageDiscoveryService:
                             res = await crawler.arun(url=url, config=run_config)
                             if res.success:
                                 raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
-                                
-                                from knowledge_map.core.relevance import check_relevance
-                                status, metadata = check_relevance(raw_html)
-                                
-                                # Structured log for relevance check outcome
-                                logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
-                                    "url": url,
-                                    "publication_id": pub_id,
-                                    "relevance_status": status,
-                                    "headline": metadata.get("headline"),
-                                    "description": metadata.get("description")
-                                })
-
-                                if status == "RELEVANT":
-                                    cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
-                                    scraped_urls.append(url)
-                                else:
-                                    save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
-                                    logger.info(f"Rejected candidate article '{url}' with status '{status}'")
+                                cache_scraped_html(
+                                    url, pub_id, raw_html, validation="PENDING",
+                                    relevance_status="PENDING", db_path=self.db_path
+                                )
+                                scraped_urls.append(url)
+                                logger.info(f"Cached candidate article '{url}' with status 'PENDING'")
                             else:
-                                logger.error(f"Failed to fetch candidate '{url}': {res.error_message}")
+                                error_msg = getattr(res, "error_message", "")
+                                logger.error(f"Failed to fetch candidate '{url}': {error_msg}")
 
                     await asyncio.gather(*(fetch_and_cache(url) for url in candidate_urls))
                     
@@ -636,25 +624,13 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                                 logger.info(f"Archive crawl: met article older than cutoff ({pub_date} < {cutoff_date}). Reached cutoff.")
                                 return True
 
-                            # Apply Relevance Filter
-                            from knowledge_map.core.relevance import check_relevance
-                            status, metadata = check_relevance(raw_html)
-
-                            # Structured log for relevance check outcome
-                            logger.info("Relevance check completed for URL %s: status=%s", url, status, extra={
-                                "url": url,
-                                "publication_id": pub_id,
-                                "relevance_status": status,
-                                "headline": metadata.get("headline"),
-                                "description": metadata.get("description")
-                            })
-
-                            if status == "RELEVANT":
-                                cache_scraped_html(url, pub_id, raw_html, validation="PENDING", db_path=self.db_path)
-                                scraped_urls.append(url)
-                            else:
-                                save_rejected_article(url, pub_id, status, metadata, db_path=self.db_path)
-                                logger.info(f"Archive crawl: rejected candidate '{url}' with status '{status}'")
+                            # Cache candidate article immediately
+                            cache_scraped_html(
+                                url, pub_id, raw_html, validation="PENDING",
+                                relevance_status="PENDING", db_path=self.db_path
+                            )
+                            scraped_urls.append(url)
+                            logger.info(f"Archive crawl: Cached candidate article '{url}' with status 'PENDING'")
 
                         return False
 

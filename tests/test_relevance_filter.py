@@ -280,30 +280,37 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         
         scraped_urls = await service.discover_and_scrape_for_publication(pub)
 
-        # A. Verify returned scraped_urls contains ONLY the relevant URL
-        assert scraped_urls == ["https://test.com/politics/relevant-1"]
+        # A. Verify returned scraped_urls contains all successfully crawled candidate URLs
+        assert set(scraped_urls) == {
+            "https://test.com/politics/relevant-1",
+            "https://test.com/politics/irrelevant-2",
+            "https://test.com/local/inconclusive-3"
+        }
 
-        # B. Verify relevant-1 is cached in scraped_html_cache as PENDING
+        # B. Verify relevant-1 is cached in scraped_html_cache as PENDING validation/relevance
         cached = get_cached_html("https://test.com/politics/relevant-1", db_path=db_path)
         assert cached is not None
         assert cached["validation"] == "PENDING"
+        assert cached["relevance_status"] == "PENDING"
         assert "Newsom Signs New Bill" in cached["raw_html"]
 
-        # C. Verify irrelevant-2 is in rejected_articles with IRRELEVANT status, and HTML not cached
-        rejected_irrelevant = get_rejected_article("https://test.com/politics/irrelevant-2", db_path=db_path)
-        assert rejected_irrelevant is not None
-        assert rejected_irrelevant["relevance_status"] == "IRRELEVANT"
-        assert rejected_irrelevant["metadata_json"]["headline"] == "Sports Baking Special"
-        
-        assert get_cached_html("https://test.com/politics/irrelevant-2", db_path=db_path) is None
+        # C. Verify irrelevant-2 is cached in scraped_html_cache as PENDING validation/relevance
+        cached_irrelevant = get_cached_html("https://test.com/politics/irrelevant-2", db_path=db_path)
+        assert cached_irrelevant is not None
+        assert cached_irrelevant["validation"] == "PENDING"
+        assert cached_irrelevant["relevance_status"] == "PENDING"
+        assert "Sports Baking Special" in cached_irrelevant["raw_html"]
 
-        # D. Verify inconclusive-3 is in rejected_articles with INCONCLUSIVE status, and HTML not cached
-        rejected_inconclusive = get_rejected_article("https://test.com/local/inconclusive-3", db_path=db_path)
-        assert rejected_inconclusive is not None
-        assert rejected_inconclusive["relevance_status"] == "INCONCLUSIVE"
-        assert rejected_inconclusive["metadata_json"]["headline"] == "Local transit update"
+        # D. Verify inconclusive-3 is cached in scraped_html_cache as PENDING validation/relevance
+        cached_inconclusive = get_cached_html("https://test.com/local/inconclusive-3", db_path=db_path)
+        assert cached_inconclusive is not None
+        assert cached_inconclusive["validation"] == "PENDING"
+        assert cached_inconclusive["relevance_status"] == "PENDING"
+        assert "Local transit update" in cached_inconclusive["raw_html"]
 
-        assert get_cached_html("https://test.com/local/inconclusive-3", db_path=db_path) is None
+        # Verify no rejected article is saved at this stage
+        assert get_rejected_article("https://test.com/politics/irrelevant-2", db_path=db_path) is None
+        assert get_rejected_article("https://test.com/local/inconclusive-3", db_path=db_path) is None
 
         # E. Second run: listing page contains only the previously rejected/inconclusive URLs
         # They should be skipped and NOT fetched by crawl4ai again (using is_url_known)
