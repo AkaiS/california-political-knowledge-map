@@ -433,7 +433,8 @@ def test_cli_review_selectors_manual_failure(tmp_path):
     assert pub["validation_paused"] == 1
 
 
-def test_post_recovery_prioritization(tmp_path):
+@pytest.mark.anyio
+async def test_post_recovery_prioritization(tmp_path):
     db_path = str(tmp_path / "test_prioritization.db")
     init_db(db_path)
     
@@ -502,7 +503,7 @@ def test_post_recovery_prioritization(tmp_path):
         return original_validate(url, pub_id, raw_html, scraped_at)
         
     with patch.object(validator, "validate_article", side_effect=mock_validate):
-        validator.validate_pending_articles()
+        await validator.validate_pending_articles()
         
     # Verify that failed-art (VALIDATION_FAILED) was validated first, followed by pending-art (PENDING)
     assert len(validated_urls) == 2

@@ -224,12 +224,13 @@ def test_cli_validate_articles_success(tmp_path, monkeypatch):
     
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
     
+    from unittest.mock import AsyncMock
     with patch("knowledge_map.core.validation.ArticleValidatorService") as MockServiceClass:
         mock_service_instance = MagicMock()
-        mock_service_instance.validate_pending_articles.return_value = [
+        mock_service_instance.validate_pending_articles = AsyncMock(return_value=[
             {"status": "VALIDATED", "url": "https://test.com/1"},
             {"status": "VALIDATION_FAILED", "url": "https://test.com/2"}
-        ]
+        ])
         MockServiceClass.return_value = mock_service_instance
         
         try:

@@ -50,10 +50,10 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 **Blocked by:** Discovery Service Raw HTML Caching & Pending Relevance, Async LLM Silver-Standard Agent (Pydantic AI)
 
-- [ ] `ArticleValidatorService.validate_pending_articles` is async and runs classification on successfully extracted title/body
-- [ ] Relevant articles saved in stories table with status `'UNPROCESSED'`; irrelevant articles saved with status `'IRRELEVANT'`
-- [ ] Cache status is updated with correct relevance status and source (`'LLM'` or `'MODEL'`)
-- [ ] Ingestion pipeline does not fetch articles marked with `'IRRELEVANT'` status
+- [x] `ArticleValidatorService.validate_pending_articles` is async and runs classification on successfully extracted title/body
+- [x] Relevant articles saved in stories table with status `'UNPROCESSED'`; irrelevant articles saved with status `'IRRELEVANT'`
+- [x] Cache status is updated with correct relevance status and source (`'LLM'` or `'MODEL'`)
+- [x] Ingestion pipeline does not fetch articles marked with `'IRRELEVANT'` status
 
 ## CLI Auditing & Labelling Command Updates
 

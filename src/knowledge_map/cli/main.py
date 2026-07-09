@@ -529,7 +529,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         val_service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        val_results = val_service.validate_pending_articles()
+        val_results = asyncio.run(val_service.validate_pending_articles())
         validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
@@ -559,7 +559,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         val_service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        val_results = val_service.validate_pending_articles()
+        val_results = asyncio.run(val_service.validate_pending_articles())
         validated_count = sum(1 for r in val_results if r["status"] == "VALIDATED")
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
@@ -573,7 +573,7 @@ def main(args=None):
         from knowledge_map.core.validation import ArticleValidatorService
         service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
-        results = service.validate_pending_articles()
+        results = asyncio.run(service.validate_pending_articles())
         validated_count = sum(1 for r in results if r["status"] == "VALIDATED")
         failed_count = sum(1 for r in results if r["status"] == "VALIDATION_FAILED")
         unval_count = sum(1 for r in results if r["status"] == "UNVALIDATABLE")

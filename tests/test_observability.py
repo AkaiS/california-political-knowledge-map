@@ -246,7 +246,7 @@ async def test_validation_outcomes_and_circuit_breaker(test_db, caplog, capsys):
                 validation="PENDING",
                 db_path=test_db
             )
-            validator.validate_pending_articles()
+            await validator.validate_pending_articles()
 
         # Check validation outcomes logs
         validation_logged = False

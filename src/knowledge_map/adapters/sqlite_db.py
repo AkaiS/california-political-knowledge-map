@@ -226,8 +226,8 @@ def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT OR IGNORE INTO stories (title, url, category, author, published_date, summary, content)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO stories (title, url, category, author, published_date, summary, content, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             story.get("title"),
             story.get("url"),
@@ -235,7 +235,8 @@ def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
             story.get("author"),
             story.get("published_date"),
             story.get("summary"),
-            story.get("content")
+            story.get("content"),
+            story.get("status", "UNPROCESSED")
         ))
         inserted = cursor.rowcount > 0
         
@@ -284,7 +285,7 @@ def get_all_stories(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, title, url, category, author, published_date, summary, content, created_at
+            SELECT id, title, url, category, author, published_date, summary, content, created_at, status
             FROM stories
             WHERE content IS NOT NULL AND content != ''
             ORDER BY id ASC
