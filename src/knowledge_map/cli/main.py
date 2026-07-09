@@ -50,6 +50,10 @@ class IgnoreStructlogFilter(logging.Filter):
         return True
 
 def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int = logging.INFO):
+    is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
+    if is_testing and log_file_path == ".scratch/pipeline.log":
+        return
+
     os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
