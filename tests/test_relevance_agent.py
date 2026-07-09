@@ -6,30 +6,22 @@ from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html, regist
 from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
     get_relevance_agent_prompt,
-    classify_article_with_llm,
-    STATIC_POSITIVE_EXAMPLES,
-    STATIC_NEGATIVE_EXAMPLES
+    classify_article_with_llm
 )
 
 def test_relevance_classification_schema():
     """Verify that RelevanceClassification enforces schema fields and validation."""
     # Valid positive
-    obj = RelevanceClassification(classification="RELEVANT", rationale="Mentions CA Governor.")
+    obj = RelevanceClassification(classification="RELEVANT")
     assert obj.classification == "RELEVANT"
-    assert obj.rationale == "Mentions CA Governor."
 
     # Valid negative
-    obj2 = RelevanceClassification(classification="IRRELEVANT", rationale="It is a cookie recipe.")
+    obj2 = RelevanceClassification(classification="IRRELEVANT")
     assert obj2.classification == "IRRELEVANT"
-    assert obj2.rationale == "It is a cookie recipe."
 
     # Invalid classification
     with pytest.raises(ValidationError):
-        RelevanceClassification(classification="INCONCLUSIVE", rationale="Unsure")
-
-    # Missing rationale
-    with pytest.raises(ValidationError):
-        RelevanceClassification(classification="RELEVANT")
+        RelevanceClassification(classification="INCONCLUSIVE")
 
 
 def test_prompt_rendering():
@@ -53,20 +45,36 @@ def test_prompt_rendering():
     assert "IRRELEVANT" in prompt
 
 
+def test_prompt_rendering_no_examples():
+    """Verify get_relevance_agent_prompt rendering when examples are empty."""
+    prompt = get_relevance_agent_prompt(
+        title="Test Article Title",
+        body="Test Article Body Content",
+        positive_examples=[],
+        negative_examples=[]
+    )
+    
+    assert "Test Article Title" in prompt
+    assert "Test Article Body Content" in prompt
+    assert "Examples of RELEVANT" not in prompt
+    assert "Examples of IRRELEVANT" not in prompt
+    assert "based on the examples provided" not in prompt
+
+
 @pytest.mark.anyio
-async def test_classify_article_fallback_examples(tmp_path):
-    """Verify that the agent falls back to static examples when DB examples are missing."""
+async def test_classify_article_no_examples(tmp_path):
+    """Verify that the agent runs without examples when DB examples are missing."""
     db_file = tmp_path / "test_empty.db"
     init_db(str(db_file))
     
-    # We will mock the agent run to see what prompt/content was passed.
     mock_result = AsyncMock()
-    mock_result.output = RelevanceClassification(classification="RELEVANT", rationale="Mocked response")
+    mock_result.output = RelevanceClassification(classification="RELEVANT")
     
-    with patch("knowledge_map.core.relevance_agent.Agent.run") as mock_run:
+    with patch("knowledge_map.core.relevance_agent.Agent.run") as mock_run, \
+         patch("knowledge_map.core.relevance_agent.logger.warning") as mock_warn:
         mock_run.return_value = mock_result
         
-        await classify_article_with_llm(
+        res = await classify_article_with_llm(
             title="Sutter County Election",
             body="Local election results for supervisor seat.",
             db_path=str(db_file)
@@ -74,10 +82,11 @@ async def test_classify_article_fallback_examples(tmp_path):
         
         # Verify run was called
         mock_run.assert_called_once()
-        # Verify prompt contained static examples since database was empty
-        called_prompt = mock_run.call_args[0][0]
-        assert STATIC_POSITIVE_EXAMPLES[0]["title"] in called_prompt
-        assert STATIC_NEGATIVE_EXAMPLES[0]["title"] in called_prompt
+        # Verify logger.warning was called
+        mock_warn.assert_called_once_with(
+            "Running relevance classifier agent without examples: No human-labeled examples available in the database."
+        )
+        assert res.classification == "RELEVANT"
 
 
 @pytest.mark.anyio
@@ -134,7 +143,7 @@ async def test_classify_article_dynamic_examples(tmp_path):
         conn.commit()
 
     mock_result = AsyncMock()
-    mock_result.output = RelevanceClassification(classification="IRRELEVANT", rationale="Mocked response")
+    mock_result.output = RelevanceClassification(classification="IRRELEVANT")
 
     with patch("knowledge_map.core.relevance_agent.Agent.run") as mock_run:
         mock_run.return_value = mock_result
@@ -155,9 +164,7 @@ async def test_classify_article_dynamic_examples(tmp_path):
         assert "Db Neg Title" in called_prompt
         assert "Db Neg Body" in called_prompt
         
-        # Verify static examples are NOT in the prompt (as dynamic ones took precedence)
-        assert STATIC_POSITIVE_EXAMPLES[0]["title"] not in called_prompt
-        assert STATIC_NEGATIVE_EXAMPLES[0]["title"] not in called_prompt
+        # No static examples exist anymore, so we only need to verify DB examples are present
 
 
 def sqlite3_connect(db_path):

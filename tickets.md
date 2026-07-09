@@ -42,7 +42,7 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 - [x] Async agent queries database for up to 3 positive and 3 negative gold-standard (`HUMAN`) examples
 - [x] Agent falls back to pre-defined static examples if database examples are missing
-- [x] Agent returns structured Pydantic output containing classification (`RELEVANT` or `IRRELEVANT`) and rationale
+- [x] Agent returns structured Pydantic output containing classification (`RELEVANT` or `IRRELEVANT`).
 
 ## Post-Extraction Relevance Pipeline (Async Validation)
 

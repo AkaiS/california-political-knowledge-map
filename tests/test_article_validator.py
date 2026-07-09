@@ -15,7 +15,7 @@ from unittest.mock import patch
 @pytest.fixture(autouse=True)
 def mock_relevance_agent():
     from knowledge_map.core.relevance_agent import RelevanceClassification
-    mock_res = RelevanceClassification(classification="RELEVANT", rationale="Mocked relevance")
+    mock_res = RelevanceClassification(classification="RELEVANT")
     with patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_res) as mock_fn:
         yield mock_fn
 
@@ -1400,7 +1400,7 @@ async def test_post_extraction_relevance_logistic_regression_inconclusive_fallba
     mock_embedding = [0.1] * 768
     
     # Mock LLM response
-    mock_agent_res = RelevanceClassification(classification="RELEVANT", rationale="Mentions Sacramento debate")
+    mock_agent_res = RelevanceClassification(classification="RELEVANT")
     
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
          patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
@@ -1485,7 +1485,7 @@ async def test_post_extraction_relevance_no_weights_fallback(tmp_path):
     url = "https://calmatters.org/lifestyle/some-post"
     cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
     
-    mock_agent_res = RelevanceClassification(classification="IRRELEVANT", rationale="Lifestyle post")
+    mock_agent_res = RelevanceClassification(classification="IRRELEVANT")
     
     # load_classifier_weights returns None (no weights)
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=None), \
