@@ -61,6 +61,6 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 **Blocked by:** Post-Extraction Relevance Pipeline (Async Validation), Classifier Model Training Update
 
-- [ ] All CLI commands (e.g. `update-sources`, `scrape-archive`, `validate-articles`) execute the async validation pipeline correctly via `asyncio.run`
-- [ ] `ca-map classifier label` supports a `--review-all` flag to query all cached articles with `relevance_label_source != 'HUMAN'`
-- [ ] Manually labeling an article via CLI updates `relevance_label_source` to `'HUMAN'` in the database
+- [x] All CLI commands (e.g. `update-sources`, `scrape-archive`, `validate-articles`) execute the async validation pipeline correctly via `asyncio.run`
+- [x] `ca-map classifier label` supports a `--review-all` flag to query all cached articles with `relevance_label_source != 'HUMAN'`
+- [x] Manually labeling an article via CLI updates `relevance_label_source` to `'HUMAN'` in the database

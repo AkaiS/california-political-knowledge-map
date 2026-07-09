@@ -278,3 +278,178 @@ def test_cli_classifier_train_success(tmp_path, monkeypatch):
             weights = json.load(f)
         assert weights["n_samples"] == 6
 
+
+def test_cli_update_sources_runs_validation(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock, patch, AsyncMock
+    from knowledge_map.adapters.sqlite_db import init_db
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_update_sources.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    with patch("knowledge_map.cli.main.ListingPageDiscoveryService") as MockDiscoveryClass, \
+         patch("knowledge_map.core.validation.ArticleValidatorService") as MockValidatorClass:
+         
+        mock_discovery = MagicMock()
+        mock_discovery.discover_and_scrape_all = AsyncMock(return_value={})
+        MockDiscoveryClass.return_value = mock_discovery
+        
+        mock_validator = MagicMock()
+        mock_validator.validate_pending_articles = AsyncMock(return_value=[])
+        MockValidatorClass.return_value = mock_validator
+        
+        try:
+            main(["update-sources"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_discovery.discover_and_scrape_all.assert_called_once()
+        mock_validator.validate_pending_articles.assert_called_once()
+
+
+def test_cli_scrape_archive_runs_validation(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock, patch, AsyncMock
+    from knowledge_map.adapters.sqlite_db import init_db
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_scrape_archive.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    with patch("knowledge_map.adapters.sqlite_db.get_publication") as mock_get_pub, \
+         patch("knowledge_map.cli.main.ArchiveDiscoveryService") as MockDiscoveryClass, \
+         patch("knowledge_map.core.validation.ArticleValidatorService") as MockValidatorClass:
+         
+        mock_get_pub.return_value = {"id": "test_pub", "name": "Test Pub"}
+        
+        mock_discovery = MagicMock()
+        mock_discovery.run_archive_crawl = AsyncMock(return_value=[])
+        MockDiscoveryClass.return_value = mock_discovery
+        
+        mock_validator = MagicMock()
+        mock_validator.validate_pending_articles = AsyncMock(return_value=[])
+        MockValidatorClass.return_value = mock_validator
+        
+        try:
+            main(["scrape-archive", "--publication-id", "test_pub"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+        mock_get_pub.assert_called_once_with("test_pub", db_path=db_path)
+        mock_discovery.run_archive_crawl.assert_called_once()
+        mock_validator.validate_pending_articles.assert_called_once()
+
+
+def test_cli_classifier_label_default(tmp_path, monkeypatch):
+    import sqlite3
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_label_default.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 1. Insert an article with validation = 'PENDING_RELEVANCE'
+    cache_scraped_html(
+        "https://example.com/pending-rel", "pub1", "<html></html>",
+        validation="PENDING_RELEVANCE", headline="California Budget Proposal",
+        description="Gavin Newsom proposes a new budget.", db_path=db_path
+    )
+    
+    # 2. Insert another article with validation = None and relevance_label_source = 'LLM' (should NOT be reviewed by default)
+    cache_scraped_html(
+        "https://example.com/llm-labeled", "pub1", "<html></html>",
+        validation=None, headline="Other news",
+        description="Not for daily label", db_path=db_path
+    )
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    # We simulate user choosing 'y' (relevant) for the first one, then quitting
+    with patch("builtins.input", side_effect=["y"]):
+        try:
+            main(["classifier", "label"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+    # Verify database updates
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT relevance_status, validation, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/pending-rel",))
+        row = cursor.fetchone()
+        assert row["relevance_status"] == "RELEVANT"
+        assert row["validation"] == "PENDING"
+        assert row["relevance_label_source"] == "HUMAN"
+        
+        # Verify the second was not labeled/changed
+        cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/llm-labeled",))
+        row = cursor.fetchone()
+        assert row["relevance_status"] == "RELEVANT" # default from cache_scraped_html
+        assert row["relevance_label_source"] == "KEYWORD"
+    finally:
+        conn.close()
+
+
+def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
+    import sqlite3
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_label_review_all.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # 1. Insert an article with relevance_label_source = 'LLM'
+    cache_scraped_html(
+        "https://example.com/llm-labeled", "pub1", "<html></html>",
+        validation=None, headline="LLM Labeled Article",
+        description="This was classified by LLM.", relevance_label_source="LLM", db_path=db_path
+    )
+    
+    # 2. Insert another article with relevance_label_source = 'HUMAN' (should NOT be reviewed)
+    cache_scraped_html(
+        "https://example.com/human-labeled", "pub1", "<html></html>",
+        validation=None, headline="Human Labeled Article",
+        description="This was classified by Human.", relevance_label_source="HUMAN", db_path=db_path
+    )
+    
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    # We simulate user choosing 'n' (irrelevant) for the first one
+    with patch("builtins.input", side_effect=["n"]):
+        try:
+            main(["classifier", "label", "--review-all"])
+        except SystemExit as e:
+            assert e.code == 0
+            
+    # Verify database updates
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        
+        # Verify the first was updated
+        cursor.execute("SELECT relevance_status, validation, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/llm-labeled",))
+        row = cursor.fetchone()
+        assert row["relevance_status"] == "IRRELEVANT"
+        assert row["validation"] is None
+        assert row["relevance_label_source"] == "HUMAN"
+        
+        # Verify the second was not changed
+        cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/human-labeled",))
+        row = cursor.fetchone()
+        assert row["relevance_status"] == "RELEVANT"
+        assert row["relevance_label_source"] == "HUMAN"
+    finally:
+        conn.close()
+
+

@@ -180,7 +180,8 @@ def main(args=None):
     # Classifier subcommand
     classifier_parser = subparsers.add_parser("classifier", help="Relevance classifier options (label, train, reevaluate)")
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
-    classifier_sub.add_parser("label", help="Run active learning labeling feedback loop")
+    label_parser = classifier_sub.add_parser("label", help="Run active learning labeling feedback loop")
+    label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
     classifier_sub.add_parser("train", help="Train the classifier using scikit-learn LogisticRegression")
     classifier_sub.add_parser("reevaluate", help="Reevaluate inconclusive/rejected records with the trained model")
 
@@ -814,17 +815,27 @@ def main(args=None):
             conn = sqlite3.connect(db_path)
             try:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT url, headline, description
-                    FROM scraped_html_cache
-                    WHERE validation = 'PENDING_RELEVANCE'
-                """)
+                if getattr(parsed_args, "review_all", False):
+                    cursor.execute("""
+                        SELECT url, headline, description
+                        FROM scraped_html_cache
+                        WHERE relevance_label_source IS NULL OR relevance_label_source != 'HUMAN'
+                    """)
+                else:
+                    cursor.execute("""
+                        SELECT url, headline, description
+                        FROM scraped_html_cache
+                        WHERE validation = 'PENDING_RELEVANCE'
+                    """)
                 rows = cursor.fetchall()
             finally:
                 conn.close()
                 
             if not rows:
-                print("No articles with PENDING_RELEVANCE validation found to label.")
+                if getattr(parsed_args, "review_all", False):
+                    print("No articles with relevance_label_source != 'HUMAN' found to label.")
+                else:
+                    print("No articles with PENDING_RELEVANCE validation found to label.")
                 sys.exit(0)
                 
             print(f"Found {len(rows)} articles requiring relevance labeling.")
@@ -844,11 +855,11 @@ def main(args=None):
                         print("\nExiting labeling tool.")
                         sys.exit(0)
                     if choice == 'y':
-                        update_relevance_status(url, "RELEVANT", "PENDING", db_path=db_path)
+                        update_relevance_status(url, "RELEVANT", "PENDING", relevance_label_source="HUMAN", db_path=db_path)
                         print("Labeled: RELEVANT -> validation: PENDING")
                         break
                     elif choice == 'n':
-                        update_relevance_status(url, "IRRELEVANT", None, db_path=db_path)
+                        update_relevance_status(url, "IRRELEVANT", None, relevance_label_source="HUMAN", db_path=db_path)
                         print("Labeled: IRRELEVANT -> validation: None")
                         break
                     elif choice == 's':
