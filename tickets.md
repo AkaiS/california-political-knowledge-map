@@ -40,9 +40,9 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 **Blocked by:** Database Schema Migration & Cache Table updates
 
-- [ ] Async agent queries database for up to 3 positive and 3 negative gold-standard (`HUMAN`) examples
-- [ ] Agent falls back to pre-defined static examples if database examples are missing
-- [ ] Agent returns structured Pydantic output containing classification (`RELEVANT` or `IRRELEVANT`) and rationale
+- [x] Async agent queries database for up to 3 positive and 3 negative gold-standard (`HUMAN`) examples
+- [x] Agent falls back to pre-defined static examples if database examples are missing
+- [x] Agent returns structured Pydantic output containing classification (`RELEVANT` or `IRRELEVANT`) and rationale
 
 ## Post-Extraction Relevance Pipeline (Async Validation)
 
