@@ -25,6 +25,7 @@ from knowledge_map.core.selectors import (
 
 logger = logging.getLogger(__name__)
 from knowledge_map.utils.console import ConsoleNotifier
+from knowledge_map.utils.urls import clean_and_resolve_url
 
 ILLEGITIMATE_ANCESTORS = {"aside", "nav", "footer", "figure"}
 
@@ -615,7 +616,8 @@ class ArticleValidatorService:
                         "url": url,
                         "author": author_field,
                         "published_date": pub_date_str,
-                        "content": extracted["body"]
+                        "content": extracted["body"],
+                        "links": extract_links_from_elements(extracted.get("body_elements", []), url)
                     }
                     save_story(story, db_path=self.db_path)
                     logger.info("Validation outcome: VALIDATED", extra={
@@ -748,6 +750,26 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
     }
 
 
+def extract_links_from_elements(elements: List[Any], base_url: str) -> List[Dict[str, str]]:
+    """
+    Extracts, resolves, and deduplicates all hyperlinks from body elements.
+    Only keeps links in the body that are not self-links and have valid http/https schemes.
+    """
+    links = []
+    seen = set()
+    for el in elements:
+        for a in el.find_all("a", href=True):
+            href = a["href"]
+            resolved = clean_and_resolve_url(base_url, href)
+            if resolved and resolved not in seen:
+                seen.add(resolved)
+                links.append({
+                    "text": a.get_text().strip(),
+                    "url": resolved
+                })
+    return links
+
+
 def run_recovery_check(
     publication_id: str,
     trigger_article_url: str,
@@ -811,7 +833,8 @@ def run_recovery_check(
             "url": trigger_article_url,
             "author": author_field,
             "published_date": pub_date_str,
-            "content": extracted["body"]
+            "content": extracted["body"],
+            "links": extract_links_from_elements(extracted.get("body_elements", []), trigger_article_url)
         }
         save_story(story, db_path=db_path)
 

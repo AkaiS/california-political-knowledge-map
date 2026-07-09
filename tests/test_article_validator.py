@@ -1192,3 +1192,182 @@ def test_extract_fields_promotional_filtering():
 
     # Check number of elements in body_elements matches expected (which is 2)
     assert len(extracted["body_elements"]) == 2
+
+
+def test_extract_links_from_elements():
+    from bs4 import BeautifulSoup
+    from knowledge_map.core.validation import extract_links_from_elements
+
+    html = """
+    <div>
+        <p>This is a paragraph with <a href="/politics/news">a relative link</a>.</p>
+        <p>This has <a href="https://example.com/target?utm_source=feed&fbclid=123">an absolute link with tracking</a>.</p>
+        <p>This has a duplicate link: <a href="/politics/news">same relative link</a>.</p>
+        <p>This has a self link: <a href="https://calmatters.org/politics/some-story">current article</a>.</p>
+        <p>This has an invalid link: <a href="mailto:test@test.com">email</a>.</p>
+    </div>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    elements = [soup]
+    base_url = "https://calmatters.org/politics/some-story"
+
+    links = extract_links_from_elements(elements, base_url)
+    assert len(links) == 2
+    # Verify relative URL resolved and deduplicated/normalized
+    assert links[0]["text"] == "a relative link"
+    assert links[0]["url"] == "https://calmatters.org/politics/news"
+
+    # Verify tracking parameter stripped
+    assert links[1]["text"] == "an absolute link with tracking"
+    assert links[1]["url"] == "https://example.com/target"
+
+
+def test_validate_pending_articles_extracts_and_saves_links(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_all_stories,
+        get_story_links
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_validator_links.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1",
+        author="span.author",
+        date="time",
+        body="div.content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Climate Bill",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 6
+        }
+        </script>
+    </head>
+    <body>
+        <h1>Climate Bill</h1>
+        <span class="author">Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="content">
+            <p>Check out <a href="/news/water">Water Policy</a> and <a href="https://calmatters.org/politics/story">self-link</a>.</p>
+        </div>
+    </body>
+    </html>
+    """
+    url = "https://calmatters.org/politics/story"
+    cache_scraped_html(url, "calmatters", html, validation="PENDING", db_path=db_path)
+    
+    service = ArticleValidatorService(db_path=db_path)
+    results = service.validate_pending_articles()
+    
+    assert len(results) == 1
+    assert results[0]["status"] == "VALIDATED"
+    
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    story_id = stories[0]["id"]
+    
+    links = get_story_links(story_id, db_path=db_path)
+    assert len(links) == 1
+    assert links[0]["text"] == "Water Policy"
+    assert links[0]["url"] == "https://calmatters.org/news/water"
+
+
+def test_run_recovery_check_saves_links(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_all_stories,
+        get_story_links,
+        pause_publication_validation
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    from knowledge_map.core.validation import run_recovery_check
+    
+    db_file = tmp_path / "test_recovery_links.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    pause_publication_validation("calmatters", "https://calmatters.org/politics/story", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1",
+        author="span.author",
+        date="time",
+        body="div.content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@type": "NewsArticle",
+            "headline": "Climate Bill",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 4
+        }
+        </script>
+    </head>
+    <body>
+        <h1>Climate Bill</h1>
+        <span class="author">Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="content">
+            <p>Read about <a href="https://example.com/energy?utm_medium=email">Energy Bill</a>.</p>
+        </div>
+    </body>
+    </html>
+    """
+    url = "https://calmatters.org/politics/story"
+    cache_scraped_html(url, "calmatters", html, validation="PENDING", db_path=db_path)
+    
+    success = run_recovery_check("calmatters", url, db_path=db_path)
+    assert success is True
+    
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    story_id = stories[0]["id"]
+    
+    links = get_story_links(story_id, db_path=db_path)
+    assert len(links) == 1
+    assert links[0]["text"] == "Energy Bill"
+    assert links[0]["url"] == "https://example.com/energy"
+
