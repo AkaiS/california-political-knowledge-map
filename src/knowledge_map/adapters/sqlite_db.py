@@ -61,60 +61,72 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scraped_html_cache'")
         table_exists = cursor.fetchone() is not None
         
-        has_headline = False
         if table_exists:
             cursor.execute("PRAGMA table_info(scraped_html_cache)")
             columns = [row[1] for row in cursor.fetchall()]
+            
+            cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='scraped_html_cache'")
+            table_sql = cursor.fetchone()[0]
+            
+            # Check if we need the new migration
+            needs_new_migration = ("relevance_label_source" not in columns) or ("'PENDING'" not in table_sql)
             has_headline = "headline" in columns
 
-        if table_exists and not has_headline:
-            if os.path.exists(db_path):
-                import shutil
-                shutil.copy2(db_path, db_path + ".backup")
+            if not has_headline or needs_new_migration:
+                if os.path.exists(db_path):
+                    import shutil
+                    shutil.copy2(db_path, db_path + ".backup")
+                    
+                cursor.execute("ALTER TABLE scraped_html_cache RENAME TO scraped_html_cache_old")
                 
-            cursor.execute("ALTER TABLE scraped_html_cache RENAME TO scraped_html_cache_old")
-            
-            cursor.execute("""
-                CREATE TABLE scraped_html_cache (
-                    url TEXT PRIMARY KEY,
-                    publication_id TEXT NOT NULL,
-                    raw_html TEXT,
-                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')),
-                    validation_date DATETIME,
-                    scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    headline TEXT,
-                    description TEXT,
-                    embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')) DEFAULT 'RELEVANT',
-                    raw_metadata_json TEXT,
-                    FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
-                )
-            """)
-            
-            cursor.execute("""
-                INSERT INTO scraped_html_cache (
-                    url, publication_id, raw_html, validation, validation_date, scraped_at, relevance_status
-                )
-                SELECT url, publication_id, raw_html, validation, validation_date, scraped_at, 'RELEVANT'
-                FROM scraped_html_cache_old
-            """)
-            
-            cursor.execute("DROP TABLE scraped_html_cache_old")
-            
-            # Check and migrate rejected_articles
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rejected_articles'")
-            rejected_exists = cursor.fetchone() is not None
-            if rejected_exists:
-                cursor.execute("SELECT url, publication_id, relevance_status, metadata_json, checked_at FROM rejected_articles")
-                rejected_rows = cursor.fetchall()
-                for r_url, r_pub_id, r_status, r_meta, r_checked in rejected_rows:
-                    r_validation = "PENDING_RELEVANCE" if r_status == "INCONCLUSIVE" else None
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO scraped_html_cache (
-                            url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
-                        ) VALUES (?, ?, NULL, ?, ?, ?, ?)
-                    """, (r_url, r_pub_id, r_validation, r_status, r_meta, r_checked))
-                cursor.execute("DROP TABLE rejected_articles")
+                cursor.execute("""
+                    CREATE TABLE scraped_html_cache (
+                        url TEXT PRIMARY KEY,
+                        publication_id TEXT NOT NULL,
+                        raw_html TEXT,
+                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')) DEFAULT 'PENDING',
+                        validation_date DATETIME,
+                        scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        headline TEXT,
+                        description TEXT,
+                        embedding BLOB,
+                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'RELEVANT',
+                        relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                        raw_metadata_json TEXT,
+                        FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Determine which columns to copy
+                valid_new_columns = {
+                    "url", "publication_id", "raw_html", "validation", "validation_date",
+                    "scraped_at", "headline", "description", "embedding", "relevance_status",
+                    "relevance_label_source", "raw_metadata_json"
+                }
+                columns_to_copy = [col for col in columns if col in valid_new_columns]
+                columns_str = ", ".join(columns_to_copy)
+                
+                cursor.execute(f"""
+                    INSERT INTO scraped_html_cache ({columns_str})
+                    SELECT {columns_str} FROM scraped_html_cache_old
+                """)
+                
+                cursor.execute("DROP TABLE scraped_html_cache_old")
+                
+                # Check and migrate rejected_articles
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rejected_articles'")
+                rejected_exists = cursor.fetchone() is not None
+                if rejected_exists:
+                    cursor.execute("SELECT url, publication_id, relevance_status, metadata_json, checked_at FROM rejected_articles")
+                    rejected_rows = cursor.fetchall()
+                    for r_url, r_pub_id, r_status, r_meta, r_checked in rejected_rows:
+                        r_validation = "PENDING_RELEVANCE" if r_status == "INCONCLUSIVE" else None
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO scraped_html_cache (
+                                url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
+                            ) VALUES (?, ?, NULL, ?, ?, ?, ?)
+                        """, (r_url, r_pub_id, r_validation, r_status, r_meta, r_checked))
+                    cursor.execute("DROP TABLE rejected_articles")
         else:
             # Create scraped_html_cache table with new schema
             cursor.execute("""
@@ -128,7 +140,8 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     headline TEXT,
                     description TEXT,
                     embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')) DEFAULT 'RELEVANT',
+                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'RELEVANT',
+                    relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
                     raw_metadata_json TEXT,
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                 )
@@ -658,6 +671,7 @@ def cache_scraped_html(
     embedding: Optional[list[float]] = None,
     relevance_status: str = "RELEVANT",
     raw_metadata_json: Optional[dict[str, Any]] = None,
+    relevance_label_source: str = "KEYWORD",
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
@@ -673,10 +687,10 @@ def cache_scraped_html(
         cursor.execute("""
             INSERT OR REPLACE INTO scraped_html_cache (
                 url, publication_id, raw_html, validation, validation_date,
-                headline, description, embedding, relevance_status, raw_metadata_json
+                headline, description, embedding, relevance_status, relevance_label_source, raw_metadata_json
             )
-            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
-        """, (url, publication_id, raw_html, validation, headline, description, embedding_blob, relevance_status, meta_str))
+            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        """, (url, publication_id, raw_html, validation, headline, description, embedding_blob, relevance_status, relevance_label_source, meta_str))
         conn.commit()
     finally:
         conn.close()
@@ -694,7 +708,7 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
         cursor = conn.cursor()
         cursor.execute("""
             SELECT url, publication_id, raw_html, validation, validation_date, scraped_at,
-                   headline, description, embedding, relevance_status, raw_metadata_json
+                   headline, description, embedding, relevance_status, relevance_label_source, raw_metadata_json
             FROM scraped_html_cache
             WHERE url = ?
         """, (url,))
@@ -756,6 +770,7 @@ def save_rejected_article(
     publication_id: str,
     relevance_status: str,
     metadata_json: Optional[Dict[str, Any]] = None,
+    relevance_label_source: str = "KEYWORD",
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
@@ -769,9 +784,9 @@ def save_rejected_article(
         validation = "PENDING_RELEVANCE" if relevance_status == "INCONCLUSIVE" else None
         cursor.execute("""
             INSERT OR REPLACE INTO scraped_html_cache (
-                url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
-            ) VALUES (?, ?, NULL, ?, ?, ?, CURRENT_TIMESTAMP)
-        """, (url, publication_id, validation, relevance_status, meta_str))
+                url, publication_id, raw_html, validation, relevance_status, relevance_label_source, raw_metadata_json, scraped_at
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (url, publication_id, validation, relevance_status, relevance_label_source, meta_str))
         conn.commit()
     finally:
         conn.close()
@@ -805,10 +820,45 @@ def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[D
         conn.close()
 
 
+def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
+    """
+    Retrieves balanced human-labeled examples (max 3 per class) by joining cache and stories.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cursor = conn.cursor()
+        
+        # Get up to 3 relevant human-labeled stories
+        cursor.execute("""
+            SELECT s.title, s.content, c.relevance_status
+            FROM scraped_html_cache c
+            JOIN stories s ON c.url = s.url
+            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'RELEVANT'
+            LIMIT 3
+        """)
+        relevant = [dict(row) for row in cursor.fetchall()]
+        
+        # Get up to 3 irrelevant human-labeled stories
+        cursor.execute("""
+            SELECT s.title, s.content, c.relevance_status
+            FROM scraped_html_cache c
+            JOIN stories s ON c.url = s.url
+            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'IRRELEVANT'
+            LIMIT 3
+        """)
+        irrelevant = [dict(row) for row in cursor.fetchall()]
+        
+        return relevant + irrelevant
+    finally:
+        conn.close()
+
+
 def update_relevance_status(
     url: str,
     status: str,
     validation: Optional[str],
+    relevance_label_source: Optional[str] = None,
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
@@ -817,11 +867,18 @@ def update_relevance_status(
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE scraped_html_cache
-            SET relevance_status = ?, validation = ?
-            WHERE url = ?
-        """, (status, validation, url))
+        if relevance_label_source is not None:
+            cursor.execute("""
+                UPDATE scraped_html_cache
+                SET relevance_status = ?, validation = ?, relevance_label_source = ?
+                WHERE url = ?
+            """, (status, validation, relevance_label_source, url))
+        else:
+            cursor.execute("""
+                UPDATE scraped_html_cache
+                SET relevance_status = ?, validation = ?
+                WHERE url = ?
+            """, (status, validation, url))
         conn.commit()
     finally:
         conn.close()
