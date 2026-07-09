@@ -300,7 +300,7 @@ class ListingPageDiscoveryService:
                         if raw_html:
                             try:
                                 html_soup = BeautifulSoup(raw_html, "html.parser")
-                                from knowledge_map.utils.scraper import clean_and_resolve_url
+                                from knowledge_map.utils.urls import clean_and_resolve_url
                                 for a_tag in html_soup.find_all("a", href=True):
                                     raw_href = a_tag["href"]
                                     a_text = a_tag.get_text(separator=" ", strip=True)
@@ -328,7 +328,7 @@ class ListingPageDiscoveryService:
                             if not href:
                                 continue
                             
-                            from knowledge_map.utils.scraper import clean_and_resolve_url
+                            from knowledge_map.utils.urls import clean_and_resolve_url
                             resolved_url = clean_and_resolve_url(base_url, href)
                             if not resolved_url:
                                 continue
