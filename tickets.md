@@ -17,12 +17,12 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 ## Classifier Model Training Update
 
-**What to build:** Ensure that only gold-standard, human-annotated articles are used for Logistic Regression training to prevent low-confidence or machine classifications from biasing the model.
+**What to build:** Ensure that both gold-standard (human-annotated) and silver-standard (LLM-annotated) articles are used for Logistic Regression training, while excluding keyword heuristics and unverified model predictions.
 
 **Blocked by:** Database Schema Migration & Cache Table updates
 
-- [ ] Training query restricts retrieved training articles to those with `relevance_label_source = 'HUMAN'`
-- [ ] `ca-map classifier train` runs successfully using only human-labeled dataset entries
+- [ ] Training query restricts retrieved training articles to those with `relevance_label_source IN ('HUMAN', 'LLM')`
+- [ ] `ca-map classifier train` runs successfully using both human-labeled and LLM-labeled dataset entries
 
 ## Discovery Service Raw HTML Caching & Pending Relevance
 
