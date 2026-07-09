@@ -688,7 +688,7 @@ class ArticleValidatorService:
                         "author": author_field,
                         "published_date": pub_date_str,
                         "content": extracted["body"],
-                        "status": "UNPROCESSED" if relevance_status == "RELEVANT" else "IRRELEVANT"
+                        "status": "UNPROCESSED" if relevance_status == "RELEVANT" else "IRRELEVANT",
                         "links": extract_links_from_elements(extracted.get("body_elements", []), url)
                     }
                     save_story(story, db_path=self.db_path)

@@ -1235,8 +1235,8 @@ def test_extract_links_from_elements():
     assert links[1]["text"] == "an absolute link with tracking"
     assert links[1]["url"] == "https://example.com/target"
 
-
-def test_validate_pending_articles_extracts_and_saves_links(tmp_path):
+@pytest.mark.anyio
+async def test_validate_pending_articles_extracts_and_saves_links(tmp_path):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -1296,7 +1296,7 @@ def test_validate_pending_articles_extracts_and_saves_links(tmp_path):
     cache_scraped_html(url, "calmatters", html, validation="PENDING", db_path=db_path)
     
     service = ArticleValidatorService(db_path=db_path)
-    results = service.validate_pending_articles()
+    results = await service.validate_pending_articles()
     
     assert len(results) == 1
     assert results[0]["status"] == "VALIDATED"
