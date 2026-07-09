@@ -204,7 +204,7 @@ async def test_archive_crawl_first_run(tmp_path):
         scraped_urls = await service.run_archive_crawl(pub)
 
         # Verify output
-        assert scraped_urls == ["https://test.com/politics/relevant-1"]
+        assert scraped_urls == ["https://test.com/politics/relevant-1", "https://test.com/politics/irrelevant-2"]
 
         # Verify blocklist excluded '/ignore/blocked-story' from the state URLs
         state = get_discovery_state("testpub", db_path=db_path)
@@ -214,15 +214,21 @@ async def test_archive_crawl_first_run(tmp_path):
         assert state["current_index"] == 2
         assert state["cutoff_reached"] is False
 
-        # Verify relevant article is cached
-        cached = get_cached_html("https://test.com/politics/relevant-1", db_path=db_path)
-        assert cached is not None
-        assert cached["validation"] == "PENDING"
+        # Verify relevant article is cached with PENDING relevance
+        cached_1 = get_cached_html("https://test.com/politics/relevant-1", db_path=db_path)
+        assert cached_1 is not None
+        assert cached_1["validation"] == "PENDING"
+        assert cached_1["relevance_status"] == "PENDING"
 
-        # Verify irrelevant article is rejected
+        # Verify irrelevant article is also cached with PENDING relevance
+        cached_2 = get_cached_html("https://test.com/politics/irrelevant-2", db_path=db_path)
+        assert cached_2 is not None
+        assert cached_2["validation"] == "PENDING"
+        assert cached_2["relevance_status"] == "PENDING"
+
+        # Verify no rejected article is saved
         rejected = get_rejected_article("https://test.com/politics/irrelevant-2", db_path=db_path)
-        assert rejected is not None
-        assert rejected["relevance_status"] == "IRRELEVANT"
+        assert rejected is None
 
 
 @pytest.mark.anyio
@@ -512,12 +518,10 @@ async def test_archive_crawl_category_filtering(tmp_path, caplog):
 
     with patch("knowledge_map.core.discovery.DomainMapper") as MockMapperClass, \
          patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass, \
-         patch("knowledge_map.core.relevance.check_relevance") as MockCheckRelevance, \
          caplog.at_level(logging.INFO):
         
         MockMapperClass.return_value = mock_mapper_instance
         MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
-        MockCheckRelevance.return_value = ("RELEVANT", {"headline": "A", "description": "B"})
 
         service = ArchiveDiscoveryService(db_path=db_path)
         pub = get_publication("testpub_cat", db_path=db_path)
@@ -526,6 +530,12 @@ async def test_archive_crawl_category_filtering(tmp_path, caplog):
 
         # Verify only matched URL was scraped
         assert scraped_urls == ["https://test.com/politics/relevant-1"]
+
+        # Verify cached with PENDING relevance
+        from knowledge_map.adapters.sqlite_db import get_cached_html
+        cached = get_cached_html("https://test.com/politics/relevant-1", db_path=db_path)
+        assert cached is not None
+        assert cached["relevance_status"] == "PENDING"
 
         # Verify blocklist and category filtering excluded mismatched URLs from discovery state
         state = get_discovery_state("testpub_cat", db_path=db_path)

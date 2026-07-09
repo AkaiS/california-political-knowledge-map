@@ -30,9 +30,9 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 **Blocked by:** Database Schema Migration & Cache Table updates
 
-- [ ] ListingPageDiscoveryService caches raw HTML for all candidate URLs passing filters, setting validation to `'PENDING'` and relevance to `'PENDING'`
-- [ ] ArchiveDiscoveryService caches raw HTML for all candidate URLs passing filters, setting validation to `'PENDING'` and relevance to `'PENDING'`
-- [ ] No early keyword relevance check is performed on raw HTML during discovery runs (except cutoff extraction date checks for archive crawls)
+- [x] ListingPageDiscoveryService caches raw HTML for all candidate URLs passing filters, setting validation to `'PENDING'` and relevance to `'PENDING'`
+- [x] ArchiveDiscoveryService caches raw HTML for all candidate URLs passing filters, setting validation to `'PENDING'` and relevance to `'PENDING'`
+- [x] No early keyword relevance check is performed on raw HTML during discovery runs (except cutoff extraction date checks for archive crawls)
 
 ## Async LLM Silver-Standard Agent (Pydantic AI)
 

@@ -272,6 +272,7 @@ async def test_listing_page_discovery_service(tmp_path):
         assert cached["publication_id"] == "testpub"
         assert "scraped raw content" in cached["raw_html"]
         assert cached["validation"] == "PENDING"
+        assert cached["relevance_status"] == "PENDING"
         
         # Verify check_robots_txt config was passed as True because use_robots_txt is True
         # Let's inspect arun calls
@@ -406,10 +407,8 @@ async def test_discovery_service_category_filtering(tmp_path, caplog):
     mock_crawler_instance.arun.side_effect = mock_arun
     
     with patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass, \
-         patch("knowledge_map.core.relevance.check_relevance") as MockCheckRelevance, \
          caplog.at_level(logging.INFO):
         MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
-        MockCheckRelevance.return_value = ("RELEVANT", {"headline": "California story", "description": "some desc"})
         
         service = ListingPageDiscoveryService(db_path=db_path)
         pub = get_publication("testpub_cat", db_path=db_path)
@@ -421,6 +420,13 @@ async def test_discovery_service_category_filtering(tmp_path, caplog):
             "https://test.com/politics/valid-politics-story",
             "https://test.com/housing/valid-housing-story"
         }
+        
+        # Verify they were cached with PENDING relevance
+        from knowledge_map.adapters.sqlite_db import get_cached_html
+        for url in scraped_urls:
+            cached = get_cached_html(url, db_path=db_path)
+            assert cached is not None
+            assert cached["relevance_status"] == "PENDING"
         
         # Verify that blocklist is checked before category filter:
         # https://test.com/ignore/politics/blocked-story contains politics, but is blocklisted first.

@@ -172,19 +172,23 @@ async def test_relevance_outcomes_logging(test_db, caplog):
         service = ListingPageDiscoveryService(db_path=test_db)
         pub = get_publication("testpub", db_path=test_db)
         await service.discover_and_scrape_for_publication(pub)
-
-        # Check for relevance check log fields
-        relevance_logged = False
+ 
+        # Check for cached logging
+        cached_logged = False
         for record in caplog.records:
-            if hasattr(record, "relevance_status") or getattr(record, "relevance_status", None) is not None:
-                relevance_logged = True
-                assert getattr(record, "url") == "https://test.com/politics/valid-story-1"
-                assert getattr(record, "publication_id") == "testpub"
-                assert getattr(record, "relevance_status") == "RELEVANT"
-                assert "California Senate" in getattr(record, "headline")
-                assert "votes to confirm" in getattr(record, "description")
+            if "Cached candidate article" in record.message:
+                cached_logged = True
+                assert "https://test.com/politics/valid-story-1" in record.message
+                assert "PENDING" in record.message
         
-        assert relevance_logged
+        assert cached_logged
+
+        # Check database side effects
+        from knowledge_map.adapters.sqlite_db import get_cached_html
+        cached = get_cached_html("https://test.com/politics/valid-story-1", db_path=test_db)
+        assert cached is not None
+        assert cached["validation"] == "PENDING"
+        assert cached["relevance_status"] == "PENDING"
 
 @pytest.mark.anyio
 async def test_validation_outcomes_and_circuit_breaker(test_db, caplog, capsys):
