@@ -24,6 +24,10 @@ from knowledge_map.core.selectors import (
 )
 from knowledge_map.core.relevance import load_classifier_weights, classify_article
 from knowledge_map.core.relevance_agent import classify_article_with_llm
+from knowledge_map.core.relevance_classification import (
+    get_metadata_embedding,
+    persist_relevance_label,
+)
 
 logger = logging.getLogger(__name__)
 from knowledge_map.utils.console import ConsoleNotifier
@@ -627,19 +631,7 @@ class ArticleValidatorService:
                     label_source = "KEYWORD"
                     embedding = None
                     
-                    # Compute embedding of the clean text (headline + description)
-                    text_to_embed = f"{headline} {description}".strip()
-                    if text_to_embed:
-                        try:
-                            from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
-                            from knowledge_map.schemas import ArticleChunk
-                            adapter = PydanticAIEmbeddingAdapter()
-                            chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
-                            embeddings = adapter.process_chunks([chunk])
-                            if embeddings:
-                                embedding = embeddings[0]
-                        except Exception as e:
-                            logger.warning(f"Failed to generate embedding for post-extraction relevance: {e}")
+                    embedding = get_metadata_embedding(headline, description)
                     
                     if weights and embedding:
                         # Classify using model
@@ -657,25 +649,23 @@ class ArticleValidatorService:
                             relevance_status = "IRRELEVANT"
                             label_source = "LLM"
                     
-                    # Update database cache with correct relevance status, source, and embedding
-                    from knowledge_map.adapters.sqlite_db import update_relevance_status
                     if relevance_status == "RELEVANT":
-                        update_relevance_status(
-                            url, 
-                            "RELEVANT", 
-                            "VALIDATED", 
-                            label_source, 
+                        persist_relevance_label(
+                            url,
+                            "RELEVANT",
+                            "VALIDATED",
+                            label_source,
                             headline=headline,
                             description=description,
                             embedding=embedding,
                             db_path=self.db_path
                         )
                     else:
-                        update_relevance_status(
-                            url, 
-                            "IRRELEVANT", 
-                            None, 
-                            label_source, 
+                        persist_relevance_label(
+                            url,
+                            "IRRELEVANT",
+                            None,
+                            label_source,
                             headline=headline,
                             description=description,
                             embedding=embedding,
@@ -927,4 +917,3 @@ def run_recovery_check(
         # Failure leaves the publication paused
         logger.warning(f"Recovery Check failed for '{trigger_article_url}'. Errors: {res.get('errors')}. Publication remains PAUSED.")
         return False
-

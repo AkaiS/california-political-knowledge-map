@@ -814,8 +814,11 @@ def main(args=None):
         init_db(db_path)
 
         if parsed_args.classifier_action == "label":
-            from knowledge_map.adapters.sqlite_db import update_relevance_status
             from knowledge_map.core.relevance import deserialize_embedding
+            from knowledge_map.core.relevance_classification import (
+                get_metadata_embedding,
+                persist_relevance_label,
+            )
             
             conn = sqlite3.connect(db_path)
             try:
@@ -863,26 +866,14 @@ def main(args=None):
                         status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
                         validation = "PENDING" if choice == 'y' else None
                         
-                        # Retrieve existing embedding or generate a new one if missing
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
-                        if not embedding:
-                            text_to_embed = f"{headline or ''} {description or ''}".strip()
-                            if text_to_embed:
-                                try:
-                                    from knowledge_map.schemas import ArticleChunk
-                                    adapter = PydanticAIEmbeddingAdapter()
-                                    chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
-                                    embeddings = adapter.process_chunks([chunk])
-                                    if embeddings:
-                                        embedding = embeddings[0]
-                                except Exception as e:
-                                    print(f"Warning: Failed to generate embedding: {e}")
-                                
-                        update_relevance_status(
-                            url, 
-                            status, 
-                            validation, 
-                            relevance_label_source="HUMAN", 
+                        embedding = get_metadata_embedding(headline, description, embedding)
+
+                        persist_relevance_label(
+                            url,
+                            status,
+                            validation,
+                            "HUMAN",
                             headline=headline,
                             description=description,
                             embedding=embedding,

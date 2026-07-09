@@ -195,21 +195,9 @@ def check_relevance(html: str, embedding: Optional[list[float]] = None) -> Tuple
     headline = meta.get("headline")
     description = meta.get("description")
     
-    if embedding is None:
-        text_to_embed = f"{headline or ''} {description or ''}".strip()
-        if text_to_embed:
-            try:
-                from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
-                from knowledge_map.schemas import ArticleChunk
-                adapter = PydanticAIEmbeddingAdapter()
-                chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
-                embeddings = adapter.process_chunks([chunk])
-                if embeddings:
-                    embedding = embeddings[0]
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to generate embedding for relevance check: {e}")
-                
+    from knowledge_map.core.relevance_classification import get_metadata_embedding
+
+    embedding = get_metadata_embedding(headline, description, embedding)
     status = classify_article(headline, description, embedding)
     return status, meta, embedding
 
@@ -235,4 +223,3 @@ def deserialize_embedding(blob: Optional[bytes]) -> Optional[list[float]]:
     if n == 0:
         return []
     return list(struct.unpack(f"{n}f", blob))
-
