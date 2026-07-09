@@ -237,12 +237,14 @@ def test_model_training(tmp_path):
             f"https://example.com/rel/{i}", "pub1", None,
             validation="PENDING", headline="R", description="D",
             embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
+            relevance_label_source="HUMAN",
             db_path=db_path
         )
         cache_scraped_html(
             f"https://example.com/irrel/{i}", "pub1", None,
             validation=None, headline="I", description="D",
             embedding=[-1.0, -1.0, 0.0], relevance_status="IRRELEVANT",
+            relevance_label_source="HUMAN",
             db_path=db_path
         )
 
@@ -256,3 +258,51 @@ def test_model_training(tmp_path):
         assert "coefficients" in weights
         assert "intercept" in weights
         assert weights["n_samples"] == 6
+
+
+def test_model_training_filters_source(tmp_path):
+    """Verify that only HUMAN and LLM labeled articles are trained on, and KEYWORD/MODEL are ignored."""
+    db_file = tmp_path / "test_filtering.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    # Insert 3 HUMAN relevant, 3 LLM irrelevant
+    for i in range(3):
+        cache_scraped_html(
+            f"https://example.com/human-rel/{i}", "pub1", None,
+            validation="PENDING", headline="R", description="D",
+            embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
+            relevance_label_source="HUMAN", db_path=db_path
+        )
+        cache_scraped_html(
+            f"https://example.com/llm-irrel/{i}", "pub1", None,
+            validation=None, headline="I", description="D",
+            embedding=[-1.0, -1.0, 0.0], relevance_status="IRRELEVANT",
+            relevance_label_source="LLM", db_path=db_path
+        )
+
+    # Insert 3 KEYWORD relevant, 3 MODEL irrelevant (should be ignored)
+    for i in range(3):
+        cache_scraped_html(
+            f"https://example.com/kw-rel/{i}", "pub1", None,
+            validation="PENDING", headline="R", description="D",
+            embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
+            relevance_label_source="KEYWORD", db_path=db_path
+        )
+        cache_scraped_html(
+            f"https://example.com/model-irrel/{i}", "pub1", None,
+            validation=None, headline="I", description="D",
+            embedding=[-1.0, -1.0, 0.0], relevance_status="IRRELEVANT",
+            relevance_label_source="MODEL", db_path=db_path
+        )
+
+    # Run the trainer with the mock weights path patched
+    weights_test_path = str(tmp_path / "classifier_weights_test.json")
+    with patch("classifier.trainer.WEIGHTS_PATH", weights_test_path):
+        train_classifier(db_path=db_path)
+        assert os.path.exists(weights_test_path)
+        with open(weights_test_path, "r") as f:
+            weights = json.load(f)
+        # Should only train on the 6 HUMAN/LLM samples, ignoring the 6 KEYWORD/MODEL samples
+        assert weights["n_samples"] == 6
+

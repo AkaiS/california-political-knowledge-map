@@ -21,8 +21,8 @@ Work the **frontier**: any ticket whose blockers are all done.
 
 **Blocked by:** Database Schema Migration & Cache Table updates
 
-- [ ] Training query restricts retrieved training articles to those with `relevance_label_source IN ('HUMAN', 'LLM')`
-- [ ] `ca-map classifier train` runs successfully using both human-labeled and LLM-labeled dataset entries
+- [x] Training query restricts retrieved training articles to those with `relevance_label_source IN ('HUMAN', 'LLM')`
+- [x] `ca-map classifier train` runs successfully using both human-labeled and LLM-labeled dataset entries
 
 ## Discovery Service Raw HTML Caching & Pending Relevance
 

@@ -33,6 +33,7 @@ def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
             FROM scraped_html_cache
             WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT')
               AND embedding IS NOT NULL
+              AND relevance_label_source IN ('HUMAN', 'LLM')
         """)
         rows = cursor.fetchall()
     finally:

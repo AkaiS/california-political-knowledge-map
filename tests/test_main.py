@@ -238,3 +238,42 @@ def test_cli_validate_articles_success(tmp_path, monkeypatch):
             assert e.code == 0
             
         mock_service_instance.validate_pending_articles.assert_called_once()
+
+
+def test_cli_classifier_train_success(tmp_path, monkeypatch):
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html
+    from knowledge_map.cli.main import main
+    
+    db_file = tmp_path / "test_cli_classifier_train.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    # Insert 3 HUMAN relevant, 3 LLM irrelevant
+    for i in range(3):
+        cache_scraped_html(
+            f"https://example.com/human-rel/{i}", "pub1", None,
+            validation="PENDING", headline="R", description="D",
+            embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
+            relevance_label_source="HUMAN", db_path=db_path
+        )
+        cache_scraped_html(
+            f"https://example.com/llm-irrel/{i}", "pub1", None,
+            validation=None, headline="I", description="D",
+            embedding=[-1.0, -1.0, 0.0], relevance_status="IRRELEVANT",
+            relevance_label_source="LLM", db_path=db_path
+        )
+        
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+    
+    weights_test_path = str(tmp_path / "classifier_weights_test.json")
+    with patch("classifier.trainer.WEIGHTS_PATH", weights_test_path):
+        try:
+            main(["classifier", "train"])
+        except SystemExit as e:
+            assert e.code == 0
+        assert os.path.exists(weights_test_path)
+        with open(weights_test_path, "r") as f:
+            weights = json.load(f)
+        assert weights["n_samples"] == 6
+
