@@ -1506,6 +1506,94 @@ async def test_post_extraction_relevance_no_weights_fallback(tmp_path):
     assert stories[0]["status"] == "IRRELEVANT"
 
 
+@pytest.mark.anyio
+async def test_post_extraction_relevance_embedding_heading_description(tmp_path):
+    from datetime import datetime, timezone, timedelta
+    from unittest.mock import patch
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        cache_scraped_html,
+        get_cached_html
+    )
+    from knowledge_map.schemas.selectors import ArticleSelectors
+    from knowledge_map.core.selectors import add_selector_version
+    
+    db_file = tmp_path / "test_relevance_heading_desc.db"
+    db_path = str(db_file)
+    init_db(db_path)
+    
+    register_publication("calmatters", "CalMatters", "https://calmatters.org", db_path=db_path)
+    
+    selectors = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="time",
+        body="div.entry-content"
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=selectors,
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path
+    )
+    
+    html_good = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Target Article Title",
+            "description": "Target Article Description",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Target Article Title</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    
+    url = "https://calmatters.org/politics/newsom-housing"
+    cache_scraped_html(url, "calmatters", html_good, validation="PENDING", db_path=db_path)
+    
+    dummy_weights = {"coefficients": [1.0], "intercept": 0.0, "n_samples": 10}
+    mock_embedding = [0.2] * 768
+    
+    with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]) as mock_embed, \
+         patch("knowledge_map.core.validation.classify_article", return_value="RELEVANT") as mock_classify:
+         
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+        
+        # Verify embedding was generated for heading + description
+        mock_embed.assert_called_once()
+        called_args = mock_embed.call_args[0][0]
+        assert len(called_args) == 1
+        assert called_args[0].text == "Target Article Title Target Article Description"
+        
+        # Verify classify_article was called with headline + description
+        mock_classify.assert_called_once_with("Target Article Title", "Target Article Description", mock_embedding)
+        
+    # Verify cached row in DB has headline, description, and embedding updated
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Target Article Title"
+    assert cached["description"] == "Target Article Description"
+    assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
+
+
+
 
 
 

@@ -860,26 +860,46 @@ def update_relevance_status(
     status: str,
     validation: Optional[str],
     relevance_label_source: Optional[str] = None,
+    headline: Optional[str] = None,
+    description: Optional[str] = None,
+    embedding: Optional[list[float]] = None,
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
-    Updates the relevance status and validation of a cached article.
+    Updates the relevance status, validation, headline, description, and embedding of a cached article.
     """
+    import json
+    from knowledge_map.core.relevance import serialize_embedding
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
+        
+        updates = ["relevance_status = ?", "validation = ?"]
+        params = [status, validation]
+        
         if relevance_label_source is not None:
-            cursor.execute("""
-                UPDATE scraped_html_cache
-                SET relevance_status = ?, validation = ?, relevance_label_source = ?
-                WHERE url = ?
-            """, (status, validation, relevance_label_source, url))
-        else:
-            cursor.execute("""
-                UPDATE scraped_html_cache
-                SET relevance_status = ?, validation = ?
-                WHERE url = ?
-            """, (status, validation, url))
+            updates.append("relevance_label_source = ?")
+            params.append(relevance_label_source)
+            
+        if headline is not None:
+            updates.append("headline = ?")
+            params.append(headline)
+            
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+            
+        if embedding is not None:
+            updates.append("embedding = ?")
+            params.append(serialize_embedding(embedding))
+            
+        params.append(url)
+        query = f"""
+            UPDATE scraped_html_cache
+            SET {", ".join(updates)}
+            WHERE url = ?
+        """
+        cursor.execute(query, tuple(params))
         conn.commit()
     finally:
         conn.close()

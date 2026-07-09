@@ -858,13 +858,35 @@ def main(args=None):
                     except (KeyboardInterrupt, EOFError):
                         print("\nExiting labeling tool.")
                         sys.exit(0)
-                    if choice == 'y':
-                        update_relevance_status(url, "RELEVANT", "PENDING", relevance_label_source="HUMAN", db_path=db_path)
-                        print("Labeled: RELEVANT -> validation: PENDING")
-                        break
-                    elif choice == 'n':
-                        update_relevance_status(url, "IRRELEVANT", None, relevance_label_source="HUMAN", db_path=db_path)
-                        print("Labeled: IRRELEVANT -> validation: None")
+                    if choice in ('y', 'n'):
+                        status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
+                        validation = "PENDING" if choice == 'y' else None
+                        
+                        # Generate embedding of headline + description
+                        text_to_embed = f"{headline or ''} {description or ''}".strip()
+                        embedding = None
+                        if text_to_embed:
+                            try:
+                                from knowledge_map.schemas import ArticleChunk
+                                adapter = PydanticAIEmbeddingAdapter()
+                                chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
+                                embeddings = adapter.process_chunks([chunk])
+                                if embeddings:
+                                    embedding = embeddings[0]
+                            except Exception as e:
+                                print(f"Warning: Failed to generate embedding: {e}")
+                                
+                        update_relevance_status(
+                            url, 
+                            status, 
+                            validation, 
+                            relevance_label_source="HUMAN", 
+                            headline=headline,
+                            description=description,
+                            embedding=embedding,
+                            db_path=db_path
+                        )
+                        print(f"Labeled: {status} -> validation: {validation}")
                         break
                     elif choice == 's':
                         print("Skipped.")

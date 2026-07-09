@@ -372,22 +372,33 @@ def test_cli_classifier_label_default(tmp_path, monkeypatch):
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
     
     # We simulate user choosing 'y' (relevant) for the first one, then quitting
-    with patch("builtins.input", side_effect=["y"]):
+    mock_embedding = [0.3] * 768
+    with patch("builtins.input", side_effect=["y"]), \
+         patch("knowledge_map.cli.main.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]) as mock_embed:
         try:
             main(["classifier", "label"])
         except SystemExit as e:
             assert e.code == 0
+            
+        mock_embed.assert_called_once()
+        called_args = mock_embed.call_args[0][0]
+        assert len(called_args) == 1
+        assert called_args[0].text == "California Budget Proposal Gavin Newsom proposes a new budget."
             
     # Verify database updates
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT relevance_status, validation, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/pending-rel",))
+        cursor.execute("SELECT relevance_status, validation, relevance_label_source, embedding FROM scraped_html_cache WHERE url = ?", ("https://example.com/pending-rel",))
         row = cursor.fetchone()
         assert row["relevance_status"] == "RELEVANT"
         assert row["validation"] == "PENDING"
         assert row["relevance_label_source"] == "HUMAN"
+        
+        from knowledge_map.core.relevance import deserialize_embedding
+        emb = deserialize_embedding(row["embedding"])
+        assert emb == pytest.approx(mock_embedding, rel=1e-5)
         
         # Verify the second was not labeled/changed
         cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/llm-labeled",))

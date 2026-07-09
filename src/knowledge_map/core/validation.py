@@ -616,30 +616,33 @@ class ArticleValidatorService:
                     title = extracted.get("title", "").strip()
                     body = extracted.get("body", "").strip()
                     
-
+                    from knowledge_map.core.relevance import extract_metadata
+                    meta = extract_metadata(raw_html)
+                    headline = title
+                    description = (meta.get("description") or "").strip()
                     
                     weights = load_classifier_weights()
                     relevance_status = "INCONCLUSIVE"
                     label_source = "KEYWORD"
+                    embedding = None
                     
-                    if weights:
-                        # Compute embedding of the clean text (title + body)
-                        text_to_embed = f"{title} {body}".strip()
-                        embedding = None
-                        if text_to_embed:
-                            try:
-                                from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
-                                from knowledge_map.schemas import ArticleChunk
-                                adapter = PydanticAIEmbeddingAdapter()
-                                chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
-                                embeddings = adapter.process_chunks([chunk])
-                                if embeddings:
-                                    embedding = embeddings[0]
-                            except Exception as e:
-                                logger.warning(f"Failed to generate embedding for post-extraction relevance: {e}")
-                        
+                    # Compute embedding of the clean text (headline + description)
+                    text_to_embed = f"{headline} {description}".strip()
+                    if text_to_embed:
+                        try:
+                            from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
+                            from knowledge_map.schemas import ArticleChunk
+                            adapter = PydanticAIEmbeddingAdapter()
+                            chunk = ArticleChunk(text=text_to_embed, start_index=0, end_index=len(text_to_embed), index=0)
+                            embeddings = adapter.process_chunks([chunk])
+                            if embeddings:
+                                embedding = embeddings[0]
+                        except Exception as e:
+                            logger.warning(f"Failed to generate embedding for post-extraction relevance: {e}")
+                    
+                    if weights and embedding:
                         # Classify using model
-                        relevance_status = classify_article(title, body, embedding)
+                        relevance_status = classify_article(headline, description, embedding)
                         label_source = "MODEL"
                     
                     # Fallback to LLM agent if model is inconclusive or weights don't exist
@@ -653,12 +656,30 @@ class ArticleValidatorService:
                             relevance_status = "IRRELEVANT"
                             label_source = "LLM"
                     
-                    # Update database cache with correct relevance status and source
+                    # Update database cache with correct relevance status, source, and embedding
                     from knowledge_map.adapters.sqlite_db import update_relevance_status
                     if relevance_status == "RELEVANT":
-                        update_relevance_status(url, "RELEVANT", "VALIDATED", label_source, db_path=self.db_path)
+                        update_relevance_status(
+                            url, 
+                            "RELEVANT", 
+                            "VALIDATED", 
+                            label_source, 
+                            headline=headline,
+                            description=description,
+                            embedding=embedding,
+                            db_path=self.db_path
+                        )
                     else:
-                        update_relevance_status(url, "IRRELEVANT", None, label_source, db_path=self.db_path)
+                        update_relevance_status(
+                            url, 
+                            "IRRELEVANT", 
+                            None, 
+                            label_source, 
+                            headline=headline,
+                            description=description,
+                            embedding=embedding,
+                            db_path=self.db_path
+                        )
 
                     story = {
                         "title": extracted["title"],
