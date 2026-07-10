@@ -89,7 +89,7 @@ A multi-stage pipeline component that filters discovered URLs using a path block
 _Avoid_: Topic classifier, page filter
 
 **Relevance Status**:
-The classification assigned to a discovered article URL, which determines whether the article is scraped (`RELEVANT`), discarded (`IRRELEVANT`), or cached for future embeddings-based classification (`INCONCLUSIVE`).
+The automated classification assigned to a discovered article URL, which determines whether it is scraped (`RELEVANT`), discarded (`IRRELEVANT`), or routed for human review (`INCONCLUSIVE`). `INCONCLUSIVE` is not a human ground-truth label; human labels are binary: `RELEVANT` or `IRRELEVANT`.
 _Avoid_: Relevance score, category
 
 **Validation Circuit Breaker**:
@@ -167,5 +167,11 @@ _Avoid_: Extractor model, agent helper
 A versioned collection of human-labeled examples used as the authoritative expected outcomes when evaluating model-backed pipeline components.
 _Avoid_: Test fixtures, benchmark data, model labels
 
+**Evaluation Run**:
+One recorded execution of an evaluation suite against a specific component, configuration, and Evaluation Gold Set version.
+_Avoid_: Test run, benchmark, experiment
 
+**Evaluation Case Result**:
+The recorded outcome for one Evaluation Gold Set example within an Evaluation Run, including its scores, timing, and failure details.
+_Avoid_: Test result, row, sample output
 
