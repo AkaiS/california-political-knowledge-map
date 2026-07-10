@@ -19,7 +19,7 @@ Reach a decision-ready, repository-wide evaluation strategy and implementation r
 
 ## Decisions so far
 
-<!-- Closed child tickets will be indexed here. -->
+- Shared evaluation runtime: use `pydantic-evals` for dataset/case execution and scoring, Pydantic AI as the provider-neutral task seam, existing Logfire instrumentation for traces/LLM telemetry, relational persistence for run metadata and case outcomes, and CI artifacts for serialized reports/raw artifact manifests. See [01-validate-shared-evaluation-runtime.md](issues/01-validate-shared-evaluation-runtime.md).
 
 ## Not yet specified
 
