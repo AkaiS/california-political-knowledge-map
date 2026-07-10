@@ -1,7 +1,6 @@
 # 01. Model Immutable Authored Evaluation Definitions
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -15,11 +14,11 @@ The contract makes semantic changes produce a new revision, keeps split assignme
 
 ## Acceptance criteria
 
-- [ ] Authored Evaluation Cases, Evaluation Gold Sets, Evaluation Rubrics, schema references, and revision identities serialize and deserialize without losing their canonical meaning.
-- [ ] Changing authored content while reusing a business identity and revision is detectable by its content hash; semantic changes require a new revision.
-- [ ] Evaluation Gold Set membership names exact Evaluation Case revisions and owns split assignment without changing case identity.
-- [ ] Evaluation Case task input, expected output, and metadata are strongly typed; exact schema identity and revision are required for compatibility.
-- [ ] Evaluation Cases contain no evaluator configuration, and canonical configuration utilities remove credentials before serialization or fingerprinting.
+- [x] Authored Evaluation Cases, Evaluation Gold Sets, Evaluation Rubrics, schema references, and revision identities serialize and deserialize without losing their canonical meaning.
+- [x] Changing authored content while reusing a business identity and revision is detectable by its content hash; semantic changes require a new revision.
+- [x] Evaluation Gold Set membership names exact Evaluation Case revisions and owns split assignment without changing case identity.
+- [x] Evaluation Case task input, expected output, and metadata are strongly typed; exact schema identity and revision are required for compatibility.
+- [x] Evaluation Cases contain no evaluator configuration, and canonical configuration utilities remove credentials before serialization or fingerprinting.
 
 ## Blocked by
 
