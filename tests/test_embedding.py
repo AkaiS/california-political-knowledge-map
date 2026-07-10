@@ -69,6 +69,39 @@ def test_pydantic_ai_embedding_adapter_success():
     assert result[1] == [0.1] * 768
     mock_embedder.embed_documents.assert_called_once_with(["Chunk 1 text", "Chunk 2 text"])
 
+def test_pydantic_ai_embedding_adapter_embed_text_success():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        return MockResult([[0.1] * 768] * len(documents))
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+
+    result = adapter.embed_text("Metadata text")
+
+    assert result == [0.1] * 768
+    mock_embedder.embed_documents.assert_called_once_with(["Metadata text"])
+
+def test_pydantic_ai_embedding_adapter_embed_text_empty():
+    mock_embedder = MagicMock()
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+
+    with pytest.raises(ValueError, match="Text must not be empty"):
+        adapter.embed_text("")
+
+    mock_embedder.embed_documents.assert_not_called()
+
+def test_pydantic_ai_embedding_adapter_embed_text_dimension_mismatch():
+    mock_embedder = MagicMock()
+    async def fake_embed(documents):
+        return MockResult([[0.1] * 128])
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
+
+    with pytest.raises(ValueError, match="Embedding dimension mismatch"):
+        adapter.embed_text("Metadata text")
+
 def test_pydantic_ai_embedding_adapter_empty():
     mock_embedder = MagicMock()
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
@@ -107,6 +140,5 @@ def test_pydantic_ai_embedding_adapter_health_check_failure():
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
     assert adapter.health_check() is False
     mock_embedder.embed_documents.assert_called_once_with(["health_check"])
-
 
 

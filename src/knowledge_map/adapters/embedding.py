@@ -64,6 +64,29 @@ class PydanticAIEmbeddingAdapter:
         else:
             return asyncio.run(func(*args, **kwargs))
 
+    def _validate_embedding(self, embedding: list[float], context: str = "") -> list[float]:
+        expected_dim = settings.embedding.dimension
+        if len(embedding) != expected_dim:
+            prefix = f"{context}: " if context else ""
+            raise ValueError(
+                f"{prefix}Embedding dimension mismatch: "
+                f"expected {expected_dim}, got {len(embedding)}"
+            )
+        return embedding
+
+    def embed_text(self, text: str) -> list[float]:
+        """Generate and validate one document embedding for a text value."""
+        if not text:
+            raise ValueError("Text must not be empty.")
+
+        result = self._run_async(self.embedder.embed_documents, [text])
+        if len(result.embeddings) != 1:
+            raise ValueError(
+                f"Expected one embedding, got {len(result.embeddings)}"
+            )
+
+        return self._validate_embedding(result.embeddings[0])
+
     def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
         if not chunks:
             return []
@@ -72,13 +95,8 @@ class PydanticAIEmbeddingAdapter:
         result = self._run_async(self.embedder.embed_documents, texts)
         embeddings = result.embeddings
         
-        expected_dim = settings.embedding.dimension
         for i, emb in enumerate(embeddings):
-            if len(emb) != expected_dim:
-                raise ValueError(
-                    f"Embedding dimension mismatch at chunk {i}: "
-                    f"expected {expected_dim}, got {len(emb)}"
-                )
+            self._validate_embedding(emb, context=f"At chunk {i}")
                 
         return embeddings
 
@@ -88,5 +106,4 @@ class PydanticAIEmbeddingAdapter:
             return bool(result and result.embeddings)
         except Exception:
             return False
-
 

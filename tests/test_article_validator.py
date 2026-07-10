@@ -1453,7 +1453,7 @@ async def test_post_extraction_relevance_logistic_regression_relevant(tmp_path):
     mock_embedding = [0.1] * 768
     
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
-         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text", return_value=mock_embedding), \
          patch("knowledge_map.core.validation.classify_article", return_value="RELEVANT"):
          
         service = ArticleValidatorService(db_path=db_path)
@@ -1538,7 +1538,7 @@ async def test_post_extraction_relevance_logistic_regression_irrelevant(tmp_path
     mock_embedding = [0.1] * 768
     
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
-         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text", return_value=mock_embedding), \
          patch("knowledge_map.core.validation.classify_article", return_value="IRRELEVANT"):
          
         service = ArticleValidatorService(db_path=db_path)
@@ -1626,7 +1626,7 @@ async def test_post_extraction_relevance_logistic_regression_inconclusive_fallba
     mock_agent_res = RelevanceClassification(classification="RELEVANT")
     
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
-         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]), \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text", return_value=mock_embedding), \
          patch("knowledge_map.core.validation.classify_article", return_value="INCONCLUSIVE"), \
          patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_agent_res) as mock_classify_llm:
          
@@ -1794,7 +1794,7 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
     mock_embedding = [0.2] * 768
     
     with patch("knowledge_map.core.validation.load_classifier_weights", return_value=dummy_weights), \
-         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]) as mock_embed, \
+         patch("knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text", return_value=mock_embedding) as mock_embed, \
          patch("knowledge_map.core.validation.classify_article", return_value="RELEVANT") as mock_classify:
          
         service = ArticleValidatorService(db_path=db_path)
@@ -1802,9 +1802,7 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
         
         # Verify embedding was generated for heading + description
         mock_embed.assert_called_once()
-        called_args = mock_embed.call_args[0][0]
-        assert len(called_args) == 1
-        assert called_args[0].text == "Target Article Title Target Article Description"
+        mock_embed.assert_called_once_with("Target Article Title Target Article Description")
         
         # Verify classify_article was called with headline + description
         mock_classify.assert_called_once_with("Target Article Title", "Target Article Description", mock_embedding)
@@ -1814,7 +1812,6 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
     assert cached["headline"] == "Target Article Title"
     assert cached["description"] == "Target Article Description"
     assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
-
 
 
 

@@ -163,6 +163,9 @@ _Avoid_: Resolver wrapper, coref helper
 The adapter protocol and its concrete implementation that extracts entities and relationships from Article Chunks.
 _Avoid_: Extractor model, agent helper
 
+**Evaluation Gold Set**:
+A versioned collection of human-labeled examples used as the authoritative expected outcomes when evaluating model-backed pipeline components.
+_Avoid_: Test fixtures, benchmark data, model labels
 
 
 

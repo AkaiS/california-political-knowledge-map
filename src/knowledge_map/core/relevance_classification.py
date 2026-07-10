@@ -5,7 +5,6 @@ from typing import Optional
 
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH, update_relevance_status
-from knowledge_map.schemas import ArticleChunk
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +23,7 @@ def get_metadata_embedding(
         return None
 
     try:
-        chunk = ArticleChunk(text=text, start_index=0, end_index=len(text), index=0)
-        embeddings = PydanticAIEmbeddingAdapter().process_chunks([chunk])
-        return embeddings[0] if embeddings else None
+        return PydanticAIEmbeddingAdapter().embed_text(text)
     except Exception:
         logger.warning("Failed to generate relevance metadata embedding", exc_info=True)
         return None
