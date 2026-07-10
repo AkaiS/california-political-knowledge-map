@@ -167,11 +167,62 @@ _Avoid_: Extractor model, agent helper
 A versioned collection of human-labeled examples used as the authoritative expected outcomes when evaluating model-backed pipeline components.
 _Avoid_: Test fixtures, benchmark data, model labels
 
+**Evaluation Case**:
+An immutable, stably identified authored example whose revisions preserve changes to its input, expected outcome, rubric, or authoritative artifacts. Evaluation Gold Set versions assign exact Evaluation Case revisions to splits without rewriting earlier membership.
+_Avoid_: Test case, sample, fixture, gold-set row
+
+**Evaluation Suite**:
+A versioned, component-specific evaluation definition that binds a typed task contract to compatible Evaluation Cases, serialized case-evaluator configurations, at least one serialized report-evaluator configuration, and metric semantics. It consumes an Evaluation Gold Set but excludes provider and execution configuration.
+_Avoid_: Test suite, benchmark suite, model configuration
+
+**Evaluation Rubric**:
+A versioned, human-authored policy of criteria and assertions used by a model-based evaluator to judge outputs. Evaluation Suites reference exact Evaluation Rubric revisions so changes in judging semantics remain reproducible.
+_Avoid_: Judge prompt, evaluator definition, scoring instructions
+
 **Evaluation Run**:
-One recorded execution of an evaluation suite against a specific component, configuration, and Evaluation Gold Set version.
+One immutable execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means its workflow reached terminal outcomes, not that every task, evaluator, metric, or release gate succeeded; a retry is a distinct, linked Evaluation Run.
 _Avoid_: Test run, benchmark, experiment
 
+**Evaluation Run Configuration**:
+The immutable, canonical, secret-free snapshot of shared execution settings and the Validated Component Configuration used by an Evaluation Run. Its content fingerprint identifies materially equivalent configuration across runs.
+_Avoid_: Runtime config, environment snapshot, model settings
+
+**Validated Component Configuration**:
+The normalized, secret-free effective configuration used to construct the component under evaluation, represented by that component's validation model and recorded with the Evaluation Run.
+_Avoid_: Typed extension, raw environment, component options
+
+**Evaluation Case Manifest**:
+The immutable set of exact Evaluation Case revisions selected for an Evaluation Run, together with the provenance of how they were selected. It defines the population measured by aggregate observations when a run executes all or part of an Evaluation Gold Set version.
+_Avoid_: Case filter, dataset subset, selected rows
+
 **Evaluation Case Result**:
-The recorded outcome for one Evaluation Gold Set example within an Evaluation Run, including its scores, timing, and failure details.
+A result envelope created for each Evaluation Case selected by an Evaluation Run, separating execution disposition, task outcome, and independent evaluator outcomes. It preserves partial evidence and distinguishes task failures from evaluator failures.
 _Avoid_: Test result, row, sample output
 
+**Case Evaluator Execution**:
+One recorded application of a case evaluator to an Evaluation Case Result, including whether that invocation completed or failed and any Evaluation Metric Observations it produced.
+_Avoid_: Evaluator result, case metric, generic evaluator execution
+
+**Report Evaluator Execution**:
+One recorded application of a report evaluator invoked after case evaluation against an Evaluation Run report, including whether that invocation completed or failed and any run-level Evaluation Metric Observations it produced.
+_Avoid_: Run evaluator, generic evaluator execution
+
+**Evaluation Metric Definition**:
+The stable meaning of an evaluation measurement, identified by a namespaced name and evaluator revision and declaring its value type, comparison operation, and semantic description.
+_Avoid_: Metric, score definition, display label
+
+**Evaluation Metric Observation**:
+A value measured under an Evaluation Metric Definition for either an Evaluation Case Result or an Evaluation Run. Case observations are produced by Case Evaluator Executions, while run observations are produced by Report Evaluator Executions.
+_Avoid_: Score, metric result, measurement row
+
+**Evaluation Comparison Operation**:
+A versioned rule for comparing baseline and candidate values of an Evaluation Metric Definition, producing a shared better, equivalent, worse, or incomparable result. It may use shared scalar ordering or evaluator-owned logic for structured values; release thresholds remain separate gate configuration.
+_Avoid_: Comparison direction, threshold, release gate
+
+**Evaluation Artifact**:
+Immutable content used or produced by evaluation and identified by its content hash, kind, media type, size, retention class, and sensitivity classification. Redacted content is a distinct Evaluation Artifact rather than a replacement for its source.
+_Avoid_: Artifact reference, file path, CI URL, blob
+
+**Artifact Location**:
+A replaceable location from which an Evaluation Artifact can be resolved. An Evaluation Artifact may have multiple locations without changing its identity.
+_Avoid_: Artifact identity, content hash

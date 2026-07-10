@@ -20,6 +20,7 @@ Reach a decision-ready, repository-wide evaluation strategy and implementation r
 ## Decisions so far
 
 - Shared evaluation runtime: use `pydantic-evals` for dataset/case execution and scoring, Pydantic AI as the provider-neutral task seam, existing Logfire instrumentation for traces/LLM telemetry, relational persistence for run metadata and case outcomes, and CI artifacts for serialized reports/raw artifact manifests. See [01-validate-shared-evaluation-runtime.md](issues/01-validate-shared-evaluation-runtime.md).
+- Shared evaluation contract: use immutable, versioned authored definitions; suite-owned case/report evaluator configuration; mandatory report evaluation; frozen run manifests and secret-free configuration fingerprints; typed task/evaluator outcomes; versioned Metric Definitions and comparison operations; content-addressed artifacts; and an incremental relational execution ledger. See [the completed contract issue](issues/02-define-shared-evaluation-contract.md) and [ready-for-agent specification](../shared-evaluation-contract/PRD.md).
 
 ## Not yet specified
 
