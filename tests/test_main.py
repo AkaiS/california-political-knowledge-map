@@ -374,16 +374,17 @@ def test_cli_classifier_label_default(tmp_path, monkeypatch):
     # We simulate user choosing 'y' (relevant) for the first one, then quitting
     mock_embedding = [0.3] * 768
     with patch("builtins.input", side_effect=["y"]), \
-         patch("knowledge_map.cli.main.PydanticAIEmbeddingAdapter.process_chunks", return_value=[mock_embedding]) as mock_embed:
+         patch("knowledge_map.core.relevance_classification.get_metadata_embedding", return_value=mock_embedding) as mock_embed:
         try:
             main(["classifier", "label"])
         except SystemExit as e:
             assert e.code == 0
             
-        mock_embed.assert_called_once()
-        called_args = mock_embed.call_args[0][0]
-        assert len(called_args) == 1
-        assert called_args[0].text == "California Budget Proposal Gavin Newsom proposes a new budget."
+        mock_embed.assert_called_once_with(
+            "California Budget Proposal",
+            "Gavin Newsom proposes a new budget.",
+            None
+        )
             
     # Verify database updates
     conn = sqlite3.connect(db_path)
@@ -436,11 +437,19 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
     
     # We simulate user choosing 'n' (irrelevant) for the first one
-    with patch("builtins.input", side_effect=["n"]):
+    mock_embedding = [0.3] * 768
+    with patch("builtins.input", side_effect=["n"]), \
+         patch("knowledge_map.core.relevance_classification.get_metadata_embedding", return_value=mock_embedding) as mock_embed:
         try:
             main(["classifier", "label", "--review-all"])
         except SystemExit as e:
             assert e.code == 0
+            
+        mock_embed.assert_called_once_with(
+            "LLM Labeled Article",
+            "This was classified by LLM.",
+            None
+        )
             
     # Verify database updates
     conn = sqlite3.connect(db_path)
