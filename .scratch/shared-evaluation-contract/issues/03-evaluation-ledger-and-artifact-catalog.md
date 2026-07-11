@@ -1,7 +1,6 @@
 # 03. Persist Imported Definitions and the Evaluation Artifact Catalog
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -15,11 +14,11 @@ It also gives evaluation evidence a content-addressed Evaluation Artifact catalo
 
 ## Acceptance criteria
 
-- [ ] Importing an authored definition revision creates one immutable, UUIDv7-identified ledger record with its business identity, revision, canonical hash, schema references, and queryable metadata.
-- [ ] Re-importing the same authored bytes is idempotent; attempting to reuse a business identity and revision with a different hash is rejected.
-- [ ] The ledger uses relational constraints for Gold Set membership and preserves authored definitions as externally authored records rather than editable SQLite content.
-- [ ] An Evaluation Artifact is deduplicated by content hash and records its kind, media type, byte size, retention class, and sensitivity/redaction classification.
-- [ ] One artifact can have multiple replaceable Artifact Locations, and a redacted derivative is a distinct artifact linked to its source.
+- [x] Importing an authored definition revision creates one immutable, UUIDv7-identified ledger record with its business identity, revision, canonical hash, schema references, and queryable metadata.
+- [x] Re-importing the same authored bytes is idempotent; attempting to reuse a business identity and revision with a different hash is rejected.
+- [x] The ledger uses relational constraints for Gold Set membership and preserves authored definitions as externally authored records rather than editable SQLite content.
+- [x] An Evaluation Artifact is deduplicated by content hash and records its kind, media type, byte size, retention class, and sensitivity/redaction classification.
+- [x] One artifact can have multiple replaceable Artifact Locations, and a redacted derivative is a distinct artifact linked to its source.
 
 ## Blocked by
 

@@ -31,6 +31,21 @@ from .suites import (
     NoComparisonOperation,
     OrderedComparisonOperation,
 )
+from .store import (
+    ArtifactConflictError,
+    ArtifactLocation,
+    ArtifactDerivativeRecord,
+    ArtifactLocationRecord,
+    EvaluationArtifact,
+    EvaluationArtifactDerivative,
+    EvaluationArtifactRecord,
+    EvaluationDefinitionKind,
+    EvaluationDefinitionRecord,
+    EvaluationLedger,
+    EvaluationGoldSetMembershipRecord,
+    SQLiteEvaluationLedger,
+    SQLiteEvaluationStore,
+)
 
 __all__ = [
     "AuthoredDefinitionConflictError",
@@ -60,4 +75,17 @@ __all__ = [
     "EvaluationTaskContract",
     "NoComparisonOperation",
     "OrderedComparisonOperation",
+    "ArtifactConflictError",
+    "ArtifactLocation",
+    "ArtifactDerivativeRecord",
+    "ArtifactLocationRecord",
+    "EvaluationArtifact",
+    "EvaluationArtifactDerivative",
+    "EvaluationArtifactRecord",
+    "EvaluationDefinitionKind",
+    "EvaluationDefinitionRecord",
+    "EvaluationLedger",
+    "EvaluationGoldSetMembershipRecord",
+    "SQLiteEvaluationLedger",
+    "SQLiteEvaluationStore",
 ]
