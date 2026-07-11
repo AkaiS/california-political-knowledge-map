@@ -1,7 +1,6 @@
 # 02. Define Executable Evaluation Suites and Metric Semantics
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -15,12 +14,12 @@ The suite contract supports deterministic in-memory execution through `pydantic-
 
 ## Acceptance criteria
 
-- [ ] `pydantic-evals` is an explicit, locked project dependency used by the shared evaluation execution seam.
-- [ ] An Evaluation Suite revision validates its typed task contract, exact case schemas, suite-local evaluator names and configuration fingerprints, rubric references, and declared metrics.
-- [ ] A suite cannot be valid without at least one report evaluator, and it cannot select provider or model execution settings.
-- [ ] Metric Definitions have a namespaced name, evaluator revision, value type, semantic description, and versioned comparison operation; identity is `(namespaced name, evaluator revision)`.
-- [ ] Deterministic evaluators can produce number, integer, boolean, string, and exact-schema structured values; comparisons return better, equivalent, worse, or incomparable as appropriate.
-- [ ] Incompatible case/schema, rubric, or metric revisions are rejected before evaluation begins.
+- [x] `pydantic-evals` is an explicit, locked project dependency used by the shared evaluation execution seam.
+- [x] An Evaluation Suite revision validates its typed task contract, exact case schemas, suite-local evaluator names and configuration fingerprints, rubric references, and declared metrics.
+- [x] A suite cannot be valid without at least one report evaluator, and it cannot select provider or model execution settings.
+- [x] Metric Definitions have a namespaced name, evaluator revision, value type, semantic description, and versioned comparison operation; identity is `(namespaced name, evaluator revision)`.
+- [x] Deterministic evaluators can produce number, integer, boolean, string, and exact-schema structured values; comparisons return better, equivalent, worse, or incomparable as appropriate.
+- [x] Incompatible case/schema, rubric, or metric revisions are rejected before evaluation begins.
 
 ## Blocked by
 
