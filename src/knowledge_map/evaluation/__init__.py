@@ -17,6 +17,20 @@ from .definitions import (
     canonical_configuration_json,
     configuration_fingerprint,
 )
+from .suites import (
+    ConfiguredEvaluator,
+    CustomComparisonOperation,
+    EvaluationComparisonResult,
+    EvaluationMetricDefinition,
+    EvaluationMetricReference,
+    EvaluationMetricValueType,
+    EvaluationRubricRevisionReference,
+    EvaluationSuite,
+    EvaluationSuiteIdentity,
+    EvaluationTaskContract,
+    NoComparisonOperation,
+    OrderedComparisonOperation,
+)
 
 __all__ = [
     "AuthoredDefinitionConflictError",
@@ -34,4 +48,16 @@ __all__ = [
     "assert_same_revision_content",
     "canonical_configuration_json",
     "configuration_fingerprint",
+    "ConfiguredEvaluator",
+    "CustomComparisonOperation",
+    "EvaluationComparisonResult",
+    "EvaluationMetricDefinition",
+    "EvaluationMetricReference",
+    "EvaluationMetricValueType",
+    "EvaluationRubricRevisionReference",
+    "EvaluationSuite",
+    "EvaluationSuiteIdentity",
+    "EvaluationTaskContract",
+    "NoComparisonOperation",
+    "OrderedComparisonOperation",
 ]

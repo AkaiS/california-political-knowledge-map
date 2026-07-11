@@ -17,6 +17,7 @@ dependencies = [
     "logfire[system-metrics]>=4.37.0",
     "structlog>=26.1.0",
     "python-dateutil>=2.9.0.post0",
+    "pydantic-evals>=2.0.0",
 ]
 
 [project.scripts]
