@@ -1,7 +1,6 @@
 # 04. Execute and Record a Complete Deterministic Evaluation Run
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -15,12 +14,12 @@ For a successful run, the coordinator persists exactly one Evaluation Case Resul
 
 ## Acceptance criteria
 
-- [ ] A full or subset execution resolves selection once, freezes exact case revisions in an Evaluation Case Manifest, and records selection provenance without treating the selection expression as authoritative.
-- [ ] Run creation, its manifest, and pending Case Result envelopes are committed atomically before tasks start.
-- [ ] A deterministic typed task executes through `pydantic-evals` and yields exactly one Case Result per manifested case.
-- [ ] Every actual case evaluator and report evaluator application has its own execution record, including invocations that emit no observations.
-- [ ] Report evaluators receive the complete manifest and matching Case Results, emit run observations, and make denominator/exclusion treatment explicit.
-- [ ] Scalar observations persist in typed columns and structured observations as validated JSON, with an exactly-one-value invariant and subject-specific case/run foreign keys.
+- [x] A full or subset execution resolves selection once, freezes exact case revisions in an Evaluation Case Manifest, and records selection provenance without treating the selection expression as authoritative.
+- [x] Run creation, its manifest, and pending Case Result envelopes are committed atomically before tasks start.
+- [x] A deterministic typed task executes through `pydantic-evals` and yields exactly one Case Result per manifested case.
+- [x] Every actual case evaluator and report evaluator application has its own execution record, including invocations that emit no observations.
+- [x] Report evaluators receive the complete manifest and matching Case Results, emit run observations, and make denominator/exclusion treatment explicit.
+- [x] Scalar observations persist in typed columns and structured observations as validated JSON, with an exactly-one-value invariant and subject-specific case/run foreign keys.
 
 ## Blocked by
 

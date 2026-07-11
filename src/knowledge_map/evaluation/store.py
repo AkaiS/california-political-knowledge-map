@@ -26,7 +26,22 @@ from .definitions import (
     SchemaReference,
     new_uuid7,
 )
-from .suites import EvaluationSuite
+from .suites import EvaluationMetricReference, EvaluationSuite
+from .runs import (
+    CaseEvaluatorExecution,
+    CaseMetricObservation,
+    EvaluationCaseDisposition,
+    EvaluationCaseManifestEntry,
+    EvaluationCaseResult,
+    EvaluationMetricObservation,
+    EvaluationProducerStatus,
+    EvaluationRunConfiguration,
+    EvaluationRunRecord,
+    EvaluationRunStatus,
+    ReportEvaluatorExecution,
+    RunMetricObservation,
+    TaskOutcome,
+)
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -157,7 +172,7 @@ def _definition_schema_references(definition: Any) -> tuple[SchemaReference, ...
 def _definition_metadata(definition: Any) -> dict[str, Any]:
     metadata: dict[str, Any] = {
         "description": definition.description,
-        "tags": list(definition.tags),
+        "tags": list(getattr(definition, "tags", ())),
     }
     if isinstance(definition, EvaluationSuite):
         metadata.update(
@@ -184,7 +199,7 @@ class SQLiteEvaluationLedger:
     """A relational ledger for imported definitions and artifact metadata."""
 
     def __init__(self, db_path: str | Path = ":memory:") -> None:
-        self._connection = sqlite3.connect(str(db_path))
+        self._connection = sqlite3.connect(str(db_path), check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._create_schema()
@@ -328,9 +343,500 @@ class SQLiteEvaluationLedger:
             BEGIN
                 SELECT RAISE(ABORT, 'Evaluation Artifacts are immutable');
             END;
+
+            CREATE TABLE IF NOT EXISTS evaluation_runs (
+                run_id TEXT PRIMARY KEY,
+                suite_record_id TEXT NOT NULL
+                    REFERENCES evaluation_definition_revisions(record_id),
+                suite_business_id TEXT NOT NULL,
+                suite_revision INTEGER NOT NULL CHECK (suite_revision >= 1),
+                suite_content_hash TEXT NOT NULL,
+                gold_set_record_id TEXT NOT NULL
+                    REFERENCES evaluation_definition_revisions(record_id),
+                gold_set_business_id TEXT NOT NULL,
+                gold_set_revision INTEGER NOT NULL CHECK (gold_set_revision >= 1),
+                gold_set_content_hash TEXT NOT NULL,
+                configuration_json TEXT NOT NULL,
+                configuration_fingerprint TEXT NOT NULL,
+                selection_expression TEXT,
+                selection_provenance_json TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed'))
+            );
+
+            CREATE TABLE IF NOT EXISTS evaluation_case_manifests (
+                manifest_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
+                ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+                case_record_id TEXT NOT NULL
+                    REFERENCES evaluation_definition_revisions(record_id),
+                case_business_id TEXT NOT NULL,
+                case_revision INTEGER NOT NULL CHECK (case_revision >= 1),
+                case_content_hash TEXT NOT NULL,
+                split TEXT NOT NULL CHECK (split IN ('training', 'calibration', 'held-out')),
+                UNIQUE(run_id, case_record_id),
+                UNIQUE(run_id, ordinal)
+            );
+
+            CREATE TABLE IF NOT EXISTS evaluation_case_results (
+                result_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
+                manifest_id TEXT NOT NULL UNIQUE
+                    REFERENCES evaluation_case_manifests(manifest_id),
+                case_record_id TEXT NOT NULL
+                    REFERENCES evaluation_definition_revisions(record_id),
+                execution_disposition TEXT NOT NULL
+                    CHECK (execution_disposition IN ('pending', 'completed')),
+                task_outcome_json TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS case_evaluator_executions (
+                execution_id TEXT PRIMARY KEY,
+                case_result_id TEXT NOT NULL REFERENCES evaluation_case_results(result_id),
+                evaluator_name TEXT NOT NULL,
+                evaluator_revision INTEGER NOT NULL CHECK (evaluator_revision >= 1),
+                configuration_fingerprint TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+                duration_seconds REAL NOT NULL CHECK (duration_seconds >= 0),
+                failure_message TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS report_evaluator_executions (
+                execution_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
+                evaluator_name TEXT NOT NULL,
+                evaluator_revision INTEGER NOT NULL CHECK (evaluator_revision >= 1),
+                configuration_fingerprint TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+                duration_seconds REAL NOT NULL CHECK (duration_seconds >= 0),
+                failure_message TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS case_metric_observations (
+                observation_id TEXT PRIMARY KEY,
+                case_result_id TEXT NOT NULL
+                    REFERENCES evaluation_case_results(result_id),
+                case_evaluator_execution_id TEXT NOT NULL
+                    REFERENCES case_evaluator_executions(execution_id),
+                metric_namespaced_name TEXT NOT NULL,
+                metric_evaluator_revision INTEGER NOT NULL CHECK (metric_evaluator_revision >= 1),
+                number_value REAL,
+                integer_value INTEGER,
+                boolean_value INTEGER,
+                string_value TEXT,
+                structured_json TEXT,
+                CHECK ((number_value IS NOT NULL) + (integer_value IS NOT NULL)
+                    + (boolean_value IS NOT NULL) + (string_value IS NOT NULL)
+                    + (structured_json IS NOT NULL) = 1)
+            );
+
+            CREATE TABLE IF NOT EXISTS run_metric_observations (
+                observation_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
+                report_evaluator_execution_id TEXT NOT NULL
+                    REFERENCES report_evaluator_executions(execution_id),
+                metric_namespaced_name TEXT NOT NULL,
+                metric_evaluator_revision INTEGER NOT NULL CHECK (metric_evaluator_revision >= 1),
+                number_value REAL,
+                integer_value INTEGER,
+                boolean_value INTEGER,
+                string_value TEXT,
+                structured_json TEXT,
+                CHECK ((number_value IS NOT NULL) + (integer_value IS NOT NULL)
+                    + (boolean_value IS NOT NULL) + (string_value IS NOT NULL)
+                    + (structured_json IS NOT NULL) = 1)
+            );
             """
         )
         self._connection.commit()
+
+    def create_evaluation_run(
+        self,
+        run: EvaluationRunRecord,
+        manifest: Iterable[EvaluationCaseManifestEntry],
+        pending_results: Iterable[EvaluationCaseResult],
+    ) -> None:
+        """Atomically create a run, its frozen manifest, and pending envelopes."""
+        manifest_items = tuple(manifest)
+        result_items = tuple(pending_results)
+        if len(manifest_items) != len(result_items):
+            raise ValueError("every manifest entry requires exactly one pending result")
+        try:
+            self._connection.execute("BEGIN")
+            self._connection.execute(
+                """
+                INSERT INTO evaluation_runs (
+                    run_id, suite_record_id, suite_business_id, suite_revision,
+                    suite_content_hash, gold_set_record_id, gold_set_business_id,
+                    gold_set_revision, gold_set_content_hash, configuration_json,
+                    configuration_fingerprint, selection_expression,
+                    selection_provenance_json, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(run.run_id), str(run.suite_record_id), run.suite_business_id,
+                    run.suite_revision, run.suite_content_hash,
+                    str(run.gold_set_record_id), run.gold_set_business_id,
+                    run.gold_set_revision, run.gold_set_content_hash,
+                    run.configuration.configuration_json,
+                    run.configuration.content_fingerprint,
+                    run.selection_expression,
+                    json.dumps(run.selection_provenance, sort_keys=True, separators=(",", ":")),
+                    run.status.value,
+                ),
+            )
+            for entry in manifest_items:
+                self._connection.execute(
+                    """
+                    INSERT INTO evaluation_case_manifests (
+                        manifest_id, run_id, ordinal, case_record_id,
+                        case_business_id, case_revision, case_content_hash, split
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(entry.manifest_id), str(entry.run_id), entry.ordinal,
+                        str(entry.case_record_id), entry.case_business_id,
+                        entry.case_revision, entry.case_content_hash, entry.split.value,
+                    ),
+                )
+            for result in result_items:
+                self._connection.execute(
+                    """
+                    INSERT INTO evaluation_case_results (
+                        result_id, run_id, manifest_id, case_record_id,
+                        execution_disposition, task_outcome_json
+                    ) VALUES (?, ?, ?, ?, ?, NULL)
+                    """,
+                    (
+                        str(result.result_id), str(result.run_id), str(result.manifest_id),
+                        str(result.case_record_id), result.execution_disposition.value,
+                    ),
+                )
+            self._connection.commit()
+        except Exception:
+            self._connection.rollback()
+            raise
+
+    def record_case_evaluation(
+        self,
+        result: EvaluationCaseResult,
+        executions: Iterable[CaseEvaluatorExecution],
+        observations: Iterable[CaseMetricObservation],
+    ) -> None:
+        """Atomically finalize one case result and its evaluator evidence."""
+        executions = tuple(executions)
+        observations = tuple(observations)
+        try:
+            self._connection.execute("BEGIN")
+            self._connection.execute(
+                """
+                UPDATE evaluation_case_results
+                SET execution_disposition = ?, task_outcome_json = ?
+                WHERE result_id = ?
+                """,
+                (
+                    result.execution_disposition.value,
+                    None if result.task_outcome is None else json.dumps(
+                        result.task_outcome.model_dump(mode="json"),
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    str(result.result_id),
+                ),
+            )
+            for execution in executions:
+                self._insert_case_execution(execution)
+            for observation in observations:
+                self._insert_case_observation(observation)
+            self._connection.commit()
+        except Exception:
+            self._connection.rollback()
+            raise
+
+    def record_report_evaluation(
+        self,
+        executions: Iterable[ReportEvaluatorExecution],
+        observations: Iterable[RunMetricObservation],
+    ) -> None:
+        """Atomically persist report evaluator executions and run observations."""
+        executions = tuple(executions)
+        observations = tuple(observations)
+        try:
+            self._connection.execute("BEGIN")
+            for execution in executions:
+                self._insert_report_execution(execution)
+            for observation in observations:
+                self._insert_run_observation(observation)
+            self._connection.commit()
+        except Exception:
+            self._connection.rollback()
+            raise
+
+    def complete_evaluation_run(self, run_id: UUID) -> EvaluationRunRecord:
+        self._connection.execute(
+            "UPDATE evaluation_runs SET status = 'completed' WHERE run_id = ?",
+            (str(run_id),),
+        )
+        self._connection.commit()
+        run = self.get_evaluation_run(run_id)
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        return run
+
+    def get_evaluation_run(self, run_id: UUID) -> EvaluationRunRecord | None:
+        row = self._connection.execute(
+            "SELECT * FROM evaluation_runs WHERE run_id = ?", (str(run_id),)
+        ).fetchone()
+        return None if row is None else self._run_from_row(row)
+
+    def list_evaluation_runs(self) -> list[EvaluationRunRecord]:
+        rows = self._connection.execute(
+            "SELECT * FROM evaluation_runs ORDER BY rowid"
+        ).fetchall()
+        return [self._run_from_row(row) for row in rows]
+
+    def list_evaluation_case_manifest(
+        self, run_id: UUID
+    ) -> list[EvaluationCaseManifestEntry]:
+        rows = self._connection.execute(
+            "SELECT * FROM evaluation_case_manifests WHERE run_id = ? ORDER BY ordinal",
+            (str(run_id),),
+        ).fetchall()
+        return [
+            EvaluationCaseManifestEntry(
+                manifest_id=UUID(row["manifest_id"]), run_id=UUID(row["run_id"]),
+                ordinal=row["ordinal"],
+                case=EvaluationCaseRevisionReference(
+                    record_id=UUID(row["case_record_id"]),
+                    business_id=row["case_business_id"],
+                    revision=row["case_revision"],
+                    content_hash=row["case_content_hash"],
+                ),
+                split=EvaluationSplit(row["split"]),
+            )
+            for row in rows
+        ]
+
+    def list_evaluation_case_results(self, run_id: UUID) -> list[EvaluationCaseResult]:
+        rows = self._connection.execute(
+            "SELECT * FROM evaluation_case_results WHERE run_id = ? ORDER BY rowid",
+            (str(run_id),),
+        ).fetchall()
+        return [self._case_result_from_row(row) for row in rows]
+
+    list_case_manifest = list_evaluation_case_manifest
+    list_case_results = list_evaluation_case_results
+
+    def list_case_evaluator_executions(
+        self, case_result_id: UUID
+    ) -> list[CaseEvaluatorExecution]:
+        rows = self._connection.execute(
+            "SELECT * FROM case_evaluator_executions WHERE case_result_id = ? ORDER BY rowid",
+            (str(case_result_id),),
+        ).fetchall()
+        return [self._case_execution_from_row(row) for row in rows]
+
+    def list_report_evaluator_executions(
+        self, run_id: UUID
+    ) -> list[ReportEvaluatorExecution]:
+        rows = self._connection.execute(
+            "SELECT * FROM report_evaluator_executions WHERE run_id = ? ORDER BY rowid",
+            (str(run_id),),
+        ).fetchall()
+        return [self._report_execution_from_row(row) for row in rows]
+
+    def list_case_metric_observations(
+        self, case_result_id: UUID
+    ) -> list[CaseMetricObservation]:
+        rows = self._connection.execute(
+            """
+            SELECT * FROM case_metric_observations
+            WHERE case_result_id = ? ORDER BY rowid
+            """,
+            (str(case_result_id),),
+        ).fetchall()
+        return [
+            CaseMetricObservation(
+                observation_id=UUID(row["observation_id"]),
+                case_result_id=UUID(row["case_result_id"]),
+                case_evaluator_execution_id=UUID(row["case_evaluator_execution_id"]),
+                metric=EvaluationMetricReference(
+                    namespaced_name=row["metric_namespaced_name"],
+                    evaluator_revision=row["metric_evaluator_revision"],
+                ),
+                **self._observation_values(row),
+            )
+            for row in rows
+        ]
+
+    def list_run_metric_observations(
+        self, run_id: UUID
+    ) -> list[RunMetricObservation]:
+        rows = self._connection.execute(
+            """
+            SELECT * FROM run_metric_observations
+            WHERE run_id = ? ORDER BY rowid
+            """,
+            (str(run_id),),
+        ).fetchall()
+        return [
+            RunMetricObservation(
+                observation_id=UUID(row["observation_id"]),
+                run_id=UUID(row["run_id"]),
+                report_evaluator_execution_id=UUID(row["report_evaluator_execution_id"]),
+                metric=EvaluationMetricReference(
+                    namespaced_name=row["metric_namespaced_name"],
+                    evaluator_revision=row["metric_evaluator_revision"],
+                ),
+                **self._observation_values(row),
+            )
+            for row in rows
+        ]
+
+    list_case_observations = list_case_metric_observations
+    list_run_observations = list_run_metric_observations
+
+    @staticmethod
+    def _observation_values(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "number_value": row["number_value"],
+            "integer_value": row["integer_value"],
+            "boolean_value": None if row["boolean_value"] is None else bool(row["boolean_value"]),
+            "string_value": row["string_value"],
+            "structured_json": None if row["structured_json"] is None else json.loads(row["structured_json"]),
+        }
+
+    def _insert_case_execution(self, execution: CaseEvaluatorExecution) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO case_evaluator_executions (
+                execution_id, case_result_id, evaluator_name, evaluator_revision,
+                configuration_fingerprint, status, duration_seconds, failure_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(execution.execution_id), str(execution.case_result_id),
+                execution.evaluator_name, execution.evaluator_revision,
+                execution.configuration_fingerprint, execution.status.value,
+                execution.duration_seconds, execution.failure_message,
+            ),
+        )
+
+    def _insert_report_execution(self, execution: ReportEvaluatorExecution) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO report_evaluator_executions (
+                execution_id, run_id, evaluator_name, evaluator_revision,
+                configuration_fingerprint, status, duration_seconds, failure_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(execution.execution_id), str(execution.run_id), execution.evaluator_name,
+                execution.evaluator_revision, execution.configuration_fingerprint,
+                execution.status.value, execution.duration_seconds, execution.failure_message,
+            ),
+        )
+
+    @staticmethod
+    def _observation_columns(observation: EvaluationMetricObservation) -> tuple[Any, ...]:
+        return (
+            str(observation.observation_id), observation.metric.namespaced_name,
+            observation.metric.evaluator_revision, observation.number_value,
+            observation.integer_value, observation.boolean_value,
+            observation.string_value,
+            None if observation.structured_json is None else json.dumps(
+                observation.structured_json, sort_keys=True, separators=(",", ":")
+            ),
+        )
+
+    def _insert_case_observation(self, observation: CaseMetricObservation) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO case_metric_observations (
+                observation_id, case_result_id, case_evaluator_execution_id,
+                metric_namespaced_name, metric_evaluator_revision, number_value,
+                integer_value, boolean_value, string_value, structured_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(observation.observation_id), str(observation.case_result_id),
+                str(observation.case_evaluator_execution_id),
+                *self._observation_columns(observation)[1:],
+            ),
+        )
+
+    def _insert_run_observation(self, observation: RunMetricObservation) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO run_metric_observations (
+                observation_id, run_id, report_evaluator_execution_id,
+                metric_namespaced_name, metric_evaluator_revision, number_value,
+                integer_value, boolean_value, string_value, structured_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(observation.observation_id), str(observation.run_id),
+                str(observation.report_evaluator_execution_id),
+                *self._observation_columns(observation)[1:],
+            ),
+        )
+
+    @staticmethod
+    def _run_from_row(row: sqlite3.Row) -> EvaluationRunRecord:
+        config = json.loads(row["configuration_json"])
+        return EvaluationRunRecord(
+            run_id=UUID(row["run_id"]), suite_record_id=UUID(row["suite_record_id"]),
+            suite_business_id=row["suite_business_id"], suite_revision=row["suite_revision"],
+            suite_content_hash=row["suite_content_hash"],
+            gold_set_record_id=UUID(row["gold_set_record_id"]),
+            gold_set_business_id=row["gold_set_business_id"],
+            gold_set_revision=row["gold_set_revision"],
+            gold_set_content_hash=row["gold_set_content_hash"],
+            configuration=EvaluationRunConfiguration(
+                provider=config["provider"], model=config["model"],
+                execution_mode=config["execution_mode"], random_seed=config["random_seed"],
+                model_settings=config["model_settings"],
+                component_configuration=config["component_configuration"],
+                code_fingerprint=config.get("code_fingerprint"),
+            ),
+            selection_expression=row["selection_expression"],
+            selection_provenance=json.loads(row["selection_provenance_json"]),
+            status=EvaluationRunStatus(row["status"]),
+        )
+
+    @staticmethod
+    def _case_result_from_row(row: sqlite3.Row) -> EvaluationCaseResult:
+        from .runs import TaskFailure, TaskSuccess
+
+        outcome = None
+        if row["task_outcome_json"] is not None:
+            outcome_data = json.loads(row["task_outcome_json"])
+            outcome = TaskSuccess.model_validate(outcome_data) if outcome_data["kind"] == "success" else TaskFailure.model_validate(outcome_data)
+        return EvaluationCaseResult(
+            result_id=UUID(row["result_id"]), run_id=UUID(row["run_id"]),
+            manifest_id=UUID(row["manifest_id"]), case_record_id=UUID(row["case_record_id"]),
+            execution_disposition=EvaluationCaseDisposition(row["execution_disposition"]),
+            task_outcome=outcome,
+        )
+
+    @staticmethod
+    def _case_execution_from_row(row: sqlite3.Row) -> CaseEvaluatorExecution:
+        return CaseEvaluatorExecution(
+            execution_id=UUID(row["execution_id"]), case_result_id=UUID(row["case_result_id"]),
+            evaluator_name=row["evaluator_name"], evaluator_revision=row["evaluator_revision"],
+            configuration_fingerprint=row["configuration_fingerprint"],
+            status=EvaluationProducerStatus(row["status"]),
+            duration_seconds=row["duration_seconds"], failure_message=row["failure_message"],
+        )
+
+    @staticmethod
+    def _report_execution_from_row(row: sqlite3.Row) -> ReportEvaluatorExecution:
+        return ReportEvaluatorExecution(
+            execution_id=UUID(row["execution_id"]), run_id=UUID(row["run_id"]),
+            evaluator_name=row["evaluator_name"], evaluator_revision=row["evaluator_revision"],
+            configuration_fingerprint=row["configuration_fingerprint"],
+            status=EvaluationProducerStatus(row["status"]),
+            duration_seconds=row["duration_seconds"], failure_message=row["failure_message"],
+        )
 
     def import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
         """Import an authored revision's identity and index metadata idempotently."""
