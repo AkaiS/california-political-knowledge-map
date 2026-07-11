@@ -1,7 +1,6 @@
 # 05. Preserve Incomplete, Failed, and Retried Evaluation Run Evidence
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -15,12 +14,12 @@ The Evaluation Run lifecycle distinguishes `COMPLETED`, `FAILED`, and `CANCELLED
 
 ## Acceptance criteria
 
-- [ ] Task outcomes use a typed success-or-failure union; failures retain a normalized category, exception type, safe message, retryability, and failure evidence without provider SDK objects.
-- [ ] Task failure, case evaluator failure, report evaluator failure, missing required metrics, and gate failure remain separately visible in the resulting evidence.
-- [ ] Completed case and report-evaluator producer records commit atomically and incrementally; an interruption after selected commits retains completed evidence and leaves the run incomplete.
-- [ ] `COMPLETED` means all expected workflow records reached terminal outcomes, while run-level infrastructure/orchestration failure is `FAILED` and deliberate stopping is `CANCELLED`.
-- [ ] Cancelled and partially reported runs retain their evidence, and a retry creates a new linked Evaluation Run rather than overwriting its predecessor.
-- [ ] Deterministic lifecycle tests cover successful, task-failed, evaluator-failed, cancelled, orchestration-failed, partial, and retried runs without a live provider.
+- [x] Task outcomes use a typed success-or-failure union; failures retain a normalized category, exception type, safe message, retryability, and failure evidence without provider SDK objects.
+- [x] Task failure, case evaluator failure, report evaluator failure, missing required metrics, and gate failure remain separately visible in the resulting evidence.
+- [x] Completed case and report-evaluator producer records commit atomically and incrementally; an interruption after selected commits retains completed evidence and leaves the run incomplete.
+- [x] `COMPLETED` means all expected workflow records reached terminal outcomes, while run-level infrastructure/orchestration failure is `FAILED` and deliberate stopping is `CANCELLED`.
+- [x] Cancelled and partially reported runs retain their evidence, and a retry creates a new linked Evaluation Run rather than overwriting its predecessor.
+- [x] Deterministic lifecycle tests cover successful, task-failed, evaluator-failed, cancelled, orchestration-failed, partial, and retried runs without a live provider.
 
 ## Blocked by
 

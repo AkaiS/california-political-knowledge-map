@@ -36,6 +36,8 @@ from .runs import (
     EvaluationMetricObservation,
     EvaluationProducerStatus,
     EvaluationRunConfiguration,
+    EvaluationGateOutcome,
+    EvaluationRunIssue,
     EvaluationRunRecord,
     EvaluationRunStatus,
     ReportEvaluatorExecution,
@@ -360,7 +362,12 @@ class SQLiteEvaluationLedger:
                 configuration_fingerprint TEXT NOT NULL,
                 selection_expression TEXT,
                 selection_provenance_json TEXT NOT NULL,
-                status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed'))
+                status TEXT NOT NULL CHECK (
+                    status IN ('pending', 'running', 'completed', 'failed', 'cancelled')
+                ),
+                retry_of_run_id TEXT REFERENCES evaluation_runs(run_id),
+                issues_json TEXT NOT NULL DEFAULT '[]',
+                gate_outcomes_json TEXT NOT NULL DEFAULT '[]'
             );
 
             CREATE TABLE IF NOT EXISTS evaluation_case_manifests (
@@ -385,7 +392,9 @@ class SQLiteEvaluationLedger:
                 case_record_id TEXT NOT NULL
                     REFERENCES evaluation_definition_revisions(record_id),
                 execution_disposition TEXT NOT NULL
-                    CHECK (execution_disposition IN ('pending', 'completed')),
+                    CHECK (execution_disposition IN (
+                        'pending', 'completed', 'failed', 'cancelled'
+                    )),
                 task_outcome_json TEXT
             );
 
@@ -447,6 +456,22 @@ class SQLiteEvaluationLedger:
             );
             """
         )
+        run_columns = {
+            row["name"]
+            for row in self._connection.execute("PRAGMA table_info(evaluation_runs)")
+        }
+        if "retry_of_run_id" not in run_columns:
+            self._connection.execute(
+                "ALTER TABLE evaluation_runs ADD COLUMN retry_of_run_id TEXT"
+            )
+        if "issues_json" not in run_columns:
+            self._connection.execute(
+                "ALTER TABLE evaluation_runs ADD COLUMN issues_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "gate_outcomes_json" not in run_columns:
+            self._connection.execute(
+                "ALTER TABLE evaluation_runs ADD COLUMN gate_outcomes_json TEXT NOT NULL DEFAULT '[]'"
+            )
         self._connection.commit()
 
     def create_evaluation_run(
@@ -469,8 +494,9 @@ class SQLiteEvaluationLedger:
                     suite_content_hash, gold_set_record_id, gold_set_business_id,
                     gold_set_revision, gold_set_content_hash, configuration_json,
                     configuration_fingerprint, selection_expression,
-                    selection_provenance_json, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    selection_provenance_json, status, retry_of_run_id,
+                    issues_json, gate_outcomes_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(run.run_id), str(run.suite_record_id), run.suite_business_id,
@@ -482,6 +508,17 @@ class SQLiteEvaluationLedger:
                     run.selection_expression,
                     json.dumps(run.selection_provenance, sort_keys=True, separators=(",", ":")),
                     run.status.value,
+                    None if run.retry_of_run_id is None else str(run.retry_of_run_id),
+                    json.dumps(
+                        [issue.model_dump(mode="json") for issue in run.issues],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        [gate.model_dump(mode="json") for gate in run.gate_outcomes],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
                 ),
             )
             for entry in manifest_items:
@@ -527,7 +564,7 @@ class SQLiteEvaluationLedger:
         observations = tuple(observations)
         try:
             self._connection.execute("BEGIN")
-            self._connection.execute(
+            cursor = self._connection.execute(
                 """
                 UPDATE evaluation_case_results
                 SET execution_disposition = ?, task_outcome_json = ?
@@ -543,6 +580,8 @@ class SQLiteEvaluationLedger:
                     str(result.result_id),
                 ),
             )
+            if cursor.rowcount != 1:
+                raise KeyError(f"unknown Evaluation Case Result: {result.result_id}")
             for execution in executions:
                 self._insert_case_execution(execution)
             for observation in observations:
@@ -571,16 +610,82 @@ class SQLiteEvaluationLedger:
             self._connection.rollback()
             raise
 
-    def complete_evaluation_run(self, run_id: UUID) -> EvaluationRunRecord:
-        self._connection.execute(
-            "UPDATE evaluation_runs SET status = 'completed' WHERE run_id = ?",
-            (str(run_id),),
+    def complete_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+    ) -> EvaluationRunRecord:
+        self._set_evaluation_run_status(
+            run_id,
+            EvaluationRunStatus.COMPLETED,
+            issues=issues,
+            gate_outcomes=gate_outcomes,
         )
-        self._connection.commit()
         run = self.get_evaluation_run(run_id)
         if run is None:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
         return run
+
+    def fail_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+    ) -> EvaluationRunRecord:
+        self._set_evaluation_run_status(run_id, EvaluationRunStatus.FAILED, issues=issues)
+        run = self.get_evaluation_run(run_id)
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        return run
+
+    def cancel_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+    ) -> EvaluationRunRecord:
+        self._set_evaluation_run_status(run_id, EvaluationRunStatus.CANCELLED, issues=issues)
+        run = self.get_evaluation_run(run_id)
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        return run
+
+    def _set_evaluation_run_status(
+        self,
+        run_id: UUID,
+        status: EvaluationRunStatus,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+    ) -> None:
+        issue_items = tuple(issues)
+        gate_items = tuple(gate_outcomes)
+        cursor = self._connection.execute(
+            """
+            UPDATE evaluation_runs
+            SET status = ?, issues_json = ?, gate_outcomes_json = ?
+            WHERE run_id = ?
+            """,
+            (
+                status.value,
+                json.dumps(
+                    [issue.model_dump(mode="json") for issue in issue_items],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                json.dumps(
+                    [gate.model_dump(mode="json") for gate in gate_items],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                str(run_id),
+            ),
+        )
+        if cursor.rowcount != 1:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        self._connection.commit()
 
     def get_evaluation_run(self, run_id: UUID) -> EvaluationRunRecord | None:
         row = self._connection.execute(
@@ -801,6 +906,17 @@ class SQLiteEvaluationLedger:
             selection_expression=row["selection_expression"],
             selection_provenance=json.loads(row["selection_provenance_json"]),
             status=EvaluationRunStatus(row["status"]),
+            retry_of_run_id=(
+                None if row["retry_of_run_id"] is None else UUID(row["retry_of_run_id"])
+            ),
+            issues=tuple(
+                EvaluationRunIssue.model_validate(item)
+                for item in json.loads(row["issues_json"] or "[]")
+            ),
+            gate_outcomes=tuple(
+                EvaluationGateOutcome.model_validate(item)
+                for item in json.loads(row["gate_outcomes_json"] or "[]")
+            ),
         )
 
     @staticmethod

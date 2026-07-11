@@ -22,10 +22,16 @@ from .definitions import (
 from .suites import EvaluationMetricReference
 
 
+class EvaluationRunCancelled(Exception):
+    """Raised by an injected runner control to stop a run deliberately."""
+
+
 class EvaluationRunStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class EvaluationProducerStatus(str, Enum):
@@ -33,9 +39,31 @@ class EvaluationProducerStatus(str, Enum):
     FAILED = "failed"
 
 
+class EvaluationRunIssue(BaseModel):
+    """A quality or lifecycle diagnostic independent of run completion."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    category: str = Field(min_length=1)
+    subject: str = Field(min_length=1)
+    message: str = Field(min_length=1)
+
+
+class EvaluationGateOutcome(BaseModel):
+    """The result of a release policy check, separate from workflow status."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    gate_name: str = Field(min_length=1)
+    passed: bool
+    failure_message: str | None = None
+
+
 class EvaluationCaseDisposition(str, Enum):
     PENDING = "pending"
     COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class EvaluationRunConfiguration(BaseModel):
@@ -95,6 +123,7 @@ class TaskFailure(BaseModel):
     exception_type: str = Field(min_length=1)
     safe_message: str = Field(min_length=1)
     retryable: bool = False
+    failure_evidence: Mapping[str, Any] = Field(default_factory=dict)
 
 
 TaskOutcome = TaskSuccess | TaskFailure
@@ -118,6 +147,9 @@ class EvaluationRunRecord(BaseModel):
     selection_expression: str | None = None
     selection_provenance: Mapping[str, Any] = Field(default_factory=dict)
     status: EvaluationRunStatus = EvaluationRunStatus.PENDING
+    retry_of_run_id: UUID | None = None
+    issues: tuple[EvaluationRunIssue, ...] = ()
+    gate_outcomes: tuple[EvaluationGateOutcome, ...] = ()
 
     @property
     def configuration_json(self) -> str:
