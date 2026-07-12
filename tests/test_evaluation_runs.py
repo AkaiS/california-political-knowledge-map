@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 from pydantic import BaseModel, SecretStr
 from pydantic_evals.evaluators import (
@@ -11,6 +12,7 @@ from pydantic_evals.reporting.analyses import ScalarResult, TableResult
 
 from knowledge_map.evaluation import (
     ConfiguredEvaluator,
+    DeclaredArtifactReference,
     EvaluationCase,
     EvaluationCaseIdentity,
     EvaluationCaseRevisionReference,
@@ -23,6 +25,9 @@ from knowledge_map.evaluation import (
     EvaluationMetricValueType,
     EvaluationRunConfiguration,
     EvaluationRunner,
+    EvaluationRubric,
+    EvaluationRubricIdentity,
+    EvaluationRubricRevisionReference,
     EvaluationSplit,
     EvaluationSuite,
     EvaluationSuiteIdentity,
@@ -30,6 +35,7 @@ from knowledge_map.evaluation import (
     NoComparisonOperation,
     SchemaReference,
     TaskFailure,
+    TaskSuccess,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
 
@@ -140,6 +146,67 @@ def test_task_failure_preserves_provider_neutral_failure_evidence():
     assert failure.safe_message == "The component did not respond before the deadline."
     assert failure.retryable is True
     assert failure.failure_evidence == {"attempt": 2, "deadline_seconds": 30}
+
+
+def test_task_outcomes_preserve_content_addressed_artifact_references():
+    reference = DeclaredArtifactReference(
+        content_hash="a" * 64,
+        role="evaluation.task.output",
+    )
+
+    success = TaskSuccess(output=Output(answer="answer"), artifacts=(reference,))
+    failure = TaskFailure(
+        category="provider",
+        exception_type="TimeoutError",
+        safe_message="timed out",
+        artifacts=(reference,),
+    )
+
+    assert success.artifacts == (reference,)
+    assert failure.artifacts == (reference,)
+
+
+def test_case_result_persists_task_artifacts_at_case_scope(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("task-artifact-scope")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        artifact = ledger.register_artifact(
+            b"task failure evidence",
+            kind="failure-evidence",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+        reference = DeclaredArtifactReference(
+            content_hash=artifact.content_hash,
+            role="evaluation.task.failure-evidence",
+        )
+        updated = result.case_results[0].model_copy(
+            update={
+                "task_outcome": TaskFailure(
+                    category="provider",
+                    exception_type="TimeoutError",
+                    safe_message="timed out",
+                    artifacts=(reference,),
+                )
+            }
+        )
+
+        ledger.record_case_evaluation(updated, (), ())
+
+        links = ledger.list_case_result_artifacts(updated.result_id)
+        assert links[0].artifact_id == artifact.artifact_id
+        assert links[0].role == "evaluation.task.failure-evidence"
 
 
 def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
@@ -274,6 +341,247 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
             result.report_evaluator_executions[0].failure_message or ""
         )
         assert result.run_observations == ()
+
+
+def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "artifact-links", case_evaluator="exact-case"
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                NoObservationEvaluator()
+                if configured.name == "exact-case"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        consumed = ledger.register_artifact(
+            b"suite input",
+            kind="prompt",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+        run_output = ledger.register_artifact(
+            b"run report",
+            kind="report",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+        case_output = ledger.register_artifact(
+            b"case output",
+            kind="task-output",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+        case_evidence = ledger.register_artifact(
+            b"case rationale",
+            kind="rationale",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+        report_evidence = ledger.register_artifact(
+            b"report analysis",
+            kind="analysis",
+            media_type="text/plain",
+            retention_class="run",
+            sensitivity="internal",
+        )
+
+        ledger.link_consumed_artifact_to_run(
+            result.run.run_id, consumed, role="evaluation.run.prompt"
+        )
+        ledger.link_artifact_to_run(
+            result.run.run_id, run_output, role="evaluation.run.report"
+        )
+        ledger.link_artifact_to_case_result(
+            result.case_results[0].result_id,
+            case_output,
+            role="evaluation.case-result.task-output",
+        )
+        ledger.link_artifact_to_case_evaluator_execution(
+            result.case_evaluator_executions[0].execution_id,
+            case_evidence,
+            role="evaluation.case-evaluator.rationale",
+        )
+        ledger.link_artifact_to_report_evaluator_execution(
+            result.report_evaluator_executions[0].execution_id,
+            report_evidence,
+            role="evaluation.report-evaluator.analysis",
+        )
+
+        assert [item.artifact_id for item in ledger.list_consumed_artifacts(result.run.run_id)] == [
+            consumed.artifact_id
+        ]
+        produced = ledger.list_produced_artifacts(result.run.run_id)
+        assert {item.artifact_id for item in produced} == {
+            run_output.artifact_id,
+            case_output.artifact_id,
+            case_evidence.artifact_id,
+            report_evidence.artifact_id,
+        }
+        assert {
+            (item.producer_type, item.role)
+            for item in produced
+        } == {
+            ("run", "evaluation.run.report"),
+            ("case_result", "evaluation.case-result.task-output"),
+            ("case_evaluator_execution", "evaluation.case-evaluator.rationale"),
+            ("report_evaluator_execution", "evaluation.report-evaluator.analysis"),
+        }
+
+
+def test_runner_persists_normalized_logfire_execution_identity(tmp_path, monkeypatch):
+    import logfire
+
+    class FakeSpan:
+        def __init__(self):
+            self.context = SimpleNamespace(
+                trace_id=0x1234,
+                span_id=0x5678,
+            )
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def get_span_context(self):
+            return self.context
+
+    monkeypatch.setattr(logfire, "span", lambda *args, **kwargs: FakeSpan())
+    cases, gold_set, suite = _lifecycle_fixture(
+        "telemetry-identities", case_evaluator="exact-case"
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                NoObservationEvaluator()
+                if configured.name == "exact-case"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+    assert result.case_evaluator_executions[0].trace_id == "00000000000000000000000000001234"
+    assert result.case_evaluator_executions[0].span_id == "0000000000005678"
+    assert result.report_evaluator_executions[0].trace_id == "00000000000000000000000000001234"
+    assert result.report_evaluator_executions[0].span_id == "0000000000005678"
+
+
+def test_runner_marks_authored_case_artifacts_as_run_inputs(tmp_path):
+    original_cases, gold_set, suite = _lifecycle_fixture("authored-inputs")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        artifact = ledger.register_artifact(
+            b"authoritative prompt",
+            kind="prompt",
+            media_type="text/plain",
+            retention_class="long-term",
+            sensitivity="internal",
+        )
+        cases = tuple(
+            case.model_copy(
+                update={
+                    "artifacts": (
+                        DeclaredArtifactReference(
+                            content_hash=artifact.content_hash,
+                            role="evaluation.case.prompt",
+                        ),
+                    )
+                }
+            )
+            for case in original_cases
+        )
+        gold_set = gold_set.model_copy(
+            update={
+                "memberships": tuple(
+                    membership.model_copy(
+                        update={
+                            "case": EvaluationCaseRevisionReference.from_case(case)
+                        }
+                    )
+                    for membership, case in zip(gold_set.memberships, cases)
+                )
+            }
+        )
+
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        consumed = ledger.list_consumed_artifacts(result.run.run_id)
+        assert [item.artifact_id for item in consumed] == [artifact.artifact_id]
+
+
+def test_runner_marks_authored_rubric_artifacts_as_run_inputs(tmp_path):
+    cases, gold_set, base_suite = _lifecycle_fixture("authored-rubric-input")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        artifact = ledger.register_artifact(
+            b"judge rubric",
+            kind="rubric",
+            media_type="text/plain",
+            retention_class="long-term",
+            sensitivity="internal",
+        )
+        rubric = EvaluationRubric(
+            identity=EvaluationRubricIdentity(business_id="rubric-1", revision=1),
+            description="Judge the answer.",
+            criteria=("The answer is useful.",),
+            artifacts=(
+                DeclaredArtifactReference(
+                    content_hash=artifact.content_hash,
+                    role="evaluation.rubric.criteria",
+                ),
+            ),
+        )
+        suite = base_suite.model_copy(
+            update={
+                "rubrics": (EvaluationRubricRevisionReference.from_rubric(rubric),)
+            }
+        )
+
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            rubrics=(rubric,),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        consumed = ledger.list_consumed_artifacts(result.run.run_id)
+        assert [item.artifact_id for item in consumed] == [artifact.artifact_id]
 
 
 def test_cancelled_run_retains_completed_cases_and_pending_envelopes(tmp_path):

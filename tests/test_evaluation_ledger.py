@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pytest
 
 from knowledge_map.evaluation import (
+    DeclaredArtifactReference,
     EvaluationCase,
     EvaluationCaseIdentity,
     EvaluationCaseRevisionReference,
@@ -214,3 +215,31 @@ def test_artifact_hash_can_be_imported_without_bytes_and_metadata_conflicts_are_
             retention_class="long-term",
             sensitivity="internal",
         )
+
+
+def test_imported_definition_artifacts_are_linked_to_their_authored_producer(tmp_path):
+    ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
+    artifact = ledger.register_artifact(
+        b"authored prompt",
+        kind="prompt",
+        media_type="text/plain",
+        retention_class="long-term",
+        sensitivity="internal",
+    )
+    case = make_case().model_copy(
+        update={
+            "artifacts": (
+                DeclaredArtifactReference(
+                    content_hash=artifact.content_hash,
+                    role="evaluation.case.prompt",
+                ),
+            )
+        }
+    )
+
+    ledger.import_case(case)
+
+    links = ledger.list_definition_artifacts(case.identity.record_id)
+    assert len(links) == 1
+    assert links[0].artifact_id == artifact.artifact_id
+    assert links[0].role == "evaluation.case.prompt"

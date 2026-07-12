@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import asyncio
 import time
+from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -17,7 +18,13 @@ from pydantic_evals.evaluators import ReportEvaluatorContext
 from pydantic_evals.reporting.analyses import ScalarResult
 from pydantic_evals.reporting import EvaluationReport
 
-from .definitions import EvaluationCase, EvaluationGoldSet, EvaluationSplit, new_uuid7
+from .definitions import (
+    EvaluationCase,
+    EvaluationGoldSet,
+    EvaluationRubric,
+    EvaluationSplit,
+    new_uuid7,
+)
 from .runs import (
     CaseEvaluatorExecution,
     CaseMetricObservation,
@@ -46,6 +53,44 @@ from .suites import (
     EvaluationMetricValueType,
     EvaluationSuite,
 )
+
+try:
+    import logfire
+except ImportError:  # pragma: no cover - dependency is optional at this seam
+    logfire = None
+
+
+def _evaluation_span(run_id: UUID, suite_business_id: str):
+    if logfire is None:
+        return nullcontext()
+    try:
+        return logfire.span(
+            "evaluation_run",
+            run_id=str(run_id),
+            suite_business_id=suite_business_id,
+        )
+    except Exception:
+        return nullcontext()
+
+
+def _span_identity(span: Any) -> tuple[str | None, str | None]:
+    try:
+        context = span.get_span_context()
+        trace_id = context.trace_id
+        span_id = context.span_id
+        normalized_trace = (
+            None
+            if trace_id in (None, 0)
+            else f"{trace_id:032x}" if isinstance(trace_id, int) else str(trace_id)
+        )
+        normalized_span = (
+            None
+            if span_id in (None, 0)
+            else f"{span_id:016x}" if isinstance(span_id, int) else str(span_id)
+        )
+        return normalized_trace, normalized_span
+    except Exception:
+        return None, None
 
 
 @dataclass
@@ -178,6 +223,7 @@ class EvaluationRunner:
         suite: EvaluationSuite,
         gold_set: EvaluationGoldSet,
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
+        rubrics: tuple[EvaluationRubric, ...] = (),
         task: Callable[[Any], Any],
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         configuration: EvaluationRunConfiguration,
@@ -207,6 +253,19 @@ class EvaluationRunner:
         }
         gold_record = self.ledger.import_gold_set(gold_set)
         suite_record = self.ledger.import_suite(suite)
+        expected_rubrics = {
+            (reference.record_id, reference.content_hash)
+            for reference in suite.rubrics
+        }
+        supplied_rubrics = {
+            (rubric.identity.record_id, rubric.content_hash) for rubric in rubrics
+        }
+        if expected_rubrics != supplied_rubrics:
+            raise ValueError(
+                "runner requires the exact authored Evaluation Rubric revisions "
+                "declared by the suite"
+            )
+        rubric_records = tuple(self.ledger.import_rubric(rubric) for rubric in rubrics)
         run = EvaluationRunRecord(
             suite_record_id=suite_record.record_id,
             suite_business_id=suite_record.business_id,
@@ -253,6 +312,13 @@ class EvaluationRunner:
             for entry in manifest
         )
         self.ledger.create_evaluation_run(run, manifest, pending_results)
+        for record in (suite_record, gold_record, *case_records, *rubric_records):
+            for artifact_link in self.ledger.list_definition_artifacts(record.record_id):
+                self.ledger.link_consumed_artifact_to_run(
+                    run.run_id,
+                    artifact_link.artifact_id,
+                    role=artifact_link.role,
+                )
 
         case_calls: dict[str, list[_EvaluatorCall]] = {
             configured.name: [] for configured in suite.case_evaluators
@@ -264,6 +330,9 @@ class EvaluationRunner:
             f"{entry.case_business_id}@{entry.case_revision}": result
             for entry, result in zip(manifest, pending_results)
         }
+        telemetry_context = _evaluation_span(run.run_id, suite.identity.business_id)
+        telemetry_span = telemetry_context.__enter__()
+        run_trace_id, run_span_id = _span_identity(telemetry_span)
 
         try:
             for entry, evaluation_case in zip(manifest, selected_cases):
@@ -354,6 +423,8 @@ class EvaluationRunner:
                             ),
                             duration_seconds=call.duration_seconds,
                             failure_message=call.failure_message,
+                            trace_id=run_trace_id,
+                            span_id=run_span_id,
                         )
                         result_executions.append(execution)
                         if not call.failure_message:
@@ -442,6 +513,8 @@ class EvaluationRunner:
                         ),
                         duration_seconds=call.duration_seconds,
                         failure_message=call.failure_message,
+                        trace_id=run_trace_id,
+                        span_id=run_span_id,
                     )
                     observations: list[RunMetricObservation] = []
                     if not call.failure_message:
@@ -517,6 +590,8 @@ class EvaluationRunner:
                 )
             )
             completed_run = self.ledger.fail_evaluation_run(run.run_id, issues=issues)
+        finally:
+            telemetry_context.__exit__(None, None, None)
 
         return self._build_result(completed_run, manifest)
 

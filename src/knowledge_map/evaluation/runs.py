@@ -11,6 +11,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .definitions import (
+    DeclaredArtifactReference,
     EvaluationCase,
     EvaluationCaseRevisionReference,
     EvaluationGoldSet,
@@ -113,6 +114,19 @@ class TaskSuccess(BaseModel):
 
     kind: Literal["success"] = "success"
     output: Any
+    artifacts: tuple[DeclaredArtifactReference, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_output_artifact_vocabulary(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "output_artifacts" in value:
+            value = dict(value)
+            value["artifacts"] = value.pop("output_artifacts")
+        return value
+
+    @property
+    def output_artifacts(self) -> tuple[DeclaredArtifactReference, ...]:
+        return self.artifacts
 
 
 class TaskFailure(BaseModel):
@@ -124,6 +138,19 @@ class TaskFailure(BaseModel):
     safe_message: str = Field(min_length=1)
     retryable: bool = False
     failure_evidence: Mapping[str, Any] = Field(default_factory=dict)
+    artifacts: tuple[DeclaredArtifactReference, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_failure_artifact_vocabulary(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "failure_artifacts" in value:
+            value = dict(value)
+            value["artifacts"] = value.pop("failure_artifacts")
+        return value
+
+    @property
+    def failure_artifacts(self) -> tuple[DeclaredArtifactReference, ...]:
+        return self.artifacts
 
 
 TaskOutcome = TaskSuccess | TaskFailure
@@ -258,6 +285,8 @@ class CaseEvaluatorExecution(BaseModel):
     status: EvaluationProducerStatus
     duration_seconds: float = Field(ge=0)
     failure_message: str | None = None
+    trace_id: str | None = None
+    span_id: str | None = None
 
 
 class ReportEvaluatorExecution(BaseModel):
@@ -271,6 +300,8 @@ class ReportEvaluatorExecution(BaseModel):
     status: EvaluationProducerStatus
     duration_seconds: float = Field(ge=0)
     failure_message: str | None = None
+    trace_id: str | None = None
+    span_id: str | None = None
 
 
 @dataclass(frozen=True)
