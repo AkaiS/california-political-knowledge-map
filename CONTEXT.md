@@ -168,23 +168,59 @@ A versioned collection of human-labeled examples used as the authoritative expec
 _Avoid_: Test fixtures, benchmark data, model labels
 
 **Evaluation Case**:
-An immutable, stably identified authored example whose revisions preserve changes to its input, expected outcome, rubric, or authoritative artifacts. Evaluation Gold Set versions assign exact Evaluation Case revisions to splits without rewriting earlier membership.
+An immutable, stably identified authored example declaring zero or more distinct Evaluation Requirements, whose revisions preserve changes to its input, expected outcome, requirements, or authoritative artifacts. Evaluation Gold Set versions assign exact Evaluation Case revisions to splits without rewriting earlier membership.
 _Avoid_: Test case, sample, fixture, gold-set row
 
+**Evaluation Task Contract**:
+The exact typed input, output, and metadata boundary of one component operation evaluated by an Evaluation Suite. All of the suite's Evaluation Cases implement this shared contract; heterogeneous shapes are explicit variants within its schemas rather than case-specific contracts.
+_Avoid_: Case contract, test schema, suite case type
+
 **Evaluation Suite**:
-A versioned, component-specific evaluation definition that binds a typed task contract to compatible Evaluation Cases, serialized case-evaluator configurations, at least one serialized report-evaluator configuration, and metric semantics. It consumes an Evaluation Gold Set but excludes provider and execution configuration.
+A versioned, component-specific evaluation definition for one component operation that binds its Evaluation Task Contract to compatible Evaluation Cases, owns Configured Evaluators and Evaluation Requirement Bindings, requires at least one serialized report-evaluator configuration, and declares metric semantics. It consumes an Evaluation Gold Set but excludes provider and execution configuration.
 _Avoid_: Test suite, benchmark suite, model configuration
+
+**Configured Evaluator**:
+A uniquely named, suite-local evaluator declaration containing an evaluator revision, canonical configuration, and references to its rubrics and metric semantics. Case and report evaluator declarations occupy separate typed collections but have names unique across the Evaluation Suite; every configured case evaluator is referenced by suite-wide application or at least one Evaluation Requirement Binding, though that binding may be dormant for a particular run.
+_Avoid_: Evaluator instance, evaluator definition, evaluator binding
+
+**Evaluation Requirement**:
+A stable, case-owned semantic capability key from the component's Evaluation Requirement Catalog, declaring a special kind of evaluation the case requires beyond Suite-wide Case Evaluators. It does not select an evaluator implementation, configuration, rubric, model, or metric; a fundamentally different meaning receives a new key rather than revising the existing key. A Suite–Gold Set pairing is incompatible when the suite cannot bind every requirement declared by its selected cases.
+_Avoid_: Evaluator preference, evaluator name, rubric reference, case scoring config
+
+**Evaluation Requirement Catalog**:
+The component-owned closed vocabulary of valid Evaluation Requirement keys and their immutable semantic descriptions. Adding a key does not revise existing authored evaluation definitions, while changing a key's meaning requires introducing a new key.
+_Avoid_: Evaluator registry, suite requirements, arbitrary requirement strings
+
+**Evaluation Requirement Binding**:
+A suite-owned mapping from an Evaluation Requirement key to a non-empty set of Configured Evaluators that collectively satisfy it. Every bound evaluator is applied deterministically to each selected case declaring the requirement; bindings are not alternatives or fallbacks. A binding unused by a particular Gold Set or run selection remains dormant and creates no expected evaluator execution.
+_Avoid_: Case Evaluator Binding, case override, evaluator capability
+
+**Resolved Evaluation Plan**:
+The immutable per-run assignment of Configured Evaluators to the exact manifested Evaluation Case revisions, derived and frozen before execution from Suite-wide Case Evaluators and every selected case's Evaluation Requirements and the suite's bindings. Overlapping assignments are deduplicated into one evaluator application while retaining which requirements each application satisfies; every execution path consumes this same plan.
+_Avoid_: Runtime evaluator list, dataset configuration, execution report
+
+**Evaluation Checkpoint**:
+An atomic durable commit of one completed case and its case-evaluator evidence, or of one completed report-evaluator execution and its run-level evidence. Checkpoints preserve completed work when later evaluation or orchestration fails without giving evaluators responsibility for persistence.
+_Avoid_: Save point, evaluator side effect, partial report
+
+**Evaluation Finalization**:
+The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and the aggregate report input is frozen as a content-addressed Evaluation Artifact. It loads that exact report and executes only report evaluators lacking terminal evidence on the run, never rerunning cases or already checkpointed report evaluators.
+_Avoid_: Run retry, report retry, evaluation resume
+
+**Suite-wide Case Evaluator**:
+A case evaluator configured by an Evaluation Suite and applied to every Evaluation Case selected for a run. Its application is additive with evaluators selected through Evaluation Requirement Bindings, and the Resolved Evaluation Plan applies the same Configured Evaluator at most once to a case.
+_Avoid_: Default evaluator, global evaluator, universal evaluator
 
 **Evaluation Rubric**:
 A versioned, human-authored policy of criteria and assertions used by a model-based evaluator to judge outputs. Evaluation Suites reference exact Evaluation Rubric revisions so changes in judging semantics remain reproducible.
 _Avoid_: Judge prompt, evaluator definition, scoring instructions
 
 **Evaluation Run**:
-One immutable execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means its workflow reached terminal outcomes, not that every task, evaluator, metric, or release gate succeeded; a retry is a distinct, linked Evaluation Run.
+One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means its workflow reached terminal outcomes, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
 _Avoid_: Test run, benchmark, experiment
 
 **Evaluation Run Configuration**:
-The immutable, canonical, secret-free snapshot of shared execution settings and the Validated Component Configuration used by an Evaluation Run. Its content fingerprint identifies materially equivalent configuration across runs.
+The immutable, canonical, secret-free snapshot of shared execution settings, including bounded case concurrency, and the Validated Component Configuration used by an Evaluation Run. Its content fingerprint identifies materially equivalent configuration across runs; case concurrency defaults to one unless explicitly selected.
 _Avoid_: Runtime config, environment snapshot, model settings
 
 **Validated Component Configuration**:
