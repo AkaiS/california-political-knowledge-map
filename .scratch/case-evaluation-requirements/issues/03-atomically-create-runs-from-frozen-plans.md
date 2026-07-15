@@ -24,3 +24,4 @@ Create an Evaluation Run only from a successfully resolved plan, making the auth
 ## Blocked by
 
 - [Preflight selected cases into a Resolved Evaluation Plan](02-preflight-selected-cases-into-a-resolved-evaluation-plan.md)
+- [Freeze typed component configuration in Evaluation Runs](../../evaluation-contract-hardening/issues/03-freeze-typed-component-configuration-in-evaluation-runs.md)

@@ -26,3 +26,4 @@ Resolve the exact Evaluation Case revisions selected from an Evaluation Gold Set
 ## Blocked by
 
 - [Author Evaluation Requirements and Suite bindings](01-author-evaluation-requirements-and-suite-bindings.md)
+- [Bind every Evaluation Gold Set to one Task Contract](../../evaluation-contract-hardening/issues/02-bind-every-evaluation-gold-set-to-one-task-contract.md)

@@ -26,3 +26,4 @@ Make in-memory evaluation consume a Resolved Evaluation Plan through the shared 
 ## Blocked by
 
 - [Preflight selected cases into a Resolved Evaluation Plan](02-preflight-selected-cases-into-a-resolved-evaluation-plan.md)
+- [Invoke sync and async tasks through validated Task Bindings](../../evaluation-contract-hardening/issues/06-invoke-sync-and-async-tasks-through-validated-task-bindings.md)

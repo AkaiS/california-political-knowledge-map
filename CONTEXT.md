@@ -164,7 +164,7 @@ The adapter protocol and its concrete implementation that extracts entities and 
 _Avoid_: Extractor model, agent helper
 
 **Evaluation Gold Set**:
-A versioned collection of human-labeled examples used as the authoritative expected outcomes when evaluating model-backed pipeline components.
+A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. It binds one exact Evaluation Task Contract, and every member implements that contract's input, expected-output, and metadata schemas.
 _Avoid_: Test fixtures, benchmark data, model labels
 
 **Evaluation Case**:
@@ -174,6 +174,14 @@ _Avoid_: Test case, sample, fixture, gold-set row
 **Evaluation Task Contract**:
 The exact typed input, output, and metadata boundary of one component operation evaluated by an Evaluation Suite. All of the suite's Evaluation Cases implement this shared contract; heterogeneous shapes are explicit variants within its schemas rather than case-specific contracts.
 _Avoid_: Case contract, test schema, suite case type
+
+**Evaluation Task Binding**:
+The persistence-free runtime association between an evaluated component operation and the exact Evaluation Task Contract it implements. It is the sole boundary that turns each component invocation into a validated Evaluation Task Outcome and attaches references to task-produced or failure evidence.
+_Avoid_: Task callable, model function, output validator
+
+**Evaluation Task Outcome**:
+The terminal result of applying the evaluated component operation to one manifested Evaluation Case: either a typed success conforming exactly to the Evaluation Task Contract or a provider-neutral failure. An output contract violation is a task failure, not a successful outcome or evaluator failure.
+_Avoid_: Task result, component result, evaluator outcome
 
 **Evaluation Suite**:
 A versioned, component-specific evaluation definition for one component operation that binds its Evaluation Task Contract to compatible Evaluation Cases, owns Configured Evaluators and Evaluation Requirement Bindings, requires at least one serialized report-evaluator configuration, and declares metric semantics. It consumes an Evaluation Gold Set but excludes provider and execution configuration.
@@ -200,11 +208,15 @@ The immutable per-run assignment of Configured Evaluators to the exact manifeste
 _Avoid_: Runtime evaluator list, dataset configuration, execution report
 
 **Evaluation Checkpoint**:
-An atomic durable commit of one completed case and its case-evaluator evidence, or of one completed report-evaluator execution and its run-level evidence. Checkpoints preserve completed work when later evaluation or orchestration fails without giving evaluators responsibility for persistence.
+An atomic durable commit of one completed case and its task and case-evaluator evidence, or of one completed report-evaluator execution and its run-level evidence. Checkpoints preserve completed work when later evaluation or orchestration fails; Task Bindings and evaluators describe evidence without owning persistence.
 _Avoid_: Save point, evaluator side effect, partial report
 
+**Evaluation Ledger**:
+The durable transaction boundary for imported evaluation definitions and execution evidence. It presents one cohesive persistence façade while definition, execution/checkpoint, and artifact responsibilities remain internally separated behind the same atomic boundary.
+_Avoid_: Evaluation database, SQLite store, repository collection
+
 **Evaluation Finalization**:
-The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and the aggregate report input is frozen as a content-addressed Evaluation Artifact. It loads that exact report and executes only report evaluators lacking terminal evidence on the run, never rerunning cases or already checkpointed report evaluators.
+The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and the aggregate report input is frozen as a content-addressed Evaluation Artifact. It loads that exact report, executes only report evaluators lacking terminal evidence, and requests completion; the durable run record authorizes that transition only after all expected terminal evidence exists.
 _Avoid_: Run retry, report retry, evaluation resume
 
 **Suite-wide Case Evaluator**:
@@ -216,7 +228,7 @@ A versioned, human-authored policy of criteria and assertions used by a model-ba
 _Avoid_: Judge prompt, evaluator definition, scoring instructions
 
 **Evaluation Run**:
-One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means its workflow reached terminal outcomes, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
+One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means every case and evaluator assignment in its Resolved Evaluation Plan has terminal evidence and its aggregate report is frozen, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
 _Avoid_: Test run, benchmark, experiment
 
 **Evaluation Run Configuration**:
@@ -244,11 +256,11 @@ One recorded application of a report evaluator invoked after case evaluation aga
 _Avoid_: Run evaluator, generic evaluator execution
 
 **Evaluation Metric Definition**:
-The stable meaning of an evaluation measurement, identified by a namespaced name and evaluator revision and declaring its value type, comparison operation, and semantic description.
+An immutable, repository-wide authored definition of an evaluation measurement, identified by a namespaced name and evaluator revision and declaring its observation value type, comparison operation, and semantic description. Suites may reuse the exact definition across different Evaluation Task Contracts when those measurement semantics remain identical.
 _Avoid_: Metric, score definition, display label
 
 **Evaluation Metric Observation**:
-A value measured under an Evaluation Metric Definition for either an Evaluation Case Result or an Evaluation Run. Case observations are produced by Case Evaluator Executions, while run observations are produced by Report Evaluator Executions.
+A value measured under an Evaluation Metric Definition and owned by the evaluator execution that produced it. A Case Metric Observation derives its Evaluation Case Result through its Case Evaluator Execution, while a Run Metric Observation derives its Evaluation Run through its Report Evaluator Execution.
 _Avoid_: Score, metric result, measurement row
 
 **Evaluation Comparison Operation**:
