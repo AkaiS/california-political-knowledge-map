@@ -251,6 +251,10 @@ class EvaluationRunner:
         case_record_map = {
             (record.business_id, record.revision): record for record in case_records
         }
+        manifested_case_records = tuple(
+            case_record_map[(membership.case.business_id, membership.case.revision)]
+            for membership in selected_memberships
+        )
         gold_record = self.ledger.import_gold_set(gold_set)
         suite_record = self.ledger.import_suite(suite)
         expected_rubrics = {
@@ -312,7 +316,12 @@ class EvaluationRunner:
             for entry in manifest
         )
         self.ledger.create_evaluation_run(run, manifest, pending_results)
-        for record in (suite_record, gold_record, *case_records, *rubric_records):
+        for record in (
+            suite_record,
+            gold_record,
+            *manifested_case_records,
+            *rubric_records,
+        ):
             for artifact_link in self.ledger.list_definition_artifacts(record.record_id):
                 self.ledger.link_consumed_artifact_to_run(
                     run.run_id,

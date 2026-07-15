@@ -540,6 +540,191 @@ def test_runner_marks_authored_case_artifacts_as_run_inputs(tmp_path):
         assert [item.artifact_id for item in consumed] == [artifact.artifact_id]
 
 
+def test_subset_run_consumes_artifacts_from_only_manifested_case_revisions(tmp_path):
+    original_cases, base_gold_set, base_suite = _lifecycle_fixture(
+        "subset-authored-inputs"
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        artifacts = {
+            role: ledger.register_artifact(
+                content,
+                kind="authored-input",
+                media_type="text/plain",
+                retention_class="long-term",
+                sensitivity="internal",
+            )
+            for role, content in {
+                "evaluation.suite.definition": b"suite definition",
+                "evaluation.gold-set.definition": b"gold set definition",
+                "evaluation.rubric.criteria": b"rubric criteria",
+                "evaluation.case.selected": b"selected case prompt",
+                "evaluation.case.excluded": b"excluded case prompt",
+            }.items()
+        }
+        cases = tuple(
+            case.model_copy(
+                update={
+                    "artifacts": (
+                        DeclaredArtifactReference(
+                            content_hash=artifacts[role].content_hash,
+                            role=role,
+                        ),
+                    )
+                }
+            )
+            for case, role in zip(
+                original_cases,
+                ("evaluation.case.selected", "evaluation.case.excluded"),
+            )
+        )
+        gold_set = base_gold_set.model_copy(
+            update={
+                "artifacts": (
+                    DeclaredArtifactReference(
+                        content_hash=artifacts[
+                            "evaluation.gold-set.definition"
+                        ].content_hash,
+                        role="evaluation.gold-set.definition",
+                    ),
+                ),
+                "memberships": tuple(
+                    membership.model_copy(
+                        update={
+                            "case": EvaluationCaseRevisionReference.from_case(case)
+                        }
+                    )
+                    for membership, case in zip(base_gold_set.memberships, cases)
+                ),
+            }
+        )
+        rubric = EvaluationRubric(
+            identity=EvaluationRubricIdentity(
+                business_id="rubric-subset-authored-inputs", revision=1
+            ),
+            description="Judge the selected case.",
+            criteria=("The answer is correct.",),
+            artifacts=(
+                DeclaredArtifactReference(
+                    content_hash=artifacts["evaluation.rubric.criteria"].content_hash,
+                    role="evaluation.rubric.criteria",
+                ),
+            ),
+        )
+        suite = base_suite.model_copy(
+            update={
+                "rubrics": (EvaluationRubricRevisionReference.from_rubric(rubric),)
+            }
+        )
+        suite_record = ledger.import_suite(suite)
+        ledger.link_artifact_to_definition(
+            suite_record.record_id,
+            artifacts["evaluation.suite.definition"],
+            role="evaluation.suite.definition",
+        )
+
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            rubrics=(rubric,),
+            selection=lambda case: case.identity.business_id == "case-1",
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        consumed = ledger.list_consumed_artifacts(result.run.run_id)
+        assert {(item.artifact_id, item.role) for item in consumed} == {
+            (
+                artifacts["evaluation.suite.definition"].artifact_id,
+                "evaluation.suite.definition",
+            ),
+            (
+                artifacts["evaluation.gold-set.definition"].artifact_id,
+                "evaluation.gold-set.definition",
+            ),
+            (
+                artifacts["evaluation.rubric.criteria"].artifact_id,
+                "evaluation.rubric.criteria",
+            ),
+            (
+                artifacts["evaluation.case.selected"].artifact_id,
+                "evaluation.case.selected",
+            ),
+        }
+
+
+def test_full_population_run_consumes_artifacts_from_every_case_revision(tmp_path):
+    original_cases, base_gold_set, suite = _lifecycle_fixture(
+        "full-population-authored-inputs"
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        first_artifact = ledger.register_artifact(
+            b"first case prompt",
+            kind="authored-input",
+            media_type="text/plain",
+            retention_class="long-term",
+            sensitivity="internal",
+        )
+        second_artifact = ledger.register_artifact(
+            b"second case prompt",
+            kind="authored-input",
+            media_type="text/plain",
+            retention_class="long-term",
+            sensitivity="internal",
+        )
+        cases = tuple(
+            case.model_copy(
+                update={
+                    "artifacts": (
+                        DeclaredArtifactReference(
+                            content_hash=artifact.content_hash,
+                            role=role,
+                        ),
+                    )
+                }
+            )
+            for case, artifact, role in zip(
+                original_cases,
+                (first_artifact, second_artifact),
+                ("evaluation.case.first", "evaluation.case.second"),
+            )
+        )
+        gold_set = base_gold_set.model_copy(
+            update={
+                "memberships": tuple(
+                    membership.model_copy(
+                        update={
+                            "case": EvaluationCaseRevisionReference.from_case(case)
+                        }
+                    )
+                    for membership, case in zip(base_gold_set.memberships, cases)
+                )
+            }
+        )
+
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        consumed = ledger.list_consumed_artifacts(result.run.run_id)
+        assert {(item.artifact_id, item.role) for item in consumed} == {
+            (first_artifact.artifact_id, "evaluation.case.first"),
+            (second_artifact.artifact_id, "evaluation.case.second"),
+        }
+
+
 def test_runner_marks_authored_rubric_artifacts_as_run_inputs(tmp_path):
     cases, gold_set, base_suite = _lifecycle_fixture("authored-rubric-input")
 
