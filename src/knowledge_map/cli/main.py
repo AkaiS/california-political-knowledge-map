@@ -25,6 +25,27 @@ from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
 
+
+CLI_COMMAND_HELP = {
+    "ingest": "Run batch ingestion of unprocessed articles",
+    "clear": "Clear all nodes and relationships from Neo4j",
+    "analyze": "Inspect and list distinct node labels in the Neo4j database",
+    "janitor": "Perform a health check on the locked component and release lock if healthy",
+    "register-publication": "Register a new Publication in the database",
+    "update-publication": "Update an existing Publication in the database",
+    "update-sources": "Run incremental scraping/discovery for registered publications",
+    "scrape-archive": "Run archive crawl using DomainMapper",
+    "validate-articles": "Run validation on pending articles in raw HTML cache",
+    "review-selectors": "Review unresolved selector proposals and promote/reject them",
+    "heal-selectors": "Manually trigger or retry selector self-healing for a publication",
+    "purge-cache": "Purge eligible raw HTML cache rows according to retention policy",
+    "classifier": "Run relevance classifier commands",
+    "classifier label": "Run active learning labeling feedback loop",
+    "classifier train": "Train the classifier using scikit-learn LogisticRegression",
+    "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
+}
+
+
 def add_record_metadata(logger, name, event_dict):
     """
     Extract useful attributes from the standard LogRecord if present.
@@ -115,25 +136,33 @@ def main(args=None):
     setup_logging()
 
     parser = argparse.ArgumentParser(
-        description="California Political Influence GraphRAG Engine - Production CLI"
+        description="California Political Influence GraphRAG Engine - Production CLI",
+        epilog=(
+            "Command paths:\n"
+            + "\n".join(
+                f"  {command:<30} {description}"
+                for command, description in CLI_COMMAND_HELP.items()
+            )
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     # Ingest subcommand
-    ingest_parser = subparsers.add_parser("ingest", help="Run batch ingestion of unprocessed articles")
+    ingest_parser = subparsers.add_parser("ingest", help=CLI_COMMAND_HELP["ingest"])
     ingest_parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without saving to Neo4j")
 
     # Clear subcommand
-    subparsers.add_parser("clear", help="Clear all nodes and relationships from Neo4j")
+    subparsers.add_parser("clear", help=CLI_COMMAND_HELP["clear"])
 
     # Analyze subcommand
-    subparsers.add_parser("analyze", help="Inspect and list distinct node labels in the Neo4j database")
+    subparsers.add_parser("analyze", help=CLI_COMMAND_HELP["analyze"])
 
     # Janitor subcommand
-    subparsers.add_parser("janitor", help="Perform a health check on the locked component and release lock if healthy")
+    subparsers.add_parser("janitor", help=CLI_COMMAND_HELP["janitor"])
 
     # Register-publication subcommand
-    register_parser = subparsers.add_parser("register-publication", help="Register a new Publication in the database")
+    register_parser = subparsers.add_parser("register-publication", help=CLI_COMMAND_HELP["register-publication"])
     register_parser.add_argument("--id", required=True, help="Unique publication identifier (e.g. 'calmatters')")
     register_parser.add_argument("--name", required=True, help="Human-readable publication name (e.g. 'CalMatters')")
     register_parser.add_argument("--base-url", required=True, help="Base URL of the publication (e.g. 'https://calmatters.org')")
@@ -146,7 +175,7 @@ def main(args=None):
     register_parser.add_argument("--categories", nargs="+", help="Space-separated list of valid categories for the publication")
 
     # Update-publication subcommand
-    update_pub_parser = subparsers.add_parser("update-publication", help="Update an existing Publication in the database")
+    update_pub_parser = subparsers.add_parser("update-publication", help=CLI_COMMAND_HELP["update-publication"])
     update_pub_parser.add_argument("--id", required=True, help="Unique publication identifier (e.g. 'calmatters')")
     update_pub_parser.add_argument("--name", help="Human-readable publication name")
     update_pub_parser.add_argument("--base-url", help="Base URL of the publication")
@@ -159,35 +188,35 @@ def main(args=None):
     update_pub_parser.add_argument("--categories", nargs="*", help="Space-separated list of valid categories (pass empty to clear)")
 
     # Update-sources subcommand
-    subparsers.add_parser("update-sources", help="Run incremental scraping/discovery for registered publications")
+    subparsers.add_parser("update-sources", help=CLI_COMMAND_HELP["update-sources"])
 
     # Scrape-archive subcommand
-    archive_parser = subparsers.add_parser("scrape-archive", help="Run archive crawl using DomainMapper")
+    archive_parser = subparsers.add_parser("scrape-archive", help=CLI_COMMAND_HELP["scrape-archive"])
     archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
 
     # Validate-articles subcommand
-    subparsers.add_parser("validate-articles", help="Run validation on pending articles in raw HTML cache")
+    subparsers.add_parser("validate-articles", help=CLI_COMMAND_HELP["validate-articles"])
 
     # Review-selectors subcommand
-    review_parser = subparsers.add_parser("review-selectors", help="Review unresolved selector proposals and promote/reject them")
+    review_parser = subparsers.add_parser("review-selectors", help=CLI_COMMAND_HELP["review-selectors"])
     review_parser.add_argument("--manual", help="Path to JSON file containing manual selectors to promote")
 
     # Heal-selectors subcommand
-    heal_selectors_parser = subparsers.add_parser("heal-selectors", help="Manually trigger or retry selector self-healing for a publication")
+    heal_selectors_parser = subparsers.add_parser("heal-selectors", help=CLI_COMMAND_HELP["heal-selectors"])
     heal_selectors_parser.add_argument("--publication", required=True, help="ID of the publication to heal")
     heal_selectors_parser.add_argument("--retry", action="store_true", help="Mark previous proposal rejected and retry healing with negative context")
     heal_selectors_parser.add_argument("--context", help="Developer-supplied guidance/hint to append to the Generator prompt")
 
     # Purge-cache subcommand
-    subparsers.add_parser("purge-cache", help="Purge eligible raw HTML cache rows according to retention policy")
+    subparsers.add_parser("purge-cache", help=CLI_COMMAND_HELP["purge-cache"])
 
     # Classifier subcommand
-    classifier_parser = subparsers.add_parser("classifier", help="Relevance classifier options (label, train, reevaluate)")
+    classifier_parser = subparsers.add_parser("classifier", help=CLI_COMMAND_HELP["classifier"])
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
-    label_parser = classifier_sub.add_parser("label", help="Run active learning labeling feedback loop")
+    label_parser = classifier_sub.add_parser("label", help=CLI_COMMAND_HELP["classifier label"])
     label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
-    classifier_sub.add_parser("train", help="Train the classifier using scikit-learn LogisticRegression")
-    classifier_sub.add_parser("reevaluate", help="Reevaluate inconclusive/rejected records with the trained model")
+    classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
+    classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
 
     parsed_args = parser.parse_args(args)
 
