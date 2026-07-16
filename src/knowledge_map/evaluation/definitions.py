@@ -157,6 +157,100 @@ class DeclaredArtifactReference(BaseModel):
     role: str = Field(min_length=1)
 
 
+class EvaluationRequirement(BaseModel):
+    """One stable semantic key in a component's closed requirement catalog."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    key: str = Field(pattern=r"^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*$")
+    semantic_description: str = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_description_alias(cls, value: Any) -> Any:
+        if isinstance(value, Mapping) and "semantic_description" not in value:
+            value = dict(value)
+            if "description" in value:
+                value["semantic_description"] = value.pop("description")
+        return value
+
+
+class EvaluationRequirementCatalog(BaseModel):
+    """The closed vocabulary of Evaluation Requirement keys for a component."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    requirements: tuple[EvaluationRequirement, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_requirement_entries(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        normalized = dict(value)
+        if "requirements" not in normalized:
+            for alias in ("entries", "keys"):
+                if alias in normalized:
+                    normalized["requirements"] = normalized.pop(alias)
+                    break
+        entries = normalized.get("requirements", ())
+        if isinstance(entries, Mapping):
+            normalized["requirements"] = tuple(
+                {"key": key, "semantic_description": description}
+                for key, description in entries.items()
+            )
+        return normalized
+
+    @model_validator(mode="after")
+    def has_unique_keys(self) -> "EvaluationRequirementCatalog":
+        keys = [requirement.key for requirement in self.requirements]
+        if len(keys) != len(set(keys)):
+            raise ValueError("requirement catalog cannot contain duplicate keys")
+        if any(
+            not requirement.semantic_description.strip()
+            for requirement in self.requirements
+        ):
+            raise ValueError("requirement descriptions must be non-empty")
+        return self
+
+    def contains(self, key: str) -> bool:
+        return any(requirement.key == key for requirement in self.requirements)
+
+    @property
+    def keys(self) -> tuple[str, ...]:
+        return tuple(requirement.key for requirement in self.requirements)
+
+    @property
+    def entries(self) -> tuple[EvaluationRequirement, ...]:
+        return self.requirements
+
+    def validate_requirements(self, requirements: tuple[str, ...]) -> tuple[str, ...]:
+        unknown = [
+            requirement for requirement in requirements if not self.contains(requirement)
+        ]
+        if unknown:
+            raise ValueError(
+                "unknown Evaluation Requirement keys: " + ", ".join(unknown)
+            )
+        return requirements
+
+    def validate_case(
+        self, evaluation_case: "EvaluationCase[Any, Any, Any]"
+    ) -> "EvaluationCase[Any, Any, Any]":
+        self.validate_requirements(evaluation_case.requirements)
+        return evaluation_case
+
+    def description_for(self, key: str) -> str:
+        for requirement in self.requirements:
+            if requirement.key == key:
+                return requirement.semantic_description
+        raise ValueError(f"unknown Evaluation Requirement key: {key}")
+
+
+# The catalog entry is a definition rather than a separately revisioned artifact.
+EvaluationRequirementDefinition = EvaluationRequirement
+
+
 class AuthoredDefinitionConflictError(ValueError):
     """A business identity and revision were reused for different content."""
 
@@ -190,7 +284,17 @@ class EvaluationCase(_AuthoredDefinition, Generic[InputT, OutputT, MetadataT]):
     metadata: MetadataT
     description: str = Field(min_length=1)
     tags: tuple[str, ...] = ()
+    requirements: tuple[str, ...] = ()
     artifacts: tuple[DeclaredArtifactReference, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_requirement_field_alias(cls, value: Any) -> Any:
+        if isinstance(value, Mapping) and "requirements" not in value:
+            value = dict(value)
+            if "evaluation_requirements" in value:
+                value["requirements"] = value.pop("evaluation_requirements")
+        return value
 
     @model_validator(mode="after")
     def schemas_match_the_typed_values(self) -> "EvaluationCase[InputT, OutputT, MetadataT]":
@@ -210,6 +314,20 @@ class EvaluationCase(_AuthoredDefinition, Generic[InputT, OutputT, MetadataT]):
                 self.expected_output_schema,
                 self.expected_output,
             )
+        return self
+
+    @model_validator(mode="after")
+    def has_distinct_requirements(self) -> "EvaluationCase[InputT, OutputT, MetadataT]":
+        if len(self.requirements) != len(set(self.requirements)):
+            raise ValueError("an Evaluation Case cannot repeat a requirement key")
+        if any(not requirement for requirement in self.requirements):
+            raise ValueError("Evaluation Requirement keys must be non-empty")
+        return self
+
+    def validate_requirements(
+        self, catalog: EvaluationRequirementCatalog
+    ) -> "EvaluationCase[InputT, OutputT, MetadataT]":
+        catalog.validate_requirements(self.requirements)
         return self
 
 

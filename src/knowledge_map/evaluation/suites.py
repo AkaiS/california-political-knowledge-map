@@ -13,6 +13,7 @@ from pydantic_evals.reporting import EvaluationReport
 
 from .definitions import (
     EvaluationCase,
+    EvaluationRequirementCatalog,
     EvaluationRubric,
     SchemaReference,
     canonical_configuration_json,
@@ -270,6 +271,79 @@ class ConfiguredEvaluator(BaseModel):
         object.__setattr__(self, "configuration_fingerprint", fingerprint)
 
 
+class ConfiguredEvaluatorReference(BaseModel):
+    """A reference to one case Configured Evaluator declared by a Suite."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(pattern=r"^[a-z][a-z0-9-]*$")
+    evaluator_revision: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_evaluator_name_alias(cls, value: Any) -> Any:
+        if isinstance(value, Mapping) and "name" not in value:
+            value = dict(value)
+            if "evaluator_name" in value:
+                value["name"] = value.pop("evaluator_name")
+        return value
+
+    @property
+    def evaluator_name(self) -> str:
+        return self.name
+
+
+class EvaluationRequirementBinding(BaseModel):
+    """A Suite-owned, non-empty assignment for one Evaluation Requirement."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    requirement: str = Field(pattern=r"^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*$")
+    evaluators: tuple[ConfiguredEvaluatorReference, ...] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_binding_fields(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        normalized = dict(value)
+        if "requirement" not in normalized:
+            for alias in ("requirement_key", "key"):
+                if alias in normalized:
+                    normalized["requirement"] = normalized.pop(alias)
+                    break
+        if "evaluators" not in normalized:
+            for alias in (
+                "evaluator_references",
+                "configured_evaluator_references",
+                "configured_evaluators",
+                "evaluator_names",
+            ):
+                if alias in normalized:
+                    raw = normalized.pop(alias)
+                    normalized["evaluators"] = tuple(
+                        item
+                        if isinstance(item, Mapping)
+                        else {"name": item}
+                        for item in raw
+                    )
+                    break
+        return normalized
+
+    @model_validator(mode="after")
+    def has_distinct_evaluator_references(self) -> "EvaluationRequirementBinding":
+        names = [reference.name for reference in self.evaluators]
+        if len(names) != len(set(names)):
+            raise ValueError(
+                "an Evaluation Requirement Binding cannot repeat an evaluator"
+            )
+        return self
+
+    @property
+    def evaluator_references(self) -> tuple[ConfiguredEvaluatorReference, ...]:
+        return self.evaluators
+
+
 def _contains_runtime_execution_setting(value: Any) -> bool:
     if isinstance(value, Mapping):
         return any(
@@ -290,11 +364,48 @@ class EvaluationSuite(BaseModel):
     identity: EvaluationSuiteIdentity
     description: str = Field(min_length=1)
     task_contract: EvaluationTaskContract
+    requirement_catalog: EvaluationRequirementCatalog = Field(
+        default_factory=EvaluationRequirementCatalog
+    )
     case_evaluators: tuple[ConfiguredEvaluator, ...] = ()
+    suite_case_evaluators: tuple[ConfiguredEvaluatorReference, ...] = ()
+    requirement_bindings: tuple[EvaluationRequirementBinding, ...] = ()
     report_evaluators: tuple[ConfiguredEvaluator, ...] = Field(min_length=1)
     rubrics: tuple[EvaluationRubricRevisionReference, ...] = ()
     metrics: tuple[EvaluationMetricDefinition, ...] = ()
     content_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_reference_field_aliases(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        normalized = dict(value)
+        if (
+            "requirement_catalog" not in normalized
+            and "evaluation_requirement_catalog" in normalized
+        ):
+            normalized["requirement_catalog"] = normalized.pop(
+                "evaluation_requirement_catalog"
+            )
+        if "suite_case_evaluators" not in normalized:
+            for alias in (
+                "suite_wide_case_evaluators",
+                "suite_wide_case_evaluator_references",
+                "suite_case_evaluator_references",
+                "case_evaluator_references",
+            ):
+                if alias in normalized:
+                    normalized["suite_case_evaluators"] = normalized.pop(alias)
+                    break
+        if (
+            "requirement_bindings" not in normalized
+            and "evaluation_requirement_bindings" in normalized
+        ):
+            normalized["requirement_bindings"] = normalized.pop(
+                "evaluation_requirement_bindings"
+            )
+        return normalized
 
     @model_validator(mode="after")
     def has_unique_suite_local_references(self) -> "EvaluationSuite":
@@ -304,6 +415,54 @@ class EvaluationSuite(BaseModel):
         ]
         if len(evaluator_names) != len(set(evaluator_names)):
             raise ValueError("suite-local evaluator names must be unique")
+        declared_case_evaluators = {
+            evaluator.name: evaluator for evaluator in self.case_evaluators
+        }
+        declared_report_evaluators = {
+            evaluator.name for evaluator in self.report_evaluators
+        }
+
+        suite_references = self._suite_wide_case_evaluator_references()
+        self._validate_evaluator_references(
+            suite_references,
+            declared_case_evaluators=declared_case_evaluators,
+            declared_report_evaluators=declared_report_evaluators,
+            scope="Suite-wide Case Evaluators",
+        )
+        if len({reference.name for reference in suite_references}) != len(
+            suite_references
+        ):
+            raise ValueError("Suite-wide Case Evaluator references must be distinct")
+
+        binding_requirements = [
+            binding.requirement for binding in self.requirement_bindings
+        ]
+        if len(binding_requirements) != len(set(binding_requirements)):
+            raise ValueError("a Suite cannot repeat an Evaluation Requirement Binding")
+        referenced_case_evaluators = {reference.name for reference in suite_references}
+        for binding in self.requirement_bindings:
+            if not self.requirement_catalog.contains(binding.requirement):
+                raise ValueError(
+                    "Evaluation Requirement Binding references an unknown requirement: "
+                    + binding.requirement
+                )
+            self._validate_evaluator_references(
+                binding.evaluators,
+                declared_case_evaluators=declared_case_evaluators,
+                declared_report_evaluators=declared_report_evaluators,
+                scope=f"binding for {binding.requirement}",
+            )
+            referenced_case_evaluators.update(
+                reference.name for reference in binding.evaluators
+            )
+
+        if set(declared_case_evaluators) != referenced_case_evaluators:
+            dead = sorted(set(declared_case_evaluators) - referenced_case_evaluators)
+            if dead:
+                raise ValueError(
+                    "every configured case evaluator must be referenced by the Suite: "
+                    + ", ".join(dead)
+                )
         rubric_identities = [
             (rubric.business_id, rubric.revision) for rubric in self.rubrics
         ]
@@ -333,6 +492,75 @@ class EvaluationSuite(BaseModel):
             raise ValueError("content_hash does not match the evaluation suite")
         object.__setattr__(self, "content_hash", fingerprint)
 
+    def _suite_wide_case_evaluator_references(
+        self,
+    ) -> tuple[ConfiguredEvaluatorReference, ...]:
+        """Return explicit references, preserving the pre-binding API when unused."""
+        if (
+            not self.suite_case_evaluators
+            and not self.requirement_bindings
+            and not self.requirement_catalog.requirements
+        ):
+            return tuple(
+                ConfiguredEvaluatorReference(name=evaluator.name)
+                for evaluator in self.case_evaluators
+            )
+        return self.suite_case_evaluators
+
+    @staticmethod
+    def _validate_evaluator_references(
+        references: tuple[ConfiguredEvaluatorReference, ...],
+        *,
+        declared_case_evaluators: dict[str, ConfiguredEvaluator],
+        declared_report_evaluators: set[str],
+        scope: str,
+    ) -> None:
+        for reference in references:
+            if reference.name in declared_report_evaluators:
+                raise ValueError(
+                    f"{scope} may reference only declared case evaluators: "
+                    f"{reference.name} is a report evaluator"
+                )
+            configured = declared_case_evaluators.get(reference.name)
+            if configured is None:
+                raise ValueError(
+                    f"{scope} references an undeclared case evaluator: {reference.name}"
+                )
+            if (
+                reference.evaluator_revision is not None
+                and reference.evaluator_revision != configured.evaluator_revision
+            ):
+                raise ValueError(
+                    f"{scope} references {reference.name} at an incompatible evaluator revision"
+                )
+
+    @property
+    def suite_wide_case_evaluator_references(
+        self,
+    ) -> tuple[ConfiguredEvaluatorReference, ...]:
+        return self._suite_wide_case_evaluator_references()
+
+    def resolve_case_evaluators(
+        self, evaluation_case: EvaluationCase[Any, Any, Any]
+    ) -> tuple[ConfiguredEvaluator, ...]:
+        """Resolve the additive, deduplicated case evaluator assignment for a case."""
+        self.validate_cases((evaluation_case,))
+        references = list(self._suite_wide_case_evaluator_references())
+        bindings = {binding.requirement: binding for binding in self.requirement_bindings}
+        for requirement in evaluation_case.requirements:
+            binding = bindings.get(requirement)
+            if binding is None:
+                raise ValueError(
+                    f"Evaluation Requirement has no Suite binding: {requirement}"
+                )
+            references.extend(binding.evaluators)
+
+        unique_names = dict.fromkeys(reference.name for reference in references)
+        configured_by_name = {
+            evaluator.name: evaluator for evaluator in self.case_evaluators
+        }
+        return tuple(configured_by_name[name] for name in unique_names)
+
     def validate_cases(
         self, cases: tuple[EvaluationCase[Any, Any, Any], ...]
     ) -> tuple[EvaluationCase[Any, Any, Any], ...]:
@@ -354,6 +582,7 @@ class EvaluationSuite(BaseModel):
                 )
             ):
                 raise ValueError("case output schema is incompatible with the suite")
+            evaluation_case.validate_requirements(self.requirement_catalog)
         return cases
 
     def execute(
@@ -365,9 +594,14 @@ class EvaluationSuite(BaseModel):
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute compatible cases through the provider-neutral pydantic-evals seam."""
         selected_cases = self.validate_cases(cases)
+        suite_wide_references = self._suite_wide_case_evaluator_references()
+        configured_by_name = {evaluator.name: evaluator for evaluator in self.case_evaluators}
+        suite_wide_configured = tuple(
+            configured_by_name[reference.name] for reference in suite_wide_references
+        )
         case_evaluators = [
             self._resolve_case_evaluator(configured, evaluator_resolver)
-            for configured in self.case_evaluators
+            for configured in suite_wide_configured
         ]
         report_evaluators = [
             self._resolve_report_evaluator(configured, evaluator_resolver)
@@ -384,6 +618,12 @@ class EvaluationSuite(BaseModel):
                     inputs=evaluation_case.task_input,
                     expected_output=evaluation_case.expected_output,
                     metadata=evaluation_case.metadata,
+                    evaluators=tuple(
+                        self._resolve_case_evaluator(configured, evaluator_resolver)
+                        for configured in self.resolve_case_evaluators(evaluation_case)
+                        if configured.name
+                        not in {reference.name for reference in suite_wide_references}
+                    ),
                 )
                 for evaluation_case in selected_cases
             ],
