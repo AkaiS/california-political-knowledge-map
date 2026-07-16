@@ -1,10 +1,11 @@
 # Author Evaluation Requirements and Suite bindings
 
+Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Evaluation Contract and Resumable Execution](../PRD.md)
+[Case Evaluation Requirements and Resumable Evaluation Execution](../PRD.md)
 
 ## What to build
 
@@ -24,4 +25,4 @@ Allow an Evaluation Case to declare the stable semantic Evaluation Requirements 
 
 ## Blocked by
 
-- [Bind every Evaluation Gold Set to one Task Contract](02-bind-every-evaluation-gold-set-to-one-task-contract.md)
+- None — can start immediately.

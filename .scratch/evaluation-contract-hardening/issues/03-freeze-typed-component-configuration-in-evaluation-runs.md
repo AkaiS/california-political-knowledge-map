@@ -1,10 +1,11 @@
 # Freeze typed component configuration in Evaluation Runs
 
+Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Evaluation Contract and Resumable Execution](../PRD.md)
+[Evaluation Contract and Ledger Hardening](../PRD.md)
 
 ## What to build
 
