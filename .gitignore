@@ -7,3 +7,4 @@ manual_checks/*
 */generate_report.py
 .scratch/dlq/*
 .scratch/pipeline.log
+*/ralph-queue.txt
