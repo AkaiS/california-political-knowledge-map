@@ -1,11 +1,10 @@
 # Invoke sync and async tasks through validated Task Bindings
 
-Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Evaluation Contract and Ledger Hardening](../PRD.md)
+[Evaluation Contract and Resumable Execution](../PRD.md)
 
 ## What to build
 

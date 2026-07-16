@@ -1,11 +1,10 @@
 # Preserve multi-case progress and retry incomplete runs
 
-Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Case Evaluation Requirements and Resumable Evaluation Execution](../PRD.md)
+[Evaluation Contract and Resumable Execution](../PRD.md)
 
 ## What to build
 
@@ -23,4 +22,4 @@ Extend durable shared-engine execution across the complete manifested population
 
 ## Blocked by
 
-- [Checkpoint one durable case through the shared engine](05-checkpoint-one-durable-case-through-the-shared-engine.md)
+- [Checkpoint one durable case through the shared engine](11-checkpoint-one-durable-case-through-the-shared-engine.md)

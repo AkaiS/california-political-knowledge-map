@@ -1,11 +1,10 @@
 # Guard Evaluation Finalization against competing workers
 
-Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Case Evaluation Requirements and Resumable Evaluation Execution](../PRD.md)
+[Evaluation Contract and Resumable Execution](../PRD.md)
 
 ## What to build
 
@@ -22,4 +21,5 @@ Protect explicit Evaluation Finalization with a lease or compare-and-set claim s
 
 ## Blocked by
 
-- [Freeze the aggregate report and resume missing report work](08-freeze-the-aggregate-report-and-resume-missing-report-work.md)
+- [Freeze the aggregate report and resume missing report work](14-freeze-the-aggregate-report-and-resume-missing-report-work.md)
+- [Reject premature Evaluation Run completion](15-reject-premature-evaluation-run-completion.md)

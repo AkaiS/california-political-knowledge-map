@@ -1,11 +1,10 @@
 # Honor bounded case concurrency durably
 
-Status: ready-for-agent
 Labels: ready-for-agent
 
 ## Parent
 
-[Case Evaluation Requirements and Resumable Evaluation Execution](../PRD.md)
+[Evaluation Contract and Resumable Execution](../PRD.md)
 
 ## What to build
 
@@ -22,4 +21,4 @@ Allow operators to run manifested cases concurrently up to the immutable bound r
 
 ## Blocked by
 
-- [Preserve multi-case progress and retry incomplete runs](06-preserve-multi-case-progress-and-retry-incomplete-runs.md)
+- [Preserve multi-case progress and retry incomplete runs](12-preserve-multi-case-progress-and-retry-incomplete-runs.md)
