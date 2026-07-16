@@ -25,6 +25,7 @@ from .definitions import (
     EvaluationSplit,
     new_uuid7,
 )
+from .preflight import EvaluationPreflightError, preflight_selected_cases
 from .runs import (
     CaseEvaluatorExecution,
     CaseMetricObservation,
@@ -237,9 +238,25 @@ class EvaluationRunner:
         should_cancel: Callable[[], bool] | None = None,
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
     ) -> EvaluationRunResult:
+        preflight = preflight_selected_cases(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=selection,
+            split=split,
+        )
+        if not preflight.is_compatible:
+            raise EvaluationPreflightError(preflight)
+
         case_by_reference = case_reference_map(cases)
-        selected_memberships = self._resolve_memberships(
-            gold_set, case_by_reference, selection=selection, split=split
+        assert preflight.plan is not None
+        memberships_by_key = {
+            (membership.case.business_id, membership.case.revision): membership
+            for membership in gold_set.memberships
+        }
+        selected_memberships = tuple(
+            memberships_by_key[(planned.case.business_id, planned.case.revision)]
+            for planned in preflight.plan.cases
         )
         selected_cases = tuple(
             case_by_reference[(m.case.business_id, m.case.revision)]

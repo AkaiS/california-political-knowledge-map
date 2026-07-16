@@ -1,0 +1,292 @@
+from pydantic import BaseModel
+
+from knowledge_map.evaluation import (
+    ConfiguredEvaluator,
+    ConfiguredEvaluatorReference,
+    EvaluationCase,
+    EvaluationCaseIdentity,
+    EvaluationCaseRevisionReference,
+    EvaluationGoldSet,
+    EvaluationGoldSetIdentity,
+    EvaluationGoldSetMembership,
+    EvaluationRequirementCatalog,
+    EvaluationRequirement,
+    EvaluationRequirementBinding,
+    EvaluationPreflightError,
+    EvaluationRunConfiguration,
+    EvaluationRunner,
+    EvaluationSplit,
+    EvaluationSuite,
+    EvaluationSuiteIdentity,
+    EvaluationTaskContract,
+    SchemaReference,
+    preflight_selected_cases,
+)
+from knowledge_map.evaluation.store import SQLiteEvaluationLedger
+
+
+class Input(BaseModel):
+    value: str
+
+
+class Output(BaseModel):
+    label: str
+
+
+class Metadata(BaseModel):
+    source: str
+
+
+def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
+    case = EvaluationCase[Input, Output, Metadata](
+        identity=EvaluationCaseIdentity(business_id="case-1", revision=3),
+        input_schema=SchemaReference.for_model(Input, identity="input", revision=1),
+        expected_output_schema=SchemaReference.for_model(
+            Output, identity="output", revision=1
+        ),
+        metadata_schema=SchemaReference.for_model(
+            Metadata, identity="metadata", revision=1
+        ),
+        task_input=Input(value="one"),
+        expected_output=Output(label="one"),
+        metadata=Metadata(source="human"),
+        description="A selected case.",
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite", revision=4),
+        description="A suite.",
+        task_contract=EvaluationTaskContract(
+            input_schema=case.input_schema,
+            output_schema=case.expected_output_schema,
+            metadata_schema=case.metadata_schema,
+        ),
+        requirement_catalog=EvaluationRequirementCatalog(),
+        case_evaluators=(ConfiguredEvaluator(name="exact", evaluator_revision=2),),
+        suite_case_evaluators=(ConfiguredEvaluatorReference(name="exact"),),
+        report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold", revision=2),
+        description="A gold set.",
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
+    )
+
+    result = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=(case,),
+    )
+
+    assert result.is_compatible
+    assert result.issues == ()
+    assert result.plan is not None
+    assert result.plan.suite.business_id == "suite"
+    assert result.plan.suite.revision == 4
+    assert result.plan.gold_set.revision == 2
+    assert len(result.plan.cases) == 1
+    planned_case = result.plan.cases[0]
+    assert planned_case.case == EvaluationCaseRevisionReference.from_case(case)
+    assert planned_case.requirements == ()
+    assert planned_case.evaluators[0].reference == ConfiguredEvaluatorReference(
+        name="exact", evaluator_revision=2
+    )
+    assert planned_case.evaluators[0].provenance == ("suite-wide",)
+    second_result = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=(case,),
+    )
+    assert result.plan.canonical_json == second_result.plan.canonical_json
+    assert result.plan.readable_json != result.plan.canonical_json
+
+
+def _case(
+    business_id: str,
+    *,
+    requirements: tuple[str, ...] = (),
+    input_schema: SchemaReference | None = None,
+) -> EvaluationCase[Input, Output, Metadata]:
+    return EvaluationCase(
+        identity=EvaluationCaseIdentity(business_id=business_id, revision=1),
+        input_schema=input_schema
+        or SchemaReference.for_model(Input, identity="input", revision=1),
+        expected_output_schema=SchemaReference.for_model(
+            Output, identity="output", revision=1
+        ),
+        metadata_schema=SchemaReference.for_model(
+            Metadata, identity="metadata", revision=1
+        ),
+        task_input=Input(value=business_id),
+        expected_output=Output(label=business_id),
+        metadata=Metadata(source="human"),
+        description=f"Case {business_id}.",
+        requirements=requirements,
+    )
+
+
+def _gold_set(cases: tuple[EvaluationCase[Input, Output, Metadata], ...]) -> EvaluationGoldSet:
+    return EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
+        description="A gold set.",
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for case in cases
+        ),
+    )
+
+
+def _suite(
+    *,
+    cases: tuple[ConfiguredEvaluator, ...] = (),
+    suite_wide: tuple[ConfiguredEvaluatorReference, ...] = (),
+    catalog: EvaluationRequirementCatalog | None = None,
+    bindings: tuple[EvaluationRequirementBinding, ...] = (),
+) -> EvaluationSuite:
+    input_schema = SchemaReference.for_model(Input, identity="input", revision=1)
+    output_schema = SchemaReference.for_model(Output, identity="output", revision=1)
+    metadata_schema = SchemaReference.for_model(Metadata, identity="metadata", revision=1)
+    return EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite", revision=1),
+        description="A suite.",
+        task_contract=EvaluationTaskContract(
+            input_schema=input_schema,
+            output_schema=output_schema,
+            metadata_schema=metadata_schema,
+        ),
+        requirement_catalog=catalog or EvaluationRequirementCatalog(),
+        case_evaluators=cases,
+        suite_case_evaluators=suite_wide,
+        requirement_bindings=bindings,
+        report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
+    )
+
+
+def test_preflight_unions_all_relevant_bindings_once_and_retains_provenance():
+    case = _case("case-1", requirements=("grounding", "tone"))
+    exact = ConfiguredEvaluator(name="exact", evaluator_revision=1)
+    grounding = ConfiguredEvaluator(name="grounding", evaluator_revision=2)
+    tone = ConfiguredEvaluator(name="tone", evaluator_revision=3)
+    suite = _suite(
+        cases=(exact, grounding, tone),
+        suite_wide=(ConfiguredEvaluatorReference(name="exact"),),
+        catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(key="grounding", semantic_description="Source grounding."),
+                EvaluationRequirement(key="tone", semantic_description="Tone judgment."),
+            )
+        ),
+        bindings=(
+            EvaluationRequirementBinding(
+                requirement="grounding",
+                evaluators=(
+                    ConfiguredEvaluatorReference(name="exact"),
+                    ConfiguredEvaluatorReference(name="grounding"),
+                ),
+            ),
+            EvaluationRequirementBinding(
+                requirement="tone",
+                evaluators=(
+                    ConfiguredEvaluatorReference(name="exact"),
+                    ConfiguredEvaluatorReference(name="tone"),
+                ),
+            ),
+        ),
+    )
+
+    result = preflight_selected_cases(suite=suite, gold_set=_gold_set((case,)), cases=(case,))
+
+    assert result.is_compatible
+    assert [entry.reference.name for entry in result.plan.cases[0].evaluators] == [
+        "exact",
+        "grounding",
+        "tone",
+    ]
+    assert result.plan.cases[0].evaluators[0].provenance == (
+        "suite-wide",
+        "grounding",
+        "tone",
+    )
+    assert result.plan.cases[0].evaluators[1].provenance == ("grounding",)
+    assert result.plan.cases[0].evaluators[2].provenance == ("tone",)
+
+
+def test_preflight_reports_all_selected_gaps_but_ignores_unsupported_unselected_cases():
+    compatible = _case("compatible")
+    unknown = _case("unknown", requirements=("not-in-catalog",))
+    incompatible = _case(
+        "incompatible",
+        requirements=("grounding",),
+        input_schema=SchemaReference.for_model(Input, identity="other-input", revision=1),
+    )
+    suite = _suite(
+        catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(key="grounding", semantic_description="Source grounding."),
+            )
+        )
+    )
+    gold_set = _gold_set((compatible, unknown, incompatible))
+
+    full_run = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=(compatible, unknown, incompatible),
+    )
+    subset = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=(compatible, unknown, incompatible),
+        selection={"compatible"},
+    )
+
+    assert not full_run.is_compatible
+    assert {(issue.category, issue.case_business_id, issue.requirement) for issue in full_run.issues} == {
+        ("unknown_requirement", "unknown", "not-in-catalog"),
+        ("missing_requirement_binding", "unknown", "not-in-catalog"),
+        ("task_contract", "incompatible", None),
+        ("missing_requirement_binding", "incompatible", "grounding"),
+    }
+    assert subset.is_compatible
+    assert [entry.case.business_id for entry in subset.plan.cases] == ["compatible"]
+
+
+def test_runner_rejects_an_incompatible_preflight_before_creating_a_run(tmp_path):
+    first = _case("first", requirements=("grounding",))
+    second = _case("second", requirements=("unknown",))
+    suite = _suite(
+        catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(key="grounding", semantic_description="Grounding."),
+            )
+        )
+    )
+    gold_set = _gold_set((first, second))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        try:
+            EvaluationRunner(ledger).run(
+                suite=suite,
+                gold_set=gold_set,
+                cases=(first, second),
+                task=lambda value: value,
+                evaluator_resolver=lambda configured: configured,
+                configuration=EvaluationRunConfiguration(
+                    provider="deterministic", model="fixture"
+                ),
+            )
+        except EvaluationPreflightError as error:
+            assert {issue.requirement for issue in error.result.issues} == {
+                "grounding",
+                "unknown",
+            }
+        else:
+            raise AssertionError("an incompatible preflight must reject run creation")
+        assert ledger.list_evaluation_runs() == []

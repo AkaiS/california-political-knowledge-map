@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from enum import Enum
 from typing import Any
 
@@ -13,8 +13,10 @@ from pydantic_evals.reporting import EvaluationReport
 
 from .definitions import (
     EvaluationCase,
+    EvaluationGoldSet,
     EvaluationRequirementCatalog,
     EvaluationRubric,
+    EvaluationSplit,
     SchemaReference,
     canonical_configuration_json,
     configuration_fingerprint,
@@ -560,6 +562,31 @@ class EvaluationSuite(BaseModel):
             evaluator.name: evaluator for evaluator in self.case_evaluators
         }
         return tuple(configured_by_name[name] for name in unique_names)
+
+    def preflight_selected_cases(
+        self,
+        *,
+        gold_set: EvaluationGoldSet,
+        cases: tuple[EvaluationCase[Any, Any, Any], ...],
+        selection: Callable[[EvaluationCase[Any, Any, Any]], bool]
+        | Iterable[str]
+        | None = None,
+        split: EvaluationSplit | None = None,
+    ) -> "EvaluationPreflightResult":
+        """Resolve selected Gold Set cases before an Evaluation Run is created."""
+        from .preflight import preflight_selected_cases
+
+        return preflight_selected_cases(
+            suite=self,
+            gold_set=gold_set,
+            cases=cases,
+            selection=selection,
+            split=split,
+        )
+
+    def preflight(self, **kwargs: Any) -> "EvaluationPreflightResult":
+        """Convenience alias for the Suite-owned preflight boundary."""
+        return self.preflight_selected_cases(**kwargs)
 
     def validate_cases(
         self, cases: tuple[EvaluationCase[Any, Any, Any], ...]

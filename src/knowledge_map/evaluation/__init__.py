@@ -59,6 +59,16 @@ from .runs import (
     TaskSuccess,
 )
 from .runner import EvaluationRunner
+from .preflight import (
+    EvaluationDefinitionRevisionReference,
+    EvaluationPreflightError,
+    EvaluationPreflightIssue,
+    EvaluationPreflightResult,
+    ResolvedCaseEvaluator,
+    ResolvedEvaluationCase,
+    ResolvedEvaluationPlan,
+    preflight_selected_cases,
+)
 from .store import (
     ArtifactConflictError,
     ArtifactLocation,
@@ -131,6 +141,14 @@ __all__ = [
     "TaskFailure",
     "TaskSuccess",
     "EvaluationRunner",
+    "EvaluationDefinitionRevisionReference",
+    "EvaluationPreflightError",
+    "EvaluationPreflightIssue",
+    "EvaluationPreflightResult",
+    "ResolvedCaseEvaluator",
+    "ResolvedEvaluationCase",
+    "ResolvedEvaluationPlan",
+    "preflight_selected_cases",
     "ArtifactConflictError",
     "ArtifactLocation",
     "ArtifactDerivativeRecord",

@@ -1,7 +1,6 @@
 # Preflight selected cases into a Resolved Evaluation Plan
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -13,15 +12,15 @@ Resolve the exact Evaluation Case revisions selected from an Evaluation Gold Set
 
 ## Acceptance criteria
 
-- [ ] Preflight retains exact Evaluation Task Contract compatibility checks and validates requirements only for the cases selected for the proposed run.
-- [ ] Unknown catalog keys and requirements without Suite bindings reject the pairing before run creation.
-- [ ] Full-run preflight reports every incompatible selected case and requirement in one result rather than stopping at the first gap.
-- [ ] Unsupported unselected cases do not prevent a compatible subset from resolving.
-- [ ] The plan captures the exact Suite revision, manifested Evaluation Case revisions, each case's declared requirements, and every effective Configured Evaluator reference.
-- [ ] Effective case evaluators are the additive union of Suite-wide Case Evaluators and every relevant binding.
-- [ ] A Configured Evaluator selected through overlapping scopes or requirements appears once per case while retaining Suite-wide and all requirement provenance.
-- [ ] Canonical compact JSON serialization is deterministic, and any readable JSON or YAML projection is explicitly derived rather than authoritative.
-- [ ] Behavioral tests cover Suite-wide application, multiple requirements, deduplication, provenance, subset compatibility, and complete coverage-gap reporting.
+- [x] Preflight retains exact Evaluation Task Contract compatibility checks and validates requirements only for the cases selected for the proposed run.
+- [x] Unknown catalog keys and requirements without Suite bindings reject the pairing before run creation.
+- [x] Full-run preflight reports every incompatible selected case and requirement in one result rather than stopping at the first gap.
+- [x] Unsupported unselected cases do not prevent a compatible subset from resolving.
+- [x] The plan captures the exact Suite revision, manifested Evaluation Case revisions, each case's declared requirements, and every effective Configured Evaluator reference.
+- [x] Effective case evaluators are the additive union of Suite-wide Case Evaluators and every relevant binding.
+- [x] A Configured Evaluator selected through overlapping scopes or requirements appears once per case while retaining Suite-wide and all requirement provenance.
+- [x] Canonical compact JSON serialization is deterministic, and any readable JSON or YAML projection is explicitly derived rather than authoritative.
+- [x] Behavioral tests cover Suite-wide application, multiple requirements, deduplication, provenance, subset compatibility, and complete coverage-gap reporting.
 
 ## Blocked by
 
