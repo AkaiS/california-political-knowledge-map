@@ -49,6 +49,24 @@ class RequirementReportEvaluator(ReportEvaluator):
         return ScalarResult(title="Cases", value=len(ctx.report.cases))
 
 
+@dataclass
+class RecordingEvaluator(Evaluator):
+    calls: list[str]
+
+    def evaluate(self, ctx: EvaluatorContext) -> bool:
+        self.calls.append(ctx.name or "")
+        return True
+
+
+@dataclass
+class RecordingReportEvaluator(ReportEvaluator):
+    case_counts: list[int]
+
+    def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        self.case_counts.append(len(ctx.report.cases))
+        return ScalarResult(title="Cases", value=len(ctx.report.cases))
+
+
 def test_catalog_and_case_preserve_stable_requirement_keys_and_descriptions():
     catalog = EvaluationRequirementCatalog(
         requirements=(
@@ -263,6 +281,113 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
     )
 
     assert report.cases[0].assertions["RequirementEvaluator"].value is True
+
+
+def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
+    schemas = {
+        "input_schema": SchemaReference.for_model(
+            RequirementInput, identity="test.input", revision=1
+        ),
+        "expected_output_schema": SchemaReference.for_model(
+            RequirementOutput, identity="test.output", revision=1
+        ),
+        "metadata_schema": SchemaReference.for_model(
+            RequirementMetadata, identity="test.metadata", revision=1
+        ),
+    }
+    cases = tuple(
+        EvaluationCase(
+            identity=EvaluationCaseIdentity(business_id=f"engine-case-{number}", revision=1),
+            **schemas,
+            task_input=RequirementInput(text=f"text-{number}"),
+            expected_output=RequirementOutput(label=f"label-{number}"),
+            metadata=RequirementMetadata(source="fixture"),
+            description="A shared-engine case.",
+            requirements=("source-grounding",) if number == 1 else (),
+        )
+        for number in (1, 2)
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="shared-engine-suite", revision=1),
+        description="A suite executed through the shared engine.",
+        requirement_catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(
+                    key="source-grounding",
+                    semantic_description="The answer must be grounded in the source text.",
+                ),
+            )
+        ),
+        task_contract=EvaluationTaskContract(
+            input_schema=schemas["input_schema"],
+            output_schema=schemas["expected_output_schema"],
+            metadata_schema=schemas["metadata_schema"],
+        ),
+        case_evaluators=(
+            ConfiguredEvaluator(name="universal", evaluator_revision=1),
+            ConfiguredEvaluator(name="grounding", evaluator_revision=1),
+        ),
+        suite_case_evaluators=(ConfiguredEvaluatorReference(name="universal"),),
+        requirement_bindings=(
+            EvaluationRequirementBinding(
+                requirement="source-grounding",
+                evaluators=(
+                    ConfiguredEvaluatorReference(name="universal"),
+                    ConfiguredEvaluatorReference(name="grounding"),
+                ),
+            ),
+        ),
+        report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="shared-engine-gold", revision=1),
+        description="The shared-engine population.",
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for case in cases
+        ),
+    )
+    plan_result = suite.preflight_selected_cases(gold_set=gold_set, cases=cases)
+    assert plan_result.plan is not None
+
+    universal_calls: list[str] = []
+    grounding_calls: list[str] = []
+    report_case_counts: list[int] = []
+    checkpointed_cases: list[str] = []
+    checkpointed_reports: list[int] = []
+
+    class RecordingCheckpointSink:
+        def checkpoint_case(self, case) -> None:
+            checkpointed_cases.append(case.name)
+
+        def checkpoint_report(self, report) -> None:
+            checkpointed_reports.append(len(report.cases))
+
+    report = suite.execute(
+        plan=plan_result.plan,
+        cases=cases,
+        task=lambda task_input: RequirementOutput(label=task_input.text.replace("text", "label")),
+        checkpoint_sink=RecordingCheckpointSink(),
+        evaluator_resolver=lambda configured: {
+            "universal": RecordingEvaluator(universal_calls),
+            "grounding": RecordingEvaluator(grounding_calls),
+            "report": RecordingReportEvaluator(report_case_counts),
+        }[configured.name],
+    )
+
+    assert [case.name for case in report.cases] == [
+        "engine-case-1@1",
+        "engine-case-2@1",
+    ]
+    assert universal_calls == ["engine-case-1@1", "engine-case-2@1"]
+    assert grounding_calls == ["engine-case-1@1"]
+    assert report_case_counts == [2]
+    assert report.analyses[0].value == 2
+    assert checkpointed_cases == ["engine-case-1@1", "engine-case-2@1"]
+    assert checkpointed_reports == [2]
 
 
 def test_case_requirements_are_authored_content_but_suite_judging_is_not_case_content():

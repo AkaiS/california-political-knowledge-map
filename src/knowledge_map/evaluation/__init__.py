@@ -59,6 +59,7 @@ from .runs import (
     TaskSuccess,
 )
 from .runner import EvaluationRunner
+from .engine import EvaluationCheckpointSink, EvaluationEngine, NoOpCheckpointSink
 from .preflight import (
     EvaluationDefinitionRevisionReference,
     EvaluationPreflightError,
@@ -141,6 +142,9 @@ __all__ = [
     "TaskFailure",
     "TaskSuccess",
     "EvaluationRunner",
+    "EvaluationCheckpointSink",
+    "EvaluationEngine",
+    "NoOpCheckpointSink",
     "EvaluationDefinitionRevisionReference",
     "EvaluationPreflightError",
     "EvaluationPreflightIssue",

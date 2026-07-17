@@ -1,0 +1,176 @@
+"""Shared, persistence-free execution of resolved evaluation plans."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any, Protocol
+
+from pydantic_evals import Case, Dataset
+from pydantic_evals.evaluators import Evaluator, ReportEvaluator
+from pydantic_evals.reporting import EvaluationReport
+
+from .definitions import EvaluationCase
+from .preflight import ResolvedEvaluationPlan
+from .suites import ConfiguredEvaluator, EvaluationSuite
+
+
+class EvaluationCheckpointSink(Protocol):
+    """Persistence boundary exercised by both execution paths."""
+
+    def checkpoint_case(self, case: Any) -> None:
+        """Record one terminal successful or failed framework case."""
+
+    def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
+        """Record the aggregate report supplied to report evaluators."""
+
+
+class NoOpCheckpointSink:
+    """Checkpoint sink for execution that intentionally has no ledger."""
+
+    def checkpoint_case(self, case: Any) -> None:
+        return None
+
+    def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
+        return None
+
+
+EvaluatorResolver = Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator]
+
+
+class EvaluationEngine:
+    """Project one frozen plan into one multi-case Pydantic Evals Dataset."""
+
+    def __init__(self, checkpoint_sink: EvaluationCheckpointSink | None = None):
+        self.checkpoint_sink = checkpoint_sink or NoOpCheckpointSink()
+
+    def execute(
+        self,
+        *,
+        plan: ResolvedEvaluationPlan,
+        suite: EvaluationSuite,
+        cases: tuple[EvaluationCase[Any, Any, Any], ...],
+        task: Callable[[Any], Any],
+        evaluator_resolver: EvaluatorResolver,
+        max_concurrency: int = 1,
+    ) -> EvaluationReport[Any, Any, Any]:
+        """Execute the exact case and evaluator assignments in ``plan``."""
+        self._validate_plan_suite(plan, suite)
+        if max_concurrency < 1:
+            raise ValueError("max_concurrency must be greater than 0")
+        case_by_reference = {
+            (case.identity.business_id, case.identity.revision): case for case in cases
+        }
+        selected_cases: list[EvaluationCase[Any, Any, Any]] = []
+        for planned_case in plan.cases:
+            key = (planned_case.case.business_id, planned_case.case.revision)
+            evaluation_case = case_by_reference.get(key)
+            if (
+                evaluation_case is None
+                or evaluation_case.content_hash != planned_case.case.content_hash
+            ):
+                raise ValueError(
+                    "Resolved Evaluation Plan requires the exact supplied Evaluation Case revision"
+                )
+            selected_cases.append(evaluation_case)
+        suite.validate_cases(tuple(selected_cases))
+
+        configured_by_name = {configured.name: configured for configured in suite.case_evaluators}
+        suite_wide_names = tuple(
+            dict.fromkeys(
+                resolved.reference.name
+                for planned_case in plan.cases
+                for resolved in planned_case.evaluators
+                if "suite-wide" in resolved.provenance
+            )
+        )
+        suite_wide_name_set = set(suite_wide_names)
+        resolved_case_names = {
+            resolved.reference.name
+            for planned_case in plan.cases
+            for resolved in planned_case.evaluators
+        }
+        missing = resolved_case_names - configured_by_name.keys()
+        if missing:
+            raise ValueError(
+                "Resolved Evaluation Plan references undeclared case evaluators: "
+                + ", ".join(sorted(missing))
+            )
+        for planned_case in plan.cases:
+            for resolved in planned_case.evaluators:
+                configured = configured_by_name[resolved.reference.name]
+                if resolved.reference.evaluator_revision != configured.evaluator_revision:
+                    raise ValueError(
+                        "Resolved Evaluation Plan references an incompatible evaluator revision: "
+                        + resolved.reference.name
+                    )
+
+        evaluator_instances: dict[str, Evaluator] = {}
+
+        def case_evaluator(name: str) -> Evaluator:
+            if name not in evaluator_instances:
+                resolved = evaluator_resolver(configured_by_name[name])
+                if not isinstance(resolved, Evaluator):
+                    raise ValueError(f"{name} did not resolve to a case evaluator")
+                evaluator_instances[name] = resolved
+            return evaluator_instances[name]
+
+        dataset_evaluators = tuple(case_evaluator(name) for name in suite_wide_names)
+        dataset_cases = []
+        for planned_case, evaluation_case in zip(plan.cases, selected_cases):
+            names = dict.fromkeys(resolved.reference.name for resolved in planned_case.evaluators)
+            dataset_cases.append(
+                Case(
+                    name=f"{planned_case.case.business_id}@{planned_case.case.revision}",
+                    inputs=evaluation_case.task_input,
+                    expected_output=evaluation_case.expected_output,
+                    metadata=evaluation_case.metadata,
+                    evaluators=tuple(
+                        case_evaluator(name)
+                        for name in names
+                        if name not in suite_wide_name_set
+                    ),
+                )
+            )
+
+        report_evaluators = tuple(
+            self._resolve_report_evaluator(configured, evaluator_resolver)
+            for configured in suite.report_evaluators
+        )
+        dataset = Dataset(
+            name=f"{suite.identity.business_id}@{suite.identity.revision}",
+            cases=dataset_cases,
+            evaluators=dataset_evaluators,
+            report_evaluators=report_evaluators,
+        )
+        report = dataset.evaluate_sync(
+            task,
+            progress=False,
+            max_concurrency=max_concurrency,
+        )
+        for case in (*report.cases, *report.failures):
+            self.checkpoint_sink.checkpoint_case(case)
+        self.checkpoint_sink.checkpoint_report(report)
+        return report
+
+    @staticmethod
+    def _validate_plan_suite(
+        plan: ResolvedEvaluationPlan, suite: EvaluationSuite
+    ) -> None:
+        if (
+            plan.suite.business_id != suite.identity.business_id
+            or plan.suite.revision != suite.identity.revision
+            or plan.suite.content_hash != suite.content_hash
+        ):
+            raise ValueError(
+                "Resolved Evaluation Plan does not belong to the supplied Evaluation Suite"
+            )
+
+    @staticmethod
+    def _resolve_report_evaluator(
+        configured: ConfiguredEvaluator,
+        resolver: EvaluatorResolver,
+    ) -> ReportEvaluator:
+        resolved = resolver(configured)
+        if not isinstance(resolved, ReportEvaluator):
+            raise ValueError(f"{configured.name} did not resolve to a report evaluator")
+        return resolved

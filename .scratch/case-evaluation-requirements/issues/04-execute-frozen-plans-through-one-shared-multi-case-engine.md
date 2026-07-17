@@ -1,7 +1,6 @@
 # Execute frozen plans through one shared multi-case engine
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
 
 ## Parent
 
@@ -13,15 +12,15 @@ Make in-memory evaluation consume a Resolved Evaluation Plan through the shared 
 
 ## Acceptance criteria
 
-- [ ] The shared engine accepts a frozen Resolved Evaluation Plan rather than independently deriving evaluator assignments during execution.
-- [ ] One Pydantic Evals Dataset contains every selected case in the plan.
-- [ ] Suite-wide Case Evaluators are attached at Dataset scope and run for every selected case.
-- [ ] Requirement-selected evaluators are attached only to matching Cases, with evaluators already applied Suite-wide omitted at Case scope.
-- [ ] Each effective Configured Evaluator executes at most once for a case even when multiple requirements selected it.
-- [ ] Report evaluators receive the complete multi-case Pydantic Evaluation Report.
-- [ ] In-memory execution uses a no-op checkpoint sink and requires no ledger.
-- [ ] Task failures, evaluator failures, observations, and aggregate report semantics remain distinguishable through the shared result contract.
-- [ ] A highest-level deterministic test resolves and executes a typed Suite and Gold Set and asserts observable report behavior without coupling to private engine structure.
+- [x] The shared engine accepts a frozen Resolved Evaluation Plan rather than independently deriving evaluator assignments during execution.
+- [x] One Pydantic Evals Dataset contains every selected case in the plan.
+- [x] Suite-wide Case Evaluators are attached at Dataset scope and run for every selected case.
+- [x] Requirement-selected evaluators are attached only to matching Cases, with evaluators already applied Suite-wide omitted at Case scope.
+- [x] Each effective Configured Evaluator executes at most once for a case even when multiple requirements selected it.
+- [x] Report evaluators receive the complete multi-case Pydantic Evaluation Report.
+- [x] In-memory execution uses a no-op checkpoint sink and requires no ledger.
+- [x] Task failures, evaluator failures, observations, and aggregate report semantics remain distinguishable through the shared result contract.
+- [x] A highest-level deterministic test resolves and executes a typed Suite and Gold Set and asserts observable report behavior without coupling to private engine structure.
 
 ## Blocked by
 

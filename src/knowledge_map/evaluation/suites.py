@@ -618,8 +618,23 @@ class EvaluationSuite(BaseModel):
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
         task: Callable[[Any], Any],
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
+        plan: "ResolvedEvaluationPlan | None" = None,
+        checkpoint_sink: "EvaluationCheckpointSink | None" = None,
+        max_concurrency: int = 1,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute compatible cases through the provider-neutral pydantic-evals seam."""
+        if plan is not None:
+            from .engine import EvaluationEngine
+
+            return EvaluationEngine(checkpoint_sink).execute(
+                plan=plan,
+                suite=self,
+                cases=cases,
+                task=task,
+                evaluator_resolver=evaluator_resolver,
+                max_concurrency=max_concurrency,
+            )
+
         selected_cases = self.validate_cases(cases)
         suite_wide_references = self._suite_wide_case_evaluator_references()
         configured_by_name = {evaluator.name: evaluator for evaluator in self.case_evaluators}
