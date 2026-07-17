@@ -1,6 +1,9 @@
+import json
+import sqlite3
 from dataclasses import dataclass
 from types import SimpleNamespace
 
+import pytest
 from pydantic import BaseModel, SecretStr
 from pydantic_evals.evaluators import (
     Evaluator,
@@ -14,6 +17,9 @@ from knowledge_map.evaluation import (
     ConfiguredEvaluator,
     DeclaredArtifactReference,
     EvaluationCase,
+    EvaluationCaseManifestEntry,
+    EvaluationCaseDisposition,
+    EvaluationCaseResult,
     EvaluationCaseIdentity,
     EvaluationCaseRevisionReference,
     EvaluationGoldSet,
@@ -24,6 +30,7 @@ from knowledge_map.evaluation import (
     EvaluationMetricReference,
     EvaluationMetricValueType,
     EvaluationRunConfiguration,
+    EvaluationRunRecord,
     EvaluationRunner,
     EvaluationRubric,
     EvaluationRubricIdentity,
@@ -36,6 +43,7 @@ from knowledge_map.evaluation import (
     SchemaReference,
     TaskFailure,
     TaskSuccess,
+    preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
 
@@ -50,6 +58,27 @@ class Output(BaseModel):
 
 class Metadata(BaseModel):
     source: str
+
+
+def test_run_configuration_defaults_case_concurrency_to_one():
+    configuration = EvaluationRunConfiguration(
+        provider="deterministic", model="fixture"
+    )
+
+    assert configuration.case_concurrency == 1
+    assert json.loads(configuration.configuration_json)["case_concurrency"] == 1
+
+
+@pytest.mark.parametrize("case_concurrency", [0, -1])
+def test_run_configuration_rejects_non_positive_case_concurrency(
+    case_concurrency,
+):
+    with pytest.raises(ValueError, match="greater than 0"):
+        EvaluationRunConfiguration(
+            provider="deterministic",
+            model="fixture",
+            case_concurrency=case_concurrency,
+        )
 
 
 @dataclass
@@ -129,6 +158,219 @@ def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
         ),
     )
     return cases, gold_set, suite
+
+
+def test_runner_persists_the_resolved_plan_as_canonical_ledger_data(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("resolved-plan")
+    expected_plan = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=cases,
+    ).plan
+    assert expected_plan is not None
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        stored_plan = ledger.get_resolved_evaluation_plan(result.run.run_id)
+
+        assert stored_plan == expected_plan
+        assert stored_plan.canonical_json == expected_plan.canonical_json
+
+
+def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture("case-concurrency")
+    configuration = EvaluationRunConfiguration(
+        provider="deterministic",
+        model="fixture",
+        case_concurrency=4,
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=configuration,
+        )
+
+        stored_run = ledger.get_evaluation_run(result.run.run_id)
+
+        assert stored_run is not None
+        assert stored_run.configuration == configuration
+        assert json.loads(stored_run.configuration_json)["case_concurrency"] == 4
+        assert stored_run.configuration.configuration_fingerprint != (
+            EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ).configuration_fingerprint
+        )
+
+
+def _resolved_run_creation_inputs(ledger, suffix: str):
+    cases, gold_set, suite = _lifecycle_fixture(suffix)
+    plan = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=cases,
+    ).plan
+    assert plan is not None
+    for case in cases:
+        ledger.import_case(case)
+    gold_record = ledger.import_gold_set(gold_set)
+    suite_record = ledger.import_suite(suite)
+    run = EvaluationRunRecord(
+        suite_record_id=suite_record.record_id,
+        suite_business_id=suite_record.business_id,
+        suite_revision=suite_record.revision,
+        suite_content_hash=suite_record.content_hash,
+        gold_set_record_id=gold_record.record_id,
+        gold_set_business_id=gold_record.business_id,
+        gold_set_revision=gold_record.revision,
+        gold_set_content_hash=gold_record.content_hash,
+        configuration=EvaluationRunConfiguration(
+            provider="deterministic", model="fixture"
+        ),
+    )
+    manifest = tuple(
+        EvaluationCaseManifestEntry(
+            run_id=run.run_id,
+            ordinal=ordinal,
+            case=planned_case.case,
+            split=planned_case.split,
+        )
+        for ordinal, planned_case in enumerate(plan.cases)
+    )
+    pending_results = tuple(
+        EvaluationCaseResult(
+            run_id=run.run_id,
+            manifest_id=entry.manifest_id,
+            case_record_id=entry.case_record_id,
+        )
+        for entry in manifest
+    )
+    return run, plan, manifest, pending_results
+
+
+def test_ledger_rejects_a_run_whose_suite_does_not_match_the_resolved_plan(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "suite-mismatch"
+        )
+        mismatched_run = run.model_copy(
+            update={"suite_revision": run.suite_revision + 1}
+        )
+
+        with pytest.raises(ValueError, match="Suite revision"):
+            ledger.create_evaluation_run(
+                mismatched_run, plan, manifest, pending_results
+            )
+
+        assert ledger.get_evaluation_run(run.run_id) is None
+        assert ledger.get_resolved_evaluation_plan(run.run_id) is None
+
+
+def test_ledger_rejects_a_run_whose_gold_set_does_not_match_the_plan(tmp_path):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "gold-set-mismatch"
+        )
+        mismatched_run = run.model_copy(
+            update={"gold_set_revision": run.gold_set_revision + 1}
+        )
+
+        with pytest.raises(ValueError, match="Gold Set revision"):
+            ledger.create_evaluation_run(
+                mismatched_run, plan, manifest, pending_results
+            )
+
+        assert ledger.get_evaluation_run(run.run_id) is None
+        assert ledger.get_resolved_evaluation_plan(run.run_id) is None
+
+
+def test_ledger_rejects_manifested_case_revisions_that_do_not_match_the_plan(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "case-mismatch"
+        )
+        mismatched_case = manifest[0].case.model_copy(
+            update={"revision": manifest[0].case_revision + 1}
+        )
+        mismatched_manifest = (
+            manifest[0].model_copy(update={"case": mismatched_case}),
+            *manifest[1:],
+        )
+
+        with pytest.raises(ValueError, match="manifested Evaluation Case revisions"):
+            ledger.create_evaluation_run(
+                run, plan, mismatched_manifest, pending_results
+            )
+
+        assert ledger.get_evaluation_run(run.run_id) is None
+        assert ledger.list_evaluation_case_manifest(run.run_id) == []
+
+
+def test_ledger_rejects_a_non_pending_case_result_during_run_creation(tmp_path):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "completed-envelope"
+        )
+        completed_results = (
+            pending_results[0].model_copy(
+                update={
+                    "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                    "task_outcome": TaskSuccess(output=Output(answer="already done")),
+                }
+            ),
+            *pending_results[1:],
+        )
+
+        with pytest.raises(ValueError, match="pending Evaluation Case Result"):
+            ledger.create_evaluation_run(run, plan, manifest, completed_results)
+
+        assert ledger.get_evaluation_run(run.run_id) is None
+        assert ledger.list_evaluation_case_results(run.run_id) == []
+
+
+def test_run_creation_rolls_back_plan_manifest_and_results_on_any_failure(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "atomic-rollback"
+        )
+        duplicate_result_ids = (
+            pending_results[0],
+            pending_results[1].model_copy(
+                update={"result_id": pending_results[0].result_id}
+            ),
+        )
+
+        with pytest.raises(sqlite3.IntegrityError):
+            ledger.create_evaluation_run(
+                run, plan, manifest, duplicate_result_ids
+            )
+
+        assert ledger.get_evaluation_run(run.run_id) is None
+        assert ledger.get_resolved_evaluation_plan(run.run_id) is None
+        assert ledger.list_evaluation_case_manifest(run.run_id) == []
+        assert ledger.list_evaluation_case_results(run.run_id) == []
 
 
 def test_task_failure_preserves_provider_neutral_failure_evidence():

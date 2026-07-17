@@ -27,6 +27,7 @@ from .definitions import (
     new_uuid7,
 )
 from .suites import EvaluationMetricReference, EvaluationSuite
+from .preflight import ResolvedEvaluationPlan
 from .runs import (
     CaseEvaluatorExecution,
     CaseMetricObservation,
@@ -478,6 +479,11 @@ class SQLiteEvaluationLedger:
                 UNIQUE(run_id, ordinal)
             );
 
+            CREATE TABLE IF NOT EXISTS resolved_evaluation_plans (
+                run_id TEXT PRIMARY KEY REFERENCES evaluation_runs(run_id),
+                plan_json TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS evaluation_case_results (
                 result_id TEXT PRIMARY KEY,
                 run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
@@ -585,14 +591,14 @@ class SQLiteEvaluationLedger:
     def create_evaluation_run(
         self,
         run: EvaluationRunRecord,
+        plan: ResolvedEvaluationPlan,
         manifest: Iterable[EvaluationCaseManifestEntry],
         pending_results: Iterable[EvaluationCaseResult],
     ) -> None:
         """Atomically create a run, its frozen manifest, and pending envelopes."""
         manifest_items = tuple(manifest)
         result_items = tuple(pending_results)
-        if len(manifest_items) != len(result_items):
-            raise ValueError("every manifest entry requires exactly one pending result")
+        self._validate_run_creation(run, plan, manifest_items, result_items)
         try:
             self._connection.execute("BEGIN")
             self._connection.execute(
@@ -629,6 +635,13 @@ class SQLiteEvaluationLedger:
                     ),
                 ),
             )
+            self._connection.execute(
+                """
+                INSERT INTO resolved_evaluation_plans (run_id, plan_json)
+                VALUES (?, ?)
+                """,
+                (str(run.run_id), plan.canonical_json),
+            )
             for entry in manifest_items:
                 self._connection.execute(
                     """
@@ -661,6 +674,78 @@ class SQLiteEvaluationLedger:
             self._connection.rollback()
             raise
 
+    @staticmethod
+    def _validate_run_creation(
+        run: EvaluationRunRecord,
+        plan: ResolvedEvaluationPlan,
+        manifest: tuple[EvaluationCaseManifestEntry, ...],
+        pending_results: tuple[EvaluationCaseResult, ...],
+    ) -> None:
+        if (
+            plan.suite.record_id,
+            plan.suite.business_id,
+            plan.suite.revision,
+            plan.suite.content_hash,
+        ) != (
+            run.suite_record_id,
+            run.suite_business_id,
+            run.suite_revision,
+            run.suite_content_hash,
+        ):
+            raise ValueError(
+                "Resolved Evaluation Plan Suite revision does not match Evaluation Run"
+            )
+        if (
+            plan.gold_set.record_id,
+            plan.gold_set.business_id,
+            plan.gold_set.revision,
+            plan.gold_set.content_hash,
+        ) != (
+            run.gold_set_record_id,
+            run.gold_set_business_id,
+            run.gold_set_revision,
+            run.gold_set_content_hash,
+        ):
+            raise ValueError(
+                "Resolved Evaluation Plan Gold Set revision does not match "
+                "Evaluation Run"
+            )
+        manifested_cases = tuple(
+            (entry.ordinal, entry.run_id, entry.case, entry.split)
+            for entry in manifest
+        )
+        planned_cases = tuple(
+            (ordinal, run.run_id, planned.case, planned.split)
+            for ordinal, planned in enumerate(plan.cases)
+        )
+        if manifested_cases != planned_cases:
+            raise ValueError(
+                "manifested Evaluation Case revisions do not match "
+                "the Resolved Evaluation Plan"
+            )
+        if len(manifest) != len(pending_results):
+            raise ValueError("every manifest entry requires exactly one pending result")
+        expected_envelopes = {
+            (entry.manifest_id, entry.case_record_id) for entry in manifest
+        }
+        actual_envelopes = {
+            (result.manifest_id, result.case_record_id) for result in pending_results
+        }
+        if (
+            actual_envelopes != expected_envelopes
+            or len(actual_envelopes) != len(pending_results)
+            or any(
+                result.run_id != run.run_id
+                or result.execution_disposition
+                is not EvaluationCaseDisposition.PENDING
+                or result.task_outcome is not None
+                for result in pending_results
+            )
+        ):
+            raise ValueError(
+                "every manifested case requires exactly one pending "
+                "Evaluation Case Result"
+            )
     def record_case_evaluation(
         self,
         result: EvaluationCaseResult,
@@ -810,6 +895,19 @@ class SQLiteEvaluationLedger:
             "SELECT * FROM evaluation_runs WHERE run_id = ?", (str(run_id),)
         ).fetchone()
         return None if row is None else self._run_from_row(row)
+
+    def get_resolved_evaluation_plan(
+        self, run_id: UUID
+    ) -> ResolvedEvaluationPlan | None:
+        row = self._connection.execute(
+            "SELECT plan_json FROM resolved_evaluation_plans WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        return (
+            None
+            if row is None
+            else ResolvedEvaluationPlan.model_validate_json(row["plan_json"])
+        )
 
     def list_evaluation_runs(self) -> list[EvaluationRunRecord]:
         rows = self._connection.execute(
@@ -1021,6 +1119,7 @@ class SQLiteEvaluationLedger:
             configuration=EvaluationRunConfiguration(
                 provider=config["provider"], model=config["model"],
                 execution_mode=config["execution_mode"], random_seed=config["random_seed"],
+                case_concurrency=config["case_concurrency"],
                 model_settings=config["model_settings"],
                 component_configuration=config["component_configuration"],
                 code_fingerprint=config.get("code_fingerprint"),

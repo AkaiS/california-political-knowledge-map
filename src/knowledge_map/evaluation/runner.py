@@ -332,7 +332,12 @@ class EvaluationRunner:
             )
             for entry in manifest
         )
-        self.ledger.create_evaluation_run(run, manifest, pending_results)
+        self.ledger.create_evaluation_run(
+            run=run,
+            plan=preflight.plan,
+            manifest=manifest,
+            pending_results=pending_results,
+        )
         for record in (
             suite_record,
             gold_record,

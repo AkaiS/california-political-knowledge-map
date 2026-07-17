@@ -76,6 +76,7 @@ class EvaluationRunConfiguration(BaseModel):
     model: str = Field(min_length=1)
     execution_mode: str = Field(default="deterministic", min_length=1)
     random_seed: int | None = None
+    case_concurrency: int = Field(default=1, gt=0)
     model_settings: Mapping[str, Any] = Field(default_factory=dict)
     component_configuration: Mapping[str, Any] = Field(default_factory=dict)
     code_fingerprint: str | None = None
@@ -88,6 +89,7 @@ class EvaluationRunConfiguration(BaseModel):
             "model": self.model,
             "execution_mode": self.execution_mode,
             "random_seed": self.random_seed,
+            "case_concurrency": self.case_concurrency,
             "model_settings": self.model_settings,
             "component_configuration": self.component_configuration,
             "code_fingerprint": self.code_fingerprint,
