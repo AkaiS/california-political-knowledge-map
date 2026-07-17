@@ -29,6 +29,9 @@ from knowledge_map.evaluation import (
     EvaluationMetricObservation,
     EvaluationMetricReference,
     EvaluationMetricValueType,
+    EvaluationRequirement,
+    EvaluationRequirementBinding,
+    EvaluationRequirementCatalog,
     EvaluationRunConfiguration,
     EvaluationRunRecord,
     EvaluationRunner,
@@ -39,6 +42,7 @@ from knowledge_map.evaluation import (
     EvaluationSuite,
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
+    ConfiguredEvaluatorReference,
     NoComparisonOperation,
     SchemaReference,
     TaskFailure,
@@ -125,6 +129,195 @@ class FailingReportEvaluator(ReportEvaluator):
 class NoObservationReportEvaluator(ReportEvaluator):
     def evaluate(self, ctx: ReportEvaluatorContext):
         return None
+
+
+@dataclass
+class RecordingCaseEvaluator(Evaluator):
+    calls: list[str]
+
+    def evaluate(self, ctx: EvaluatorContext) -> bool:
+        self.calls.append(ctx.name or "")
+        return True
+
+
+def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
+    cases = (_case(1), _case(2))
+    cases = (
+        cases[0].model_copy(update={"requirements": ("grounded",)}),
+        cases[1],
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-durable-plan", revision=1),
+        description="Durable shared-engine cases.",
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for case in cases
+        ),
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite-durable-plan", revision=1),
+        description="Durable shared-engine suite.",
+        requirement_catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(
+                    key="grounded", semantic_description="The answer is grounded."
+                ),
+            )
+        ),
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
+        case_evaluators=(
+            ConfiguredEvaluator(name="universal", evaluator_revision=1),
+            ConfiguredEvaluator(name="grounding", evaluator_revision=1),
+        ),
+        suite_case_evaluators=(ConfiguredEvaluatorReference(name="universal"),),
+        requirement_bindings=(
+            EvaluationRequirementBinding(
+                requirement="grounded",
+                evaluators=(ConfiguredEvaluatorReference(name="grounding"),),
+            ),
+        ),
+        report_evaluators=(ConfiguredEvaluator(name="count-cases", evaluator_revision=1),),
+    )
+    universal_calls: list[str] = []
+    grounding_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                RecordingCaseEvaluator(universal_calls)
+                if configured.name == "universal"
+                else RecordingCaseEvaluator(grounding_calls)
+                if configured.name == "grounding"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+    assert result.run.status == "completed"
+    assert universal_calls == ["case-1@1", "case-2@1"]
+    assert grounding_calls == ["case-1@1"]
+    assert [execution.evaluator_name for execution in result.case_evaluator_executions] == [
+        "universal",
+        "grounding",
+        "universal",
+    ]
+
+
+def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_failure(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, base_suite = _lifecycle_fixture(
+        "checkpoint-rollback", case_evaluator="exact-case"
+    )
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.checkpoint",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.BOOLEAN,
+        semantic_description="Whether checkpoint evidence was produced.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = base_suite.model_copy(
+        update={
+            "metrics": (metric,),
+            "case_evaluators": (
+                ConfiguredEvaluator(
+                    name="exact-case",
+                    evaluator_revision=1,
+                    metrics=(
+                        EvaluationMetricReference(
+                            namespaced_name="tests.checkpoint", evaluator_revision=1
+                        ),
+                    ),
+                ),
+            ),
+        }
+    )
+
+    def fail_observation_insert(observation):
+        raise RuntimeError("observation storage failed")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        monkeypatch.setattr(ledger, "_insert_case_observation", fail_observation_insert)
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                ExactAnswer() if configured.name == "exact-case" else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        case_result = result.case_results[0]
+        assert result.run.status == "failed"
+        assert case_result.execution_disposition is EvaluationCaseDisposition.PENDING
+        assert ledger.list_case_evaluator_executions(case_result.result_id) == []
+        assert ledger.list_case_metric_observations(case_result.result_id) == []
+
+
+def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "shared-parity", case_evaluator="exact-case"
+    )
+    plan_result = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=cases,
+        selection=("case-1",),
+    )
+    assert plan_result.plan is not None
+
+    def resolve(configured):
+        return ExactAnswer() if configured.name == "exact-case" else CountCases()
+
+    in_memory = suite.execute(
+        plan=plan_result.plan,
+        cases=cases,
+        task=lambda task_input: Output(answer=task_input.prompt),
+        evaluator_resolver=resolve,
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        durable = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=resolve,
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+    assert durable.run.status == "completed"
+    assert in_memory.cases[0].output.model_dump() == durable.case_results[0].task_outcome.output
+    assert list(in_memory.cases[0].assertions) == ["ExactAnswer"]
+    assert [execution.evaluator_name for execution in durable.case_evaluator_executions] == [
+        "exact-case"
+    ]
+    assert in_memory.analyses[0].value == len(durable.case_results) == 1
+    assert [execution.status.value for execution in durable.report_evaluator_executions] == [
+        "completed"
+    ]
 
 
 def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
@@ -1102,7 +1295,7 @@ def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(tm
         assert result.run.status == "failed"
         assert [case.execution_disposition.value for case in result.case_results] == [
             "completed",
-            "pending",
+            "completed",
         ]
         assert result.report_evaluator_executions == ()
 

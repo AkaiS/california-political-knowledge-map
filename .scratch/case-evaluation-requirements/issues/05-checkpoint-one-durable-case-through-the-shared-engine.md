@@ -1,7 +1,6 @@
 # Checkpoint one durable case through the shared engine
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -13,13 +12,13 @@ Run one manifested Evaluation Case durably through the shared engine and transla
 
 ## Acceptance criteria
 
-- [ ] Durable execution consumes the same Resolved Evaluation Plan and shared engine as in-memory execution.
-- [ ] Runner-owned Pydantic case lifecycle integration produces the terminal Evaluation Case Result and its Case Evaluator Executions.
-- [ ] The case result, evaluator success or failure evidence, observations, issues, and artifact links commit atomically as one checkpoint.
-- [ ] Task failure and case-evaluator failure remain separate terminal evidence and are not conflated with orchestration failure.
-- [ ] Task callables and case evaluators perform no ledger writes.
-- [ ] A persistence failure leaves no partial producer records or observations.
-- [ ] The same deterministic one-case plan produces equivalent task output, evaluator applications, failures, observations, and report semantics with no-op and ledger-backed checkpoint sinks.
+- [x] Durable execution consumes the same Resolved Evaluation Plan and shared engine as in-memory execution.
+- [x] Runner-owned Pydantic case lifecycle integration produces the terminal Evaluation Case Result and its Case Evaluator Executions.
+- [x] The case result, evaluator success or failure evidence, observations, issues, and artifact links commit atomically as one checkpoint.
+- [x] Task failure and case-evaluator failure remain separate terminal evidence and are not conflated with orchestration failure.
+- [x] Task callables and case evaluators perform no ledger writes.
+- [x] A persistence failure leaves no partial producer records or observations.
+- [x] The same deterministic one-case plan produces equivalent task output, evaluator applications, failures, observations, and report semantics with no-op and ledger-backed checkpoint sinks.
 
 ## Blocked by
 

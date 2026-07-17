@@ -12,11 +12,10 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, ReportEvaluator
-from pydantic_evals.evaluators import ReportEvaluatorContext
+from pydantic_evals.lifecycle import CaseLifecycle
 from pydantic_evals.reporting.analyses import ScalarResult
-from pydantic_evals.reporting import EvaluationReport
+from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from .definitions import (
     EvaluationCase,
@@ -25,6 +24,7 @@ from .definitions import (
     EvaluationSplit,
     new_uuid7,
 )
+from .engine import EvaluationEngine
 from .preflight import EvaluationPreflightError, preflight_selected_cases
 from .runs import (
     CaseEvaluatorExecution,
@@ -212,6 +212,239 @@ class _RecordingReportEvaluator(ReportEvaluator):
         return output
 
 
+@dataclass
+class _CancellationAwareReportEvaluator(ReportEvaluator):
+    delegate: ReportEvaluator
+    guard: Callable[[], None]
+
+    def get_serialization_name(self) -> str:
+        return self.delegate.get_serialization_name()
+
+    def evaluate(self, ctx: Any) -> Any:
+        self.guard()
+        return self.delegate.evaluate(ctx)
+
+    async def evaluate_async(self, ctx: Any) -> Any:
+        self.guard()
+        return await self.delegate.evaluate_async(ctx)
+
+
+class _DurableCheckpointSink:
+    """Translate framework terminal results into runner-owned ledger checkpoints."""
+
+    def __init__(
+        self,
+        *,
+        ledger: SQLiteEvaluationLedger,
+        run: EvaluationRunRecord,
+        manifest: tuple[EvaluationCaseManifestEntry, ...],
+        pending_results: tuple[EvaluationCaseResult, ...],
+        suite: EvaluationSuite,
+        case_calls: dict[str, list[_EvaluatorCall]],
+        report_calls: dict[str, list[_EvaluatorCall]],
+        issues: list[EvaluationRunIssue],
+        trace_id: str | None,
+        span_id: str | None,
+    ) -> None:
+        self.ledger = ledger
+        self.run = run
+        self.suite = suite
+        self.case_calls = case_calls
+        self.report_calls = report_calls
+        self.issues = issues
+        self.trace_id = trace_id
+        self.span_id = span_id
+        self._persisted_report_call_counts = {
+            configured.name: 0 for configured in suite.report_evaluators
+        }
+        self.results_by_name = {
+            f"{entry.case_business_id}@{entry.case_revision}": result
+            for entry, result in zip(manifest, pending_results)
+        }
+        self.configured_case_evaluators = {
+            configured.name: configured for configured in suite.case_evaluators
+        }
+
+    @property
+    def case_lifecycle(self) -> type[CaseLifecycle[Any, Any, Any]]:
+        sink = self
+
+        class DurableCaseLifecycle(CaseLifecycle[Any, Any, Any]):
+            async def teardown(self, result: Any) -> None:
+                sink.checkpoint_case(result)
+
+        return DurableCaseLifecycle
+
+    def checkpoint_case(self, framework_case: ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any] | None) -> None:
+        """Persist one terminal framework case and all evidence in one transaction."""
+        if framework_case is None:
+            return
+        result = self.results_by_name.get(framework_case.name)
+        if result is None:
+            raise ValueError(f"framework returned an unknown Evaluation Case: {framework_case.name}")
+
+        if isinstance(framework_case, ReportCaseFailure):
+            exception_type, safe_message = self._split_failure_message(
+                framework_case.error_message
+            )
+            completed = result.model_copy(
+                update={
+                    "execution_disposition": EvaluationCaseDisposition.FAILED,
+                    "task_outcome": TaskFailure(
+                        category="task_execution",
+                        exception_type=exception_type,
+                        safe_message=safe_message,
+                        retryable=False,
+                        failure_evidence={
+                            "error_stacktrace": framework_case.error_stacktrace
+                        },
+                    ),
+                }
+            )
+            self.ledger.record_case_evaluation(completed, (), ())
+            return
+
+        completed = result.model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output=framework_case.output),
+            }
+        )
+        executions: list[CaseEvaluatorExecution] = []
+        observations: list[CaseMetricObservation] = []
+        for configured in self.configured_case_evaluators.values():
+            calls = [
+                call
+                for call in self.case_calls[configured.name]
+                if call.subject_name == framework_case.name
+            ]
+            if not calls:
+                continue
+            evaluator_observations: list[CaseMetricObservation] = []
+            for call in calls:
+                execution = CaseEvaluatorExecution(
+                    case_result_id=result.result_id,
+                    evaluator_name=configured.name,
+                    evaluator_revision=configured.evaluator_revision,
+                    configuration_fingerprint=configured.configuration_fingerprint,
+                    status=(
+                        EvaluationProducerStatus.FAILED
+                        if call.failure_message
+                        else EvaluationProducerStatus.COMPLETED
+                    ),
+                    duration_seconds=call.duration_seconds,
+                    failure_message=call.failure_message,
+                    trace_id=self.trace_id,
+                    span_id=self.span_id,
+                )
+                if not call.failure_message:
+                    try:
+                        evaluator_observations.extend(
+                            EvaluationRunner._case_observations(
+                                configured,
+                                call.output,
+                                execution.execution_id,
+                                result.result_id,
+                                self.suite.metrics,
+                            )
+                        )
+                    except Exception as exc:
+                        execution = execution.model_copy(
+                            update={
+                                "status": EvaluationProducerStatus.FAILED,
+                                "failure_message": f"{type(exc).__name__}: {exc}",
+                            }
+                        )
+                executions.append(execution)
+
+            produced_identities = {
+                observation.metric.namespaced_name
+                for observation in evaluator_observations
+            }
+            observations.extend(evaluator_observations)
+            for metric in configured.metrics:
+                if metric.namespaced_name not in produced_identities:
+                    self.issues.append(
+                        EvaluationRunIssue(
+                            category="missing_metric",
+                            subject=f"case:{framework_case.name}/{configured.name}",
+                            message=f"required metric {metric.namespaced_name} was not produced",
+                        )
+                    )
+        self.ledger.record_case_evaluation(completed, executions, observations)
+
+    def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
+        """Persist report evaluator evidence one evaluator transaction at a time."""
+        self._checkpoint_report_calls()
+
+        # Keep the framework's report object alive at the sink boundary for parity
+        # callers; the durable ledger stores its evaluator evidence separately.
+        del report
+
+    def checkpoint_partial_report_evidence(self) -> None:
+        """Flush report evaluator calls completed before orchestration stopped."""
+        self._checkpoint_report_calls()
+
+    def _checkpoint_report_calls(self) -> None:
+        for configured in self.suite.report_evaluators:
+            calls = self.report_calls[configured.name]
+            start = self._persisted_report_call_counts[configured.name]
+            for call in calls[start:]:
+                execution = ReportEvaluatorExecution(
+                    run_id=self.run.run_id,
+                    evaluator_name=configured.name,
+                    evaluator_revision=configured.evaluator_revision,
+                    configuration_fingerprint=configured.configuration_fingerprint,
+                    status=(
+                        EvaluationProducerStatus.FAILED
+                        if call.failure_message
+                        else EvaluationProducerStatus.COMPLETED
+                    ),
+                    duration_seconds=call.duration_seconds,
+                    failure_message=call.failure_message,
+                    trace_id=self.trace_id,
+                    span_id=self.span_id,
+                )
+                observations: list[RunMetricObservation] = []
+                if not call.failure_message:
+                    try:
+                        observations = EvaluationRunner._run_observations(
+                            configured,
+                            call.output,
+                            execution.execution_id,
+                            self.run.run_id,
+                            self.suite.metrics,
+                        )
+                    except Exception as exc:
+                        execution = execution.model_copy(
+                            update={
+                                "status": EvaluationProducerStatus.FAILED,
+                                "failure_message": f"{type(exc).__name__}: {exc}",
+                            }
+                        )
+                produced_identities = {
+                    observation.metric.namespaced_name for observation in observations
+                }
+                for metric in configured.metrics:
+                    if metric.namespaced_name not in produced_identities:
+                        self.issues.append(
+                            EvaluationRunIssue(
+                                category="missing_metric",
+                                subject=f"report:{configured.name}",
+                                message=f"required metric {metric.namespaced_name} was not produced",
+                            )
+                        )
+                self.ledger.record_report_evaluation([execution], observations)
+                self._persisted_report_call_counts[configured.name] += 1
+
+    @staticmethod
+    def _split_failure_message(message: str) -> tuple[str, str]:
+        if ": " not in message:
+            return "Exception", message
+        exception_type, safe_message = message.split(": ", 1)
+        return exception_type, safe_message
+
+
 class EvaluationRunner:
     """Execute a typed suite and persist its complete successful evidence."""
 
@@ -354,24 +587,39 @@ class EvaluationRunner:
         case_calls: dict[str, list[_EvaluatorCall]] = {
             configured.name: [] for configured in suite.case_evaluators
         }
-        report_cases: list[Any] = []
-        report_failures: list[Any] = []
-        issues: list[EvaluationRunIssue] = []
-        result_by_name = {
-            f"{entry.case_business_id}@{entry.case_revision}": result
-            for entry, result in zip(manifest, pending_results)
+        report_calls: dict[str, list[_EvaluatorCall]] = {
+            configured.name: [] for configured in suite.report_evaluators
         }
+        issues: list[EvaluationRunIssue] = []
         telemetry_context = _evaluation_span(run.run_id, suite.identity.business_id)
         telemetry_span = telemetry_context.__enter__()
         run_trace_id, run_span_id = _span_identity(telemetry_span)
+        checkpoint_sink = _DurableCheckpointSink(
+            ledger=self.ledger,
+            run=run,
+            manifest=manifest,
+            pending_results=pending_results,
+            suite=suite,
+            case_calls=case_calls,
+            report_calls=report_calls,
+            issues=issues,
+            trace_id=run_trace_id,
+            span_id=run_span_id,
+        )
+        cancel_requested = False
+        resolver_failure: Exception | None = None
 
         try:
-            for entry, evaluation_case in zip(manifest, selected_cases):
-                if should_cancel is not None and should_cancel():
-                    raise EvaluationRunCancelled()
-
-                def resolve_case(configured: ConfiguredEvaluator) -> Evaluator:
+            def resolve(configured: ConfiguredEvaluator) -> Evaluator | ReportEvaluator:
+                nonlocal resolver_failure
+                try:
+                    if configured.name in report_calls:
+                        cancellation_guard()
                     resolved = evaluator_resolver(configured)
+                except Exception as exc:
+                    resolver_failure = exc
+                    raise
+                if configured.name in case_calls:
                     if not isinstance(resolved, Evaluator):
                         raise ValueError(
                             f"{configured.name} did not resolve to a case evaluator"
@@ -379,204 +627,45 @@ class EvaluationRunner:
                     return _RecordingEvaluator(
                         resolved, configured.name, case_calls[configured.name]
                     )
-
-                evaluators = [
-                    resolve_case(configured) for configured in suite.case_evaluators
-                ]
-                dataset = Dataset(
-                    name=f"{suite.identity.business_id}@{suite.identity.revision}",
-                    cases=[
-                        Case(
-                            name=f"{entry.case_business_id}@{entry.case_revision}",
-                            inputs=evaluation_case.task_input,
-                            expected_output=evaluation_case.expected_output,
-                            metadata=evaluation_case.metadata,
-                        )
-                    ],
-                    evaluators=evaluators,
-                )
-                report = dataset.evaluate_sync(
-                    task, progress=False, max_concurrency=1
-                )
-                result = result_by_name[
-                    f"{entry.case_business_id}@{entry.case_revision}"
-                ]
-                if report.failures:
-                    failed_case = report.failures[0]
-                    report_failures.append(failed_case)
-                    completed = result.model_copy(
-                        update={
-                            "execution_disposition": EvaluationCaseDisposition.FAILED,
-                            "task_outcome": TaskFailure(
-                                category="task_execution",
-                                exception_type=failed_case.error_message.split(":", 1)[0],
-                                safe_message=self._safe_error_message(
-                                    failed_case.error_message
-                                ),
-                                retryable=False,
-                                failure_evidence={
-                                    "error_stacktrace": failed_case.error_stacktrace
-                                },
-                            ),
-                        }
+                if not isinstance(resolved, ReportEvaluator):
+                    raise ValueError(
+                        f"{configured.name} did not resolve to a report evaluator"
                     )
-                    self.ledger.record_case_evaluation(completed, (), ())
-                    continue
-
-                if len(report.cases) != 1:
-                    raise RuntimeError("single-case evaluation returned no case result")
-                report_case = report.cases[0]
-                report_cases.append(report_case)
-                result_executions: list[CaseEvaluatorExecution] = []
-                result_observations: list[CaseMetricObservation] = []
-                completed = result.model_copy(
-                    update={
-                        "execution_disposition": EvaluationCaseDisposition.COMPLETED,
-                        "task_outcome": TaskSuccess(output=report_case.output),
-                    }
-                )
-                for configured in suite.case_evaluators:
-                    calls = [
-                        call
-                        for call in case_calls[configured.name]
-                        if call.subject_name == report_case.name
-                    ]
-                    for call in calls:
-                        execution = CaseEvaluatorExecution(
-                            case_result_id=result.result_id,
-                            evaluator_name=configured.name,
-                            evaluator_revision=configured.evaluator_revision,
-                            configuration_fingerprint=configured.configuration_fingerprint,
-                            status=(
-                                EvaluationProducerStatus.FAILED
-                                if call.failure_message
-                                else EvaluationProducerStatus.COMPLETED
-                            ),
-                            duration_seconds=call.duration_seconds,
-                            failure_message=call.failure_message,
-                            trace_id=run_trace_id,
-                            span_id=run_span_id,
-                        )
-                        result_executions.append(execution)
-                        if not call.failure_message:
-                            try:
-                                result_observations.extend(
-                                    self._case_observations(
-                                        configured,
-                                        call.output,
-                                        execution.execution_id,
-                                        result.result_id,
-                                        suite.metrics,
-                                    )
-                                )
-                            except Exception as exc:
-                                result_executions[-1] = execution.model_copy(
-                                    update={
-                                        "status": EvaluationProducerStatus.FAILED,
-                                        "failure_message": f"{type(exc).__name__}: {exc}",
-                                    }
-                                )
-                        produced_identities = {
-                            observation.metric.namespaced_name
-                            for observation in result_observations
-                        }
-                        for metric in configured.metrics:
-                            if metric.namespaced_name not in produced_identities:
-                                issues.append(
-                                    EvaluationRunIssue(
-                                        category="missing_metric",
-                                        subject=f"case:{entry.case_business_id}@{entry.case_revision}/{configured.name}",
-                                        message=f"required metric {metric.namespaced_name} was not produced",
-                                    )
-                                )
-                self.ledger.record_case_evaluation(
-                    completed, result_executions, result_observations
+                return _CancellationAwareReportEvaluator(
+                    _RecordingReportEvaluator(
+                        resolved, configured.name, report_calls[configured.name]
+                    ),
+                    cancellation_guard,
                 )
 
+            def cancellation_guard() -> None:
+                nonlocal cancel_requested
+                if cancel_requested or (
+                    should_cancel is not None and should_cancel()
+                ):
+                    cancel_requested = True
+                    raise asyncio.CancelledError()
+
+            def guarded_task(task_input: Any) -> Any:
+                nonlocal cancel_requested
+                if should_cancel is not None and should_cancel():
+                    cancel_requested = True
+                    raise asyncio.CancelledError()
+                return task(task_input)
+
+            evaluation_report = EvaluationEngine(checkpoint_sink).execute(
+                plan=preflight.plan,
+                suite=suite,
+                cases=selected_cases,
+                task=guarded_task,
+                evaluator_resolver=resolve,
+                max_concurrency=configuration.case_concurrency,
+                case_lifecycle=checkpoint_sink.case_lifecycle,
+            )
+            if resolver_failure is not None:
+                raise resolver_failure
             if should_cancel is not None and should_cancel():
                 raise EvaluationRunCancelled()
-
-            evaluation_report = EvaluationReport(
-                name=f"{suite.identity.business_id}@{suite.identity.revision}",
-                cases=report_cases,
-                failures=report_failures,
-            )
-            report_ctx = ReportEvaluatorContext(
-                name=evaluation_report.name,
-                report=evaluation_report,
-                experiment_metadata=None,
-            )
-            report_calls: dict[str, list[_EvaluatorCall]] = {
-                configured.name: [] for configured in suite.report_evaluators
-            }
-            for configured in suite.report_evaluators:
-                if should_cancel is not None and should_cancel():
-                    raise EvaluationRunCancelled()
-                calls = report_calls[configured.name]
-                try:
-                    resolved = evaluator_resolver(configured)
-                    if not isinstance(resolved, ReportEvaluator):
-                        raise ValueError(
-                            f"{configured.name} did not resolve to a report evaluator"
-                        )
-                    recording = _RecordingReportEvaluator(
-                        resolved, configured.name, calls
-                    )
-                    asyncio.run(recording.evaluate_async(report_ctx))
-                except Exception as exc:
-                    if not calls:
-                        calls.append(
-                            _EvaluatorCall(
-                                subject_name=evaluation_report.name,
-                                failure_message=f"{type(exc).__name__}: {exc}",
-                            )
-                        )
-                for call in calls:
-                    execution = ReportEvaluatorExecution(
-                        run_id=run.run_id,
-                        evaluator_name=configured.name,
-                        evaluator_revision=configured.evaluator_revision,
-                        configuration_fingerprint=configured.configuration_fingerprint,
-                        status=(
-                            EvaluationProducerStatus.FAILED
-                            if call.failure_message
-                            else EvaluationProducerStatus.COMPLETED
-                        ),
-                        duration_seconds=call.duration_seconds,
-                        failure_message=call.failure_message,
-                        trace_id=run_trace_id,
-                        span_id=run_span_id,
-                    )
-                    observations: list[RunMetricObservation] = []
-                    if not call.failure_message:
-                        try:
-                            observations = self._run_observations(
-                                configured,
-                                call.output,
-                                execution.execution_id,
-                                run.run_id,
-                                suite.metrics,
-                            )
-                        except Exception as exc:
-                            execution = execution.model_copy(
-                                update={
-                                    "status": EvaluationProducerStatus.FAILED,
-                                    "failure_message": f"{type(exc).__name__}: {exc}",
-                                }
-                            )
-                    produced_identities = {
-                        observation.metric.namespaced_name for observation in observations
-                    }
-                    for metric in configured.metrics:
-                        if metric.namespaced_name not in produced_identities:
-                            issues.append(
-                                EvaluationRunIssue(
-                                    category="missing_metric",
-                                    subject=f"report:{configured.name}",
-                                    message=f"required metric {metric.namespaced_name} was not produced",
-                                )
-                            )
-                    self.ledger.record_report_evaluation([execution], observations)
 
             gate_outcomes: list[EvaluationGateOutcome] = []
             provisional = self._build_result(run, manifest)
@@ -605,7 +694,8 @@ class EvaluationRunner:
             completed_run = self.ledger.complete_evaluation_run(
                 run.run_id, issues=issues, gate_outcomes=gate_outcomes
             )
-        except EvaluationRunCancelled:
+        except (EvaluationRunCancelled, asyncio.CancelledError):
+            checkpoint_sink.checkpoint_partial_report_evidence()
             issues.append(
                 EvaluationRunIssue(
                     category="cancelled", subject="run", message="run was deliberately stopped"
@@ -613,14 +703,27 @@ class EvaluationRunner:
             )
             completed_run = self.ledger.cancel_evaluation_run(run.run_id, issues=issues)
         except Exception as exc:
-            issues.append(
-                EvaluationRunIssue(
-                    category="orchestration_failure",
-                    subject="run",
-                    message=f"{type(exc).__name__}: {exc}",
+            if cancel_requested:
+                checkpoint_sink.checkpoint_partial_report_evidence()
+                issues.append(
+                    EvaluationRunIssue(
+                        category="cancelled",
+                        subject="run",
+                        message="run was deliberately stopped",
+                    )
                 )
-            )
-            completed_run = self.ledger.fail_evaluation_run(run.run_id, issues=issues)
+                completed_run = self.ledger.cancel_evaluation_run(
+                    run.run_id, issues=issues
+                )
+            else:
+                issues.append(
+                    EvaluationRunIssue(
+                        category="orchestration_failure",
+                        subject="run",
+                        message=f"{type(exc).__name__}: {exc}",
+                    )
+                )
+                completed_run = self.ledger.fail_evaluation_run(run.run_id, issues=issues)
         finally:
             telemetry_context.__exit__(None, None, None)
 
