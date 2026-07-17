@@ -16,6 +16,7 @@ from knowledge_map.adapters.sqlite_db import (
     get_selector_versions
 )
 from knowledge_map.core.selectors import add_selector_version
+from knowledge_map.core.relevance_agent import RelevanceClassification
 from knowledge_map.schemas.selectors import ArticleSelectors
 from knowledge_map.core.validation import run_recovery_check, ArticleValidatorService
 from knowledge_map.cli.main import main
@@ -502,8 +503,20 @@ async def test_post_recovery_prioritization(tmp_path):
         validated_urls.append(url)
         return original_validate(url, pub_id, raw_html, scraped_at)
         
-    with patch.object(validator, "validate_article", side_effect=mock_validate):
+    mock_relevance = RelevanceClassification(classification="RELEVANT")
+    with patch(
+        "knowledge_map.core.validation.get_metadata_embedding",
+        return_value=[0.0] * 768,
+    ) as mock_embedding, patch(
+        "knowledge_map.core.validation.classify_article_with_llm",
+        return_value=mock_relevance,
+    ) as mock_llm, patch.object(
+        validator, "validate_article", side_effect=mock_validate
+    ):
         await validator.validate_pending_articles()
+
+    assert mock_embedding.call_count == 2
+    assert mock_llm.await_count == 2
         
     # Verify that failed-art (VALIDATION_FAILED) was validated first, followed by pending-art (PENDING)
     assert len(validated_urls) == 2

@@ -19,6 +19,16 @@ def mock_relevance_agent():
     with patch("knowledge_map.core.validation.classify_article_with_llm", return_value=mock_res) as mock_fn:
         yield mock_fn
 
+
+@pytest.fixture
+def mock_metadata_embedding():
+    with patch(
+        "knowledge_map.core.validation.get_metadata_embedding",
+        return_value=[0.0] * 768,
+    ) as mock_fn:
+        yield mock_fn
+
+
 def test_edit_distance_ratio():
     # Identical strings
     assert edit_distance_ratio("hello", "hello") == 1.0
@@ -255,7 +265,7 @@ def test_validate_extraction():
 
 
 @pytest.mark.anyio
-async def test_article_validator_service(tmp_path):
+async def test_article_validator_service(tmp_path, mock_metadata_embedding):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -504,7 +514,7 @@ async def test_circuit_breaker_points_accumulation(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_circuit_breaker_reset_on_success(tmp_path):
+async def test_circuit_breaker_reset_on_success(tmp_path, mock_metadata_embedding):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -680,7 +690,7 @@ async def test_circuit_breaker_trips(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_circuit_breaker_skips_paused_publications(tmp_path):
+async def test_circuit_breaker_skips_paused_publications(tmp_path, mock_metadata_embedding):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -1236,7 +1246,9 @@ def test_extract_links_from_elements():
     assert links[1]["url"] == "https://example.com/target"
 
 @pytest.mark.anyio
-async def test_validate_pending_articles_extracts_and_saves_links(tmp_path):
+async def test_validate_pending_articles_extracts_and_saves_links(
+    tmp_path, mock_metadata_embedding
+):
     from datetime import datetime, timezone, timedelta
     from knowledge_map.adapters.sqlite_db import (
         init_db,
@@ -1647,7 +1659,9 @@ async def test_post_extraction_relevance_logistic_regression_inconclusive_fallba
 
 
 @pytest.mark.anyio
-async def test_post_extraction_relevance_no_weights_fallback(tmp_path):
+async def test_post_extraction_relevance_no_weights_fallback(
+    tmp_path, mock_metadata_embedding
+):
     from datetime import datetime, timezone, timedelta
     from unittest.mock import patch
     from knowledge_map.adapters.sqlite_db import (
@@ -1812,8 +1826,6 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
     assert cached["headline"] == "Target Article Title"
     assert cached["description"] == "Target Article Description"
     assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
-
-
 
 
 
