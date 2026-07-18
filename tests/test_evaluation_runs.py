@@ -211,7 +211,7 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
             ),
         )
 
-    assert result.run.status == "completed"
+    assert result.run.status == "finalization_pending"
     assert universal_calls == ["case-1@1", "case-2@1"]
     assert grounding_calls == ["case-1@1"]
     assert [execution.evaluator_name for execution in result.case_evaluator_executions] == [
@@ -301,7 +301,8 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        durable = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -311,6 +312,10 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        durable = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=resolve,
         )
 
     assert durable.run.status == "completed"
@@ -567,7 +572,7 @@ def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
             ),
         )
 
-        assert result.run.status == "completed"
+        assert result.run.status == "finalization_pending"
         assert maximum_active == expected_maximum
         assert len(result.case_results) == len(cases)
         assert all(
@@ -863,13 +868,18 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
                 raise TimeoutError("provider request timed out")
             return Output(answer="answer-2")
 
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
             task=task,
             evaluator_resolver=lambda configured: CountCases(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: CountCases(),
         )
 
         assert result.run.status == "completed"
@@ -892,7 +902,8 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -903,6 +914,10 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
                 else CountCases()
             ),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: CountCases(),
         )
 
         assert result.run.status == "completed"
@@ -929,13 +944,18 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
             task=lambda task_input: Output(answer=task_input.prompt),
             evaluator_resolver=lambda configured: FailingReportEvaluator(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: FailingReportEvaluator(),
         )
 
         assert result.run.status == "completed"
@@ -953,7 +973,8 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -966,6 +987,10 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: CountCases(),
         )
         consumed = ledger.register_artifact(
             b"suite input",
@@ -1028,8 +1053,11 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
         assert [item.artifact_id for item in ledger.list_consumed_artifacts(result.run.run_id)] == [
             consumed.artifact_id
         ]
+        frozen_report_artifact_id = result.run.frozen_report_artifact_id
+        assert frozen_report_artifact_id is not None
         produced = ledger.list_produced_artifacts(result.run.run_id)
         assert {item.artifact_id for item in produced} == {
+            frozen_report_artifact_id,
             run_output.artifact_id,
             case_output.artifact_id,
             case_evidence.artifact_id,
@@ -1039,6 +1067,7 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
             (item.producer_type, item.role)
             for item in produced
         } == {
+            ("run", "evaluation.aggregate-report.frozen"),
             ("run", "evaluation.run.report"),
             ("case_result", "evaluation.case-result.task-output"),
             ("case_evaluator_execution", "evaluation.case-evaluator.rationale"),
@@ -1071,7 +1100,8 @@ def test_runner_persists_normalized_logfire_execution_identity(tmp_path, monkeyp
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1084,6 +1114,10 @@ def test_runner_persists_normalized_logfire_execution_identity(tmp_path, monkeyp
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: CountCases(),
         )
 
     assert result.case_evaluator_executions[0].trace_id == "00000000000000000000000000001234"
@@ -1430,7 +1464,7 @@ def test_process_interruption_preserves_prior_case_checkpoints(tmp_path):
         ]
 
 
-def test_cancelled_run_retains_partial_report_evaluation(tmp_path):
+def test_interrupted_finalization_retains_partial_report_evaluation(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("partial-report")
     suite = suite.model_copy(
         update={
@@ -1445,10 +1479,11 @@ def test_cancelled_run_retains_partial_report_evaluation(tmp_path):
     def should_cancel() -> bool:
         nonlocal checks
         checks += 1
-        return checks == 5
+        return checks == 2
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1457,27 +1492,29 @@ def test_cancelled_run_retains_partial_report_evaluation(tmp_path):
                 CountCases() if configured.name == "count-cases" else CaseTable()
             ),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                CountCases() if configured.name == "count-cases" else CaseTable()
+            ),
             should_cancel=should_cancel,
         )
 
-        assert result.run.status == "cancelled"
+        assert result.run.status == "finalization_pending"
         assert [execution.evaluator_name for execution in result.report_evaluator_executions] == [
             "count-cases"
         ]
 
 
-def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(tmp_path):
-    cases, gold_set, suite = _lifecycle_fixture(
-        "orchestration-failure", case_evaluator="case-evaluator"
-    )
-    resolver_calls = 0
+def test_incomplete_cases_cannot_freeze_the_aggregate_report(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("freeze-requires-terminal-cases")
+    checks = 0
 
-    def resolve(configured):
-        nonlocal resolver_calls
-        resolver_calls += 1
-        if resolver_calls == 2:
-            raise RuntimeError("resolver infrastructure failed")
-        return NoObservationEvaluator()
+    def should_cancel() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks == 2
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         result = EvaluationRunner(ledger).run(
@@ -1485,7 +1522,217 @@ def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(tm
             gold_set=gold_set,
             cases=cases,
             task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=resolve,
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+            should_cancel=should_cancel,
+        )
+
+        assert result.run.status == "cancelled"
+        assert ledger.get_frozen_report_artifact(result.run.run_id) is None
+        with pytest.raises(ValueError, match="terminal"):
+            EvaluationRunner(ledger).finalize(
+                result.run.run_id,
+                evaluator_resolver=lambda configured: CountCases(),
+            )
+
+
+def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("explicit-finalization")
+    resolver_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        result = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                resolver_calls.append(configured.name) or CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        assert result.run.status == "finalization_pending"
+        assert resolver_calls == []
+        artifact = ledger.get_frozen_report_artifact(result.run.run_id)
+        assert artifact is not None
+        assert ledger.read_artifact(artifact)
+        assert len(ledger.list_artifact_locations(artifact)) == 1
+
+        finalized = runner.finalize(
+            result.run.run_id,
+            evaluator_resolver=lambda configured: (
+                resolver_calls.append(configured.name) or CountCases()
+            ),
+        )
+
+        assert finalized.run.status == "completed"
+        assert resolver_calls == ["count-cases"]
+        assert [execution.evaluator_name for execution in finalized.report_evaluator_executions] == [
+            "count-cases"
+        ]
+
+
+def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work(
+    tmp_path,
+):
+    cases, gold_set, base_suite = _lifecycle_fixture("resume-finalization")
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
+                ConfiguredEvaluator(name="case-table", evaluator_revision=1),
+            )
+        }
+    )
+    checks = 0
+    first_finalizer_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def stop_after_one() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == 2
+
+        partial = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                first_finalizer_calls.append(configured.name)
+                or (_ for _ in ()).throw(RuntimeError("missing evaluator"))
+                if configured.name == "count-cases"
+                else CaseTable()
+            ),
+            should_cancel=stop_after_one,
+        )
+
+        assert partial.run.status == "finalization_pending"
+        assert first_finalizer_calls == ["count-cases"]
+        assert [execution.status.value for execution in partial.report_evaluator_executions] == [
+            "failed"
+        ]
+
+        second_finalizer_calls: list[str] = []
+        completed = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                second_finalizer_calls.append(configured.name)
+                or CaseTable()
+            ),
+        )
+
+        assert completed.run.status == "completed"
+        assert second_finalizer_calls == ["case-table"]
+        assert [execution.status.value for execution in completed.report_evaluator_executions] == [
+            "failed",
+            "completed",
+        ]
+
+        calls_before_idempotent = list(second_finalizer_calls)
+        repeated = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                second_finalizer_calls.append(configured.name) or CaseTable()
+            ),
+        )
+        assert repeated.run.status == "completed"
+        assert second_finalizer_calls == calls_before_idempotent
+
+
+def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "guarded-completion", case_evaluator="exact-case"
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "guarded-completion-2.sqlite") as ledger:
+        case_records = tuple(ledger.import_case(case) for case in cases)
+        gold_record = ledger.import_gold_set(gold_set)
+        suite_record = ledger.import_suite(suite)
+        plan = preflight_selected_cases(suite=suite, gold_set=gold_set, cases=cases).plan
+        assert plan is not None
+        run = EvaluationRunRecord(
+            suite_record_id=suite_record.record_id,
+            suite_business_id=suite_record.business_id,
+            suite_revision=suite_record.revision,
+            suite_content_hash=suite_record.content_hash,
+            gold_set_record_id=gold_record.record_id,
+            gold_set_business_id=gold_record.business_id,
+            gold_set_revision=gold_record.revision,
+            gold_set_content_hash=gold_record.content_hash,
+            configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+            status="running",
+        )
+        manifest = tuple(
+            EvaluationCaseManifestEntry(
+                run_id=run.run_id,
+                ordinal=index,
+                case=planned.case,
+                split=planned.split,
+            )
+            for index, planned in enumerate(plan.cases)
+        )
+        pending = tuple(
+            EvaluationCaseResult(
+                run_id=run.run_id,
+                manifest_id=entry.manifest_id,
+                case_record_id=case_records[index].record_id,
+            )
+            for index, entry in enumerate(manifest)
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        with pytest.raises(ValueError, match="aggregate report"):
+            ledger.complete_evaluation_run(run.run_id)
+
+        for result in pending:
+            ledger.record_case_evaluation(
+                result.model_copy(
+                    update={
+                        "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                        "task_outcome": TaskSuccess(output=Output(answer="answer")),
+                    }
+                ),
+                (),
+                (),
+            )
+        ledger.freeze_aggregate_report(run.run_id, b"frozen-report")
+        with pytest.raises(ValueError, match="case evaluators"):
+            ledger.complete_evaluation_run(run.run_id)
+
+
+def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "orchestration-failure", case_evaluator="case-evaluator"
+    )
+
+    def fail_report_freeze(*args, **kwargs):
+        raise RuntimeError("report storage failed")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        monkeypatch.setattr(ledger, "freeze_aggregate_report", fail_report_freeze)
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: NoObservationEvaluator(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
 
@@ -1615,13 +1862,18 @@ def test_missing_metrics_and_gate_failures_are_run_diagnostics(tmp_path):
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
             task=lambda task_input: Output(answer=task_input.prompt),
             evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
             release_gates={"quality-threshold": lambda run: False},
         )
 
@@ -1742,7 +1994,8 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
             )
             return Output(answer=task_input.prompt.replace("prompt", "answer"))
 
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1761,6 +2014,13 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
                     "api_key": SecretStr("must-not-persist"),
                 },
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: {
+                "count-cases": CountCases(),
+                "case-table": CaseTable(),
+            }[configured.name],
         )
 
         assert result.run.status == "completed"
@@ -1845,7 +2105,8 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1860,6 +2121,10 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: CountCases(),
         )
 
         assert [entry.case_business_id for entry in result.manifest] == ["case-2"]

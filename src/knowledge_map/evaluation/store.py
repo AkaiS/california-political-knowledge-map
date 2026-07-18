@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import tempfile
 from collections.abc import Iterable, Mapping
 from enum import Enum
 from pathlib import Path
@@ -235,6 +236,12 @@ class SQLiteEvaluationLedger:
         self._connection = sqlite3.connect(str(db_path), check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._transaction_lock = RLock()
+        if str(db_path) == ":memory:":
+            self._artifact_root = Path(tempfile.mkdtemp(prefix="evaluation-artifacts-"))
+        else:
+            database_path = Path(db_path)
+            self._artifact_root = database_path.parent / f".{database_path.name}.artifacts"
+        self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._create_schema()
 
@@ -263,6 +270,7 @@ class SQLiteEvaluationLedger:
                 ),
                 schema_references_json TEXT NOT NULL,
                 metadata_json TEXT NOT NULL,
+                definition_json TEXT,
                 UNIQUE(kind, business_id, revision)
             );
 
@@ -461,7 +469,7 @@ class SQLiteEvaluationLedger:
                 selection_expression TEXT,
                 selection_provenance_json TEXT NOT NULL,
                 status TEXT NOT NULL CHECK (
-                    status IN ('pending', 'running', 'completed', 'failed', 'cancelled')
+                    status IN ('pending', 'running', 'finalization_pending', 'completed', 'failed', 'cancelled')
                 ),
                 retry_of_run_id TEXT REFERENCES evaluation_runs(run_id),
                 issues_json TEXT NOT NULL DEFAULT '[]',
@@ -567,6 +575,16 @@ class SQLiteEvaluationLedger:
             row["name"]
             for row in self._connection.execute("PRAGMA table_info(evaluation_runs)")
         }
+        definition_columns = {
+            row["name"]
+            for row in self._connection.execute(
+                "PRAGMA table_info(evaluation_definition_revisions)"
+            )
+        }
+        if "definition_json" not in definition_columns:
+            self._connection.execute(
+                "ALTER TABLE evaluation_definition_revisions ADD COLUMN definition_json TEXT"
+            )
         if "retry_of_run_id" not in run_columns:
             self._connection.execute(
                 "ALTER TABLE evaluation_runs ADD COLUMN retry_of_run_id TEXT"
@@ -578,6 +596,10 @@ class SQLiteEvaluationLedger:
         if "gate_outcomes_json" not in run_columns:
             self._connection.execute(
                 "ALTER TABLE evaluation_runs ADD COLUMN gate_outcomes_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "frozen_report_artifact_id" not in run_columns:
+            self._connection.execute(
+                "ALTER TABLE evaluation_runs ADD COLUMN frozen_report_artifact_id TEXT"
             )
         for table in ("case_evaluator_executions", "report_evaluator_executions"):
             columns = {
@@ -612,8 +634,8 @@ class SQLiteEvaluationLedger:
                     gold_set_revision, gold_set_content_hash, configuration_json,
                     configuration_fingerprint, selection_expression,
                     selection_provenance_json, status, retry_of_run_id,
-                    issues_json, gate_outcomes_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    issues_json, gate_outcomes_json, frozen_report_artifact_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(run.run_id), str(run.suite_record_id), run.suite_business_id,
@@ -636,6 +658,7 @@ class SQLiteEvaluationLedger:
                         sort_keys=True,
                         separators=(",", ":"),
                     ),
+                    None,
                 ),
             )
             self._connection.execute(
@@ -834,10 +857,12 @@ class SQLiteEvaluationLedger:
         self,
         executions: Iterable[ReportEvaluatorExecution],
         observations: Iterable[RunMetricObservation],
+        issues: Iterable[EvaluationRunIssue] = (),
     ) -> None:
-        """Atomically persist report evaluator executions and run observations."""
+        """Atomically persist one report checkpoint and its diagnostics."""
         executions = tuple(executions)
         observations = tuple(observations)
+        issue_items = tuple(issues)
         with self._transaction_lock:
             try:
                 self._connection.execute("BEGIN")
@@ -845,6 +870,22 @@ class SQLiteEvaluationLedger:
                     self._insert_report_execution(execution)
                 for observation in observations:
                     self._insert_run_observation(observation)
+                if issue_items:
+                    current = self._connection.execute(
+                        "SELECT issues_json FROM evaluation_runs WHERE run_id = ?",
+                        (str(executions[0].run_id),),
+                    ).fetchone()
+                    if current is None:
+                        raise KeyError(f"unknown Evaluation Run: {executions[0].run_id}")
+                    existing = json.loads(current["issues_json"] or "[]")
+                    existing.extend(issue.model_dump(mode="json") for issue in issue_items)
+                    self._connection.execute(
+                        "UPDATE evaluation_runs SET issues_json = ? WHERE run_id = ?",
+                        (
+                            json.dumps(existing, sort_keys=True, separators=(",", ":")),
+                            str(executions[0].run_id),
+                        ),
+                    )
                 self._connection.commit()
             except Exception:
                 self._connection.rollback()
@@ -857,16 +898,306 @@ class SQLiteEvaluationLedger:
         issues: Iterable[EvaluationRunIssue] = (),
         gate_outcomes: Iterable[EvaluationGateOutcome] = (),
     ) -> EvaluationRunRecord:
-        self._set_evaluation_run_status(
-            run_id,
-            EvaluationRunStatus.COMPLETED,
-            issues=issues,
-            gate_outcomes=gate_outcomes,
-        )
+        issue_items = tuple(issues)
+        gate_items = tuple(gate_outcomes)
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                row = self._connection.execute(
+                    "SELECT * FROM evaluation_runs WHERE run_id = ?",
+                    (str(run_id),),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"unknown Evaluation Run: {run_id}")
+                if row["status"] != EvaluationRunStatus.COMPLETED.value:
+                    self._assert_run_is_complete(run_id)
+                    self._connection.execute(
+                        """
+                        UPDATE evaluation_runs
+                        SET status = ?, issues_json = ?, gate_outcomes_json = ?
+                        WHERE run_id = ?
+                        """,
+                        (
+                            EvaluationRunStatus.COMPLETED.value,
+                            json.dumps(
+                                [issue.model_dump(mode="json") for issue in issue_items],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                            json.dumps(
+                                [gate.model_dump(mode="json") for gate in gate_items],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                            str(run_id),
+                        ),
+                    )
+                self._connection.commit()
+            except Exception:
+                self._connection.rollback()
+                raise
         run = self.get_evaluation_run(run_id)
         if run is None:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
         return run
+
+    def _assert_run_is_complete(self, run_id: UUID) -> None:
+        row = self._connection.execute(
+            "SELECT frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        if row["frozen_report_artifact_id"] is None:
+            raise ValueError(
+                "Evaluation Run cannot complete before the aggregate report is frozen"
+            )
+        pending = self._connection.execute(
+            """
+            SELECT 1 FROM evaluation_case_results
+            WHERE run_id = ?
+              AND (execution_disposition IN ('pending', 'cancelled')
+                   OR task_outcome_json IS NULL)
+            LIMIT 1
+            """,
+            (str(run_id),),
+        ).fetchone()
+        if pending is not None:
+            raise ValueError(
+                "Evaluation Run cannot complete while cases lack terminal evidence"
+            )
+        plan_row = self._connection.execute(
+            "SELECT plan_json FROM resolved_evaluation_plans WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if plan_row is None:
+            raise ValueError("Evaluation Run cannot complete without its frozen plan")
+        plan = ResolvedEvaluationPlan.model_validate_json(plan_row["plan_json"])
+        for ordinal, planned_case in enumerate(plan.cases):
+            result = self._connection.execute(
+                """
+                SELECT result_id, task_outcome_json
+                FROM evaluation_case_results
+                WHERE run_id = ? AND manifest_id = (
+                    SELECT manifest_id FROM evaluation_case_manifests
+                    WHERE run_id = ? AND ordinal = ?
+                )
+                """,
+                (str(run_id), str(run_id), ordinal),
+            ).fetchone()
+            if result is None or result["task_outcome_json"] is None:
+                raise ValueError("Evaluation Run cannot complete without terminal task evidence")
+            outcome = json.loads(result["task_outcome_json"])
+            if outcome.get("kind") == "failure":
+                continue
+            terminal = {
+                (row["evaluator_name"], row["evaluator_revision"])
+                for row in self._connection.execute(
+                    """
+                    SELECT evaluator_name, evaluator_revision
+                    FROM case_evaluator_executions
+                    WHERE case_result_id = ?
+                    """,
+                    (result["result_id"],),
+                )
+            }
+            missing_case_evaluators = {
+                (resolved.reference.name, resolved.reference.evaluator_revision)
+                for resolved in planned_case.evaluators
+            } - terminal
+            if missing_case_evaluators:
+                raise ValueError(
+                    "Evaluation Run cannot complete while case evaluators lack terminal evidence: "
+                    + ", ".join(sorted(name for name, _ in missing_case_evaluators))
+                )
+        suite = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
+        expected = {
+            evaluator["name"] for evaluator in suite.get("report_evaluators", [])
+        }
+        terminal = {
+            row["evaluator_name"]
+            for row in self._connection.execute(
+                "SELECT evaluator_name FROM report_evaluator_executions WHERE run_id = ?",
+                (str(run_id),),
+            )
+        }
+        missing = expected - terminal
+        if missing:
+            raise ValueError(
+                "Evaluation Run cannot complete while report evaluators lack terminal evidence: "
+                + ", ".join(sorted(missing))
+            )
+
+    def freeze_aggregate_report(
+        self,
+        run_id: UUID,
+        content: bytes,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+    ) -> EvaluationArtifactRecord:
+        """Freeze report bytes and atomically link them to finalization state."""
+        with self._transaction_lock:
+            row = self._connection.execute(
+                "SELECT status, frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+                (str(run_id),),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"unknown Evaluation Run: {run_id}")
+            if row["frozen_report_artifact_id"] is None and row["status"] not in {
+                EvaluationRunStatus.RUNNING.value,
+                EvaluationRunStatus.FINALIZATION_PENDING.value,
+            }:
+                raise ValueError("only an active Evaluation Run can freeze its aggregate report")
+            if row["frozen_report_artifact_id"] is None:
+                pending = self._connection.execute(
+                    """
+                    SELECT 1 FROM evaluation_case_results
+                    WHERE run_id = ?
+                      AND (execution_disposition IN ('pending', 'cancelled')
+                           OR task_outcome_json IS NULL)
+                    LIMIT 1
+                    """,
+                    (str(run_id),),
+                ).fetchone()
+                if pending is not None:
+                    raise ValueError(
+                        "aggregate report requires every manifested case to be terminal"
+                    )
+        artifact = self.register_artifact(
+            content,
+            kind="aggregate-report",
+            media_type="application/json",
+            retention_class="run",
+            sensitivity_classification="internal",
+        )
+        destination = self._artifact_root / f"{artifact.content_hash}.json"
+        if not destination.exists():
+            destination.write_bytes(content)
+        self.put_artifact_location(
+            artifact,
+            str(destination),
+            location_key="frozen-report",
+            location_kind="filesystem",
+        )
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                issue_items = tuple(issues)
+                row = self._connection.execute(
+                    "SELECT status, frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+                    (str(run_id),),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"unknown Evaluation Run: {run_id}")
+                if row["frozen_report_artifact_id"] is not None:
+                    existing = self._get_artifact_by_id(UUID(row["frozen_report_artifact_id"]))
+                    if existing.content_hash != artifact.content_hash:
+                        raise ValueError(
+                            "the aggregate report is already frozen with different bytes"
+                        )
+                    self._connection.commit()
+                    return existing
+                if row["status"] not in {
+                    EvaluationRunStatus.RUNNING.value,
+                    EvaluationRunStatus.FINALIZATION_PENDING.value,
+                }:
+                    raise ValueError("only an active Evaluation Run can freeze its aggregate report")
+                pending = self._connection.execute(
+                    """
+                    SELECT 1 FROM evaluation_case_results
+                    WHERE run_id = ?
+                      AND (execution_disposition IN ('pending', 'cancelled')
+                           OR task_outcome_json IS NULL)
+                    LIMIT 1
+                    """,
+                    (str(run_id),),
+                ).fetchone()
+                if pending is not None:
+                    raise ValueError(
+                        "aggregate report requires every manifested case to be terminal"
+                    )
+                self._link_artifact(
+                    "evaluation_run_artifacts",
+                    "run_id",
+                    run_id,
+                    artifact,
+                    "evaluation.aggregate-report.frozen",
+                    commit=False,
+                )
+                self._connection.execute(
+                    """
+                    UPDATE evaluation_runs
+                    SET status = ?, frozen_report_artifact_id = ?, issues_json = ?
+                    WHERE run_id = ?
+                    """,
+                    (
+                        EvaluationRunStatus.FINALIZATION_PENDING.value,
+                        str(artifact.artifact_id),
+                        json.dumps(
+                            [issue.model_dump(mode="json") for issue in issue_items],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        str(run_id),
+                    ),
+                )
+                self._connection.commit()
+                return artifact
+            except Exception:
+                self._connection.rollback()
+                raise
+
+    def get_frozen_report_artifact(self, run_id: UUID) -> EvaluationArtifactRecord | None:
+        row = self._connection.execute(
+            "SELECT frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        if row["frozen_report_artifact_id"] is None:
+            return None
+        return self._get_artifact_by_id(UUID(row["frozen_report_artifact_id"]))
+
+    def read_artifact(self, artifact: EvaluationArtifactRecord | UUID | str) -> bytes:
+        record = self._resolve_artifact(artifact)
+        for location in self.list_artifact_locations(record):
+            if location.location_kind == "filesystem":
+                return Path(location.uri).read_bytes()
+        raise FileNotFoundError(
+            f"no readable location for Evaluation Artifact: {record.artifact_id}"
+        )
+
+    def _definition_for_run(
+        self, run_id: UUID, kind: EvaluationDefinitionKind
+    ) -> dict[str, Any]:
+        run = self._connection.execute(
+            "SELECT suite_record_id FROM evaluation_runs WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        row = self._connection.execute(
+            """
+            SELECT definition_json FROM evaluation_definition_revisions
+            WHERE record_id = ? AND kind = ?
+            """,
+            (run["suite_record_id"], kind.value),
+        ).fetchone()
+        if row is None or row["definition_json"] is None:
+            raise ValueError("the frozen authored Evaluation Suite is unavailable")
+        return json.loads(row["definition_json"])
+
+    def get_frozen_suite(self, run_id: UUID):
+        from .suites import EvaluationSuite
+
+        payload = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
+        # Recompute from the stored semantic fields.  This also keeps the
+        # ledger tolerant of callers that used Pydantic ``model_copy`` to
+        # change authored fields without rerunning model post-init hooks.
+        payload["content_hash"] = None
+        return EvaluationSuite.model_validate(
+            payload
+        )
 
     def fail_evaluation_run(
         self,
@@ -1175,6 +1506,11 @@ class SQLiteEvaluationLedger:
                 EvaluationGateOutcome.model_validate(item)
                 for item in json.loads(row["gate_outcomes_json"] or "[]")
             ),
+            frozen_report_artifact_id=(
+                None
+                if row["frozen_report_artifact_id"] is None
+                else UUID(row["frozen_report_artifact_id"])
+            ),
         )
 
     @staticmethod
@@ -1247,8 +1583,8 @@ class SQLiteEvaluationLedger:
                 """
                 INSERT INTO evaluation_definition_revisions (
                     record_id, kind, business_id, revision, content_hash,
-                    schema_references_json, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    schema_references_json, metadata_json, definition_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(record.record_id),
@@ -1265,6 +1601,11 @@ class SQLiteEvaluationLedger:
                         separators=(",", ":"),
                     ),
                     json.dumps(record.metadata, sort_keys=True, separators=(",", ":")),
+                    json.dumps(
+                        definition.model_dump(mode="json"),
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
                 ),
             )
             if isinstance(definition, EvaluationGoldSet):

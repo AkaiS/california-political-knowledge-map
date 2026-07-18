@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import asyncio
+import hashlib
 import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
@@ -12,7 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from pydantic_evals.evaluators import Evaluator, ReportEvaluator
+from pydantic_evals.evaluators import Evaluator, ReportEvaluator, ReportEvaluatorContext
 from pydantic_evals.lifecycle import CaseLifecycle
 from pydantic_evals.reporting.analyses import ScalarResult
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
@@ -25,6 +26,7 @@ from .definitions import (
     new_uuid7,
 )
 from .engine import EvaluationEngine
+from .reporting import canonical_report_bytes, report_from_bytes
 from .preflight import EvaluationPreflightError, preflight_selected_cases
 from .runs import (
     CaseEvaluatorExecution,
@@ -374,12 +376,16 @@ class _DurableCheckpointSink:
         self.ledger.record_case_evaluation(completed, executions, observations)
 
     def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
-        """Persist report evaluator evidence one evaluator transaction at a time."""
-        self._checkpoint_report_calls()
-
-        # Keep the framework's report object alive at the sink boundary for parity
-        # callers; the durable ledger stores its evaluator evidence separately.
-        del report
+        """Freeze the exact aggregate report for explicit finalization."""
+        if self.trace_id is not None:
+            report.trace_id = self.trace_id
+        if self.span_id is not None:
+            report.span_id = self.span_id
+        self.ledger.freeze_aggregate_report(
+            self.run.run_id,
+            canonical_report_bytes(report),
+            issues=self.issues,
+        )
 
     def checkpoint_partial_report_evidence(self) -> None:
         """Flush report evaluator calls completed before orchestration stopped."""
@@ -390,6 +396,7 @@ class _DurableCheckpointSink:
             calls = self.report_calls[configured.name]
             start = self._persisted_report_call_counts[configured.name]
             for call in calls[start:]:
+                issue_start = len(self.issues)
                 execution = ReportEvaluatorExecution(
                     run_id=self.run.run_id,
                     evaluator_name=configured.name,
@@ -434,7 +441,11 @@ class _DurableCheckpointSink:
                                 message=f"required metric {metric.namespaced_name} was not produced",
                             )
                         )
-                self.ledger.record_report_evaluation([execution], observations)
+                self.ledger.record_report_evaluation(
+                    [execution],
+                    observations,
+                    self.issues[issue_start:],
+                )
                 self._persisted_report_call_counts[configured.name] += 1
 
     @staticmethod
@@ -701,39 +712,13 @@ class EvaluationRunner:
                 evaluator_resolver=resolve,
                 max_concurrency=configuration.case_concurrency,
                 case_lifecycle=checkpoint_sink.case_lifecycle,
+                include_report_evaluators=False,
             )
             if resolver_failure is not None:
                 raise resolver_failure
-            if should_cancel is not None and should_cancel():
-                raise EvaluationRunCancelled()
-
-            gate_outcomes: list[EvaluationGateOutcome] = []
-            provisional = self._build_result(run, manifest)
-            for gate_name, gate in (release_gates or {}).items():
-                try:
-                    passed = bool(gate(provisional))
-                    failure_message = None if passed else "release gate did not pass"
-                except Exception as exc:
-                    passed = False
-                    failure_message = f"{type(exc).__name__}: {exc}"
-                gate_outcomes.append(
-                    EvaluationGateOutcome(
-                        gate_name=gate_name,
-                        passed=passed,
-                        failure_message=failure_message,
-                    )
-                )
-                if not passed:
-                    issues.append(
-                        EvaluationRunIssue(
-                            category="gate_failure",
-                            subject=gate_name,
-                            message=failure_message or "release gate did not pass",
-                        )
-                    )
-            completed_run = self.ledger.complete_evaluation_run(
-                run.run_id, issues=issues, gate_outcomes=gate_outcomes
-            )
+            completed_run = self.ledger.get_evaluation_run(run.run_id)
+            if completed_run is None:  # pragma: no cover - ledger invariant
+                raise KeyError(f"unknown Evaluation Run: {run.run_id}")
         except (EvaluationRunCancelled, asyncio.CancelledError):
             checkpoint_sink.checkpoint_partial_report_evidence()
             issues.append(
@@ -768,6 +753,156 @@ class EvaluationRunner:
             telemetry_context.__exit__(None, None, None)
 
         return self._build_result(completed_run, manifest)
+
+    def finalize(
+        self,
+        run_id: UUID,
+        *,
+        suite: EvaluationSuite | None = None,
+        evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
+        release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
+        should_cancel: Callable[[], bool] | None = None,
+    ) -> EvaluationRunResult:
+        """Explicitly resume missing report evaluator work for one frozen run.
+
+        ``suite`` is accepted for callers migrating from the original runner
+        seam, but the persisted frozen Suite is always authoritative.
+        """
+        run = self.ledger.get_evaluation_run(run_id)
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        if run.status is EvaluationRunStatus.COMPLETED:
+            return self._build_result(run, tuple(self.ledger.list_evaluation_case_manifest(run_id)))
+        artifact = self.ledger.get_frozen_report_artifact(run_id)
+        if artifact is None:
+            raise ValueError(
+                "Evaluation Finalization requires every manifested case to be terminal and the aggregate report to be frozen"
+            )
+        if run.status is not EvaluationRunStatus.FINALIZATION_PENDING:
+            raise ValueError(
+                "Evaluation Finalization requires a run in finalization_pending state"
+            )
+
+        suite = self.ledger.get_frozen_suite(run_id)
+        report_bytes = self.ledger.read_artifact(artifact)
+        if hashlib.sha256(report_bytes).hexdigest() != artifact.content_hash:
+            raise ValueError("frozen aggregate report bytes do not match their artifact identity")
+        report = report_from_bytes(report_bytes)
+        existing = self.ledger.list_report_evaluator_executions(run_id)
+        completed_names = {
+            (execution.evaluator_name, execution.evaluator_revision,
+             execution.configuration_fingerprint)
+            for execution in existing
+        }
+        issues = list(run.issues)
+        trace_id, span_id = report.trace_id, report.span_id
+        for configured in suite.report_evaluators:
+            if should_cancel is not None and should_cancel():
+                return self._build_result(
+                    run,
+                    tuple(self.ledger.list_evaluation_case_manifest(run_id)),
+                )
+            identity = (
+                configured.name,
+                configured.evaluator_revision,
+                configured.configuration_fingerprint,
+            )
+            if identity in completed_names:
+                continue
+            started = time.perf_counter()
+            issue_start = len(issues)
+            execution = ReportEvaluatorExecution(
+                run_id=run_id,
+                evaluator_name=configured.name,
+                evaluator_revision=configured.evaluator_revision,
+                configuration_fingerprint=configured.configuration_fingerprint,
+                status=EvaluationProducerStatus.COMPLETED,
+                duration_seconds=0,
+                trace_id=trace_id,
+                span_id=span_id,
+            )
+            observations: list[RunMetricObservation] = []
+            try:
+                resolved = evaluator_resolver(configured)
+                if not isinstance(resolved, ReportEvaluator):
+                    raise ValueError(
+                        f"{configured.name} did not resolve to a report evaluator"
+                    )
+                output = resolved.evaluate(
+                    ReportEvaluatorContext(
+                        name=configured.name,
+                        report=report,
+                        experiment_metadata=report.experiment_metadata,
+                    )
+                )
+                if inspect.isawaitable(output):
+                    output = asyncio.run(output)
+                observations = self._run_observations(
+                    configured,
+                    output,
+                    execution.execution_id,
+                    run_id,
+                    suite.metrics,
+                )
+            except Exception as exc:
+                execution = execution.model_copy(
+                    update={
+                        "status": EvaluationProducerStatus.FAILED,
+                        "failure_message": f"{type(exc).__name__}: {exc}",
+                    }
+                )
+            execution = execution.model_copy(
+                update={"duration_seconds": time.perf_counter() - started}
+            )
+            produced = {observation.metric.namespaced_name for observation in observations}
+            for metric in configured.metrics:
+                if metric.namespaced_name not in produced:
+                    issues.append(
+                        EvaluationRunIssue(
+                            category="missing_metric",
+                            subject=f"report:{configured.name}",
+                            message=f"required metric {metric.namespaced_name} was not produced",
+                        )
+                    )
+            self.ledger.record_report_evaluation(
+                [execution], observations, issues[issue_start:]
+            )
+
+        pending_run = self.ledger.get_evaluation_run(run_id)
+        if pending_run is None:  # pragma: no cover - ledger invariant
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        gate_outcomes: list[EvaluationGateOutcome] = []
+        provisional = self._build_result(pending_run, tuple(self.ledger.list_evaluation_case_manifest(run_id)))
+        for gate_name, gate in (release_gates or {}).items():
+            try:
+                passed = bool(gate(provisional))
+                failure_message = None if passed else "release gate did not pass"
+            except Exception as exc:
+                passed = False
+                failure_message = f"{type(exc).__name__}: {exc}"
+            gate_outcomes.append(
+                EvaluationGateOutcome(
+                    gate_name=gate_name,
+                    passed=passed,
+                    failure_message=failure_message,
+                )
+            )
+            if not passed:
+                issues.append(
+                    EvaluationRunIssue(
+                        category="gate_failure",
+                        subject=gate_name,
+                        message=failure_message or "release gate did not pass",
+                    )
+                )
+        completed_run = self.ledger.complete_evaluation_run(
+            run_id, issues=issues, gate_outcomes=gate_outcomes
+        )
+        return self._build_result(
+            completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
+        )
+
+    finalize_evaluation_run = finalize
 
     execute = run
 

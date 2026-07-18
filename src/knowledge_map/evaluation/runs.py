@@ -30,6 +30,7 @@ class EvaluationRunCancelled(Exception):
 class EvaluationRunStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
+    FINALIZATION_PENDING = "finalization_pending"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -179,10 +180,15 @@ class EvaluationRunRecord(BaseModel):
     retry_of_run_id: UUID | None = None
     issues: tuple[EvaluationRunIssue, ...] = ()
     gate_outcomes: tuple[EvaluationGateOutcome, ...] = ()
+    frozen_report_artifact_id: UUID | None = None
 
     @property
     def configuration_json(self) -> str:
         return self.configuration.configuration_json
+
+    @property
+    def aggregate_report_artifact_id(self) -> UUID | None:
+        return self.frozen_report_artifact_id
 
 
 class EvaluationCaseManifestEntry(BaseModel):

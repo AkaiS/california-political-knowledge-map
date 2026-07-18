@@ -111,6 +111,7 @@ class EvaluationEngine:
         evaluator_resolver: EvaluatorResolver,
         max_concurrency: int = 1,
         case_lifecycle: type[CaseLifecycle[Any, Any, Any]] | None = None,
+        include_report_evaluators: bool = True,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute the exact case and evaluator assignments in ``plan``."""
         self._validate_plan_suite(plan, suite)
@@ -191,11 +192,15 @@ class EvaluationEngine:
                 )
             )
 
-        report_evaluators = tuple(
-            _NoneSafeReportEvaluator(
-                _DeferredReportEvaluator(configured, evaluator_resolver)
+        report_evaluators = (
+            tuple(
+                _NoneSafeReportEvaluator(
+                    _DeferredReportEvaluator(configured, evaluator_resolver)
+                )
+                for configured in suite.report_evaluators
             )
-            for configured in suite.report_evaluators
+            if include_report_evaluators
+            else ()
         )
         dataset = Dataset(
             name=f"{suite.identity.business_id}@{suite.identity.revision}",
