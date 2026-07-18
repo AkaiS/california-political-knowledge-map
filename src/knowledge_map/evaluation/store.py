@@ -12,6 +12,7 @@ import sqlite3
 from collections.abc import Iterable, Mapping
 from enum import Enum
 from pathlib import Path
+from threading import RLock
 from typing import Any
 from uuid import UUID
 
@@ -233,6 +234,7 @@ class SQLiteEvaluationLedger:
     def __init__(self, db_path: str | Path = ":memory:") -> None:
         self._connection = sqlite3.connect(str(db_path), check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
+        self._transaction_lock = RLock()
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._create_schema()
 
@@ -756,44 +758,77 @@ class SQLiteEvaluationLedger:
         """Atomically finalize one case result and its evaluator evidence."""
         executions = tuple(executions)
         observations = tuple(observations)
-        try:
-            self._connection.execute("BEGIN")
-            cursor = self._connection.execute(
-                """
-                UPDATE evaluation_case_results
-                SET execution_disposition = ?, task_outcome_json = ?
-                WHERE result_id = ?
-                """,
-                (
-                    result.execution_disposition.value,
-                    None if result.task_outcome is None else json.dumps(
-                        result.task_outcome.model_dump(mode="json"),
-                        sort_keys=True,
-                        separators=(",", ":"),
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                cursor = self._connection.execute(
+                    """
+                    UPDATE evaluation_case_results
+                    SET execution_disposition = ?, task_outcome_json = ?
+                    WHERE result_id = ? AND execution_disposition = 'pending'
+                    """,
+                    (
+                        result.execution_disposition.value,
+                        None if result.task_outcome is None else json.dumps(
+                            result.task_outcome.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        str(result.result_id),
                     ),
-                    str(result.result_id),
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise KeyError(f"unknown Evaluation Case Result: {result.result_id}")
-            if result.task_outcome is not None:
-                for artifact in result.task_outcome.artifacts:
-                    self._link_artifact(
-                        "evaluation_case_result_artifacts",
-                        "case_result_id",
-                        result.result_id,
-                        artifact.content_hash,
-                        artifact.role,
-                        commit=False,
+                )
+                if cursor.rowcount != 1:
+                    existing = self._connection.execute(
+                        """
+                        SELECT execution_disposition
+                        FROM evaluation_case_results
+                        WHERE result_id = ?
+                        """,
+                        (str(result.result_id),),
+                    ).fetchone()
+                    if existing is None:
+                        raise KeyError(
+                            f"unknown Evaluation Case Result: {result.result_id}"
+                        )
+                    if executions or observations:
+                        raise ValueError(
+                            f"Evaluation Case Result is already terminal: {result.result_id}"
+                        )
+                    self._connection.execute(
+                        """
+                        UPDATE evaluation_case_results
+                        SET task_outcome_json = ?
+                        WHERE result_id = ?
+                        """,
+                        (
+                            None
+                            if result.task_outcome is None
+                            else json.dumps(
+                                result.task_outcome.model_dump(mode="json"),
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                            str(result.result_id),
+                        ),
                     )
-            for execution in executions:
-                self._insert_case_execution(execution)
-            for observation in observations:
-                self._insert_case_observation(observation)
-            self._connection.commit()
-        except Exception:
-            self._connection.rollback()
-            raise
+                if result.task_outcome is not None:
+                    for artifact in result.task_outcome.artifacts:
+                        self._link_artifact(
+                            "evaluation_case_result_artifacts",
+                            "case_result_id",
+                            result.result_id,
+                            artifact.content_hash,
+                            artifact.role,
+                            commit=False,
+                        )
+                for execution in executions:
+                    self._insert_case_execution(execution)
+                for observation in observations:
+                    self._insert_case_observation(observation)
+                self._connection.commit()
+            except Exception:
+                self._connection.rollback()
+                raise
 
     def record_report_evaluation(
         self,
@@ -803,16 +838,17 @@ class SQLiteEvaluationLedger:
         """Atomically persist report evaluator executions and run observations."""
         executions = tuple(executions)
         observations = tuple(observations)
-        try:
-            self._connection.execute("BEGIN")
-            for execution in executions:
-                self._insert_report_execution(execution)
-            for observation in observations:
-                self._insert_run_observation(observation)
-            self._connection.commit()
-        except Exception:
-            self._connection.rollback()
-            raise
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                for execution in executions:
+                    self._insert_report_execution(execution)
+                for observation in observations:
+                    self._insert_run_observation(observation)
+                self._connection.commit()
+            except Exception:
+                self._connection.rollback()
+                raise
 
     def complete_evaluation_run(
         self,

@@ -672,7 +672,9 @@ class EvaluationSuite(BaseModel):
             evaluators=case_evaluators,
             report_evaluators=report_evaluators,
         )
-        return dataset.evaluate_sync(task, progress=False, max_concurrency=1)
+        return dataset.evaluate_sync(
+            task, progress=False, max_concurrency=max_concurrency
+        )
 
     @staticmethod
     def _resolve_case_evaluator(

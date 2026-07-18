@@ -1,5 +1,8 @@
 import json
 import sqlite3
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -14,6 +17,7 @@ from pydantic_evals.evaluators import (
 from pydantic_evals.reporting.analyses import ScalarResult, TableResult
 
 from knowledge_map.evaluation import (
+    CaseEvaluatorExecution,
     ConfiguredEvaluator,
     DeclaredArtifactReference,
     EvaluationCase,
@@ -29,6 +33,7 @@ from knowledge_map.evaluation import (
     EvaluationMetricObservation,
     EvaluationMetricReference,
     EvaluationMetricValueType,
+    EvaluationProducerStatus,
     EvaluationRequirement,
     EvaluationRequirementBinding,
     EvaluationRequirementCatalog,
@@ -409,6 +414,170 @@ def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
             EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ).configuration_fingerprint
+        )
+
+
+def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
+    cases = tuple(_case(number) for number in range(1, 5))
+    _, _, suite = _lifecycle_fixture("shared-concurrency")
+    active = 0
+    maximum_active = 0
+    lock = threading.Lock()
+
+    def task(task_input: Input) -> Output:
+        nonlocal active, maximum_active
+        with lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+        try:
+            time.sleep(0.03)
+            return Output(answer=task_input.prompt)
+        finally:
+            with lock:
+                active -= 1
+
+    report = suite.execute(
+        cases=cases,
+        task=task,
+        evaluator_resolver=lambda configured: CountCases(),
+        max_concurrency=2,
+    )
+
+    assert len(report.cases) == len(cases)
+    assert maximum_active == 2
+
+
+def test_ledger_serializes_concurrent_terminal_case_checkpoints(tmp_path, monkeypatch):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending_results = _resolved_run_creation_inputs(
+            ledger, "concurrent-checkpoints"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending_results)
+        insert_case_execution = ledger._insert_case_execution
+
+        def delayed_insert(execution: CaseEvaluatorExecution) -> None:
+            time.sleep(0.05)
+            insert_case_execution(execution)
+
+        monkeypatch.setattr(ledger, "_insert_case_execution", delayed_insert)
+
+        def checkpoint(result: EvaluationCaseResult) -> None:
+            execution = CaseEvaluatorExecution(
+                case_result_id=result.result_id,
+                evaluator_name="checkpoint-evaluator",
+                evaluator_revision=1,
+                configuration_fingerprint=run.configuration.configuration_fingerprint,
+                status=EvaluationProducerStatus.COMPLETED,
+                duration_seconds=0,
+            )
+            ledger.record_case_evaluation(
+                result.model_copy(
+                    update={
+                        "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                        "task_outcome": TaskSuccess(
+                            output=Output(answer=result.case_record_id.hex)
+                        ),
+                    }
+                ),
+                (execution,),
+                (),
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            list(workers.map(checkpoint, pending_results))
+
+        with pytest.raises(ValueError, match="already terminal"):
+            checkpoint(pending_results[0])
+
+        stored_results = ledger.list_case_results(run.run_id)
+        assert [result.execution_disposition for result in stored_results] == [
+            EvaluationCaseDisposition.COMPLETED,
+            EvaluationCaseDisposition.COMPLETED,
+        ]
+        assert [result.task_outcome.kind for result in stored_results] == [
+            "success",
+            "success",
+        ]
+        assert [
+            execution.evaluator_name
+            for result in stored_results
+            for execution in ledger.list_case_evaluator_executions(result.result_id)
+        ] == ["checkpoint-evaluator", "checkpoint-evaluator"]
+
+
+@pytest.mark.parametrize(
+    ("configured_concurrency", "expected_maximum"),
+    ((None, 1), (2, 2)),
+)
+def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
+    tmp_path, configured_concurrency, expected_maximum
+):
+    cases = tuple(_case(number) for number in range(1, 5))
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(
+            business_id="gold-set-durable-concurrency", revision=1
+        ),
+        description="Concurrent durable cases.",
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for case in cases
+        ),
+    )
+    _, _, suite = _lifecycle_fixture(
+        "durable-concurrency", case_evaluator="exact-case"
+    )
+    active = 0
+    maximum_active = 0
+    lock = threading.Lock()
+
+    def task(task_input: Input) -> Output:
+        nonlocal active, maximum_active
+        with lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+        try:
+            time.sleep(0.03)
+            return Output(answer=task_input.prompt)
+        finally:
+            with lock:
+                active -= 1
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=task,
+            evaluator_resolver=lambda configured: (
+                ExactAnswer()
+                if configured.name == "exact-case"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic",
+                model="fixture",
+                **(
+                    {}
+                    if configured_concurrency is None
+                    else {"case_concurrency": configured_concurrency}
+                ),
+            ),
+        )
+
+        assert result.run.status == "completed"
+        assert maximum_active == expected_maximum
+        assert len(result.case_results) == len(cases)
+        assert all(
+            case.execution_disposition is EvaluationCaseDisposition.COMPLETED
+            for case in result.case_results
+        )
+        assert len(result.case_evaluator_executions) == len(cases)
+        assert all(
+            len(ledger.list_case_evaluator_executions(case.result_id)) == 1
+            for case in result.case_results
         )
 
 

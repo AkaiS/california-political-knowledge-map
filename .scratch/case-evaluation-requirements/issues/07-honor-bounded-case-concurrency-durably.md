@@ -1,7 +1,7 @@
 # Honor bounded case concurrency durably
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -13,12 +13,12 @@ Allow operators to run manifested cases concurrently up to the immutable bound r
 
 ## Acceptance criteria
 
-- [ ] Omitted case concurrency executes conservatively with a bound of one.
-- [ ] Explicit positive bounds are passed to the shared Pydantic Evals execution path.
-- [ ] Observed task concurrency never exceeds the configured bound.
-- [ ] Concurrent case completions are serialized through safe ledger transactions.
-- [ ] Every terminal case produces exactly one atomic Evaluation Checkpoint with its evaluator evidence.
-- [ ] Concurrent execution preserves the same case population, evaluator assignments, failures, observations, and aggregate report semantics as single-case concurrency.
+- [x] Omitted case concurrency executes conservatively with a bound of one.
+- [x] Explicit positive bounds are passed to the shared Pydantic Evals execution path.
+- [x] Observed task concurrency never exceeds the configured bound.
+- [x] Concurrent case completions are serialized through safe ledger transactions.
+- [x] Every terminal case produces exactly one atomic Evaluation Checkpoint with its evaluator evidence.
+- [x] Concurrent execution preserves the same case population, evaluator assignments, failures, observations, and aggregate report semantics as single-case concurrency.
 
 ## Blocked by
 
