@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .definitions import (
     AuthoredDefinitionConflictError,
     EvaluationCase,
+    EvaluationCaseRevisionReference,
     EvaluationGoldSet,
     EvaluationSplit,
     EvaluationRubric,

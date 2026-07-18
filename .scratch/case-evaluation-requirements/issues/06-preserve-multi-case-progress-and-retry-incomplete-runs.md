@@ -1,7 +1,6 @@
 # Preserve multi-case progress and retry incomplete runs
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -13,13 +12,13 @@ Extend durable shared-engine execution across the complete manifested population
 
 ## Acceptance criteria
 
-- [ ] Each terminal case is checkpointed as it finishes rather than accumulated in memory until the case phase ends.
-- [ ] Cancellation, task failure, evaluator failure, orchestration failure, or process interruption does not erase earlier terminal case checkpoints.
-- [ ] Pending or otherwise non-terminal manifested cases remain visibly distinct from completed and failed cases.
-- [ ] Missing case work is never resumed or replayed into the original Evaluation Run.
-- [ ] A retry creates a distinct Evaluation Run linked through the existing retry relationship and freezes its own plan and manifest.
-- [ ] Task failures, evaluator failures, missing work, and orchestration failures remain separately queryable.
-- [ ] Durable multi-case behavior is covered through the highest-level runner and a temporary real SQLite evaluation ledger.
+- [x] Each terminal case is checkpointed as it finishes rather than accumulated in memory until the case phase ends.
+- [x] Cancellation, task failure, evaluator failure, orchestration failure, or process interruption does not erase earlier terminal case checkpoints.
+- [x] Pending or otherwise non-terminal manifested cases remain visibly distinct from completed and failed cases.
+- [x] Missing case work is never resumed or replayed into the original Evaluation Run.
+- [x] A retry creates a distinct Evaluation Run linked through the existing retry relationship and freezes its own plan and manifest.
+- [x] Task failures, evaluator failures, missing work, and orchestration failures remain separately queryable.
+- [x] Durable multi-case behavior is covered through the highest-level runner and a temporary real SQLite evaluation ledger.
 
 ## Blocked by
 

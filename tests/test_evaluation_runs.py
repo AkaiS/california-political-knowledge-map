@@ -1233,6 +1233,34 @@ def test_cancelled_run_retains_completed_cases_and_pending_envelopes(tmp_path):
         assert ledger.get_evaluation_run(result.run.run_id) == result.run
 
 
+def test_process_interruption_preserves_prior_case_checkpoints(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("process-interruption")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        def task(task_input: Input) -> Output:
+            if task_input.prompt == "prompt-2":
+                raise KeyboardInterrupt()
+            return Output(answer=task_input.prompt)
+
+        with pytest.raises(KeyboardInterrupt):
+            EvaluationRunner(ledger).run(
+                suite=suite,
+                gold_set=gold_set,
+                cases=cases,
+                task=task,
+                evaluator_resolver=lambda configured: CountCases(),
+                configuration=EvaluationRunConfiguration(
+                    provider="deterministic", model="fixture"
+                ),
+            )
+
+        run = ledger.list_evaluation_runs()[0]
+        assert [result.execution_disposition.value for result in ledger.list_case_results(run.run_id)] == [
+            "completed",
+            "pending",
+        ]
+
+
 def test_cancelled_run_retains_partial_report_evaluation(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("partial-report")
     suite = suite.model_copy(
@@ -1329,6 +1357,64 @@ def test_retry_is_a_new_run_linked_to_its_predecessor(tmp_path):
             first.run.run_id,
             second.run.run_id,
         ]
+
+
+def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("retry-incomplete")
+    checks = 0
+
+    def should_cancel() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks == 2
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        first_task_calls: list[str] = []
+        first = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: (
+                first_task_calls.append(task_input.prompt)
+                or Output(answer=task_input.prompt)
+            ),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+            should_cancel=should_cancel,
+        )
+
+        retry_task_calls: list[str] = []
+        second = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: (
+                retry_task_calls.append(task_input.prompt)
+                or Output(answer=task_input.prompt)
+            ),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+            retry_of_run_id=first.run.run_id,
+            selection=("case-1", "case-2"),
+        )
+
+        assert first.run.status == "cancelled"
+        assert first_task_calls == ["prompt-1"]
+        assert [result.execution_disposition.value for result in first.case_results] == [
+            "completed",
+            "pending",
+        ]
+        assert second.run.retry_of_run_id == first.run.run_id
+        assert [entry.case_business_id for entry in second.manifest] == ["case-2"]
+        assert [planned.case.business_id for planned in ledger.get_resolved_evaluation_plan(second.run.run_id).cases] == [
+            "case-2"
+        ]
+        assert [result.execution_disposition.value for result in second.case_results] == [
+            "completed"
+        ]
+        assert retry_task_calls == ["prompt-2"]
+        assert ledger.list_evaluation_case_manifest(first.run.run_id) == list(first.manifest)
 
 
 def test_missing_metrics_and_gate_failures_are_run_diagnostics(tmp_path):

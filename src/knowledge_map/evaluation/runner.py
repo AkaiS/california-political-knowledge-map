@@ -471,6 +471,46 @@ class EvaluationRunner:
         should_cancel: Callable[[], bool] | None = None,
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
     ) -> EvaluationRunResult:
+        if retry_of_run_id is not None:
+            if self.ledger.get_evaluation_run(retry_of_run_id) is None:
+                raise KeyError(f"unknown Evaluation Run: {retry_of_run_id}")
+            predecessor_manifest = self.ledger.list_evaluation_case_manifest(
+                retry_of_run_id
+            )
+            predecessor_results = {
+                result.manifest_id: result
+                for result in self.ledger.list_evaluation_case_results(retry_of_run_id)
+            }
+            incomplete_cases = frozenset(
+                (entry.case_business_id, entry.case_revision)
+                for entry in predecessor_manifest
+                if predecessor_results[entry.manifest_id].execution_disposition
+                in {
+                    EvaluationCaseDisposition.PENDING,
+                    EvaluationCaseDisposition.CANCELLED,
+                }
+            )
+            if incomplete_cases:
+                def is_incomplete(case: EvaluationCase[Any, Any, Any]) -> bool:
+                    return (
+                        case.identity.business_id,
+                        case.identity.revision,
+                    ) in incomplete_cases
+
+                if selection is None:
+                    selection = is_incomplete
+                elif callable(selection):
+                    requested_selection = selection
+                    selection = lambda case: (
+                        is_incomplete(case) and requested_selection(case)
+                    )
+                else:
+                    requested_names = frozenset(selection)
+                    selection = lambda case: (
+                        is_incomplete(case)
+                        and case.identity.business_id in requested_names
+                    )
+
         preflight = preflight_selected_cases(
             suite=suite,
             gold_set=gold_set,
