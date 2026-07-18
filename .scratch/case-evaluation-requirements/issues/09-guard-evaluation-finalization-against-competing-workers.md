@@ -1,7 +1,6 @@
 # Guard Evaluation Finalization against competing workers
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -13,12 +12,12 @@ Protect explicit Evaluation Finalization with a lease or compare-and-set claim s
 
 ## Acceptance criteria
 
-- [ ] A finalizer must atomically acquire the run's finalization claim before executing missing report evaluators.
-- [ ] A competing worker cannot acquire a live claim or produce duplicate Report Evaluator Executions.
-- [ ] Claim ownership and expiry are represented explicitly enough to diagnose who may finalize and when recovery is allowed.
-- [ ] Successful completion and controlled failure have clear claim release behavior.
-- [ ] An expired claim can be safely recovered without rerunning terminal successful or failed report evaluator executions.
-- [ ] Concurrency tests demonstrate one active worker, no duplicate executions under competing claims, and safe expired-claim recovery.
+- [x] A finalizer must atomically acquire the run's finalization claim before executing missing report evaluators.
+- [x] A competing worker cannot acquire a live claim or produce duplicate Report Evaluator Executions.
+- [x] Claim ownership and expiry are represented explicitly enough to diagnose who may finalize and when recovery is allowed.
+- [x] Successful completion and controlled failure have clear claim release behavior.
+- [x] An expired claim can be safely recovered without rerunning terminal successful or failed report evaluator executions.
+- [x] Concurrency tests demonstrate one active worker, no duplicate executions under competing claims, and safe expired-claim recovery.
 
 ## Blocked by
 

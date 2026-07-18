@@ -4,6 +4,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -99,6 +100,20 @@ class ExactAnswer(Evaluator):
 @dataclass
 class CountCases(ReportEvaluator):
     def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        return ScalarResult(title="evaluated-cases", value=len(ctx.report.cases))
+
+
+@dataclass
+class BlockingCountCases(ReportEvaluator):
+    entered: threading.Event
+    release: threading.Event
+    calls: list[str]
+
+    def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        self.calls.append(ctx.name)
+        self.entered.set()
+        if not self.release.wait(timeout=5):
+            raise TimeoutError("blocking evaluator was not released")
         return ScalarResult(title="evaluated-cases", value=len(ctx.report.cases))
 
 
@@ -1576,6 +1591,80 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
         assert [execution.evaluator_name for execution in finalized.report_evaluator_executions] == [
             "count-cases"
         ]
+        assert finalized.run.finalization_claim is None
+        assert ledger.get_finalization_claim(finalized.run.run_id) is None
+
+
+def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("finalization-claim")
+    database = tmp_path / "evaluation.sqlite"
+    now = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+
+    with SQLiteEvaluationLedger(database) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        with SQLiteEvaluationLedger(database) as competing_ledger:
+            first_claim = first_ledger.acquire_finalization_claim(
+                initial.run.run_id,
+                owner_id="worker-a",
+                lease_seconds=60,
+                now=now,
+            )
+            second_claim = competing_ledger.acquire_finalization_claim(
+                initial.run.run_id,
+                owner_id="worker-b",
+                lease_seconds=60,
+                now=now,
+            )
+
+            assert first_claim.owner_id == "worker-a"
+            assert first_claim.acquired_at == now
+            assert first_claim.expires_at == now + timedelta(seconds=60)
+            assert second_claim is None
+            assert competing_ledger.get_finalization_claim(initial.run.run_id) == first_claim
+
+
+def test_finalize_refuses_a_live_claim_before_resolving_report_evaluators(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("finalization-claim-guard")
+    database = tmp_path / "evaluation.sqlite"
+
+    with SQLiteEvaluationLedger(database) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = first_ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="worker-a"
+        )
+        assert claim is not None
+
+        with SQLiteEvaluationLedger(database) as competing_ledger:
+            resolver_calls: list[str] = []
+            with pytest.raises(RuntimeError, match="finalization claim"):
+                EvaluationRunner(competing_ledger).finalize(
+                    initial.run.run_id,
+                    worker_id="worker-b",
+                    evaluator_resolver=lambda configured: (
+                        resolver_calls.append(configured.name) or CountCases()
+                    ),
+                )
+
+            assert resolver_calls == []
+            assert competing_ledger.get_finalization_claim(initial.run.run_id) == claim
 
 
 def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work(
@@ -1627,6 +1716,8 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
         assert [execution.status.value for execution in partial.report_evaluator_executions] == [
             "failed"
         ]
+        assert partial.run.finalization_claim is None
+        assert ledger.get_finalization_claim(initial.run.run_id) is None
 
         second_finalizer_calls: list[str] = []
         completed = runner.finalize(
@@ -1653,6 +1744,130 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
         )
         assert repeated.run.status == "completed"
         assert second_finalizer_calls == calls_before_idempotent
+
+
+def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
+    cases, gold_set, base_suite = _lifecycle_fixture("expired-finalization-claim")
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
+                ConfiguredEvaluator(name="case-table", evaluator_revision=1),
+            )
+        }
+    )
+    checks = 0
+    now = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def stop_after_one() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == 2
+
+        partial = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                (_ for _ in ()).throw(RuntimeError("report evaluator failed"))
+                if configured.name == "count-cases"
+                else CaseTable()
+            ),
+            should_cancel=stop_after_one,
+            worker_id="worker-a",
+        )
+        assert partial.run.status.value == "finalization_pending"
+        assert [execution.evaluator_name for execution in partial.report_evaluator_executions] == [
+            "count-cases"
+        ]
+        assert partial.report_evaluator_executions[0].status == EvaluationProducerStatus.FAILED
+
+        stale_claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="crashed-worker",
+            lease_seconds=1,
+            now=now,
+        )
+        assert stale_claim is not None
+
+        recovery_calls: list[str] = []
+        recovered = runner.finalize(
+            initial.run.run_id,
+            evaluator_resolver=lambda configured: (
+                recovery_calls.append(configured.name) or CaseTable()
+            ),
+            worker_id="recovery-worker",
+            now=now + timedelta(seconds=2),
+        )
+
+        assert recovered.run.status.value == "completed"
+        assert recovery_calls == ["case-table"]
+        assert [execution.status for execution in recovered.report_evaluator_executions] == [
+            EvaluationProducerStatus.FAILED,
+            EvaluationProducerStatus.COMPLETED,
+        ]
+        assert ledger.release_finalization_claim(
+            initial.run.run_id, stale_claim.claim_id
+        ) is False
+
+
+def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("concurrent-finalization-claim")
+    database = tmp_path / "evaluation.sqlite"
+    entered = threading.Event()
+    release = threading.Event()
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        with SQLiteEvaluationLedger(database) as second_ledger:
+            blocking = BlockingCountCases(entered, release, evaluator_calls)
+            second_resolver_calls: list[str] = []
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                first_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    worker_id="worker-a",
+                    evaluator_resolver=lambda configured: blocking,
+                )
+                assert entered.wait(timeout=5)
+
+                with pytest.raises(RuntimeError, match="live finalization claim"):
+                    EvaluationRunner(second_ledger).finalize(
+                        initial.run.run_id,
+                        worker_id="worker-b",
+                        evaluator_resolver=lambda configured: (
+                            second_resolver_calls.append(configured.name) or CountCases()
+                        ),
+                    )
+
+                release.set()
+                completed = first_future.result(timeout=5)
+
+            assert completed.run.status.value == "completed"
+            assert evaluator_calls == ["count-cases"]
+            assert second_resolver_calls == []
+            assert len(completed.report_evaluator_executions) == 1
 
 
 def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tmp_path):

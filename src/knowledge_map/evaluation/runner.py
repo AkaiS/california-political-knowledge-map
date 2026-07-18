@@ -9,6 +9,7 @@ import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -34,6 +35,7 @@ from .runs import (
     EvaluationCaseDisposition,
     EvaluationCaseManifestEntry,
     EvaluationCaseResult,
+    EvaluationFinalizationClaim,
     EvaluationProducerStatus,
     EvaluationRunConfiguration,
     EvaluationGateOutcome,
@@ -762,6 +764,9 @@ class EvaluationRunner:
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
         should_cancel: Callable[[], bool] | None = None,
+        worker_id: str | None = None,
+        lease_seconds: float = 300.0,
+        now: datetime | None = None,
     ) -> EvaluationRunResult:
         """Explicitly resume missing report evaluator work for one frozen run.
 
@@ -783,7 +788,60 @@ class EvaluationRunner:
                 "Evaluation Finalization requires a run in finalization_pending state"
             )
 
+        owner_id = worker_id or f"evaluation-finalizer:{new_uuid7()}"
+        claim = self.ledger.acquire_finalization_claim(
+            run_id,
+            owner_id=owner_id,
+            lease_seconds=lease_seconds,
+            now=now,
+        )
+        if claim is None:
+            current_claim = self.ledger.get_finalization_claim(run_id)
+            if current_claim is None:  # pragma: no cover - ledger invariant
+                raise RuntimeError("finalization claim was not acquired")
+            raise RuntimeError(
+                "Evaluation Finalization is protected by a live finalization claim "
+                f"owned by {current_claim.owner_id} until {current_claim.expires_at.isoformat()}"
+            )
+
+        try:
+            self._finalize_with_claim(
+                run_id,
+                claim=claim,
+                evaluator_resolver=evaluator_resolver,
+                release_gates=release_gates,
+                should_cancel=should_cancel,
+                now=now,
+            )
+        finally:
+            self.ledger.release_finalization_claim(run_id, claim.claim_id)
+
+        released_run = self.ledger.get_evaluation_run(run_id)
+        if released_run is None:  # pragma: no cover - ledger invariant
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        return self._build_result(
+            released_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
+        )
+
+    def _finalize_with_claim(
+        self,
+        run_id: UUID,
+        *,
+        claim: EvaluationFinalizationClaim,
+        evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
+        release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None,
+        should_cancel: Callable[[], bool] | None,
+        now: datetime | None,
+    ) -> EvaluationRunResult:
+        """Perform report work while holding one finalization claim."""
+
+        run = self.ledger.get_evaluation_run(run_id)
+        if run is None:  # pragma: no cover - ledger invariant
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
         suite = self.ledger.get_frozen_suite(run_id)
+        artifact = self.ledger.get_frozen_report_artifact(run_id)
+        if artifact is None:  # pragma: no cover - ledger invariant
+            raise ValueError("Evaluation Finalization has no frozen report artifact")
         report_bytes = self.ledger.read_artifact(artifact)
         if hashlib.sha256(report_bytes).hexdigest() != artifact.content_hash:
             raise ValueError("frozen aggregate report bytes do not match their artifact identity")
@@ -797,6 +855,10 @@ class EvaluationRunner:
         issues = list(run.issues)
         trace_id, span_id = report.trace_id, report.span_id
         for configured in suite.report_evaluators:
+            if not self.ledger.owns_finalization_claim(
+                run_id, claim.claim_id, now=now
+            ):
+                raise RuntimeError("Evaluation Finalization lost its finalization claim")
             if should_cancel is not None and should_cancel():
                 return self._build_result(
                     run,
@@ -809,6 +871,10 @@ class EvaluationRunner:
             )
             if identity in completed_names:
                 continue
+            if not self.ledger.owns_finalization_claim(
+                run_id, claim.claim_id, now=now
+            ):
+                raise RuntimeError("Evaluation Finalization lost its finalization claim")
             started = time.perf_counter()
             issue_start = len(issues)
             execution = ReportEvaluatorExecution(
@@ -865,7 +931,11 @@ class EvaluationRunner:
                         )
                     )
             self.ledger.record_report_evaluation(
-                [execution], observations, issues[issue_start:]
+                [execution],
+                observations,
+                issues[issue_start:],
+                finalization_claim_id=claim.claim_id,
+                claim_now=now,
             )
 
         pending_run = self.ledger.get_evaluation_run(run_id)
@@ -896,7 +966,10 @@ class EvaluationRunner:
                     )
                 )
         completed_run = self.ledger.complete_evaluation_run(
-            run_id, issues=issues, gate_outcomes=gate_outcomes
+            run_id,
+            issues=issues,
+            gate_outcomes=gate_outcomes,
+            finalization_claim_id=claim.claim_id,
         )
         return self._build_result(
             completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))

@@ -11,6 +11,7 @@ import json
 import sqlite3
 import tempfile
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from threading import RLock
@@ -40,6 +41,7 @@ from .runs import (
     EvaluationMetricObservation,
     EvaluationProducerStatus,
     EvaluationRunConfiguration,
+    EvaluationFinalizationClaim,
     EvaluationGateOutcome,
     EvaluationRunIssue,
     EvaluationRunRecord,
@@ -473,7 +475,11 @@ class SQLiteEvaluationLedger:
                 ),
                 retry_of_run_id TEXT REFERENCES evaluation_runs(run_id),
                 issues_json TEXT NOT NULL DEFAULT '[]',
-                gate_outcomes_json TEXT NOT NULL DEFAULT '[]'
+                gate_outcomes_json TEXT NOT NULL DEFAULT '[]',
+                finalization_claim_id TEXT,
+                finalization_claim_owner_id TEXT,
+                finalization_claim_acquired_at TEXT,
+                finalization_claim_expires_at TEXT
             );
 
             CREATE TABLE IF NOT EXISTS evaluation_case_manifests (
@@ -534,6 +540,11 @@ class SQLiteEvaluationLedger:
                 trace_id TEXT,
                 span_id TEXT
             );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_report_evaluator_terminal_identity
+                ON report_evaluator_executions(
+                    run_id, evaluator_name, evaluator_revision,
+                    configuration_fingerprint
+                );
 
             CREATE TABLE IF NOT EXISTS case_metric_observations (
                 observation_id TEXT PRIMARY KEY,
@@ -601,6 +612,16 @@ class SQLiteEvaluationLedger:
             self._connection.execute(
                 "ALTER TABLE evaluation_runs ADD COLUMN frozen_report_artifact_id TEXT"
             )
+        for column in (
+            "finalization_claim_id",
+            "finalization_claim_owner_id",
+            "finalization_claim_acquired_at",
+            "finalization_claim_expires_at",
+        ):
+            if column not in run_columns:
+                self._connection.execute(
+                    f"ALTER TABLE evaluation_runs ADD COLUMN {column} TEXT"
+                )
         for table in ("case_evaluator_executions", "report_evaluator_executions"):
             columns = {
                 row["name"]
@@ -634,8 +655,10 @@ class SQLiteEvaluationLedger:
                     gold_set_revision, gold_set_content_hash, configuration_json,
                     configuration_fingerprint, selection_expression,
                     selection_provenance_json, status, retry_of_run_id,
-                    issues_json, gate_outcomes_json, frozen_report_artifact_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    issues_json, gate_outcomes_json, frozen_report_artifact_id,
+                    finalization_claim_id, finalization_claim_owner_id,
+                    finalization_claim_acquired_at, finalization_claim_expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(run.run_id), str(run.suite_record_id), run.suite_business_id,
@@ -658,6 +681,10 @@ class SQLiteEvaluationLedger:
                         sort_keys=True,
                         separators=(",", ":"),
                     ),
+                    None,
+                    None,
+                    None,
+                    None,
                     None,
                 ),
             )
@@ -858,6 +885,9 @@ class SQLiteEvaluationLedger:
         executions: Iterable[ReportEvaluatorExecution],
         observations: Iterable[RunMetricObservation],
         issues: Iterable[EvaluationRunIssue] = (),
+        *,
+        finalization_claim_id: UUID | None = None,
+        claim_now: datetime | None = None,
     ) -> None:
         """Atomically persist one report checkpoint and its diagnostics."""
         executions = tuple(executions)
@@ -866,6 +896,29 @@ class SQLiteEvaluationLedger:
         with self._transaction_lock:
             try:
                 self._connection.execute("BEGIN")
+                if finalization_claim_id is not None:
+                    if not executions:
+                        raise ValueError(
+                            "a finalization claim requires a report execution checkpoint"
+                        )
+                    _, claim_timestamp = self._claim_timestamp(claim_now)
+                    claim = self._connection.execute(
+                        """
+                        SELECT 1 FROM evaluation_runs
+                        WHERE run_id = ?
+                          AND finalization_claim_id = ?
+                          AND finalization_claim_expires_at > ?
+                        """,
+                        (
+                            str(executions[0].run_id),
+                            str(finalization_claim_id),
+                            claim_timestamp,
+                        ),
+                    ).fetchone()
+                    if claim is None:
+                        raise RuntimeError(
+                            "cannot checkpoint report evaluation without the live finalization claim"
+                        )
                 for execution in executions:
                     self._insert_report_execution(execution)
                 for observation in observations:
@@ -897,6 +950,7 @@ class SQLiteEvaluationLedger:
         *,
         issues: Iterable[EvaluationRunIssue] = (),
         gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+        finalization_claim_id: UUID | None = None,
     ) -> EvaluationRunRecord:
         issue_items = tuple(issues)
         gate_items = tuple(gate_outcomes)
@@ -911,10 +965,22 @@ class SQLiteEvaluationLedger:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
                 if row["status"] != EvaluationRunStatus.COMPLETED.value:
                     self._assert_run_is_complete(run_id)
+                    if (
+                        finalization_claim_id is not None
+                        and row["finalization_claim_id"]
+                        != str(finalization_claim_id)
+                    ):
+                        raise ValueError(
+                            "Evaluation Finalization does not own the run's claim"
+                        )
                     self._connection.execute(
                         """
                         UPDATE evaluation_runs
-                        SET status = ?, issues_json = ?, gate_outcomes_json = ?
+                        SET status = ?, issues_json = ?, gate_outcomes_json = ?,
+                            finalization_claim_id = NULL,
+                            finalization_claim_owner_id = NULL,
+                            finalization_claim_acquired_at = NULL,
+                            finalization_claim_expires_at = NULL
                         WHERE run_id = ?
                         """,
                         (
@@ -1264,6 +1330,141 @@ class SQLiteEvaluationLedger:
         ).fetchone()
         return None if row is None else self._run_from_row(row)
 
+    @staticmethod
+    def _claim_timestamp(value: datetime | None) -> tuple[datetime, str]:
+        timestamp = value or datetime.now(timezone.utc)
+        if timestamp.tzinfo is None:
+            raise ValueError("finalization claim timestamps must include a timezone")
+        timestamp = timestamp.astimezone(timezone.utc)
+        return timestamp, timestamp.isoformat()
+
+    def acquire_finalization_claim(
+        self,
+        run_id: UUID,
+        *,
+        owner_id: str,
+        lease_seconds: float = 300.0,
+        now: datetime | None = None,
+    ) -> EvaluationFinalizationClaim | None:
+        """Atomically acquire a live finalization lease, if one is available."""
+        if not owner_id:
+            raise ValueError("finalization claim owner_id must be non-empty")
+        if lease_seconds <= 0:
+            raise ValueError("finalization claim lease_seconds must be greater than 0")
+        acquired_at, acquired_timestamp = self._claim_timestamp(now)
+        expires_at = acquired_at + timedelta(seconds=lease_seconds)
+        claim = EvaluationFinalizationClaim(
+            run_id=run_id,
+            owner_id=owner_id,
+            acquired_at=acquired_at,
+            expires_at=expires_at,
+        )
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                row = self._connection.execute(
+                    "SELECT status FROM evaluation_runs WHERE run_id = ?",
+                    (str(run_id),),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"unknown Evaluation Run: {run_id}")
+                if row["status"] != EvaluationRunStatus.FINALIZATION_PENDING.value:
+                    raise ValueError(
+                        "finalization claims require a finalization_pending Evaluation Run"
+                    )
+                cursor = self._connection.execute(
+                    """
+                    UPDATE evaluation_runs
+                    SET finalization_claim_id = ?,
+                        finalization_claim_owner_id = ?,
+                        finalization_claim_acquired_at = ?,
+                        finalization_claim_expires_at = ?
+                    WHERE run_id = ?
+                      AND status = ?
+                      AND (
+                          finalization_claim_id IS NULL
+                          OR finalization_claim_expires_at <= ?
+                      )
+                    """,
+                    (
+                        str(claim.claim_id),
+                        claim.owner_id,
+                        acquired_timestamp,
+                        expires_at.astimezone(timezone.utc).isoformat(),
+                        str(run_id),
+                        EvaluationRunStatus.FINALIZATION_PENDING.value,
+                        acquired_timestamp,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    self._connection.rollback()
+                    return None
+                self._connection.commit()
+                return claim
+            except Exception:
+                self._connection.rollback()
+                raise
+
+    def get_finalization_claim(
+        self, run_id: UUID
+    ) -> EvaluationFinalizationClaim | None:
+        row = self._connection.execute(
+            """
+            SELECT finalization_claim_id, finalization_claim_owner_id,
+                   finalization_claim_acquired_at, finalization_claim_expires_at
+            FROM evaluation_runs
+            WHERE run_id = ?
+            """,
+            (str(run_id),),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        if row["finalization_claim_id"] is None:
+            return None
+        return EvaluationFinalizationClaim(
+            claim_id=UUID(row["finalization_claim_id"]),
+            run_id=run_id,
+            owner_id=row["finalization_claim_owner_id"],
+            acquired_at=datetime.fromisoformat(row["finalization_claim_acquired_at"]),
+            expires_at=datetime.fromisoformat(row["finalization_claim_expires_at"]),
+        )
+
+    def owns_finalization_claim(
+        self,
+        run_id: UUID,
+        claim_id: UUID,
+        *,
+        now: datetime | None = None,
+    ) -> bool:
+        _, timestamp = self._claim_timestamp(now)
+        row = self._connection.execute(
+            """
+            SELECT 1 FROM evaluation_runs
+            WHERE run_id = ?
+              AND finalization_claim_id = ?
+              AND finalization_claim_expires_at > ?
+            """,
+            (str(run_id), str(claim_id), timestamp),
+        ).fetchone()
+        return row is not None
+
+    def release_finalization_claim(self, run_id: UUID, claim_id: UUID) -> bool:
+        """Release only the exact claim token that was acquired."""
+        with self._transaction_lock:
+            cursor = self._connection.execute(
+                """
+                UPDATE evaluation_runs
+                SET finalization_claim_id = NULL,
+                    finalization_claim_owner_id = NULL,
+                    finalization_claim_acquired_at = NULL,
+                    finalization_claim_expires_at = NULL
+                WHERE run_id = ? AND finalization_claim_id = ?
+                """,
+                (str(run_id), str(claim_id)),
+            )
+            self._connection.commit()
+            return cursor.rowcount == 1
+
     def get_resolved_evaluation_plan(
         self, run_id: UUID
     ) -> ResolvedEvaluationPlan | None:
@@ -1510,6 +1711,21 @@ class SQLiteEvaluationLedger:
                 None
                 if row["frozen_report_artifact_id"] is None
                 else UUID(row["frozen_report_artifact_id"])
+            ),
+            finalization_claim=(
+                None
+                if row["finalization_claim_id"] is None
+                else EvaluationFinalizationClaim(
+                    claim_id=UUID(row["finalization_claim_id"]),
+                    run_id=UUID(row["run_id"]),
+                    owner_id=row["finalization_claim_owner_id"],
+                    acquired_at=datetime.fromisoformat(
+                        row["finalization_claim_acquired_at"]
+                    ),
+                    expires_at=datetime.fromisoformat(
+                        row["finalization_claim_expires_at"]
+                    ),
+                )
             ),
         )
 

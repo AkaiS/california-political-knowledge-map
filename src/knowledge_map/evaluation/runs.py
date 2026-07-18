@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Mapping
 from uuid import UUID
@@ -59,6 +60,27 @@ class EvaluationGateOutcome(BaseModel):
     gate_name: str = Field(min_length=1)
     passed: bool
     failure_message: str | None = None
+
+
+class EvaluationFinalizationClaim(BaseModel):
+    """A durable lease authorizing one worker to finalize a run."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    claim_id: UUID = Field(default_factory=new_uuid7)
+    run_id: UUID
+    owner_id: str = Field(min_length=1)
+    acquired_at: datetime
+    expires_at: datetime
+
+    @model_validator(mode="after")
+    def expires_after_acquisition(self) -> "EvaluationFinalizationClaim":
+        if self.expires_at <= self.acquired_at:
+            raise ValueError("finalization claim must expire after acquisition")
+        return self
+
+    def is_expired(self, now: datetime) -> bool:
+        return now >= self.expires_at
 
 
 class EvaluationCaseDisposition(str, Enum):
@@ -181,6 +203,7 @@ class EvaluationRunRecord(BaseModel):
     issues: tuple[EvaluationRunIssue, ...] = ()
     gate_outcomes: tuple[EvaluationGateOutcome, ...] = ()
     frozen_report_artifact_id: UUID | None = None
+    finalization_claim: EvaluationFinalizationClaim | None = None
 
     @property
     def configuration_json(self) -> str:
