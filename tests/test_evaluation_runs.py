@@ -1207,11 +1207,11 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
         assert [item.artifact_id for item in ledger.list_consumed_artifacts(result.run.run_id)] == [
             consumed.artifact_id
         ]
-        frozen_report_artifact_id = result.run.frozen_report_artifact_id
-        assert frozen_report_artifact_id is not None
+        frozen_manifest_artifact_id = result.run.frozen_aggregate_manifest_artifact_id
+        assert frozen_manifest_artifact_id is not None
         produced = ledger.list_produced_artifacts(result.run.run_id)
         assert {item.artifact_id for item in produced} == {
-            frozen_report_artifact_id,
+            frozen_manifest_artifact_id,
             run_output.artifact_id,
             case_output.artifact_id,
             case_evidence.artifact_id,
@@ -1221,7 +1221,7 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
             (item.producer_type, item.role)
             for item in produced
         } == {
-            ("run", "evaluation.aggregate-report.frozen"),
+                ("run", "evaluation.aggregate-manifest.frozen"),
             ("run", "evaluation.run.report"),
             ("case_result", "evaluation.case-result.task-output"),
             ("case_evaluator_execution", "evaluation.case-evaluator.rationale"),
@@ -1684,7 +1684,7 @@ def test_incomplete_cases_cannot_freeze_the_aggregate_report(tmp_path):
         )
 
         assert result.run.status == "cancelled"
-        assert ledger.get_frozen_report_artifact(result.run.run_id) is None
+        assert ledger.get_frozen_aggregate_manifest_artifact(result.run.run_id) is None
         with pytest.raises(ValueError, match="terminal"):
             EvaluationRunner(ledger).finalize(
                 result.run.run_id,
@@ -1713,7 +1713,7 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
 
         assert result.run.status == "finalization_pending"
         assert resolver_calls == []
-        artifact = ledger.get_frozen_report_artifact(result.run.run_id)
+        artifact = ledger.get_frozen_aggregate_manifest_artifact(result.run.run_id)
         assert artifact is not None
         assert ledger.read_artifact(artifact)
         assert len(ledger.list_artifact_locations(artifact)) == 1
@@ -1734,6 +1734,108 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
         assert ledger.get_finalization_claim(finalized.run.run_id) is None
 
 
+def test_completed_cases_freeze_an_ordered_content_addressed_aggregate_manifest(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        artifact = ledger.get_frozen_aggregate_manifest_artifact(result.run.run_id)
+        assert artifact is not None
+        assert artifact.kind == "frozen-aggregate-manifest"
+        payload = json.loads(ledger.read_artifact(artifact))
+        assert payload["run_id"] == str(result.run.run_id)
+        assert [entry["manifest_entry_id"] for entry in payload["cases"]] == [
+            str(entry.manifest_id) for entry in result.manifest
+        ]
+        assert [entry["case_result_id"] for entry in payload["cases"]] == [
+            str(case_result.result_id) for case_result in result.case_results
+        ]
+        assert payload["evidence_contract_version"] == 1
+        forbidden = {
+            "inputs",
+            "expected_output",
+            "output",
+            "metadata",
+            "scores",
+            "labels",
+            "assertions",
+        }
+        assert forbidden.isdisjoint(str(key) for key in _nested_keys(payload))
+
+
+def _nested_keys(value):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            yield key
+            yield from _nested_keys(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _nested_keys(item)
+
+
+def test_aggregate_manifest_freeze_is_idempotent_and_rejects_replacement(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest-replay")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original = ledger.get_frozen_aggregate_manifest_artifact(result.run.run_id)
+
+        replay = ledger.freeze_aggregate_manifest(result.run.run_id)
+        assert replay == original
+
+        with pytest.raises(ValueError, match="different composition"):
+            ledger.freeze_aggregate_manifest(
+                result.run.run_id,
+                report_provenance={"trace_id": "replacement"},
+            )
+
+
+def test_finalization_rejects_a_tampered_frozen_aggregate_manifest(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest-tamper")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        artifact = ledger.get_frozen_aggregate_manifest_artifact(result.run.run_id)
+        assert artifact is not None
+        location = ledger.list_artifact_locations(artifact)[0]
+        with open(location.uri, "ab") as manifest_file:
+            manifest_file.write(b" ")
+
+        with pytest.raises(ValueError, match="artifact identity"):
+            EvaluationRunner(ledger).finalize(
+                result.run.run_id,
+                evaluator_resolver=lambda configured: CountCases(),
+            )
 def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("finalization-claim")
     database = tmp_path / "evaluation.sqlite"
@@ -2050,21 +2152,30 @@ def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tm
             for index, entry in enumerate(manifest)
         )
         ledger.create_evaluation_run(run, plan, manifest, pending)
-        with pytest.raises(ValueError, match="aggregate report"):
+        with pytest.raises(ValueError, match="aggregate manifest"):
             ledger.complete_evaluation_run(run.run_id)
 
         for result in pending:
-            ledger.record_case_evaluation(
+                ledger.record_case_evaluation(
                 result.model_copy(
                     update={
                         "execution_disposition": EvaluationCaseDisposition.COMPLETED,
                         "task_outcome": TaskSuccess(output=Output(answer="answer")),
                     }
                 ),
-                (),
-                (),
-            )
-        ledger.freeze_aggregate_report(run.run_id, b"frozen-report")
+                    (),
+                    (),
+                    {
+                        "name": "case@1",
+                        "output": {"answer": "answer"},
+                        "metrics": {},
+                        "attributes": {},
+                        "scores": {},
+                        "labels": {},
+                        "assertions": {},
+                    },
+                )
+        ledger.freeze_aggregate_manifest(run.run_id)
         with pytest.raises(ValueError, match="case evaluators"):
             ledger.complete_evaluation_run(run.run_id)
 
@@ -2080,7 +2191,7 @@ def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(
         raise RuntimeError("report storage failed")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        monkeypatch.setattr(ledger, "freeze_aggregate_report", fail_report_freeze)
+        monkeypatch.setattr(ledger, "freeze_aggregate_manifest", fail_report_freeze)
         result = EvaluationRunner(ledger).run(
             suite=suite,
             gold_set=gold_set,

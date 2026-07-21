@@ -24,6 +24,9 @@ from .definitions import (
 from .suites import EvaluationMetricReference
 
 
+EVIDENCE_CONTRACT_VERSION = 1
+
+
 class EvaluationRunCancelled(Exception):
     """Raised by an injected runner control to stop a run deliberately."""
 
@@ -202,7 +205,7 @@ class EvaluationRunRecord(BaseModel):
     retry_of_run_id: UUID | None = None
     issues: tuple[EvaluationRunIssue, ...] = ()
     gate_outcomes: tuple[EvaluationGateOutcome, ...] = ()
-    frozen_report_artifact_id: UUID | None = None
+    frozen_aggregate_manifest_artifact_id: UUID | None = None
     finalization_claim: EvaluationFinalizationClaim | None = None
 
     @property
@@ -210,8 +213,8 @@ class EvaluationRunRecord(BaseModel):
         return self.configuration.configuration_json
 
     @property
-    def aggregate_report_artifact_id(self) -> UUID | None:
-        return self.frozen_report_artifact_id
+    def aggregate_manifest_artifact_id(self) -> UUID | None:
+        return self.frozen_aggregate_manifest_artifact_id
 
 
 class EvaluationCaseManifestEntry(BaseModel):
@@ -253,6 +256,48 @@ class EvaluationCaseResult(BaseModel):
     case_record_id: UUID
     execution_disposition: EvaluationCaseDisposition = EvaluationCaseDisposition.PENDING
     task_outcome: TaskOutcome | None = None
+    checkpoint_id: UUID | None = None
+    checkpoint_content_hash: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+
+
+class FrozenAggregateManifestEntry(BaseModel):
+    """Integrity references for one terminal case, without copied case evidence."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ordinal: int = Field(ge=0)
+    manifest_entry_id: UUID
+    manifest_entry_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    case_result_id: UUID
+    case_result_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    checkpoint_id: UUID
+    checkpoint_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class FrozenAggregateManifest(BaseModel):
+    """Canonical composition of immutable run definitions and terminal evidence."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    run_id: UUID
+    suite_record_id: UUID
+    suite_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    resolved_plan_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    task_contract_content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_contract_version: int = Field(ge=1)
+    report_provenance: Mapping[str, Any]
+    cases: tuple[FrozenAggregateManifestEntry, ...]
+
+    @property
+    def canonical_bytes(self) -> bytes:
+        return json.dumps(
+            self.model_dump(mode="json"),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
 
 
 class EvaluationMetricObservation(BaseModel):

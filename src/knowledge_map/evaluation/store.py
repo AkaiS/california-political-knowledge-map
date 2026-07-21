@@ -17,6 +17,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 from uuid import UUID
+from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.reporting import ReportCase, ReportCaseFailure
@@ -30,6 +31,7 @@ from .definitions import (
     EvaluationRubric,
     SchemaReference,
     new_uuid7,
+    content_fingerprint,
 )
 from .suites import EvaluationMetricReference, EvaluationSuite
 from .preflight import ResolvedEvaluationPlan
@@ -39,6 +41,9 @@ from .runs import (
     EvaluationCaseDisposition,
     EvaluationCaseManifestEntry,
     EvaluationCaseResult,
+    EVIDENCE_CONTRACT_VERSION,
+    FrozenAggregateManifest,
+    FrozenAggregateManifestEntry,
     EvaluationMetricObservation,
     EvaluationProducerStatus,
     EvaluationRunConfiguration,
@@ -51,7 +56,7 @@ from .runs import (
     RunMetricObservation,
     TaskOutcome,
 )
-from .reporting import SchemaRegistry, _evaluation_result
+from .reporting import SchemaRegistry, _evaluation_result, report_from_bytes
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -515,7 +520,9 @@ class SQLiteEvaluationLedger:
                         'pending', 'completed', 'failed', 'cancelled'
                     )),
                 task_outcome_json TEXT,
-                report_case_json TEXT
+                report_case_json TEXT,
+                checkpoint_id TEXT,
+                checkpoint_content_hash TEXT
             );
 
             CREATE TABLE IF NOT EXISTS case_evaluator_executions (
@@ -611,9 +618,9 @@ class SQLiteEvaluationLedger:
             self._connection.execute(
                 "ALTER TABLE evaluation_runs ADD COLUMN gate_outcomes_json TEXT NOT NULL DEFAULT '[]'"
             )
-        if "frozen_report_artifact_id" not in run_columns:
+        if "frozen_aggregate_manifest_artifact_id" not in run_columns:
             self._connection.execute(
-                "ALTER TABLE evaluation_runs ADD COLUMN frozen_report_artifact_id TEXT"
+                "ALTER TABLE evaluation_runs ADD COLUMN frozen_aggregate_manifest_artifact_id TEXT"
             )
         for column in (
             "finalization_claim_id",
@@ -658,7 +665,7 @@ class SQLiteEvaluationLedger:
                     gold_set_revision, gold_set_content_hash, configuration_json,
                     configuration_fingerprint, selection_expression,
                     selection_provenance_json, status, retry_of_run_id,
-                    issues_json, gate_outcomes_json, frozen_report_artifact_id,
+                    issues_json, gate_outcomes_json, frozen_aggregate_manifest_artifact_id,
                     finalization_claim_id, finalization_claim_owner_id,
                     finalization_claim_acquired_at, finalization_claim_expires_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -717,8 +724,9 @@ class SQLiteEvaluationLedger:
                     """
                     INSERT INTO evaluation_case_results (
                         result_id, run_id, manifest_id, case_record_id,
-                        execution_disposition, task_outcome_json
-                    ) VALUES (?, ?, ?, ?, ?, NULL)
+                        execution_disposition, task_outcome_json,
+                        checkpoint_id, checkpoint_content_hash
+                    ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL)
                     """,
                     (
                         str(result.result_id), str(result.run_id), str(result.manifest_id),
@@ -812,13 +820,39 @@ class SQLiteEvaluationLedger:
         """Atomically finalize one case result and its evaluator evidence."""
         executions = tuple(executions)
         observations = tuple(observations)
+        task_outcome_payload = (
+            None if result.task_outcome is None else result.task_outcome.model_dump(mode="json")
+        )
+        result_payload = {
+            "result_id": str(result.result_id),
+            "run_id": str(result.run_id),
+            "manifest_id": str(result.manifest_id),
+            "case_record_id": str(result.case_record_id),
+            "execution_disposition": result.execution_disposition.value,
+            "task_outcome": task_outcome_payload,
+        }
+        checkpoint_hash = content_fingerprint(
+            {
+                "case_result": result_payload,
+                "report_case_evidence": report_case_evidence,
+                "case_evaluator_executions": [
+                    item.model_dump(mode="json") for item in executions
+                ],
+                "case_metric_observations": [
+                    item.model_dump(mode="json") for item in observations
+                ],
+                "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,
+            }
+        )
+        checkpoint_id = uuid5(NAMESPACE_URL, f"evaluation-checkpoint:{checkpoint_hash}")
         with self._transaction_lock:
             try:
                 self._connection.execute("BEGIN")
                 cursor = self._connection.execute(
                     """
                     UPDATE evaluation_case_results
-                    SET execution_disposition = ?, task_outcome_json = ?, report_case_json = ?
+                    SET execution_disposition = ?, task_outcome_json = ?, report_case_json = ?,
+                        checkpoint_id = ?, checkpoint_content_hash = ?
                     WHERE result_id = ? AND execution_disposition = 'pending'
                     """,
                     (
@@ -831,6 +865,8 @@ class SQLiteEvaluationLedger:
                         None if report_case_evidence is None else json.dumps(
                             report_case_evidence, sort_keys=True, separators=(",", ":")
                         ),
+                        str(checkpoint_id),
+                        checkpoint_hash,
                         str(result.result_id),
                     ),
                 )
@@ -854,7 +890,9 @@ class SQLiteEvaluationLedger:
                         else json.loads(existing["report_case_json"])
                     )
                     if (
-                        existing_result == result
+                        existing_result.model_copy(
+                            update={"checkpoint_id": None, "checkpoint_content_hash": None}
+                        ) == result
                         and self.list_case_evaluator_executions(result.result_id)
                         == list(executions)
                         and self.list_case_metric_observations(result.result_id)
@@ -1082,14 +1120,14 @@ class SQLiteEvaluationLedger:
 
     def _assert_run_is_complete(self, run_id: UUID) -> None:
         row = self._connection.execute(
-            "SELECT frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+            "SELECT frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
             (str(run_id),),
         ).fetchone()
         if row is None:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
-        if row["frozen_report_artifact_id"] is None:
+        if row["frozen_aggregate_manifest_artifact_id"] is None:
             raise ValueError(
-                "Evaluation Run cannot complete before the aggregate report is frozen"
+                "Evaluation Run cannot complete before the aggregate manifest is frozen"
             )
         pending = self._connection.execute(
             """
@@ -1167,27 +1205,27 @@ class SQLiteEvaluationLedger:
                 + ", ".join(sorted(missing))
             )
 
-    def freeze_aggregate_report(
+    def freeze_aggregate_manifest(
         self,
         run_id: UUID,
-        content: bytes,
         *,
         issues: Iterable[EvaluationRunIssue] = (),
+        report_provenance: Mapping[str, Any] | None = None,
     ) -> EvaluationArtifactRecord:
-        """Freeze report bytes and atomically link them to finalization state."""
+        """Freeze the aggregate manifest and atomically enter finalization."""
         with self._transaction_lock:
             row = self._connection.execute(
-                "SELECT status, frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+                "SELECT status, frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
                 (str(run_id),),
             ).fetchone()
             if row is None:
                 raise KeyError(f"unknown Evaluation Run: {run_id}")
-            if row["frozen_report_artifact_id"] is None and row["status"] not in {
+            if row["frozen_aggregate_manifest_artifact_id"] is None and row["status"] not in {
                 EvaluationRunStatus.RUNNING.value,
                 EvaluationRunStatus.FINALIZATION_PENDING.value,
             }:
-                raise ValueError("only an active Evaluation Run can freeze its aggregate report")
-            if row["frozen_report_artifact_id"] is None:
+                raise ValueError("only an active Evaluation Run can freeze its aggregate manifest")
+            if row["frozen_aggregate_manifest_artifact_id"] is None:
                 pending = self._connection.execute(
                     """
                     SELECT 1 FROM evaluation_case_results
@@ -1200,22 +1238,43 @@ class SQLiteEvaluationLedger:
                 ).fetchone()
                 if pending is not None:
                     raise ValueError(
-                        "aggregate report requires every manifested case to be terminal"
+                        "aggregate manifest requires every manifested case to be terminal"
                     )
+        if row["frozen_aggregate_manifest_artifact_id"] is not None and report_provenance is None:
+            existing_artifact = self._get_artifact_by_id(
+                UUID(row["frozen_aggregate_manifest_artifact_id"])
+            )
+            existing_manifest = FrozenAggregateManifest.model_validate_json(
+                self.read_artifact(existing_artifact)
+            )
+            base_keys = {
+                "configuration_fingerprint",
+                "selection_expression",
+                "selection_provenance",
+            }
+            report_provenance = {
+                key: value
+                for key, value in existing_manifest.report_provenance.items()
+                if key not in base_keys
+            }
+        manifest = self._build_frozen_aggregate_manifest(
+            run_id, report_provenance=report_provenance or {}
+        )
+        manifest_bytes = manifest.canonical_bytes
         artifact = self.register_artifact(
-            content,
-            kind="aggregate-report",
+            manifest_bytes,
+            kind="frozen-aggregate-manifest",
             media_type="application/json",
             retention_class="run",
             sensitivity_classification="internal",
         )
         destination = self._artifact_root / f"{artifact.content_hash}.json"
         if not destination.exists():
-            destination.write_bytes(content)
+            destination.write_bytes(manifest_bytes)
         self.put_artifact_location(
             artifact,
             str(destination),
-            location_key="frozen-report",
+            location_key="frozen-aggregate-manifest",
             location_kind="filesystem",
         )
         with self._transaction_lock:
@@ -1223,16 +1282,16 @@ class SQLiteEvaluationLedger:
                 self._connection.execute("BEGIN")
                 issue_items = tuple(issues)
                 row = self._connection.execute(
-                    "SELECT status, frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+                    "SELECT status, frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
                     (str(run_id),),
                 ).fetchone()
                 if row is None:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
-                if row["frozen_report_artifact_id"] is not None:
-                    existing = self._get_artifact_by_id(UUID(row["frozen_report_artifact_id"]))
+                if row["frozen_aggregate_manifest_artifact_id"] is not None:
+                    existing = self._get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
                     if existing.content_hash != artifact.content_hash:
                         raise ValueError(
-                            "the aggregate report is already frozen with different bytes"
+                            "the aggregate manifest is already frozen with a different composition"
                         )
                     self._connection.commit()
                     return existing
@@ -1240,7 +1299,7 @@ class SQLiteEvaluationLedger:
                     EvaluationRunStatus.RUNNING.value,
                     EvaluationRunStatus.FINALIZATION_PENDING.value,
                 }:
-                    raise ValueError("only an active Evaluation Run can freeze its aggregate report")
+                    raise ValueError("only an active Evaluation Run can freeze its aggregate manifest")
                 pending = self._connection.execute(
                     """
                     SELECT 1 FROM evaluation_case_results
@@ -1253,20 +1312,20 @@ class SQLiteEvaluationLedger:
                 ).fetchone()
                 if pending is not None:
                     raise ValueError(
-                        "aggregate report requires every manifested case to be terminal"
+                        "aggregate manifest requires every manifested case to be terminal"
                     )
                 self._link_artifact(
                     "evaluation_run_artifacts",
                     "run_id",
                     run_id,
                     artifact,
-                    "evaluation.aggregate-report.frozen",
+                    "evaluation.aggregate-manifest.frozen",
                     commit=False,
                 )
                 self._connection.execute(
                     """
                     UPDATE evaluation_runs
-                    SET status = ?, frozen_report_artifact_id = ?, issues_json = ?
+                    SET status = ?, frozen_aggregate_manifest_artifact_id = ?, issues_json = ?
                     WHERE run_id = ?
                     """,
                     (
@@ -1286,16 +1345,166 @@ class SQLiteEvaluationLedger:
                 self._connection.rollback()
                 raise
 
-    def get_frozen_report_artifact(self, run_id: UUID) -> EvaluationArtifactRecord | None:
+    def _build_frozen_aggregate_manifest(
+        self, run_id: UUID, *, report_provenance: Mapping[str, Any]
+    ) -> FrozenAggregateManifest:
+        run = self.get_evaluation_run(run_id)
+        plan = self.get_resolved_evaluation_plan(run_id)
+        if run is None or plan is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        suite = self.get_frozen_suite(run_id)
+        entries = self.list_evaluation_case_manifest(run_id)
+        rows = self._connection.execute(
+            "SELECT * FROM evaluation_case_results WHERE run_id = ? ORDER BY rowid",
+            (str(run_id),),
+        ).fetchall()
+        results = {UUID(row["manifest_id"]): row for row in rows}
+        frozen_entries: list[FrozenAggregateManifestEntry] = []
+        for entry in entries:
+            row = results.get(entry.manifest_id)
+            if row is None or row["execution_disposition"] not in {"completed", "failed"}:
+                raise ValueError("aggregate manifest requires every manifested case to be terminal")
+            if row["task_outcome_json"] is None or row["report_case_json"] is None:
+                raise ValueError("aggregate manifest requires every terminal checkpoint to have evidence")
+            manifest_hash = content_fingerprint(entry.model_dump(mode="json"))
+            result_payload = {
+                "result_id": row["result_id"],
+                "run_id": row["run_id"],
+                "manifest_id": row["manifest_id"],
+                "case_record_id": row["case_record_id"],
+                "execution_disposition": row["execution_disposition"],
+                "task_outcome": json.loads(row["task_outcome_json"]),
+            }
+            result_hash = content_fingerprint(result_payload)
+            executions = [
+                item.model_dump(mode="json")
+                for item in self.list_case_evaluator_executions(UUID(row["result_id"]))
+            ]
+            observations = [
+                item.model_dump(mode="json")
+                for item in self.list_case_metric_observations(UUID(row["result_id"]))
+            ]
+            checkpoint_hash = content_fingerprint(
+                {
+                    "case_result": result_payload,
+                    "report_case_evidence": json.loads(row["report_case_json"]),
+                    "case_evaluator_executions": executions,
+                    "case_metric_observations": observations,
+                    "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,
+                }
+            )
+            if (
+                row["checkpoint_id"]
+                != str(uuid5(NAMESPACE_URL, f"evaluation-checkpoint:{checkpoint_hash}"))
+                or row["checkpoint_content_hash"] != checkpoint_hash
+            ):
+                raise ValueError("terminal checkpoint identity or content hash is mismatched")
+            frozen_entries.append(
+                FrozenAggregateManifestEntry(
+                    ordinal=entry.ordinal,
+                    manifest_entry_id=entry.manifest_id,
+                    manifest_entry_content_hash=manifest_hash,
+                    case_result_id=UUID(row["result_id"]),
+                    case_result_content_hash=result_hash,
+                    checkpoint_id=UUID(row["checkpoint_id"]),
+                    checkpoint_content_hash=checkpoint_hash,
+                )
+            )
+        return FrozenAggregateManifest(
+            run_id=run_id,
+            suite_record_id=run.suite_record_id,
+            suite_content_hash=run.suite_content_hash,
+            resolved_plan_content_hash=plan.content_hash,
+            task_contract_content_hash=content_fingerprint(
+                suite.task_contract.model_dump(mode="json")
+            ),
+            evidence_contract_version=EVIDENCE_CONTRACT_VERSION,
+            report_provenance={
+                "configuration_fingerprint": run.configuration.content_fingerprint,
+                "selection_expression": run.selection_expression,
+                "selection_provenance": run.selection_provenance,
+                **report_provenance,
+            },
+            cases=tuple(frozen_entries),
+        )
+
+    def materialize_aggregate_report(self, run_id: UUID):
+        """Verify the frozen composition and derive its evaluator-visible report."""
+        artifact = self.get_frozen_aggregate_manifest_artifact(run_id)
+        if artifact is None:
+            raise ValueError("Evaluation Run has no frozen aggregate manifest")
+        content = self.read_artifact(artifact)
+        if hashlib.sha256(content).hexdigest() != artifact.content_hash:
+            raise ValueError("frozen aggregate manifest bytes do not match their artifact identity")
+        frozen = FrozenAggregateManifest.model_validate_json(content)
+        base_provenance = {
+            "configuration_fingerprint",
+            "selection_expression",
+            "selection_provenance",
+        }
+        extra_provenance = {
+            key: value
+            for key, value in frozen.report_provenance.items()
+            if key not in base_provenance
+        }
+        current = self._build_frozen_aggregate_manifest(
+            run_id, report_provenance=extra_provenance
+        )
+        if current.canonical_bytes != frozen.canonical_bytes:
+            raise ValueError("terminal checkpoint evidence does not match the frozen aggregate manifest")
+
+        cases: list[dict[str, Any]] = []
+        failures: list[dict[str, Any]] = []
+        for frozen_entry in frozen.cases:
+            row = self._connection.execute(
+                """
+                SELECT r.execution_disposition, r.report_case_json, d.definition_json
+                FROM evaluation_case_results AS r
+                JOIN evaluation_definition_revisions AS d
+                  ON d.record_id = r.case_record_id
+                WHERE r.result_id = ?
+                """,
+                (str(frozen_entry.case_result_id),),
+            ).fetchone()
+            if row is None:
+                raise ValueError("frozen aggregate manifest references missing case evidence")
+            authored = json.loads(row["definition_json"])
+            evidence = json.loads(row["report_case_json"])
+            projected = {
+                **evidence,
+                "inputs": authored["task_input"],
+                "metadata": authored["metadata"],
+                "expected_output": authored.get("expected_output"),
+            }
+            if row["execution_disposition"] == EvaluationCaseDisposition.FAILED.value:
+                failures.append(projected)
+            else:
+                cases.append(projected)
+        provenance = frozen.report_provenance
+        report_payload = {
+            "name": provenance.get("report_name", f"run@{run_id}"),
+            "cases": cases,
+            "failures": failures,
+            "experiment_metadata": provenance.get("experiment_metadata"),
+            "trace_id": provenance.get("trace_id"),
+            "span_id": provenance.get("span_id"),
+        }
+        return report_from_bytes(
+            json.dumps(report_payload, sort_keys=True, separators=(",", ":")).encode()
+        )
+
+    def get_frozen_aggregate_manifest_artifact(
+        self, run_id: UUID
+    ) -> EvaluationArtifactRecord | None:
         row = self._connection.execute(
-            "SELECT frozen_report_artifact_id FROM evaluation_runs WHERE run_id = ?",
+            "SELECT frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
             (str(run_id),),
         ).fetchone()
         if row is None:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
-        if row["frozen_report_artifact_id"] is None:
+        if row["frozen_aggregate_manifest_artifact_id"] is None:
             return None
-        return self._get_artifact_by_id(UUID(row["frozen_report_artifact_id"]))
+        return self._get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
 
     def read_artifact(self, artifact: EvaluationArtifactRecord | UUID | str) -> bytes:
         record = self._resolve_artifact(artifact)
@@ -1780,10 +1989,10 @@ class SQLiteEvaluationLedger:
                 EvaluationGateOutcome.model_validate(item)
                 for item in json.loads(row["gate_outcomes_json"] or "[]")
             ),
-            frozen_report_artifact_id=(
+            frozen_aggregate_manifest_artifact_id=(
                 None
-                if row["frozen_report_artifact_id"] is None
-                else UUID(row["frozen_report_artifact_id"])
+                if row["frozen_aggregate_manifest_artifact_id"] is None
+                else UUID(row["frozen_aggregate_manifest_artifact_id"])
             ),
             finalization_claim=(
                 None
@@ -1815,6 +2024,10 @@ class SQLiteEvaluationLedger:
             manifest_id=UUID(row["manifest_id"]), case_record_id=UUID(row["case_record_id"]),
             execution_disposition=EvaluationCaseDisposition(row["execution_disposition"]),
             task_outcome=outcome,
+            checkpoint_id=(
+                None if row["checkpoint_id"] is None else UUID(row["checkpoint_id"])
+            ),
+            checkpoint_content_hash=row["checkpoint_content_hash"],
         )
 
     @staticmethod

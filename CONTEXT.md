@@ -211,12 +211,20 @@ _Avoid_: Runtime evaluator list, dataset configuration, execution report
 An atomic durable commit of one completed case and its task and case-evaluator evidence, or of one completed report-evaluator execution and its run-level evidence. Checkpoints preserve completed work when later evaluation or orchestration fails; Task Bindings and evaluators describe evidence without owning persistence.
 _Avoid_: Save point, evaluator side effect, partial report
 
+**Evidence Contract Version**:
+The single durable semantic version governing both interpretation of persisted Evaluation Checkpoints and deterministic materialization of evaluator-visible report inputs. The installed Pydantic Evals version and the materializer implementation are not separately persisted version authorities.
+_Avoid_: Materializer version, Pydantic Evals compatibility version, report schema version
+
+**Frozen Aggregate Manifest**:
+A canonical, content-addressed artifact that fixes one Evaluation Run's exact Suite, Resolved Evaluation Plan, Evaluation Task Contract, evidence-contract version, report-level provenance, and ordered terminal Evaluation Checkpoint composition by identity and content hash. It contains integrity references rather than copied authored case values or complete ReportCase payloads; the Evaluation Report is deterministically derived from the referenced immutable definitions and checkpoints.
+_Avoid_: Frozen report, aggregate report blob, report snapshot
+
 **Evaluation Ledger**:
 The durable transaction boundary for imported evaluation definitions and execution evidence. It presents one cohesive persistence façade while definition, execution/checkpoint, and artifact responsibilities remain internally separated behind the same atomic boundary.
 _Avoid_: Evaluation database, SQLite store, repository collection
 
 **Evaluation Finalization**:
-The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and the aggregate report input is frozen as a content-addressed Evaluation Artifact. It loads that exact report, executes only report evaluators lacking terminal evidence, and requests completion; the durable run record authorizes that transition only after all expected terminal evidence exists.
+The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and their exact ordered composition is frozen in a Frozen Aggregate Manifest. It verifies the manifest, deterministically materializes the derived Evaluation Report, executes only report evaluators lacking terminal evidence, and requests completion; the durable run record authorizes that transition only after all expected terminal evidence exists.
 _Avoid_: Run retry, report retry, evaluation resume
 
 **Suite-wide Case Evaluator**:
@@ -228,7 +236,7 @@ A versioned, human-authored policy of criteria and assertions used by a model-ba
 _Avoid_: Judge prompt, evaluator definition, scoring instructions
 
 **Evaluation Run**:
-One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means every case and evaluator assignment in its Resolved Evaluation Plan has terminal evidence and its aggregate report is frozen, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
+One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means every case and evaluator assignment in its Resolved Evaluation Plan has terminal evidence and its Frozen Aggregate Manifest is linked, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
 _Avoid_: Test run, benchmark, experiment
 
 **Evaluation Run Configuration**:

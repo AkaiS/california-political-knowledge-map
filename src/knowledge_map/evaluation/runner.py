@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 import asyncio
-import hashlib
 import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
@@ -28,10 +27,8 @@ from .definitions import (
 )
 from .engine import EvaluationEngine
 from .reporting import (
-    canonical_report_bytes,
     evaluator_version_tag,
     report_case_payload,
-    report_from_bytes,
 )
 from .preflight import EvaluationPreflightError, preflight_selected_cases
 from .runs import (
@@ -396,15 +393,20 @@ class _DurableCheckpointSink:
         )
 
     def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
-        """Freeze the exact aggregate report for explicit finalization."""
+        """Freeze the report's exact checkpoint composition for finalization."""
         if self.trace_id is not None:
             report.trace_id = self.trace_id
         if self.span_id is not None:
             report.span_id = self.span_id
-        self.ledger.freeze_aggregate_report(
+        self.ledger.freeze_aggregate_manifest(
             self.run.run_id,
-            canonical_report_bytes(report),
             issues=self.issues,
+            report_provenance={
+                "report_name": report.name,
+                "experiment_metadata": report.experiment_metadata,
+                "trace_id": report.trace_id,
+                "span_id": report.span_id,
+            },
         )
 
     def checkpoint_partial_report_evidence(self) -> None:
@@ -796,10 +798,10 @@ class EvaluationRunner:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
         if run.status is EvaluationRunStatus.COMPLETED:
             return self._build_result(run, tuple(self.ledger.list_evaluation_case_manifest(run_id)))
-        artifact = self.ledger.get_frozen_report_artifact(run_id)
+        artifact = self.ledger.get_frozen_aggregate_manifest_artifact(run_id)
         if artifact is None:
             raise ValueError(
-                "Evaluation Finalization requires every manifested case to be terminal and the aggregate report to be frozen"
+                "Evaluation Finalization requires every manifested case to be terminal and the aggregate manifest to be frozen"
             )
         if run.status is not EvaluationRunStatus.FINALIZATION_PENDING:
             raise ValueError(
@@ -857,13 +859,10 @@ class EvaluationRunner:
         if run is None:  # pragma: no cover - ledger invariant
             raise KeyError(f"unknown Evaluation Run: {run_id}")
         suite = self.ledger.get_frozen_suite(run_id)
-        artifact = self.ledger.get_frozen_report_artifact(run_id)
+        artifact = self.ledger.get_frozen_aggregate_manifest_artifact(run_id)
         if artifact is None:  # pragma: no cover - ledger invariant
-            raise ValueError("Evaluation Finalization has no frozen report artifact")
-        report_bytes = self.ledger.read_artifact(artifact)
-        if hashlib.sha256(report_bytes).hexdigest() != artifact.content_hash:
-            raise ValueError("frozen aggregate report bytes do not match their artifact identity")
-        report = report_from_bytes(report_bytes)
+            raise ValueError("Evaluation Finalization has no frozen aggregate manifest")
+        report = self.ledger.materialize_aggregate_report(run_id)
         existing = self.ledger.list_report_evaluator_executions(run_id)
         completed_names = {
             (execution.evaluator_name, execution.evaluator_revision,

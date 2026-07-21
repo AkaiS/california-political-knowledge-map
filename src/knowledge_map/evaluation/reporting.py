@@ -1,4 +1,4 @@
-"""Canonical serialization for the immutable aggregate report input."""
+"""Deterministic projections of evaluator-visible report evidence."""
 
 from __future__ import annotations
 

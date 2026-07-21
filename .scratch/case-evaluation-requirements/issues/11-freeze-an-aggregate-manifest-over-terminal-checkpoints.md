@@ -16,15 +16,15 @@ Atomically link the manifest artifact and move the run into finalization-pending
 
 ## Acceptance criteria
 
-- [ ] The Frozen Aggregate Manifest records the run identity, exact Suite and Resolved Evaluation Plan identities and hashes, exact Evaluation Task Contract identity or hash, evidence-contract version, report-level provenance, and the ordered manifest-entry, case-result, and checkpoint identities and content hashes.
-- [ ] Manifest bytes are canonical and content-addressed, so the same immutable run composition produces the same content identity.
-- [ ] The manifest contains no copied task inputs, expected outputs, actual outputs, metadata, evaluator results, or other complete ReportCase payloads.
-- [ ] A run with any pending, cancelled, missing, conflicting, or hash-mismatched case checkpoint cannot freeze its aggregate manifest or enter finalization-pending.
-- [ ] Registering the manifest artifact, linking it to the run, and transitioning the run to finalization-pending preserve the ledger's atomicity guarantees; a failure leaves no linked partial aggregate state.
-- [ ] Repeating manifest creation for the same frozen composition returns the same aggregate identity, while attempting to replace it with a different composition is rejected.
-- [ ] The evidence-contract version governs persisted evidence meaning and evaluator-visible report projection semantics; there is no separate persisted materializer version or Pydantic Evals compatibility version.
-- [ ] Domain documentation and a new or superseding architectural decision define the Frozen Aggregate Manifest and derived Evaluation Report model, replacing the earlier decision that a complete serialized report blob is authoritative.
-- [ ] Highest-level tests cover ordered multi-case identity, stable content addressing, terminal-evidence enforcement, tamper detection, atomic transition, and absence of duplicated case payloads.
+- [x] The Frozen Aggregate Manifest records the run identity, exact Suite and Resolved Evaluation Plan identities and hashes, exact Evaluation Task Contract identity or hash, evidence-contract version, report-level provenance, and the ordered manifest-entry, case-result, and checkpoint identities and content hashes.
+- [x] Manifest bytes are canonical and content-addressed, so the same immutable run composition produces the same content identity.
+- [x] The manifest contains no copied task inputs, expected outputs, actual outputs, metadata, evaluator results, or other complete ReportCase payloads.
+- [x] A run with any pending, cancelled, missing, conflicting, or hash-mismatched case checkpoint cannot freeze its aggregate manifest or enter finalization-pending.
+- [x] Registering the manifest artifact, linking it to the run, and transitioning the run to finalization-pending preserve the ledger's atomicity guarantees; a failure leaves no linked partial aggregate state.
+- [x] Repeating manifest creation for the same frozen composition returns the same aggregate identity, while attempting to replace it with a different composition is rejected.
+- [x] The evidence-contract version governs persisted evidence meaning and evaluator-visible report projection semantics; there is no separate persisted materializer version or Pydantic Evals compatibility version.
+- [x] Domain documentation and a new or superseding architectural decision define the Frozen Aggregate Manifest and derived Evaluation Report model, replacing the earlier decision that a complete serialized report blob is authoritative.
+- [x] Highest-level tests cover ordered multi-case identity, stable content addressing, terminal-evidence enforcement, tamper detection, atomic transition, and absence of duplicated case payloads.
 
 ## Blocked by
 
