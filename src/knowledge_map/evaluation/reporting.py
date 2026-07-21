@@ -14,7 +14,45 @@ from pydantic_evals.evaluators import EvaluatorSpec
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 from pydantic_evals.evaluators.evaluator import EvaluationResult
 
-from .definitions import canonical_json
+from .definitions import SchemaReference, canonical_json
+
+
+class SchemaRegistry:
+    """Allowlist exact authored schema contracts to concrete Pydantic models."""
+
+    def __init__(self) -> None:
+        self._models: dict[tuple[str, int, str], type[BaseModel]] = {}
+
+    def register(
+        self, reference: SchemaReference | None, model_type: type[BaseModel]
+    ) -> None:
+        if reference is None:
+            raise ValueError("a schema reference is required")
+        actual = SchemaReference.for_model(
+            model_type, identity=reference.identity, revision=reference.revision
+        )
+        if actual != reference:
+            raise ValueError("registered model does not match the exact schema fingerprint")
+        self._models[self._key(reference)] = model_type
+
+    def resolve(self, reference: SchemaReference) -> type[BaseModel]:
+        try:
+            return self._models[self._key(reference)]
+        except KeyError as exc:
+            raise ValueError(
+                f"schema is not allowlisted: {reference.identity}@{reference.revision}"
+            ) from exc
+
+    def validate(self, reference: SchemaReference, value: Any) -> BaseModel:
+        return self.resolve(reference).model_validate(value)
+
+    @staticmethod
+    def _key(reference: SchemaReference) -> tuple[str, int, str]:
+        return (
+            reference.identity,
+            reference.revision,
+            reference.model_fingerprint,
+        )
 
 
 def _json_value(value: Any) -> Any:
@@ -44,6 +82,21 @@ def canonical_report_bytes(report: EvaluationReport[Any, Any, Any]) -> bytes:
         "span_id": report.span_id,
     }
     return canonical_json(_json_value(payload)).encode("utf-8")
+
+
+def report_case_payload(
+    case: ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any]
+) -> dict[str, Any]:
+    """Return canonical run evidence, excluding immutable authored values."""
+    payload = _json_value(case)
+    for authored_field in ("inputs", "metadata", "expected_output"):
+        payload.pop(authored_field, None)
+    return payload
+
+
+def evaluator_version_tag(revision: int, configuration_fingerprint: str) -> str:
+    """Project the configured evaluator's single behavioral identity."""
+    return f"revision-{revision}:{configuration_fingerprint}"
 
 
 def _evaluation_result(value: Any) -> EvaluationResult[Any]:

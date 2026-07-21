@@ -19,6 +19,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_evals.reporting import ReportCase, ReportCaseFailure
 
 from .definitions import (
     AuthoredDefinitionConflictError,
@@ -50,6 +51,7 @@ from .runs import (
     RunMetricObservation,
     TaskOutcome,
 )
+from .reporting import SchemaRegistry, _evaluation_result
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -512,7 +514,8 @@ class SQLiteEvaluationLedger:
                     CHECK (execution_disposition IN (
                         'pending', 'completed', 'failed', 'cancelled'
                     )),
-                task_outcome_json TEXT
+                task_outcome_json TEXT,
+                report_case_json TEXT
             );
 
             CREATE TABLE IF NOT EXISTS case_evaluator_executions (
@@ -804,6 +807,7 @@ class SQLiteEvaluationLedger:
         result: EvaluationCaseResult,
         executions: Iterable[CaseEvaluatorExecution],
         observations: Iterable[CaseMetricObservation],
+        report_case_evidence: Mapping[str, Any] | None = None,
     ) -> None:
         """Atomically finalize one case result and its evaluator evidence."""
         executions = tuple(executions)
@@ -814,7 +818,7 @@ class SQLiteEvaluationLedger:
                 cursor = self._connection.execute(
                     """
                     UPDATE evaluation_case_results
-                    SET execution_disposition = ?, task_outcome_json = ?
+                    SET execution_disposition = ?, task_outcome_json = ?, report_case_json = ?
                     WHERE result_id = ? AND execution_disposition = 'pending'
                     """,
                     (
@@ -824,13 +828,16 @@ class SQLiteEvaluationLedger:
                             sort_keys=True,
                             separators=(",", ":"),
                         ),
+                        None if report_case_evidence is None else json.dumps(
+                            report_case_evidence, sort_keys=True, separators=(",", ":")
+                        ),
                         str(result.result_id),
                     ),
                 )
                 if cursor.rowcount != 1:
                     existing = self._connection.execute(
                         """
-                        SELECT execution_disposition
+                        SELECT *
                         FROM evaluation_case_results
                         WHERE result_id = ?
                         """,
@@ -840,26 +847,24 @@ class SQLiteEvaluationLedger:
                         raise KeyError(
                             f"unknown Evaluation Case Result: {result.result_id}"
                         )
-                    if executions or observations:
-                        raise ValueError(
-                            f"Evaluation Case Result is already terminal: {result.result_id}"
-                        )
-                    self._connection.execute(
-                        """
-                        UPDATE evaluation_case_results
-                        SET task_outcome_json = ?
-                        WHERE result_id = ?
-                        """,
-                        (
-                            None
-                            if result.task_outcome is None
-                            else json.dumps(
-                                result.task_outcome.model_dump(mode="json"),
-                                sort_keys=True,
-                                separators=(",", ":"),
-                            ),
-                            str(result.result_id),
-                        ),
+                    existing_result = self._case_result_from_row(existing)
+                    existing_evidence = (
+                        None
+                        if existing["report_case_json"] is None
+                        else json.loads(existing["report_case_json"])
+                    )
+                    if (
+                        existing_result == result
+                        and self.list_case_evaluator_executions(result.result_id)
+                        == list(executions)
+                        and self.list_case_metric_observations(result.result_id)
+                        == list(observations)
+                        and existing_evidence == report_case_evidence
+                    ):
+                        self._connection.commit()
+                        return
+                    raise ValueError(
+                        f"Evaluation Case Result is already terminal with different evidence: {result.result_id}"
                     )
                 if result.task_outcome is not None:
                     for artifact in result.task_outcome.artifacts:
@@ -879,6 +884,74 @@ class SQLiteEvaluationLedger:
             except Exception:
                 self._connection.rollback()
                 raise
+
+    def materialize_report_case(
+        self, case_result_id: UUID, schemas: SchemaRegistry
+    ) -> ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any]:
+        """Reconstruct a typed framework case from one terminal checkpoint."""
+        row = self._connection.execute(
+            """
+            SELECT r.execution_disposition, r.report_case_json, d.definition_json
+            FROM evaluation_case_results AS r
+            JOIN evaluation_definition_revisions AS d
+              ON d.record_id = r.case_record_id
+            WHERE r.result_id = ? AND r.execution_disposition IN ('completed', 'failed')
+            """,
+            (str(case_result_id),),
+        ).fetchone()
+        if row is None:
+            raise ValueError("ReportCase requires a completed terminal checkpoint")
+        if row["report_case_json"] is None:
+            raise ValueError("terminal checkpoint lacks ReportCase evidence")
+        authored = json.loads(row["definition_json"])
+        evidence = json.loads(row["report_case_json"])
+        input_schema = SchemaReference.model_validate(authored["input_schema"])
+        metadata_schema = SchemaReference.model_validate(authored["metadata_schema"])
+        expected_schema = (
+            None
+            if authored.get("expected_output_schema") is None
+            else SchemaReference.model_validate(authored["expected_output_schema"])
+        )
+        typed_inputs = schemas.validate(input_schema, authored["task_input"])
+        typed_metadata = schemas.validate(metadata_schema, authored["metadata"])
+        typed_expected = (
+            None
+            if authored.get("expected_output") is None
+            else schemas.validate(expected_schema, authored["expected_output"])
+        )
+        if row["execution_disposition"] == EvaluationCaseDisposition.FAILED.value:
+            return ReportCaseFailure(
+                name=evidence["name"],
+                inputs=typed_inputs,
+                metadata=typed_metadata,
+                expected_output=typed_expected,
+                error_message=evidence["error_message"],
+                error_stacktrace=evidence["error_stacktrace"],
+                source_case_name=evidence.get("source_case_name"),
+                trace_id=evidence.get("trace_id"),
+                span_id=evidence.get("span_id"),
+            )
+        output_schema = expected_schema
+        if output_schema is None:
+            raise ValueError("successful ReportCase requires an output schema")
+        return ReportCase(
+            name=evidence["name"],
+            inputs=typed_inputs,
+            metadata=typed_metadata,
+            expected_output=typed_expected,
+            output=schemas.validate(output_schema, evidence["output"]),
+            metrics=evidence.get("metrics", {}),
+            attributes=evidence.get("attributes", {}),
+            scores={k: _evaluation_result(v) for k, v in evidence.get("scores", {}).items()},
+            labels={k: _evaluation_result(v) for k, v in evidence.get("labels", {}).items()},
+            assertions={k: _evaluation_result(v) for k, v in evidence.get("assertions", {}).items()},
+            task_duration=evidence.get("task_duration", 0),
+            total_duration=evidence.get("total_duration", 0),
+            source_case_name=evidence.get("source_case_name"),
+            trace_id=evidence.get("trace_id"),
+            span_id=evidence.get("span_id"),
+            evaluator_failures=evidence.get("evaluator_failures", []),
+        )
 
     def record_report_evaluation(
         self,

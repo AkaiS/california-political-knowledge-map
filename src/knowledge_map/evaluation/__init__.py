@@ -61,6 +61,7 @@ from .runs import (
 )
 from .runner import EvaluationRunner
 from .engine import EvaluationCheckpointSink, EvaluationEngine, NoOpCheckpointSink
+from .reporting import SchemaRegistry, evaluator_version_tag
 from .preflight import (
     EvaluationDefinitionRevisionReference,
     EvaluationPreflightError,
@@ -147,6 +148,8 @@ __all__ = [
     "EvaluationCheckpointSink",
     "EvaluationEngine",
     "NoOpCheckpointSink",
+    "SchemaRegistry",
+    "evaluator_version_tag",
     "EvaluationDefinitionRevisionReference",
     "EvaluationPreflightError",
     "EvaluationPreflightIssue",

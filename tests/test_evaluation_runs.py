@@ -16,6 +16,7 @@ from pydantic_evals.evaluators import (
     ReportEvaluatorContext,
 )
 from pydantic_evals.reporting.analyses import ScalarResult, TableResult
+from pydantic_evals.reporting import ReportCaseFailure
 
 from knowledge_map.evaluation import (
     CaseEvaluatorExecution,
@@ -51,6 +52,7 @@ from knowledge_map.evaluation import (
     ConfiguredEvaluatorReference,
     NoComparisonOperation,
     SchemaReference,
+    SchemaRegistry,
     TaskFailure,
     TaskSuccess,
     preflight_selected_cases,
@@ -343,6 +345,150 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
     assert [execution.status.value for execution in durable.report_evaluator_executions] == [
         "completed"
     ]
+
+
+def test_terminal_checkpoint_materializes_one_typed_report_case(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "typed-report-case", case_evaluator="exact-case"
+    )
+    registry = SchemaRegistry()
+    registry.register(cases[0].input_schema, Input)
+    registry.register(cases[0].expected_output_schema, Output)
+    registry.register(cases[0].metadata_schema, Metadata)
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(
+                answer=task_input.prompt.replace("prompt", "answer")
+            ),
+            evaluator_resolver=lambda configured: (
+                ExactAnswer() if configured.name == "exact-case" else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        report_case = ledger.materialize_report_case(
+            result.case_results[0].result_id, registry
+        )
+
+    assert isinstance(report_case.inputs, Input)
+    assert isinstance(report_case.expected_output, Output)
+    assert isinstance(report_case.metadata, Metadata)
+    assert isinstance(report_case.output, Output)
+    assert report_case.output == Output(answer="answer-1")
+    assert report_case.assertions["exact-case"].value is True
+    assert report_case.assertions["exact-case"].reason is None
+    assert report_case.assertions["exact-case"].evaluator_version
+    assert report_case.task_duration >= 0
+    assert report_case.total_duration >= report_case.task_duration
+    assert report_case.trace_id is not None and len(report_case.trace_id) == 32
+    assert report_case.span_id is not None and len(report_case.span_id) == 16
+
+
+def test_typed_report_case_rejects_an_unallowlisted_schema(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("unknown-report-schema")
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        with pytest.raises(ValueError, match="schema is not allowlisted"):
+            ledger.materialize_report_case(
+                result.case_results[0].result_id, SchemaRegistry()
+            )
+
+
+def test_schema_registry_rejects_a_model_with_the_wrong_fingerprint():
+    class IncompatibleInput(BaseModel):
+        different: int
+
+    reference = SchemaReference.for_model(
+        Input, identity="tests.input", revision=1
+    )
+
+    with pytest.raises(ValueError, match="exact schema fingerprint"):
+        SchemaRegistry().register(reference, IncompatibleInput)
+
+
+def test_failed_terminal_checkpoint_materializes_a_typed_report_case_failure(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("typed-report-failure")
+    registry = SchemaRegistry()
+    registry.register(cases[0].input_schema, Input)
+    registry.register(cases[0].expected_output_schema, Output)
+    registry.register(cases[0].metadata_schema, Metadata)
+
+    def fail_task(_task_input):
+        raise RuntimeError("provider unavailable")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=fail_task,
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        report_case = ledger.materialize_report_case(
+            result.case_results[0].result_id, registry
+        )
+
+    assert isinstance(report_case, ReportCaseFailure)
+    assert isinstance(report_case.inputs, Input)
+    assert isinstance(report_case.expected_output, Output)
+    assert isinstance(report_case.metadata, Metadata)
+    assert "provider unavailable" in report_case.error_message
+    assert report_case.error_stacktrace
+
+
+def test_terminal_case_checkpoint_replay_is_idempotent_and_replacement_is_rejected(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "immutable-report-case"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        completed = pending[0].model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output={"answer": "stable"}),
+            }
+        )
+        evidence = {
+            "name": "case-1@1",
+            "output": {"answer": "stable"},
+            "task_duration": 0.1,
+            "total_duration": 0.2,
+        }
+
+        ledger.record_case_evaluation(completed, (), (), evidence)
+        ledger.record_case_evaluation(completed, (), (), evidence)
+
+        with pytest.raises(ValueError, match="different evidence"):
+            ledger.record_case_evaluation(
+                completed,
+                (),
+                (),
+                {**evidence, "total_duration": 99.0},
+            )
 
 
 def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
@@ -791,19 +937,11 @@ def test_task_outcomes_preserve_content_addressed_artifact_references():
 
 
 def test_case_result_persists_task_artifacts_at_case_scope(tmp_path):
-    cases, gold_set, suite = _lifecycle_fixture("task-artifact-scope")
-
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=lambda configured: CountCases(),
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "task-artifact-scope"
         )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
         artifact = ledger.register_artifact(
             b"task failure evidence",
             kind="failure-evidence",
@@ -815,8 +953,9 @@ def test_case_result_persists_task_artifacts_at_case_scope(tmp_path):
             content_hash=artifact.content_hash,
             role="evaluation.task.failure-evidence",
         )
-        updated = result.case_results[0].model_copy(
+        updated = pending[0].model_copy(
             update={
+                "execution_disposition": EvaluationCaseDisposition.FAILED,
                 "task_outcome": TaskFailure(
                     category="provider",
                     exception_type="TimeoutError",

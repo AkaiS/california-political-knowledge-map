@@ -16,15 +16,15 @@ Treat the Configured Evaluator's revision and configuration fingerprint as its a
 
 ## Acceptance criteria
 
-- [ ] A terminal case checkpoint atomically commits the Evaluation Task Outcome, Case Evaluator Executions, evaluator results and failures, observations, issues, artifact links, durations, attributes, and trace provenance required to reconstruct that case's report semantics.
-- [ ] A terminal case checkpoint is immutable and idempotent: replaying the same checkpoint is harmless, while attempting to replace terminal evidence with different content is rejected.
-- [ ] Authored inputs, expected outputs, metadata, and their schema references remain owned by the exact immutable Evaluation Case and Evaluation Task Contract rather than being copied into run-specific checkpoint evidence.
-- [ ] Extensible fields accept canonical JSON values directly and require a schema-tagged envelope whenever a non-JSON runtime type must be preserved.
-- [ ] Schema-tagged payloads resolve only through an allowlisted registry, verify identity, revision, and fingerprint, and reject unknown or incompatible schemas without falling back to untyped dictionaries.
-- [ ] Structured metric observations use the schema owned by their exact Evaluation Metric Definition, and typed artifacts use their artifact-owned schema metadata when applicable.
-- [ ] Pydantic Evals Evaluation Results and failures receive an evaluator-version tag deterministically derived from the Configured Evaluator revision and configuration fingerprint, and the same value is available to evaluation telemetry such as Logfire.
-- [ ] A highest-level test checkpoints and reloads successful and failed cases, materializes typed ReportCase values, and proves equivalent task outcomes, evaluator result categories, values, reasons, failures, timings, attributes, artifact links, tracing, and concrete application-owned types.
-- [ ] A persistence or schema-resolution failure leaves no partial terminal checkpoint or producer evidence.
+- [x] A terminal case checkpoint atomically commits the Evaluation Task Outcome, Case Evaluator Executions, evaluator results and failures, observations, issues, artifact links, durations, attributes, and trace provenance required to reconstruct that case's report semantics.
+- [x] A terminal case checkpoint is immutable and idempotent: replaying the same checkpoint is harmless, while attempting to replace terminal evidence with different content is rejected.
+- [x] Authored inputs, expected outputs, metadata, and their schema references remain owned by the exact immutable Evaluation Case and Evaluation Task Contract rather than being copied into run-specific checkpoint evidence.
+- [x] Extensible fields accept canonical JSON values directly and require a schema-tagged envelope whenever a non-JSON runtime type must be preserved.
+- [x] Schema-tagged payloads resolve only through an allowlisted registry, verify identity, revision, and fingerprint, and reject unknown or incompatible schemas without falling back to untyped dictionaries.
+- [x] Structured metric observations use the schema owned by their exact Evaluation Metric Definition, and typed artifacts use their artifact-owned schema metadata when applicable.
+- [x] Pydantic Evals Evaluation Results and failures receive an evaluator-version tag deterministically derived from the Configured Evaluator revision and configuration fingerprint, and the same value is available to evaluation telemetry such as Logfire.
+- [x] A highest-level test checkpoints and reloads successful and failed cases, materializes typed ReportCase values, and proves equivalent task outcomes, evaluator result categories, values, reasons, failures, timings, attributes, artifact links, tracing, and concrete application-owned types.
+- [x] A persistence or schema-resolution failure leaves no partial terminal checkpoint or producer evidence.
 
 ## Blocked by
 

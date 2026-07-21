@@ -27,7 +27,12 @@ from .definitions import (
     new_uuid7,
 )
 from .engine import EvaluationEngine
-from .reporting import canonical_report_bytes, report_from_bytes
+from .reporting import (
+    canonical_report_bytes,
+    evaluator_version_tag,
+    report_case_payload,
+    report_from_bytes,
+)
 from .preflight import EvaluationPreflightError, preflight_selected_cases
 from .runs import (
     CaseEvaluatorExecution,
@@ -305,7 +310,9 @@ class _DurableCheckpointSink:
                     ),
                 }
             )
-            self.ledger.record_case_evaluation(completed, (), ())
+            self.ledger.record_case_evaluation(
+                completed, (), (), report_case_payload(framework_case)
+            )
             return
 
         completed = result.model_copy(
@@ -375,7 +382,18 @@ class _DurableCheckpointSink:
                             message=f"required metric {metric.namespaced_name} was not produced",
                         )
                     )
-        self.ledger.record_case_evaluation(completed, executions, observations)
+        evidence = report_case_payload(framework_case)
+        for category in ("scores", "labels", "assertions"):
+            for name, evaluation_result in evidence.get(category, {}).items():
+                configured = self.configured_case_evaluators.get(name)
+                if configured is not None:
+                    evaluation_result["evaluator_version"] = evaluator_version_tag(
+                        configured.evaluator_revision,
+                        configured.configuration_fingerprint,
+                    )
+        self.ledger.record_case_evaluation(
+            completed, executions, observations, evidence
+        )
 
     def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
         """Freeze the exact aggregate report for explicit finalization."""
