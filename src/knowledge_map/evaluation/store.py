@@ -20,7 +20,7 @@ from uuid import UUID
 from uuid import NAMESPACE_URL, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field
-from pydantic_evals.reporting import ReportCase, ReportCaseFailure
+from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from .definitions import (
     AuthoredDefinitionConflictError,
@@ -56,7 +56,7 @@ from .runs import (
     RunMetricObservation,
     TaskOutcome,
 )
-from .reporting import SchemaRegistry, _evaluation_result, report_from_bytes
+from .reporting import SchemaRegistry, _evaluation_result
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -929,10 +929,14 @@ class SQLiteEvaluationLedger:
         """Reconstruct a typed framework case from one terminal checkpoint."""
         row = self._connection.execute(
             """
-            SELECT r.execution_disposition, r.report_case_json, d.definition_json
+            SELECT r.execution_disposition, r.report_case_json, d.definition_json,
+                   d.content_hash AS stored_case_content_hash,
+                   m.case_content_hash AS manifested_case_content_hash
             FROM evaluation_case_results AS r
             JOIN evaluation_definition_revisions AS d
               ON d.record_id = r.case_record_id
+            JOIN evaluation_case_manifests AS m
+              ON m.manifest_id = r.manifest_id
             WHERE r.result_id = ? AND r.execution_disposition IN ('completed', 'failed')
             """,
             (str(case_result_id),),
@@ -942,6 +946,17 @@ class SQLiteEvaluationLedger:
         if row["report_case_json"] is None:
             raise ValueError("terminal checkpoint lacks ReportCase evidence")
         authored = json.loads(row["definition_json"])
+        semantic_authored = {
+            key: value for key, value in authored.items() if key != "content_hash"
+        }
+        semantic_authored["identity"] = dict(semantic_authored["identity"])
+        semantic_authored["identity"].pop("record_id", None)
+        authored_hash = content_fingerprint(semantic_authored)
+        if authored_hash not in {
+            row["stored_case_content_hash"],
+            row["manifested_case_content_hash"],
+        } or row["stored_case_content_hash"] != row["manifested_case_content_hash"]:
+            raise ValueError("frozen case definition fingerprint is mismatched")
         evidence = json.loads(row["report_case_json"])
         input_schema = SchemaReference.model_validate(authored["input_schema"])
         metadata_schema = SchemaReference.model_validate(authored["metadata_schema"])
@@ -1428,7 +1443,9 @@ class SQLiteEvaluationLedger:
             cases=tuple(frozen_entries),
         )
 
-    def materialize_aggregate_report(self, run_id: UUID):
+    def materialize_aggregate_report(
+        self, run_id: UUID, schemas: SchemaRegistry
+    ) -> EvaluationReport[Any, Any, Any]:
         """Verify the frozen composition and derive its evaluator-visible report."""
         artifact = self.get_frozen_aggregate_manifest_artifact(run_id)
         if artifact is None:
@@ -1437,6 +1454,32 @@ class SQLiteEvaluationLedger:
         if hashlib.sha256(content).hexdigest() != artifact.content_hash:
             raise ValueError("frozen aggregate manifest bytes do not match their artifact identity")
         frozen = FrozenAggregateManifest.model_validate_json(content)
+        if frozen.evidence_contract_version != EVIDENCE_CONTRACT_VERSION:
+            raise ValueError(
+                "unsupported evidence-contract version: "
+                f"{frozen.evidence_contract_version}"
+            )
+        suite = self.get_frozen_suite(run_id)
+        suite_reference = self._connection.execute(
+            """
+            SELECT content_hash FROM evaluation_definition_revisions
+            WHERE record_id = ? AND kind = ?
+            """,
+            (str(frozen.suite_record_id), EvaluationDefinitionKind.SUITE.value),
+        ).fetchone()
+        if (
+            suite_reference is None
+            or suite.identity.record_id != frozen.suite_record_id
+            or suite_reference["content_hash"] != frozen.suite_content_hash
+        ):
+            raise ValueError("frozen Evaluation Suite fingerprint is mismatched")
+        plan = self.get_resolved_evaluation_plan(run_id)
+        if plan is None or plan.content_hash != frozen.resolved_plan_content_hash:
+            raise ValueError("frozen Resolved Evaluation Plan fingerprint is mismatched")
+        if content_fingerprint(
+            suite.task_contract.model_dump(mode="json")
+        ) != frozen.task_contract_content_hash:
+            raise ValueError("frozen Evaluation Task Contract fingerprint is mismatched")
         base_provenance = {
             "configuration_fingerprint",
             "selection_expression",
@@ -1453,44 +1496,24 @@ class SQLiteEvaluationLedger:
         if current.canonical_bytes != frozen.canonical_bytes:
             raise ValueError("terminal checkpoint evidence does not match the frozen aggregate manifest")
 
-        cases: list[dict[str, Any]] = []
-        failures: list[dict[str, Any]] = []
+        cases: list[ReportCase[Any, Any, Any]] = []
+        failures: list[ReportCaseFailure[Any, Any, Any]] = []
         for frozen_entry in frozen.cases:
-            row = self._connection.execute(
-                """
-                SELECT r.execution_disposition, r.report_case_json, d.definition_json
-                FROM evaluation_case_results AS r
-                JOIN evaluation_definition_revisions AS d
-                  ON d.record_id = r.case_record_id
-                WHERE r.result_id = ?
-                """,
-                (str(frozen_entry.case_result_id),),
-            ).fetchone()
-            if row is None:
-                raise ValueError("frozen aggregate manifest references missing case evidence")
-            authored = json.loads(row["definition_json"])
-            evidence = json.loads(row["report_case_json"])
-            projected = {
-                **evidence,
-                "inputs": authored["task_input"],
-                "metadata": authored["metadata"],
-                "expected_output": authored.get("expected_output"),
-            }
-            if row["execution_disposition"] == EvaluationCaseDisposition.FAILED.value:
+            projected = self.materialize_report_case(
+                frozen_entry.case_result_id, schemas
+            )
+            if isinstance(projected, ReportCaseFailure):
                 failures.append(projected)
             else:
                 cases.append(projected)
         provenance = frozen.report_provenance
-        report_payload = {
-            "name": provenance.get("report_name", f"run@{run_id}"),
-            "cases": cases,
-            "failures": failures,
-            "experiment_metadata": provenance.get("experiment_metadata"),
-            "trace_id": provenance.get("trace_id"),
-            "span_id": provenance.get("span_id"),
-        }
-        return report_from_bytes(
-            json.dumps(report_payload, sort_keys=True, separators=(",", ":")).encode()
+        return EvaluationReport(
+            name=provenance.get("report_name", f"run@{run_id}"),
+            cases=cases,
+            failures=failures,
+            experiment_metadata=provenance.get("experiment_metadata"),
+            trace_id=provenance.get("trace_id"),
+            span_id=provenance.get("span_id"),
         )
 
     def get_frozen_aggregate_manifest_artifact(

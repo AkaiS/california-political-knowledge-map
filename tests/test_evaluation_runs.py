@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 import threading
@@ -70,6 +71,14 @@ class Output(BaseModel):
 
 class Metadata(BaseModel):
     source: str
+
+
+def _schemas_for(cases) -> SchemaRegistry:
+    schemas = SchemaRegistry()
+    schemas.register(cases[0].input_schema, Input)
+    schemas.register(cases[0].expected_output_schema, Output)
+    schemas.register(cases[0].metadata_schema, Metadata)
+    return schemas
 
 
 def test_run_configuration_defaults_case_concurrency_to_one():
@@ -151,6 +160,15 @@ class FailingReportEvaluator(ReportEvaluator):
 class NoObservationReportEvaluator(ReportEvaluator):
     def evaluate(self, ctx: ReportEvaluatorContext):
         return None
+
+
+@dataclass
+class CaptureTypedReport(ReportEvaluator):
+    reports: list
+
+    def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        self.reports.append(ctx.report)
+        return ScalarResult(title="evaluated-cases", value=len(ctx.report.cases))
 
 
 @dataclass
@@ -332,6 +350,7 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
         )
         durable = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=resolve,
         )
 
@@ -1033,6 +1052,7 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: CountCases(),
         )
 
@@ -1071,6 +1091,7 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: CountCases(),
         )
 
@@ -1109,6 +1130,7 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: FailingReportEvaluator(),
         )
 
@@ -1144,6 +1166,7 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: CountCases(),
         )
         consumed = ledger.register_artifact(
@@ -1271,6 +1294,7 @@ def test_runner_persists_normalized_logfire_execution_identity(tmp_path, monkeyp
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: CountCases(),
         )
 
@@ -1649,6 +1673,7 @@ def test_interrupted_finalization_retains_partial_report_evaluation(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 CountCases() if configured.name == "count-cases" else CaseTable()
             ),
@@ -1688,6 +1713,7 @@ def test_incomplete_cases_cannot_freeze_the_aggregate_report(tmp_path):
         with pytest.raises(ValueError, match="terminal"):
             EvaluationRunner(ledger).finalize(
                 result.run.run_id,
+                schemas=_schemas_for(cases),
                 evaluator_resolver=lambda configured: CountCases(),
             )
 
@@ -1720,6 +1746,7 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
 
         finalized = runner.finalize(
             result.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 resolver_calls.append(configured.name) or CountCases()
             ),
@@ -1732,6 +1759,148 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
         ]
         assert finalized.run.finalization_claim is None
         assert ledger.get_finalization_claim(finalized.run.run_id) is None
+
+
+def test_finalization_materializes_typed_report_from_frozen_evidence(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("typed-finalization")
+    schemas = SchemaRegistry()
+    schemas.register(cases[0].input_schema, Input)
+    schemas.register(cases[0].expected_output_schema, Output)
+    schemas.register(cases[0].metadata_schema, Metadata)
+    reports = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        EvaluationRunner(ledger).finalize(
+            initial.run.run_id,
+            schemas=schemas,
+            evaluator_resolver=lambda configured: CaptureTypedReport(reports),
+        )
+
+    assert [case.name for case in reports[0].cases] == ["case-1@1", "case-2@1"]
+    assert all(isinstance(case.inputs, Input) for case in reports[0].cases)
+    assert all(isinstance(case.expected_output, Output) for case in reports[0].cases)
+    assert all(isinstance(case.output, Output) for case in reports[0].cases)
+    assert all(isinstance(case.metadata, Metadata) for case in reports[0].cases)
+
+
+def test_finalization_rejects_unresolved_frozen_schemas_before_evaluating(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("unresolved-finalization-schema")
+    resolver_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        with pytest.raises(ValueError, match="schema is not allowlisted"):
+            EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=SchemaRegistry(),
+                evaluator_resolver=lambda configured: (
+                    resolver_calls.append(configured.name) or CountCases()
+                ),
+            )
+
+        assert resolver_calls == []
+        assert ledger.get_finalization_claim(initial.run.run_id) is None
+
+
+def test_finalization_rejects_a_tampered_frozen_case_definition(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("tampered-frozen-case")
+    resolver_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        record_id = initial.manifest[0].case.record_id
+        row = ledger._connection.execute(
+            "SELECT definition_json FROM evaluation_definition_revisions WHERE record_id = ?",
+            (str(record_id),),
+        ).fetchone()
+        payload = json.loads(row["definition_json"])
+        payload["task_input"]["prompt"] = "tampered"
+        ledger._connection.execute(
+            "DROP TRIGGER evaluation_definition_revisions_immutable_update"
+        )
+        ledger._connection.execute(
+            "UPDATE evaluation_definition_revisions SET definition_json = ? WHERE record_id = ?",
+            (json.dumps(payload), str(record_id)),
+        )
+        ledger._connection.commit()
+
+        with pytest.raises(ValueError, match="case definition fingerprint"):
+            EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                evaluator_resolver=lambda configured: (
+                    resolver_calls.append(configured.name) or CountCases()
+                ),
+            )
+
+        assert resolver_calls == []
+
+
+def test_finalization_rejects_an_unsupported_evidence_contract(tmp_path, monkeypatch):
+    cases, gold_set, suite = _lifecycle_fixture("unsupported-evidence-contract")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        artifact = ledger.get_frozen_aggregate_manifest_artifact(initial.run.run_id)
+        payload = json.loads(ledger.read_artifact(artifact))
+        payload["evidence_contract_version"] = 999
+        unsupported = json.dumps(
+            payload, sort_keys=True, separators=(",", ":")
+        ).encode()
+        monkeypatch.setattr(ledger, "read_artifact", lambda ignored: unsupported)
+        monkeypatch.setattr(
+            ledger,
+            "get_frozen_aggregate_manifest_artifact",
+            lambda ignored: artifact.model_copy(
+                update={"content_hash": hashlib.sha256(unsupported).hexdigest()}
+            ),
+        )
+
+        with pytest.raises(ValueError, match="unsupported evidence-contract version: 999"):
+            EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                evaluator_resolver=lambda configured: CountCases(),
+            )
 
 
 def test_completed_cases_freeze_an_ordered_content_addressed_aggregate_manifest(
@@ -1834,6 +2003,7 @@ def test_finalization_rejects_a_tampered_frozen_aggregate_manifest(tmp_path):
         with pytest.raises(ValueError, match="artifact identity"):
             EvaluationRunner(ledger).finalize(
                 result.run.run_id,
+                schemas=_schemas_for(cases),
                 evaluator_resolver=lambda configured: CountCases(),
             )
 def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
@@ -1898,6 +2068,7 @@ def test_finalize_refuses_a_live_claim_before_resolving_report_evaluators(tmp_pa
             with pytest.raises(RuntimeError, match="finalization claim"):
                 EvaluationRunner(competing_ledger).finalize(
                     initial.run.run_id,
+                    schemas=_schemas_for(cases),
                     worker_id="worker-b",
                     evaluator_resolver=lambda configured: (
                         resolver_calls.append(configured.name) or CountCases()
@@ -1943,6 +2114,7 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
 
         partial = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 first_finalizer_calls.append(configured.name)
                 or (_ for _ in ()).throw(RuntimeError("missing evaluator"))
@@ -1963,6 +2135,7 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
         second_finalizer_calls: list[str] = []
         completed = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 second_finalizer_calls.append(configured.name)
                 or CaseTable()
@@ -1979,6 +2152,7 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
         calls_before_idempotent = list(second_finalizer_calls)
         repeated = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 second_finalizer_calls.append(configured.name) or CaseTable()
             ),
@@ -2020,6 +2194,7 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
 
         partial = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 (_ for _ in ()).throw(RuntimeError("report evaluator failed"))
                 if configured.name == "count-cases"
@@ -2045,6 +2220,7 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
         recovery_calls: list[str] = []
         recovered = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: (
                 recovery_calls.append(configured.name) or CaseTable()
             ),
@@ -2088,6 +2264,7 @@ def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tm
                 first_future = workers.submit(
                     EvaluationRunner(first_ledger).finalize,
                     initial.run.run_id,
+                    schemas=_schemas_for(cases),
                     worker_id="worker-a",
                     evaluator_resolver=lambda configured: blocking,
                 )
@@ -2096,6 +2273,7 @@ def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tm
                 with pytest.raises(RuntimeError, match="live finalization claim"):
                     EvaluationRunner(second_ledger).finalize(
                         initial.run.run_id,
+                        schemas=_schemas_for(cases),
                         worker_id="worker-b",
                         evaluator_resolver=lambda configured: (
                             second_resolver_calls.append(configured.name) or CountCases()
@@ -2338,6 +2516,7 @@ def test_missing_metrics_and_gate_failures_are_run_diagnostics(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
             release_gates={"quality-threshold": lambda run: False},
         )
@@ -2482,6 +2661,7 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: {
                 "count-cases": CountCases(),
                 "case-table": CaseTable(),
@@ -2589,6 +2769,7 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
         )
         result = runner.finalize(
             initial.run.run_id,
+            schemas=_schemas_for(cases),
             evaluator_resolver=lambda configured: CountCases(),
         )
 

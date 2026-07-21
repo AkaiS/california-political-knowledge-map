@@ -27,6 +27,7 @@ from .definitions import (
 )
 from .engine import EvaluationEngine
 from .reporting import (
+    SchemaRegistry,
     evaluator_version_tag,
     report_case_payload,
 )
@@ -781,6 +782,7 @@ class EvaluationRunner:
         run_id: UUID,
         *,
         suite: EvaluationSuite | None = None,
+        schemas: SchemaRegistry,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
         should_cancel: Callable[[], bool] | None = None,
@@ -828,6 +830,7 @@ class EvaluationRunner:
             self._finalize_with_claim(
                 run_id,
                 claim=claim,
+                schemas=schemas,
                 evaluator_resolver=evaluator_resolver,
                 release_gates=release_gates,
                 should_cancel=should_cancel,
@@ -848,6 +851,7 @@ class EvaluationRunner:
         run_id: UUID,
         *,
         claim: EvaluationFinalizationClaim,
+        schemas: SchemaRegistry,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None,
         should_cancel: Callable[[], bool] | None,
@@ -862,7 +866,7 @@ class EvaluationRunner:
         artifact = self.ledger.get_frozen_aggregate_manifest_artifact(run_id)
         if artifact is None:  # pragma: no cover - ledger invariant
             raise ValueError("Evaluation Finalization has no frozen aggregate manifest")
-        report = self.ledger.materialize_aggregate_report(run_id)
+        report = self.ledger.materialize_aggregate_report(run_id, schemas)
         existing = self.ledger.list_report_evaluator_executions(run_id)
         completed_names = {
             (execution.evaluator_name, execution.evaluator_revision,
