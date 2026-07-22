@@ -44,6 +44,7 @@ from knowledge_map.evaluation import (
     EvaluationRequirement,
     EvaluationRequirementBinding,
     EvaluationRequirementCatalog,
+    ReportEvaluatorExecution,
     EvaluationRunConfiguration,
     EvaluationRunRecord,
     EvaluationRunner,
@@ -2494,6 +2495,73 @@ def test_finalization_authority_uses_one_shared_ledger_clock(tmp_path):
 
             assert replacement is not None
             assert replacement.acquired_at == clock.current
+
+
+def test_report_checkpoint_samples_time_after_obtaining_the_write_position(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("checkpoint-write-position")
+    database = tmp_path / "evaluation.sqlite"
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(database, clock=clock) as claim_ledger:
+        initial = EvaluationRunner(claim_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = claim_ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert claim is not None
+
+        configured = suite.report_evaluators[0]
+        execution = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name=configured.name,
+            evaluator_revision=configured.evaluator_revision,
+            configuration_fingerprint=configured.configuration_fingerprint,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0,
+        )
+
+        with SQLiteEvaluationLedger(database, clock=clock) as waiting_ledger:
+            write_attempted = threading.Event()
+            waiting_ledger._connection.set_trace_callback(
+                lambda statement: (
+                    write_attempted.set()
+                    if statement == "BEGIN IMMEDIATE"
+                    else None
+                )
+            )
+            blocker = sqlite3.connect(database)
+            try:
+                blocker.execute("BEGIN IMMEDIATE")
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    checkpoint = executor.submit(
+                        waiting_ledger.record_report_evaluation,
+                        [execution],
+                        [],
+                        finalization_claim_id=claim.claim_id,
+                    )
+                    assert write_attempted.wait(timeout=5)
+
+                    clock.current = claim.expires_at
+                    blocker.commit()
+
+                    with pytest.raises(RuntimeError, match="live finalization claim"):
+                        checkpoint.result(timeout=5)
+            finally:
+                blocker.close()
+
+            assert waiting_ledger.list_report_evaluator_executions(
+                initial.run.run_id
+            ) == []
 
 
 def test_finalization_claim_renews_from_ledger_time_without_changing_identity(tmp_path):
