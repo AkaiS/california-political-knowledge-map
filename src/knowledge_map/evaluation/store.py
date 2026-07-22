@@ -10,7 +10,7 @@ import hashlib
 import json
 import sqlite3
 import tempfile
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
@@ -258,10 +258,16 @@ def _definition_metadata(definition: Any) -> dict[str, Any]:
 class SQLiteEvaluationLedger:
     """A relational ledger for imported definitions and artifact metadata."""
 
-    def __init__(self, db_path: str | Path = ":memory:") -> None:
+    def __init__(
+        self,
+        db_path: str | Path = ":memory:",
+        *,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self._connection = sqlite3.connect(str(db_path), check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._transaction_lock = RLock()
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
         if str(db_path) == ":memory:":
             self._artifact_root = Path(tempfile.mkdtemp(prefix="evaluation-artifacts-"))
         else:
@@ -1102,7 +1108,6 @@ class SQLiteEvaluationLedger:
         issues: Iterable[EvaluationRunIssue] = (),
         *,
         finalization_claim_id: UUID | None = None,
-        claim_now: datetime | None = None,
     ) -> None:
         """Atomically persist one report checkpoint and its diagnostics."""
         executions = tuple(executions)
@@ -1110,22 +1115,25 @@ class SQLiteEvaluationLedger:
         issue_items = tuple(issues)
         with self._transaction_lock:
             try:
-                self._connection.execute("BEGIN")
+                self._connection.execute("BEGIN IMMEDIATE")
                 if finalization_claim_id is not None:
                     if not executions:
                         raise ValueError(
                             "a finalization claim requires a report execution checkpoint"
                         )
-                    _, claim_timestamp = self._claim_timestamp(claim_now)
+                    _, claim_timestamp = self._claim_timestamp()
                     claim = self._connection.execute(
                         """
-                        SELECT 1 FROM evaluation_runs
+                        SELECT 1
+                        FROM evaluation_runs
                         WHERE run_id = ?
+                          AND status = ?
                           AND finalization_claim_id = ?
                           AND finalization_claim_expires_at > ?
                         """,
                         (
                             str(executions[0].run_id),
+                            EvaluationRunStatus.FINALIZATION_PENDING.value,
                             str(finalization_claim_id),
                             claim_timestamp,
                         ),
@@ -1171,7 +1179,8 @@ class SQLiteEvaluationLedger:
         gate_items = tuple(gate_outcomes)
         with self._transaction_lock:
             try:
-                self._connection.execute("BEGIN")
+                self._connection.execute("BEGIN IMMEDIATE")
+                _, claim_timestamp = self._claim_timestamp()
                 row = self._connection.execute(
                     "SELECT * FROM evaluation_runs WHERE run_id = ?",
                     (str(run_id),),
@@ -1179,6 +1188,31 @@ class SQLiteEvaluationLedger:
                 if row is None:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
                 if row["status"] != EvaluationRunStatus.COMPLETED.value:
+                    if row["status"] == EvaluationRunStatus.FINALIZATION_PENDING.value:
+                        if finalization_claim_id is None:
+                            raise ValueError(
+                                "Evaluation Run completion requires its exact live finalization claim"
+                            )
+                        claim = self._connection.execute(
+                            """
+                            SELECT 1
+                            FROM evaluation_runs
+                            WHERE run_id = ?
+                              AND status = ?
+                              AND finalization_claim_id = ?
+                              AND finalization_claim_expires_at > ?
+                            """,
+                            (
+                                str(run_id),
+                                EvaluationRunStatus.FINALIZATION_PENDING.value,
+                                str(finalization_claim_id),
+                                claim_timestamp,
+                            ),
+                        ).fetchone()
+                        if claim is None:
+                            raise RuntimeError(
+                                "cannot complete Evaluation Run without the live finalization claim"
+                            )
                     self._assert_run_is_complete(run_id)
                     if (
                         finalization_claim_id is not None
@@ -1731,9 +1765,8 @@ class SQLiteEvaluationLedger:
         ).fetchone()
         return None if row is None else self._run_from_row(row)
 
-    @staticmethod
-    def _claim_timestamp(value: datetime | None) -> tuple[datetime, str]:
-        timestamp = value or datetime.now(timezone.utc)
+    def _claim_timestamp(self) -> tuple[datetime, str]:
+        timestamp = self._clock()
         if timestamp.tzinfo is None:
             raise ValueError("finalization claim timestamps must include a timezone")
         timestamp = timestamp.astimezone(timezone.utc)
@@ -1745,24 +1778,23 @@ class SQLiteEvaluationLedger:
         *,
         owner_id: str,
         lease_seconds: float = 300.0,
-        now: datetime | None = None,
     ) -> EvaluationFinalizationClaim | None:
         """Atomically acquire a live finalization lease, if one is available."""
         if not owner_id:
             raise ValueError("finalization claim owner_id must be non-empty")
         if lease_seconds <= 0:
             raise ValueError("finalization claim lease_seconds must be greater than 0")
-        acquired_at, acquired_timestamp = self._claim_timestamp(now)
-        expires_at = acquired_at + timedelta(seconds=lease_seconds)
-        claim = EvaluationFinalizationClaim(
-            run_id=run_id,
-            owner_id=owner_id,
-            acquired_at=acquired_at,
-            expires_at=expires_at,
-        )
         with self._transaction_lock:
             try:
-                self._connection.execute("BEGIN")
+                self._connection.execute("BEGIN IMMEDIATE")
+                acquired_at, acquired_timestamp = self._claim_timestamp()
+                expires_at = acquired_at + timedelta(seconds=lease_seconds)
+                claim = EvaluationFinalizationClaim(
+                    run_id=run_id,
+                    owner_id=owner_id,
+                    acquired_at=acquired_at,
+                    expires_at=expires_at,
+                )
                 row = self._connection.execute(
                     "SELECT status FROM evaluation_runs WHERE run_id = ?",
                     (str(run_id),),
@@ -1834,37 +1866,53 @@ class SQLiteEvaluationLedger:
         self,
         run_id: UUID,
         claim_id: UUID,
-        *,
-        now: datetime | None = None,
     ) -> bool:
-        _, timestamp = self._claim_timestamp(now)
-        row = self._connection.execute(
-            """
-            SELECT 1 FROM evaluation_runs
-            WHERE run_id = ?
-              AND finalization_claim_id = ?
-              AND finalization_claim_expires_at > ?
-            """,
-            (str(run_id), str(claim_id), timestamp),
-        ).fetchone()
-        return row is not None
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN")
+                _, timestamp = self._claim_timestamp()
+                row = self._connection.execute(
+                    """
+                    SELECT 1 FROM evaluation_runs
+                    WHERE run_id = ?
+                      AND status = ?
+                      AND finalization_claim_id = ?
+                      AND finalization_claim_expires_at > ?
+                    """,
+                    (
+                        str(run_id),
+                        EvaluationRunStatus.FINALIZATION_PENDING.value,
+                        str(claim_id),
+                        timestamp,
+                    ),
+                ).fetchone()
+                self._connection.commit()
+                return row is not None
+            except Exception:
+                self._connection.rollback()
+                raise
 
     def release_finalization_claim(self, run_id: UUID, claim_id: UUID) -> bool:
         """Release only the exact claim token that was acquired."""
         with self._transaction_lock:
-            cursor = self._connection.execute(
-                """
-                UPDATE evaluation_runs
-                SET finalization_claim_id = NULL,
-                    finalization_claim_owner_id = NULL,
-                    finalization_claim_acquired_at = NULL,
-                    finalization_claim_expires_at = NULL
-                WHERE run_id = ? AND finalization_claim_id = ?
-                """,
-                (str(run_id), str(claim_id)),
-            )
-            self._connection.commit()
-            return cursor.rowcount == 1
+            try:
+                self._connection.execute("BEGIN IMMEDIATE")
+                cursor = self._connection.execute(
+                    """
+                    UPDATE evaluation_runs
+                    SET finalization_claim_id = NULL,
+                        finalization_claim_owner_id = NULL,
+                        finalization_claim_acquired_at = NULL,
+                        finalization_claim_expires_at = NULL
+                    WHERE run_id = ? AND finalization_claim_id = ?
+                    """,
+                    (str(run_id), str(claim_id)),
+                )
+                self._connection.commit()
+                return cursor.rowcount == 1
+            except Exception:
+                self._connection.rollback()
+                raise
 
     def get_resolved_evaluation_plan(
         self, run_id: UUID

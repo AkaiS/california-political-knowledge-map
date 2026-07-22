@@ -78,6 +78,14 @@ class Metadata(BaseModel):
     source: str
 
 
+@dataclass
+class ControllableClock:
+    current: datetime
+
+    def __call__(self) -> datetime:
+        return self.current
+
+
 def _schemas_for(cases) -> SchemaRegistry:
     schemas = SchemaRegistry()
     schemas.register(cases[0].input_schema, Input)
@@ -2370,9 +2378,9 @@ def test_finalization_rejects_a_tampered_frozen_aggregate_manifest(tmp_path):
 def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("finalization-claim")
     database = tmp_path / "evaluation.sqlite"
-    now = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
-    with SQLiteEvaluationLedger(database) as first_ledger:
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
         initial = EvaluationRunner(first_ledger).run(
             suite=suite,
             gold_set=gold_set,
@@ -2383,25 +2391,63 @@ def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
                 provider="deterministic", model="fixture"
             ),
         )
-        with SQLiteEvaluationLedger(database) as competing_ledger:
+        with SQLiteEvaluationLedger(database, clock=clock) as competing_ledger:
             first_claim = first_ledger.acquire_finalization_claim(
                 initial.run.run_id,
                 owner_id="worker-a",
                 lease_seconds=60,
-                now=now,
             )
             second_claim = competing_ledger.acquire_finalization_claim(
                 initial.run.run_id,
                 owner_id="worker-b",
                 lease_seconds=60,
-                now=now,
             )
 
             assert first_claim.owner_id == "worker-a"
-            assert first_claim.acquired_at == now
-            assert first_claim.expires_at == now + timedelta(seconds=60)
+            assert first_claim.acquired_at == clock.current
+            assert first_claim.expires_at == clock.current + timedelta(seconds=60)
             assert second_claim is None
             assert competing_ledger.get_finalization_claim(initial.run.run_id) == first_claim
+
+
+def test_finalization_authority_uses_one_shared_ledger_clock(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("ledger-clock")
+    database = tmp_path / "evaluation.sqlite"
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            claim = first_ledger.acquire_finalization_claim(
+                initial.run.run_id,
+                owner_id="worker-a",
+                lease_seconds=10,
+            )
+            assert claim is not None
+            assert claim.acquired_at == clock.current
+
+            clock.current += timedelta(seconds=11)
+
+            assert first_ledger.owns_finalization_claim(
+                initial.run.run_id, claim.claim_id
+            ) is False
+            replacement = second_ledger.acquire_finalization_claim(
+                initial.run.run_id,
+                owner_id="worker-b",
+                lease_seconds=10,
+            )
+
+            assert replacement is not None
+            assert replacement.acquired_at == clock.current
 
 
 def test_finalize_refuses_a_live_claim_before_resolving_report_evaluators(tmp_path):
@@ -2533,9 +2579,9 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
         }
     )
     checks = 0
-    now = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
-    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
         runner = EvaluationRunner(ledger)
         initial = runner.run(
             suite=suite,
@@ -2574,9 +2620,9 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
             initial.run.run_id,
             owner_id="crashed-worker",
             lease_seconds=1,
-            now=now,
         )
         assert stale_claim is not None
+        clock.current += timedelta(seconds=2)
 
         recovery_calls: list[str] = []
         recovered = runner.finalize(
@@ -2586,7 +2632,6 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
                 recovery_calls.append(configured.name) or CaseTable()
             ),
             worker_id="recovery-worker",
-            now=now + timedelta(seconds=2),
         )
 
         assert recovered.run.status.value == "completed"
@@ -2719,8 +2764,12 @@ def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tm
                 },
             )
         ledger.freeze_aggregate_manifest(run.run_id)
+        claim = ledger.acquire_finalization_claim(run.run_id, owner_id="completion-test")
+        assert claim is not None
         with pytest.raises(ValueError, match="case evaluators"):
-            ledger.complete_evaluation_run(run.run_id)
+            ledger.complete_evaluation_run(
+                run.run_id, finalization_claim_id=claim.claim_id
+            )
 
 
 def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(

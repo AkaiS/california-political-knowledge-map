@@ -12,13 +12,13 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** None — can start immediately
 
-- [ ] The ledger accepts an injectable timezone-aware UTC clock, defaulting to the real current UTC time.
-- [ ] Claim acquisition, expiry recovery, checkpointing, renewal eligibility, release, and completion no longer depend on a caller-supplied fixed current time.
-- [ ] Finalization callers cannot freeze the authority lifecycle by passing one timestamp for the whole attempt.
-- [ ] Report checkpoints require the exact matching claim to remain live inside the checkpoint transaction.
-- [ ] Evaluation Run completion requires the exact matching claim to remain live inside the completion transaction, including when no successor has replaced an expired claim.
-- [ ] Transaction ordering prevents a writer that waited beyond expiry from succeeding with a time sampled before it obtained the write position.
-- [ ] Deterministic multiple-connection tests use one shared controllable clock and no wall-clock sleeps.
+- [x] The ledger accepts an injectable timezone-aware UTC clock, defaulting to the real current UTC time.
+- [x] Claim acquisition, expiry recovery, checkpointing, renewal eligibility, release, and completion no longer depend on a caller-supplied fixed current time.
+- [x] Finalization callers cannot freeze the authority lifecycle by passing one timestamp for the whole attempt.
+- [x] Report checkpoints require the exact matching claim to remain live inside the checkpoint transaction.
+- [x] Evaluation Run completion requires the exact matching claim to remain live inside the completion transaction, including when no successor has replaced an expired claim.
+- [x] Transaction ordering prevents a writer that waited beyond expiry from succeeding with a time sampled before it obtained the write position.
+- [x] Deterministic multiple-connection tests use one shared controllable clock and no wall-clock sleeps.
 
 ## Renew authority during long-running evaluators
 

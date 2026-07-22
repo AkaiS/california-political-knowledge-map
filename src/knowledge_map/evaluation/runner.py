@@ -8,7 +8,6 @@ import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -780,7 +779,6 @@ class EvaluationRunner:
         should_cancel: Callable[[], bool] | None = None,
         worker_id: str | None = None,
         lease_seconds: float = 300.0,
-        now: datetime | None = None,
     ) -> EvaluationRunResult:
         """Explicitly resume missing report evaluator work for one frozen run.
 
@@ -807,7 +805,6 @@ class EvaluationRunner:
             run_id,
             owner_id=owner_id,
             lease_seconds=lease_seconds,
-            now=now,
         )
         if claim is None:
             current_claim = self.ledger.get_finalization_claim(run_id)
@@ -826,7 +823,6 @@ class EvaluationRunner:
                 evaluator_resolver=evaluator_resolver,
                 release_gates=release_gates,
                 should_cancel=should_cancel,
-                now=now,
             )
         finally:
             self.ledger.release_finalization_claim(run_id, claim.claim_id)
@@ -847,7 +843,6 @@ class EvaluationRunner:
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None,
         should_cancel: Callable[[], bool] | None,
-        now: datetime | None,
     ) -> EvaluationRunResult:
         """Perform report work while holding one finalization claim."""
 
@@ -869,7 +864,7 @@ class EvaluationRunner:
         trace_id, span_id = report.trace_id, report.span_id
         for configured in suite.report_evaluators:
             if not self.ledger.owns_finalization_claim(
-                run_id, claim.claim_id, now=now
+                run_id, claim.claim_id
             ):
                 raise RuntimeError("Evaluation Finalization lost its finalization claim")
             if should_cancel is not None and should_cancel():
@@ -885,7 +880,7 @@ class EvaluationRunner:
             if identity in completed_names:
                 continue
             if not self.ledger.owns_finalization_claim(
-                run_id, claim.claim_id, now=now
+                run_id, claim.claim_id
             ):
                 raise RuntimeError("Evaluation Finalization lost its finalization claim")
             started = time.perf_counter()
@@ -948,7 +943,6 @@ class EvaluationRunner:
                 observations,
                 issues[issue_start:],
                 finalization_claim_id=claim.claim_id,
-                claim_now=now,
             )
 
         pending_run = self.ledger.get_evaluation_run(run_id)
