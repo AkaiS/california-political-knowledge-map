@@ -58,6 +58,7 @@ from knowledge_map.evaluation import (
     SuccessfulReportCaseEvidence,
     TaskFailure,
     TaskSuccess,
+    evaluator_version_tag,
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
@@ -144,6 +145,12 @@ class CaseTable(ReportEvaluator):
 class NoObservationEvaluator(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:
         return True
+
+
+@dataclass
+class MappingCaseEvaluator(Evaluator):
+    def evaluate(self, ctx: EvaluatorContext) -> dict[str, bool | float]:
+        return {"answer-correct": True, "answer-confidence": 0.75}
 
 
 @dataclass
@@ -327,8 +334,21 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
     )
     assert plan_result.plan is not None
 
+    class IndependentlyVersionedExactAnswer(ExactAnswer):
+        def get_default_evaluation_name(self) -> str:
+            return "ExactAnswer"
+
+        def get_evaluator_version(self) -> str:
+            return "implementation-version-must-not-win"
+
     def resolve(configured):
-        return ExactAnswer() if configured.name == "exact-case" else CountCases()
+        return (
+            IndependentlyVersionedExactAnswer()
+            if configured.name == "exact-case"
+            else CountCases()
+        )
+
+    captured_reports: list = []
 
     in_memory = suite.execute(
         plan=plan_result.plan,
@@ -350,15 +370,29 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
                 provider="deterministic", model="fixture"
             ),
         )
+        checkpoint_case = ledger.materialize_report_case(
+            initial.case_results[0].result_id, _schemas_for(cases)
+        )
         durable = runner.finalize(
             initial.run.run_id,
             schemas=_schemas_for(cases),
-            evaluator_resolver=resolve,
+            evaluator_resolver=lambda configured: CaptureTypedReport(captured_reports),
         )
 
     assert durable.run.status == "completed"
     assert in_memory.cases[0].output.model_dump() == durable.case_results[0].task_outcome.output
     assert list(in_memory.cases[0].assertions) == ["ExactAnswer"]
+    configured = suite.case_evaluators[0]
+    expected_version = evaluator_version_tag(
+        configured.evaluator_revision,
+        configured.configuration_fingerprint,
+    )
+    assert in_memory.cases[0].assertions["ExactAnswer"].evaluator_version == expected_version
+    assert checkpoint_case.assertions["exact-case"].evaluator_version == expected_version
+    assert (
+        captured_reports[0].cases[0].assertions["exact-case"].evaluator_version
+        == expected_version
+    )
     assert [execution.evaluator_name for execution in durable.case_evaluator_executions] == [
         "exact-case"
     ]
@@ -410,6 +444,56 @@ def test_terminal_checkpoint_materializes_one_typed_report_case(tmp_path):
     assert report_case.total_duration >= report_case.task_duration
     assert report_case.trace_id is not None and len(report_case.trace_id) == 32
     assert report_case.span_id is not None and len(report_case.span_id) == 16
+
+
+def test_mapping_case_evaluator_identity_survives_checkpoint_and_aggregate_materialization(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "mapping-evaluator-version", case_evaluator="configured-judge"
+    )
+    configured = suite.case_evaluators[0]
+    expected_version = evaluator_version_tag(
+        configured.evaluator_revision,
+        configured.configuration_fingerprint,
+    )
+    captured_reports: list = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                MappingCaseEvaluator()
+                if configured.name == "configured-judge"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        checkpoint_case = ledger.materialize_report_case(
+            initial.case_results[0].result_id, _schemas_for(cases)
+        )
+        runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CaptureTypedReport(captured_reports),
+        )
+
+    assert set(checkpoint_case.assertions) == {"answer-correct"}
+    assert set(checkpoint_case.scores) == {"answer-confidence"}
+    assert {
+        checkpoint_case.assertions["answer-correct"].evaluator_version,
+        checkpoint_case.scores["answer-confidence"].evaluator_version,
+    } == {expected_version}
+    aggregate_case = captured_reports[0].cases[0]
+    assert aggregate_case.assertions["answer-correct"].evaluator_version == expected_version
+    assert aggregate_case.scores["answer-confidence"].evaluator_version == expected_version
 
 
 def test_typed_report_case_rejects_an_unallowlisted_schema(tmp_path):
@@ -1274,6 +1358,12 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture(
         "case-evaluator-failure", case_evaluator="failing-case"
     )
+    configured = suite.case_evaluators[0]
+    expected_version = evaluator_version_tag(
+        configured.evaluator_revision,
+        configured.configuration_fingerprint,
+    )
+    captured_reports: list = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
@@ -1295,7 +1385,7 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
         result = runner.finalize(
             initial.run.run_id,
             schemas=_schemas_for(cases),
-            evaluator_resolver=lambda configured: CountCases(),
+            evaluator_resolver=lambda configured: CaptureTypedReport(captured_reports),
         )
 
         assert result.run.status == "completed"
@@ -1303,6 +1393,12 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
         assert isinstance(materialized.evaluator_failures[0], EvaluatorFailure)
         assert materialized.evaluator_failures[0].name == "failing-case"
         assert materialized.evaluator_failures[0].source.name == "_RecordingEvaluator"
+        assert materialized.evaluator_failures[0].error_type == "ValueError"
+        assert materialized.evaluator_failures[0].error_stacktrace
+        assert materialized.evaluator_failures[0].evaluator_version == expected_version
+        aggregate_failure = captured_reports[0].cases[0].evaluator_failures[0]
+        assert isinstance(aggregate_failure, EvaluatorFailure)
+        assert aggregate_failure.evaluator_version == expected_version
         assert [execution.status.value for execution in result.case_evaluator_executions] == [
             "failed",
             "failed",

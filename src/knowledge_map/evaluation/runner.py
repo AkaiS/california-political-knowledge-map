@@ -28,7 +28,6 @@ from .definitions import (
 from .engine import EvaluationEngine
 from .reporting import (
     SchemaRegistry,
-    evaluator_version_tag,
     report_case_payload,
 )
 from .preflight import EvaluationPreflightError, preflight_selected_cases
@@ -381,14 +380,6 @@ class _DurableCheckpointSink:
                         )
                     )
         evidence = report_case_payload(framework_case)
-        for category in ("scores", "labels", "assertions"):
-            for name, evaluation_result in evidence.get(category, {}).items():
-                configured = self.configured_case_evaluators.get(name)
-                if configured is not None:
-                    evaluation_result["evaluator_version"] = evaluator_version_tag(
-                        configured.evaluator_revision,
-                        configured.configuration_fingerprint,
-                    )
         self.ledger.record_case_evaluation(
             completed, executions, observations, evidence
         )

@@ -13,7 +13,7 @@ from pydantic_evals.reporting.analyses import ScalarResult
 
 from .definitions import EvaluationCase
 from .preflight import ResolvedEvaluationPlan
-from .suites import ConfiguredEvaluator, EvaluationSuite
+from .suites import ConfiguredEvaluator, EvaluationSuite, _ConfiguredCaseEvaluator
 
 
 class EvaluationCheckpointSink(Protocol):
@@ -171,7 +171,9 @@ class EvaluationEngine:
                 resolved = evaluator_resolver(configured_by_name[name])
                 if not isinstance(resolved, Evaluator):
                     raise ValueError(f"{name} did not resolve to a case evaluator")
-                evaluator_instances[name] = resolved
+                evaluator_instances[name] = _ConfiguredCaseEvaluator(
+                    configured_by_name[name], resolved
+                )
             return evaluator_instances[name]
 
         dataset_evaluators = tuple(case_evaluator(name) for name in suite_wide_names)

@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_evals import Case, Dataset
-from pydantic_evals.evaluators import Evaluator, ReportEvaluator
+from pydantic_evals.evaluators import Evaluator, EvaluatorSpec, ReportEvaluator
 from pydantic_evals.reporting import EvaluationReport
 
 from .definitions import (
@@ -23,6 +23,7 @@ from .definitions import (
     content_fingerprint,
     new_uuid7,
 )
+from .reporting import evaluator_version_tag
 from uuid import UUID
 
 
@@ -271,6 +272,32 @@ class ConfiguredEvaluator(BaseModel):
         ):
             raise ValueError("configuration_fingerprint does not match configuration")
         object.__setattr__(self, "configuration_fingerprint", fingerprint)
+
+
+class _ConfiguredCaseEvaluator(Evaluator):
+    """Expose the suite-owned behavioral identity to Pydantic Evals."""
+
+    def __init__(self, configured: ConfiguredEvaluator, delegate: Evaluator) -> None:
+        self.configured = configured
+        self.delegate = delegate
+
+    def get_default_evaluation_name(self) -> str:
+        return self.delegate.get_default_evaluation_name()
+
+    def as_spec(self) -> EvaluatorSpec:
+        return self.delegate.as_spec()
+
+    def get_evaluator_version(self) -> str:
+        return evaluator_version_tag(
+            self.configured.evaluator_revision,
+            self.configured.configuration_fingerprint,
+        )
+
+    def evaluate(self, ctx: Any) -> Any:
+        return self.delegate.evaluate(ctx)
+
+    async def evaluate_async(self, ctx: Any) -> Any:
+        return await self.delegate.evaluate_async(ctx)
 
 
 class ConfiguredEvaluatorReference(BaseModel):
@@ -684,7 +711,7 @@ class EvaluationSuite(BaseModel):
         resolved = resolver(configured)
         if not isinstance(resolved, Evaluator):
             raise ValueError(f"{configured.name} did not resolve to a case evaluator")
-        return resolved
+        return _ConfiguredCaseEvaluator(configured, resolved)
 
     @staticmethod
     def _resolve_report_evaluator(
