@@ -264,11 +264,11 @@ One recorded application of a report evaluator invoked after case evaluation aga
 _Avoid_: Run evaluator, generic evaluator execution
 
 **Evaluation Metric Definition**:
-An immutable, repository-wide authored definition of an evaluation measurement, identified by a namespaced name and evaluator revision and declaring its observation value type, comparison operation, and semantic description. Suites may reuse the exact definition across different Evaluation Task Contracts when those measurement semantics remain identical.
+An immutable, repository-wide authored definition of an evaluation measurement, identified by a namespaced name and evaluator revision and declaring its observation value type, comparison operation, and semantic description. A structured definition also declares the exact object-shaped value schema that every observation must satisfy; its named fields give each constituent value semantic meaning, while collections may appear only beneath those fields. The metric identity and value-schema identity are distinct contracts. Suites may reuse the exact definition across different Evaluation Task Contracts when those measurement semantics remain identical.
 _Avoid_: Metric, score definition, display label
 
 **Evaluation Metric Observation**:
-A value measured under an Evaluation Metric Definition and owned by the evaluator execution that produced it. A Case Metric Observation derives its Evaluation Case Result through its Case Evaluator Execution, while a Run Metric Observation derives its Evaluation Run through its Report Evaluator Execution.
+A value measured under an Evaluation Metric Definition and owned by the evaluator execution that produced it. Its value must conform to the type and, for structured observations, the exact object-shaped schema declared by that definition. A Case Metric Observation derives its Evaluation Case Result through its Case Evaluator Execution, while a Run Metric Observation derives its Evaluation Run through its Report Evaluator Execution.
 _Avoid_: Score, metric result, measurement row
 
 **Evaluation Comparison Operation**:
