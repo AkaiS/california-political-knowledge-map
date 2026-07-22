@@ -53,10 +53,15 @@ from .runs import (
     EvaluationRunRecord,
     EvaluationRunStatus,
     ReportEvaluatorExecution,
+    REPORT_CASE_EVIDENCE_ADAPTER,
     RunMetricObservation,
+    FailedReportCaseEvidence,
+    SuccessfulReportCaseEvidence,
+    TaskFailure,
     TaskOutcome,
+    TaskSuccess,
 )
-from .reporting import SchemaRegistry, _evaluation_result
+from .reporting import SchemaRegistry, _evaluation_result, _evaluator_failure
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -820,6 +825,14 @@ class SQLiteEvaluationLedger:
         """Atomically finalize one case result and its evaluator evidence."""
         executions = tuple(executions)
         observations = tuple(observations)
+        validated_evidence = self._validate_report_case_evidence(
+            result, report_case_evidence
+        )
+        canonical_evidence = (
+            None
+            if validated_evidence is None
+            else validated_evidence.model_dump(mode="json")
+        )
         task_outcome_payload = (
             None if result.task_outcome is None else result.task_outcome.model_dump(mode="json")
         )
@@ -834,7 +847,7 @@ class SQLiteEvaluationLedger:
         checkpoint_hash = content_fingerprint(
             {
                 "case_result": result_payload,
-                "report_case_evidence": report_case_evidence,
+                "report_case_evidence": canonical_evidence,
                 "case_evaluator_executions": [
                     item.model_dump(mode="json") for item in executions
                 ],
@@ -862,8 +875,8 @@ class SQLiteEvaluationLedger:
                             sort_keys=True,
                             separators=(",", ":"),
                         ),
-                        None if report_case_evidence is None else json.dumps(
-                            report_case_evidence, sort_keys=True, separators=(",", ":")
+                        None if canonical_evidence is None else json.dumps(
+                            canonical_evidence, sort_keys=True, separators=(",", ":")
                         ),
                         str(checkpoint_id),
                         checkpoint_hash,
@@ -897,7 +910,7 @@ class SQLiteEvaluationLedger:
                         == list(executions)
                         and self.list_case_metric_observations(result.result_id)
                         == list(observations)
-                        and existing_evidence == report_case_evidence
+                        and existing_evidence == canonical_evidence
                     ):
                         self._connection.commit()
                         return
@@ -923,13 +936,45 @@ class SQLiteEvaluationLedger:
                 self._connection.rollback()
                 raise
 
+    @staticmethod
+    def _validate_report_case_evidence(
+        result: EvaluationCaseResult,
+        evidence: Mapping[str, Any] | None,
+    ) -> SuccessfulReportCaseEvidence | FailedReportCaseEvidence | None:
+        if evidence is None:
+            return None
+        validated = REPORT_CASE_EVIDENCE_ADAPTER.validate_python(evidence)
+        if isinstance(validated, SuccessfulReportCaseEvidence):
+            if (
+                result.execution_disposition is not EvaluationCaseDisposition.COMPLETED
+                or not isinstance(result.task_outcome, TaskSuccess)
+            ):
+                raise ValueError(
+                    "successful ReportCase evidence requires a completed case "
+                    "and successful task outcome"
+                )
+            if content_fingerprint(validated.output) != content_fingerprint(
+                result.task_outcome.model_dump(mode="json")["output"]
+            ):
+                raise ValueError(
+                    "successful ReportCase evidence output does not match the task outcome"
+                )
+        elif (
+            result.execution_disposition is not EvaluationCaseDisposition.FAILED
+            or not isinstance(result.task_outcome, TaskFailure)
+        ):
+            raise ValueError(
+                "failed ReportCase evidence requires a failed case and failed task outcome"
+            )
+        return validated
+
     def materialize_report_case(
         self, case_result_id: UUID, schemas: SchemaRegistry
     ) -> ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any]:
         """Reconstruct a typed framework case from one terminal checkpoint."""
         row = self._connection.execute(
             """
-            SELECT r.execution_disposition, r.report_case_json, d.definition_json,
+            SELECT r.*, d.definition_json,
                    d.content_hash AS stored_case_content_hash,
                    m.case_content_hash AS manifested_case_content_hash
             FROM evaluation_case_results AS r
@@ -957,7 +1002,9 @@ class SQLiteEvaluationLedger:
             row["manifested_case_content_hash"],
         } or row["stored_case_content_hash"] != row["manifested_case_content_hash"]:
             raise ValueError("frozen case definition fingerprint is mismatched")
-        evidence = json.loads(row["report_case_json"])
+        evidence = self._validate_report_case_evidence(
+            self._case_result_from_row(row), json.loads(row["report_case_json"])
+        )
         input_schema = SchemaReference.model_validate(authored["input_schema"])
         metadata_schema = SchemaReference.model_validate(authored["metadata_schema"])
         expected_schema = (
@@ -973,37 +1020,53 @@ class SQLiteEvaluationLedger:
             else schemas.validate(expected_schema, authored["expected_output"])
         )
         if row["execution_disposition"] == EvaluationCaseDisposition.FAILED.value:
+            if not isinstance(evidence, FailedReportCaseEvidence):
+                raise ValueError("failed case requires failed ReportCase evidence")
             return ReportCaseFailure(
-                name=evidence["name"],
+                name=evidence.name,
                 inputs=typed_inputs,
                 metadata=typed_metadata,
                 expected_output=typed_expected,
-                error_message=evidence["error_message"],
-                error_stacktrace=evidence["error_stacktrace"],
-                source_case_name=evidence.get("source_case_name"),
-                trace_id=evidence.get("trace_id"),
-                span_id=evidence.get("span_id"),
+                error_message=evidence.error_message,
+                error_stacktrace=evidence.error_stacktrace,
+                source_case_name=evidence.source_case_name,
+                trace_id=evidence.trace_id,
+                span_id=evidence.span_id,
             )
+        if not isinstance(evidence, SuccessfulReportCaseEvidence):
+            raise ValueError("completed case requires successful ReportCase evidence")
         output_schema = expected_schema
         if output_schema is None:
             raise ValueError("successful ReportCase requires an output schema")
         return ReportCase(
-            name=evidence["name"],
+            name=evidence.name,
             inputs=typed_inputs,
             metadata=typed_metadata,
             expected_output=typed_expected,
-            output=schemas.validate(output_schema, evidence["output"]),
-            metrics=evidence.get("metrics", {}),
-            attributes=evidence.get("attributes", {}),
-            scores={k: _evaluation_result(v) for k, v in evidence.get("scores", {}).items()},
-            labels={k: _evaluation_result(v) for k, v in evidence.get("labels", {}).items()},
-            assertions={k: _evaluation_result(v) for k, v in evidence.get("assertions", {}).items()},
-            task_duration=evidence.get("task_duration", 0),
-            total_duration=evidence.get("total_duration", 0),
-            source_case_name=evidence.get("source_case_name"),
-            trace_id=evidence.get("trace_id"),
-            span_id=evidence.get("span_id"),
-            evaluator_failures=evidence.get("evaluator_failures", []),
+            output=schemas.validate(output_schema, evidence.output),
+            metrics=dict(evidence.metrics),
+            attributes=dict(evidence.attributes),
+            scores={
+                key: _evaluation_result(value.model_dump(mode="json"))
+                for key, value in evidence.scores.items()
+            },
+            labels={
+                key: _evaluation_result(value.model_dump(mode="json"))
+                for key, value in evidence.labels.items()
+            },
+            assertions={
+                key: _evaluation_result(value.model_dump(mode="json"))
+                for key, value in evidence.assertions.items()
+            },
+            task_duration=evidence.task_duration,
+            total_duration=evidence.total_duration,
+            source_case_name=evidence.source_case_name,
+            trace_id=evidence.trace_id,
+            span_id=evidence.span_id,
+            evaluator_failures=[
+                _evaluator_failure(item.model_dump(mode="json"))
+                for item in evidence.evaluator_failures
+            ],
         )
 
     def record_report_evaluation(
@@ -1399,10 +1462,17 @@ class SQLiteEvaluationLedger:
                 item.model_dump(mode="json")
                 for item in self.list_case_metric_observations(UUID(row["result_id"]))
             ]
+            validated_evidence = self._validate_report_case_evidence(
+                self._case_result_from_row(row), json.loads(row["report_case_json"])
+            )
+            if validated_evidence is None:
+                raise ValueError(
+                    "aggregate manifest requires every terminal checkpoint to have evidence"
+                )
             checkpoint_hash = content_fingerprint(
                 {
                     "case_result": result_payload,
-                    "report_case_evidence": json.loads(row["report_case_json"]),
+                    "report_case_evidence": validated_evidence.model_dump(mode="json"),
                     "case_evaluator_executions": executions,
                     "case_metric_observations": observations,
                     "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,

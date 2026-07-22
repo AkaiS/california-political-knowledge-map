@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from pydantic_evals.evaluators import EvaluatorSpec
+from pydantic_evals.evaluators import EvaluatorFailure, EvaluatorSpec
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 from pydantic_evals.evaluators.evaluator import EvaluationResult
 
@@ -91,6 +91,7 @@ def report_case_payload(
     payload = _json_value(case)
     for authored_field in ("inputs", "metadata", "expected_output"):
         payload.pop(authored_field, None)
+    payload["kind"] = "failure" if isinstance(case, ReportCaseFailure) else "success"
     return payload
 
 
@@ -110,6 +111,21 @@ def _evaluation_result(value: Any) -> EvaluationResult[Any]:
             arguments=source.get("arguments"),
         ),
         evaluator_version=value.get("evaluator_version"),
+    )
+
+
+def _evaluator_failure(value: Any) -> EvaluatorFailure:
+    source = value.get("source", {})
+    return EvaluatorFailure(
+        name=value["name"],
+        error_message=value["error_message"],
+        error_stacktrace=value["error_stacktrace"],
+        source=EvaluatorSpec(
+            name=source["name"],
+            arguments=source.get("arguments"),
+        ),
+        evaluator_version=value.get("evaluator_version"),
+        error_type=value.get("error_type"),
     )
 
 

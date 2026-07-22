@@ -13,6 +13,7 @@ from pydantic import BaseModel, SecretStr
 from pydantic_evals.evaluators import (
     Evaluator,
     EvaluatorContext,
+    EvaluatorFailure,
     ReportEvaluator,
     ReportEvaluatorContext,
 )
@@ -54,6 +55,7 @@ from knowledge_map.evaluation import (
     NoComparisonOperation,
     SchemaReference,
     SchemaRegistry,
+    SuccessfulReportCaseEvidence,
     TaskFailure,
     TaskSuccess,
     preflight_selected_cases,
@@ -431,6 +433,39 @@ def test_typed_report_case_rejects_an_unallowlisted_schema(tmp_path):
             )
 
 
+def test_materialization_rejects_corrupted_stored_report_case_evidence(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("corrupted-report-evidence")
+    registry = _schemas_for(cases)
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        result = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        case_result = result.case_results[0]
+        row = ledger._connection.execute(
+            "SELECT report_case_json FROM evaluation_case_results WHERE result_id = ?",
+            (str(case_result.result_id),),
+        ).fetchone()
+        corrupted = json.loads(row["report_case_json"])
+        corrupted["unexpected"] = "must not be ignored"
+        ledger._connection.execute(
+            "UPDATE evaluation_case_results SET report_case_json = ? WHERE result_id = ?",
+            (json.dumps(corrupted), str(case_result.result_id)),
+        )
+        ledger._connection.commit()
+
+        with pytest.raises(ValueError, match="unexpected"):
+            ledger.materialize_report_case(case_result.result_id, registry)
+
+
 def test_schema_registry_rejects_a_model_with_the_wrong_fingerprint():
     class IncompatibleInput(BaseModel):
         different: int
@@ -492,14 +527,35 @@ def test_terminal_case_checkpoint_replay_is_idempotent_and_replacement_is_reject
             }
         )
         evidence = {
+            "kind": "success",
             "name": "case-1@1",
             "output": {"answer": "stable"},
+            "metrics": {},
+            "attributes": {},
+            "scores": {},
+            "labels": {},
+            "assertions": {},
+            "evaluator_failures": [],
             "task_duration": 0.1,
             "total_duration": 0.2,
+            "source_case_name": None,
+            "trace_id": None,
+            "span_id": None,
         }
 
         ledger.record_case_evaluation(completed, (), (), evidence)
-        ledger.record_case_evaluation(completed, (), (), evidence)
+        ledger.record_case_evaluation(
+            completed,
+            (),
+            (),
+            {
+                "total_duration": 0.2,
+                "output": {"answer": "stable"},
+                "name": "case-1@1",
+                "kind": "success",
+                "task_duration": 0.1,
+            },
+        )
 
         with pytest.raises(ValueError, match="different evidence"):
             ledger.record_case_evaluation(
@@ -508,6 +564,150 @@ def test_terminal_case_checkpoint_replay_is_idempotent_and_replacement_is_reject
                 (),
                 {**evidence, "total_duration": 99.0},
             )
+
+
+def _successful_report_case_evidence(**updates):
+    evidence = {
+        "kind": "success",
+        "name": "case-1@1",
+        "output": {"answer": "stable"},
+        "metrics": {},
+        "attributes": {},
+        "scores": {},
+        "labels": {},
+        "assertions": {},
+        "evaluator_failures": [],
+        "task_duration": 0.1,
+        "total_duration": 0.2,
+        "source_case_name": None,
+        "trace_id": None,
+        "span_id": None,
+    }
+    evidence.update(updates)
+    return evidence
+
+
+def test_report_case_evidence_model_is_immutable_and_rejects_unknown_nested_fields():
+    evidence = SuccessfulReportCaseEvidence.model_validate(
+        _successful_report_case_evidence(
+            assertions={
+                "quality": {
+                    "name": "quality",
+                    "value": True,
+                    "reason": None,
+                    "source": {"name": "ExactAnswer", "arguments": None},
+                    "evaluator_version": "revision-1:abc",
+                }
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="frozen"):
+        evidence.total_duration = 4
+    malformed = _successful_report_case_evidence(
+        assertions={
+            "quality": {
+                "name": "quality",
+                "value": True,
+                "reason": None,
+                "source": {
+                    "name": "ExactAnswer",
+                    "arguments": None,
+                    "unexpected": True,
+                },
+                "evaluator_version": None,
+            }
+        }
+    )
+    with pytest.raises(ValueError, match="unexpected"):
+        SuccessfulReportCaseEvidence.model_validate(malformed)
+
+
+@pytest.mark.parametrize(
+    ("evidence", "message"),
+    [
+        (_successful_report_case_evidence(unexpected=True), "unexpected"),
+        (_successful_report_case_evidence(output={"answer": "different"}), "output"),
+        (_successful_report_case_evidence(task_duration=-0.1), "greater than or equal"),
+        (
+            _successful_report_case_evidence(task_duration=0.3, total_duration=0.2),
+            "total_duration",
+        ),
+    ],
+)
+def test_checkpoint_rejects_invalid_success_evidence_before_persistence(
+    tmp_path, evidence, message
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "invalid-success-evidence"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        completed = pending[0].model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output={"answer": "stable"}),
+            }
+        )
+
+        with pytest.raises(ValueError, match=message):
+            ledger.record_case_evaluation(completed, (), (), evidence)
+
+        assert ledger.list_evaluation_case_results(run.run_id)[0] == pending[0]
+
+
+@pytest.mark.parametrize(
+    ("disposition", "outcome", "evidence", "message"),
+    [
+        (
+            EvaluationCaseDisposition.COMPLETED,
+            TaskFailure(
+                category="task_execution",
+                exception_type="RuntimeError",
+                safe_message="failed",
+            ),
+            _successful_report_case_evidence(),
+            "successful ReportCase evidence",
+        ),
+        (
+            EvaluationCaseDisposition.FAILED,
+            TaskFailure(
+                category="task_execution",
+                exception_type="RuntimeError",
+                safe_message="failed",
+            ),
+            _successful_report_case_evidence(),
+            "successful ReportCase evidence",
+        ),
+        (
+            EvaluationCaseDisposition.COMPLETED,
+            TaskSuccess(output={"answer": "stable"}),
+            {
+                "kind": "failure",
+                "name": "case-1@1",
+                "error_message": "RuntimeError: failed",
+                "error_stacktrace": "traceback",
+            },
+            "failed ReportCase evidence",
+        ),
+    ],
+)
+def test_checkpoint_rejects_evidence_variant_disposition_and_outcome_mismatches(
+    tmp_path, disposition, outcome, evidence, message
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "mismatched-evidence"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        terminal = pending[0].model_copy(
+            update={"execution_disposition": disposition, "task_outcome": outcome}
+        )
+
+        with pytest.raises(ValueError, match=message):
+            ledger.record_case_evaluation(terminal, (), (), evidence)
+
+        assert ledger.list_evaluation_case_results(run.run_id)[0] == pending[0]
 
 
 def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
@@ -1089,6 +1289,9 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
             ),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
+        materialized = ledger.materialize_report_case(
+            initial.case_results[0].result_id, _schemas_for(cases)
+        )
         result = runner.finalize(
             initial.run.run_id,
             schemas=_schemas_for(cases),
@@ -1097,6 +1300,9 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
 
         assert result.run.status == "completed"
         assert all(case.task_outcome.kind == "success" for case in result.case_results)
+        assert isinstance(materialized.evaluator_failures[0], EvaluatorFailure)
+        assert materialized.evaluator_failures[0].name == "failing-case"
+        assert materialized.evaluator_failures[0].source.name == "_RecordingEvaluator"
         assert [execution.status.value for execution in result.case_evaluator_executions] == [
             "failed",
             "failed",
@@ -2334,25 +2540,29 @@ def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tm
             ledger.complete_evaluation_run(run.run_id)
 
         for result in pending:
-                ledger.record_case_evaluation(
+            ledger.record_case_evaluation(
                 result.model_copy(
                     update={
                         "execution_disposition": EvaluationCaseDisposition.COMPLETED,
                         "task_outcome": TaskSuccess(output=Output(answer="answer")),
                     }
                 ),
-                    (),
-                    (),
-                    {
-                        "name": "case@1",
-                        "output": {"answer": "answer"},
-                        "metrics": {},
-                        "attributes": {},
-                        "scores": {},
-                        "labels": {},
-                        "assertions": {},
-                    },
-                )
+                (),
+                (),
+                {
+                    "kind": "success",
+                    "name": "case@1",
+                    "output": {"answer": "answer"},
+                    "metrics": {},
+                    "attributes": {},
+                    "scores": {},
+                    "labels": {},
+                    "assertions": {},
+                    "evaluator_failures": [],
+                    "task_duration": 0,
+                    "total_duration": 0,
+                },
+            )
         ledger.freeze_aggregate_manifest(run.run_id)
         with pytest.raises(ValueError, match="case evaluators"):
             ledger.complete_evaluation_run(run.run_id)

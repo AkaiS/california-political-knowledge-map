@@ -6,10 +6,17 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Mapping
+from typing import Annotated, Any, Literal, Mapping
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    TypeAdapter,
+    model_validator,
+)
 
 from .definitions import (
     DeclaredArtifactReference,
@@ -182,6 +189,108 @@ class TaskFailure(BaseModel):
 
 
 TaskOutcome = TaskSuccess | TaskFailure
+
+
+class ReportCaseEvaluatorSourceEvidence(BaseModel):
+    """Canonical evaluator constructor identity persisted in ReportCase evidence."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    arguments: tuple[Any, ...] | Mapping[str, Any] | None = None
+
+
+class ReportCaseScoreEvidence(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    value: int | float
+    reason: str | None = None
+    source: ReportCaseEvaluatorSourceEvidence
+    evaluator_version: str | None = None
+
+
+class ReportCaseLabelEvidence(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    value: str
+    reason: str | None = None
+    source: ReportCaseEvaluatorSourceEvidence
+    evaluator_version: str | None = None
+
+
+class ReportCaseAssertionEvidence(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    value: StrictBool
+    reason: str | None = None
+    source: ReportCaseEvaluatorSourceEvidence
+    evaluator_version: str | None = None
+
+
+class ReportCaseEvaluatorFailureEvidence(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    error_message: str
+    error_stacktrace: str
+    source: ReportCaseEvaluatorSourceEvidence
+    evaluator_version: str | None = None
+    error_type: str | None = None
+
+
+class SuccessfulReportCaseEvidence(BaseModel):
+    """Evidence-contract-v1 projection of a successful framework ReportCase."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["success"] = "success"
+    name: str = Field(min_length=1)
+    output: Any
+    metrics: Mapping[str, int | float] = Field(default_factory=dict)
+    attributes: Mapping[str, Any] = Field(default_factory=dict)
+    scores: Mapping[str, ReportCaseScoreEvidence] = Field(default_factory=dict)
+    labels: Mapping[str, ReportCaseLabelEvidence] = Field(default_factory=dict)
+    assertions: Mapping[str, ReportCaseAssertionEvidence] = Field(
+        default_factory=dict
+    )
+    evaluator_failures: tuple[ReportCaseEvaluatorFailureEvidence, ...] = ()
+    task_duration: float = Field(ge=0)
+    total_duration: float = Field(ge=0)
+    source_case_name: str | None = None
+    trace_id: str | None = None
+    span_id: str | None = None
+
+    @model_validator(mode="after")
+    def total_includes_task_duration(self) -> "SuccessfulReportCaseEvidence":
+        if self.total_duration < self.task_duration:
+            raise ValueError(
+                "total_duration must be greater than or equal to task_duration"
+            )
+        return self
+
+
+class FailedReportCaseEvidence(BaseModel):
+    """Evidence-contract-v1 projection of a failed framework ReportCase."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["failure"] = "failure"
+    name: str = Field(min_length=1)
+    error_message: str
+    error_stacktrace: str
+    source_case_name: str | None = None
+    trace_id: str | None = None
+    span_id: str | None = None
+
+
+ReportCaseEvidence = Annotated[
+    SuccessfulReportCaseEvidence | FailedReportCaseEvidence,
+    Field(discriminator="kind"),
+]
+REPORT_CASE_EVIDENCE_ADAPTER = TypeAdapter(ReportCaseEvidence)
 
 
 class EvaluationRunRecord(BaseModel):
