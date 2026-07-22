@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
 import asyncio
+import inspect
+import threading
 import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
@@ -233,6 +234,51 @@ class _CancellationAwareReportEvaluator(ReportEvaluator):
     async def evaluate_async(self, ctx: Any) -> Any:
         self.guard()
         return await self.delegate.evaluate_async(ctx)
+
+
+class _FinalizationHeartbeat:
+    """Renew one finalization claim independently of report work."""
+
+    def __init__(
+        self,
+        ledger: SQLiteEvaluationLedger,
+        run_id: UUID,
+        claim: EvaluationFinalizationClaim,
+        lease_seconds: float,
+    ) -> None:
+        self._ledger = ledger
+        self._run_id = run_id
+        self._claim = claim
+        self._lease_seconds = lease_seconds
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._run,
+            name=f"evaluation-finalization-heartbeat:{claim.claim_id}",
+            daemon=True,
+        )
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join()
+
+    def _run(self) -> None:
+        cadence = self._lease_seconds / 3
+        while not self._stop.is_set():
+            try:
+                renewed = self._ledger.renew_finalization_claim(
+                    self._run_id,
+                    self._claim.claim_id,
+                    lease_seconds=self._lease_seconds,
+                )
+            except Exception:
+                return
+            if renewed is None:
+                return
+            if self._stop.wait(cadence):
+                return
 
 
 class _DurableCheckpointSink:
@@ -815,6 +861,10 @@ class EvaluationRunner:
                 f"owned by {current_claim.owner_id} until {current_claim.expires_at.isoformat()}"
             )
 
+        heartbeat = _FinalizationHeartbeat(
+            self.ledger, run_id, claim, lease_seconds
+        )
+        heartbeat.start()
         try:
             self._finalize_with_claim(
                 run_id,
@@ -825,6 +875,7 @@ class EvaluationRunner:
                 should_cancel=should_cancel,
             )
         finally:
+            heartbeat.stop()
             self.ledger.release_finalization_claim(run_id, claim.claim_id)
 
         released_run = self.ledger.get_evaluation_run(run_id)

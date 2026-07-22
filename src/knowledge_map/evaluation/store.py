@@ -1892,6 +1892,75 @@ class SQLiteEvaluationLedger:
                 self._connection.rollback()
                 raise
 
+    def renew_finalization_claim(
+        self,
+        run_id: UUID,
+        claim_id: UUID,
+        *,
+        lease_seconds: float = 300.0,
+    ) -> EvaluationFinalizationClaim | None:
+        """Atomically extend one still-live finalization claim."""
+        if lease_seconds <= 0:
+            raise ValueError("finalization claim lease_seconds must be greater than 0")
+        with self._transaction_lock:
+            try:
+                self._connection.execute("BEGIN IMMEDIATE")
+                renewed_at, renewed_timestamp = self._claim_timestamp()
+                row = self._connection.execute(
+                    """
+                    SELECT finalization_claim_owner_id, finalization_claim_acquired_at
+                    FROM evaluation_runs
+                    WHERE run_id = ?
+                      AND status = ?
+                      AND finalization_claim_id = ?
+                      AND finalization_claim_expires_at > ?
+                    """,
+                    (
+                        str(run_id),
+                        EvaluationRunStatus.FINALIZATION_PENDING.value,
+                        str(claim_id),
+                        renewed_timestamp,
+                    ),
+                ).fetchone()
+                if row is None:
+                    self._connection.rollback()
+                    return None
+
+                expires_at = renewed_at + timedelta(seconds=lease_seconds)
+                cursor = self._connection.execute(
+                    """
+                    UPDATE evaluation_runs
+                    SET finalization_claim_expires_at = ?
+                    WHERE run_id = ?
+                      AND status = ?
+                      AND finalization_claim_id = ?
+                      AND finalization_claim_expires_at > ?
+                    """,
+                    (
+                        expires_at.isoformat(),
+                        str(run_id),
+                        EvaluationRunStatus.FINALIZATION_PENDING.value,
+                        str(claim_id),
+                        renewed_timestamp,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    self._connection.rollback()
+                    return None
+                self._connection.commit()
+                return EvaluationFinalizationClaim(
+                    claim_id=claim_id,
+                    run_id=run_id,
+                    owner_id=row["finalization_claim_owner_id"],
+                    acquired_at=datetime.fromisoformat(
+                        row["finalization_claim_acquired_at"]
+                    ),
+                    expires_at=expires_at,
+                )
+            except Exception:
+                self._connection.rollback()
+                raise
+
     def release_finalization_claim(self, run_id: UUID, claim_id: UUID) -> bool:
         """Release only the exact claim token that was acquired."""
         with self._transaction_lock:

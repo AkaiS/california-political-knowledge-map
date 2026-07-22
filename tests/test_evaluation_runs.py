@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import math
@@ -8,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from uuid import UUID
 
 import pytest
 from pydantic import BaseModel, SecretStr
@@ -84,6 +86,50 @@ class ControllableClock:
 
     def __call__(self) -> datetime:
         return self.current
+
+
+@dataclass
+class RenewalClock:
+    current: datetime
+    initial: datetime
+    renewal_seen: threading.Event
+
+    def __call__(self) -> datetime:
+        if self.current > self.initial:
+            self.renewal_seen.set()
+        return self.current
+
+
+@dataclass
+class ClockAdvancingBlockingCountCases(ReportEvaluator):
+    clock: RenewalClock
+    entered: threading.Event
+    release: threading.Event
+    calls: list[str]
+
+    def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        self.calls.append(ctx.name)
+        self.clock.current = self.clock.initial + timedelta(seconds=0.1)
+        self.entered.set()
+        if not self.release.wait(timeout=5):
+            raise TimeoutError("blocking evaluator was not released")
+        return ScalarResult(title="evaluated-cases", value=len(ctx.report.cases))
+
+
+@dataclass
+class AsyncClockAdvancingBlockingCountCases(ReportEvaluator):
+    clock: RenewalClock
+    entered: threading.Event
+    release: threading.Event
+    calls: list[str]
+
+    async def evaluate(self, ctx: ReportEvaluatorContext) -> ScalarResult:
+        self.calls.append(ctx.name)
+        self.clock.current = self.clock.initial + timedelta(seconds=0.1)
+        self.entered.set()
+        if not await asyncio.to_thread(self.release.wait, 5):
+            raise TimeoutError("blocking evaluator was not released")
+        return ScalarResult(title="evaluated-cases", value=len(ctx.report.cases))
 
 
 def _schemas_for(cases) -> SchemaRegistry:
@@ -2450,6 +2496,99 @@ def test_finalization_authority_uses_one_shared_ledger_clock(tmp_path):
             assert replacement.acquired_at == clock.current
 
 
+def test_finalization_claim_renews_from_ledger_time_without_changing_identity(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("renew-finalization-claim")
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert claim is not None
+
+        clock.current += timedelta(seconds=5)
+        renewed = ledger.renew_finalization_claim(
+            initial.run.run_id,
+            claim.claim_id,
+            lease_seconds=10,
+        )
+
+        assert renewed is not None
+        assert renewed.claim_id == claim.claim_id
+        assert renewed.owner_id == claim.owner_id
+        assert renewed.acquired_at == claim.acquired_at
+        assert renewed.expires_at == clock.current + timedelta(seconds=10)
+        assert ledger.get_finalization_claim(initial.run.run_id) == renewed
+
+
+def test_finalization_claim_renewal_rejects_wrong_released_and_expired_claims(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("renew-finalization-claim-rejections")
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert claim is not None
+
+        assert ledger.renew_finalization_claim(
+            initial.run.run_id, UUID(int=claim.claim_id.int + 1)
+        ) is None
+
+        clock.current = claim.expires_at
+        replacement = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-b",
+            lease_seconds=10,
+        )
+        assert replacement is not None
+        assert ledger.renew_finalization_claim(
+            initial.run.run_id, claim.claim_id
+        ) is None
+
+        assert ledger.release_finalization_claim(
+            initial.run.run_id, replacement.claim_id
+        )
+        assert ledger.renew_finalization_claim(
+            initial.run.run_id, replacement.claim_id
+        ) is None
+
+        replacement = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-c",
+            lease_seconds=10,
+        )
+        assert replacement is not None
+        clock.current = replacement.expires_at
+        assert ledger.renew_finalization_claim(
+            initial.run.run_id, replacement.claim_id
+        ) is None
+
+
 def test_finalize_refuses_a_live_claim_before_resolving_report_evaluators(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("finalization-claim-guard")
     database = tmp_path / "evaluation.sqlite"
@@ -2693,6 +2832,79 @@ def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tm
             assert evaluator_calls == ["count-cases"]
             assert second_resolver_calls == []
             assert len(completed.report_evaluator_executions) == 1
+
+
+def _assert_long_running_finalizer_stays_authoritative(
+    tmp_path, *, suffix: str, evaluator_factory
+):
+    cases, gold_set, suite = _lifecycle_fixture(suffix)
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = RenewalClock(initial_time, initial_time, threading.Event())
+    entered = threading.Event()
+    release = threading.Event()
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            blocking = evaluator_factory(
+                clock, entered, release, evaluator_calls
+            )
+            with ThreadPoolExecutor(max_workers=1) as workers:
+                first_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-a",
+                    lease_seconds=0.15,
+                    evaluator_resolver=lambda configured: blocking,
+                )
+                assert entered.wait(timeout=5)
+                assert clock.renewal_seen.wait(timeout=5)
+
+                clock.current = initial_time + timedelta(seconds=0.16)
+                with pytest.raises(RuntimeError, match="live finalization claim"):
+                    EvaluationRunner(second_ledger).finalize(
+                        initial.run.run_id,
+                        schemas=_schemas_for(cases),
+                        worker_id="worker-b",
+                        evaluator_resolver=lambda configured: (
+                            (_ for _ in ()).throw(AssertionError("worker B evaluated"))
+                        ),
+                    )
+
+                release.set()
+                completed = first_future.result(timeout=5)
+
+            assert completed.run.status.value == "completed"
+            assert evaluator_calls == ["count-cases"]
+            assert len(completed.report_evaluator_executions) == 1
+
+
+def test_heartbeat_keeps_a_long_running_sync_finalizer_authoritative(tmp_path):
+    _assert_long_running_finalizer_stays_authoritative(
+        tmp_path,
+        suffix="heartbeat-sync-finalizer",
+        evaluator_factory=ClockAdvancingBlockingCountCases,
+    )
+
+
+def test_heartbeat_keeps_a_long_running_async_finalizer_authoritative(tmp_path):
+    _assert_long_running_finalizer_stays_authoritative(
+        tmp_path,
+        suffix="heartbeat-async-finalizer",
+        evaluator_factory=AsyncClockAdvancingBlockingCountCases,
+    )
 
 
 def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tmp_path):

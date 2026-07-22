@@ -26,13 +26,13 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Move finalization authority onto ledger-owned time
 
-- [ ] A matching claim can be atomically renewed only while the run is finalization-pending and the claim remains unexpired.
-- [ ] Renewal extends expiry from the ledger's current time without changing the claim identity or original acquisition time.
-- [ ] A wrong, released, replaced, completed, or expired claim cannot renew, even when no successor exists.
-- [ ] The runner starts an independent heartbeat immediately after acquisition and keeps it active while report evidence is materialized and an evaluator is invoked and checkpointed.
-- [ ] Heartbeat behavior is identical for synchronous and asynchronous report evaluators.
-- [ ] Heartbeat cadence is derived internally at approximately one-third of `lease_seconds`; the 300-second default remains unchanged and no public cadence setting is added.
-- [ ] In the primary regression scenario, worker A remains healthy beyond its original expiry, worker B is rejected, and exactly one evaluator invocation and one terminal Report Evaluator Execution result.
+- [x] A matching claim can be atomically renewed only while the run is finalization-pending and the claim remains unexpired.
+- [x] Renewal extends expiry from the ledger's current time without changing the claim identity or original acquisition time.
+- [x] A wrong, released, replaced, completed, or expired claim cannot renew, even when no successor exists.
+- [x] The runner starts an independent heartbeat immediately after acquisition and keeps it active while report evidence is materialized and an evaluator is invoked and checkpointed.
+- [x] Heartbeat behavior is identical for synchronous and asynchronous report evaluators.
+- [x] Heartbeat cadence is derived internally at approximately one-third of `lease_seconds`; the 300-second default remains unchanged and no public cadence setting is added.
+- [x] In the primary regression scenario, worker A remains healthy beyond its original expiry, worker B is rejected, and exactly one evaluator invocation and one terminal Report Evaluator Execution result.
 
 ## Fence and stop an attempt that loses authority
 
