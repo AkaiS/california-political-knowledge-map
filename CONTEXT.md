@@ -236,8 +236,12 @@ The durable transaction boundary for imported evaluation definitions and executi
 _Avoid_: Evaluation database, SQLite store, repository collection
 
 **Evaluation Finalization**:
-The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and their exact ordered composition is frozen in a Frozen Aggregate Manifest. It verifies the manifest, deterministically materializes the derived Evaluation Report, executes only report evaluators lacking terminal evidence, and requests completion; the durable run record authorizes that transition only after all expected terminal evidence exists.
+The resumable report-evaluation phase of an Evaluation Run after every manifested case has a terminal checkpoint and their exact ordered composition is frozen in a Frozen Aggregate Manifest. It verifies the manifest, deterministically materializes the derived Evaluation Report, executes only report evaluators lacking terminal evidence, and requests completion; the durable run record authorizes that transition only after all expected terminal evidence exists. Loss of finalization authority does not interrupt an already-started evaluator invocation, but its evidence is rejected and no further evaluator work begins; the run remains available for recovery.
 _Avoid_: Run retry, report retry, evaluation resume
+
+**Evaluation Finalization Attempt**:
+One bounded effort to perform Evaluation Finalization under a single continuously held authority claim. Authority expiry irreversibly ends the attempt even when no successor has claimed the run. An attempt that loses authority discards uncheckpointed evaluator output and ends without reacquiring authority or cancelling the Evaluation Run; a new attempt may resume the run from its terminal evidence. A controlled stop begins no further evaluator or gate work, ends renewal after any in-flight evaluator returns, requests early release as best-effort cleanup, and leaves the run pending without recording an issue; unconfirmed release delays recovery only until authority expires.
+_Avoid_: Evaluation Run retry, evaluator retry, lease retry
 
 **Suite-wide Case Evaluator**:
 A case evaluator configured by an Evaluation Suite and applied to every Evaluation Case selected for a run. Its application is additive with evaluators selected through Evaluation Requirement Bindings, and the Resolved Evaluation Plan applies the same Configured Evaluator at most once to a case.
@@ -250,6 +254,14 @@ _Avoid_: Judge prompt, evaluator definition, scoring instructions
 **Evaluation Run**:
 One immutable case-execution attempt of an Evaluation Suite against a specific component, configuration, and Evaluation Gold Set version, retained even when incomplete or unsuccessful. Completion means every case and evaluator assignment in its Resolved Evaluation Plan has terminal evidence and its Frozen Aggregate Manifest is linked, not that every task, evaluator, metric, or release gate succeeded; incomplete case execution requires a distinct linked retry, while incomplete report evaluation may resume as Evaluation Finalization on the same run.
 _Avoid_: Test run, benchmark, experiment
+
+**Evaluation Run Issue**:
+A durable, factual quality or lifecycle diagnostic attached to an Evaluation Run independently of its workflow status. An expired finalization claim replaced during recovery produces a claim-recovery issue identifying the prior attempt and its observed expiry without inferring why its authority lapsed; worker-local causes remain operational telemetry.
+_Avoid_: Evaluator failure, run status reason, speculative incident diagnosis
+
+**Release Gate**:
+A side-effect-free, deterministic policy check over terminal Evaluation Run evidence and explicit gate configuration. It produces a pass or fail outcome, may be safely replayed during Evaluation Finalization recovery, and never performs the external release action that may consume its persisted outcome.
+_Avoid_: Deployment hook, evaluator, approval side effect, mutable policy lookup
 
 **Evaluation Run Configuration**:
 The immutable, canonical, secret-free snapshot of shared execution settings, including bounded case concurrency, and the Validated Component Configuration used by an Evaluation Run. Its content fingerprint identifies materially equivalent configuration across runs; case concurrency defaults to one unless explicitly selected.
