@@ -5,3 +5,5 @@ This decision supersedes the aggregate-report-blob portion of ADR 0005. Immutabl
 The manifest artifact is content-addressed. Registering it, linking it to the run, and moving the run to `finalization_pending` are one ledger transition; replay of the same composition is idempotent and replacement with a different composition is rejected. Finalization verifies both artifact and checkpoint integrity, then deterministically materializes the Evaluation Report from the exact immutable definitions and checkpoints named by the manifest. That report is a derived projection, never an independently authoritative persisted blob.
 
 The evidence-contract version is the sole persisted authority for checkpoint meaning and evaluator-visible report projection semantics. Materializer code and the installed Pydantic Evals version are implementation details and do not receive independent persisted compatibility versions.
+
+Evidence contract version 1 defines the persisted successful and failed ReportCase projections. Increment the version only when an incompatible persisted shape or semantic change must be supported alongside existing evidence.
