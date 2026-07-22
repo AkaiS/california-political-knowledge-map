@@ -33,14 +33,14 @@ Labels: ready-for-agent
 
 **Blocked by:** None — can start immediately.
 
-- [ ] The derived schema inventory includes the exact Schema Reference declared by every structured Metric Definition in the Suite.
-- [ ] Existing task input, output, and metadata Schema References remain present.
-- [ ] Scalar Metric Definitions add no schema references.
-- [ ] Repeated exact Schema References are deduplicated deterministically while stable inventory ordering is preserved.
-- [ ] The Suite gains no second authored field for metric schemas.
-- [ ] Authored and frozen Suite records contain schema references only and never executable Python model classes or import paths.
-- [ ] Runtime schema registration rejects a model whose schema fingerprint is incompatible with the registered Schema Reference.
-- [ ] Tests cover structured and scalar metrics, shared structured schemas, deterministic ordering, exact-reference deduplication, and preservation of task-contract schemas.
+- [x] The derived schema inventory includes the exact Schema Reference declared by every structured Metric Definition in the Suite.
+- [x] Existing task input, output, and metadata Schema References remain present.
+- [x] Scalar Metric Definitions add no schema references.
+- [x] Repeated exact Schema References are deduplicated deterministically while stable inventory ordering is preserved.
+- [x] The Suite gains no second authored field for metric schemas.
+- [x] Authored and frozen Suite records contain schema references only and never executable Python model classes or import paths.
+- [x] Runtime schema registration rejects a model whose schema fingerprint is incompatible with the registered Schema Reference.
+- [x] Tests cover structured and scalar metrics, shared structured schemas, deterministic ordering, exact-reference deduplication, and preservation of task-contract schemas.
 
 ## Materialize fetched structured observations into evaluator-owned models
 

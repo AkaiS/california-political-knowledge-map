@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pytest
 
 from knowledge_map.evaluation import (
+    ConfiguredEvaluator,
     DeclaredArtifactReference,
     EvaluationCase,
     EvaluationCaseIdentity,
@@ -11,7 +12,14 @@ from knowledge_map.evaluation import (
     EvaluationGoldSet,
     EvaluationGoldSetIdentity,
     EvaluationGoldSetMembership,
+    EvaluationMetricDefinition,
+    EvaluationMetricReference,
+    EvaluationMetricValueType,
     EvaluationSplit,
+    EvaluationSuite,
+    EvaluationSuiteIdentity,
+    EvaluationTaskContract,
+    NoComparisonOperation,
     SchemaReference,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
@@ -27,6 +35,10 @@ class Output(BaseModel):
 
 class Metadata(BaseModel):
     source: str
+
+
+class StructuredMetric(BaseModel):
+    score: float
 
 
 def make_case(answer: str = "relevant") -> EvaluationCase[Input, Output, Metadata]:
@@ -73,6 +85,125 @@ def test_imported_authored_definition_is_queryable_and_idempotent(tmp_path):
     ) == first
     assert ledger.list_definitions() == [first]
     assert ledger.find_definitions(tags=("smoke",)) == [first]
+
+
+def test_imported_suite_inventory_includes_structured_metric_schemas(tmp_path):
+    structured_schema = SchemaReference.for_model(
+        StructuredMetric, identity="tests.structured-metric", revision=1
+    )
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.quality",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.STRUCTURED,
+        structured_schema=structured_schema,
+        semantic_description="Structured quality details.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite-001", revision=1),
+        description="A suite with a structured metric.",
+        task_contract=EvaluationTaskContract(
+            input_schema=SchemaReference.for_model(
+                Input, identity="tests.input", revision=1
+            ),
+            output_schema=SchemaReference.for_model(
+                Output, identity="tests.output", revision=1
+            ),
+            metadata_schema=SchemaReference.for_model(
+                Metadata, identity="tests.metadata", revision=1
+            ),
+        ),
+        report_evaluators=(
+            ConfiguredEvaluator(
+                name="quality",
+                evaluator_revision=1,
+                metrics=(EvaluationMetricReference.from_definition(metric),),
+            ),
+        ),
+        metrics=(metric,),
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        record = ledger.import_suite(suite)
+
+    assert record.schema_references == (
+        suite.task_contract.input_schema,
+        suite.task_contract.output_schema,
+        suite.task_contract.metadata_schema,
+        structured_schema,
+    )
+
+
+def test_imported_suite_inventory_preserves_task_schemas_and_deduplicates_metrics(
+    tmp_path,
+):
+    shared_schema = SchemaReference.for_model(
+        StructuredMetric, identity="tests.shared-metric", revision=1
+    )
+    first_metric = EvaluationMetricDefinition(
+        namespaced_name="tests.first-quality",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.STRUCTURED,
+        structured_schema=shared_schema,
+        semantic_description="First structured quality details.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    scalar_metric = EvaluationMetricDefinition(
+        namespaced_name="tests.scalar-quality",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.BOOLEAN,
+        semantic_description="Scalar quality result.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    second_metric = first_metric.model_copy(
+        update={"namespaced_name": "tests.second-quality"}
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite-002", revision=1),
+        description="A suite with repeated and scalar metrics.",
+        task_contract=EvaluationTaskContract(
+            input_schema=SchemaReference.for_model(
+                Input, identity="tests.input", revision=1
+            ),
+            output_schema=SchemaReference.for_model(
+                Output, identity="tests.output", revision=1
+            ),
+            metadata_schema=SchemaReference.for_model(
+                Metadata, identity="tests.metadata", revision=1
+            ),
+        ),
+        report_evaluators=(
+            ConfiguredEvaluator(
+                name="quality",
+                evaluator_revision=1,
+                metrics=tuple(
+                    EvaluationMetricReference.from_definition(metric)
+                    for metric in (first_metric, scalar_metric, second_metric)
+                ),
+            ),
+        ),
+        metrics=(first_metric, scalar_metric, second_metric),
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        record = ledger.import_suite(suite)
+
+    assert record.schema_references == (
+        suite.task_contract.input_schema,
+        suite.task_contract.output_schema,
+        suite.task_contract.metadata_schema,
+        shared_schema,
+    )
+    serialized = record.model_dump(mode="json")
+    assert serialized["schema_references"][-1] == shared_schema.model_dump(mode="json")
+    assert "StructuredMetric" not in str(serialized)
+    assert "import" not in str(serialized)
 
 
 def test_import_rejects_a_business_revision_with_different_authored_bytes(tmp_path):

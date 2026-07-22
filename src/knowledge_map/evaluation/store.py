@@ -210,11 +210,17 @@ def _definition_schema_references(definition: Any) -> tuple[SchemaReference, ...
             if schema is not None
         )
     if isinstance(definition, EvaluationSuite):
-        return (
+        references = [
             definition.task_contract.input_schema,
             definition.task_contract.output_schema,
             definition.task_contract.metadata_schema,
+        ]
+        references.extend(
+            metric.structured_schema
+            for metric in definition.metrics
+            if metric.structured_schema is not None
         )
+        return tuple(dict.fromkeys(references))
     return ()
 
 
