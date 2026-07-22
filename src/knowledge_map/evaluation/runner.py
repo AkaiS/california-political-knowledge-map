@@ -47,6 +47,7 @@ from .runs import (
     EvaluationRunStatus,
     ReportEvaluatorExecution,
     RunMetricObservation,
+    StructuredMetricValue,
     TaskFailure,
     EvaluationRunCancelled,
     TaskSuccess,
@@ -1099,5 +1100,8 @@ class EvaluationRunner:
             fields["string_value"] = validated
         else:
             assert isinstance(validated, BaseModel)
-            fields["structured_json"] = validated.model_dump(mode="json")
+            fields["structured_value"] = StructuredMetricValue(
+                schema_reference=metric.structured_schema,
+                payload=validated.model_dump(mode="json"),
+            )
         return fields

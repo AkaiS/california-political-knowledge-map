@@ -55,6 +55,7 @@ from .runs import (
     ReportEvaluatorExecution,
     REPORT_CASE_EVIDENCE_ADAPTER,
     RunMetricObservation,
+    StructuredMetricValue,
     FailedReportCaseEvidence,
     SuccessfulReportCaseEvidence,
     TaskFailure,
@@ -1967,7 +1968,11 @@ class SQLiteEvaluationLedger:
             "integer_value": row["integer_value"],
             "boolean_value": None if row["boolean_value"] is None else bool(row["boolean_value"]),
             "string_value": row["string_value"],
-            "structured_json": None if row["structured_json"] is None else json.loads(row["structured_json"]),
+            "structured_value": (
+                None
+                if row["structured_json"] is None
+                else StructuredMetricValue.model_validate(json.loads(row["structured_json"]))
+            ),
         }
 
     def _insert_case_execution(self, execution: CaseEvaluatorExecution) -> None:
@@ -2012,8 +2017,10 @@ class SQLiteEvaluationLedger:
             observation.metric.evaluator_revision, observation.number_value,
             observation.integer_value, observation.boolean_value,
             observation.string_value,
-            None if observation.structured_json is None else json.dumps(
-                observation.structured_json, sort_keys=True, separators=(",", ":")
+            None if observation.structured_value is None else json.dumps(
+                observation.structured_value.model_dump(mode="json"),
+                sort_keys=True,
+                separators=(",", ":"),
             ),
         )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -15,6 +16,7 @@ from pydantic import (
     Field,
     StrictBool,
     TypeAdapter,
+    field_validator,
     model_validator,
 )
 
@@ -27,11 +29,48 @@ from .definitions import (
     canonical_configuration_json,
     configuration_fingerprint,
     new_uuid7,
+    SchemaReference,
 )
 from .suites import EvaluationMetricReference
 
 
 EVIDENCE_CONTRACT_VERSION = 1
+
+
+def _validate_strict_json_value(value: Any, *, root: bool = False) -> Any:
+    if type(value) is dict:
+        if root and any(type(key) is not str for key in value):
+            raise ValueError("structured metric payload object keys must be strings")
+        for key, item in value.items():
+            if type(key) is not str:
+                raise ValueError("structured metric payload object keys must be strings")
+            _validate_strict_json_value(item)
+        return value
+    if type(value) is list:
+        for item in value:
+            _validate_strict_json_value(item)
+        return value
+    if value is None or type(value) is str or type(value) is bool or type(value) is int:
+        return value
+    if type(value) is float and math.isfinite(value):
+        return value
+    raise ValueError("structured metric payload must contain only strict JSON values")
+
+
+class StructuredMetricValue(BaseModel):
+    """A durable, schema-tagged object-shaped structured metric value."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_reference: SchemaReference
+    payload: dict[str, Any]
+
+    @field_validator("payload", mode="before")
+    @classmethod
+    def payload_is_strict_json_object(cls, value: Any) -> Any:
+        if type(value) is not dict:
+            raise ValueError("structured metric payload must be a JSON object")
+        return _validate_strict_json_value(value, root=True)
 
 
 class EvaluationRunCancelled(Exception):
@@ -420,7 +459,7 @@ class EvaluationMetricObservation(BaseModel):
     integer_value: int | None = None
     boolean_value: bool | None = None
     string_value: str | None = None
-    structured_json: Any | None = None
+    structured_value: StructuredMetricValue | None = None
 
     @model_validator(mode="after")
     def has_exactly_one_value(self) -> "EvaluationMetricObservation":
@@ -429,7 +468,7 @@ class EvaluationMetricObservation(BaseModel):
             self.integer_value,
             self.boolean_value,
             self.string_value,
-            self.structured_json,
+            self.structured_value,
         )
         if sum(value is not None for value in values) != 1:
             raise ValueError("a metric observation must contain exactly one value")
@@ -442,7 +481,7 @@ class EvaluationMetricObservation(BaseModel):
             self.integer_value,
             self.boolean_value,
             self.string_value,
-            self.structured_json,
+            self.structured_value,
         ):
             if value is not None:
                 return value

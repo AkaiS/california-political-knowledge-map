@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 import sqlite3
 import threading
 import time
@@ -55,6 +56,7 @@ from knowledge_map.evaluation import (
     NoComparisonOperation,
     SchemaReference,
     SchemaRegistry,
+    StructuredMetricValue,
     SuccessfulReportCaseEvidence,
     TaskFailure,
     TaskSuccess,
@@ -82,6 +84,47 @@ def _schemas_for(cases) -> SchemaRegistry:
     schemas.register(cases[0].expected_output_schema, Output)
     schemas.register(cases[0].metadata_schema, Metadata)
     return schemas
+
+
+def test_structured_metric_value_accepts_only_strict_json_object_payloads():
+    reference = SchemaReference(
+        identity="tests.structured", revision=1, model_fingerprint="a" * 64
+    )
+
+    value = StructuredMetricValue(
+        schema_reference=reference,
+        payload={
+            "nested": {"items": ["text", True, 3, 1.5, None]},
+        },
+    )
+
+    assert value.payload["nested"] == {
+        "items": ["text", True, 3, 1.5, None]
+    }
+    for invalid in (["root"], "root", 1, {1: "non-string-key"}, {"bad": (1, 2)}, {"bad": math.nan}):
+        with pytest.raises(ValueError, match="strict JSON|JSON object|keys must be strings"):
+            StructuredMetricValue(schema_reference=reference, payload=invalid)
+
+
+def test_metric_observation_has_one_value_and_no_storage_field_alias():
+    reference = SchemaReference(
+        identity="tests.structured", revision=1, model_fingerprint="a" * 64
+    )
+    structured = StructuredMetricValue(schema_reference=reference, payload={"ok": True})
+    metric = EvaluationMetricReference(
+        namespaced_name="tests.example", evaluator_revision=1
+    )
+
+    observation = EvaluationMetricObservation(metric=metric, structured_value=structured)
+
+    assert observation.value is structured
+    assert "structured_json" not in EvaluationMetricObservation.model_fields
+    with pytest.raises(ValueError, match="exactly one value"):
+        EvaluationMetricObservation(
+            metric=metric,
+            boolean_value=True,
+            structured_value=structured,
+        )
 
 
 def test_run_configuration_defaults_case_concurrency_to_one():
@@ -154,9 +197,25 @@ class MappingCaseEvaluator(Evaluator):
 
 
 @dataclass
+class CaseTableEvaluator(Evaluator):
+    def evaluate(self, ctx: EvaluatorContext) -> TableResult:
+        return TableResult(
+            title="case-table",
+            columns=["case"],
+            rows=[[ctx.name]],
+        )
+
+
+@dataclass
 class FailingCaseEvaluator(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:
         raise ValueError("the case evaluator could not score this output")
+
+
+@dataclass
+class MismatchedStructuredEvaluator(Evaluator):
+    def evaluate(self, ctx: EvaluatorContext) -> Output:
+        return Output(answer="wrong structured schema")
 
 
 @dataclass
@@ -2986,13 +3045,16 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
             True,
         ]
         assert result.run_observations[0].integer_value == 2
-        assert result.run_observations[1].structured_json == {
-            "columns": ["case"],
-            "description": None,
-            "rows": [["case-1@1"], ["case-2@1"]],
-            "title": "case-table",
-            "type": "table",
-        }
+        assert result.run_observations[1].structured_value == StructuredMetricValue(
+            schema_reference=table_metric.structured_schema,
+            payload={
+                "columns": ["case"],
+                "description": None,
+                "rows": [["case-1@1"], ["case-2@1"]],
+                "title": "case-table",
+                "type": "table",
+            },
+        )
         assert ledger.list_case_observations(result.case_results[0].result_id) == [
             result.case_observations[0]
         ]
@@ -3005,6 +3067,143 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
         ).value is True
         assert "must-not-persist" not in result.run.configuration_json
         assert ledger.get_evaluation_run(result.run.run_id) == result.run
+
+
+def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_path):
+    cases = (_case(1),)
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-both", revision=1),
+        description="One deterministic case.",
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(cases[0]),
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
+    )
+    case_metric = EvaluationMetricDefinition(
+        namespaced_name="tests.case-table",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.STRUCTURED,
+        structured_schema=SchemaReference.for_model(
+            TableResult, identity="tests.case-table", revision=1
+        ),
+        semantic_description="The case table.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    report_metric = case_metric.model_copy(update={"namespaced_name": "tests.report-table"})
+    suite = _lifecycle_fixture("structured-both")[2].model_copy(
+        update={
+            "case_evaluators": (
+                ConfiguredEvaluator(
+                    name="case-table",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(case_metric),),
+                ),
+            ),
+            "report_evaluators": (
+                ConfiguredEvaluator(
+                    name="report-table",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(report_metric),),
+                ),
+            ),
+            "metrics": (case_metric, report_metric),
+        }
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                CaseTableEvaluator()
+                if configured.name == "case-table"
+                else CaseTable()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CaseTable(),
+        )
+
+        case_observation = ledger.list_case_observations(result.case_results[0].result_id)[0]
+        run_observation = ledger.list_run_observations(result.run.run_id)[0]
+
+        assert case_observation.structured_value is not None
+        assert run_observation.structured_value is not None
+        assert case_observation.structured_value.schema_reference == case_metric.structured_schema
+        assert run_observation.structured_value.schema_reference == report_metric.structured_schema
+        assert case_observation.structured_value.payload["rows"] == [["case-1@1"]]
+        assert run_observation.structured_value.payload["rows"] == [["case-1@1"]]
+
+
+def test_mismatched_structured_evaluator_output_is_failure_evidence_without_observation(
+    tmp_path,
+):
+    cases, gold_set, base_suite = _lifecycle_fixture(
+        "structured-mismatch", case_evaluator="invalid-structured"
+    )
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.structured-mismatch",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.STRUCTURED,
+        structured_schema=SchemaReference.for_model(
+            TableResult, identity="tests.structured-mismatch", revision=1
+        ),
+        semantic_description="A structured evaluator result.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = base_suite.model_copy(
+        update={
+            "case_evaluators": (
+                ConfiguredEvaluator(
+                    name="invalid-structured",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(metric),),
+                ),
+            ),
+            "metrics": (metric,),
+        }
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: (
+                MismatchedStructuredEvaluator()
+                if configured.name == "invalid-structured"
+                else CountCases()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CountCases(),
+        )
+
+        assert result.run.status == "completed"
+        assert result.case_evaluator_executions[0].status is EvaluationProducerStatus.FAILED
+        assert ledger.list_case_observations(result.case_results[0].result_id) == []
+        assert [issue.category for issue in result.run.issues].count("missing_metric") == 2
 
 
 def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path):
