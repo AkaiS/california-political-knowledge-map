@@ -73,7 +73,13 @@ from .runs import (
 )
 from .runner import EvaluationRunner
 from .engine import EvaluationCheckpointSink, EvaluationEngine, NoOpCheckpointSink
-from .reporting import SchemaRegistry, evaluator_version_tag
+from .reporting import (
+    ResolvedSchemaBinding,
+    SchemaRegistry,
+    evaluator_version_tag,
+    materialize_metric_observation,
+    materialize_structured_metric_observation,
+)
 from .preflight import (
     EvaluationDefinitionRevisionReference,
     EvaluationPreflightError,
@@ -173,6 +179,9 @@ __all__ = [
     "EvaluationEngine",
     "NoOpCheckpointSink",
     "SchemaRegistry",
+    "ResolvedSchemaBinding",
+    "materialize_structured_metric_observation",
+    "materialize_metric_observation",
     "evaluator_version_tag",
     "EvaluationDefinitionRevisionReference",
     "EvaluationPreflightError",

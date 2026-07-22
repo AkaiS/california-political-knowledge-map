@@ -62,7 +62,12 @@ from .runs import (
     TaskOutcome,
     TaskSuccess,
 )
-from .reporting import SchemaRegistry, _evaluation_result, _evaluator_failure
+from .reporting import (
+    SchemaRegistry,
+    _evaluation_result,
+    _evaluator_failure,
+    materialize_metric_observation as _materialize_metric_observation,
+)
 
 
 class EvaluationDefinitionKind(str, Enum):
@@ -974,6 +979,20 @@ class SQLiteEvaluationLedger:
                 "failed ReportCase evidence requires a failed case and failed task outcome"
             )
         return validated
+
+    def materialize_metric_observation(
+        self,
+        run_id: UUID,
+        observation: CaseMetricObservation | RunMetricObservation,
+        schemas: SchemaRegistry,
+    ) -> Any:
+        """Materialize one observation against the run's frozen Evaluation Suite."""
+        if observation.structured_value is None:
+            return observation.value
+        suite = self.get_frozen_suite(run_id)
+        return _materialize_metric_observation(
+            observation, suite=suite, schemas=schemas
+        )
 
     def materialize_report_case(
         self, case_result_id: UUID, schemas: SchemaRegistry

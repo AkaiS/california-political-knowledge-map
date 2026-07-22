@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from collections.abc import Mapping
 from enum import Enum
 from typing import Any
@@ -43,6 +43,13 @@ class SchemaRegistry:
                 f"schema is not allowlisted: {reference.identity}@{reference.revision}"
             ) from exc
 
+    def resolve_binding(self, reference: SchemaReference) -> "ResolvedSchemaBinding":
+        """Resolve an authored schema reference to its allowlisted model type."""
+        return ResolvedSchemaBinding(
+            expected_reference=reference,
+            model_type=self.resolve(reference),
+        )
+
     def validate(self, reference: SchemaReference, value: Any) -> BaseModel:
         return self.resolve(reference).model_validate(value)
 
@@ -53,6 +60,47 @@ class SchemaRegistry:
             reference.revision,
             reference.model_fingerprint,
         )
+
+
+@dataclass(frozen=True)
+class ResolvedSchemaBinding:
+    """One exact schema reference paired with its allowlisted runtime model."""
+
+    expected_reference: SchemaReference
+    model_type: type[BaseModel]
+
+    def __post_init__(self) -> None:
+        actual = SchemaReference.for_model(
+            self.model_type,
+            identity=self.expected_reference.identity,
+            revision=self.expected_reference.revision,
+        )
+        if actual != self.expected_reference:
+            raise ValueError(
+                "resolved schema binding model does not match the exact schema fingerprint"
+            )
+
+
+def materialize_structured_metric_observation(
+    observation: Any, binding: ResolvedSchemaBinding
+) -> BaseModel:
+    """Reconstruct one fetched structured metric observation without persistence access."""
+    structured_value = getattr(observation, "structured_value", None)
+    if structured_value is None:
+        raise ValueError("materialization requires a structured metric observation")
+    if structured_value.schema_reference != binding.expected_reference:
+        raise ValueError("structured metric observation schema tag does not match binding")
+    return binding.model_type.model_validate(structured_value.payload)
+
+
+def materialize_metric_observation(
+    observation: Any, *, suite: Any, schemas: SchemaRegistry
+) -> Any:
+    """Materialize one observation using the frozen Suite's metric definition."""
+    if getattr(observation, "structured_value", None) is None:
+        return observation.value
+    binding = suite.resolve_structured_metric_binding(observation.metric, schemas)
+    return materialize_structured_metric_observation(observation, binding)
 
 
 def _json_value(value: Any) -> Any:

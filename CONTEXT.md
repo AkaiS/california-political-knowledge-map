@@ -175,6 +175,18 @@ _Avoid_: Test case, sample, fixture, gold-set row
 The exact typed input, output, and metadata boundary of one component operation evaluated by an Evaluation Suite. All of the suite's Evaluation Cases implement this shared contract; heterogeneous shapes are explicit variants within its schemas rather than case-specific contracts.
 _Avoid_: Case contract, test schema, suite case type
 
+**Schema Reference**:
+The exact identity, revision, and JSON-schema fingerprint of an authored Pydantic model contract. Structured Evaluation Metric Definitions own their value Schema References, while Suites expose them through a derived inventory without storing executable model types.
+_Avoid_: Runtime model path, schema label, database type
+
+**Resolved Schema Binding**:
+The persistence-free runtime association between one expected Schema Reference and one allowlisted concrete Pydantic model type used to materialize a structured Evaluation Metric Observation.
+_Avoid_: Schema import, untyped payload, serialized model
+
+**Structured Metric Observation Materialization**:
+The explicit reconstruction of one fetched schema-tagged structured Evaluation Metric Observation into its allowlisted evaluator-owned Pydantic model after the frozen Evaluation Suite resolves the governing Metric Definition. Scalar observations remain directly usable and are not materialized.
+_Avoid_: Database fetch, dictionary cast, report blob deserialization
+
 **Evaluation Task Binding**:
 The persistence-free runtime association between an evaluated component operation and the exact Evaluation Task Contract it implements. It is the sole boundary that turns each component invocation into a validated Evaluation Task Outcome and attaches references to task-produced or failure evidence.
 _Avoid_: Task callable, model function, output validator

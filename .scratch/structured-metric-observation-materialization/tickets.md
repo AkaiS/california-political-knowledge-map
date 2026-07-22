@@ -50,16 +50,16 @@ Labels: ready-for-agent
 
 **Blocked by:** Persist schema-tagged structured Metric Observations; Expose Metric Definition schemas through the Suite inventory.
 
-- [ ] A resolved schema binding associates one expected Schema Reference with one allowlisted concrete Pydantic model type.
-- [ ] Before materialization, the runtime resolves the observation's metric identity through the frozen Suite and confirms that the definition's structured schema is registered.
-- [ ] The individual materializer accepts one fetched structured observation and one resolved schema binding and performs no persistence access.
-- [ ] The materializer rejects an envelope whose schema tag differs from the binding's expected reference.
-- [ ] The materializer validates the object payload with the bound concrete model and returns an instance of that evaluator-owned model.
-- [ ] An unknown registry entry, incompatible registered model, malformed payload, or schema-tag mismatch never falls back to an untyped dictionary.
-- [ ] Scalar observations bypass schema resolution and remain directly usable after fetch.
-- [ ] Structured observations are materialized independently so one failure does not invalidate unrelated scalar or structured observations.
-- [ ] The public durable evaluation flow proves successful reconstruction for deterministic case-level and report-level structured metrics after a real SQLite round trip.
-- [ ] Mixed-observation tests prove unaffected observations remain usable when one structured observation cannot be resolved or validated.
-- [ ] Missing observations remain diagnostics and do not prevent report production or Evaluation Run completion.
-- [ ] Evidence contract version remains 1, with no migration, legacy reader, compatibility alias, or previous-shape patching path.
-- [ ] Materialization remains limited to structured Metric Observations; arbitrary task-run attributes and other framework extension fields retain ordinary JSON round-trip behavior.
+- [x] A resolved schema binding associates one expected Schema Reference with one allowlisted concrete Pydantic model type.
+- [x] Before materialization, the runtime resolves the observation's metric identity through the frozen Suite and confirms that the definition's structured schema is registered.
+- [x] The individual materializer accepts one fetched structured observation and one resolved schema binding and performs no persistence access.
+- [x] The materializer rejects an envelope whose schema tag differs from the binding's expected reference.
+- [x] The materializer validates the object payload with the bound concrete model and returns an instance of that evaluator-owned model.
+- [x] An unknown registry entry, incompatible registered model, malformed payload, or schema-tag mismatch never falls back to an untyped dictionary.
+- [x] Scalar observations bypass schema resolution and remain directly usable after fetch.
+- [x] Structured observations are materialized independently so one failure does not invalidate unrelated scalar or structured observations.
+- [x] The public durable evaluation flow proves successful reconstruction for deterministic case-level and report-level structured metrics after a real SQLite round trip.
+- [x] Mixed-observation tests prove unaffected observations remain usable when one structured observation cannot be resolved or validated.
+- [x] Missing observations remain diagnostics and do not prevent report production or Evaluation Run completion.
+- [x] Evidence contract version remains 1, with no migration, legacy reader, compatibility alias, or previous-shape patching path.
+- [x] Materialization remains limited to structured Metric Observations; arbitrary task-run attributes and other framework extension fields retain ordinary JSON round-trip behavior.

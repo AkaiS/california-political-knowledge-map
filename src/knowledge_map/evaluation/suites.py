@@ -23,7 +23,7 @@ from .definitions import (
     content_fingerprint,
     new_uuid7,
 )
-from .reporting import evaluator_version_tag
+from .reporting import ResolvedSchemaBinding, SchemaRegistry, evaluator_version_tag
 from uuid import UUID
 
 
@@ -589,6 +589,35 @@ class EvaluationSuite(BaseModel):
             evaluator.name: evaluator for evaluator in self.case_evaluators
         }
         return tuple(configured_by_name[name] for name in unique_names)
+
+    def resolve_metric_definition(
+        self, reference: EvaluationMetricReference
+    ) -> EvaluationMetricDefinition:
+        """Resolve one observation identity to its singular authored definition."""
+        for metric in self.metrics:
+            if metric.identity == (
+                reference.namespaced_name,
+                reference.evaluator_revision,
+            ):
+                return metric
+        raise ValueError(
+            "Evaluation Suite does not declare metric "
+            f"{reference.namespaced_name}@{reference.evaluator_revision}"
+        )
+
+    def resolve_structured_metric_binding(
+        self,
+        reference: EvaluationMetricReference,
+        schemas: SchemaRegistry,
+    ) -> ResolvedSchemaBinding:
+        """Resolve a structured metric identity and its registered runtime schema."""
+        metric = self.resolve_metric_definition(reference)
+        if metric.value_type is not EvaluationMetricValueType.STRUCTURED:
+            raise ValueError(
+                f"metric {reference.namespaced_name} is not structured"
+            )
+        assert metric.structured_schema is not None
+        return schemas.resolve_binding(metric.structured_schema)
 
     def preflight_selected_cases(
         self,

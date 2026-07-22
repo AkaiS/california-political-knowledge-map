@@ -3116,6 +3116,9 @@ def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_pat
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
+        schemas = _schemas_for(cases)
+        schemas.register(case_metric.structured_schema, TableResult)
+        schemas.register(report_metric.structured_schema, TableResult)
         initial = runner.run(
             suite=suite,
             gold_set=gold_set,
@@ -3132,7 +3135,7 @@ def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_pat
         )
         result = runner.finalize(
             initial.run.run_id,
-            schemas=_schemas_for(cases),
+            schemas=schemas,
             evaluator_resolver=lambda configured: CaseTable(),
         )
 
@@ -3145,6 +3148,20 @@ def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_pat
         assert run_observation.structured_value.schema_reference == report_metric.structured_schema
         assert case_observation.structured_value.payload["rows"] == [["case-1@1"]]
         assert run_observation.structured_value.payload["rows"] == [["case-1@1"]]
+        assert ledger.materialize_metric_observation(
+            result.run.run_id, case_observation, schemas
+        ) == TableResult(
+            title="case-table",
+            columns=["case"],
+            rows=[["case-1@1"]],
+        )
+        assert ledger.materialize_metric_observation(
+            result.run.run_id, run_observation, schemas
+        ) == TableResult(
+            title="case-table",
+            columns=["case"],
+            rows=[["case-1@1"]],
+        )
 
 
 def test_mismatched_structured_evaluator_output_is_failure_evidence_without_observation(
