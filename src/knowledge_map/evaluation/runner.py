@@ -1056,7 +1056,7 @@ class EvaluationRunner:
         schemas: SchemaRegistry,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
-        should_cancel: Callable[[], bool] | None = None,
+        should_stop_finalization: Callable[[], bool] | None = None,
         worker_id: str | None = None,
         lease_seconds: float = 300.0,
     ) -> EvaluationRunResult:
@@ -1107,7 +1107,7 @@ class EvaluationRunner:
                 schemas=schemas,
                 evaluator_resolver=evaluator_resolver,
                 release_gates=release_gates,
-                should_cancel=should_cancel,
+                should_stop_finalization=should_stop_finalization,
             )
         finally:
             heartbeat.stop()
@@ -1138,7 +1138,7 @@ class EvaluationRunner:
         schemas: SchemaRegistry,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None,
-        should_cancel: Callable[[], bool] | None,
+        should_stop_finalization: Callable[[], bool] | None,
     ) -> EvaluationRunResult:
         """Perform report work while holding one finalization claim."""
 
@@ -1160,7 +1160,7 @@ class EvaluationRunner:
         trace_id, span_id = report.trace_id, report.span_id
         for configured in suite.report_evaluators:
             self._ensure_finalization_claim(heartbeat)
-            if should_cancel is not None and should_cancel():
+            if should_stop_finalization is not None and should_stop_finalization():
                 return self._build_result(
                     run,
                     tuple(self.ledger.list_evaluation_case_manifest(run_id)),

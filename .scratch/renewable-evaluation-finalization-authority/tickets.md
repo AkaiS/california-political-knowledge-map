@@ -111,11 +111,11 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Fence and stop an attempt that loses authority
 
-- [ ] The finalization-specific callback is named `should_stop_finalization` and is not represented as Evaluation Run cancellation.
-- [ ] A controlled stop waits for an already-running evaluator to return and then starts no later evaluator or Release Gate.
-- [ ] The runner stops heartbeat renewal before ending the attempt.
-- [ ] The run remains finalization-pending, the partial result returns normally, and no cancellation, failure, or recovery issue is added.
-- [ ] Exact-token release is attempted as best-effort cleanup and confirmed release permits immediate resumption.
-- [ ] Release failure does not mask the controlled result or an existing exception and is emitted as telemetry.
-- [ ] When release cannot be confirmed, the stored claim remains until natural expiry and a later attempt can recover it.
-- [ ] Successful completion relies on its atomic claim clearing and does not require a separate release for correctness.
+- [x] The finalization-specific callback is named `should_stop_finalization` and is not represented as Evaluation Run cancellation.
+- [x] A controlled stop waits for an already-running evaluator to return and then starts no later evaluator or Release Gate.
+- [x] The runner stops heartbeat renewal before ending the attempt.
+- [x] The run remains finalization-pending, the partial result returns normally, and no cancellation, failure, or recovery issue is added.
+- [x] Exact-token release is attempted as best-effort cleanup and confirmed release permits immediate resumption.
+- [x] Release failure does not mask the controlled result or an existing exception and is emitted as telemetry.
+- [x] When release cannot be confirmed, the stored claim remains until natural expiry and a later attempt can recover it.
+- [x] Successful completion relies on its atomic claim clearing and does not require a separate release for correctness.

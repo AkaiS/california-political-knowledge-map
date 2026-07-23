@@ -2098,13 +2098,198 @@ def test_interrupted_finalization_retains_partial_report_evaluation(tmp_path):
             evaluator_resolver=lambda configured: (
                 CountCases() if configured.name == "count-cases" else CaseTable()
             ),
-            should_cancel=should_cancel,
+            should_stop_finalization=should_cancel,
         )
 
         assert result.run.status == "finalization_pending"
         assert [execution.evaluator_name for execution in result.report_evaluator_executions] == [
             "count-cases"
         ]
+
+
+def test_controlled_finalization_stop_leaves_run_pending_after_inflight_evaluator(
+    tmp_path,
+):
+    cases, gold_set, base_suite = _lifecycle_fixture("controlled-finalization-stop")
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
+                ConfiguredEvaluator(name="case-table", evaluator_revision=1),
+            )
+        }
+    )
+    entered = threading.Event()
+    release = threading.Event()
+    stop_requested = threading.Event()
+    resolver_calls: list[str] = []
+    evaluator_calls: list[str] = []
+    gate_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                runner.finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                evaluator_resolver=lambda configured: (
+                    resolver_calls.append(configured.name)
+                    or (
+                        BlockingCountCases(entered, release, evaluator_calls)
+                        if configured.name == "count-cases"
+                        else CaseTable()
+                    )
+                ),
+                should_stop_finalization=stop_requested.is_set,
+                release_gates={
+                    "policy": lambda result: gate_calls.append("stopped") or True
+                },
+            )
+            assert entered.wait(timeout=5) or future.result(timeout=0)
+            stop_requested.set()
+            release.set()
+            result = future.result(timeout=5)
+
+        assert result.run.status is EvaluationRunStatus.FINALIZATION_PENDING
+        assert [execution.evaluator_name for execution in result.report_evaluator_executions] == [
+            "count-cases"
+        ]
+        assert resolver_calls == ["count-cases"]
+        assert evaluator_calls == ["count-cases"]
+        assert gate_calls == []
+        assert result.run.issues == ()
+        assert result.run.finalization_claim is None
+        assert ledger.get_finalization_claim(initial.run.run_id) is None
+
+        resumed = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: (
+                resolver_calls.append(configured.name) or CaseTable()
+            ),
+            release_gates={
+                "policy": lambda result: gate_calls.append("resumed") or True
+            },
+        )
+
+        assert resumed.run.status is EvaluationRunStatus.COMPLETED
+        assert resolver_calls == ["count-cases", "case-table"]
+        assert gate_calls == ["resumed"]
+
+
+def test_controlled_stop_release_failure_preserves_result_and_allows_later_recovery(
+    tmp_path, monkeypatch, caplog
+):
+    cases, gold_set, suite = _lifecycle_fixture("controlled-stop-release-failure")
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_release = ledger.release_finalization_claim
+        release_calls = 0
+
+        def fail_first_release(run_id, claim_id):
+            nonlocal release_calls
+            release_calls += 1
+            if release_calls == 1:
+                raise RuntimeError("release persistence failed")
+            return original_release(run_id, claim_id)
+
+        monkeypatch.setattr(ledger, "release_finalization_claim", fail_first_release)
+        with caplog.at_level(logging.INFO):
+            stopped = runner.finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: CountCases(),
+                should_stop_finalization=lambda: True,
+            )
+
+        assert stopped.run.status is EvaluationRunStatus.FINALIZATION_PENDING
+        stored_claim = ledger.get_finalization_claim(initial.run.run_id)
+        assert stored_claim is not None
+        assert any(
+            "evaluation_finalization.claim_release_failed" in record.getMessage()
+            for record in caplog.records
+        )
+
+        clock.current = initial_time + timedelta(seconds=2)
+        recovered = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CountCases(),
+        )
+
+        assert recovered.run.status is EvaluationRunStatus.COMPLETED
+        assert any(
+            issue.category == "finalization_claim_recovered"
+            for issue in recovered.run.issues
+        )
+        assert ledger.get_finalization_claim(initial.run.run_id) is None
+
+
+def test_release_cleanup_failure_does_not_mask_finalization_error(
+    tmp_path, monkeypatch, caplog
+):
+    cases, gold_set, suite = _lifecycle_fixture("release-failure-existing-error")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def broken_materialization(run_id, schemas):
+            raise RuntimeError("report materialization failed")
+
+        def broken_release(run_id, claim_id):
+            raise RuntimeError("release persistence failed")
+
+        monkeypatch.setattr(ledger, "materialize_aggregate_report", broken_materialization)
+        monkeypatch.setattr(ledger, "release_finalization_claim", broken_release)
+
+        with caplog.at_level(logging.INFO):
+            with pytest.raises(RuntimeError, match="report materialization failed"):
+                runner.finalize(
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    evaluator_resolver=lambda configured: CountCases(),
+                )
+
+        assert any(
+            "evaluation_finalization.claim_release_failed" in record.getMessage()
+            for record in caplog.records
+        )
 
 
 def test_incomplete_cases_cannot_freeze_the_aggregate_report(tmp_path):
@@ -3219,7 +3404,7 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
                 if configured.name == "count-cases"
                 else CaseTable()
             ),
-            should_cancel=stop_after_one,
+            should_stop_finalization=stop_after_one,
         )
 
         assert partial.run.status == "finalization_pending"
@@ -3298,7 +3483,7 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
                 if configured.name == "count-cases"
                 else CaseTable()
             ),
-            should_cancel=stop_after_one,
+            should_stop_finalization=stop_after_one,
             worker_id="worker-a",
         )
         assert partial.run.status.value == "finalization_pending"
