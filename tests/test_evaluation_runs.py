@@ -4214,6 +4214,63 @@ def test_transient_renewal_contention_becomes_claim_loss_at_confirmed_expiry(
         assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
 
 
+def test_transient_renewal_and_ownership_contention_stop_at_confirmed_expiry(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("transient-contention-boundary")
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    ownership_calls = 0
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def contended_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            raise sqlite3.OperationalError("database is locked")
+
+        def contended_ownership(run_id, claim_id):
+            nonlocal ownership_calls
+            ownership_calls += 1
+            clock.current = initial_time + timedelta(seconds=1)
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(ledger, "renew_finalization_claim", contended_renewal)
+        monkeypatch.setattr(ledger, "owns_finalization_claim", contended_ownership)
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                EvaluationRunner(ledger).finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: (
+                    evaluator_calls.append(configured.name) or CountCases()
+                ),
+            )
+            assert renewal_started.wait(timeout=5)
+            with pytest.raises(FinalizationClaimLostError) as lost:
+                future.result(timeout=5)
+
+        assert lost.value.loss_classification == "claim_expired"
+        assert lost.value.last_confirmed_expiry == initial_time + timedelta(seconds=1)
+        assert ownership_calls == 1
+        assert evaluator_calls == []
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
+
+
 def _assert_long_running_finalizer_stays_authoritative(
     tmp_path, *, suffix: str, evaluator_factory
 ):

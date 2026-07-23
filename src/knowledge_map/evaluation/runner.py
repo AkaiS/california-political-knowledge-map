@@ -11,7 +11,7 @@ import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -431,18 +431,36 @@ class _FinalizationHeartbeat:
             renewal_failure=f"{type(exc).__name__}: {exc}",
         )
 
+    def _now(self) -> datetime:
+        current = self._ledger.clock()
+        if current.tzinfo is None:
+            raise ValueError("finalization heartbeat timestamps must include a timezone")
+        return current.astimezone(timezone.utc)
+
+    def _record_expiry_loss_if_needed(self) -> bool:
+        if self._now() < self.last_confirmed_expiry:
+            return False
+        if not self._stop.is_set():
+            self.record_loss("claim_expired")
+        return True
+
     def _claim_is_still_live(self) -> bool:
+        if self._record_expiry_loss_if_needed():
+            return False
         try:
-            if self._ledger.owns_finalization_claim(
+            owns_claim = self._ledger.owns_finalization_claim(
                 self._run_id, self._claim.claim_id
-            ):
-                return True
+            )
         except Exception as exc:
             if _is_retryable_sqlite_contention(exc):
-                return True
+                return not self._record_expiry_loss_if_needed()
             if not self._stop.is_set():
                 self.record_loss("renewal_failure", exc)
             return False
+        if self._record_expiry_loss_if_needed():
+            return False
+        if owns_claim:
+            return True
         if not self._stop.is_set():
             self.record_loss(self.classify_claim_loss())
         return False

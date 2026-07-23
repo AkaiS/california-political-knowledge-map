@@ -286,6 +286,11 @@ class SQLiteEvaluationLedger:
     def __exit__(self, *_: Any) -> None:
         self.close()
 
+    @property
+    def clock(self) -> Callable[[], datetime]:
+        """Return the clock used for all ledger authority decisions."""
+        return self._clock
+
     def _create_schema(self) -> None:
         self._connection.executescript(
             """
