@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import sqlite3
 import threading
@@ -48,6 +49,8 @@ from knowledge_map.evaluation import (
     EvaluationRunConfiguration,
     EvaluationRunRecord,
     EvaluationRunner,
+    EvaluationRunStatus,
+    FinalizationClaimLostError,
     EvaluationRubric,
     EvaluationRubricIdentity,
     EvaluationRubricRevisionReference,
@@ -2900,6 +2903,385 @@ def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tm
             assert evaluator_calls == ["count-cases"]
             assert second_resolver_calls == []
             assert len(completed.report_evaluator_executions) == 1
+
+
+def test_stale_finalizer_discards_inflight_result_and_raises_typed_claim_loss(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, base_suite = _lifecycle_fixture("stale-finalizer-claim-loss")
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
+                ConfiguredEvaluator(name="case-table", evaluator_revision=1),
+            )
+        }
+    )
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    allow_renewal = threading.Event()
+    entered_a = threading.Event()
+    release_a = threading.Event()
+    entered_b = threading.Event()
+    release_b = threading.Event()
+    calls_a: list[str] = []
+    calls_b: list[str] = []
+    gate_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = first_ledger.renew_finalization_claim
+
+        def paused_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert allow_renewal.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(first_ledger, "renew_finalization_claim", paused_renewal)
+
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            evaluator_a = BlockingCountCases(entered_a, release_a, calls_a)
+            evaluator_b = BlockingCountCases(entered_b, release_b, calls_b)
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                stale_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-a",
+                    lease_seconds=1,
+                    evaluator_resolver=lambda configured: evaluator_a,
+                    release_gates={
+                        "policy": lambda result: gate_calls.append("worker-a") or True
+                    },
+                )
+                assert renewal_started.wait(timeout=5)
+                assert entered_a.wait(timeout=5)
+
+                clock.current = initial_time + timedelta(seconds=2)
+                recovery_future = workers.submit(
+                    EvaluationRunner(second_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-b",
+                    lease_seconds=10,
+                    evaluator_resolver=lambda configured: evaluator_b,
+                    release_gates={
+                        "policy": lambda result: gate_calls.append("worker-b") or True
+                    },
+                )
+                assert entered_b.wait(timeout=5)
+
+                allow_renewal.set()
+                release_a.set()
+                with pytest.raises(FinalizationClaimLostError) as lost:
+                    stale_future.result(timeout=5)
+
+                release_b.set()
+                recovered = recovery_future.result(timeout=5)
+
+            assert lost.value.run_id == initial.run.run_id
+            assert lost.value.owner_id == "worker-a"
+            assert lost.value.last_confirmed_expiry == initial_time + timedelta(seconds=1)
+            assert lost.value.loss_classification
+            assert calls_a == ["count-cases"]
+            assert calls_b == ["count-cases", "case-table"]
+            assert gate_calls == ["worker-b"]
+            assert recovered.run.status is EvaluationRunStatus.COMPLETED
+            assert len(recovered.report_evaluator_executions) == 2
+            assert all(
+                execution.status is EvaluationProducerStatus.COMPLETED
+                for execution in recovered.report_evaluator_executions
+            )
+            assert all(issue.category != "finalization_claim_lost" for issue in recovered.run.issues)
+
+
+def test_recovery_worker_alone_persists_one_terminal_execution_after_claim_loss(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("single-terminal-after-claim-loss")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    allow_renewal = threading.Event()
+    entered_a = threading.Event()
+    release_a = threading.Event()
+    entered_b = threading.Event()
+    release_b = threading.Event()
+    calls_a: list[str] = []
+    calls_b: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = first_ledger.renew_finalization_claim
+
+        def paused_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert allow_renewal.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(first_ledger, "renew_finalization_claim", paused_renewal)
+
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            evaluator_a = BlockingCountCases(entered_a, release_a, calls_a)
+            evaluator_b = BlockingCountCases(entered_b, release_b, calls_b)
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                stale_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-a",
+                    lease_seconds=1,
+                    evaluator_resolver=lambda configured: evaluator_a,
+                )
+                assert renewal_started.wait(timeout=5)
+                assert entered_a.wait(timeout=5)
+
+                clock.current = initial_time + timedelta(seconds=2)
+                recovery_future = workers.submit(
+                    EvaluationRunner(second_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-b",
+                    lease_seconds=10,
+                    evaluator_resolver=lambda configured: evaluator_b,
+                )
+                assert entered_b.wait(timeout=5)
+
+                allow_renewal.set()
+                release_a.set()
+                with pytest.raises(FinalizationClaimLostError):
+                    stale_future.result(timeout=5)
+
+                release_b.set()
+                recovered = recovery_future.result(timeout=5)
+
+            assert calls_a == ["count-cases"]
+            assert calls_b == ["count-cases"]
+            assert recovered.run.status is EvaluationRunStatus.COMPLETED
+            assert len(recovered.report_evaluator_executions) == 1
+            assert recovered.report_evaluator_executions[0].status is EvaluationProducerStatus.COMPLETED
+
+
+def test_claim_loss_during_release_gate_discards_gate_outcomes(tmp_path, monkeypatch):
+    cases, gold_set, suite = _lifecycle_fixture("stale-finalizer-gate-loss")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    allow_renewal = threading.Event()
+    gate_entered = threading.Event()
+    release_gate = threading.Event()
+    gate_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = first_ledger.renew_finalization_claim
+
+        def paused_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert allow_renewal.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(first_ledger, "renew_finalization_claim", paused_renewal)
+
+        def stale_gate(result):
+            gate_calls.append("worker-a")
+            gate_entered.set()
+            assert release_gate.wait(timeout=5)
+            return True
+
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                stale_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-a",
+                    lease_seconds=1,
+                    evaluator_resolver=lambda configured: CountCases(),
+                    release_gates={"policy": stale_gate},
+                )
+                assert renewal_started.wait(timeout=5)
+                assert gate_entered.wait(timeout=5)
+
+                clock.current = initial_time + timedelta(seconds=2)
+                recovered_future = workers.submit(
+                    EvaluationRunner(second_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-b",
+                    evaluator_resolver=lambda configured: CountCases(),
+                    release_gates={
+                        "policy": lambda result: gate_calls.append("worker-b") or True
+                    },
+                )
+                recovered = recovered_future.result(timeout=5)
+
+                allow_renewal.set()
+                release_gate.set()
+                with pytest.raises(FinalizationClaimLostError):
+                    stale_future.result(timeout=5)
+
+            assert recovered.run.status is EvaluationRunStatus.COMPLETED
+            assert [outcome.gate_name for outcome in recovered.run.gate_outcomes] == [
+                "policy"
+            ]
+            assert gate_calls == ["worker-a", "worker-b"]
+            assert len(recovered.report_evaluator_executions) == 1
+
+
+def test_expired_finalizer_without_successor_raises_claim_loss(tmp_path, monkeypatch):
+    cases, gold_set, suite = _lifecycle_fixture("expired-finalizer-without-successor")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    allow_renewal = threading.Event()
+    entered = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = ledger.renew_finalization_claim
+
+        def paused_expiring_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert allow_renewal.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(ledger, "renew_finalization_claim", paused_expiring_renewal)
+        evaluator = BlockingCountCases(entered, release, calls)
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                EvaluationRunner(ledger).finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: evaluator,
+            )
+            assert renewal_started.wait(timeout=5)
+            assert entered.wait(timeout=5)
+
+            expired_at = initial_time + timedelta(seconds=1)
+            clock.current = expired_at
+            allow_renewal.set()
+            release.set()
+            with pytest.raises(FinalizationClaimLostError) as lost:
+                future.result(timeout=5)
+
+        assert lost.value.loss_classification == "claim_expired"
+        assert lost.value.last_confirmed_expiry == expired_at
+        assert ledger.get_finalization_claim(initial.run.run_id) is None
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
+        pending = ledger.get_evaluation_run(initial.run.run_id)
+        assert pending is not None
+        assert pending.status is EvaluationRunStatus.FINALIZATION_PENDING
+        assert all(issue.category != "finalization_claim_lost" for issue in pending.issues)
+
+
+def test_renewal_failure_is_typed_telemetry_and_not_a_run_issue(
+    tmp_path, monkeypatch, caplog
+):
+    cases, gold_set, suite = _lifecycle_fixture("renewal-failure-claim-loss")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    allow_failure = threading.Event()
+    entered = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def failed_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert allow_failure.wait(timeout=5)
+            raise OSError("renewal database unavailable")
+
+        monkeypatch.setattr(ledger, "renew_finalization_claim", failed_renewal)
+        evaluator = BlockingCountCases(entered, release, calls)
+        caplog.set_level(logging.INFO, logger="knowledge_map.evaluation.runner")
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                EvaluationRunner(ledger).finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=10,
+                evaluator_resolver=lambda configured: evaluator,
+            )
+            assert renewal_started.wait(timeout=5)
+            assert entered.wait(timeout=5)
+            allow_failure.set()
+            release.set()
+            with pytest.raises(FinalizationClaimLostError) as lost:
+                future.result(timeout=5)
+
+        assert lost.value.loss_classification == "renewal_failure"
+        assert lost.value.renewal_failure_context == "OSError: renewal database unavailable"
+        assert calls == ["count-cases"]
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
+        pending = ledger.get_evaluation_run(initial.run.run_id)
+        assert pending is not None
+        assert all(issue.category != "finalization_claim_lost" for issue in pending.issues)
+        assert any(
+            "evaluation_finalization.claim_lost" in record.message
+            for record in caplog.records
+        )
 
 
 def _assert_long_running_finalizer_stays_authoritative(

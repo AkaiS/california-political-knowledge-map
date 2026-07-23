@@ -77,6 +77,37 @@ class EvaluationRunCancelled(Exception):
     """Raised by an injected runner control to stop a run deliberately."""
 
 
+class FinalizationClaimLostError(RuntimeError):
+    """Raised when an Evaluation Finalization Attempt loses its authority claim."""
+
+    def __init__(
+        self,
+        claim: "EvaluationFinalizationClaim",
+        *,
+        last_confirmed_expiry: datetime,
+        loss_classification: str,
+        renewal_failure: BaseException | None = None,
+    ) -> None:
+        self.run_id = claim.run_id
+        self.claim = claim
+        self.claim_id = claim.claim_id
+        self.owner_id = claim.owner_id
+        self.last_confirmed_expiry = last_confirmed_expiry
+        self.loss_classification = loss_classification
+        self.renewal_failure = renewal_failure
+        self.renewal_failure_context = (
+            None
+            if renewal_failure is None
+            else f"{type(renewal_failure).__name__}: {renewal_failure}"
+        )
+        detail = f" ({self.renewal_failure_context})" if self.renewal_failure_context else ""
+        super().__init__(
+            "Evaluation Finalization lost its claim "
+            f"for run {self.run_id} owned by {self.owner_id}: "
+            f"{self.loss_classification}{detail}"
+        )
+
+
 class EvaluationRunStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"

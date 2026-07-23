@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import logging
 import threading
 import time
 from contextlib import nullcontext
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -50,6 +52,7 @@ from .runs import (
     StructuredMetricValue,
     TaskFailure,
     EvaluationRunCancelled,
+    FinalizationClaimLostError,
     TaskSuccess,
     case_reference_map,
 )
@@ -66,6 +69,20 @@ try:
     import logfire
 except ImportError:  # pragma: no cover - dependency is optional at this seam
     logfire = None
+
+
+logger = logging.getLogger(__name__)
+
+
+def _emit_finalization_telemetry(event: str, **fields: Any) -> None:
+    """Emit operational finalization events without making telemetry mandatory."""
+    logger.info("evaluation_finalization.%s", event, extra=fields)
+    if logfire is None:
+        return
+    try:
+        logfire.info(f"evaluation_finalization.{event}", **fields)
+    except Exception:
+        logger.debug("failed to emit finalization telemetry", exc_info=True)
 
 
 def _evaluation_span(run_id: UUID, suite_business_id: str):
@@ -236,6 +253,13 @@ class _CancellationAwareReportEvaluator(ReportEvaluator):
         return await self.delegate.evaluate_async(ctx)
 
 
+@dataclass(frozen=True)
+class _FinalizationClaimLoss:
+    classification: str
+    last_confirmed_expiry: datetime
+    renewal_failure: BaseException | None = None
+
+
 class _FinalizationHeartbeat:
     """Renew one finalization claim independently of report work."""
 
@@ -251,6 +275,9 @@ class _FinalizationHeartbeat:
         self._claim = claim
         self._lease_seconds = lease_seconds
         self._stop = threading.Event()
+        self._loss_lock = threading.Lock()
+        self._loss: _FinalizationClaimLoss | None = None
+        self._last_confirmed_expiry = claim.expires_at
         self._thread = threading.Thread(
             target=self._run,
             name=f"evaluation-finalization-heartbeat:{claim.claim_id}",
@@ -264,6 +291,78 @@ class _FinalizationHeartbeat:
         self._stop.set()
         self._thread.join()
 
+    @property
+    def loss(self) -> _FinalizationClaimLoss | None:
+        with self._loss_lock:
+            return self._loss
+
+    @property
+    def run_id(self) -> UUID:
+        return self._run_id
+
+    @property
+    def claim_id(self) -> UUID:
+        return self._claim.claim_id
+
+    @property
+    def last_confirmed_expiry(self) -> datetime:
+        with self._loss_lock:
+            return self._last_confirmed_expiry
+
+    def claim_loss_error(self) -> FinalizationClaimLostError:
+        loss = self.loss
+        if loss is None:  # pragma: no cover - caller invariant
+            raise RuntimeError("finalization claim loss has not been recorded")
+        return FinalizationClaimLostError(
+            self._claim,
+            last_confirmed_expiry=loss.last_confirmed_expiry,
+            loss_classification=loss.classification,
+            renewal_failure=loss.renewal_failure,
+        )
+
+    def record_loss(
+        self,
+        classification: str,
+        renewal_failure: BaseException | None = None,
+    ) -> None:
+        with self._loss_lock:
+            if self._loss is not None:
+                return
+            last_confirmed_expiry = self._last_confirmed_expiry
+            self._loss = _FinalizationClaimLoss(
+                classification=classification,
+                last_confirmed_expiry=last_confirmed_expiry,
+                renewal_failure=renewal_failure,
+            )
+        _emit_finalization_telemetry(
+            "claim_lost",
+            run_id=str(self._run_id),
+            claim_id=str(self._claim.claim_id),
+            owner_id=self._claim.owner_id,
+            loss_classification=classification,
+            last_confirmed_expiry=last_confirmed_expiry.isoformat(),
+            renewal_failure=(
+                None
+                if renewal_failure is None
+                else f"{type(renewal_failure).__name__}: {renewal_failure}"
+            ),
+        )
+
+    def classify_claim_loss(self) -> str:
+        try:
+            current = self._ledger.get_finalization_claim(self._run_id)
+            if current is None:
+                return "claim_cleared"
+            if current.claim_id != self._claim.claim_id:
+                return "claim_replaced"
+            if not self._ledger.owns_finalization_claim(
+                self._run_id, self._claim.claim_id
+            ):
+                return "claim_expired"
+        except Exception:
+            return "claim_not_live"
+        return "claim_not_live"
+
     def _run(self) -> None:
         cadence = self._lease_seconds / 3
         while not self._stop.is_set():
@@ -273,10 +372,24 @@ class _FinalizationHeartbeat:
                     self._claim.claim_id,
                     lease_seconds=self._lease_seconds,
                 )
-            except Exception:
+            except Exception as exc:
+                if not self._stop.is_set():
+                    self.record_loss("renewal_failure", exc)
+                return
+            if self._stop.is_set():
                 return
             if renewed is None:
+                self.record_loss(self.classify_claim_loss())
                 return
+            with self._loss_lock:
+                self._last_confirmed_expiry = renewed.expires_at
+            _emit_finalization_telemetry(
+                "claim_renewed",
+                run_id=str(self._run_id),
+                claim_id=str(self._claim.claim_id),
+                owner_id=self._claim.owner_id,
+                expires_at=renewed.expires_at.isoformat(),
+            )
             if self._stop.wait(cadence):
                 return
 
@@ -869,6 +982,7 @@ class EvaluationRunner:
             self._finalize_with_claim(
                 run_id,
                 claim=claim,
+                heartbeat=heartbeat,
                 schemas=schemas,
                 evaluator_resolver=evaluator_resolver,
                 release_gates=release_gates,
@@ -876,7 +990,16 @@ class EvaluationRunner:
             )
         finally:
             heartbeat.stop()
-            self.ledger.release_finalization_claim(run_id, claim.claim_id)
+            try:
+                self.ledger.release_finalization_claim(run_id, claim.claim_id)
+            except Exception as exc:
+                _emit_finalization_telemetry(
+                    "claim_release_failed",
+                    run_id=str(run_id),
+                    claim_id=str(claim.claim_id),
+                    owner_id=claim.owner_id,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
 
         released_run = self.ledger.get_evaluation_run(run_id)
         if released_run is None:  # pragma: no cover - ledger invariant
@@ -890,6 +1013,7 @@ class EvaluationRunner:
         run_id: UUID,
         *,
         claim: EvaluationFinalizationClaim,
+        heartbeat: _FinalizationHeartbeat,
         schemas: SchemaRegistry,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None,
@@ -914,10 +1038,7 @@ class EvaluationRunner:
         issues = list(run.issues)
         trace_id, span_id = report.trace_id, report.span_id
         for configured in suite.report_evaluators:
-            if not self.ledger.owns_finalization_claim(
-                run_id, claim.claim_id
-            ):
-                raise RuntimeError("Evaluation Finalization lost its finalization claim")
+            self._ensure_finalization_claim(heartbeat)
             if should_cancel is not None and should_cancel():
                 return self._build_result(
                     run,
@@ -930,10 +1051,7 @@ class EvaluationRunner:
             )
             if identity in completed_names:
                 continue
-            if not self.ledger.owns_finalization_claim(
-                run_id, claim.claim_id
-            ):
-                raise RuntimeError("Evaluation Finalization lost its finalization claim")
+            self._ensure_finalization_claim(heartbeat)
             started = time.perf_counter()
             issue_start = len(issues)
             execution = ReportEvaluatorExecution(
@@ -976,6 +1094,7 @@ class EvaluationRunner:
                         "failure_message": f"{type(exc).__name__}: {exc}",
                     }
                 )
+            self._ensure_finalization_claim(heartbeat)
             execution = execution.model_copy(
                 update={"duration_seconds": time.perf_counter() - started}
             )
@@ -989,12 +1108,16 @@ class EvaluationRunner:
                             message=f"required metric {metric.namespaced_name} was not produced",
                         )
                     )
-            self.ledger.record_report_evaluation(
-                [execution],
-                observations,
-                issues[issue_start:],
-                finalization_claim_id=claim.claim_id,
-            )
+            try:
+                self.ledger.record_report_evaluation(
+                    [execution],
+                    observations,
+                    issues[issue_start:],
+                    finalization_claim_id=claim.claim_id,
+                )
+            except Exception:
+                self._ensure_finalization_claim(heartbeat)
+                raise
 
         pending_run = self.ledger.get_evaluation_run(run_id)
         if pending_run is None:  # pragma: no cover - ledger invariant
@@ -1002,6 +1125,7 @@ class EvaluationRunner:
         gate_outcomes: list[EvaluationGateOutcome] = []
         provisional = self._build_result(pending_run, tuple(self.ledger.list_evaluation_case_manifest(run_id)))
         for gate_name, gate in (release_gates or {}).items():
+            self._ensure_finalization_claim(heartbeat)
             try:
                 passed = bool(gate(provisional))
                 failure_message = None if passed else "release gate did not pass"
@@ -1023,15 +1147,33 @@ class EvaluationRunner:
                         message=failure_message or "release gate did not pass",
                     )
                 )
-        completed_run = self.ledger.complete_evaluation_run(
-            run_id,
-            issues=issues,
-            gate_outcomes=gate_outcomes,
-            finalization_claim_id=claim.claim_id,
-        )
+            self._ensure_finalization_claim(heartbeat)
+        self._ensure_finalization_claim(heartbeat)
+        try:
+            completed_run = self.ledger.complete_evaluation_run(
+                run_id,
+                issues=issues,
+                gate_outcomes=gate_outcomes,
+                finalization_claim_id=claim.claim_id,
+            )
+        except Exception:
+            self._ensure_finalization_claim(heartbeat)
+            raise
         return self._build_result(
             completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
         )
+
+    def _ensure_finalization_claim(
+        self, heartbeat: _FinalizationHeartbeat
+    ) -> None:
+        if heartbeat.loss is not None:
+            raise heartbeat.claim_loss_error()
+        if self.ledger.owns_finalization_claim(
+            heartbeat.run_id, heartbeat.claim_id
+        ):
+            return
+        heartbeat.record_loss(heartbeat.classify_claim_loss())
+        raise heartbeat.claim_loss_error()
 
     finalize_evaluation_run = finalize
 

@@ -40,13 +40,13 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Renew authority during long-running evaluators
 
-- [ ] Claim expiry is irreversible for the current attempt, and the same finalization call never reacquires authority.
-- [ ] A thread-safe loss signal communicates definitive heartbeat loss to the finalization loop.
-- [ ] If an in-flight evaluator returns or raises after authority loss, its success or failure is discarded and creates no terminal evaluator evidence.
-- [ ] A stale attempt starts no later evaluator or Release Gate and cannot checkpoint or complete the run.
-- [ ] The stale attempt raises `FinalizationClaimLostError` with the run, claim, owner, last confirmed expiry, loss classification, and any known renewal-failure context.
-- [ ] Claim loss and renewal history are emitted as operational telemetry and are not appended by the stale worker to Evaluation Run Issues.
-- [ ] A deterministic two-worker test proves that the recovery worker alone persists one terminal execution while the stale worker exits with the typed error.
+- [x] Claim expiry is irreversible for the current attempt, and the same finalization call never reacquires authority.
+- [x] A thread-safe loss signal communicates definitive heartbeat loss to the finalization loop.
+- [x] If an in-flight evaluator returns or raises after authority loss, its success or failure is discarded and creates no terminal evaluator evidence.
+- [x] A stale attempt starts no later evaluator or Release Gate and cannot checkpoint or complete the run.
+- [x] The stale attempt raises `FinalizationClaimLostError` with the run, claim, owner, last confirmed expiry, loss classification, and any known renewal-failure context.
+- [x] Claim loss and renewal history are emitted as operational telemetry and are not appended by the stale worker to Evaluation Run Issues.
+- [x] A deterministic two-worker test proves that the recovery worker alone persists one terminal execution while the stale worker exits with the typed error.
 
 ## Record factual expired-claim recovery
 

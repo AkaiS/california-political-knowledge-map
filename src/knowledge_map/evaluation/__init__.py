@@ -52,6 +52,7 @@ from .runs import (
     EvaluationRunIssue,
     EvaluationGateOutcome,
     EvaluationFinalizationClaim,
+    FinalizationClaimLostError,
     EvaluationRunRecord,
     EvaluationRun,
     EvaluationRunResult,
