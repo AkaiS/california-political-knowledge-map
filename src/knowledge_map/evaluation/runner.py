@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import sqlite3
 import threading
 import time
 from contextlib import nullcontext
@@ -260,6 +261,21 @@ class _FinalizationClaimLoss:
     renewal_failure: BaseException | None = None
 
 
+def _is_retryable_sqlite_contention(exc: BaseException) -> bool:
+    """Recognize only SQLite's explicit busy/locked write contention errors."""
+    if not isinstance(exc, sqlite3.OperationalError):
+        return False
+    error_code = getattr(exc, "sqlite_errorcode", None)
+    retryable_codes = {
+        getattr(sqlite3, "SQLITE_BUSY", None),
+        getattr(sqlite3, "SQLITE_LOCKED", None),
+    }
+    if error_code in retryable_codes - {None}:
+        return True
+    message = str(exc).casefold()
+    return "busy" in message or "locked" in message
+
+
 class _FinalizationHeartbeat:
     """Renew one finalization claim independently of report work."""
 
@@ -276,7 +292,9 @@ class _FinalizationHeartbeat:
         self._lease_seconds = lease_seconds
         self._stop = threading.Event()
         self._loss_lock = threading.Lock()
+        self._state_changed = threading.Condition(self._loss_lock)
         self._loss: _FinalizationClaimLoss | None = None
+        self._authority_unknown = False
         self._last_confirmed_expiry = claim.expires_at
         self._thread = threading.Thread(
             target=self._run,
@@ -289,11 +307,13 @@ class _FinalizationHeartbeat:
 
     def stop(self) -> None:
         self._stop.set()
+        with self._state_changed:
+            self._state_changed.notify_all()
         self._thread.join()
 
     @property
     def loss(self) -> _FinalizationClaimLoss | None:
-        with self._loss_lock:
+        with self._state_changed:
             return self._loss
 
     @property
@@ -306,8 +326,17 @@ class _FinalizationHeartbeat:
 
     @property
     def last_confirmed_expiry(self) -> datetime:
-        with self._loss_lock:
+        with self._state_changed:
             return self._last_confirmed_expiry
+
+    def wait_until_authority_confirmed(self) -> None:
+        """Pause finalization until a transient renewal uncertainty resolves."""
+        with self._state_changed:
+            while self._authority_unknown and self._loss is None and not self._stop.is_set():
+                self._state_changed.wait()
+            loss = self._loss
+        if loss is not None:
+            raise self.claim_loss_error()
 
     def claim_loss_error(self) -> FinalizationClaimLostError:
         loss = self.loss
@@ -325,7 +354,7 @@ class _FinalizationHeartbeat:
         classification: str,
         renewal_failure: BaseException | None = None,
     ) -> None:
-        with self._loss_lock:
+        with self._state_changed:
             if self._loss is not None:
                 return
             last_confirmed_expiry = self._last_confirmed_expiry
@@ -334,6 +363,8 @@ class _FinalizationHeartbeat:
                 last_confirmed_expiry=last_confirmed_expiry,
                 renewal_failure=renewal_failure,
             )
+            self._authority_unknown = False
+            self._state_changed.notify_all()
         _emit_finalization_telemetry(
             "claim_lost",
             run_id=str(self._run_id),
@@ -347,6 +378,40 @@ class _FinalizationHeartbeat:
                 else f"{type(renewal_failure).__name__}: {renewal_failure}"
             ),
         )
+
+    def record_transient_renewal_failure(
+        self, exc: BaseException, retry_delay_seconds: float
+    ) -> None:
+        with self._state_changed:
+            if self._loss is not None or self._stop.is_set():
+                return
+            self._authority_unknown = True
+            last_confirmed_expiry = self._last_confirmed_expiry
+        _emit_finalization_telemetry(
+            "renewal_transient_failure",
+            run_id=str(self._run_id),
+            claim_id=str(self._claim.claim_id),
+            owner_id=self._claim.owner_id,
+            last_confirmed_expiry=last_confirmed_expiry.isoformat(),
+            retry_delay_seconds=retry_delay_seconds,
+            renewal_failure=f"{type(exc).__name__}: {exc}",
+        )
+
+    def _claim_is_still_live(self) -> bool:
+        try:
+            if self._ledger.owns_finalization_claim(
+                self._run_id, self._claim.claim_id
+            ):
+                return True
+        except Exception as exc:
+            if _is_retryable_sqlite_contention(exc):
+                return True
+            if not self._stop.is_set():
+                self.record_loss("renewal_failure", exc)
+            return False
+        if not self._stop.is_set():
+            self.record_loss(self.classify_claim_loss())
+        return False
 
     def classify_claim_loss(self) -> str:
         try:
@@ -365,6 +430,7 @@ class _FinalizationHeartbeat:
 
     def _run(self) -> None:
         cadence = self._lease_seconds / 3
+        retry_delay = min(1.0, max(0.001, cadence / 4))
         while not self._stop.is_set():
             try:
                 renewed = self._ledger.renew_finalization_claim(
@@ -373,16 +439,29 @@ class _FinalizationHeartbeat:
                     lease_seconds=self._lease_seconds,
                 )
             except Exception as exc:
-                if not self._stop.is_set():
+                if self._stop.is_set():
+                    return
+                if not _is_retryable_sqlite_contention(exc):
                     self.record_loss("renewal_failure", exc)
-                return
+                    return
+                self.record_transient_renewal_failure(exc, retry_delay)
+                if not self._claim_is_still_live():
+                    return
+                if self._stop.wait(retry_delay):
+                    return
+                if not self._claim_is_still_live():
+                    return
+                retry_delay = min(1.0, retry_delay * 2)
+                continue
             if self._stop.is_set():
                 return
             if renewed is None:
                 self.record_loss(self.classify_claim_loss())
                 return
-            with self._loss_lock:
+            with self._state_changed:
                 self._last_confirmed_expiry = renewed.expires_at
+                self._authority_unknown = False
+                self._state_changed.notify_all()
             _emit_finalization_telemetry(
                 "claim_renewed",
                 run_id=str(self._run_id),
@@ -1166,6 +1245,7 @@ class EvaluationRunner:
     def _ensure_finalization_claim(
         self, heartbeat: _FinalizationHeartbeat
     ) -> None:
+        heartbeat.wait_until_authority_confirmed()
         if heartbeat.loss is not None:
             raise heartbeat.claim_loss_error()
         if self.ledger.owns_finalization_claim(

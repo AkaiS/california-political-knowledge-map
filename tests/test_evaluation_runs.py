@@ -3398,6 +3398,128 @@ def test_renewal_failure_is_typed_telemetry_and_not_a_run_issue(
         )
 
 
+def test_transient_renewal_contention_pauses_work_until_authority_is_reconfirmed(
+    tmp_path, monkeypatch, caplog
+):
+    cases, gold_set, suite = _lifecycle_fixture("transient-renewal-contention")
+    database = tmp_path / "evaluation.sqlite"
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+    renewal_started = threading.Event()
+    retry_started = threading.Event()
+    allow_renewal = threading.Event()
+    entered = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = ledger.renew_finalization_claim
+        renewal_attempts = 0
+
+        def contended_then_renew(run_id, claim_id, *, lease_seconds=300.0):
+            nonlocal renewal_attempts
+            renewal_attempts += 1
+            if renewal_attempts == 1:
+                renewal_started.set()
+                raise sqlite3.OperationalError("database is locked")
+            retry_started.set()
+            assert allow_renewal.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(ledger, "renew_finalization_claim", contended_then_renew)
+        evaluator = BlockingCountCases(entered, release, calls)
+        caplog.set_level(logging.INFO, logger="knowledge_map.evaluation.runner")
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                EvaluationRunner(ledger).finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=10,
+                evaluator_resolver=lambda configured: evaluator,
+            )
+            assert renewal_started.wait(timeout=5)
+            assert retry_started.wait(timeout=5)
+            assert not entered.is_set()
+
+            allow_renewal.set()
+            assert entered.wait(timeout=5)
+            release.set()
+            completed = future.result(timeout=5)
+
+        assert completed.run.status is EvaluationRunStatus.COMPLETED
+        assert renewal_attempts == 2
+        assert calls == ["count-cases"]
+        assert len(completed.report_evaluator_executions) == 1
+        assert any(
+            "evaluation_finalization.renewal_transient_failure" in record.message
+            for record in caplog.records
+        )
+
+
+def test_transient_renewal_contention_becomes_claim_loss_at_confirmed_expiry(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("transient-renewal-expiry")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    renewal_started = threading.Event()
+    entered = threading.Event()
+    calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        def permanently_contended_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(
+            ledger, "renew_finalization_claim", permanently_contended_renewal
+        )
+        evaluator = BlockingCountCases(entered, threading.Event(), calls)
+
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(
+                EvaluationRunner(ledger).finalize,
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: evaluator,
+            )
+            assert renewal_started.wait(timeout=5)
+            clock.current = initial_time + timedelta(seconds=1)
+            with pytest.raises(FinalizationClaimLostError) as lost:
+                future.result(timeout=5)
+
+        assert lost.value.loss_classification == "claim_expired"
+        assert lost.value.last_confirmed_expiry == initial_time + timedelta(seconds=1)
+        assert not entered.is_set()
+        assert calls == []
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
+
+
 def _assert_long_running_finalizer_stays_authoritative(
     tmp_path, *, suffix: str, evaluator_factory
 ):

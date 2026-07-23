@@ -67,14 +67,14 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Fence and stop an attempt that loses authority
 
-- [ ] Only explicitly classified SQLite `busy` or `locked` renewal conflicts are retryable.
-- [ ] A retryable renewal conflict marks authority as temporarily unknown rather than definitively lost.
-- [ ] No new evaluator or Release Gate begins while authority is unknown.
-- [ ] Renewal uses bounded backoff and retries only while the last confirmed expiry remains in the future.
-- [ ] Work may resume only after a successful renewal reconfirms ownership.
-- [ ] Contention lasting beyond the confirmed lease becomes definitive claim loss and cannot revive the expired claim.
-- [ ] Constraint, state, validation, disk, corruption, unrelated operational, and programming failures do not retry.
-- [ ] Renewal successes, transient failures, and definitive loss are observable through telemetry without creating a recovery issue.
+- [x] Only explicitly classified SQLite `busy` or `locked` renewal conflicts are retryable.
+- [x] A retryable renewal conflict marks authority as temporarily unknown rather than definitively lost.
+- [x] No new evaluator or Release Gate begins while authority is unknown.
+- [x] Renewal uses bounded backoff and retries only while the last confirmed expiry remains in the future.
+- [x] Work may resume only after a successful renewal reconfirms ownership.
+- [x] Contention lasting beyond the confirmed lease becomes definitive claim loss and cannot revive the expired claim.
+- [x] Constraint, state, validation, disk, corruption, unrelated operational, and programming failures do not retry.
+- [x] Renewal successes, transient failures, and definitive loss are observable through telemetry without creating a recovery issue.
 
 ## Retry finalization persistence without reevaluating
 
