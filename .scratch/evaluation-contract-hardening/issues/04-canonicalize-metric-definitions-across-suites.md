@@ -1,7 +1,7 @@
 # Canonicalize Metric Definitions across Suites
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,14 +15,14 @@ A type-agnostic evaluator may reuse one Metric Definition across different Evalu
 
 ## Acceptance criteria
 
-- [ ] Every Evaluation Metric Definition has canonical authored content and a verified content hash covering its value type, structured schema, semantic description, and comparison operation.
-- [ ] Metric Definitions are imported as independently queryable immutable ledger records.
-- [ ] Importing identical metric content from multiple Suites is idempotent and stores one canonical definition.
-- [ ] Reusing `(namespaced name, evaluator revision)` with different content is rejected across Suites.
-- [ ] The ledger records exact Suite-to-metric relationships while authored Suites remain self-contained.
-- [ ] Configured Evaluator metric references resolve only to exact Metric Definitions declared by their Suite.
-- [ ] A semantic metric change requires a new Metric Definition revision and changes the content of every Suite revision that adopts it.
-- [ ] Contract and temporary-ledger tests cover reuse across task types, idempotent imports, conflict rejection, and Suite round trips.
+- [x] Every Evaluation Metric Definition has canonical authored content and a verified content hash covering its value type, structured schema, semantic description, and comparison operation.
+- [x] Metric Definitions are imported as independently queryable immutable ledger records.
+- [x] Importing identical metric content from multiple Suites is idempotent and stores one canonical definition.
+- [x] Reusing `(namespaced name, evaluator revision)` with different content is rejected across Suites.
+- [x] The ledger records exact Suite-to-metric relationships while authored Suites remain self-contained.
+- [x] Configured Evaluator metric references resolve only to exact Metric Definitions declared by their Suite.
+- [x] A semantic metric change requires a new Metric Definition revision and changes the content of every Suite revision that adopts it.
+- [x] Contract and temporary-ledger tests cover reuse across task types, idempotent imports, conflict rejection, and Suite round trips.
 
 ## Blocked by
 

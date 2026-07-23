@@ -47,6 +47,18 @@ class StructuredMetric(BaseModel):
     score: float
 
 
+class AlternateInput(BaseModel):
+    text: str
+
+
+class AlternateOutput(BaseModel):
+    label: str
+
+
+class AlternateMetadata(BaseModel):
+    annotator: str
+
+
 def test_evaluation_ledger_uses_one_shared_connection_for_decomposed_capabilities(
     tmp_path,
 ):
@@ -171,6 +183,10 @@ def test_imported_suite_inventory_includes_structured_metric_schemas(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         record = ledger.import_suite(suite)
+        stored_metric = ledger.get_metric_definition(
+            namespaced_name=metric.namespaced_name,
+            evaluator_revision=metric.evaluator_revision,
+        )
 
     assert record.schema_references == (
         suite.task_contract.input_schema,
@@ -178,6 +194,151 @@ def test_imported_suite_inventory_includes_structured_metric_schemas(tmp_path):
         suite.task_contract.metadata_schema,
         structured_schema,
     )
+    assert stored_metric is not None
+    assert stored_metric.definition == metric
+
+
+def test_imported_suite_publishes_its_metric_as_an_independently_queryable_record(
+    tmp_path,
+):
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.quality",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.BOOLEAN,
+        semantic_description="Whether the output passed quality review.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="suite-metric-record", revision=1),
+        description="A suite with a canonical metric.",
+        task_contract=EvaluationTaskContract(
+            input_schema=SchemaReference.for_model(Input, identity="tests.input", revision=1),
+            output_schema=SchemaReference.for_model(Output, identity="tests.output", revision=1),
+            metadata_schema=SchemaReference.for_model(
+                Metadata, identity="tests.metadata", revision=1
+            ),
+        ),
+        report_evaluators=(
+            ConfiguredEvaluator(
+                name="quality",
+                evaluator_revision=1,
+                metrics=(EvaluationMetricReference.from_definition(metric),),
+            ),
+        ),
+        metrics=(metric,),
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        ledger.import_suite(suite)
+
+        stored = ledger.get_metric_definition(
+            namespaced_name=metric.namespaced_name,
+            evaluator_revision=metric.evaluator_revision,
+        )
+
+        assert stored is not None
+        assert stored.content_hash == metric.content_hash
+        assert stored.definition == metric
+        assert ledger.list_metric_definitions() == [stored]
+
+
+def test_identical_metric_content_is_shared_across_suites_with_exact_relationships(
+    tmp_path,
+):
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.shared-quality",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.BOOLEAN,
+        semantic_description="Whether the output passed quality review.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+
+    def make_suite(business_id: str, input_type: type[BaseModel], output_type: type[BaseModel], metadata_type: type[BaseModel]):
+        return EvaluationSuite(
+            identity=EvaluationSuiteIdentity(business_id=business_id, revision=1),
+            description=f"Suite {business_id}.",
+            task_contract=EvaluationTaskContract(
+                input_schema=SchemaReference.for_model(
+                    input_type, identity=f"tests.{business_id}.input", revision=1
+                ),
+                output_schema=SchemaReference.for_model(
+                    output_type, identity=f"tests.{business_id}.output", revision=1
+                ),
+                metadata_schema=SchemaReference.for_model(
+                    metadata_type, identity=f"tests.{business_id}.metadata", revision=1
+                ),
+            ),
+            report_evaluators=(
+                ConfiguredEvaluator(
+                    name="quality",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(metric),),
+                ),
+            ),
+            metrics=(metric,),
+        )
+
+    first_suite = make_suite("suite-shared-first", Input, Output, Metadata)
+    second_suite = make_suite(
+        "suite-shared-second", AlternateInput, AlternateOutput, AlternateMetadata
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        first_record = ledger.import_suite(first_suite)
+        second_record = ledger.import_suite(second_suite)
+
+        assert len(ledger.list_metric_definitions()) == 1
+        stored = ledger.list_metric_definitions()[0]
+        assert ledger.list_suite_metrics(first_record.record_id) == [stored]
+        assert ledger.list_suite_metrics(second_record.record_id) == [stored]
+
+
+def test_reusing_a_metric_identity_with_different_content_is_rejected_across_suites(
+    tmp_path,
+):
+    def make_metric(description: str) -> EvaluationMetricDefinition:
+        return EvaluationMetricDefinition(
+            namespaced_name="tests.conflicting-quality",
+            evaluator_revision=1,
+            value_type=EvaluationMetricValueType.BOOLEAN,
+            semantic_description=description,
+            comparison_operation=NoComparisonOperation(
+                namespaced_name="tests.comparison.none", revision=1
+            ),
+        )
+
+    def make_suite(business_id: str, metric: EvaluationMetricDefinition):
+        return EvaluationSuite(
+            identity=EvaluationSuiteIdentity(business_id=business_id, revision=1),
+            description=f"Suite {business_id}.",
+            task_contract=EvaluationTaskContract(
+                input_schema=SchemaReference.for_model(Input, identity="tests.input", revision=1),
+                output_schema=SchemaReference.for_model(Output, identity="tests.output", revision=1),
+                metadata_schema=SchemaReference.for_model(
+                    Metadata, identity="tests.metadata", revision=1
+                ),
+            ),
+            report_evaluators=(
+                ConfiguredEvaluator(
+                    name="quality",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(metric),),
+                ),
+            ),
+            metrics=(metric,),
+        )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        ledger.import_suite(make_suite("suite-conflict-first", make_metric("Passes review.")))
+
+        with pytest.raises(ValueError, match="metric content changed"):
+            ledger.import_suite(
+                make_suite("suite-conflict-second", make_metric("Passes strict review."))
+            )
 
 
 def test_imported_suite_inventory_preserves_task_schemas_and_deduplicates_metrics(

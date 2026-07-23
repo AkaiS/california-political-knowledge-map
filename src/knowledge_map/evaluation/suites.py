@@ -123,6 +123,7 @@ class EvaluationMetricDefinition(BaseModel):
     comparison_operation: (
         OrderedComparisonOperation | NoComparisonOperation | CustomComparisonOperation
     )
+    content_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
     def structured_value_type_has_an_exact_schema(self) -> "EvaluationMetricDefinition":
@@ -132,6 +133,23 @@ class EvaluationMetricDefinition(BaseModel):
         elif self.structured_schema is not None:
             raise ValueError("only structured metrics may declare a structured_schema")
         return self
+
+    def model_post_init(self, __context: Any) -> None:
+        semantic_content = self.model_dump(mode="json", exclude={"content_hash"})
+        fingerprint = content_fingerprint(semantic_content)
+        if self.content_hash is not None and self.content_hash != fingerprint:
+            raise ValueError("content_hash does not match the Evaluation Metric Definition")
+        object.__setattr__(self, "content_hash", fingerprint)
+
+    def model_copy(
+        self,
+        *,
+        update: Mapping[str, Any] | None = None,
+        deep: bool = False,
+    ) -> "EvaluationMetricDefinition":
+        payload = super().model_copy(update=update, deep=deep).model_dump(mode="json")
+        payload["content_hash"] = None
+        return type(self).model_validate(payload)
 
     @property
     def identity(self) -> tuple[str, int]:
@@ -511,6 +529,19 @@ class EvaluationSuite(BaseModel):
         if self.content_hash is not None and self.content_hash != fingerprint:
             raise ValueError("content_hash does not match the evaluation suite")
         object.__setattr__(self, "content_hash", fingerprint)
+
+    def model_copy(
+        self,
+        *,
+        update: Mapping[str, Any] | None = None,
+        deep: bool = False,
+    ) -> "EvaluationSuite":
+        payload = super().model_copy(update=update, deep=deep).model_dump(mode="json")
+        payload["content_hash"] = None
+        payload["metrics"] = [
+            {**metric, "content_hash": None} for metric in payload["metrics"]
+        ]
+        return type(self).model_validate(payload)
 
     def _suite_wide_case_evaluator_references(
         self,

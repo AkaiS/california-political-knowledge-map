@@ -98,6 +98,38 @@ def test_number_metric_compares_values_under_its_revisioned_ordering_contract():
     assert metric.compare(candidate=0.83, baseline=0.87) is EvaluationComparisonResult.WORSE
 
 
+def test_metric_definition_carries_a_verified_canonical_content_hash():
+    metric = EvaluationMetricDefinition(
+        namespaced_name="ca-map.relevance.accuracy",
+        evaluator_revision=2,
+        value_type=EvaluationMetricValueType.NUMBER,
+        semantic_description="Fraction of relevance classifications that match review.",
+        comparison_operation=OrderedComparisonOperation(
+            namespaced_name="ca-map.comparison.ordered-scalar",
+            revision=1,
+            higher_is_better=True,
+        ),
+    )
+
+    assert len(metric.content_hash) == 64
+    assert metric.model_copy().content_hash == metric.content_hash
+    assert (
+        metric.model_copy(
+            update={"semantic_description": "A revised meaning."}
+        ).content_hash
+        != metric.content_hash
+    )
+    with pytest.raises(ValueError, match="content_hash"):
+        EvaluationMetricDefinition(
+            namespaced_name=metric.namespaced_name,
+            evaluator_revision=metric.evaluator_revision,
+            value_type=metric.value_type,
+            semantic_description=metric.semantic_description,
+            comparison_operation=metric.comparison_operation,
+            content_hash="a" * 64,
+        )
+
+
 @pytest.mark.parametrize(
     ("value_type", "value"),
     [
