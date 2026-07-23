@@ -317,6 +317,11 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set-durable-plan", revision=1),
         description="Durable shared-engine cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -918,6 +923,11 @@ def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id=f"gold-set-{suffix}", revision=1),
         description="Lifecycle cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -1106,6 +1116,11 @@ def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
             business_id="gold-set-durable-concurrency", revision=1
         ),
         description="Concurrent durable cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -1399,6 +1414,11 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set-task-failure", revision=1),
         description="Task failure cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -4616,6 +4636,11 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set", revision=1),
         description="Deterministic cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -4772,6 +4797,11 @@ def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_pat
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set-both", revision=1),
         description="One deterministic case.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(cases[0]),
@@ -4926,6 +4956,11 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set-subset", revision=1),
         description="Deterministic cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),

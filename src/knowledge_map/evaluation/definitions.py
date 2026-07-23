@@ -148,6 +148,16 @@ class SchemaReference(BaseModel):
         return self == other
 
 
+class EvaluationTaskContract(BaseModel):
+    """The exact typed inputs, outputs, and metadata of one component operation."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    input_schema: SchemaReference
+    output_schema: SchemaReference
+    metadata_schema: SchemaReference
+
+
 class DeclaredArtifactReference(BaseModel):
     """A content-addressed artifact consumed by an authored definition."""
 
@@ -346,6 +356,9 @@ class EvaluationCaseRevisionReference(BaseModel):
     business_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input_schema: SchemaReference
+    output_schema: SchemaReference
+    metadata_schema: SchemaReference
 
     @classmethod
     def from_case(
@@ -356,6 +369,9 @@ class EvaluationCaseRevisionReference(BaseModel):
             business_id=evaluation_case.identity.business_id,
             revision=evaluation_case.identity.revision,
             content_hash=evaluation_case.content_hash,
+            input_schema=evaluation_case.input_schema,
+            output_schema=evaluation_case.expected_output_schema,
+            metadata_schema=evaluation_case.metadata_schema,
         )
 
 
@@ -373,6 +389,7 @@ class EvaluationGoldSet(_AuthoredDefinition):
 
     identity: EvaluationGoldSetIdentity
     description: str = Field(min_length=1)
+    task_contract: EvaluationTaskContract
     tags: tuple[str, ...] = ()
     artifacts: tuple[DeclaredArtifactReference, ...] = ()
     memberships: tuple[EvaluationGoldSetMembership, ...] = Field(min_length=1)
@@ -386,6 +403,51 @@ class EvaluationGoldSet(_AuthoredDefinition):
         if len(revisions) != len(set(revisions)):
             raise ValueError("a Gold Set cannot contain a case revision more than once")
         return self
+
+    @model_validator(mode="after")
+    def members_match_task_contract(self) -> "EvaluationGoldSet":
+        for membership in self.memberships:
+            reference = membership.case
+            for field_name, actual, expected in (
+                ("input", reference.input_schema, self.task_contract.input_schema),
+                ("output", reference.output_schema, self.task_contract.output_schema),
+                (
+                    "metadata",
+                    reference.metadata_schema,
+                    self.task_contract.metadata_schema,
+                ),
+            ):
+                if not actual.is_exactly_compatible_with(expected):
+                    raise ValueError(
+                        f"Gold Set member {reference.business_id}@{reference.revision} "
+                        f"has an incompatible {field_name} schema"
+                    )
+        return self
+
+    def validate_cases(
+        self, cases: tuple[EvaluationCase[Any, Any, Any], ...]
+    ) -> tuple[EvaluationCase[Any, Any, Any], ...]:
+        """Revalidate supplied case values against this Gold Set's contract."""
+        for evaluation_case in cases:
+            for field_name, actual, expected in (
+                ("input", evaluation_case.input_schema, self.task_contract.input_schema),
+                (
+                    "output",
+                    evaluation_case.expected_output_schema,
+                    self.task_contract.output_schema,
+                ),
+                (
+                    "metadata",
+                    evaluation_case.metadata_schema,
+                    self.task_contract.metadata_schema,
+                ),
+            ):
+                if not actual.is_exactly_compatible_with(expected):
+                    raise ValueError(
+                        f"case {evaluation_case.identity.business_id}@{evaluation_case.identity.revision} "
+                        f"has an incompatible {field_name} schema for the Gold Set"
+                    )
+        return cases
 
 
 class EvaluationRubric(_AuthoredDefinition):

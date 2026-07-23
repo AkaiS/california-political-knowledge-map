@@ -1,7 +1,7 @@
 # Bind every Evaluation Gold Set to one Task Contract
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,13 +15,13 @@ Validate membership when the Gold Set is authored and again when its references 
 
 ## Acceptance criteria
 
-- [ ] An Evaluation Gold Set version records one exact input, expected-output, and metadata schema contract as semantic authored content.
-- [ ] Gold Set construction rejects any member whose exact schema identity, revision, or fingerprint differs from the bound Task Contract.
-- [ ] Import rejects membership references that resolve to incompatible Evaluation Case revisions or to content different from the referenced immutable revision.
-- [ ] Suite-to-Gold-Set preflight rejects a Task Contract mismatch before selection or run creation.
-- [ ] A selected Evaluation Case Manifest is revalidated against the already-matched Task Contract without permitting selection to hide an incompatible Gold Set member.
-- [ ] Legitimate heterogeneous case shapes remain supported only as explicit variants inside the shared Pydantic schemas.
-- [ ] Contract, import, full-run, and subset-run tests cover compatible populations and every mismatch dimension.
+- [x] An Evaluation Gold Set version records one exact input, expected-output, and metadata schema contract as semantic authored content.
+- [x] Gold Set construction rejects any member whose exact schema identity, revision, or fingerprint differs from the bound Task Contract.
+- [x] Import rejects membership references that resolve to incompatible Evaluation Case revisions or to content different from the referenced immutable revision.
+- [x] Suite-to-Gold-Set preflight rejects a Task Contract mismatch before selection or run creation.
+- [x] A selected Evaluation Case Manifest is revalidated against the already-matched Task Contract without permitting selection to hide an incompatible Gold Set member.
+- [x] Legitimate heterogeneous case shapes remain supported only as explicit variants inside the shared Pydantic schemas.
+- [x] Contract, import, full-run, and subset-run tests cover compatible populations and every mismatch dimension.
 
 ## Blocked by
 

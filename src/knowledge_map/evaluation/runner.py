@@ -858,6 +858,7 @@ class EvaluationRunner:
             case_by_reference[(m.case.business_id, m.case.revision)]
             for m in selected_memberships
         )
+        gold_set.validate_cases(selected_cases)
         suite.validate_cases(selected_cases)
 
         case_records = tuple(self.ledger.import_case(case) for case in cases)

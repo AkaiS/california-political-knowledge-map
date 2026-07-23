@@ -267,6 +267,11 @@ def test_imported_gold_set_uses_relational_membership_rows(tmp_path):
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-set-001", revision=1),
         description="Held-out cases.",
+        task_contract=EvaluationTaskContract(
+            input_schema=case.input_schema,
+            output_schema=case.expected_output_schema,
+            metadata_schema=case.metadata_schema,
+        ),
         memberships=(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -283,6 +288,36 @@ def test_imported_gold_set_uses_relational_membership_rows(tmp_path):
     assert memberships[0].case_record_id == case.identity.record_id
     assert memberships[0].case_content_hash == case.content_hash
     assert memberships[0].split is EvaluationSplit.HELD_OUT
+
+
+def test_import_rejects_a_gold_set_reference_whose_case_contract_changed(tmp_path):
+    ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
+    case = make_case()
+    ledger.import_definition(case)
+    forged_input_schema = SchemaReference.for_model(
+        Input, identity="tests.other-input", revision=1
+    )
+    forged_reference = EvaluationCaseRevisionReference.from_case(case).model_copy(
+        update={"input_schema": forged_input_schema}
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-contract", revision=1),
+        description="A contract-mismatched gold set.",
+        task_contract=EvaluationTaskContract(
+            input_schema=forged_input_schema,
+            output_schema=case.expected_output_schema,
+            metadata_schema=case.metadata_schema,
+        ),
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=forged_reference,
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="contract"):
+        ledger.import_definition(gold_set)
 
 
 def test_artifact_catalog_deduplicates_bytes_and_preserves_immutable_metadata(tmp_path):

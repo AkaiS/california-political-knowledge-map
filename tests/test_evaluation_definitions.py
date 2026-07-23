@@ -495,6 +495,11 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="relevance-gold", revision=1),
         description="Reviewed relevance examples.",
+        task_contract=EvaluationTaskContract(
+            input_schema=authored_case.input_schema,
+            output_schema=authored_case.expected_output_schema,
+            metadata_schema=authored_case.metadata_schema,
+        ),
         memberships=(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(authored_case),
@@ -508,6 +513,63 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
     assert restored_gold_set == gold_set
     assert gold_set.memberships[0].case.content_hash == authored_case.content_hash
     assert gold_set.memberships[0].split is EvaluationSplit.HELD_OUT
+
+
+def test_gold_set_binds_one_exact_task_contract_and_rejects_a_mismatched_member():
+    authored_case = EvaluationCase[RelevanceInput, RelevanceOutput, RelevanceMetadata](
+        identity=EvaluationCaseIdentity(business_id="relevance-contract-001", revision=1),
+        input_schema=SchemaReference.for_model(
+            RelevanceInput, identity="ca-map.relevance.input", revision=1
+        ),
+        expected_output_schema=SchemaReference.for_model(
+            RelevanceOutput, identity="ca-map.relevance.output", revision=1
+        ),
+        metadata_schema=SchemaReference.for_model(
+            RelevanceMetadata, identity="ca-map.relevance.metadata", revision=1
+        ),
+        task_input=RelevanceInput(headline="Governor proposes housing bill"),
+        expected_output=RelevanceOutput(is_relevant=True),
+        metadata=RelevanceMetadata(source="human-reviewed"),
+        description="A California policy headline is relevant.",
+    )
+    contract = EvaluationTaskContract(
+        input_schema=authored_case.input_schema,
+        output_schema=authored_case.expected_output_schema,
+        metadata_schema=authored_case.metadata_schema,
+    )
+
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(
+            business_id="relevance-contract-gold", revision=1
+        ),
+        description="Reviewed relevance examples.",
+        task_contract=contract,
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(authored_case),
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
+    )
+
+    assert gold_set.task_contract == contract
+
+    incompatible_contract = contract.model_copy(
+        update={
+            "input_schema": SchemaReference.for_model(
+                RelevanceInput, identity="other.operation.input", revision=1
+            )
+        }
+    )
+    with pytest.raises(ValueError, match="input schema"):
+        EvaluationGoldSet(
+            identity=EvaluationGoldSetIdentity(
+                business_id="relevance-contract-gold", revision=2
+            ),
+            description="An incompatible population.",
+            task_contract=incompatible_contract,
+            memberships=gold_set.memberships,
+        )
 
 
 def test_reusing_a_case_business_identity_and_revision_for_changed_content_is_rejected():

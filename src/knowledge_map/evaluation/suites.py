@@ -17,6 +17,7 @@ from .definitions import (
     EvaluationRequirementCatalog,
     EvaluationRubric,
     EvaluationSplit,
+    EvaluationTaskContract,
     SchemaReference,
     canonical_configuration_json,
     configuration_fingerprint,
@@ -213,16 +214,6 @@ class EvaluationRubricRevisionReference(BaseModel):
             revision=rubric.identity.revision,
             content_hash=rubric.content_hash,
         )
-
-
-class EvaluationTaskContract(BaseModel):
-    """The exact typed inputs, outputs, and metadata accepted by a suite task."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    input_schema: SchemaReference
-    output_schema: SchemaReference
-    metadata_schema: SchemaReference
 
 
 class EvaluationMetricReference(BaseModel):

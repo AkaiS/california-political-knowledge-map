@@ -135,10 +135,107 @@ def preflight_selected_cases(
     | None = None,
     split: EvaluationSplit | None = None,
 ) -> EvaluationPreflightResult:
-    """Resolve selected Gold Set members and report every selected compatibility gap."""
+    """Resolve selected members after validating the whole Gold Set contract."""
+    contract_subject = (
+        f"{gold_set.identity.business_id}@{gold_set.identity.revision}"
+    )
+    contract_issues = [
+        EvaluationPreflightIssue(
+            category="task_contract",
+            subject=contract_subject,
+            message=(
+                f"Gold Set {field_name} schema is incompatible with the "
+                "Suite task contract"
+            ),
+        )
+        for field_name, gold_schema, suite_schema in (
+            (
+                "input",
+                gold_set.task_contract.input_schema,
+                suite.task_contract.input_schema,
+            ),
+            (
+                "output",
+                gold_set.task_contract.output_schema,
+                suite.task_contract.output_schema,
+            ),
+            (
+                "metadata",
+                gold_set.task_contract.metadata_schema,
+                suite.task_contract.metadata_schema,
+            ),
+        )
+        if not gold_schema.is_exactly_compatible_with(suite_schema)
+    ]
+    if contract_issues:
+        return EvaluationPreflightResult(issues=tuple(contract_issues))
+
+    membership_contract_issues: list[EvaluationPreflightIssue] = []
+    for membership in gold_set.memberships:
+        reference = membership.case
+        for field_name, actual, expected in (
+            ("input", reference.input_schema, gold_set.task_contract.input_schema),
+            ("output", reference.output_schema, gold_set.task_contract.output_schema),
+            (
+                "metadata",
+                reference.metadata_schema,
+                gold_set.task_contract.metadata_schema,
+            ),
+        ):
+            if actual is None or not actual.is_exactly_compatible_with(expected):
+                membership_contract_issues.append(
+                    EvaluationPreflightIssue(
+                        category="task_contract",
+                        subject=f"{reference.business_id}@{reference.revision}",
+                        message=(
+                            f"Gold Set member {reference.business_id}@{reference.revision} "
+                            f"has an incompatible {field_name} schema"
+                        ),
+                        case_business_id=reference.business_id,
+                        case_revision=reference.revision,
+                    )
+                )
+    if membership_contract_issues:
+        return EvaluationPreflightResult(issues=tuple(membership_contract_issues))
+
     case_by_reference = {
         (case.identity.business_id, case.identity.revision): case for case in cases
     }
+    resolved_contract_issues: list[EvaluationPreflightIssue] = []
+    for membership in gold_set.memberships:
+        reference = membership.case
+        case = case_by_reference.get((reference.business_id, reference.revision))
+        if case is None or case.content_hash != reference.content_hash:
+            continue
+        for field_name, actual, expected in (
+            ("input", case.input_schema, gold_set.task_contract.input_schema),
+            (
+                "output",
+                case.expected_output_schema,
+                gold_set.task_contract.output_schema,
+            ),
+            (
+                "metadata",
+                case.metadata_schema,
+                gold_set.task_contract.metadata_schema,
+            ),
+        ):
+            if actual is None or not actual.is_exactly_compatible_with(expected):
+                resolved_contract_issues.append(
+                    EvaluationPreflightIssue(
+                        category="task_contract",
+                        subject=f"{reference.business_id}@{reference.revision}",
+                        message=(
+                            f"resolved case {reference.business_id}@{reference.revision} "
+                            f"has an incompatible {field_name} schema for the Gold Set"
+                        ),
+                        case_business_id=reference.business_id,
+                        case_revision=reference.revision,
+                    )
+                )
+    if resolved_contract_issues:
+        return EvaluationPreflightResult(issues=tuple(resolved_contract_issues))
+
     selected_names = (
         set(selection) if selection is not None and not callable(selection) else None
     )

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+import pytest
 
 from knowledge_map.evaluation import (
     ConfiguredEvaluator,
@@ -68,6 +69,11 @@ def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold", revision=2),
         description="A gold set.",
+        task_contract=EvaluationTaskContract(
+            input_schema=case.input_schema,
+            output_schema=case.expected_output_schema,
+            metadata_schema=case.metadata_schema,
+        ),
         memberships=(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -133,6 +139,11 @@ def _gold_set(cases: tuple[EvaluationCase[Input, Output, Metadata], ...]) -> Eva
     return EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
         description="A gold set.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -218,7 +229,7 @@ def test_preflight_unions_all_relevant_bindings_once_and_retains_provenance():
     assert result.plan.cases[0].evaluators[2].provenance == ("tone",)
 
 
-def test_preflight_reports_all_selected_gaps_but_ignores_unsupported_unselected_cases():
+def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
     compatible = _case("compatible")
     unknown = _case("unknown", requirements=("not-in-catalog",))
     incompatible = _case(
@@ -233,17 +244,20 @@ def test_preflight_reports_all_selected_gaps_but_ignores_unsupported_unselected_
             )
         )
     )
-    gold_set = _gold_set((compatible, unknown, incompatible))
+    with pytest.raises(ValueError, match="input schema"):
+        _gold_set((compatible, unknown, incompatible))
+
+    gold_set = _gold_set((compatible, unknown))
 
     full_run = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
-        cases=(compatible, unknown, incompatible),
+        cases=(compatible, unknown),
     )
     subset = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
-        cases=(compatible, unknown, incompatible),
+        cases=(compatible, unknown),
         selection={"compatible"},
     )
 
@@ -251,11 +265,46 @@ def test_preflight_reports_all_selected_gaps_but_ignores_unsupported_unselected_
     assert {(issue.category, issue.case_business_id, issue.requirement) for issue in full_run.issues} == {
         ("unknown_requirement", "unknown", "not-in-catalog"),
         ("missing_requirement_binding", "unknown", "not-in-catalog"),
-        ("task_contract", "incompatible", None),
-        ("missing_requirement_binding", "incompatible", "grounding"),
     }
     assert subset.is_compatible
     assert [entry.case.business_id for entry in subset.plan.cases] == ["compatible"]
+
+
+@pytest.mark.parametrize("mismatched_field", ("input", "output", "metadata"))
+def test_preflight_rejects_suite_and_gold_set_contract_mismatch_before_selection(
+    mismatched_field,
+):
+    case = _case("compatible")
+    gold_set = _gold_set((case,))
+    mismatched_schema = SchemaReference.for_model(
+        {"input": Input, "output": Output, "metadata": Metadata}[mismatched_field],
+        identity=f"different-{mismatched_field}",
+        revision=1,
+    )
+    contract_schemas = {
+        "input_schema": case.input_schema,
+        "output_schema": case.expected_output_schema,
+        "metadata_schema": case.metadata_schema,
+    }
+    contract_schemas[f"{mismatched_field}_schema"] = mismatched_schema
+    suite = _suite().model_copy(
+        update={
+            "task_contract": EvaluationTaskContract(
+                **contract_schemas,
+            )
+        }
+    )
+
+    result = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=(case,),
+        selection={"does-not-select-any-case"},
+    )
+
+    assert not result.is_compatible
+    assert any(issue.category == "task_contract" for issue in result.issues)
+    assert any("Gold Set" in issue.message for issue in result.issues)
 
 
 def test_runner_rejects_an_incompatible_preflight_before_creating_a_run(tmp_path):

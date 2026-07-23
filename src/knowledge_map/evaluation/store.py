@@ -395,6 +395,12 @@ def _definition_schema_references(definition: Any) -> tuple[SchemaReference, ...
             if metric.structured_schema is not None
         )
         return tuple(dict.fromkeys(references))
+    if isinstance(definition, EvaluationGoldSet):
+        return (
+            definition.task_contract.input_schema,
+            definition.task_contract.output_schema,
+            definition.task_contract.metadata_schema,
+        )
     return ()
 
 
@@ -881,6 +887,9 @@ class SQLiteEvaluationLedger:
                 case_business_id TEXT NOT NULL,
                 case_revision INTEGER NOT NULL CHECK (case_revision >= 1),
                 case_content_hash TEXT NOT NULL,
+                input_schema_json TEXT NOT NULL,
+                output_schema_json TEXT NOT NULL,
+                metadata_schema_json TEXT NOT NULL,
                 split TEXT NOT NULL CHECK (split IN ('training', 'calibration', 'held-out')),
                 UNIQUE(run_id, case_record_id),
                 UNIQUE(run_id, ordinal)
@@ -1043,13 +1052,30 @@ class SQLiteEvaluationLedger:
                     """
                     INSERT INTO evaluation_case_manifests (
                         manifest_id, run_id, ordinal, case_record_id,
-                        case_business_id, case_revision, case_content_hash, split
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        case_business_id, case_revision, case_content_hash,
+                        input_schema_json, output_schema_json, metadata_schema_json, split
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         str(entry.manifest_id), str(entry.run_id), entry.ordinal,
                         str(entry.case_record_id), entry.case_business_id,
-                        entry.case_revision, entry.case_content_hash, entry.split.value,
+                        entry.case_revision, entry.case_content_hash,
+                        json.dumps(
+                            entry.case.input_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        json.dumps(
+                            entry.case.output_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        json.dumps(
+                            entry.case.metadata_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        entry.split.value,
                     ),
                 )
             for result in result_items:
@@ -2457,6 +2483,15 @@ class SQLiteEvaluationLedger:
                     business_id=row["case_business_id"],
                     revision=row["case_revision"],
                     content_hash=row["case_content_hash"],
+                    input_schema=SchemaReference.model_validate_json(
+                        row["input_schema_json"]
+                    ),
+                    output_schema=SchemaReference.model_validate_json(
+                        row["output_schema_json"]
+                    ),
+                    metadata_schema=SchemaReference.model_validate_json(
+                        row["metadata_schema_json"]
+                    ),
                 ),
                 split=EvaluationSplit(row["split"]),
             )
@@ -3109,6 +3144,15 @@ class SQLiteEvaluationLedger:
             ):
                 raise ValueError(
                     "Gold Set membership must reference an imported exact Evaluation Case revision"
+                )
+            expected_schemas = (
+                gold_set.task_contract.input_schema,
+                gold_set.task_contract.output_schema,
+                gold_set.task_contract.metadata_schema,
+            )
+            if case_record.schema_references != expected_schemas:
+                raise ValueError(
+                    "Gold Set membership case does not implement the Gold Set task contract"
                 )
             self._connection.execute(
                 """

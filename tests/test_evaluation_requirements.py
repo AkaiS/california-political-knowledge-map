@@ -342,6 +342,11 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="shared-engine-gold", revision=1),
         description="The shared-engine population.",
+        task_contract=EvaluationTaskContract(
+            input_schema=cases[0].input_schema,
+            output_schema=cases[0].expected_output_schema,
+            metadata_schema=cases[0].metadata_schema,
+        ),
         memberships=tuple(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(case),
@@ -422,6 +427,11 @@ def test_case_requirements_are_authored_content_but_suite_judging_is_not_case_co
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(business_id="gold-5", revision=1),
         description="A reviewed case population.",
+        task_contract=EvaluationTaskContract(
+            input_schema=base_case.input_schema,
+            output_schema=base_case.expected_output_schema,
+            metadata_schema=base_case.metadata_schema,
+        ),
         memberships=(
             EvaluationGoldSetMembership(
                 case=EvaluationCaseRevisionReference.from_case(base_case),
