@@ -1,7 +1,7 @@
 # Freeze typed component configuration in Evaluation Runs
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,13 +15,13 @@ The persisted snapshot must reproduce what constructed the evaluated component w
 
 ## Acceptance criteria
 
-- [ ] Evaluation Run Configuration requires a Validated Component Configuration produced by the component's Pydantic configuration model rather than an arbitrary mapping.
-- [ ] The component configuration snapshot records its exact schema identity, revision, and fingerprint alongside canonical secret-free content.
-- [ ] Provider, model, model parameters, execution mode, random seed, and bounded case concurrency use normalized shared fields with unambiguous vocabulary.
-- [ ] Case concurrency defaults to one, rejects non-positive bounds, and participates in canonical serialization and fingerprinting.
-- [ ] Credentials and secret values are excluded from persisted content and from the configuration fingerprint.
-- [ ] Materially equivalent configurations produce the same fingerprint, while any material shared or component setting changes it.
-- [ ] A temporary-ledger contract test creates and reads back a run with a typed component configuration without losing its canonical meaning.
+- [x] Evaluation Run Configuration requires a Validated Component Configuration produced by the component's Pydantic configuration model rather than an arbitrary mapping.
+- [x] The component configuration snapshot records its exact schema identity, revision, and fingerprint alongside canonical secret-free content.
+- [x] Provider, model, model parameters, execution mode, random seed, and bounded case concurrency use normalized shared fields with unambiguous vocabulary.
+- [x] Case concurrency defaults to one, rejects non-positive bounds, and participates in canonical serialization and fingerprinting.
+- [x] Credentials and secret values are excluded from persisted content and from the configuration fingerprint.
+- [x] Materially equivalent configurations produce the same fingerprint, while any material shared or component setting changes it.
+- [x] A temporary-ledger contract test creates and reads back a run with a typed component configuration without losing its canonical meaning.
 
 ## Blocked by
 

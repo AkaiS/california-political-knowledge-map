@@ -2685,9 +2685,9 @@ class SQLiteEvaluationLedger:
             gold_set_content_hash=row["gold_set_content_hash"],
             configuration=EvaluationRunConfiguration(
                 provider=config["provider"], model=config["model"],
+                model_parameters=config["model_parameters"],
                 execution_mode=config["execution_mode"], random_seed=config["random_seed"],
                 case_concurrency=config["case_concurrency"],
-                model_settings=config["model_settings"],
                 component_configuration=config["component_configuration"],
                 code_fingerprint=config.get("code_fingerprint"),
             ),

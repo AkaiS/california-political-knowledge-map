@@ -47,6 +47,7 @@ from knowledge_map.evaluation import (
     EvaluationRequirementCatalog,
     ReportEvaluatorExecution,
     EvaluationRunConfiguration,
+    ValidatedComponentConfiguration,
     EvaluationRunIssue,
     EvaluationRunRecord,
     EvaluationRunner,
@@ -84,6 +85,11 @@ class Output(BaseModel):
 
 class Metadata(BaseModel):
     source: str
+
+
+class ComponentConfiguration(BaseModel):
+    temperature: int = 0
+    api_key: SecretStr
 
 
 @dataclass
@@ -4741,10 +4747,14 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
                 provider="deterministic",
                 model="fixture",
                 random_seed=7,
-                component_configuration={
-                    "temperature": 0,
-                    "api_key": SecretStr("must-not-persist"),
-                },
+                component_configuration=ValidatedComponentConfiguration.from_model(
+                    ComponentConfiguration(
+                        temperature=0,
+                        api_key=SecretStr("must-not-persist"),
+                    ),
+                    identity="tests.component-configuration",
+                    revision=1,
+                ),
             ),
         )
         result = runner.finalize(

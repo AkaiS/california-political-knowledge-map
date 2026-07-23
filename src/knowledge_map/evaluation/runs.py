@@ -170,6 +170,84 @@ class EvaluationCaseDisposition(str, Enum):
     CANCELLED = "cancelled"
 
 
+class ValidatedComponentConfiguration(BaseModel):
+    """A schema-identified, canonical snapshot of component construction settings."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_reference: SchemaReference
+    content: Mapping[str, Any] = Field(default_factory=dict)
+    content_fingerprint: str = ""
+
+    @classmethod
+    def from_model(
+        cls,
+        configuration: BaseModel,
+        *,
+        identity: str,
+        revision: int,
+    ) -> "ValidatedComponentConfiguration":
+        """Snapshot one validated Pydantic component configuration model."""
+        if not isinstance(configuration, BaseModel):
+            raise TypeError("component configuration must be a Pydantic BaseModel")
+        serialized = canonical_configuration_json(configuration)
+        content = json.loads(serialized)
+        if not isinstance(content, dict):  # pragma: no cover - Pydantic models dump objects
+            raise ValueError("component configuration must serialize to a JSON object")
+        return cls(
+            schema_reference=SchemaReference.for_model(
+                type(configuration), identity=identity, revision=revision
+            ),
+            content=content,
+            content_fingerprint=configuration_fingerprint(content),
+        )
+
+    from_config = from_model
+
+    def model_post_init(self, __context: Any) -> None:
+        serialized = canonical_configuration_json(self.content)
+        sanitized = json.loads(serialized)
+        fingerprint = configuration_fingerprint(sanitized)
+        if self.content_fingerprint and self.content_fingerprint != fingerprint:
+            raise ValueError(
+                "content_fingerprint does not match the component configuration"
+            )
+        object.__setattr__(self, "content", sanitized)
+        object.__setattr__(self, "content_fingerprint", fingerprint)
+
+    @property
+    def schema_identity(self) -> str:
+        return self.schema_reference.identity
+
+    @property
+    def schema_revision(self) -> int:
+        return self.schema_reference.revision
+
+    @property
+    def schema_fingerprint(self) -> str:
+        return self.schema_reference.model_fingerprint
+
+    @property
+    def fingerprint(self) -> str:
+        return self.content_fingerprint
+
+    @property
+    def configuration_fingerprint(self) -> str:
+        return self.content_fingerprint
+
+
+class _EmptyComponentConfiguration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+def _default_component_configuration() -> ValidatedComponentConfiguration:
+    return ValidatedComponentConfiguration.from_model(
+        _EmptyComponentConfiguration(),
+        identity="knowledge-map.empty-component-configuration",
+        revision=1,
+    )
+
+
 class EvaluationRunConfiguration(BaseModel):
     """The canonical, secret-free configuration frozen into a run."""
 
@@ -177,11 +255,13 @@ class EvaluationRunConfiguration(BaseModel):
 
     provider: str = Field(min_length=1)
     model: str = Field(min_length=1)
+    model_parameters: Mapping[str, Any] = Field(default_factory=dict)
     execution_mode: str = Field(default="deterministic", min_length=1)
     random_seed: int | None = None
     case_concurrency: int = Field(default=1, gt=0)
-    model_settings: Mapping[str, Any] = Field(default_factory=dict)
-    component_configuration: Mapping[str, Any] = Field(default_factory=dict)
+    component_configuration: ValidatedComponentConfiguration = Field(
+        default_factory=_default_component_configuration
+    )
     code_fingerprint: str | None = None
     configuration_json: str = ""
     content_fingerprint: str = ""
@@ -190,10 +270,10 @@ class EvaluationRunConfiguration(BaseModel):
         effective = {
             "provider": self.provider,
             "model": self.model,
+            "model_parameters": self.model_parameters,
             "execution_mode": self.execution_mode,
             "random_seed": self.random_seed,
             "case_concurrency": self.case_concurrency,
-            "model_settings": self.model_settings,
             "component_configuration": self.component_configuration,
             "code_fingerprint": self.code_fingerprint,
         }
@@ -206,8 +286,7 @@ class EvaluationRunConfiguration(BaseModel):
         object.__setattr__(self, "configuration_json", serialized)
         object.__setattr__(self, "content_fingerprint", fingerprint)
         sanitized = json.loads(serialized)
-        object.__setattr__(self, "model_settings", sanitized["model_settings"])
-        object.__setattr__(self, "component_configuration", sanitized["component_configuration"])
+        object.__setattr__(self, "model_parameters", sanitized["model_parameters"])
 
     @property
     def configuration_fingerprint(self) -> str:
