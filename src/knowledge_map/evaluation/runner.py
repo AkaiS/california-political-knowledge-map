@@ -650,7 +650,6 @@ class _DurableCheckpointSink:
                                 configured,
                                 call.output,
                                 execution.execution_id,
-                                result.result_id,
                                 self.suite.metrics,
                             )
                         )
@@ -731,7 +730,6 @@ class _DurableCheckpointSink:
                             configured,
                             call.output,
                             execution.execution_id,
-                            self.run.run_id,
                             self.suite.metrics,
                         )
                     except Exception as exc:
@@ -1224,7 +1222,6 @@ class EvaluationRunner:
                     configured,
                     output,
                     execution.execution_id,
-                    run_id,
                     suite.metrics,
                 )
             except Exception as exc:
@@ -1414,10 +1411,9 @@ class EvaluationRunner:
         return tuple(resolved)
 
     @staticmethod
-    def _case_observations(configured: ConfiguredEvaluator, output: Any, execution_id: Any, result_id: Any, definitions: tuple[EvaluationMetricDefinition, ...]) -> list[CaseMetricObservation]:
+    def _case_observations(configured: ConfiguredEvaluator, output: Any, execution_id: Any, definitions: tuple[EvaluationMetricDefinition, ...]) -> list[CaseMetricObservation]:
         return [
             CaseMetricObservation(
-                case_result_id=result_id,
                 case_evaluator_execution_id=execution_id,
                 **EvaluationRunner._observation_fields(metric, value),
             )
@@ -1425,10 +1421,9 @@ class EvaluationRunner:
         ]
 
     @staticmethod
-    def _run_observations(configured: ConfiguredEvaluator, output: Any, execution_id: Any, run_id: Any, definitions: tuple[EvaluationMetricDefinition, ...]) -> list[RunMetricObservation]:
+    def _run_observations(configured: ConfiguredEvaluator, output: Any, execution_id: Any, definitions: tuple[EvaluationMetricDefinition, ...]) -> list[RunMetricObservation]:
         return [
             RunMetricObservation(
-                run_id=run_id,
                 report_evaluator_execution_id=execution_id,
                 **EvaluationRunner._observation_fields(metric, value),
             )

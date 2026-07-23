@@ -26,6 +26,7 @@ from pydantic_evals.reporting import ReportCaseFailure
 
 from knowledge_map.evaluation import (
     CaseEvaluatorExecution,
+    CaseMetricObservation,
     ConfiguredEvaluator,
     DeclaredArtifactReference,
     EvaluationCase,
@@ -3122,6 +3123,27 @@ def test_report_checkpoint_rejects_conflicting_observation_replay_atomically(
     tmp_path,
 ):
     cases, gold_set, suite = _lifecycle_fixture("conflicting-report-observation")
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.count",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.INTEGER,
+        semantic_description="The number of evaluated cases.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(
+                    name="count-cases",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(metric),),
+                ),
+            ),
+            "metrics": (metric,),
+        }
+    )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         initial = EvaluationRunner(ledger).run(
@@ -3147,7 +3169,6 @@ def test_report_checkpoint_rejects_conflicting_observation_replay_atomically(
             duration_seconds=0.25,
         )
         observation = RunMetricObservation(
-            run_id=initial.run.run_id,
             report_evaluator_execution_id=execution.execution_id,
             metric=EvaluationMetricReference(
                 namespaced_name="tests.count", evaluator_revision=1
@@ -3167,6 +3188,208 @@ def test_report_checkpoint_rejects_conflicting_observation_replay_atomically(
         assert ledger.list_run_metric_observations(initial.run.run_id) == [
             observation
         ]
+
+
+def test_case_metric_observation_cannot_be_written_through_a_different_case_result(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "producer-owned-case-observation"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        metric = EvaluationMetricDefinition(
+            namespaced_name="tests.producer-owned-case",
+            evaluator_revision=1,
+            value_type=EvaluationMetricValueType.INTEGER,
+            semantic_description="A producer-owned case metric.",
+            comparison_operation=NoComparisonOperation(
+                namespaced_name="tests.comparison.none", revision=1
+            ),
+        )
+        ledger.import_metric_definition(metric)
+        execution = CaseEvaluatorExecution(
+            case_result_id=pending[0].result_id,
+            evaluator_name="case-evaluator",
+            evaluator_revision=1,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.1,
+        )
+        observation = CaseMetricObservation(
+            case_evaluator_execution_id=execution.execution_id,
+            metric=EvaluationMetricReference.from_definition(metric),
+            integer_value=1,
+        )
+        first_result = pending[0].model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output=Output(answer="answer-1")),
+            }
+        )
+        second_result = pending[1].model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output=Output(answer="answer-2")),
+            }
+        )
+        ledger.record_case_evaluation(first_result, [execution], [observation])
+
+        with pytest.raises(ValueError, match="different case result"):
+            ledger.record_case_evaluation(second_result, [], [observation])
+
+        assert ledger.list_case_metric_observations(first_result.result_id) == [
+            observation
+        ]
+        assert ledger.list_case_metric_observations(second_result.result_id) == []
+
+
+def test_run_metric_observations_can_be_compared_across_runs_by_canonical_metric(
+    tmp_path,
+):
+    cases, gold_set, base_suite = _lifecycle_fixture("comparable-run-metrics")
+    metric = EvaluationMetricDefinition(
+        namespaced_name="tests.comparable-count",
+        evaluator_revision=1,
+        value_type=EvaluationMetricValueType.INTEGER,
+        semantic_description="The number of evaluated cases.",
+        comparison_operation=NoComparisonOperation(
+            namespaced_name="tests.comparison.none", revision=1
+        ),
+    )
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(
+                    name="count-cases",
+                    evaluator_revision=1,
+                    metrics=(EvaluationMetricReference.from_definition(metric),),
+                ),
+            ),
+            "metrics": (metric,),
+        }
+    )
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        configuration = EvaluationRunConfiguration(
+            provider="deterministic", model="fixture"
+        )
+        first = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=configuration,
+        )
+        second = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=configuration,
+        )
+        first = runner.finalize(
+            first.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CountCases(),
+        )
+        second = runner.finalize(
+            second.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: CountCases(),
+        )
+
+        comparable = ledger.list_metric_observations_across_runs(
+            EvaluationMetricReference.from_definition(metric)
+        )
+
+        assert comparable == [first.run_observations[0], second.run_observations[0]]
+        assert {
+            observation.report_evaluator_execution_id
+            for observation in comparable
+        } == {
+            first.run_observations[0].report_evaluator_execution_id,
+            second.run_observations[0].report_evaluator_execution_id,
+        }
+
+
+def test_run_metric_observation_cannot_be_written_through_a_different_run(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        first_run, first_plan, first_manifest, first_pending = (
+            _resolved_run_creation_inputs(ledger, "producer-owned-first-run")
+        )
+        second_run_id = UUID(int=first_run.run_id.int + 1)
+        second_run = first_run.model_copy(update={"run_id": second_run_id})
+        second_manifest = tuple(
+            entry.model_copy(
+                update={
+                    "manifest_id": UUID(int=entry.manifest_id.int + 1),
+                    "run_id": second_run_id,
+                }
+            )
+            for entry in first_manifest
+        )
+        second_pending = tuple(
+            result.model_copy(
+                update={
+                    "result_id": UUID(int=result.result_id.int + 1),
+                    "run_id": second_run_id,
+                    "manifest_id": entry.manifest_id,
+                }
+            )
+            for result, entry in zip(first_pending, second_manifest)
+        )
+        ledger.create_evaluation_run(
+            first_run, first_plan, first_manifest, first_pending
+        )
+        ledger.create_evaluation_run(
+            second_run, first_plan, second_manifest, second_pending
+        )
+        metric = EvaluationMetricDefinition(
+            namespaced_name="tests.producer-owned-run",
+            evaluator_revision=1,
+            value_type=EvaluationMetricValueType.INTEGER,
+            semantic_description="A producer-owned run metric.",
+            comparison_operation=NoComparisonOperation(
+                namespaced_name="tests.comparison.none", revision=1
+            ),
+        )
+        ledger.import_metric_definition(metric)
+        first_execution = ReportEvaluatorExecution(
+            run_id=first_run.run_id,
+            evaluator_name="report-evaluator",
+            evaluator_revision=1,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.1,
+        )
+        observation = RunMetricObservation(
+            report_evaluator_execution_id=first_execution.execution_id,
+            metric=EvaluationMetricReference.from_definition(metric),
+            integer_value=1,
+        )
+        ledger.record_report_evaluation([first_execution], [observation])
+
+        second_execution = ReportEvaluatorExecution(
+            run_id=second_run.run_id,
+            evaluator_name="report-evaluator",
+            evaluator_revision=1,
+            configuration_fingerprint="b" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.1,
+        )
+        with pytest.raises(ValueError, match="different Evaluation Run"):
+            ledger.record_report_evaluation([second_execution], [observation])
+
+        assert ledger.list_run_metric_observations(first_run.run_id) == [
+            observation
+        ]
+        assert ledger.list_run_metric_observations(second_run.run_id) == []
 
 
 def test_report_checkpoint_retry_stops_at_confirmed_claim_expiry(

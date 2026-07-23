@@ -1,7 +1,7 @@
 # Query Metric Observations through producer ownership
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,13 +15,13 @@ Expose indexed query paths that retrieve case observations, run observations, an
 
 ## Acceptance criteria
 
-- [ ] A Case Metric Observation references one Case Evaluator Execution and stores no independently writable Case Result or Run owner.
-- [ ] A Run Metric Observation references one Report Evaluator Execution and stores no independently writable Evaluation Run owner.
-- [ ] Separate case- and run-observation tables continue to enforce observation subject type.
-- [ ] Observation writes cannot attribute a producer's metric to a different case or run.
-- [ ] Case-result, run-level, and cross-run metric queries traverse indexed producer relationships and return the same complete evidence expected by callers.
-- [ ] Observation metric identities resolve to canonical Evaluation Metric Definition records.
-- [ ] Temporary-ledger tests prove exact producer attribution and cross-case or cross-run misattribution is unrepresentable.
+- [x] A Case Metric Observation references one Case Evaluator Execution and stores no independently writable Case Result or Run owner.
+- [x] A Run Metric Observation references one Report Evaluator Execution and stores no independently writable Evaluation Run owner.
+- [x] Separate case- and run-observation tables continue to enforce observation subject type.
+- [x] Observation writes cannot attribute a producer's metric to a different case or run.
+- [x] Case-result, run-level, and cross-run metric queries traverse indexed producer relationships and return the same complete evidence expected by callers.
+- [x] Observation metric identities resolve to canonical Evaluation Metric Definition records.
+- [x] Temporary-ledger tests prove exact producer attribution and cross-case or cross-run misattribution is unrepresentable.
 
 ## Blocked by
 

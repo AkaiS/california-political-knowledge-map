@@ -715,6 +715,9 @@ class SQLiteEvaluationLedger:
             "list_run_metric_observations",
             "list_case_observations",
             "list_run_observations",
+            "list_metric_observations_across_runs",
+            "list_comparable_metric_observations",
+            "list_run_metric_observations_across_runs",
         )
         artifact_methods = (
             "put_artifact_location",
@@ -1109,8 +1112,6 @@ class SQLiteEvaluationLedger:
 
             CREATE TABLE IF NOT EXISTS case_metric_observations (
                 observation_id TEXT PRIMARY KEY,
-                case_result_id TEXT NOT NULL
-                    REFERENCES evaluation_case_results(result_id),
                 case_evaluator_execution_id TEXT NOT NULL
                     REFERENCES case_evaluator_executions(execution_id),
                 metric_namespaced_name TEXT NOT NULL,
@@ -1122,12 +1123,13 @@ class SQLiteEvaluationLedger:
                 structured_json TEXT,
                 CHECK ((number_value IS NOT NULL) + (integer_value IS NOT NULL)
                     + (boolean_value IS NOT NULL) + (string_value IS NOT NULL)
-                    + (structured_json IS NOT NULL) = 1)
+                    + (structured_json IS NOT NULL) = 1),
+                FOREIGN KEY (metric_namespaced_name, metric_evaluator_revision)
+                    REFERENCES evaluation_metric_definitions(namespaced_name, evaluator_revision)
             );
 
             CREATE TABLE IF NOT EXISTS run_metric_observations (
                 observation_id TEXT PRIMARY KEY,
-                run_id TEXT NOT NULL REFERENCES evaluation_runs(run_id),
                 report_evaluator_execution_id TEXT NOT NULL
                     REFERENCES report_evaluator_executions(execution_id),
                 metric_namespaced_name TEXT NOT NULL,
@@ -1139,8 +1141,39 @@ class SQLiteEvaluationLedger:
                 structured_json TEXT,
                 CHECK ((number_value IS NOT NULL) + (integer_value IS NOT NULL)
                     + (boolean_value IS NOT NULL) + (string_value IS NOT NULL)
-                    + (structured_json IS NOT NULL) = 1)
+                    + (structured_json IS NOT NULL) = 1),
+                FOREIGN KEY (metric_namespaced_name, metric_evaluator_revision)
+                    REFERENCES evaluation_metric_definitions(namespaced_name, evaluator_revision)
             );
+
+            CREATE INDEX IF NOT EXISTS idx_case_metric_observations_producer_metric
+                ON case_metric_observations(
+                    case_evaluator_execution_id,
+                    metric_namespaced_name,
+                    metric_evaluator_revision
+                );
+            CREATE INDEX IF NOT EXISTS idx_run_metric_observations_producer_metric
+                ON run_metric_observations(
+                    report_evaluator_execution_id,
+                    metric_namespaced_name,
+                    metric_evaluator_revision
+                );
+            CREATE INDEX IF NOT EXISTS idx_case_metric_observations_metric_producer
+                ON case_metric_observations(
+                    metric_namespaced_name,
+                    metric_evaluator_revision,
+                    case_evaluator_execution_id
+                );
+            CREATE INDEX IF NOT EXISTS idx_run_metric_observations_metric_producer
+                ON run_metric_observations(
+                    metric_namespaced_name,
+                    metric_evaluator_revision,
+                    report_evaluator_execution_id
+                );
+            CREATE INDEX IF NOT EXISTS idx_case_evaluator_executions_result
+                ON case_evaluator_executions(case_result_id);
+            CREATE INDEX IF NOT EXISTS idx_report_evaluator_executions_run
+                ON report_evaluator_executions(run_id);
             """
         )
         self._connection.commit()
@@ -1442,6 +1475,9 @@ class SQLiteEvaluationLedger:
                         )
                 for execution in executions:
                     self._insert_case_execution(execution)
+                self._validate_case_observation_ownership(
+                    result.result_id, observations
+                )
                 for observation in observations:
                     self._insert_case_observation(observation)
                 self._connection.commit()
@@ -1679,7 +1715,6 @@ class SQLiteEvaluationLedger:
                     if row is not None:
                         existing = RunMetricObservation(
                             observation_id=UUID(row["observation_id"]),
-                            run_id=UUID(row["run_id"]),
                             report_evaluator_execution_id=UUID(
                                 row["report_evaluator_execution_id"]
                             ),
@@ -1698,12 +1733,11 @@ class SQLiteEvaluationLedger:
                         identity = self._connection.execute(
                             """
                             SELECT 1 FROM run_metric_observations
-                            WHERE run_id = ? AND report_evaluator_execution_id = ?
+                            WHERE report_evaluator_execution_id = ?
                               AND metric_namespaced_name = ?
                               AND metric_evaluator_revision = ?
                             """,
                             (
-                                str(observation.run_id),
                                 str(observation.report_evaluator_execution_id),
                                 observation.metric.namespaced_name,
                                 observation.metric.evaluator_revision,
@@ -1716,6 +1750,9 @@ class SQLiteEvaluationLedger:
                 for execution in executions:
                     if execution.execution_id not in existing_executions:
                         self._insert_report_execution(execution)
+                self._validate_report_observation_ownership(
+                    executions[0].run_id if executions else None, observations
+                )
                 for observation in observations:
                     if observation.observation_id not in existing_observations:
                         self._insert_run_observation(observation)
@@ -2690,15 +2727,18 @@ class SQLiteEvaluationLedger:
     ) -> list[CaseMetricObservation]:
         rows = self._connection.execute(
             """
-            SELECT * FROM case_metric_observations
-            WHERE case_result_id = ? ORDER BY rowid
+            SELECT o.*
+            FROM case_metric_observations AS o
+            JOIN case_evaluator_executions AS e
+              ON e.execution_id = o.case_evaluator_execution_id
+            WHERE e.case_result_id = ?
+            ORDER BY o.rowid
             """,
             (str(case_result_id),),
         ).fetchall()
         return [
             CaseMetricObservation(
                 observation_id=UUID(row["observation_id"]),
-                case_result_id=UUID(row["case_result_id"]),
                 case_evaluator_execution_id=UUID(row["case_evaluator_execution_id"]),
                 metric=EvaluationMetricReference(
                     namespaced_name=row["metric_namespaced_name"],
@@ -2714,15 +2754,18 @@ class SQLiteEvaluationLedger:
     ) -> list[RunMetricObservation]:
         rows = self._connection.execute(
             """
-            SELECT * FROM run_metric_observations
-            WHERE run_id = ? ORDER BY rowid
+            SELECT o.*
+            FROM run_metric_observations AS o
+            JOIN report_evaluator_executions AS e
+              ON e.execution_id = o.report_evaluator_execution_id
+            WHERE e.run_id = ?
+            ORDER BY o.rowid
             """,
             (str(run_id),),
         ).fetchall()
         return [
             RunMetricObservation(
                 observation_id=UUID(row["observation_id"]),
-                run_id=UUID(row["run_id"]),
                 report_evaluator_execution_id=UUID(row["report_evaluator_execution_id"]),
                 metric=EvaluationMetricReference(
                     namespaced_name=row["metric_namespaced_name"],
@@ -2735,6 +2778,53 @@ class SQLiteEvaluationLedger:
 
     list_case_observations = list_case_metric_observations
     list_run_observations = list_run_metric_observations
+
+    def list_metric_observations_across_runs(
+        self,
+        metric: EvaluationMetricReference | str,
+        evaluator_revision: int | None = None,
+    ) -> list[RunMetricObservation]:
+        """Return one canonical run metric identity across all producing runs."""
+        if isinstance(metric, EvaluationMetricReference):
+            namespaced_name = metric.namespaced_name
+            revision = metric.evaluator_revision
+        else:
+            if evaluator_revision is None:
+                raise TypeError(
+                    "evaluator_revision is required when metric is a namespaced name"
+                )
+            namespaced_name = metric
+            revision = evaluator_revision
+        rows = self._connection.execute(
+            """
+            SELECT o.*
+            FROM run_metric_observations AS o
+            JOIN report_evaluator_executions AS e
+              ON e.execution_id = o.report_evaluator_execution_id
+            JOIN evaluation_metric_definitions AS m
+              ON m.namespaced_name = o.metric_namespaced_name
+             AND m.evaluator_revision = o.metric_evaluator_revision
+            WHERE o.metric_namespaced_name = ?
+              AND o.metric_evaluator_revision = ?
+            ORDER BY e.run_id, o.rowid
+            """,
+            (namespaced_name, revision),
+        ).fetchall()
+        return [
+            RunMetricObservation(
+                observation_id=UUID(row["observation_id"]),
+                report_evaluator_execution_id=UUID(row["report_evaluator_execution_id"]),
+                metric=EvaluationMetricReference(
+                    namespaced_name=row["metric_namespaced_name"],
+                    evaluator_revision=row["metric_evaluator_revision"],
+                ),
+                **self._observation_values(row),
+            )
+            for row in rows
+        ]
+
+    list_comparable_metric_observations = list_metric_observations_across_runs
+    list_run_metric_observations_across_runs = list_metric_observations_across_runs
 
     @staticmethod
     def _observation_values(row: sqlite3.Row) -> dict[str, Any]:
@@ -2799,17 +2889,88 @@ class SQLiteEvaluationLedger:
             ),
         )
 
+    def _validate_case_observation_ownership(
+        self,
+        case_result_id: UUID,
+        observations: Iterable[CaseMetricObservation],
+    ) -> None:
+        for observation in observations:
+            self._validate_canonical_metric_identity(observation)
+            row = self._connection.execute(
+                """
+                SELECT case_result_id
+                FROM case_evaluator_executions
+                WHERE execution_id = ?
+                """,
+                (str(observation.case_evaluator_execution_id),),
+            ).fetchone()
+            if row is None:
+                raise ValueError(
+                    "case metric observation references an unknown producer execution"
+                )
+            if row["case_result_id"] != str(case_result_id):
+                raise ValueError(
+                    "case metric observation producer belongs to a different case result"
+                )
+
+    def _validate_report_observation_ownership(
+        self,
+        run_id: UUID | None,
+        observations: Iterable[RunMetricObservation],
+    ) -> None:
+        if observations and run_id is None:
+            raise ValueError(
+                "run metric observations require a report evaluator execution"
+            )
+        for observation in observations:
+            self._validate_canonical_metric_identity(observation)
+            row = self._connection.execute(
+                """
+                SELECT run_id
+                FROM report_evaluator_executions
+                WHERE execution_id = ?
+                """,
+                (str(observation.report_evaluator_execution_id),),
+            ).fetchone()
+            if row is None:
+                raise ValueError(
+                    "run metric observation references an unknown producer execution"
+                )
+            if row["run_id"] != str(run_id):
+                raise ValueError(
+                    "run metric observation producer belongs to a different Evaluation Run"
+                )
+
+    def _validate_canonical_metric_identity(
+        self, observation: EvaluationMetricObservation
+    ) -> None:
+        row = self._connection.execute(
+            """
+            SELECT 1
+            FROM evaluation_metric_definitions
+            WHERE namespaced_name = ? AND evaluator_revision = ?
+            """,
+            (
+                observation.metric.namespaced_name,
+                observation.metric.evaluator_revision,
+            ),
+        ).fetchone()
+        if row is None:
+            raise ValueError(
+                "metric observation must reference a canonical Evaluation Metric Definition"
+            )
+
     def _insert_case_observation(self, observation: CaseMetricObservation) -> None:
         self._connection.execute(
             """
             INSERT INTO case_metric_observations (
-                observation_id, case_result_id, case_evaluator_execution_id,
+                observation_id, case_evaluator_execution_id,
                 metric_namespaced_name, metric_evaluator_revision, number_value,
                 integer_value, boolean_value, string_value, structured_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(observation.observation_id), str(observation.case_result_id),
+                str(observation.observation_id),
                 str(observation.case_evaluator_execution_id),
                 *self._observation_columns(observation)[1:],
             ),
@@ -2819,13 +2980,13 @@ class SQLiteEvaluationLedger:
         self._connection.execute(
             """
             INSERT INTO run_metric_observations (
-                observation_id, run_id, report_evaluator_execution_id,
+                observation_id, report_evaluator_execution_id,
                 metric_namespaced_name, metric_evaluator_revision, number_value,
                 integer_value, boolean_value, string_value, structured_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(observation.observation_id), str(observation.run_id),
+                str(observation.observation_id),
                 str(observation.report_evaluator_execution_id),
                 *self._observation_columns(observation)[1:],
             ),

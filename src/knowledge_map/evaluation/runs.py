@@ -599,12 +599,10 @@ class EvaluationMetricObservation(BaseModel):
 
 
 class CaseMetricObservation(EvaluationMetricObservation):
-    case_result_id: UUID
     case_evaluator_execution_id: UUID
 
 
 class RunMetricObservation(EvaluationMetricObservation):
-    run_id: UUID
     report_evaluator_execution_id: UUID
 
 
