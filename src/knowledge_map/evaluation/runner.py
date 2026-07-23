@@ -1247,6 +1247,11 @@ class EvaluationRunner:
         provisional = self._build_result(pending_run, tuple(self.ledger.list_evaluation_case_manifest(run_id)))
         for gate_name, gate in (release_gates or {}).items():
             self._ensure_finalization_claim(heartbeat)
+            if should_stop_finalization is not None and should_stop_finalization():
+                return self._build_result(
+                    run,
+                    tuple(self.ledger.list_evaluation_case_manifest(run_id)),
+                )
             try:
                 passed = bool(gate(provisional))
                 failure_message = None if passed else "release gate did not pass"
