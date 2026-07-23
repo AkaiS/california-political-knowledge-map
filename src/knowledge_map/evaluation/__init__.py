@@ -105,7 +105,11 @@ from .store import (
     EvaluationDefinitionRecord,
     EvaluationLedger,
     EvaluationGoldSetMembershipRecord,
+    SQLiteAuthoredDefinitionCatalog,
+    SQLiteEvaluationArtifactCatalog,
+    SQLiteEvaluationExecutionStore,
     SQLiteEvaluationLedger,
+    SQLiteEvaluationSchemaInstaller,
     SQLiteEvaluationStore,
 )
 
@@ -205,6 +209,10 @@ __all__ = [
     "EvaluationDefinitionRecord",
     "EvaluationLedger",
     "EvaluationGoldSetMembershipRecord",
+    "SQLiteAuthoredDefinitionCatalog",
+    "SQLiteEvaluationArtifactCatalog",
+    "SQLiteEvaluationExecutionStore",
     "SQLiteEvaluationLedger",
+    "SQLiteEvaluationSchemaInstaller",
     "SQLiteEvaluationStore",
 ]

@@ -57,7 +57,7 @@ from .runs import (
     TaskSuccess,
     case_reference_map,
 )
-from .store import SQLiteEvaluationLedger
+from .store import EvaluationLedger
 from .suites import (
     ConfiguredEvaluator,
     EvaluationMetricDefinition,
@@ -281,7 +281,7 @@ class _FinalizationHeartbeat:
 
     def __init__(
         self,
-        ledger: SQLiteEvaluationLedger,
+        ledger: EvaluationLedger,
         run_id: UUID,
         claim: EvaluationFinalizationClaim,
         lease_seconds: float,
@@ -539,7 +539,7 @@ class _DurableCheckpointSink:
     def __init__(
         self,
         *,
-        ledger: SQLiteEvaluationLedger,
+        ledger: EvaluationLedger,
         run: EvaluationRunRecord,
         manifest: tuple[EvaluationCaseManifestEntry, ...],
         pending_results: tuple[EvaluationCaseResult, ...],
@@ -771,7 +771,7 @@ class _DurableCheckpointSink:
 class EvaluationRunner:
     """Execute a typed suite and persist its complete successful evidence."""
 
-    def __init__(self, ledger: SQLiteEvaluationLedger):
+    def __init__(self, ledger: EvaluationLedger):
         self.ledger = ledger
 
     def run(

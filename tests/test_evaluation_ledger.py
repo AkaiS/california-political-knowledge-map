@@ -22,7 +22,13 @@ from knowledge_map.evaluation import (
     NoComparisonOperation,
     SchemaReference,
 )
-from knowledge_map.evaluation.store import SQLiteEvaluationLedger
+from knowledge_map.evaluation.store import (
+    SQLiteAuthoredDefinitionCatalog,
+    SQLiteEvaluationArtifactCatalog,
+    SQLiteEvaluationExecutionStore,
+    SQLiteEvaluationLedger,
+    SQLiteEvaluationSchemaInstaller,
+)
 
 
 class Input(BaseModel):
@@ -39,6 +45,44 @@ class Metadata(BaseModel):
 
 class StructuredMetric(BaseModel):
     score: float
+
+
+def test_evaluation_ledger_uses_one_shared_connection_for_decomposed_capabilities(
+    tmp_path,
+):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        assert isinstance(ledger.schema_installer, SQLiteEvaluationSchemaInstaller)
+        assert isinstance(ledger.definition_catalog, SQLiteAuthoredDefinitionCatalog)
+        assert isinstance(ledger.execution_store, SQLiteEvaluationExecutionStore)
+        assert isinstance(ledger.artifact_catalog, SQLiteEvaluationArtifactCatalog)
+        assert {
+            id(component.connection)
+            for component in (
+                ledger.schema_installer,
+                ledger.definition_catalog,
+                ledger.execution_store,
+                ledger.artifact_catalog,
+            )
+        } == {id(ledger.connection)}
+
+
+def test_schema_installer_creates_the_clean_current_run_schema(tmp_path):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        columns = {
+            row["name"]
+            for row in ledger.connection.execute("PRAGMA table_info(evaluation_runs)")
+        }
+
+    assert {
+        "retry_of_run_id",
+        "issues_json",
+        "gate_outcomes_json",
+        "frozen_aggregate_manifest_artifact_id",
+        "finalization_claim_id",
+        "finalization_claim_owner_id",
+        "finalization_claim_acquired_at",
+        "finalization_claim_expires_at",
+    } <= columns
 
 
 def make_case(answer: str = "relevant") -> EvaluationCase[Input, Output, Metadata]:

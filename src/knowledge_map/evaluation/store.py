@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 from uuid import NAMESPACE_URL, uuid5
 
@@ -191,6 +191,175 @@ class ArtifactConflictError(ValueError):
     """An artifact hash was reused with different immutable metadata."""
 
 
+class SQLiteEvaluationSchemaInstaller:
+    """Install the clean current evaluation schema on a supplied connection."""
+
+    def __init__(
+        self,
+        connection: sqlite3.Connection,
+        install_callback: Callable[[], None],
+    ) -> None:
+        self.connection = connection
+        self._install_callback = install_callback
+
+    def install(self) -> None:
+        self._install_callback()
+
+
+class _SQLiteLedgerCapability:
+    """Base for capability stores sharing the ledger connection."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+        self._handlers: dict[str, Callable[..., Any]] = {}
+
+    def bind(self, name: str, handler: Callable[..., Any]) -> None:
+        self._handlers[name] = handler
+
+    def __getattr__(self, name: str) -> Any:
+        try:
+            return self._handlers[name]
+        except KeyError as exc:
+            raise AttributeError(name) from exc
+
+
+class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
+    """Catalog boundary for immutable authored evaluation definitions."""
+
+    def __init__(
+        self,
+        connection: sqlite3.Connection,
+        ledger: Any,
+    ) -> None:
+        super().__init__(connection)
+        self._ledger = ledger
+
+    def import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
+        return self._ledger._import_definition(definition)
+
+    def get_definition(
+        self,
+        *,
+        business_id: str,
+        revision: int,
+        kind: EvaluationDefinitionKind | str,
+    ) -> EvaluationDefinitionRecord | None:
+        return self._ledger._get_definition(
+            business_id=business_id, revision=revision, kind=kind
+        )
+
+    def list_definitions(
+        self,
+        *,
+        kind: EvaluationDefinitionKind | str | None = None,
+        business_id: str | None = None,
+        metadata: Mapping[str, Any] | None = None,
+        tags: Iterable[str] | None = None,
+    ) -> list[EvaluationDefinitionRecord]:
+        return self._ledger._list_definitions(
+            kind=kind, business_id=business_id, metadata=metadata, tags=tags
+        )
+
+    def list_gold_set_memberships(
+        self, gold_set_record_id: UUID
+    ) -> list[EvaluationGoldSetMembershipRecord]:
+        return self._ledger._list_gold_set_memberships(gold_set_record_id)
+
+
+class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
+    """Execution and checkpoint boundary for evaluation runs."""
+
+    def __init__(self, connection: sqlite3.Connection, ledger: Any) -> None:
+        super().__init__(connection)
+        self._ledger = ledger
+
+    def create_evaluation_run(
+        self,
+        run: EvaluationRunRecord,
+        plan: ResolvedEvaluationPlan,
+        manifest: Iterable[EvaluationCaseManifestEntry],
+        pending_results: Iterable[EvaluationCaseResult],
+    ) -> None:
+        self._ledger._create_evaluation_run(run, plan, manifest, pending_results)
+
+    def record_case_evaluation(
+        self,
+        result: EvaluationCaseResult,
+        executions: Iterable[CaseEvaluatorExecution],
+        observations: Iterable[CaseMetricObservation],
+        report_case_evidence: Mapping[str, Any] | None = None,
+    ) -> None:
+        self._ledger._record_case_evaluation(
+            result, executions, observations, report_case_evidence
+        )
+
+    def record_report_evaluation(
+        self,
+        executions: Iterable[ReportEvaluatorExecution],
+        observations: Iterable[RunMetricObservation],
+        issues: Iterable[EvaluationRunIssue] = (),
+        *,
+        finalization_claim_id: UUID | None = None,
+    ) -> None:
+        self._ledger._record_report_evaluation(
+            executions,
+            observations,
+            issues,
+            finalization_claim_id=finalization_claim_id,
+        )
+
+    def complete_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+        finalization_claim_id: UUID | None = None,
+    ) -> EvaluationRunRecord:
+        return self._ledger._complete_evaluation_run(
+            run_id,
+            issues=issues,
+            gate_outcomes=gate_outcomes,
+            finalization_claim_id=finalization_claim_id,
+        )
+
+
+class SQLiteEvaluationArtifactCatalog(_SQLiteLedgerCapability):
+    """Artifact identity, location, lineage, and provenance boundary."""
+
+    def __init__(self, connection: sqlite3.Connection, ledger: Any) -> None:
+        super().__init__(connection)
+        self._ledger = ledger
+
+    def register_artifact(self, *args: Any, **kwargs: Any) -> EvaluationArtifactRecord:
+        return self._ledger._register_artifact(*args, **kwargs)
+
+    def get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
+        return self._ledger._get_artifact(content_hash)
+
+    def read_artifact(
+        self, artifact: EvaluationArtifactRecord | UUID | str
+    ) -> bytes:
+        return self._ledger._read_artifact(artifact)
+
+
+class EvaluationLedger(Protocol):
+    """Persistence contract consumed by the evaluation runtime."""
+
+    @property
+    def clock(self) -> Callable[[], datetime]: ...
+
+    def __getattr__(self, name: str) -> Any: ...
+
+    def create_evaluation_run(self, *args: Any, **kwargs: Any) -> None: ...
+
+    def record_case_evaluation(self, *args: Any, **kwargs: Any) -> None: ...
+
+    def record_report_evaluation(self, *args: Any, **kwargs: Any) -> None: ...
+
+    def complete_evaluation_run(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
 def _definition_kind(definition: Any) -> EvaluationDefinitionKind:
     if isinstance(definition, EvaluationCase):
         return EvaluationDefinitionKind.CASE
@@ -275,7 +444,20 @@ class SQLiteEvaluationLedger:
             self._artifact_root = database_path.parent / f".{database_path.name}.artifacts"
         self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._connection.execute("PRAGMA foreign_keys = ON")
-        self._create_schema()
+        self.schema_installer = SQLiteEvaluationSchemaInstaller(
+            self._connection, self._create_schema
+        )
+        self.schema_installer.install()
+        self.definition_catalog = SQLiteAuthoredDefinitionCatalog(
+            self._connection, self
+        )
+        self.execution_store = SQLiteEvaluationExecutionStore(
+            self._connection, self
+        )
+        self.artifact_catalog = SQLiteEvaluationArtifactCatalog(
+            self._connection, self
+        )
+        self._bind_capability_methods()
 
     def close(self) -> None:
         self._connection.close()
@@ -290,6 +472,178 @@ class SQLiteEvaluationLedger:
     def clock(self) -> Callable[[], datetime]:
         """Return the clock used for all ledger authority decisions."""
         return self._clock
+
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """The one connection shared by the facade and its capabilities."""
+        return self._connection
+
+    # The facade owns the public boundary; capability stores own the routed
+    # operation and use the private implementation methods below.  This keeps
+    # cross-capability transactions on this one connection and lock.
+    def import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
+        return self.definition_catalog.import_definition(definition)
+
+    def get_definition(
+        self,
+        *,
+        business_id: str,
+        revision: int,
+        kind: EvaluationDefinitionKind | str,
+    ) -> EvaluationDefinitionRecord | None:
+        return self.definition_catalog.get_definition(
+            business_id=business_id, revision=revision, kind=kind
+        )
+
+    def list_definitions(
+        self,
+        *,
+        kind: EvaluationDefinitionKind | str | None = None,
+        business_id: str | None = None,
+        metadata: Mapping[str, Any] | None = None,
+        tags: Iterable[str] | None = None,
+    ) -> list[EvaluationDefinitionRecord]:
+        return self.definition_catalog.list_definitions(
+            kind=kind, business_id=business_id, metadata=metadata, tags=tags
+        )
+
+    def list_gold_set_memberships(
+        self, gold_set_record_id: UUID
+    ) -> list[EvaluationGoldSetMembershipRecord]:
+        return self.definition_catalog.list_gold_set_memberships(gold_set_record_id)
+
+    def register_artifact(self, *args: Any, **kwargs: Any) -> EvaluationArtifactRecord:
+        return self.artifact_catalog.register_artifact(*args, **kwargs)
+
+    def get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
+        return self.artifact_catalog.get_artifact(content_hash)
+
+    def read_artifact(
+        self, artifact: EvaluationArtifactRecord | UUID | str
+    ) -> bytes:
+        return self.artifact_catalog.read_artifact(artifact)
+
+    def create_evaluation_run(
+        self,
+        run: EvaluationRunRecord,
+        plan: ResolvedEvaluationPlan,
+        manifest: Iterable[EvaluationCaseManifestEntry],
+        pending_results: Iterable[EvaluationCaseResult],
+    ) -> None:
+        self.execution_store.create_evaluation_run(
+            run, plan, manifest, pending_results
+        )
+
+    def record_case_evaluation(
+        self,
+        result: EvaluationCaseResult,
+        executions: Iterable[CaseEvaluatorExecution],
+        observations: Iterable[CaseMetricObservation],
+        report_case_evidence: Mapping[str, Any] | None = None,
+    ) -> None:
+        self.execution_store.record_case_evaluation(
+            result, executions, observations, report_case_evidence
+        )
+
+    def record_report_evaluation(
+        self,
+        executions: Iterable[ReportEvaluatorExecution],
+        observations: Iterable[RunMetricObservation],
+        issues: Iterable[EvaluationRunIssue] = (),
+        *,
+        finalization_claim_id: UUID | None = None,
+    ) -> None:
+        self.execution_store.record_report_evaluation(
+            executions,
+            observations,
+            issues,
+            finalization_claim_id=finalization_claim_id,
+        )
+
+    def complete_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+        finalization_claim_id: UUID | None = None,
+    ) -> EvaluationRunRecord:
+        return self.execution_store.complete_evaluation_run(
+            run_id,
+            issues=issues,
+            gate_outcomes=gate_outcomes,
+            finalization_claim_id=finalization_claim_id,
+        )
+
+    def _bind_capability_methods(self) -> None:
+        """Route each domain operation through its shared-connection catalog."""
+        definition_methods = (
+            "import_case",
+            "import_gold_set",
+            "import_rubric",
+            "import_suite",
+            "find_definitions",
+        )
+        execution_methods = (
+            "materialize_metric_observation",
+            "materialize_report_case",
+            "freeze_aggregate_manifest",
+            "materialize_aggregate_report",
+            "get_frozen_aggregate_manifest_artifact",
+            "get_frozen_suite",
+            "fail_evaluation_run",
+            "cancel_evaluation_run",
+            "get_evaluation_run",
+            "acquire_finalization_claim",
+            "get_finalization_claim",
+            "owns_finalization_claim",
+            "renew_finalization_claim",
+            "release_finalization_claim",
+            "get_resolved_evaluation_plan",
+            "list_evaluation_runs",
+            "list_evaluation_case_manifest",
+            "list_evaluation_case_results",
+            "list_case_manifest",
+            "list_case_results",
+            "list_case_evaluator_executions",
+            "list_report_evaluator_executions",
+            "list_case_metric_observations",
+            "list_run_metric_observations",
+            "list_case_observations",
+            "list_run_observations",
+        )
+        artifact_methods = (
+            "put_artifact_location",
+            "replace_artifact_location",
+            "add_artifact_location",
+            "list_artifact_locations",
+            "list_locations",
+            "register_redacted_derivative",
+            "list_artifact_derivatives",
+            "get_artifact_source",
+            "link_artifact_to_definition",
+            "link_consumed_artifact_to_run",
+            "link_artifact_to_run",
+            "link_artifact_to_case_result",
+            "link_artifact_to_case_evaluator_execution",
+            "link_artifact_to_report_evaluator_execution",
+            "list_definition_artifacts",
+            "list_consumed_artifacts",
+            "list_run_artifacts",
+            "list_case_result_artifacts",
+            "list_case_evaluator_execution_artifacts",
+            "list_report_evaluator_execution_artifacts",
+            "list_produced_artifacts",
+        )
+        for component, names in (
+            (self.definition_catalog, definition_methods),
+            (self.execution_store, execution_methods),
+            (self.artifact_catalog, artifact_methods),
+        ):
+            for name in names:
+                handler = getattr(self, name)
+                component.bind(name, handler)
+                setattr(self, name, getattr(component, name))
 
     def _create_schema(self) -> None:
         self._connection.executescript(
@@ -511,6 +865,7 @@ class SQLiteEvaluationLedger:
                 retry_of_run_id TEXT REFERENCES evaluation_runs(run_id),
                 issues_json TEXT NOT NULL DEFAULT '[]',
                 gate_outcomes_json TEXT NOT NULL DEFAULT '[]',
+                frozen_aggregate_manifest_artifact_id TEXT,
                 finalization_claim_id TEXT,
                 finalization_claim_owner_id TEXT,
                 finalization_claim_acquired_at TEXT,
@@ -620,59 +975,9 @@ class SQLiteEvaluationLedger:
             );
             """
         )
-        run_columns = {
-            row["name"]
-            for row in self._connection.execute("PRAGMA table_info(evaluation_runs)")
-        }
-        definition_columns = {
-            row["name"]
-            for row in self._connection.execute(
-                "PRAGMA table_info(evaluation_definition_revisions)"
-            )
-        }
-        if "definition_json" not in definition_columns:
-            self._connection.execute(
-                "ALTER TABLE evaluation_definition_revisions ADD COLUMN definition_json TEXT"
-            )
-        if "retry_of_run_id" not in run_columns:
-            self._connection.execute(
-                "ALTER TABLE evaluation_runs ADD COLUMN retry_of_run_id TEXT"
-            )
-        if "issues_json" not in run_columns:
-            self._connection.execute(
-                "ALTER TABLE evaluation_runs ADD COLUMN issues_json TEXT NOT NULL DEFAULT '[]'"
-            )
-        if "gate_outcomes_json" not in run_columns:
-            self._connection.execute(
-                "ALTER TABLE evaluation_runs ADD COLUMN gate_outcomes_json TEXT NOT NULL DEFAULT '[]'"
-            )
-        if "frozen_aggregate_manifest_artifact_id" not in run_columns:
-            self._connection.execute(
-                "ALTER TABLE evaluation_runs ADD COLUMN frozen_aggregate_manifest_artifact_id TEXT"
-            )
-        for column in (
-            "finalization_claim_id",
-            "finalization_claim_owner_id",
-            "finalization_claim_acquired_at",
-            "finalization_claim_expires_at",
-        ):
-            if column not in run_columns:
-                self._connection.execute(
-                    f"ALTER TABLE evaluation_runs ADD COLUMN {column} TEXT"
-                )
-        for table in ("case_evaluator_executions", "report_evaluator_executions"):
-            columns = {
-                row["name"]
-                for row in self._connection.execute(f"PRAGMA table_info({table})")
-            }
-            for column in ("trace_id", "span_id"):
-                if column not in columns:
-                    self._connection.execute(
-                        f"ALTER TABLE {table} ADD COLUMN {column} TEXT"
-                    )
         self._connection.commit()
 
-    def create_evaluation_run(
+    def _create_evaluation_run(
         self,
         run: EvaluationRunRecord,
         plan: ResolvedEvaluationPlan,
@@ -838,7 +1143,7 @@ class SQLiteEvaluationLedger:
                 "every manifested case requires exactly one pending "
                 "Evaluation Case Result"
             )
-    def record_case_evaluation(
+    def _record_case_evaluation(
         self,
         result: EvaluationCaseResult,
         executions: Iterable[CaseEvaluatorExecution],
@@ -1106,7 +1411,7 @@ class SQLiteEvaluationLedger:
             ],
         )
 
-    def record_report_evaluation(
+    def _record_report_evaluation(
         self,
         executions: Iterable[ReportEvaluatorExecution],
         observations: Iterable[RunMetricObservation],
@@ -1253,7 +1558,7 @@ class SQLiteEvaluationLedger:
                 self._connection.rollback()
                 raise
 
-    def complete_evaluation_run(
+    def _complete_evaluation_run(
         self,
         run_id: UUID,
         *,
@@ -1745,7 +2050,7 @@ class SQLiteEvaluationLedger:
             return None
         return self._get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
 
-    def read_artifact(self, artifact: EvaluationArtifactRecord | UUID | str) -> bytes:
+    def _read_artifact(self, artifact: EvaluationArtifactRecord | UUID | str) -> bytes:
         record = self._resolve_artifact(artifact)
         for location in self.list_artifact_locations(record):
             if location.location_kind == "filesystem":
@@ -2428,7 +2733,7 @@ class SQLiteEvaluationLedger:
             trace_id=row["trace_id"], span_id=row["span_id"],
         )
 
-    def import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
+    def _import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
         """Import an authored revision's identity and index metadata idempotently."""
         kind = _definition_kind(definition)
         identity = definition.identity
@@ -2823,7 +3128,7 @@ class SQLiteEvaluationLedger:
                 ),
             )
 
-    def list_gold_set_memberships(
+    def _list_gold_set_memberships(
         self, gold_set_record_id: UUID
     ) -> list[EvaluationGoldSetMembershipRecord]:
         rows = self._connection.execute(
@@ -2847,7 +3152,7 @@ class SQLiteEvaluationLedger:
             for row in rows
         ]
 
-    def register_artifact(
+    def _register_artifact(
         self,
         content: bytes | bytearray | None = None,
         *,
@@ -2925,7 +3230,7 @@ class SQLiteEvaluationLedger:
         self._connection.commit()
         return candidate
 
-    def get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
+    def _get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
         row = self._connection.execute(
             "SELECT * FROM evaluation_artifacts WHERE content_hash = ?",
             (content_hash,),
@@ -3126,7 +3431,7 @@ class SQLiteEvaluationLedger:
             redaction_classification=row["redaction_classification"],
         )
 
-    def get_definition(
+    def _get_definition(
         self,
         *,
         business_id: str,
@@ -3143,7 +3448,7 @@ class SQLiteEvaluationLedger:
         ).fetchone()
         return None if row is None else self._definition_from_row(row)
 
-    def list_definitions(
+    def _list_definitions(
         self,
         *,
         kind: EvaluationDefinitionKind | str | None = None,
@@ -3207,5 +3512,4 @@ class SQLiteEvaluationLedger:
 EvaluationArtifact = EvaluationArtifactRecord
 ArtifactLocation = ArtifactLocationRecord
 EvaluationArtifactDerivative = ArtifactDerivativeRecord
-EvaluationLedger = SQLiteEvaluationLedger
 SQLiteEvaluationStore = SQLiteEvaluationLedger
