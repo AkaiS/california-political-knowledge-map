@@ -1,7 +1,7 @@
 # Reject premature Evaluation Run completion
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,14 +15,14 @@ Terminal task or evaluator failures count as completed workflow evidence. Missin
 
 ## Acceptance criteria
 
-- [ ] No public ledger operation can unconditionally mark an Evaluation Run complete.
-- [ ] Completion is rejected while any manifested case lacks a terminal task outcome or any planned Case Evaluator application lacks terminal execution evidence.
-- [ ] Completion is rejected until the exact aggregate report artifact is frozen and atomically linked to the run.
-- [ ] Completion is rejected while any report evaluator expected by the frozen Suite and Resolved Evaluation Plan lacks terminal execution evidence.
-- [ ] Successful and failed task or evaluator executions both satisfy terminal-evidence accounting.
-- [ ] Missing metrics, quality issues, and release-gate failures remain visible but do not block a fully accounted workflow from completing.
-- [ ] The invariant check and status transition execute in one transaction and remain safe under repeated finalization requests.
-- [ ] Temporary-ledger lifecycle tests cover pending cases, missing case evaluators, missing reports, missing report evaluators, terminal failures, gate failures, and successful idempotent completion.
+- [x] No public ledger operation can unconditionally mark an Evaluation Run complete.
+- [x] Completion is rejected while any manifested case lacks a terminal task outcome or any planned Case Evaluator application lacks terminal execution evidence.
+- [x] Completion is rejected until the exact aggregate report artifact is frozen and atomically linked to the run.
+- [x] Completion is rejected while any report evaluator expected by the frozen Suite and Resolved Evaluation Plan lacks terminal execution evidence.
+- [x] Successful and failed task or evaluator executions both satisfy terminal-evidence accounting.
+- [x] Missing metrics, quality issues, and release-gate failures remain visible but do not block a fully accounted workflow from completing.
+- [x] The invariant check and status transition execute in one transaction and remain safe under repeated finalization requests.
+- [x] Temporary-ledger lifecycle tests cover pending cases, missing case evaluators, missing reports, missing report evaluators, terminal failures, gate failures, and successful idempotent completion.
 
 ## Blocked by
 

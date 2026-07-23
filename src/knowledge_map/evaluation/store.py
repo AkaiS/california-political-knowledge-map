@@ -1901,6 +1901,11 @@ class SQLiteEvaluationLedger:
         if plan_row is None:
             raise ValueError("Evaluation Run cannot complete without its frozen plan")
         plan = ResolvedEvaluationPlan.model_validate_json(plan_row["plan_json"])
+        suite = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
+        case_evaluators = {
+            evaluator["name"]: evaluator
+            for evaluator in suite.get("case_evaluators", [])
+        }
         for ordinal, planned_case in enumerate(plan.cases):
             result = self._connection.execute(
                 """
@@ -1919,33 +1924,61 @@ class SQLiteEvaluationLedger:
             if outcome.get("kind") == "failure":
                 continue
             terminal = {
-                (row["evaluator_name"], row["evaluator_revision"])
+                (
+                    row["evaluator_name"],
+                    row["evaluator_revision"],
+                    row["configuration_fingerprint"],
+                )
                 for row in self._connection.execute(
                     """
-                    SELECT evaluator_name, evaluator_revision
+                    SELECT evaluator_name, evaluator_revision, configuration_fingerprint
                     FROM case_evaluator_executions
                     WHERE case_result_id = ?
                     """,
                     (result["result_id"],),
                 )
             }
-            missing_case_evaluators = {
-                (resolved.reference.name, resolved.reference.evaluator_revision)
-                for resolved in planned_case.evaluators
-            } - terminal
+            expected_case_evaluators = set()
+            for resolved in planned_case.evaluators:
+                configured = case_evaluators.get(resolved.reference.name)
+                if configured is None:
+                    raise ValueError(
+                        "Evaluation Run cannot complete while the frozen plan references "
+                        f"unknown case evaluator: {resolved.reference.name}"
+                    )
+                expected_case_evaluators.add(
+                    (
+                        resolved.reference.name,
+                        resolved.reference.evaluator_revision,
+                        configured["configuration_fingerprint"],
+                    )
+                )
+            missing_case_evaluators = expected_case_evaluators - terminal
             if missing_case_evaluators:
                 raise ValueError(
                     "Evaluation Run cannot complete while case evaluators lack terminal evidence: "
-                    + ", ".join(sorted(name for name, _ in missing_case_evaluators))
+                    + ", ".join(sorted(name for name, _, _ in missing_case_evaluators))
                 )
-        suite = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
         expected = {
-            evaluator["name"] for evaluator in suite.get("report_evaluators", [])
+            (
+                evaluator["name"],
+                evaluator["evaluator_revision"],
+                evaluator["configuration_fingerprint"],
+            )
+            for evaluator in suite.get("report_evaluators", [])
         }
         terminal = {
-            row["evaluator_name"]
+            (
+                row["evaluator_name"],
+                row["evaluator_revision"],
+                row["configuration_fingerprint"],
+            )
             for row in self._connection.execute(
-                "SELECT evaluator_name FROM report_evaluator_executions WHERE run_id = ?",
+                """
+                SELECT evaluator_name, evaluator_revision, configuration_fingerprint
+                FROM report_evaluator_executions
+                WHERE run_id = ?
+                """,
                 (str(run_id),),
             )
         }
@@ -1953,7 +1986,7 @@ class SQLiteEvaluationLedger:
         if missing:
             raise ValueError(
                 "Evaluation Run cannot complete while report evaluators lack terminal evidence: "
-                + ", ".join(sorted(missing))
+                + ", ".join(sorted(name for name, _, _ in missing))
             )
 
     def freeze_aggregate_manifest(

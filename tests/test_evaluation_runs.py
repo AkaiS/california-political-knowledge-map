@@ -4679,6 +4679,102 @@ def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tm
             )
 
 
+def test_completion_rejects_report_execution_with_wrong_frozen_evaluator_identity(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture("wrong-report-evaluator-identity")
+
+    with SQLiteEvaluationLedger(tmp_path / "wrong-report-evaluator-identity.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="wrong-report-evaluator-test"
+        )
+        assert claim is not None
+        expected = suite.report_evaluators[0]
+        forged = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name=expected.name,
+            evaluator_revision=expected.evaluator_revision + 1,
+            configuration_fingerprint=expected.configuration_fingerprint,
+            status=EvaluationProducerStatus.FAILED,
+            duration_seconds=0,
+            failure_message="forged terminal evidence",
+        )
+        ledger.record_report_evaluation(
+            [forged], [], finalization_claim_id=claim.claim_id
+        )
+
+        with pytest.raises(ValueError, match="report evaluators"):
+            ledger.complete_evaluation_run(
+                initial.run.run_id, finalization_claim_id=claim.claim_id
+            )
+
+        assert ledger.get_evaluation_run(initial.run.run_id).status is EvaluationRunStatus.FINALIZATION_PENDING
+
+
+def test_completion_rejects_report_execution_with_wrong_frozen_configuration(
+    tmp_path,
+):
+    cases, gold_set, base_suite = _lifecycle_fixture(
+        "wrong-report-evaluator-configuration"
+    )
+    suite = base_suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(
+                    name="count-cases",
+                    evaluator_revision=1,
+                    configuration={"temperature": 0},
+                ),
+            )
+        }
+    )
+
+    with SQLiteEvaluationLedger(
+        tmp_path / "wrong-report-evaluator-configuration.sqlite"
+    ) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="wrong-report-configuration-test"
+        )
+        assert claim is not None
+        expected = suite.report_evaluators[0]
+        forged = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name=expected.name,
+            evaluator_revision=expected.evaluator_revision,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0,
+        )
+        ledger.record_report_evaluation(
+            [forged], [], finalization_claim_id=claim.claim_id
+        )
+
+        with pytest.raises(ValueError, match="report evaluators"):
+            ledger.complete_evaluation_run(
+                initial.run.run_id, finalization_claim_id=claim.claim_id
+            )
+
+
 def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(
     tmp_path, monkeypatch
 ):
