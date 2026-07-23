@@ -295,6 +295,8 @@ class _FinalizationHeartbeat:
         self._state_changed = threading.Condition(self._loss_lock)
         self._loss: _FinalizationClaimLoss | None = None
         self._authority_unknown = False
+        self._completion_in_flight = False
+        self._completion_confirmed = False
         self._last_confirmed_expiry = claim.expires_at
         self._thread = threading.Thread(
             target=self._run,
@@ -310,6 +312,26 @@ class _FinalizationHeartbeat:
         with self._state_changed:
             self._state_changed.notify_all()
         self._thread.join()
+
+    def confirm_completion(self) -> None:
+        """Stop renewal once the ledger has durably completed the run."""
+        with self._state_changed:
+            self._completion_in_flight = False
+            self._completion_confirmed = True
+            self._authority_unknown = False
+            self._stop.set()
+            self._state_changed.notify_all()
+
+    def begin_completion(self) -> None:
+        """Mark the current attempt's fenced completion transaction as in flight."""
+        with self._state_changed:
+            self._completion_in_flight = True
+
+    def abort_completion(self) -> None:
+        """Allow ordinary claim-loss handling after a failed completion attempt."""
+        with self._state_changed:
+            self._completion_in_flight = False
+            self._state_changed.notify_all()
 
     @property
     def loss(self) -> _FinalizationClaimLoss | None:
@@ -363,7 +385,7 @@ class _FinalizationHeartbeat:
         renewal_failure: BaseException | None = None,
     ) -> None:
         with self._state_changed:
-            if self._loss is not None:
+            if self._loss is not None or self._completion_confirmed:
                 return
             last_confirmed_expiry = self._last_confirmed_expiry
             self._loss = _FinalizationClaimLoss(
@@ -391,7 +413,11 @@ class _FinalizationHeartbeat:
         self, exc: BaseException, retry_delay_seconds: float
     ) -> None:
         with self._state_changed:
-            if self._loss is not None or self._stop.is_set():
+            if (
+                self._loss is not None
+                or self._completion_confirmed
+                or self._stop.is_set()
+            ):
                 return
             self._authority_unknown = True
             last_confirmed_expiry = self._last_confirmed_expiry
@@ -436,6 +462,10 @@ class _FinalizationHeartbeat:
             return "claim_not_live"
         return "claim_not_live"
 
+    def _run_completion_is_confirmed(self) -> bool:
+        with self._state_changed:
+            return self._completion_in_flight or self._completion_confirmed
+
     def _run(self) -> None:
         cadence = self._lease_seconds / 3
         retry_delay = min(1.0, max(0.001, cadence / 4))
@@ -450,6 +480,8 @@ class _FinalizationHeartbeat:
                 if self._stop.is_set():
                     return
                 if not _is_retryable_sqlite_contention(exc):
+                    if self._run_completion_is_confirmed():
+                        return
                     self.record_loss("renewal_failure", exc)
                     return
                 self.record_transient_renewal_failure(exc, retry_delay)
@@ -464,6 +496,8 @@ class _FinalizationHeartbeat:
             if self._stop.is_set():
                 return
             if renewed is None:
+                if self._run_completion_is_confirmed():
+                    return
                 self.record_loss(self.classify_claim_loss())
                 return
             with self._state_changed:
@@ -1236,16 +1270,22 @@ class EvaluationRunner:
                 )
             self._ensure_finalization_claim(heartbeat)
         self._ensure_finalization_claim(heartbeat)
-        completed_run = self._retry_finalization_persistence(
-            lambda: self.ledger.complete_evaluation_run(
-                run_id,
-                issues=issues,
-                gate_outcomes=gate_outcomes,
-                finalization_claim_id=claim.claim_id,
-            ),
-            heartbeat,
-            operation_name="completion",
-        )
+        heartbeat.begin_completion()
+        try:
+            completed_run = self._retry_finalization_persistence(
+                lambda: self.ledger.complete_evaluation_run(
+                    run_id,
+                    issues=issues,
+                    gate_outcomes=gate_outcomes,
+                    finalization_claim_id=claim.claim_id,
+                ),
+                heartbeat,
+                operation_name="completion",
+            )
+        except Exception:
+            heartbeat.abort_completion()
+            raise
+        heartbeat.confirm_completion()
         return self._build_result(
             completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
         )

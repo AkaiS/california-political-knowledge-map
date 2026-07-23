@@ -3641,6 +3641,148 @@ def test_claim_loss_during_release_gate_discards_gate_outcomes(tmp_path, monkeyp
             assert len(recovered.report_evaluator_executions) == 1
 
 
+def test_heartbeat_keeps_a_long_running_release_gate_authoritative(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("heartbeat-release-gate")
+    database = tmp_path / "evaluation.sqlite"
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = RenewalClock(initial_time, initial_time, threading.Event())
+    gate_entered = threading.Event()
+    renewal_completed = threading.Event()
+    release_gate = threading.Event()
+    gate_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = first_ledger.renew_finalization_claim
+
+        def observe_renewal(run_id, claim_id, *, lease_seconds=300.0):
+            renewed = original_renew(
+                run_id, claim_id, lease_seconds=lease_seconds
+            )
+            if renewed is not None and clock.current > initial_time:
+                renewal_completed.set()
+            return renewed
+
+        monkeypatch.setattr(
+            first_ledger, "renew_finalization_claim", observe_renewal
+        )
+
+        def blocking_gate(result):
+            gate_calls.append("worker-a")
+            clock.current = initial_time + timedelta(seconds=0.1)
+            gate_entered.set()
+            assert release_gate.wait(timeout=5)
+            return True
+
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                first_future = workers.submit(
+                    EvaluationRunner(first_ledger).finalize,
+                    initial.run.run_id,
+                    schemas=_schemas_for(cases),
+                    worker_id="worker-a",
+                    lease_seconds=0.15,
+                    evaluator_resolver=lambda configured: CountCases(),
+                    release_gates={"policy": blocking_gate},
+                )
+                assert gate_entered.wait(timeout=5)
+                assert renewal_completed.wait(timeout=5)
+
+                clock.current = initial_time + timedelta(seconds=0.16)
+                live_claim = second_ledger.get_finalization_claim(initial.run.run_id)
+                assert live_claim is not None
+                assert live_claim.expires_at > clock.current
+                with pytest.raises(RuntimeError, match="live finalization claim"):
+                    EvaluationRunner(second_ledger).finalize(
+                        initial.run.run_id,
+                        schemas=_schemas_for(cases),
+                        worker_id="worker-b",
+                        evaluator_resolver=lambda configured: (
+                            (_ for _ in ()).throw(AssertionError("worker B evaluated"))
+                        ),
+                        release_gates={
+                            "policy": lambda result: gate_calls.append("worker-b")
+                            or True
+                        },
+                    )
+
+                release_gate.set()
+                completed = first_future.result(timeout=5)
+
+            assert completed.run.status is EvaluationRunStatus.COMPLETED
+            assert [outcome.gate_name for outcome in completed.run.gate_outcomes] == [
+                "policy"
+            ]
+            assert gate_calls == ["worker-a"]
+
+
+def test_completion_racing_with_heartbeat_response_does_not_report_claim_loss(
+    tmp_path, monkeypatch, caplog
+):
+    cases, gold_set, suite = _lifecycle_fixture("completion-heartbeat-race")
+    database = tmp_path / "evaluation.sqlite"
+    clock = ControllableClock(
+        datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    )
+    renewal_started = threading.Event()
+    completion_committed = threading.Event()
+
+    with SQLiteEvaluationLedger(database, clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_renew = ledger.renew_finalization_claim
+
+        def renew_after_completion(run_id, claim_id, *, lease_seconds=300.0):
+            renewal_started.set()
+            assert completion_committed.wait(timeout=5)
+            return original_renew(run_id, claim_id, lease_seconds=lease_seconds)
+
+        monkeypatch.setattr(ledger, "renew_finalization_claim", renew_after_completion)
+        original_complete = ledger.complete_evaluation_run
+
+        def observe_completion(*args, **kwargs):
+            completed = original_complete(*args, **kwargs)
+            completion_committed.set()
+            return completed
+
+        monkeypatch.setattr(ledger, "complete_evaluation_run", observe_completion)
+
+        with caplog.at_level(logging.INFO):
+            completed = EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: CountCases(),
+            )
+
+        assert renewal_started.is_set()
+        assert completed.run.status is EvaluationRunStatus.COMPLETED
+        assert not any(
+            record.getMessage() == "evaluation_finalization.claim_lost"
+            for record in caplog.records
+        )
+
+
 def test_expired_finalizer_without_successor_raises_claim_loss(tmp_path, monkeypatch):
     cases, gold_set, suite = _lifecycle_fixture("expired-finalizer-without-successor")
     database = tmp_path / "evaluation.sqlite"

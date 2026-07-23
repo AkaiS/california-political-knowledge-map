@@ -97,13 +97,13 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Handle transient renewal contention without expanding stale work; Retry finalization persistence without reevaluating
 
-- [ ] The heartbeat remains active throughout long Release Gate evaluation and prevents takeover by a competing worker.
-- [ ] Authority is checked before starting each Release Gate and before the completion transition.
-- [ ] If authority is lost during gate evaluation, the stale attempt cannot persist gate outcomes or complete the run.
-- [ ] A recovery attempt reruns all gates from terminal run evidence rather than relying on partial gate checkpoints.
-- [ ] Release Gates remain deterministic and side-effect-free; deployments, notifications, approvals, and other external release actions remain outside them.
-- [ ] Successful completion atomically validates terminal evidence, persists issues and gate outcomes, transitions the run, and clears finalization authority.
-- [ ] A heartbeat response racing after confirmed completion cannot turn a successful result into claim loss.
+- [x] The heartbeat remains active throughout long Release Gate evaluation and prevents takeover by a competing worker.
+- [x] Authority is checked before starting each Release Gate and before the completion transition.
+- [x] If authority is lost during gate evaluation, the stale attempt cannot persist gate outcomes or complete the run.
+- [x] A recovery attempt reruns all gates from terminal run evidence rather than relying on partial gate checkpoints.
+- [x] Release Gates remain deterministic and side-effect-free; deployments, notifications, approvals, and other external release actions remain outside them.
+- [x] Successful completion atomically validates terminal evidence, persists issues and gate outcomes, transitions the run, and clears finalization authority.
+- [x] A heartbeat response racing after confirmed completion cannot turn a successful result into claim loss.
 
 ## Stop finalization cleanly without cancelling the run
 
