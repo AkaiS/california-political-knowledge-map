@@ -2500,6 +2500,120 @@ def test_finalization_authority_uses_one_shared_ledger_clock(tmp_path):
             assert replacement.acquired_at == clock.current
 
 
+def test_replacing_expired_finalization_claim_records_factual_recovery_issue(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("finalization-claim-recovery-issue")
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        prior_claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert prior_claim is not None
+
+        clock.current = prior_claim.expires_at + timedelta(seconds=1)
+        recovery_time = clock.current
+        successor_claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-b",
+            lease_seconds=10,
+        )
+        assert successor_claim is not None
+
+        recovered = ledger.get_evaluation_run(initial.run.run_id)
+        assert recovered is not None
+        assert len(recovered.issues) == 1
+        issue = recovered.issues[0]
+        assert issue.category == "finalization_claim_recovered"
+        assert issue.subject == f"claim:{prior_claim.claim_id}"
+        assert json.loads(issue.message) == {
+            "prior_claim_id": str(prior_claim.claim_id),
+            "prior_owner_id": prior_claim.owner_id,
+            "prior_acquired_at": prior_claim.acquired_at.isoformat(),
+            "prior_expires_at": prior_claim.expires_at.isoformat(),
+            "successor_owner_id": successor_claim.owner_id,
+            "recovered_at": recovery_time.isoformat(),
+        }
+
+
+def test_ordinary_finalization_claim_acquisition_records_no_recovery_issue(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("ordinary-finalization-claim")
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert claim is not None
+
+        acquired = ledger.get_evaluation_run(initial.run.run_id)
+        assert acquired is not None
+        assert acquired.issues == ()
+
+
+def test_rejected_competing_finalization_claim_acquisition_records_no_recovery_issue(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture("competing-finalization-claim")
+    database = tmp_path / "evaluation.sqlite"
+    clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
+
+    with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
+        initial = EvaluationRunner(first_ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        first_claim = first_ledger.acquire_finalization_claim(
+            initial.run.run_id,
+            owner_id="worker-a",
+            lease_seconds=10,
+        )
+        assert first_claim is not None
+
+        with SQLiteEvaluationLedger(database, clock=clock) as second_ledger:
+            assert (
+                second_ledger.acquire_finalization_claim(
+                    initial.run.run_id,
+                    owner_id="worker-b",
+                    lease_seconds=10,
+                )
+                is None
+            )
+            rejected = second_ledger.get_evaluation_run(initial.run.run_id)
+            assert rejected is not None
+            assert rejected.issues == ()
+
+
 def test_report_checkpoint_samples_time_after_obtaining_the_write_position(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("checkpoint-write-position")
     database = tmp_path / "evaluation.sqlite"

@@ -1796,7 +1796,14 @@ class SQLiteEvaluationLedger:
                     expires_at=expires_at,
                 )
                 row = self._connection.execute(
-                    "SELECT status FROM evaluation_runs WHERE run_id = ?",
+                    """
+                    SELECT status, issues_json, finalization_claim_id,
+                           finalization_claim_owner_id,
+                           finalization_claim_acquired_at,
+                           finalization_claim_expires_at
+                    FROM evaluation_runs
+                    WHERE run_id = ?
+                    """,
                     (str(run_id),),
                 ).fetchone()
                 if row is None:
@@ -1805,6 +1812,21 @@ class SQLiteEvaluationLedger:
                     raise ValueError(
                         "finalization claims require a finalization_pending Evaluation Run"
                     )
+                prior_claim = None
+                if row["finalization_claim_id"] is not None:
+                    prior_claim = EvaluationFinalizationClaim(
+                        claim_id=UUID(row["finalization_claim_id"]),
+                        run_id=run_id,
+                        owner_id=row["finalization_claim_owner_id"],
+                        acquired_at=datetime.fromisoformat(
+                            row["finalization_claim_acquired_at"]
+                        ),
+                        expires_at=datetime.fromisoformat(
+                            row["finalization_claim_expires_at"]
+                        ),
+                    )
+                    if prior_claim.expires_at > acquired_at:
+                        prior_claim = None
                 cursor = self._connection.execute(
                     """
                     UPDATE evaluation_runs
@@ -1832,6 +1854,32 @@ class SQLiteEvaluationLedger:
                 if cursor.rowcount != 1:
                     self._connection.rollback()
                     return None
+                if prior_claim is not None:
+                    recovery_issue = EvaluationRunIssue(
+                        category="finalization_claim_recovered",
+                        subject=f"claim:{prior_claim.claim_id}",
+                        message=json.dumps(
+                            {
+                                "prior_claim_id": str(prior_claim.claim_id),
+                                "prior_owner_id": prior_claim.owner_id,
+                                "prior_acquired_at": prior_claim.acquired_at.isoformat(),
+                                "prior_expires_at": prior_claim.expires_at.isoformat(),
+                                "successor_owner_id": claim.owner_id,
+                                "recovered_at": acquired_at.isoformat(),
+                            },
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                    )
+                    issues = json.loads(row["issues_json"] or "[]")
+                    issues.append(recovery_issue.model_dump(mode="json"))
+                    self._connection.execute(
+                        "UPDATE evaluation_runs SET issues_json = ? WHERE run_id = ?",
+                        (
+                            json.dumps(issues, sort_keys=True, separators=(",", ":")),
+                            str(run_id),
+                        ),
+                    )
                 self._connection.commit()
                 return claim
             except Exception:

@@ -54,12 +54,12 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Move finalization authority onto ledger-owned time
 
-- [ ] Replacing an expired claim and appending its `finalization_claim_recovered` Evaluation Run Issue occur in the same transaction.
-- [ ] The issue records the prior claim identity, owner, acquisition time, expiry, successor owner, and recovery time.
-- [ ] The issue contains no inferred crash, suspension, database, process, or network cause.
-- [ ] One successful recovery appends exactly one recovery issue.
-- [ ] Rejected competing acquisition, ordinary acquisition, and recovered transient contention append no recovery issue.
-- [ ] An expired claim remains inspectable until release, completion, or atomic replacement; no durable heartbeat-history or last-renewed field is added.
+- [x] Replacing an expired claim and appending its `finalization_claim_recovered` Evaluation Run Issue occur in the same transaction.
+- [x] The issue records the prior claim identity, owner, acquisition time, expiry, successor owner, and recovery time.
+- [x] The issue contains no inferred crash, suspension, database, process, or network cause.
+- [x] One successful recovery appends exactly one recovery issue.
+- [x] Rejected competing acquisition, ordinary acquisition, and recovered transient contention append no recovery issue.
+- [x] An expired claim remains inspectable until release, completion, or atomic replacement; no durable heartbeat-history or last-renewed field is added.
 
 ## Handle transient renewal contention without expanding stale work
 
