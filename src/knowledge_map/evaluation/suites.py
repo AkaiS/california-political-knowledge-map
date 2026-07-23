@@ -694,13 +694,16 @@ class EvaluationSuite(BaseModel):
         self,
         *,
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
-        task: Callable[[Any], Any],
+        task: Callable[[Any], Any] | None = None,
+        task_binding: Any | None = None,
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         plan: "ResolvedEvaluationPlan | None" = None,
         checkpoint_sink: "EvaluationCheckpointSink | None" = None,
         max_concurrency: int = 1,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute compatible cases through the provider-neutral pydantic-evals seam."""
+        if (task is None) == (task_binding is None):
+            raise ValueError("provide exactly one task or task_binding")
         if plan is not None:
             from .engine import EvaluationEngine
 
@@ -709,11 +712,28 @@ class EvaluationSuite(BaseModel):
                 suite=self,
                 cases=cases,
                 task=task,
+                task_binding=task_binding,
                 evaluator_resolver=evaluator_resolver,
                 max_concurrency=max_concurrency,
             )
 
         selected_cases = self.validate_cases(cases)
+        if task_binding is not None:
+            from .bindings import TaskBindingInvocationError
+
+            def bound_task(task_input: Any) -> Any:
+                import asyncio
+
+                outcome = (
+                    asyncio.run(task_binding.invoke_async(task_input))
+                    if task_binding.is_async
+                    else task_binding.invoke(task_input)
+                )
+                if outcome.kind == "failure":
+                    raise TaskBindingInvocationError(outcome)
+                return outcome.output
+
+            task = bound_task
         suite_wide_references = self._suite_wide_case_evaluator_references()
         configured_by_name = {evaluator.name: evaluator for evaluator in self.case_evaluators}
         suite_wide_configured = tuple(

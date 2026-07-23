@@ -62,6 +62,7 @@ from knowledge_map.evaluation import (
     EvaluationSuite,
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
+    EvaluationTaskBinding,
     ConfiguredEvaluatorReference,
     NoComparisonOperation,
     SchemaReference,
@@ -1471,12 +1472,20 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
                 raise TimeoutError("provider request timed out")
             return Output(answer="answer-2")
 
+        task_binding = EvaluationTaskBinding(
+            operation=task,
+            contract=suite.task_contract,
+            input_model=Input,
+            output_model=Output,
+            metadata_model=Metadata,
+        )
+
         runner = EvaluationRunner(ledger)
         initial = runner.run(
             suite=suite,
             gold_set=gold_set,
             cases=cases,
-            task=task,
+            task_binding=task_binding,
             evaluator_resolver=lambda configured: CountCases(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
@@ -1493,7 +1502,7 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
         ]
         failed_outcome = result.case_results[0].task_outcome
         assert isinstance(failed_outcome, TaskFailure)
-        assert failed_outcome.category == "task_execution"
+        assert failed_outcome.category == "component"
         assert failed_outcome.exception_type == "TimeoutError"
         assert failed_outcome.safe_message == "provider request timed out"
         assert result.run_observations[0].integer_value == 1

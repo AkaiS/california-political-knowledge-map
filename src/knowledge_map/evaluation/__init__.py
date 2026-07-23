@@ -74,6 +74,7 @@ from .runs import (
     TaskSuccess,
 )
 from .runner import EvaluationRunner
+from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
 from .engine import EvaluationCheckpointSink, EvaluationEngine, NoOpCheckpointSink
 from .reporting import (
     ResolvedSchemaBinding,
@@ -183,6 +184,8 @@ __all__ = [
     "TaskFailure",
     "TaskSuccess",
     "EvaluationRunner",
+    "EvaluationTaskBinding",
+    "TaskBindingInvocationError",
     "EvaluationCheckpointSink",
     "EvaluationEngine",
     "NoOpCheckpointSink",

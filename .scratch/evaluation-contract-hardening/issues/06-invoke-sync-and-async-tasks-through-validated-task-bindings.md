@@ -1,7 +1,7 @@
 # Invoke sync and async tasks through validated Task Bindings
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,15 +15,15 @@ The evaluation engine trusts the Binding's outcome and does not repeat output va
 
 ## Acceptance criteria
 
-- [ ] An Evaluation Task Binding associates one component operation and its input, output, and metadata Pydantic models with one exact Evaluation Task Contract.
-- [ ] Binding creation rejects model schemas that do not exactly match the authored contract.
-- [ ] Every synchronous and asynchronous invocation validates its returned value once at the Binding boundary.
-- [ ] A valid return produces a typed success outcome with any output-artifact references; an output contract violation produces a terminal, non-retryable `output_validation` task failure.
-- [ ] Component exceptions and failure evidence become provider-neutral failure outcomes without leaking provider SDK objects.
-- [ ] Task Bindings describe artifact evidence but perform no ledger or artifact-catalog writes.
-- [ ] The evaluation engine and Pydantic Evals projection consume the validated success output without performing duplicate validation.
-- [ ] Synchronous and asynchronous evaluator adapters share timing and evidence-recording logic while preserving their distinct call and await behavior.
-- [ ] Deterministic tests cover synchronous success, asynchronous success, output mismatch, component failure, artifact references, evaluator success, and evaluator failure.
+- [x] An Evaluation Task Binding associates one component operation and its input, output, and metadata Pydantic models with one exact Evaluation Task Contract.
+- [x] Binding creation rejects model schemas that do not exactly match the authored contract.
+- [x] Every synchronous and asynchronous invocation validates its returned value once at the Binding boundary.
+- [x] A valid return produces a typed success outcome with any output-artifact references; an output contract violation produces a terminal, non-retryable `output_validation` task failure.
+- [x] Component exceptions and failure evidence become provider-neutral failure outcomes without leaking provider SDK objects.
+- [x] Task Bindings describe artifact evidence but perform no ledger or artifact-catalog writes.
+- [x] The evaluation engine and Pydantic Evals projection consume the validated success output without performing duplicate validation.
+- [x] Synchronous and asynchronous evaluator adapters share timing and evidence-recording logic while preserving their distinct call and await behavior.
+- [x] Deterministic tests cover synchronous success, asynchronous success, output mismatch, component failure, artifact references, evaluator success, and evaluator failure.
 
 ## Blocked by
 

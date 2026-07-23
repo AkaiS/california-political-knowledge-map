@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import logging
 import sqlite3
 import threading
@@ -29,6 +30,7 @@ from .definitions import (
     new_uuid7,
 )
 from .engine import EvaluationEngine
+from .bindings import EvaluationTaskBinding
 from .reporting import (
     SchemaRegistry,
     report_case_payload,
@@ -52,6 +54,7 @@ from .runs import (
     RunMetricObservation,
     StructuredMetricValue,
     TaskFailure,
+    TaskOutcome,
     EvaluationRunCancelled,
     FinalizationClaimLostError,
     TaskSuccess,
@@ -73,6 +76,12 @@ except ImportError:  # pragma: no cover - dependency is optional at this seam
 
 
 logger = logging.getLogger(__name__)
+
+
+def _task_input_key(value: Any) -> str:
+    if isinstance(value, BaseModel):
+        value = value.model_dump(mode="json")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
 
 def _emit_finalization_telemetry(event: str, **fields: Any) -> None:
@@ -127,6 +136,56 @@ class _EvaluatorCall:
     duration_seconds: float = 0.0
 
 
+def _record_sync_call(
+    calls: list[_EvaluatorCall], subject_name: str, operation: Callable[[], Any]
+) -> Any:
+    started = time.perf_counter()
+    try:
+        output = operation()
+    except Exception as exc:
+        calls.append(
+            _EvaluatorCall(
+                subject_name=subject_name,
+                failure_message=f"{type(exc).__name__}: {exc}",
+                duration_seconds=time.perf_counter() - started,
+            )
+        )
+        raise
+    calls.append(
+        _EvaluatorCall(
+            subject_name=subject_name,
+            output=output,
+            duration_seconds=time.perf_counter() - started,
+        )
+    )
+    return output
+
+
+async def _record_async_call(
+    calls: list[_EvaluatorCall], subject_name: str, operation: Callable[[], Any]
+) -> Any:
+    started = time.perf_counter()
+    try:
+        output = await operation()
+    except Exception as exc:
+        calls.append(
+            _EvaluatorCall(
+                subject_name=subject_name,
+                failure_message=f"{type(exc).__name__}: {exc}",
+                duration_seconds=time.perf_counter() - started,
+            )
+        )
+        raise
+    calls.append(
+        _EvaluatorCall(
+            subject_name=subject_name,
+            output=output,
+            duration_seconds=time.perf_counter() - started,
+        )
+    )
+    return output
+
+
 @dataclass
 class _RecordingEvaluator(Evaluator):
     delegate: Evaluator
@@ -137,48 +196,18 @@ class _RecordingEvaluator(Evaluator):
         return self.configured_name
 
     def evaluate(self, ctx: Any) -> Any:
-        started = time.perf_counter()
-        try:
-            output = self.delegate.evaluate_sync(ctx)
-        except Exception as exc:
-            self.calls.append(
-                _EvaluatorCall(
-                    subject_name=ctx.name or "",
-                    failure_message=f"{type(exc).__name__}: {exc}",
-                    duration_seconds=time.perf_counter() - started,
-                )
-            )
-            raise
-        self.calls.append(
-            _EvaluatorCall(
-                subject_name=ctx.name or "",
-                output=output,
-                duration_seconds=time.perf_counter() - started,
-            )
+        return _record_sync_call(
+            self.calls,
+            ctx.name or "",
+            lambda: self.delegate.evaluate_sync(ctx),
         )
-        return output
 
     async def evaluate_async(self, ctx: Any) -> Any:
-        started = time.perf_counter()
-        try:
-            output = await self.delegate.evaluate_async(ctx)
-        except Exception as exc:
-            self.calls.append(
-                _EvaluatorCall(
-                    subject_name=ctx.name or "",
-                    failure_message=f"{type(exc).__name__}: {exc}",
-                    duration_seconds=time.perf_counter() - started,
-                )
-            )
-            raise
-        self.calls.append(
-            _EvaluatorCall(
-                subject_name=ctx.name or "",
-                output=output,
-                duration_seconds=time.perf_counter() - started,
-            )
+        return await _record_async_call(
+            self.calls,
+            ctx.name or "",
+            lambda: self.delegate.evaluate_async(ctx),
         )
-        return output
 
 
 @dataclass
@@ -191,50 +220,20 @@ class _RecordingReportEvaluator(ReportEvaluator):
         return self.configured_name
 
     def evaluate(self, ctx: Any) -> Any:
-        started = time.perf_counter()
-        try:
+        def invoke() -> Any:
             output = self.delegate.evaluate(ctx)
             if inspect.isawaitable(output):
                 raise TypeError("async report evaluators must be resolved by evaluate_async")
-        except Exception as exc:
-            self.calls.append(
-                _EvaluatorCall(
-                    subject_name=ctx.name,
-                    failure_message=f"{type(exc).__name__}: {exc}",
-                    duration_seconds=time.perf_counter() - started,
-                )
-            )
-            raise
-        self.calls.append(
-            _EvaluatorCall(
-                subject_name=ctx.name,
-                output=output,
-                duration_seconds=time.perf_counter() - started,
-            )
-        )
-        return output
+            return output
+
+        return _record_sync_call(self.calls, ctx.name, invoke)
 
     async def evaluate_async(self, ctx: Any) -> Any:
-        started = time.perf_counter()
-        try:
-            output = await self.delegate.evaluate_async(ctx)
-        except Exception as exc:
-            self.calls.append(
-                _EvaluatorCall(
-                    subject_name=ctx.name,
-                    failure_message=f"{type(exc).__name__}: {exc}",
-                    duration_seconds=time.perf_counter() - started,
-                )
-            )
-            raise
-        self.calls.append(
-            _EvaluatorCall(
-                subject_name=ctx.name,
-                output=output,
-                duration_seconds=time.perf_counter() - started,
-            )
+        return await _record_async_call(
+            self.calls,
+            ctx.name,
+            lambda: self.delegate.evaluate_async(ctx),
         )
-        return output
 
 
 @dataclass
@@ -568,6 +567,20 @@ class _DurableCheckpointSink:
         self.configured_case_evaluators = {
             configured.name: configured for configured in suite.case_evaluators
         }
+        self._task_outcomes: dict[str, list[TaskOutcome]] = {}
+
+    def record_task_outcome(self, task_input: Any, outcome: TaskOutcome) -> None:
+        """Hold Binding evidence until its complete case checkpoint is written."""
+        self._task_outcomes.setdefault(_task_input_key(task_input), []).append(outcome)
+
+    def _take_task_outcome(self, task_input: Any) -> TaskOutcome | None:
+        outcomes = self._task_outcomes.get(_task_input_key(task_input))
+        if not outcomes:
+            return None
+        outcome = outcomes.pop(0)
+        if not outcomes:
+            self._task_outcomes.pop(_task_input_key(task_input), None)
+        return outcome
 
     @property
     def case_lifecycle(self) -> type[CaseLifecycle[Any, Any, Any]]:
@@ -587,7 +600,19 @@ class _DurableCheckpointSink:
         if result is None:
             raise ValueError(f"framework returned an unknown Evaluation Case: {framework_case.name}")
 
+        bound_outcome = self._take_task_outcome(framework_case.inputs)
         if isinstance(framework_case, ReportCaseFailure):
+            if isinstance(bound_outcome, TaskFailure):
+                completed = result.model_copy(
+                    update={
+                        "execution_disposition": EvaluationCaseDisposition.FAILED,
+                        "task_outcome": bound_outcome,
+                    }
+                )
+                self.ledger.record_case_evaluation(
+                    completed, (), (), report_case_payload(framework_case)
+                )
+                return
             exception_type, safe_message = self._split_failure_message(
                 framework_case.error_message
             )
@@ -610,10 +635,15 @@ class _DurableCheckpointSink:
             )
             return
 
+        success = (
+            bound_outcome
+            if isinstance(bound_outcome, TaskSuccess)
+            else TaskSuccess(output=framework_case.output)
+        )
         completed = result.model_copy(
             update={
                 "execution_disposition": EvaluationCaseDisposition.COMPLETED,
-                "task_outcome": TaskSuccess(output=framework_case.output),
+                "task_outcome": success,
             }
         )
         executions: list[CaseEvaluatorExecution] = []
@@ -779,9 +809,10 @@ class EvaluationRunner:
         gold_set: EvaluationGoldSet,
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
         rubrics: tuple[EvaluationRubric, ...] = (),
-        task: Callable[[Any], Any],
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         configuration: EvaluationRunConfiguration,
+        task: Callable[[Any], Any] | None = None,
+        task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         selection: Callable[[EvaluationCase[Any, Any, Any]], bool]
         | Iterable[str]
         | None = None,
@@ -792,6 +823,8 @@ class EvaluationRunner:
         should_cancel: Callable[[], bool] | None = None,
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
     ) -> EvaluationRunResult:
+        if (task is None) == (task_binding is None):
+            raise ValueError("provide exactly one task or task_binding")
         if retry_of_run_id is not None:
             if self.ledger.get_evaluation_run(retry_of_run_id) is None:
                 raise KeyError(f"unknown Evaluation Run: {retry_of_run_id}")
@@ -1013,6 +1046,17 @@ class EvaluationRunner:
                 if should_cancel is not None and should_cancel():
                     cancel_requested = True
                     raise asyncio.CancelledError()
+                if task_binding is not None:
+                    outcome = (
+                        asyncio.run(task_binding.invoke_async(task_input))
+                        if task_binding.is_async
+                        else task_binding.invoke(task_input)
+                    )
+                    checkpoint_sink.record_task_outcome(task_input, outcome)
+                    if outcome.kind == "failure":
+                        raise RuntimeError(outcome.safe_message)
+                    return outcome.output
+                assert task is not None
                 return task(task_input)
 
             evaluation_report = EvaluationEngine(checkpoint_sink).execute(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from typing import Any, Protocol
 
@@ -12,6 +13,7 @@ from pydantic_evals.reporting import EvaluationReport
 from pydantic_evals.reporting.analyses import ScalarResult
 
 from .definitions import EvaluationCase
+from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
 from .preflight import ResolvedEvaluationPlan
 from .suites import ConfiguredEvaluator, EvaluationSuite, _ConfiguredCaseEvaluator
 
@@ -107,7 +109,8 @@ class EvaluationEngine:
         plan: ResolvedEvaluationPlan,
         suite: EvaluationSuite,
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
-        task: Callable[[Any], Any],
+        task: Callable[[Any], Any] | None = None,
+        task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         evaluator_resolver: EvaluatorResolver,
         max_concurrency: int = 1,
         case_lifecycle: type[CaseLifecycle[Any, Any, Any]] | None = None,
@@ -115,6 +118,8 @@ class EvaluationEngine:
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute the exact case and evaluator assignments in ``plan``."""
         self._validate_plan_suite(plan, suite)
+        if (task is None) == (task_binding is None):
+            raise ValueError("provide exactly one task or task_binding")
         if max_concurrency < 1:
             raise ValueError("max_concurrency must be greater than 0")
         case_by_reference = {
@@ -210,6 +215,21 @@ class EvaluationEngine:
             evaluators=dataset_evaluators,
             report_evaluators=report_evaluators,
         )
+        if task_binding is not None:
+            def bound_task(task_input: Any) -> Any:
+                outcome = (
+                    asyncio.run(task_binding.invoke_async(task_input))
+                    if task_binding.is_async
+                    else task_binding.invoke(task_input)
+                )
+                recorder = getattr(self.checkpoint_sink, "record_task_outcome", None)
+                if recorder is not None:
+                    recorder(task_input, outcome)
+                if outcome.kind == "failure":
+                    raise TaskBindingInvocationError(outcome)
+                return outcome.output
+
+            task = bound_task
         report = dataset.evaluate_sync(
             task,
             progress=False,

@@ -17,6 +17,7 @@ from knowledge_map.evaluation import (
     EvaluationSuite,
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
+    EvaluationTaskBinding,
     ConfiguredEvaluator,
     ConfiguredEvaluatorReference,
     EvaluationRequirementBinding,
@@ -371,10 +372,19 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
         def checkpoint_report(self, report) -> None:
             checkpointed_reports.append(len(report.cases))
 
+    binding = EvaluationTaskBinding(
+        operation=lambda task_input: RequirementOutput(
+            label=task_input.text.replace("text", "label")
+        ),
+        contract=suite.task_contract,
+        input_model=RequirementInput,
+        output_model=RequirementOutput,
+        metadata_model=RequirementMetadata,
+    )
     report = suite.execute(
         plan=plan_result.plan,
         cases=cases,
-        task=lambda task_input: RequirementOutput(label=task_input.text.replace("text", "label")),
+        task_binding=binding,
         checkpoint_sink=RecordingCheckpointSink(),
         evaluator_resolver=lambda configured: {
             "universal": RecordingEvaluator(universal_calls),
