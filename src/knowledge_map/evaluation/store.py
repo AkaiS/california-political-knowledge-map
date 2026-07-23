@@ -1142,10 +1142,88 @@ class SQLiteEvaluationLedger:
                         raise RuntimeError(
                             "cannot checkpoint report evaluation without the live finalization claim"
                         )
+                existing_executions: dict[UUID, ReportEvaluatorExecution] = {}
                 for execution in executions:
-                    self._insert_report_execution(execution)
+                    row = self._connection.execute(
+                        "SELECT * FROM report_evaluator_executions WHERE execution_id = ?",
+                        (str(execution.execution_id),),
+                    ).fetchone()
+                    if row is not None:
+                        existing = self._report_execution_from_row(row)
+                        if existing != execution:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing execution"
+                            )
+                        existing_executions[execution.execution_id] = existing
+                    else:
+                        identity = self._connection.execute(
+                            """
+                            SELECT * FROM report_evaluator_executions
+                            WHERE run_id = ? AND evaluator_name = ?
+                              AND evaluator_revision = ?
+                              AND configuration_fingerprint = ?
+                            """,
+                            (
+                                str(execution.run_id),
+                                execution.evaluator_name,
+                                execution.evaluator_revision,
+                                execution.configuration_fingerprint,
+                            ),
+                        ).fetchone()
+                        if identity is not None:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing execution identity"
+                            )
+
+                existing_observations: dict[UUID, RunMetricObservation] = {}
                 for observation in observations:
-                    self._insert_run_observation(observation)
+                    row = self._connection.execute(
+                        "SELECT * FROM run_metric_observations WHERE observation_id = ?",
+                        (str(observation.observation_id),),
+                    ).fetchone()
+                    if row is not None:
+                        existing = RunMetricObservation(
+                            observation_id=UUID(row["observation_id"]),
+                            run_id=UUID(row["run_id"]),
+                            report_evaluator_execution_id=UUID(
+                                row["report_evaluator_execution_id"]
+                            ),
+                            metric=EvaluationMetricReference(
+                                namespaced_name=row["metric_namespaced_name"],
+                                evaluator_revision=row["metric_evaluator_revision"],
+                            ),
+                            **self._observation_values(row),
+                        )
+                        if existing != observation:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing observation"
+                            )
+                        existing_observations[observation.observation_id] = existing
+                    else:
+                        identity = self._connection.execute(
+                            """
+                            SELECT 1 FROM run_metric_observations
+                            WHERE run_id = ? AND report_evaluator_execution_id = ?
+                              AND metric_namespaced_name = ?
+                              AND metric_evaluator_revision = ?
+                            """,
+                            (
+                                str(observation.run_id),
+                                str(observation.report_evaluator_execution_id),
+                                observation.metric.namespaced_name,
+                                observation.metric.evaluator_revision,
+                            ),
+                        ).fetchone()
+                        if identity is not None:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing observation identity"
+                            )
+                for execution in executions:
+                    if execution.execution_id not in existing_executions:
+                        self._insert_report_execution(execution)
+                for observation in observations:
+                    if observation.observation_id not in existing_observations:
+                        self._insert_run_observation(observation)
                 if issue_items:
                     current = self._connection.execute(
                         "SELECT issues_json FROM evaluation_runs WHERE run_id = ?",
@@ -1154,7 +1232,10 @@ class SQLiteEvaluationLedger:
                     if current is None:
                         raise KeyError(f"unknown Evaluation Run: {executions[0].run_id}")
                     existing = json.loads(current["issues_json"] or "[]")
-                    existing.extend(issue.model_dump(mode="json") for issue in issue_items)
+                    for issue in issue_items:
+                        payload = issue.model_dump(mode="json")
+                        if payload not in existing:
+                            existing.append(payload)
                     self._connection.execute(
                         "UPDATE evaluation_runs SET issues_json = ? WHERE run_id = ?",
                         (

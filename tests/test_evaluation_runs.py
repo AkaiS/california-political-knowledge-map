@@ -47,10 +47,12 @@ from knowledge_map.evaluation import (
     EvaluationRequirementCatalog,
     ReportEvaluatorExecution,
     EvaluationRunConfiguration,
+    EvaluationRunIssue,
     EvaluationRunRecord,
     EvaluationRunner,
     EvaluationRunStatus,
     FinalizationClaimLostError,
+    RunMetricObservation,
     EvaluationRubric,
     EvaluationRubricIdentity,
     EvaluationRubricRevisionReference,
@@ -2679,6 +2681,371 @@ def test_report_checkpoint_samples_time_after_obtaining_the_write_position(tmp_p
             assert waiting_ledger.list_report_evaluator_executions(
                 initial.run.run_id
             ) == []
+
+
+def test_report_checkpoint_replay_is_one_atomic_idempotent_success(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("report-checkpoint-replay")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="worker-a"
+        )
+        assert claim is not None
+        execution = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name="count-cases",
+            evaluator_revision=1,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.25,
+        )
+        issues = (
+            EvaluationRunIssue(
+                category="missing_metric",
+                subject="report:count-cases",
+                message="required metric was not produced",
+            ),
+        )
+
+        ledger.record_report_evaluation(
+            [execution], [], issues=issues, finalization_claim_id=claim.claim_id
+        )
+        ledger.record_report_evaluation(
+            [execution], [], issues=issues, finalization_claim_id=claim.claim_id
+        )
+
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == [
+            execution
+        ]
+        assert ledger.get_evaluation_run(initial.run.run_id).issues == issues
+
+
+def test_finalization_retries_report_checkpoint_without_reevaluating(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("report-checkpoint-retry")
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_record = ledger.record_report_evaluation
+        checkpoint_attempts = 0
+
+        def contended_once(*args, **kwargs):
+            nonlocal checkpoint_attempts
+            checkpoint_attempts += 1
+            if checkpoint_attempts == 1:
+                raise sqlite3.OperationalError("database is locked")
+            return original_record(*args, **kwargs)
+
+        monkeypatch.setattr(ledger, "record_report_evaluation", contended_once)
+        completed = EvaluationRunner(ledger).finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: (
+                evaluator_calls.append(configured.name) or CountCases()
+            ),
+        )
+
+        assert completed.run.status is EvaluationRunStatus.COMPLETED
+        assert checkpoint_attempts == 2
+        assert evaluator_calls == ["count-cases"]
+        assert len(completed.report_evaluator_executions) == 1
+
+
+def test_finalization_replays_an_ambiguously_acknowledged_checkpoint(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("ambiguous-report-checkpoint")
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_record = ledger.record_report_evaluation
+        checkpoint_attempts = 0
+
+        def commit_then_report_contention(*args, **kwargs):
+            nonlocal checkpoint_attempts
+            checkpoint_attempts += 1
+            result = original_record(*args, **kwargs)
+            if checkpoint_attempts == 1:
+                raise sqlite3.OperationalError("database is locked")
+            return result
+
+        monkeypatch.setattr(
+            ledger, "record_report_evaluation", commit_then_report_contention
+        )
+        completed = EvaluationRunner(ledger).finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: (
+                evaluator_calls.append(configured.name) or CountCases()
+            ),
+        )
+
+        assert completed.run.status is EvaluationRunStatus.COMPLETED
+        assert checkpoint_attempts == 2
+        assert evaluator_calls == ["count-cases"]
+        assert len(completed.report_evaluator_executions) == 1
+
+
+def test_finalization_retries_completion_after_ambiguous_commit(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("ambiguous-completion")
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        original_complete = ledger.complete_evaluation_run
+        completion_attempts = 0
+
+        def commit_then_report_contention(*args, **kwargs):
+            nonlocal completion_attempts
+            completion_attempts += 1
+            result = original_complete(*args, **kwargs)
+            if completion_attempts == 1:
+                raise sqlite3.OperationalError("database is locked")
+            return result
+
+        monkeypatch.setattr(
+            ledger, "complete_evaluation_run", commit_then_report_contention
+        )
+        completed = EvaluationRunner(ledger).finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: (
+                evaluator_calls.append(configured.name) or CountCases()
+            ),
+        )
+
+        assert completed.run.status is EvaluationRunStatus.COMPLETED
+        assert completion_attempts == 1
+        assert evaluator_calls == ["count-cases"]
+
+
+def test_report_checkpoint_rejects_conflicting_execution_replay_atomically(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("conflicting-report-execution")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="worker-a"
+        )
+        assert claim is not None
+        execution = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name="count-cases",
+            evaluator_revision=1,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.25,
+        )
+        ledger.record_report_evaluation(
+            [execution], [], finalization_claim_id=claim.claim_id
+        )
+        conflicting = execution.model_copy(
+            update={
+                "execution_id": UUID(int=execution.execution_id.int + 1),
+                "duration_seconds": 0.5,
+            }
+        )
+
+        with pytest.raises(ValueError, match="conflicts with existing execution identity"):
+            ledger.record_report_evaluation(
+                [conflicting], [], finalization_claim_id=claim.claim_id
+            )
+
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == [
+            execution
+        ]
+
+
+def test_report_checkpoint_rejects_conflicting_observation_replay_atomically(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture("conflicting-report-observation")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        claim = ledger.acquire_finalization_claim(
+            initial.run.run_id, owner_id="worker-a"
+        )
+        assert claim is not None
+        execution = ReportEvaluatorExecution(
+            run_id=initial.run.run_id,
+            evaluator_name="count-cases",
+            evaluator_revision=1,
+            configuration_fingerprint="a" * 64,
+            status=EvaluationProducerStatus.COMPLETED,
+            duration_seconds=0.25,
+        )
+        observation = RunMetricObservation(
+            run_id=initial.run.run_id,
+            report_evaluator_execution_id=execution.execution_id,
+            metric=EvaluationMetricReference(
+                namespaced_name="tests.count", evaluator_revision=1
+            ),
+            integer_value=1,
+        )
+        ledger.record_report_evaluation(
+            [execution], [observation], finalization_claim_id=claim.claim_id
+        )
+        conflicting = observation.model_copy(update={"integer_value": 2})
+
+        with pytest.raises(ValueError, match="conflicts with existing observation"):
+            ledger.record_report_evaluation(
+                [execution], [conflicting], finalization_claim_id=claim.claim_id
+            )
+
+        assert ledger.list_run_metric_observations(initial.run.run_id) == [
+            observation
+        ]
+
+
+def test_report_checkpoint_retry_stops_at_confirmed_claim_expiry(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("report-checkpoint-retry-expiry")
+    initial_time = datetime(2026, 7, 17, 12, tzinfo=timezone.utc)
+    clock = ControllableClock(initial_time)
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        checkpoint_attempts = 0
+
+        def permanently_contended(*args, **kwargs):
+            nonlocal checkpoint_attempts
+            checkpoint_attempts += 1
+            clock.current = initial_time + timedelta(seconds=1)
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(ledger, "record_report_evaluation", permanently_contended)
+
+        with pytest.raises(FinalizationClaimLostError) as lost:
+            EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                worker_id="worker-a",
+                lease_seconds=1,
+                evaluator_resolver=lambda configured: (
+                    evaluator_calls.append(configured.name) or CountCases()
+                ),
+            )
+
+        assert lost.value.loss_classification == "claim_expired"
+        assert lost.value.last_confirmed_expiry == initial_time + timedelta(seconds=1)
+        assert checkpoint_attempts == 1
+        assert evaluator_calls == ["count-cases"]
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
+        pending = ledger.get_evaluation_run(initial.run.run_id)
+        assert pending is not None
+        assert pending.status is EvaluationRunStatus.FINALIZATION_PENDING
+
+
+def test_report_checkpoint_does_not_retry_non_retryable_persistence_defect(
+    tmp_path, monkeypatch
+):
+    cases, gold_set, suite = _lifecycle_fixture("report-checkpoint-non-retryable")
+    evaluator_calls: list[str] = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        initial = EvaluationRunner(ledger).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        checkpoint_attempts = 0
+
+        def invalid_persistence(*args, **kwargs):
+            nonlocal checkpoint_attempts
+            checkpoint_attempts += 1
+            raise sqlite3.IntegrityError("constraint failed")
+
+        monkeypatch.setattr(ledger, "record_report_evaluation", invalid_persistence)
+
+        with pytest.raises(sqlite3.IntegrityError, match="constraint failed"):
+            EvaluationRunner(ledger).finalize(
+                initial.run.run_id,
+                schemas=_schemas_for(cases),
+                evaluator_resolver=lambda configured: (
+                    evaluator_calls.append(configured.name) or CountCases()
+                ),
+            )
+
+        assert checkpoint_attempts == 1
+        assert evaluator_calls == ["count-cases"]
+        assert ledger.list_report_evaluator_executions(initial.run.run_id) == []
 
 
 def test_finalization_claim_renews_from_ledger_time_without_changing_identity(tmp_path):

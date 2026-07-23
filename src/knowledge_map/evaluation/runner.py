@@ -325,6 +325,14 @@ class _FinalizationHeartbeat:
         return self._claim.claim_id
 
     @property
+    def lease_seconds(self) -> float:
+        return self._lease_seconds
+
+    def wait_for_retry(self, delay_seconds: float) -> bool:
+        """Wait using the heartbeat stop signal; return whether stopping was requested."""
+        return self._stop.wait(delay_seconds)
+
+    @property
     def last_confirmed_expiry(self) -> datetime:
         with self._state_changed:
             return self._last_confirmed_expiry
@@ -1187,16 +1195,16 @@ class EvaluationRunner:
                             message=f"required metric {metric.namespaced_name} was not produced",
                         )
                     )
-            try:
-                self.ledger.record_report_evaluation(
+            self._retry_finalization_persistence(
+                lambda: self.ledger.record_report_evaluation(
                     [execution],
                     observations,
                     issues[issue_start:],
                     finalization_claim_id=claim.claim_id,
-                )
-            except Exception:
-                self._ensure_finalization_claim(heartbeat)
-                raise
+                ),
+                heartbeat,
+                operation_name="report_checkpoint",
+            )
 
         pending_run = self.ledger.get_evaluation_run(run_id)
         if pending_run is None:  # pragma: no cover - ledger invariant
@@ -1228,19 +1236,52 @@ class EvaluationRunner:
                 )
             self._ensure_finalization_claim(heartbeat)
         self._ensure_finalization_claim(heartbeat)
-        try:
-            completed_run = self.ledger.complete_evaluation_run(
+        completed_run = self._retry_finalization_persistence(
+            lambda: self.ledger.complete_evaluation_run(
                 run_id,
                 issues=issues,
                 gate_outcomes=gate_outcomes,
                 finalization_claim_id=claim.claim_id,
-            )
-        except Exception:
-            self._ensure_finalization_claim(heartbeat)
-            raise
+            ),
+            heartbeat,
+            operation_name="completion",
+        )
         return self._build_result(
             completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
         )
+
+    def _retry_finalization_persistence(
+        self,
+        attempt: Callable[[], Any],
+        heartbeat: _FinalizationHeartbeat,
+        *,
+        operation_name: str,
+    ) -> Any:
+        """Retry only transient SQLite contention while the claim remains live."""
+        delay = min(1.0, max(0.001, heartbeat.lease_seconds / 12))
+        while True:
+            try:
+                return attempt()
+            except Exception as exc:
+                if not _is_retryable_sqlite_contention(exc):
+                    raise
+                if operation_name == "completion":
+                    run = self.ledger.get_evaluation_run(heartbeat.run_id)
+                    if run is not None and run.status is EvaluationRunStatus.COMPLETED:
+                        return run
+                self._ensure_finalization_claim(heartbeat)
+                _emit_finalization_telemetry(
+                    "persistence_transient_failure",
+                    run_id=str(heartbeat.run_id),
+                    claim_id=str(heartbeat.claim_id),
+                    operation=operation_name,
+                    retry_delay_seconds=delay,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+                if heartbeat.wait_for_retry(delay):
+                    raise heartbeat.claim_loss_error()
+                self._ensure_finalization_claim(heartbeat)
+                delay = min(1.0, delay * 2)
 
     def _ensure_finalization_claim(
         self, heartbeat: _FinalizationHeartbeat

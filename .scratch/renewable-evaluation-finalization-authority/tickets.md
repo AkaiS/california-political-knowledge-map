@@ -82,14 +82,14 @@ Work the **frontier**: any ticket whose blockers are all done. Tickets 2 and 4 c
 
 **Blocked by:** Fence and stop an attempt that loses authority
 
-- [ ] Only explicitly classified SQLite `busy` or `locked` conflicts are retryable for report checkpointing and completion.
-- [ ] A checkpoint retry reuses the exact Report Evaluator Execution, observation, and issue identities and payloads.
-- [ ] Exact checkpoint replay is one atomic idempotent success and duplicates no executions, observations, or issues.
-- [ ] Replay with conflicting execution or observation content is rejected atomically.
-- [ ] A retryable checkpoint conflict can clear within the live lease with one evaluator invocation and one terminal execution.
-- [ ] Completion retry safely handles both a pre-commit contention failure and an ambiguous acknowledgement after a committed completion.
-- [ ] Checkpoint and completion retries stop at claim expiry, preserve the live-claim fence, and never mask non-retryable defects.
-- [ ] Retry behavior is deterministic and does not depend on exact sleep timing in tests.
+- [x] Only explicitly classified SQLite `busy` or `locked` conflicts are retryable for report checkpointing and completion.
+- [x] A checkpoint retry reuses the exact Report Evaluator Execution, observation, and issue identities and payloads.
+- [x] Exact checkpoint replay is one atomic idempotent success and duplicates no executions, observations, or issues.
+- [x] Replay with conflicting execution or observation content is rejected atomically.
+- [x] A retryable checkpoint conflict can clear within the live lease with one evaluator invocation and one terminal execution.
+- [x] Completion retry safely handles both a pre-commit contention failure and an ambiguous acknowledgement after a committed completion.
+- [x] Checkpoint and completion retries stop at claim expiry, preserve the live-claim fence, and never mask non-retryable defects.
+- [x] Retry behavior is deterministic and does not depend on exact sleep timing in tests.
 
 ## Protect Release Gates through completion
 
