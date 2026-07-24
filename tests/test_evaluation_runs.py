@@ -433,7 +433,9 @@ def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_fai
         raise RuntimeError("observation storage failed")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        monkeypatch.setattr(ledger, "_insert_case_observation", fail_observation_insert)
+        monkeypatch.setattr(
+            ledger.execution_store, "_insert_case_observation", fail_observation_insert
+        )
         result = EvaluationRunner(ledger).run(
             suite=suite,
             gold_set=gold_set,
@@ -1059,13 +1061,15 @@ def test_ledger_serializes_concurrent_terminal_case_checkpoints(tmp_path, monkey
             ledger, "concurrent-checkpoints"
         )
         ledger.create_evaluation_run(run, plan, manifest, pending_results)
-        insert_case_execution = ledger._insert_case_execution
+        insert_case_execution = ledger.execution_store._insert_case_execution
 
         def delayed_insert(execution: CaseEvaluatorExecution) -> None:
             time.sleep(0.05)
             insert_case_execution(execution)
 
-        monkeypatch.setattr(ledger, "_insert_case_execution", delayed_insert)
+        monkeypatch.setattr(
+            ledger.execution_store, "_insert_case_execution", delayed_insert
+        )
 
         def checkpoint(result: EvaluationCaseResult) -> None:
             execution = CaseEvaluatorExecution(
