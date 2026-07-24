@@ -5374,3 +5374,13 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
         assert result.case_evaluator_executions[0].status == "completed"
         assert result.case_observations == ()
         assert result.run_observations[0].integer_value == 1
+
+
+def test_sqlite_evaluation_execution_store_owns_query_persistence():
+    assert not hasattr(SQLiteEvaluationLedger, "_create_evaluation_run")
+    assert not hasattr(SQLiteEvaluationLedger, "_record_case_evaluation")
+    assert not hasattr(SQLiteEvaluationLedger, "_record_report_evaluation")
+    assert not hasattr(SQLiteEvaluationLedger, "_complete_evaluation_run")
+    assert not hasattr(SQLiteEvaluationLedger, "_validate_run_creation")
+    assert not hasattr(SQLiteEvaluationLedger, "_assert_run_is_complete")
+

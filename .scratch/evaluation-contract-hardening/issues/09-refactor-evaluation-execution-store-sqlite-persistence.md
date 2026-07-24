@@ -1,7 +1,7 @@
 # Refactor Evaluation Execution Store SQLite persistence
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,10 +15,10 @@ Remove reverse calls back to private methods on `SQLiteEvaluationLedger` (`_crea
 
 ## Acceptance criteria
 
-- [ ] `SQLiteEvaluationExecutionStore` executes run creation, case recording, report recording, and run completion query logic directly.
-- [ ] `SQLiteEvaluationLedger` delegates execution lifecycle operations to `SQLiteEvaluationExecutionStore`.
-- [ ] All run lifecycle unit tests pass (`uv run pytest tests/test_evaluation_runs.py`).
-- [ ] Entire test suite remains green (`uv run pytest`).
+- [x] `SQLiteEvaluationExecutionStore` executes run creation, case recording, report recording, and run completion query logic directly.
+- [x] `SQLiteEvaluationLedger` delegates execution lifecycle operations to `SQLiteEvaluationExecutionStore`.
+- [x] All run lifecycle unit tests pass (`uv run pytest tests/test_evaluation_runs.py`).
+- [x] Entire test suite remains green (`uv run pytest`).
 
 ## Blocked by
 

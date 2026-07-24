@@ -734,7 +734,182 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         manifest: Iterable[EvaluationCaseManifestEntry],
         pending_results: Iterable[EvaluationCaseResult],
     ) -> None:
-        self._ledger._create_evaluation_run(run, plan, manifest, pending_results)
+        """Atomically create a run, its frozen manifest, and pending envelopes."""
+        manifest_items = tuple(manifest)
+        result_items = tuple(pending_results)
+        self._validate_run_creation(run, plan, manifest_items, result_items)
+        try:
+            self.connection.execute("BEGIN")
+            self.connection.execute(
+                """
+                INSERT INTO evaluation_runs (
+                    run_id, suite_record_id, suite_business_id, suite_revision,
+                    suite_content_hash, gold_set_record_id, gold_set_business_id,
+                    gold_set_revision, gold_set_content_hash, configuration_json,
+                    configuration_fingerprint, selection_expression,
+                    selection_provenance_json, status, retry_of_run_id,
+                    issues_json, gate_outcomes_json, frozen_aggregate_manifest_artifact_id,
+                    finalization_claim_id, finalization_claim_owner_id,
+                    finalization_claim_acquired_at, finalization_claim_expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(run.run_id), str(run.suite_record_id), run.suite_business_id,
+                    run.suite_revision, run.suite_content_hash,
+                    str(run.gold_set_record_id), run.gold_set_business_id,
+                    run.gold_set_revision, run.gold_set_content_hash,
+                    run.configuration.configuration_json,
+                    run.configuration.content_fingerprint,
+                    run.selection_expression,
+                    json.dumps(run.selection_provenance, sort_keys=True, separators=(",", ":")),
+                    run.status.value,
+                    None if run.retry_of_run_id is None else str(run.retry_of_run_id),
+                    json.dumps(
+                        [issue.model_dump(mode="json") for issue in run.issues],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        [gate.model_dump(mode="json") for gate in run.gate_outcomes],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO resolved_evaluation_plans (run_id, plan_json)
+                VALUES (?, ?)
+                """,
+                (str(run.run_id), plan.canonical_json),
+            )
+            for entry in manifest_items:
+                self.connection.execute(
+                    """
+                    INSERT INTO evaluation_case_manifests (
+                        manifest_id, run_id, ordinal, case_record_id,
+                        case_business_id, case_revision, case_content_hash,
+                        input_schema_json, output_schema_json, metadata_schema_json, split
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(entry.manifest_id), str(entry.run_id), entry.ordinal,
+                        str(entry.case_record_id), entry.case_business_id,
+                        entry.case_revision, entry.case_content_hash,
+                        json.dumps(
+                            entry.case.input_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        json.dumps(
+                            entry.case.output_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        json.dumps(
+                            entry.case.metadata_schema.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        entry.split.value,
+                    ),
+                )
+            for result in result_items:
+                self.connection.execute(
+                    """
+                    INSERT INTO evaluation_case_results (
+                        result_id, run_id, manifest_id, case_record_id,
+                        execution_disposition, task_outcome_json,
+                        checkpoint_id, checkpoint_content_hash
+                    ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL)
+                    """,
+                    (
+                        str(result.result_id), str(result.run_id), str(result.manifest_id),
+                        str(result.case_record_id), result.execution_disposition.value,
+                    ),
+                )
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    @staticmethod
+    def _validate_run_creation(
+        run: EvaluationRunRecord,
+        plan: ResolvedEvaluationPlan,
+        manifest: tuple[EvaluationCaseManifestEntry, ...],
+        pending_results: tuple[EvaluationCaseResult, ...],
+    ) -> None:
+        if (
+            plan.suite.record_id,
+            plan.suite.business_id,
+            plan.suite.revision,
+            plan.suite.content_hash,
+        ) != (
+            run.suite_record_id,
+            run.suite_business_id,
+            run.suite_revision,
+            run.suite_content_hash,
+        ):
+            raise ValueError(
+                "Resolved Evaluation Plan Suite revision does not match Evaluation Run"
+            )
+        if (
+            plan.gold_set.record_id,
+            plan.gold_set.business_id,
+            plan.gold_set.revision,
+            plan.gold_set.content_hash,
+        ) != (
+            run.gold_set_record_id,
+            run.gold_set_business_id,
+            run.gold_set_revision,
+            run.gold_set_content_hash,
+        ):
+            raise ValueError(
+                "Resolved Evaluation Plan Gold Set revision does not match "
+                "Evaluation Run"
+            )
+        manifested_cases = tuple(
+            (entry.ordinal, entry.run_id, entry.case, entry.split)
+            for entry in manifest
+        )
+        planned_cases = tuple(
+            (ordinal, run.run_id, planned.case, planned.split)
+            for ordinal, planned in enumerate(plan.cases)
+        )
+        if manifested_cases != planned_cases:
+            raise ValueError(
+                "manifested Evaluation Case revisions do not match "
+                "the Resolved Evaluation Plan"
+            )
+        if len(manifest) != len(pending_results):
+            raise ValueError("every manifest entry requires exactly one pending result")
+        expected_envelopes = {
+            (entry.manifest_id, entry.case_record_id) for entry in manifest
+        }
+        actual_envelopes = {
+            (result.manifest_id, result.case_record_id) for result in pending_results
+        }
+        if (
+            actual_envelopes != expected_envelopes
+            or len(actual_envelopes) != len(pending_results)
+            or any(
+                result.run_id != run.run_id
+                or result.execution_disposition
+                is not EvaluationCaseDisposition.PENDING
+                or result.task_outcome is not None
+                for result in pending_results
+            )
+        ):
+            raise ValueError(
+                "every manifested case requires exactly one pending "
+                "Evaluation Case Result"
+            )
 
     def record_case_evaluation(
         self,
@@ -743,9 +918,154 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         observations: Iterable[CaseMetricObservation],
         report_case_evidence: Mapping[str, Any] | None = None,
     ) -> None:
-        self._ledger._record_case_evaluation(
-            result, executions, observations, report_case_evidence
+        """Atomically finalize one case result and its evaluator evidence."""
+        executions = tuple(executions)
+        observations = tuple(observations)
+        validated_evidence = self._validate_report_case_evidence(
+            result, report_case_evidence
         )
+        canonical_evidence = (
+            None
+            if validated_evidence is None
+            else validated_evidence.model_dump(mode="json")
+        )
+        task_outcome_payload = (
+            None if result.task_outcome is None else result.task_outcome.model_dump(mode="json")
+        )
+        result_payload = {
+            "result_id": str(result.result_id),
+            "run_id": str(result.run_id),
+            "manifest_id": str(result.manifest_id),
+            "case_record_id": str(result.case_record_id),
+            "execution_disposition": result.execution_disposition.value,
+            "task_outcome": task_outcome_payload,
+        }
+        checkpoint_hash = content_fingerprint(
+            {
+                "case_result": result_payload,
+                "report_case_evidence": canonical_evidence,
+                "case_evaluator_executions": [
+                    item.model_dump(mode="json") for item in executions
+                ],
+                "case_metric_observations": [
+                    item.model_dump(mode="json") for item in observations
+                ],
+                "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,
+            }
+        )
+        checkpoint_id = uuid5(NAMESPACE_URL, f"evaluation-checkpoint:{checkpoint_hash}")
+        with self._ledger._transaction_lock:
+            try:
+                self.connection.execute("BEGIN")
+                cursor = self.connection.execute(
+                    """
+                    UPDATE evaluation_case_results
+                    SET execution_disposition = ?, task_outcome_json = ?, report_case_json = ?,
+                        checkpoint_id = ?, checkpoint_content_hash = ?
+                    WHERE result_id = ? AND execution_disposition = 'pending'
+                    """,
+                    (
+                        result.execution_disposition.value,
+                        None if result.task_outcome is None else json.dumps(
+                            result.task_outcome.model_dump(mode="json"),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        None if canonical_evidence is None else json.dumps(
+                            canonical_evidence, sort_keys=True, separators=(",", ":")
+                        ),
+                        str(checkpoint_id),
+                        checkpoint_hash,
+                        str(result.result_id),
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    existing = self.connection.execute(
+                        """
+                        SELECT *
+                        FROM evaluation_case_results
+                        WHERE result_id = ?
+                        """,
+                        (str(result.result_id),),
+                    ).fetchone()
+                    if existing is None:
+                        raise KeyError(
+                            f"unknown Evaluation Case Result: {result.result_id}"
+                        )
+                    existing_result = self._ledger._case_result_from_row(existing)
+                    existing_evidence = (
+                        None
+                        if existing["report_case_json"] is None
+                        else json.loads(existing["report_case_json"])
+                    )
+                    if (
+                        existing_result.model_copy(
+                            update={"checkpoint_id": None, "checkpoint_content_hash": None}
+                        ) == result
+                        and self._ledger.list_case_evaluator_executions(result.result_id)
+                        == list(executions)
+                        and self._ledger.list_case_metric_observations(result.result_id)
+                        == list(observations)
+                        and existing_evidence == canonical_evidence
+                    ):
+                        self.connection.commit()
+                        return
+                    raise ValueError(
+                        f"Evaluation Case Result is already terminal with different evidence: {result.result_id}"
+                    )
+                if result.task_outcome is not None:
+                    for artifact in result.task_outcome.artifacts:
+                        self._ledger._link_artifact(
+                            "evaluation_case_result_artifacts",
+                            "case_result_id",
+                            result.result_id,
+                            artifact.content_hash,
+                            artifact.role,
+                            commit=False,
+                        )
+                for execution in executions:
+                    self._ledger._insert_case_execution(execution)
+                self._ledger._validate_case_observation_ownership(
+                    result.result_id, observations
+                )
+                for observation in observations:
+                    self._ledger._insert_case_observation(observation)
+                self.connection.commit()
+            except Exception:
+                self.connection.rollback()
+                raise
+
+    @staticmethod
+    def _validate_report_case_evidence(
+        result: EvaluationCaseResult,
+        evidence: Mapping[str, Any] | None,
+    ) -> SuccessfulReportCaseEvidence | FailedReportCaseEvidence | None:
+        if evidence is None:
+            return None
+        validated = REPORT_CASE_EVIDENCE_ADAPTER.validate_python(evidence)
+        if isinstance(validated, SuccessfulReportCaseEvidence):
+            if (
+                result.execution_disposition is not EvaluationCaseDisposition.COMPLETED
+                or not isinstance(result.task_outcome, TaskSuccess)
+            ):
+                raise ValueError(
+                    "successful ReportCase evidence requires a completed case "
+                    "and successful task outcome"
+                )
+            if content_fingerprint(validated.output) != content_fingerprint(
+                result.task_outcome.model_dump(mode="json")["output"]
+            ):
+                raise ValueError(
+                    "successful ReportCase evidence output does not match the task outcome"
+                )
+        elif (
+            result.execution_disposition is not EvaluationCaseDisposition.FAILED
+            or not isinstance(result.task_outcome, TaskFailure)
+        ):
+            raise ValueError(
+                "failed ReportCase evidence requires a failed case and failed task outcome"
+            )
+        return validated
 
     def record_report_evaluation(
         self,
@@ -755,12 +1075,145 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         *,
         finalization_claim_id: UUID | None = None,
     ) -> None:
-        self._ledger._record_report_evaluation(
-            executions,
-            observations,
-            issues,
-            finalization_claim_id=finalization_claim_id,
-        )
+        """Atomically persist one report checkpoint and its diagnostics."""
+        executions = tuple(executions)
+        observations = tuple(observations)
+        issue_items = tuple(issues)
+        with self._ledger._transaction_lock:
+            try:
+                self.connection.execute("BEGIN IMMEDIATE")
+                if finalization_claim_id is not None:
+                    if not executions:
+                        raise ValueError(
+                            "a finalization claim requires a report execution checkpoint"
+                        )
+                    _, claim_timestamp = self._ledger._claim_timestamp()
+                    claim = self.connection.execute(
+                        """
+                        SELECT 1
+                        FROM evaluation_runs
+                        WHERE run_id = ?
+                          AND status = ?
+                          AND finalization_claim_id = ?
+                          AND finalization_claim_expires_at > ?
+                        """,
+                        (
+                            str(executions[0].run_id),
+                            EvaluationRunStatus.FINALIZATION_PENDING.value,
+                            str(finalization_claim_id),
+                            claim_timestamp,
+                        ),
+                    ).fetchone()
+                    if claim is None:
+                        raise RuntimeError(
+                            "cannot checkpoint report evaluation without the live finalization claim"
+                        )
+                existing_executions: dict[UUID, ReportEvaluatorExecution] = {}
+                for execution in executions:
+                    row = self.connection.execute(
+                        "SELECT * FROM report_evaluator_executions WHERE execution_id = ?",
+                        (str(execution.execution_id),),
+                    ).fetchone()
+                    if row is not None:
+                        existing = self._ledger._report_execution_from_row(row)
+                        if existing != execution:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing execution"
+                            )
+                        existing_executions[execution.execution_id] = existing
+                    else:
+                        identity = self.connection.execute(
+                            """
+                            SELECT * FROM report_evaluator_executions
+                            WHERE run_id = ? AND evaluator_name = ?
+                              AND evaluator_revision = ?
+                              AND configuration_fingerprint = ?
+                            """,
+                            (
+                                str(execution.run_id),
+                                execution.evaluator_name,
+                                execution.evaluator_revision,
+                                execution.configuration_fingerprint,
+                            ),
+                        ).fetchone()
+                        if identity is not None:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing execution identity"
+                            )
+
+                existing_observations: dict[UUID, RunMetricObservation] = {}
+                for observation in observations:
+                    row = self.connection.execute(
+                        "SELECT * FROM run_metric_observations WHERE observation_id = ?",
+                        (str(observation.observation_id),),
+                    ).fetchone()
+                    if row is not None:
+                        existing = RunMetricObservation(
+                            observation_id=UUID(row["observation_id"]),
+                            report_evaluator_execution_id=UUID(
+                                row["report_evaluator_execution_id"]
+                            ),
+                            metric=EvaluationMetricReference(
+                                namespaced_name=row["metric_namespaced_name"],
+                                evaluator_revision=row["metric_evaluator_revision"],
+                            ),
+                            **self._ledger._observation_values(row),
+                        )
+                        if existing != observation:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing observation"
+                            )
+                        existing_observations[observation.observation_id] = existing
+                    else:
+                        identity = self.connection.execute(
+                            """
+                            SELECT 1 FROM run_metric_observations
+                            WHERE report_evaluator_execution_id = ?
+                              AND metric_namespaced_name = ?
+                              AND metric_evaluator_revision = ?
+                            """,
+                            (
+                                str(observation.report_evaluator_execution_id),
+                                observation.metric.namespaced_name,
+                                observation.metric.evaluator_revision,
+                            ),
+                        ).fetchone()
+                        if identity is not None:
+                            raise ValueError(
+                                "report evaluator checkpoint replay conflicts with existing observation identity"
+                            )
+                for execution in executions:
+                    if execution.execution_id not in existing_executions:
+                        self._ledger._insert_report_execution(execution)
+                self._ledger._validate_report_observation_ownership(
+                    executions[0].run_id if executions else None, observations
+                )
+                for observation in observations:
+                    if observation.observation_id not in existing_observations:
+                        self._ledger._insert_run_observation(observation)
+                if issue_items:
+                    current = self.connection.execute(
+                        "SELECT issues_json FROM evaluation_runs WHERE run_id = ?",
+                        (str(executions[0].run_id),),
+                    ).fetchone()
+                    if current is None:
+                        raise KeyError(f"unknown Evaluation Run: {executions[0].run_id}")
+                    existing = json.loads(current["issues_json"] or "[]")
+                    for issue in issue_items:
+                        payload = issue.model_dump(mode="json")
+                        if payload not in existing:
+                            existing.append(payload)
+                    self.connection.execute(
+                        "UPDATE evaluation_runs SET issues_json = ? WHERE run_id = ?",
+                        (
+                            json.dumps(existing, sort_keys=True, separators=(",", ":")),
+                            str(executions[0].run_id),
+                        ),
+                    )
+                self.connection.commit()
+            except Exception:
+                self.connection.rollback()
+                raise
 
     def complete_evaluation_run(
         self,
@@ -770,12 +1223,207 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         gate_outcomes: Iterable[EvaluationGateOutcome] = (),
         finalization_claim_id: UUID | None = None,
     ) -> EvaluationRunRecord:
-        return self._ledger._complete_evaluation_run(
-            run_id,
-            issues=issues,
-            gate_outcomes=gate_outcomes,
-            finalization_claim_id=finalization_claim_id,
-        )
+        issue_items = tuple(issues)
+        gate_items = tuple(gate_outcomes)
+        with self._ledger._transaction_lock:
+            try:
+                self.connection.execute("BEGIN IMMEDIATE")
+                _, claim_timestamp = self._ledger._claim_timestamp()
+                row = self.connection.execute(
+                    "SELECT * FROM evaluation_runs WHERE run_id = ?",
+                    (str(run_id),),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"unknown Evaluation Run: {run_id}")
+                if row["status"] != EvaluationRunStatus.COMPLETED.value:
+                    if row["status"] == EvaluationRunStatus.FINALIZATION_PENDING.value:
+                        if finalization_claim_id is None:
+                            raise ValueError(
+                                "Evaluation Run completion requires its exact live finalization claim"
+                            )
+                        claim = self.connection.execute(
+                            """
+                            SELECT 1
+                            FROM evaluation_runs
+                            WHERE run_id = ?
+                              AND status = ?
+                              AND finalization_claim_id = ?
+                              AND finalization_claim_expires_at > ?
+                            """,
+                            (
+                                str(run_id),
+                                EvaluationRunStatus.FINALIZATION_PENDING.value,
+                                str(finalization_claim_id),
+                                claim_timestamp,
+                            ),
+                        ).fetchone()
+                        if claim is None:
+                            raise RuntimeError(
+                                "cannot complete Evaluation Run without the live finalization claim"
+                            )
+                    self._assert_run_is_complete(run_id)
+                    if (
+                        finalization_claim_id is not None
+                        and row["finalization_claim_id"]
+                        != str(finalization_claim_id)
+                    ):
+                        raise ValueError(
+                            "Evaluation Finalization does not own the run's claim"
+                        )
+                    self.connection.execute(
+                        """
+                        UPDATE evaluation_runs
+                        SET status = ?, issues_json = ?, gate_outcomes_json = ?,
+                            finalization_claim_id = NULL,
+                            finalization_claim_owner_id = NULL,
+                            finalization_claim_acquired_at = NULL,
+                            finalization_claim_expires_at = NULL
+                        WHERE run_id = ?
+                        """,
+                        (
+                            EvaluationRunStatus.COMPLETED.value,
+                            json.dumps(
+                                [issue.model_dump(mode="json") for issue in issue_items],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                            json.dumps(
+                                [gate.model_dump(mode="json") for gate in gate_items],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            ),
+                            str(run_id),
+                        ),
+                    )
+                self.connection.commit()
+            except Exception:
+                self.connection.rollback()
+                raise
+        run = self._ledger.get_evaluation_run(run_id)
+        if run is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        return run
+
+    def _assert_run_is_complete(self, run_id: UUID) -> None:
+        row = self.connection.execute(
+            "SELECT frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Run: {run_id}")
+        if row["frozen_aggregate_manifest_artifact_id"] is None:
+            raise ValueError(
+                "Evaluation Run cannot complete before the aggregate manifest is frozen"
+            )
+        pending = self.connection.execute(
+            """
+            SELECT 1 FROM evaluation_case_results
+            WHERE run_id = ?
+              AND (execution_disposition IN ('pending', 'cancelled')
+                   OR task_outcome_json IS NULL)
+            LIMIT 1
+            """,
+            (str(run_id),),
+        ).fetchone()
+        if pending is not None:
+            raise ValueError(
+                "Evaluation Run cannot complete while cases lack terminal evidence"
+            )
+        plan_row = self.connection.execute(
+            "SELECT plan_json FROM resolved_evaluation_plans WHERE run_id = ?",
+            (str(run_id),),
+        ).fetchone()
+        if plan_row is None:
+            raise ValueError("Evaluation Run cannot complete without its frozen plan")
+        plan = ResolvedEvaluationPlan.model_validate_json(plan_row["plan_json"])
+        suite = self._ledger._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
+        case_evaluators = {
+            evaluator["name"]: evaluator
+            for evaluator in suite.get("case_evaluators", [])
+        }
+        for ordinal, planned_case in enumerate(plan.cases):
+            result = self.connection.execute(
+                """
+                SELECT result_id, task_outcome_json
+                FROM evaluation_case_results
+                WHERE run_id = ? AND manifest_id = (
+                    SELECT manifest_id FROM evaluation_case_manifests
+                    WHERE run_id = ? AND ordinal = ?
+                )
+                """,
+                (str(run_id), str(run_id), ordinal),
+            ).fetchone()
+            if result is None or result["task_outcome_json"] is None:
+                raise ValueError("Evaluation Run cannot complete without terminal task evidence")
+            outcome = json.loads(result["task_outcome_json"])
+            if outcome.get("kind") == "failure":
+                continue
+            terminal = {
+                (
+                    row["evaluator_name"],
+                    row["evaluator_revision"],
+                    row["configuration_fingerprint"],
+                )
+                for row in self.connection.execute(
+                    """
+                    SELECT evaluator_name, evaluator_revision, configuration_fingerprint
+                    FROM case_evaluator_executions
+                    WHERE case_result_id = ?
+                    """,
+                    (result["result_id"],),
+                )
+            }
+            expected_case_evaluators = set()
+            for resolved in planned_case.evaluators:
+                configured = case_evaluators.get(resolved.reference.name)
+                if configured is None:
+                    raise ValueError(
+                        "Evaluation Run cannot complete while the frozen plan references "
+                        f"unknown case evaluator: {resolved.reference.name}"
+                    )
+                expected_case_evaluators.add(
+                    (
+                        resolved.reference.name,
+                        resolved.reference.evaluator_revision,
+                        configured["configuration_fingerprint"],
+                    )
+                )
+            missing_case_evaluators = expected_case_evaluators - terminal
+            if missing_case_evaluators:
+                raise ValueError(
+                    "Evaluation Run cannot complete while case evaluators lack terminal evidence: "
+                    + ", ".join(sorted(name for name, _, _ in missing_case_evaluators))
+                )
+        expected = {
+            (
+                evaluator["name"],
+                evaluator["evaluator_revision"],
+                evaluator["configuration_fingerprint"],
+            )
+            for evaluator in suite.get("report_evaluators", [])
+        }
+        terminal = {
+            (
+                row["evaluator_name"],
+                row["evaluator_revision"],
+                row["configuration_fingerprint"],
+            )
+            for row in self.connection.execute(
+                """
+                SELECT evaluator_name, evaluator_revision, configuration_fingerprint
+                FROM report_evaluator_executions
+                WHERE run_id = ?
+                """,
+                (str(run_id),),
+            )
+        }
+        missing = expected - terminal
+        if missing:
+            raise ValueError(
+                "Evaluation Run cannot complete while report evaluators lack terminal evidence: "
+                + ", ".join(sorted(name for name, _, _ in missing))
+            )
+
 
 
 class SQLiteEvaluationArtifactCatalog(_SQLiteLedgerCapability):
@@ -1569,345 +2217,6 @@ class SQLiteEvaluationLedger:
         )
         self._connection.commit()
 
-    def _create_evaluation_run(
-        self,
-        run: EvaluationRunRecord,
-        plan: ResolvedEvaluationPlan,
-        manifest: Iterable[EvaluationCaseManifestEntry],
-        pending_results: Iterable[EvaluationCaseResult],
-    ) -> None:
-        """Atomically create a run, its frozen manifest, and pending envelopes."""
-        manifest_items = tuple(manifest)
-        result_items = tuple(pending_results)
-        self._validate_run_creation(run, plan, manifest_items, result_items)
-        try:
-            self._connection.execute("BEGIN")
-            self._connection.execute(
-                """
-                INSERT INTO evaluation_runs (
-                    run_id, suite_record_id, suite_business_id, suite_revision,
-                    suite_content_hash, gold_set_record_id, gold_set_business_id,
-                    gold_set_revision, gold_set_content_hash, configuration_json,
-                    configuration_fingerprint, selection_expression,
-                    selection_provenance_json, status, retry_of_run_id,
-                    issues_json, gate_outcomes_json, frozen_aggregate_manifest_artifact_id,
-                    finalization_claim_id, finalization_claim_owner_id,
-                    finalization_claim_acquired_at, finalization_claim_expires_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(run.run_id), str(run.suite_record_id), run.suite_business_id,
-                    run.suite_revision, run.suite_content_hash,
-                    str(run.gold_set_record_id), run.gold_set_business_id,
-                    run.gold_set_revision, run.gold_set_content_hash,
-                    run.configuration.configuration_json,
-                    run.configuration.content_fingerprint,
-                    run.selection_expression,
-                    json.dumps(run.selection_provenance, sort_keys=True, separators=(",", ":")),
-                    run.status.value,
-                    None if run.retry_of_run_id is None else str(run.retry_of_run_id),
-                    json.dumps(
-                        [issue.model_dump(mode="json") for issue in run.issues],
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ),
-                    json.dumps(
-                        [gate.model_dump(mode="json") for gate in run.gate_outcomes],
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                ),
-            )
-            self._connection.execute(
-                """
-                INSERT INTO resolved_evaluation_plans (run_id, plan_json)
-                VALUES (?, ?)
-                """,
-                (str(run.run_id), plan.canonical_json),
-            )
-            for entry in manifest_items:
-                self._connection.execute(
-                    """
-                    INSERT INTO evaluation_case_manifests (
-                        manifest_id, run_id, ordinal, case_record_id,
-                        case_business_id, case_revision, case_content_hash,
-                        input_schema_json, output_schema_json, metadata_schema_json, split
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        str(entry.manifest_id), str(entry.run_id), entry.ordinal,
-                        str(entry.case_record_id), entry.case_business_id,
-                        entry.case_revision, entry.case_content_hash,
-                        json.dumps(
-                            entry.case.input_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        json.dumps(
-                            entry.case.output_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        json.dumps(
-                            entry.case.metadata_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        entry.split.value,
-                    ),
-                )
-            for result in result_items:
-                self._connection.execute(
-                    """
-                    INSERT INTO evaluation_case_results (
-                        result_id, run_id, manifest_id, case_record_id,
-                        execution_disposition, task_outcome_json,
-                        checkpoint_id, checkpoint_content_hash
-                    ) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL)
-                    """,
-                    (
-                        str(result.result_id), str(result.run_id), str(result.manifest_id),
-                        str(result.case_record_id), result.execution_disposition.value,
-                    ),
-                )
-            self._connection.commit()
-        except Exception:
-            self._connection.rollback()
-            raise
-
-    @staticmethod
-    def _validate_run_creation(
-        run: EvaluationRunRecord,
-        plan: ResolvedEvaluationPlan,
-        manifest: tuple[EvaluationCaseManifestEntry, ...],
-        pending_results: tuple[EvaluationCaseResult, ...],
-    ) -> None:
-        if (
-            plan.suite.record_id,
-            plan.suite.business_id,
-            plan.suite.revision,
-            plan.suite.content_hash,
-        ) != (
-            run.suite_record_id,
-            run.suite_business_id,
-            run.suite_revision,
-            run.suite_content_hash,
-        ):
-            raise ValueError(
-                "Resolved Evaluation Plan Suite revision does not match Evaluation Run"
-            )
-        if (
-            plan.gold_set.record_id,
-            plan.gold_set.business_id,
-            plan.gold_set.revision,
-            plan.gold_set.content_hash,
-        ) != (
-            run.gold_set_record_id,
-            run.gold_set_business_id,
-            run.gold_set_revision,
-            run.gold_set_content_hash,
-        ):
-            raise ValueError(
-                "Resolved Evaluation Plan Gold Set revision does not match "
-                "Evaluation Run"
-            )
-        manifested_cases = tuple(
-            (entry.ordinal, entry.run_id, entry.case, entry.split)
-            for entry in manifest
-        )
-        planned_cases = tuple(
-            (ordinal, run.run_id, planned.case, planned.split)
-            for ordinal, planned in enumerate(plan.cases)
-        )
-        if manifested_cases != planned_cases:
-            raise ValueError(
-                "manifested Evaluation Case revisions do not match "
-                "the Resolved Evaluation Plan"
-            )
-        if len(manifest) != len(pending_results):
-            raise ValueError("every manifest entry requires exactly one pending result")
-        expected_envelopes = {
-            (entry.manifest_id, entry.case_record_id) for entry in manifest
-        }
-        actual_envelopes = {
-            (result.manifest_id, result.case_record_id) for result in pending_results
-        }
-        if (
-            actual_envelopes != expected_envelopes
-            or len(actual_envelopes) != len(pending_results)
-            or any(
-                result.run_id != run.run_id
-                or result.execution_disposition
-                is not EvaluationCaseDisposition.PENDING
-                or result.task_outcome is not None
-                for result in pending_results
-            )
-        ):
-            raise ValueError(
-                "every manifested case requires exactly one pending "
-                "Evaluation Case Result"
-            )
-    def _record_case_evaluation(
-        self,
-        result: EvaluationCaseResult,
-        executions: Iterable[CaseEvaluatorExecution],
-        observations: Iterable[CaseMetricObservation],
-        report_case_evidence: Mapping[str, Any] | None = None,
-    ) -> None:
-        """Atomically finalize one case result and its evaluator evidence."""
-        executions = tuple(executions)
-        observations = tuple(observations)
-        validated_evidence = self._validate_report_case_evidence(
-            result, report_case_evidence
-        )
-        canonical_evidence = (
-            None
-            if validated_evidence is None
-            else validated_evidence.model_dump(mode="json")
-        )
-        task_outcome_payload = (
-            None if result.task_outcome is None else result.task_outcome.model_dump(mode="json")
-        )
-        result_payload = {
-            "result_id": str(result.result_id),
-            "run_id": str(result.run_id),
-            "manifest_id": str(result.manifest_id),
-            "case_record_id": str(result.case_record_id),
-            "execution_disposition": result.execution_disposition.value,
-            "task_outcome": task_outcome_payload,
-        }
-        checkpoint_hash = content_fingerprint(
-            {
-                "case_result": result_payload,
-                "report_case_evidence": canonical_evidence,
-                "case_evaluator_executions": [
-                    item.model_dump(mode="json") for item in executions
-                ],
-                "case_metric_observations": [
-                    item.model_dump(mode="json") for item in observations
-                ],
-                "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,
-            }
-        )
-        checkpoint_id = uuid5(NAMESPACE_URL, f"evaluation-checkpoint:{checkpoint_hash}")
-        with self._transaction_lock:
-            try:
-                self._connection.execute("BEGIN")
-                cursor = self._connection.execute(
-                    """
-                    UPDATE evaluation_case_results
-                    SET execution_disposition = ?, task_outcome_json = ?, report_case_json = ?,
-                        checkpoint_id = ?, checkpoint_content_hash = ?
-                    WHERE result_id = ? AND execution_disposition = 'pending'
-                    """,
-                    (
-                        result.execution_disposition.value,
-                        None if result.task_outcome is None else json.dumps(
-                            result.task_outcome.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        None if canonical_evidence is None else json.dumps(
-                            canonical_evidence, sort_keys=True, separators=(",", ":")
-                        ),
-                        str(checkpoint_id),
-                        checkpoint_hash,
-                        str(result.result_id),
-                    ),
-                )
-                if cursor.rowcount != 1:
-                    existing = self._connection.execute(
-                        """
-                        SELECT *
-                        FROM evaluation_case_results
-                        WHERE result_id = ?
-                        """,
-                        (str(result.result_id),),
-                    ).fetchone()
-                    if existing is None:
-                        raise KeyError(
-                            f"unknown Evaluation Case Result: {result.result_id}"
-                        )
-                    existing_result = self._case_result_from_row(existing)
-                    existing_evidence = (
-                        None
-                        if existing["report_case_json"] is None
-                        else json.loads(existing["report_case_json"])
-                    )
-                    if (
-                        existing_result.model_copy(
-                            update={"checkpoint_id": None, "checkpoint_content_hash": None}
-                        ) == result
-                        and self.list_case_evaluator_executions(result.result_id)
-                        == list(executions)
-                        and self.list_case_metric_observations(result.result_id)
-                        == list(observations)
-                        and existing_evidence == canonical_evidence
-                    ):
-                        self._connection.commit()
-                        return
-                    raise ValueError(
-                        f"Evaluation Case Result is already terminal with different evidence: {result.result_id}"
-                    )
-                if result.task_outcome is not None:
-                    for artifact in result.task_outcome.artifacts:
-                        self._link_artifact(
-                            "evaluation_case_result_artifacts",
-                            "case_result_id",
-                            result.result_id,
-                            artifact.content_hash,
-                            artifact.role,
-                            commit=False,
-                        )
-                for execution in executions:
-                    self._insert_case_execution(execution)
-                self._validate_case_observation_ownership(
-                    result.result_id, observations
-                )
-                for observation in observations:
-                    self._insert_case_observation(observation)
-                self._connection.commit()
-            except Exception:
-                self._connection.rollback()
-                raise
-
-    @staticmethod
-    def _validate_report_case_evidence(
-        result: EvaluationCaseResult,
-        evidence: Mapping[str, Any] | None,
-    ) -> SuccessfulReportCaseEvidence | FailedReportCaseEvidence | None:
-        if evidence is None:
-            return None
-        validated = REPORT_CASE_EVIDENCE_ADAPTER.validate_python(evidence)
-        if isinstance(validated, SuccessfulReportCaseEvidence):
-            if (
-                result.execution_disposition is not EvaluationCaseDisposition.COMPLETED
-                or not isinstance(result.task_outcome, TaskSuccess)
-            ):
-                raise ValueError(
-                    "successful ReportCase evidence requires a completed case "
-                    "and successful task outcome"
-                )
-            if content_fingerprint(validated.output) != content_fingerprint(
-                result.task_outcome.model_dump(mode="json")["output"]
-            ):
-                raise ValueError(
-                    "successful ReportCase evidence output does not match the task outcome"
-                )
-        elif (
-            result.execution_disposition is not EvaluationCaseDisposition.FAILED
-            or not isinstance(result.task_outcome, TaskFailure)
-        ):
-            raise ValueError(
-                "failed ReportCase evidence requires a failed case and failed task outcome"
-            )
-        return validated
-
     def materialize_metric_observation(
         self,
         run_id: UUID,
@@ -1956,7 +2265,7 @@ class SQLiteEvaluationLedger:
             row["manifested_case_content_hash"],
         } or row["stored_case_content_hash"] != row["manifested_case_content_hash"]:
             raise ValueError("frozen case definition fingerprint is mismatched")
-        evidence = self._validate_report_case_evidence(
+        evidence = SQLiteEvaluationExecutionStore._validate_report_case_evidence(
             self._case_result_from_row(row), json.loads(row["report_case_json"])
         )
         input_schema = SchemaReference.model_validate(authored["input_schema"])
@@ -2023,362 +2332,7 @@ class SQLiteEvaluationLedger:
             ],
         )
 
-    def _record_report_evaluation(
-        self,
-        executions: Iterable[ReportEvaluatorExecution],
-        observations: Iterable[RunMetricObservation],
-        issues: Iterable[EvaluationRunIssue] = (),
-        *,
-        finalization_claim_id: UUID | None = None,
-    ) -> None:
-        """Atomically persist one report checkpoint and its diagnostics."""
-        executions = tuple(executions)
-        observations = tuple(observations)
-        issue_items = tuple(issues)
-        with self._transaction_lock:
-            try:
-                self._connection.execute("BEGIN IMMEDIATE")
-                if finalization_claim_id is not None:
-                    if not executions:
-                        raise ValueError(
-                            "a finalization claim requires a report execution checkpoint"
-                        )
-                    _, claim_timestamp = self._claim_timestamp()
-                    claim = self._connection.execute(
-                        """
-                        SELECT 1
-                        FROM evaluation_runs
-                        WHERE run_id = ?
-                          AND status = ?
-                          AND finalization_claim_id = ?
-                          AND finalization_claim_expires_at > ?
-                        """,
-                        (
-                            str(executions[0].run_id),
-                            EvaluationRunStatus.FINALIZATION_PENDING.value,
-                            str(finalization_claim_id),
-                            claim_timestamp,
-                        ),
-                    ).fetchone()
-                    if claim is None:
-                        raise RuntimeError(
-                            "cannot checkpoint report evaluation without the live finalization claim"
-                        )
-                existing_executions: dict[UUID, ReportEvaluatorExecution] = {}
-                for execution in executions:
-                    row = self._connection.execute(
-                        "SELECT * FROM report_evaluator_executions WHERE execution_id = ?",
-                        (str(execution.execution_id),),
-                    ).fetchone()
-                    if row is not None:
-                        existing = self._report_execution_from_row(row)
-                        if existing != execution:
-                            raise ValueError(
-                                "report evaluator checkpoint replay conflicts with existing execution"
-                            )
-                        existing_executions[execution.execution_id] = existing
-                    else:
-                        identity = self._connection.execute(
-                            """
-                            SELECT * FROM report_evaluator_executions
-                            WHERE run_id = ? AND evaluator_name = ?
-                              AND evaluator_revision = ?
-                              AND configuration_fingerprint = ?
-                            """,
-                            (
-                                str(execution.run_id),
-                                execution.evaluator_name,
-                                execution.evaluator_revision,
-                                execution.configuration_fingerprint,
-                            ),
-                        ).fetchone()
-                        if identity is not None:
-                            raise ValueError(
-                                "report evaluator checkpoint replay conflicts with existing execution identity"
-                            )
 
-                existing_observations: dict[UUID, RunMetricObservation] = {}
-                for observation in observations:
-                    row = self._connection.execute(
-                        "SELECT * FROM run_metric_observations WHERE observation_id = ?",
-                        (str(observation.observation_id),),
-                    ).fetchone()
-                    if row is not None:
-                        existing = RunMetricObservation(
-                            observation_id=UUID(row["observation_id"]),
-                            report_evaluator_execution_id=UUID(
-                                row["report_evaluator_execution_id"]
-                            ),
-                            metric=EvaluationMetricReference(
-                                namespaced_name=row["metric_namespaced_name"],
-                                evaluator_revision=row["metric_evaluator_revision"],
-                            ),
-                            **self._observation_values(row),
-                        )
-                        if existing != observation:
-                            raise ValueError(
-                                "report evaluator checkpoint replay conflicts with existing observation"
-                            )
-                        existing_observations[observation.observation_id] = existing
-                    else:
-                        identity = self._connection.execute(
-                            """
-                            SELECT 1 FROM run_metric_observations
-                            WHERE report_evaluator_execution_id = ?
-                              AND metric_namespaced_name = ?
-                              AND metric_evaluator_revision = ?
-                            """,
-                            (
-                                str(observation.report_evaluator_execution_id),
-                                observation.metric.namespaced_name,
-                                observation.metric.evaluator_revision,
-                            ),
-                        ).fetchone()
-                        if identity is not None:
-                            raise ValueError(
-                                "report evaluator checkpoint replay conflicts with existing observation identity"
-                            )
-                for execution in executions:
-                    if execution.execution_id not in existing_executions:
-                        self._insert_report_execution(execution)
-                self._validate_report_observation_ownership(
-                    executions[0].run_id if executions else None, observations
-                )
-                for observation in observations:
-                    if observation.observation_id not in existing_observations:
-                        self._insert_run_observation(observation)
-                if issue_items:
-                    current = self._connection.execute(
-                        "SELECT issues_json FROM evaluation_runs WHERE run_id = ?",
-                        (str(executions[0].run_id),),
-                    ).fetchone()
-                    if current is None:
-                        raise KeyError(f"unknown Evaluation Run: {executions[0].run_id}")
-                    existing = json.loads(current["issues_json"] or "[]")
-                    for issue in issue_items:
-                        payload = issue.model_dump(mode="json")
-                        if payload not in existing:
-                            existing.append(payload)
-                    self._connection.execute(
-                        "UPDATE evaluation_runs SET issues_json = ? WHERE run_id = ?",
-                        (
-                            json.dumps(existing, sort_keys=True, separators=(",", ":")),
-                            str(executions[0].run_id),
-                        ),
-                    )
-                self._connection.commit()
-            except Exception:
-                self._connection.rollback()
-                raise
-
-    def _complete_evaluation_run(
-        self,
-        run_id: UUID,
-        *,
-        issues: Iterable[EvaluationRunIssue] = (),
-        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
-        finalization_claim_id: UUID | None = None,
-    ) -> EvaluationRunRecord:
-        issue_items = tuple(issues)
-        gate_items = tuple(gate_outcomes)
-        with self._transaction_lock:
-            try:
-                self._connection.execute("BEGIN IMMEDIATE")
-                _, claim_timestamp = self._claim_timestamp()
-                row = self._connection.execute(
-                    "SELECT * FROM evaluation_runs WHERE run_id = ?",
-                    (str(run_id),),
-                ).fetchone()
-                if row is None:
-                    raise KeyError(f"unknown Evaluation Run: {run_id}")
-                if row["status"] != EvaluationRunStatus.COMPLETED.value:
-                    if row["status"] == EvaluationRunStatus.FINALIZATION_PENDING.value:
-                        if finalization_claim_id is None:
-                            raise ValueError(
-                                "Evaluation Run completion requires its exact live finalization claim"
-                            )
-                        claim = self._connection.execute(
-                            """
-                            SELECT 1
-                            FROM evaluation_runs
-                            WHERE run_id = ?
-                              AND status = ?
-                              AND finalization_claim_id = ?
-                              AND finalization_claim_expires_at > ?
-                            """,
-                            (
-                                str(run_id),
-                                EvaluationRunStatus.FINALIZATION_PENDING.value,
-                                str(finalization_claim_id),
-                                claim_timestamp,
-                            ),
-                        ).fetchone()
-                        if claim is None:
-                            raise RuntimeError(
-                                "cannot complete Evaluation Run without the live finalization claim"
-                            )
-                    self._assert_run_is_complete(run_id)
-                    if (
-                        finalization_claim_id is not None
-                        and row["finalization_claim_id"]
-                        != str(finalization_claim_id)
-                    ):
-                        raise ValueError(
-                            "Evaluation Finalization does not own the run's claim"
-                        )
-                    self._connection.execute(
-                        """
-                        UPDATE evaluation_runs
-                        SET status = ?, issues_json = ?, gate_outcomes_json = ?,
-                            finalization_claim_id = NULL,
-                            finalization_claim_owner_id = NULL,
-                            finalization_claim_acquired_at = NULL,
-                            finalization_claim_expires_at = NULL
-                        WHERE run_id = ?
-                        """,
-                        (
-                            EvaluationRunStatus.COMPLETED.value,
-                            json.dumps(
-                                [issue.model_dump(mode="json") for issue in issue_items],
-                                sort_keys=True,
-                                separators=(",", ":"),
-                            ),
-                            json.dumps(
-                                [gate.model_dump(mode="json") for gate in gate_items],
-                                sort_keys=True,
-                                separators=(",", ":"),
-                            ),
-                            str(run_id),
-                        ),
-                    )
-                self._connection.commit()
-            except Exception:
-                self._connection.rollback()
-                raise
-        run = self.get_evaluation_run(run_id)
-        if run is None:
-            raise KeyError(f"unknown Evaluation Run: {run_id}")
-        return run
-
-    def _assert_run_is_complete(self, run_id: UUID) -> None:
-        row = self._connection.execute(
-            "SELECT frozen_aggregate_manifest_artifact_id FROM evaluation_runs WHERE run_id = ?",
-            (str(run_id),),
-        ).fetchone()
-        if row is None:
-            raise KeyError(f"unknown Evaluation Run: {run_id}")
-        if row["frozen_aggregate_manifest_artifact_id"] is None:
-            raise ValueError(
-                "Evaluation Run cannot complete before the aggregate manifest is frozen"
-            )
-        pending = self._connection.execute(
-            """
-            SELECT 1 FROM evaluation_case_results
-            WHERE run_id = ?
-              AND (execution_disposition IN ('pending', 'cancelled')
-                   OR task_outcome_json IS NULL)
-            LIMIT 1
-            """,
-            (str(run_id),),
-        ).fetchone()
-        if pending is not None:
-            raise ValueError(
-                "Evaluation Run cannot complete while cases lack terminal evidence"
-            )
-        plan_row = self._connection.execute(
-            "SELECT plan_json FROM resolved_evaluation_plans WHERE run_id = ?",
-            (str(run_id),),
-        ).fetchone()
-        if plan_row is None:
-            raise ValueError("Evaluation Run cannot complete without its frozen plan")
-        plan = ResolvedEvaluationPlan.model_validate_json(plan_row["plan_json"])
-        suite = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
-        case_evaluators = {
-            evaluator["name"]: evaluator
-            for evaluator in suite.get("case_evaluators", [])
-        }
-        for ordinal, planned_case in enumerate(plan.cases):
-            result = self._connection.execute(
-                """
-                SELECT result_id, task_outcome_json
-                FROM evaluation_case_results
-                WHERE run_id = ? AND manifest_id = (
-                    SELECT manifest_id FROM evaluation_case_manifests
-                    WHERE run_id = ? AND ordinal = ?
-                )
-                """,
-                (str(run_id), str(run_id), ordinal),
-            ).fetchone()
-            if result is None or result["task_outcome_json"] is None:
-                raise ValueError("Evaluation Run cannot complete without terminal task evidence")
-            outcome = json.loads(result["task_outcome_json"])
-            if outcome.get("kind") == "failure":
-                continue
-            terminal = {
-                (
-                    row["evaluator_name"],
-                    row["evaluator_revision"],
-                    row["configuration_fingerprint"],
-                )
-                for row in self._connection.execute(
-                    """
-                    SELECT evaluator_name, evaluator_revision, configuration_fingerprint
-                    FROM case_evaluator_executions
-                    WHERE case_result_id = ?
-                    """,
-                    (result["result_id"],),
-                )
-            }
-            expected_case_evaluators = set()
-            for resolved in planned_case.evaluators:
-                configured = case_evaluators.get(resolved.reference.name)
-                if configured is None:
-                    raise ValueError(
-                        "Evaluation Run cannot complete while the frozen plan references "
-                        f"unknown case evaluator: {resolved.reference.name}"
-                    )
-                expected_case_evaluators.add(
-                    (
-                        resolved.reference.name,
-                        resolved.reference.evaluator_revision,
-                        configured["configuration_fingerprint"],
-                    )
-                )
-            missing_case_evaluators = expected_case_evaluators - terminal
-            if missing_case_evaluators:
-                raise ValueError(
-                    "Evaluation Run cannot complete while case evaluators lack terminal evidence: "
-                    + ", ".join(sorted(name for name, _, _ in missing_case_evaluators))
-                )
-        expected = {
-            (
-                evaluator["name"],
-                evaluator["evaluator_revision"],
-                evaluator["configuration_fingerprint"],
-            )
-            for evaluator in suite.get("report_evaluators", [])
-        }
-        terminal = {
-            (
-                row["evaluator_name"],
-                row["evaluator_revision"],
-                row["configuration_fingerprint"],
-            )
-            for row in self._connection.execute(
-                """
-                SELECT evaluator_name, evaluator_revision, configuration_fingerprint
-                FROM report_evaluator_executions
-                WHERE run_id = ?
-                """,
-                (str(run_id),),
-            )
-        }
-        missing = expected - terminal
-        if missing:
-            raise ValueError(
-                "Evaluation Run cannot complete while report evaluators lack terminal evidence: "
-                + ", ".join(sorted(name for name, _, _ in missing))
-            )
 
     def freeze_aggregate_manifest(
         self,
@@ -2559,7 +2513,7 @@ class SQLiteEvaluationLedger:
                 item.model_dump(mode="json")
                 for item in self.list_case_metric_observations(UUID(row["result_id"]))
             ]
-            validated_evidence = self._validate_report_case_evidence(
+            validated_evidence = SQLiteEvaluationExecutionStore._validate_report_case_evidence(
                 self._case_result_from_row(row), json.loads(row["report_case_json"])
             )
             if validated_evidence is None:
