@@ -117,9 +117,11 @@ class EvaluationEngine:
         include_report_evaluators: bool = True,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute the exact case and evaluator assignments in ``plan``."""
-        self._validate_plan_suite(plan, suite)
         if (task is None) == (task_binding is None):
             raise ValueError("provide exactly one task or task_binding")
+        if task_binding is not None and not task_binding.contract.is_exactly_compatible_with(suite.task_contract):
+            raise ValueError("task_binding contract does not match the Suite/Gold Set contract")
+        self._validate_plan_suite(plan, suite)
         if max_concurrency < 1:
             raise ValueError("max_concurrency must be greater than 0")
         case_by_reference = {

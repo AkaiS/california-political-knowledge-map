@@ -704,6 +704,8 @@ class EvaluationSuite(BaseModel):
         """Execute compatible cases through the provider-neutral pydantic-evals seam."""
         if (task is None) == (task_binding is None):
             raise ValueError("provide exactly one task or task_binding")
+        if task_binding is not None and not task_binding.contract.is_exactly_compatible_with(self.task_contract):
+            raise ValueError("task_binding contract does not match the Suite/Gold Set contract")
         if plan is not None:
             from .engine import EvaluationEngine
 

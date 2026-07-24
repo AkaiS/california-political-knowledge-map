@@ -166,3 +166,163 @@ def test_task_binding_preserves_success_artifact_references_without_persisting_t
 
     assert isinstance(outcome, TaskSuccess)
     assert outcome.artifacts[0].content_hash == "c" * 64
+
+
+def test_task_contract_is_exactly_compatible_with():
+    contract1 = _contract()
+    contract2 = _contract()
+
+    other_output_contract = EvaluationTaskContract(
+        input_schema=SchemaReference.for_model(
+            Input, identity="tests.input", revision=1
+        ),
+        output_schema=SchemaReference.for_model(
+            OtherOutput, identity="tests.other_output", revision=1
+        ),
+        metadata_schema=SchemaReference.for_model(
+            Metadata, identity="tests.metadata", revision=1
+        ),
+    )
+
+    assert contract1.is_exactly_compatible_with(contract2) is True
+    assert contract1.is_exactly_compatible_with(other_output_contract) is False
+
+
+def test_execution_entry_points_reject_mismatched_task_binding_contracts():
+    from knowledge_map.evaluation import (
+        EvaluationSuite,
+        EvaluationSuiteIdentity,
+        ConfiguredEvaluator,
+        EvaluationMetricDefinition,
+        EvaluationMetricValueType,
+        EvaluationMetricReference,
+        NoComparisonOperation,
+    )
+    from knowledge_map.evaluation.engine import EvaluationEngine
+    from knowledge_map.evaluation.preflight import ResolvedEvaluationPlan, EvaluationDefinitionRevisionReference
+
+    suite_contract = _contract()
+    mismatched_contract = EvaluationTaskContract(
+        input_schema=SchemaReference.for_model(
+            Input, identity="tests.input", revision=1
+        ),
+        output_schema=SchemaReference.for_model(
+            OtherOutput, identity="tests.other_output", revision=1
+        ),
+        metadata_schema=SchemaReference.for_model(
+            Metadata, identity="tests.metadata", revision=1
+        ),
+    )
+
+    mismatched_binding = EvaluationTaskBinding(
+        operation=lambda val: OtherOutput(value=42),
+        contract=mismatched_contract,
+        input_model=Input,
+        output_model=OtherOutput,
+        metadata_model=Metadata,
+    )
+
+    suite = EvaluationSuite(
+        identity=EvaluationSuiteIdentity(business_id="test-suite", revision=1),
+        description="Suite description",
+        task_contract=suite_contract,
+        report_evaluators=(
+            ConfiguredEvaluator(
+                name="test-eval",
+                evaluator_revision=1,
+                metrics=(
+                    EvaluationMetricReference(
+                        namespaced_name="tests.metric", evaluator_revision=1
+                    ),
+                ),
+            ),
+        ),
+        metrics=(
+            EvaluationMetricDefinition(
+                namespaced_name="tests.metric",
+                evaluator_revision=1,
+                value_type=EvaluationMetricValueType.INTEGER,
+                semantic_description="Metric desc",
+                comparison_operation=NoComparisonOperation(
+                    namespaced_name="tests.none", revision=1
+                ),
+            ),
+        ),
+    )
+
+    # 1. EvaluationSuite.execute must reject mismatched binding
+    with pytest.raises(ValueError, match="task_binding contract does not match"):
+        suite.execute(
+            cases=(),
+            task_binding=mismatched_binding,
+            evaluator_resolver=lambda cfg: None,
+        )
+
+    # 2. EvaluationEngine.execute must reject mismatched binding
+    plan = ResolvedEvaluationPlan(
+        suite=EvaluationDefinitionRevisionReference(
+            record_id="00000000-0000-0000-0000-000000000001",
+            business_id="test-suite",
+            revision=1,
+            content_hash="a" * 64,
+        ),
+        gold_set=EvaluationDefinitionRevisionReference(
+            record_id="00000000-0000-0000-0000-000000000002",
+            business_id="test-gold-set",
+            revision=1,
+            content_hash="b" * 64,
+        ),
+        cases=(),
+    )
+    engine = EvaluationEngine()
+    with pytest.raises(ValueError, match="task_binding contract does not match"):
+        engine.execute(
+            plan=plan,
+            suite=suite,
+            cases=(),
+            task_binding=mismatched_binding,
+            evaluator_resolver=lambda cfg: None,
+        )
+
+    # 3. EvaluationRunner.run must reject mismatched binding
+    from unittest.mock import MagicMock
+    from knowledge_map.evaluation import (
+        EvaluationRunner,
+        EvaluationRunConfiguration,
+        EvaluationGoldSet,
+        EvaluationGoldSetIdentity,
+        EvaluationGoldSetMembership,
+        EvaluationCaseRevisionReference,
+        EvaluationSplit,
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="test-gold-set", revision=1),
+        description="Gold set description",
+        task_contract=suite_contract,
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference(
+                    record_id="00000000-0000-0000-0000-000000000003",
+                    business_id="case-1",
+                    revision=1,
+                    content_hash="c" * 64,
+                    input_schema=suite_contract.input_schema,
+                    output_schema=suite_contract.output_schema,
+                    metadata_schema=suite_contract.metadata_schema,
+                ),
+                split=EvaluationSplit.TRAINING,
+            ),
+        ),
+    )
+    runner = EvaluationRunner(MagicMock())
+    with pytest.raises(ValueError, match="task_binding contract does not match"):
+        runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=(),
+            task_binding=mismatched_binding,
+            evaluator_resolver=lambda cfg: None,
+            configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
+        )
+
+

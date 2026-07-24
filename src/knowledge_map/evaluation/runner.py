@@ -825,6 +825,8 @@ class EvaluationRunner:
     ) -> EvaluationRunResult:
         if (task is None) == (task_binding is None):
             raise ValueError("provide exactly one task or task_binding")
+        if task_binding is not None and not task_binding.contract.is_exactly_compatible_with(suite.task_contract):
+            raise ValueError("task_binding contract does not match the Suite/Gold Set contract")
         if retry_of_run_id is not None:
             if self.ledger.get_evaluation_run(retry_of_run_id) is None:
                 raise KeyError(f"unknown Evaluation Run: {retry_of_run_id}")

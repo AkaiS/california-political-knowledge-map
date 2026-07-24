@@ -157,6 +157,14 @@ class EvaluationTaskContract(BaseModel):
     output_schema: SchemaReference
     metadata_schema: SchemaReference
 
+    def is_exactly_compatible_with(self, other: "EvaluationTaskContract") -> bool:
+        return (
+            self.input_schema.is_exactly_compatible_with(other.input_schema)
+            and self.output_schema.is_exactly_compatible_with(other.output_schema)
+            and self.metadata_schema.is_exactly_compatible_with(other.metadata_schema)
+        )
+
+
 
 class DeclaredArtifactReference(BaseModel):
     """A content-addressed artifact consumed by an authored definition."""
