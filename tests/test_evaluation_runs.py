@@ -4316,6 +4316,17 @@ def test_renewal_failure_is_typed_telemetry_and_not_a_run_issue(
             ),
         )
 
+        from knowledge_map.evaluation.runner import _FinalizationHeartbeat
+
+        loss_recorded = threading.Event()
+        original_record_loss = _FinalizationHeartbeat.record_loss
+
+        def tracking_record_loss(hb_self, loss_classification, exc=None):
+            original_record_loss(hb_self, loss_classification, exc)
+            loss_recorded.set()
+
+        monkeypatch.setattr(_FinalizationHeartbeat, "record_loss", tracking_record_loss)
+
         def failed_renewal(run_id, claim_id, *, lease_seconds=300.0):
             renewal_started.set()
             assert allow_failure.wait(timeout=5)
@@ -4337,6 +4348,7 @@ def test_renewal_failure_is_typed_telemetry_and_not_a_run_issue(
             assert renewal_started.wait(timeout=5)
             assert entered.wait(timeout=5)
             allow_failure.set()
+            assert loss_recorded.wait(timeout=5)
             release.set()
             with pytest.raises(FinalizationClaimLostError) as lost:
                 future.result(timeout=5)
