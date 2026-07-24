@@ -1,7 +1,7 @@
 # Refactor Authored Definition Catalog SQLite persistence
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,10 +15,10 @@ Remove reverse calls back to private methods on `SQLiteEvaluationLedger` (`_impo
 
 ## Acceptance criteria
 
-- [ ] `SQLiteAuthoredDefinitionCatalog` executes SQLite query logic directly on its database connection rather than calling private methods on `SQLiteEvaluationLedger`.
-- [ ] `SQLiteEvaluationLedger` delegates definition catalog operations to `SQLiteAuthoredDefinitionCatalog`.
-- [ ] All authored definition and metric unit tests pass (`uv run pytest tests/test_evaluation_definitions.py`).
-- [ ] Entire test suite remains green (`uv run pytest`).
+- [x] `SQLiteAuthoredDefinitionCatalog` executes SQLite query logic directly on its database connection rather than calling private methods on `SQLiteEvaluationLedger`.
+- [x] `SQLiteEvaluationLedger` delegates definition catalog operations to `SQLiteAuthoredDefinitionCatalog`.
+- [x] All authored definition and metric unit tests pass (`uv run pytest tests/test_evaluation_definitions.py`).
+- [x] Entire test suite remains green (`uv run pytest`).
 
 ## Blocked by
 

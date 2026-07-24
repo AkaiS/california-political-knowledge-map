@@ -280,29 +280,307 @@ class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
     def import_definition(
         self, definition: Any
     ) -> EvaluationDefinitionRecord | EvaluationMetricDefinitionRecord:
+        """Import an authored revision's identity and index metadata idempotently."""
         if isinstance(definition, EvaluationMetricDefinition):
-            return self._ledger._import_metric_definition(definition)
-        return self._ledger._import_definition(definition)
+            return self.import_metric_definition(definition)
+        if isinstance(definition, EvaluationSuite):
+            definition = self._canonical_suite(definition)
+        kind = _definition_kind(definition)
+        identity = definition.identity
+        record = EvaluationDefinitionRecord(
+            record_id=identity.record_id,
+            kind=kind,
+            business_id=identity.business_id,
+            revision=identity.revision,
+            content_hash=definition.content_hash,
+            schema_references=_definition_schema_references(definition),
+            metadata=_definition_metadata(definition),
+        )
+
+        existing = self.connection.execute(
+            """
+            SELECT * FROM evaluation_definition_revisions
+            WHERE kind = ? AND business_id = ? AND revision = ?
+            """,
+            (record.kind.value, record.business_id, record.revision),
+        ).fetchone()
+        if existing is not None:
+            if existing["content_hash"] != record.content_hash:
+                raise AuthoredDefinitionConflictError(
+                    "authored content changed without a new revision"
+                )
+            if isinstance(definition, EvaluationSuite):
+                self._import_suite_metrics(definition, identity.record_id)
+                self.connection.commit()
+            return self._definition_from_row(existing)
+
+        try:
+            self.connection.execute(
+                """
+                INSERT INTO evaluation_definition_revisions (
+                    record_id, kind, business_id, revision, content_hash,
+                    schema_references_json, metadata_json, definition_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(record.record_id),
+                    record.kind.value,
+                    record.business_id,
+                    record.revision,
+                    record.content_hash,
+                    json.dumps(
+                        [
+                            schema.model_dump(mode="json")
+                            for schema in record.schema_references
+                        ],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(record.metadata, sort_keys=True, separators=(",", ":")),
+                    json.dumps(
+                        definition.model_dump(mode="json"),
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                ),
+            )
+            if isinstance(definition, EvaluationSuite):
+                self._import_suite_metrics(definition, identity.record_id)
+            if isinstance(definition, EvaluationGoldSet):
+                self._insert_gold_set_memberships(definition)
+            self._insert_declared_artifact_links(definition)
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+        return record
+
+    @staticmethod
+    def _canonical_suite(suite: EvaluationSuite) -> EvaluationSuite:
+        """Recompute nested metric and Suite hashes for model-copy-tolerant imports."""
+        payload = suite.model_dump(mode="json")
+        payload["metrics"] = [
+            {**metric, "content_hash": None} for metric in payload["metrics"]
+        ]
+        payload["content_hash"] = None
+        return EvaluationSuite.model_validate(payload)
 
     def import_metric_definition(
         self, metric: EvaluationMetricDefinition
     ) -> EvaluationMetricDefinitionRecord:
-        return self._ledger._import_metric_definition(metric)
+        """Import one canonical metric revision independently of any Suite."""
+        canonical = self._canonical_metric_definition(metric)
+
+        try:
+            record = self._upsert_metric_definition(canonical)
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+        return record
+
+    def _upsert_metric_definition(
+        self, metric: EvaluationMetricDefinition
+    ) -> EvaluationMetricDefinitionRecord:
+        existing = self.connection.execute(
+            """
+            SELECT * FROM evaluation_metric_definitions
+            WHERE namespaced_name = ? AND evaluator_revision = ?
+            """,
+            metric.identity,
+        ).fetchone()
+        if existing is not None:
+            if existing["content_hash"] != metric.content_hash:
+                raise AuthoredDefinitionConflictError(
+                    "metric content changed without a new revision"
+                )
+            return self._metric_definition_from_row(existing)
+
+        record = EvaluationMetricDefinitionRecord(
+            record_id=new_uuid7(),
+            namespaced_name=metric.namespaced_name,
+            evaluator_revision=metric.evaluator_revision,
+            value_type=metric.value_type,
+            structured_schema=metric.structured_schema,
+            semantic_description=metric.semantic_description,
+            comparison_operation=metric.comparison_operation,
+            content_hash=metric.content_hash,
+        )
+        self.connection.execute(
+            """
+            INSERT INTO evaluation_metric_definitions (
+                record_id, namespaced_name, evaluator_revision, value_type,
+                structured_schema_json, semantic_description,
+                comparison_operation_json, content_hash, definition_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(record.record_id),
+                record.namespaced_name,
+                record.evaluator_revision,
+                record.value_type.value,
+                None
+                if record.structured_schema is None
+                else json.dumps(
+                    record.structured_schema.model_dump(mode="json"),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                record.semantic_description,
+                json.dumps(
+                    record.comparison_operation.model_dump(mode="json"),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                record.content_hash,
+                json.dumps(
+                    record.definition.model_dump(mode="json"),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+            ),
+        )
+        return record
+
+    def _import_suite_metrics(
+        self, suite: EvaluationSuite, suite_record_id: UUID
+    ) -> None:
+        for metric in suite.metrics:
+            canonical = self._canonical_metric_definition(metric)
+            record = self._upsert_metric_definition(canonical)
+            existing = self.connection.execute(
+                """
+                SELECT * FROM evaluation_suite_metrics
+                WHERE suite_record_id = ?
+                  AND namespaced_name = ?
+                  AND evaluator_revision = ?
+                """,
+                (
+                    str(suite_record_id),
+                    record.namespaced_name,
+                    record.evaluator_revision,
+                ),
+            ).fetchone()
+            if existing is not None:
+                if existing["metric_content_hash"] != record.content_hash:
+                    raise AuthoredDefinitionConflictError(
+                        "Suite-to-metric relationship points to conflicting metric content"
+                    )
+                continue
+            self.connection.execute(
+                """
+                INSERT INTO evaluation_suite_metrics (
+                    suite_record_id, metric_record_id, namespaced_name,
+                    evaluator_revision, metric_content_hash
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    str(suite_record_id),
+                    str(record.record_id),
+                    record.namespaced_name,
+                    record.evaluator_revision,
+                    record.content_hash,
+                ),
+            )
+
+    @staticmethod
+    def _canonical_metric_definition(
+        metric: EvaluationMetricDefinition,
+    ) -> EvaluationMetricDefinition:
+        """Recompute a metric hash from fields for model-copy-tolerant imports."""
+        payload = metric.model_dump(mode="json")
+        payload["content_hash"] = None
+        return EvaluationMetricDefinition.model_validate(payload)
+
+    def _insert_declared_artifact_links(self, definition: Any) -> None:
+        for declared in getattr(definition, "artifacts", ()):
+            artifact = self._ledger.get_artifact(declared.content_hash)
+            if artifact is None:
+                raise KeyError(
+                    f"unknown Evaluation Artifact: {declared.content_hash}"
+                )
+            self._ledger._link_definition_artifact(
+                definition.identity.record_id, artifact, declared.role, commit=False
+            )
+
+    def _insert_gold_set_memberships(self, gold_set: EvaluationGoldSet) -> None:
+        for membership in gold_set.memberships:
+            case_record = self.get_definition(
+                business_id=membership.case.business_id,
+                revision=membership.case.revision,
+                kind=EvaluationDefinitionKind.CASE,
+            )
+            if (
+                case_record is None
+                or case_record.record_id != membership.case.record_id
+                or case_record.content_hash != membership.case.content_hash
+            ):
+                raise ValueError(
+                    "Gold Set membership must reference an imported exact Evaluation Case revision"
+                )
+            expected_schemas = (
+                gold_set.task_contract.input_schema,
+                gold_set.task_contract.output_schema,
+                gold_set.task_contract.metadata_schema,
+            )
+            if case_record.schema_references != expected_schemas:
+                raise ValueError(
+                    "Gold Set membership case does not implement the Gold Set task contract"
+                )
+            self.connection.execute(
+                """
+                INSERT INTO evaluation_gold_set_memberships (
+                    membership_id, gold_set_record_id, case_record_id,
+                    case_business_id, case_revision, case_content_hash, split
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(new_uuid7()),
+                    str(gold_set.identity.record_id),
+                    str(membership.case.record_id),
+                    membership.case.business_id,
+                    membership.case.revision,
+                    membership.case.content_hash,
+                    membership.split.value,
+                ),
+            )
 
     def get_metric_definition(
         self, *, namespaced_name: str, evaluator_revision: int
     ) -> EvaluationMetricDefinitionRecord | None:
-        return self._ledger._get_metric_definition(
-            namespaced_name=namespaced_name, evaluator_revision=evaluator_revision
-        )
+        row = self.connection.execute(
+            """
+            SELECT * FROM evaluation_metric_definitions
+            WHERE namespaced_name = ? AND evaluator_revision = ?
+            """,
+            (namespaced_name, evaluator_revision),
+        ).fetchone()
+        return None if row is None else self._metric_definition_from_row(row)
 
     def list_metric_definitions(self) -> list[EvaluationMetricDefinitionRecord]:
-        return self._ledger._list_metric_definitions()
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_metric_definitions
+            ORDER BY namespaced_name, evaluator_revision
+            """
+        ).fetchall()
+        return [self._metric_definition_from_row(row) for row in rows]
 
     def list_suite_metric_definitions(
         self, suite_record_id: UUID
     ) -> list[EvaluationMetricDefinitionRecord]:
-        return self._ledger._list_suite_metric_definitions(suite_record_id)
+        rows = self.connection.execute(
+            """
+            SELECT m.*
+            FROM evaluation_suite_metrics AS sm
+            JOIN evaluation_metric_definitions AS m
+              ON m.record_id = sm.metric_record_id
+            WHERE sm.suite_record_id = ?
+            ORDER BY sm.namespaced_name, sm.evaluator_revision
+            """,
+            (str(suite_record_id),),
+        ).fetchall()
+        return [self._metric_definition_from_row(row) for row in rows]
 
     list_suite_metrics = list_suite_metric_definitions
 
@@ -313,9 +591,15 @@ class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
         revision: int,
         kind: EvaluationDefinitionKind | str,
     ) -> EvaluationDefinitionRecord | None:
-        return self._ledger._get_definition(
-            business_id=business_id, revision=revision, kind=kind
-        )
+        kind_value = EvaluationDefinitionKind(kind).value
+        row = self.connection.execute(
+            """
+            SELECT * FROM evaluation_definition_revisions
+            WHERE kind = ? AND business_id = ? AND revision = ?
+            """,
+            (kind_value, business_id, revision),
+        ).fetchone()
+        return None if row is None else self._definition_from_row(row)
 
     def list_definitions(
         self,
@@ -325,14 +609,115 @@ class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
         metadata: Mapping[str, Any] | None = None,
         tags: Iterable[str] | None = None,
     ) -> list[EvaluationDefinitionRecord]:
-        return self._ledger._list_definitions(
-            kind=kind, business_id=business_id, metadata=metadata, tags=tags
-        )
+        clauses: list[str] = []
+        parameters: list[Any] = []
+        if kind is not None:
+            clauses.append("kind = ?")
+            parameters.append(EvaluationDefinitionKind(kind).value)
+        if business_id is not None:
+            clauses.append("business_id = ?")
+            parameters.append(business_id)
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_definition_revisions
+            """
+            + where
+            + " ORDER BY kind, business_id, revision",
+            parameters,
+        ).fetchall()
+        records = [self._definition_from_row(row) for row in rows]
+        if metadata is not None:
+            records = [
+                record
+                for record in records
+                if all(record.metadata.get(key) == value for key, value in metadata.items())
+            ]
+        if tags is not None:
+            required_tags = set(tags)
+            records = [
+                record
+                for record in records
+                if required_tags.issubset(set(record.metadata.get("tags", [])))
+            ]
+        return records
+
+    find_definitions = list_definitions
 
     def list_gold_set_memberships(
         self, gold_set_record_id: UUID
     ) -> list[EvaluationGoldSetMembershipRecord]:
-        return self._ledger._list_gold_set_memberships(gold_set_record_id)
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_gold_set_memberships
+            WHERE gold_set_record_id = ?
+            ORDER BY rowid
+            """,
+            (str(gold_set_record_id),),
+        ).fetchall()
+        return [
+            EvaluationGoldSetMembershipRecord(
+                membership_id=UUID(row["membership_id"]),
+                gold_set_record_id=UUID(row["gold_set_record_id"]),
+                case_record_id=UUID(row["case_record_id"]),
+                case_business_id=row["case_business_id"],
+                case_revision=row["case_revision"],
+                case_content_hash=row["case_content_hash"],
+                split=EvaluationSplit(row["split"]),
+            )
+            for row in rows
+        ]
+
+    def import_case(
+        self, evaluation_case: EvaluationCase[Any, Any, Any]
+    ) -> EvaluationDefinitionRecord:
+        return self.import_definition(evaluation_case)
+
+    def import_gold_set(self, gold_set: EvaluationGoldSet) -> EvaluationDefinitionRecord:
+        return self.import_definition(gold_set)
+
+    def import_rubric(self, rubric: EvaluationRubric) -> EvaluationDefinitionRecord:
+        return self.import_definition(rubric)
+
+    def import_suite(self, suite: EvaluationSuite) -> EvaluationDefinitionRecord:
+        return self.import_definition(suite)
+
+    @staticmethod
+    def _definition_from_row(row: sqlite3.Row) -> EvaluationDefinitionRecord:
+        return EvaluationDefinitionRecord(
+            record_id=UUID(row["record_id"]),
+            kind=row["kind"],
+            business_id=row["business_id"],
+            revision=row["revision"],
+            content_hash=row["content_hash"],
+            schema_references=tuple(
+                SchemaReference.model_validate(item)
+                for item in json.loads(row["schema_references_json"])
+            ),
+            metadata=json.loads(row["metadata_json"]),
+        )
+
+    @staticmethod
+    def _metric_definition_from_row(
+        row: sqlite3.Row,
+    ) -> EvaluationMetricDefinitionRecord:
+        return EvaluationMetricDefinitionRecord(
+            record_id=UUID(row["record_id"]),
+            namespaced_name=row["namespaced_name"],
+            evaluator_revision=row["evaluator_revision"],
+            value_type=EvaluationMetricValueType(row["value_type"]),
+            structured_schema=(
+                None
+                if row["structured_schema_json"] is None
+                else SchemaReference.model_validate(
+                    json.loads(row["structured_schema_json"])
+                )
+            ),
+            semantic_description=row["semantic_description"],
+            comparison_operation=json.loads(row["comparison_operation_json"]),
+            content_hash=row["content_hash"],
+        )
+
 
 
 class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
@@ -606,6 +991,8 @@ class SQLiteEvaluationLedger:
             kind=kind, business_id=business_id, metadata=metadata, tags=tags
         )
 
+    find_definitions = list_definitions
+
     def list_gold_set_memberships(
         self, gold_set_record_id: UUID
     ) -> list[EvaluationGoldSetMembershipRecord]:
@@ -677,16 +1064,20 @@ class SQLiteEvaluationLedger:
     def _bind_capability_methods(self) -> None:
         """Route each domain operation through its shared-connection catalog."""
         definition_methods = (
+            "import_definition",
             "import_metric_definition",
             "get_metric_definition",
             "list_metric_definitions",
             "list_suite_metric_definitions",
             "list_suite_metrics",
+            "get_definition",
+            "list_definitions",
+            "find_definitions",
+            "list_gold_set_memberships",
             "import_case",
             "import_gold_set",
             "import_rubric",
             "import_suite",
-            "find_definitions",
         )
         execution_methods = (
             "materialize_metric_observation",
@@ -3121,227 +3512,7 @@ class SQLiteEvaluationLedger:
             trace_id=row["trace_id"], span_id=row["span_id"],
         )
 
-    def _import_definition(self, definition: Any) -> EvaluationDefinitionRecord:
-        """Import an authored revision's identity and index metadata idempotently."""
-        if isinstance(definition, EvaluationSuite):
-            definition = self._canonical_suite(definition)
-        kind = _definition_kind(definition)
-        identity = definition.identity
-        record = EvaluationDefinitionRecord(
-            record_id=identity.record_id,
-            kind=kind,
-            business_id=identity.business_id,
-            revision=identity.revision,
-            content_hash=definition.content_hash,
-            schema_references=_definition_schema_references(definition),
-            metadata=_definition_metadata(definition),
-        )
 
-        existing = self._connection.execute(
-            """
-            SELECT * FROM evaluation_definition_revisions
-            WHERE kind = ? AND business_id = ? AND revision = ?
-            """,
-            (record.kind.value, record.business_id, record.revision),
-        ).fetchone()
-        if existing is not None:
-            if existing["content_hash"] != record.content_hash:
-                raise AuthoredDefinitionConflictError(
-                    "authored content changed without a new revision"
-                )
-            if isinstance(definition, EvaluationSuite):
-                self._import_suite_metrics(definition, identity.record_id)
-                self._connection.commit()
-            return self._definition_from_row(existing)
-
-        try:
-            self._connection.execute(
-                """
-                INSERT INTO evaluation_definition_revisions (
-                    record_id, kind, business_id, revision, content_hash,
-                    schema_references_json, metadata_json, definition_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(record.record_id),
-                    record.kind.value,
-                    record.business_id,
-                    record.revision,
-                    record.content_hash,
-                    json.dumps(
-                        [
-                            schema.model_dump(mode="json")
-                            for schema in record.schema_references
-                        ],
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ),
-                    json.dumps(record.metadata, sort_keys=True, separators=(",", ":")),
-                    json.dumps(
-                        definition.model_dump(mode="json"),
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ),
-                ),
-            )
-            if isinstance(definition, EvaluationSuite):
-                self._import_suite_metrics(definition, identity.record_id)
-            if isinstance(definition, EvaluationGoldSet):
-                self._insert_gold_set_memberships(definition)
-            self._insert_declared_artifact_links(definition)
-            self._connection.commit()
-        except Exception:
-            self._connection.rollback()
-            raise
-        return record
-
-    @staticmethod
-    def _canonical_suite(suite: EvaluationSuite) -> EvaluationSuite:
-        """Recompute nested metric and Suite hashes for model-copy-tolerant imports."""
-        payload = suite.model_dump(mode="json")
-        payload["metrics"] = [
-            {**metric, "content_hash": None} for metric in payload["metrics"]
-        ]
-        payload["content_hash"] = None
-        return EvaluationSuite.model_validate(payload)
-
-    def _import_metric_definition(
-        self, metric: EvaluationMetricDefinition
-    ) -> EvaluationMetricDefinitionRecord:
-        """Import one canonical metric revision independently of any Suite."""
-        canonical = self._canonical_metric_definition(metric)
-
-        try:
-            record = self._upsert_metric_definition(canonical)
-            self._connection.commit()
-        except Exception:
-            self._connection.rollback()
-            raise
-        return record
-
-    def _upsert_metric_definition(
-        self, metric: EvaluationMetricDefinition
-    ) -> EvaluationMetricDefinitionRecord:
-        existing = self._connection.execute(
-            """
-            SELECT * FROM evaluation_metric_definitions
-            WHERE namespaced_name = ? AND evaluator_revision = ?
-            """,
-            metric.identity,
-        ).fetchone()
-        if existing is not None:
-            if existing["content_hash"] != metric.content_hash:
-                raise AuthoredDefinitionConflictError(
-                    "metric content changed without a new revision"
-                )
-            return self._metric_definition_from_row(existing)
-
-        record = EvaluationMetricDefinitionRecord(
-            record_id=new_uuid7(),
-            namespaced_name=metric.namespaced_name,
-            evaluator_revision=metric.evaluator_revision,
-            value_type=metric.value_type,
-            structured_schema=metric.structured_schema,
-            semantic_description=metric.semantic_description,
-            comparison_operation=metric.comparison_operation,
-            content_hash=metric.content_hash,
-        )
-        self._connection.execute(
-            """
-            INSERT INTO evaluation_metric_definitions (
-                record_id, namespaced_name, evaluator_revision, value_type,
-                structured_schema_json, semantic_description,
-                comparison_operation_json, content_hash, definition_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                str(record.record_id),
-                record.namespaced_name,
-                record.evaluator_revision,
-                record.value_type.value,
-                None
-                if record.structured_schema is None
-                else json.dumps(
-                    record.structured_schema.model_dump(mode="json"),
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-                record.semantic_description,
-                json.dumps(
-                    record.comparison_operation.model_dump(mode="json"),
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-                record.content_hash,
-                json.dumps(
-                    record.definition.model_dump(mode="json"),
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            ),
-        )
-        return record
-
-    def _import_suite_metrics(
-        self, suite: EvaluationSuite, suite_record_id: UUID
-    ) -> None:
-        for metric in suite.metrics:
-            canonical = self._canonical_metric_definition(metric)
-            record = self._upsert_metric_definition(canonical)
-            existing = self._connection.execute(
-                """
-                SELECT * FROM evaluation_suite_metrics
-                WHERE suite_record_id = ?
-                  AND namespaced_name = ?
-                  AND evaluator_revision = ?
-                """,
-                (
-                    str(suite_record_id),
-                    record.namespaced_name,
-                    record.evaluator_revision,
-                ),
-            ).fetchone()
-            if existing is not None:
-                if existing["metric_content_hash"] != record.content_hash:
-                    raise AuthoredDefinitionConflictError(
-                        "Suite-to-metric relationship points to conflicting metric content"
-                    )
-                continue
-            self._connection.execute(
-                """
-                INSERT INTO evaluation_suite_metrics (
-                    suite_record_id, metric_record_id, namespaced_name,
-                    evaluator_revision, metric_content_hash
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    str(suite_record_id),
-                    str(record.record_id),
-                    record.namespaced_name,
-                    record.evaluator_revision,
-                    record.content_hash,
-                ),
-            )
-
-    @staticmethod
-    def _canonical_metric_definition(
-        metric: EvaluationMetricDefinition,
-    ) -> EvaluationMetricDefinition:
-        """Recompute a metric hash from fields for model-copy-tolerant imports."""
-        payload = metric.model_dump(mode="json")
-        payload["content_hash"] = None
-        return EvaluationMetricDefinition.model_validate(payload)
-
-    def _insert_declared_artifact_links(self, definition: Any) -> None:
-        for declared in getattr(definition, "artifacts", ()):
-            artifact = self.get_artifact(declared.content_hash)
-            if artifact is None:
-                raise KeyError(
-                    f"unknown Evaluation Artifact: {declared.content_hash}"
-                )
-            self._link_definition_artifact(
-                definition.identity.record_id, artifact, declared.role, commit=False
-            )
 
     def _link_definition_artifact(
         self,
@@ -3616,82 +3787,16 @@ class SQLiteEvaluationLedger:
     def import_case(
         self, evaluation_case: EvaluationCase[Any, Any, Any]
     ) -> EvaluationDefinitionRecord:
-        return self.import_definition(evaluation_case)
+        return self.definition_catalog.import_case(evaluation_case)
 
     def import_gold_set(self, gold_set: EvaluationGoldSet) -> EvaluationDefinitionRecord:
-        return self.import_definition(gold_set)
+        return self.definition_catalog.import_gold_set(gold_set)
 
     def import_rubric(self, rubric: EvaluationRubric) -> EvaluationDefinitionRecord:
-        return self.import_definition(rubric)
+        return self.definition_catalog.import_rubric(rubric)
 
     def import_suite(self, suite: EvaluationSuite) -> EvaluationDefinitionRecord:
-        return self.import_definition(suite)
-
-    def _insert_gold_set_memberships(self, gold_set: EvaluationGoldSet) -> None:
-        for membership in gold_set.memberships:
-            case_record = self.get_definition(
-                business_id=membership.case.business_id,
-                revision=membership.case.revision,
-                kind=EvaluationDefinitionKind.CASE,
-            )
-            if (
-                case_record is None
-                or case_record.record_id != membership.case.record_id
-                or case_record.content_hash != membership.case.content_hash
-            ):
-                raise ValueError(
-                    "Gold Set membership must reference an imported exact Evaluation Case revision"
-                )
-            expected_schemas = (
-                gold_set.task_contract.input_schema,
-                gold_set.task_contract.output_schema,
-                gold_set.task_contract.metadata_schema,
-            )
-            if case_record.schema_references != expected_schemas:
-                raise ValueError(
-                    "Gold Set membership case does not implement the Gold Set task contract"
-                )
-            self._connection.execute(
-                """
-                INSERT INTO evaluation_gold_set_memberships (
-                    membership_id, gold_set_record_id, case_record_id,
-                    case_business_id, case_revision, case_content_hash, split
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(new_uuid7()),
-                    str(gold_set.identity.record_id),
-                    str(membership.case.record_id),
-                    membership.case.business_id,
-                    membership.case.revision,
-                    membership.case.content_hash,
-                    membership.split.value,
-                ),
-            )
-
-    def _list_gold_set_memberships(
-        self, gold_set_record_id: UUID
-    ) -> list[EvaluationGoldSetMembershipRecord]:
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_gold_set_memberships
-            WHERE gold_set_record_id = ?
-            ORDER BY rowid
-            """,
-            (str(gold_set_record_id),),
-        ).fetchall()
-        return [
-            EvaluationGoldSetMembershipRecord(
-                membership_id=UUID(row["membership_id"]),
-                gold_set_record_id=UUID(row["gold_set_record_id"]),
-                case_record_id=UUID(row["case_record_id"]),
-                case_business_id=row["case_business_id"],
-                case_revision=row["case_revision"],
-                case_content_hash=row["case_content_hash"],
-                split=EvaluationSplit(row["split"]),
-            )
-            for row in rows
-        ]
+        return self.definition_catalog.import_suite(suite)
 
     def _register_artifact(
         self,
@@ -3972,138 +4077,7 @@ class SQLiteEvaluationLedger:
             redaction_classification=row["redaction_classification"],
         )
 
-    def _get_definition(
-        self,
-        *,
-        business_id: str,
-        revision: int,
-        kind: EvaluationDefinitionKind | str,
-    ) -> EvaluationDefinitionRecord | None:
-        kind_value = EvaluationDefinitionKind(kind).value
-        row = self._connection.execute(
-            """
-            SELECT * FROM evaluation_definition_revisions
-            WHERE kind = ? AND business_id = ? AND revision = ?
-            """,
-            (kind_value, business_id, revision),
-        ).fetchone()
-        return None if row is None else self._definition_from_row(row)
 
-    def _get_metric_definition(
-        self, *, namespaced_name: str, evaluator_revision: int
-    ) -> EvaluationMetricDefinitionRecord | None:
-        row = self._connection.execute(
-            """
-            SELECT * FROM evaluation_metric_definitions
-            WHERE namespaced_name = ? AND evaluator_revision = ?
-            """,
-            (namespaced_name, evaluator_revision),
-        ).fetchone()
-        return None if row is None else self._metric_definition_from_row(row)
-
-    def _list_metric_definitions(self) -> list[EvaluationMetricDefinitionRecord]:
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_metric_definitions
-            ORDER BY namespaced_name, evaluator_revision
-            """
-        ).fetchall()
-        return [self._metric_definition_from_row(row) for row in rows]
-
-    def _list_suite_metric_definitions(
-        self, suite_record_id: UUID
-    ) -> list[EvaluationMetricDefinitionRecord]:
-        rows = self._connection.execute(
-            """
-            SELECT m.*
-            FROM evaluation_suite_metrics AS sm
-            JOIN evaluation_metric_definitions AS m
-              ON m.record_id = sm.metric_record_id
-            WHERE sm.suite_record_id = ?
-            ORDER BY sm.namespaced_name, sm.evaluator_revision
-            """,
-            (str(suite_record_id),),
-        ).fetchall()
-        return [self._metric_definition_from_row(row) for row in rows]
-
-    def _list_definitions(
-        self,
-        *,
-        kind: EvaluationDefinitionKind | str | None = None,
-        business_id: str | None = None,
-        metadata: Mapping[str, Any] | None = None,
-        tags: Iterable[str] | None = None,
-    ) -> list[EvaluationDefinitionRecord]:
-        clauses: list[str] = []
-        parameters: list[Any] = []
-        if kind is not None:
-            clauses.append("kind = ?")
-            parameters.append(EvaluationDefinitionKind(kind).value)
-        if business_id is not None:
-            clauses.append("business_id = ?")
-            parameters.append(business_id)
-        where = " WHERE " + " AND ".join(clauses) if clauses else ""
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_definition_revisions
-            """
-            + where
-            + " ORDER BY kind, business_id, revision",
-            parameters,
-        ).fetchall()
-        records = [self._definition_from_row(row) for row in rows]
-        if metadata is not None:
-            records = [
-                record
-                for record in records
-                if all(record.metadata.get(key) == value for key, value in metadata.items())
-            ]
-        if tags is not None:
-            required_tags = set(tags)
-            records = [
-                record
-                for record in records
-                if required_tags.issubset(set(record.metadata.get("tags", [])))
-            ]
-        return records
-
-    find_definitions = list_definitions
-
-    @staticmethod
-    def _definition_from_row(row: sqlite3.Row) -> EvaluationDefinitionRecord:
-        return EvaluationDefinitionRecord(
-            record_id=UUID(row["record_id"]),
-            kind=row["kind"],
-            business_id=row["business_id"],
-            revision=row["revision"],
-            content_hash=row["content_hash"],
-            schema_references=tuple(
-                SchemaReference.model_validate(item)
-                for item in json.loads(row["schema_references_json"])
-            ),
-            metadata=json.loads(row["metadata_json"]),
-        )
-
-    @staticmethod
-    def _metric_definition_from_row(
-        row: sqlite3.Row,
-    ) -> EvaluationMetricDefinitionRecord:
-        return EvaluationMetricDefinitionRecord(
-            record_id=UUID(row["record_id"]),
-            namespaced_name=row["namespaced_name"],
-            evaluator_revision=row["evaluator_revision"],
-            value_type=EvaluationMetricValueType(row["value_type"]),
-            structured_schema=(
-                None
-                if row["structured_schema_json"] is None
-                else SchemaReference.model_validate(
-                    json.loads(row["structured_schema_json"])
-                )
-            ),
-            semantic_description=row["semantic_description"],
-            comparison_operation=json.loads(row["comparison_operation_json"]),
-            content_hash=row["content_hash"],
-        )
 
 
 # Domain-oriented aliases keep the persistence implementation name out of

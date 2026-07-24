@@ -23,6 +23,7 @@ from knowledge_map.evaluation import (
     SchemaReference,
 )
 from knowledge_map.evaluation.store import (
+    EvaluationDefinitionKind,
     SQLiteAuthoredDefinitionCatalog,
     SQLiteEvaluationArtifactCatalog,
     SQLiteEvaluationExecutionStore,
@@ -614,3 +615,45 @@ def test_imported_definition_artifacts_are_linked_to_their_authored_producer(tmp
     assert len(links) == 1
     assert links[0].artifact_id == artifact.artifact_id
     assert links[0].role == "evaluation.case.prompt"
+
+
+def test_definition_catalog_directly_owns_sqlite_persistence_without_ledger_private_methods(
+    tmp_path,
+):
+    ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
+
+    # Assert legacy private methods are removed from SQLiteEvaluationLedger facade
+    private_methods = (
+        "_import_definition",
+        "_import_metric_definition",
+        "_get_definition",
+        "_get_metric_definition",
+        "_list_definitions",
+        "_list_metric_definitions",
+        "_list_suite_metric_definitions",
+        "_list_gold_set_memberships",
+    )
+    for method in private_methods:
+        assert not hasattr(
+            ledger, method
+        ), f"SQLiteEvaluationLedger should not define private method {method}"
+
+    # Verify SQLiteAuthoredDefinitionCatalog methods work directly
+    case = make_case()
+    imported_case = ledger.definition_catalog.import_definition(case)
+    assert imported_case.business_id == case.identity.business_id
+
+    fetched = ledger.definition_catalog.get_definition(
+        business_id=case.identity.business_id,
+        revision=case.identity.revision,
+        kind=EvaluationDefinitionKind.CASE,
+    )
+    assert fetched is not None
+    assert fetched.content_hash == case.content_hash
+
+    listed = ledger.definition_catalog.list_definitions(
+        kind=EvaluationDefinitionKind.CASE
+    )
+    assert len(listed) == 1
+    assert listed[0].record_id == imported_case.record_id
+
