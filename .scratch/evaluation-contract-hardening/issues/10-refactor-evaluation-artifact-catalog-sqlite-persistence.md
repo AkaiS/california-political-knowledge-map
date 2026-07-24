@@ -1,7 +1,7 @@
 # Refactor Evaluation Artifact Catalog SQLite persistence
 
-Status: ready-for-agent
-Labels: ready-for-agent
+Status: completed
+Labels: completed
 
 ## Parent
 
@@ -15,10 +15,10 @@ Remove reverse calls back to private methods on `SQLiteEvaluationLedger` (`_regi
 
 ## Acceptance criteria
 
-- [ ] `SQLiteEvaluationArtifactCatalog` executes artifact persistence, lookup, and retrieval query logic directly on its connection.
-- [ ] `SQLiteEvaluationLedger` delegates artifact operations to `SQLiteEvaluationArtifactCatalog`.
-- [ ] `SQLiteEvaluationLedger` functions strictly as a thin transaction coordinator and persistence façade without holding private SQL implementation methods.
-- [ ] Entire test suite remains green (`uv run pytest`).
+- [x] `SQLiteEvaluationArtifactCatalog` executes artifact persistence, lookup, and retrieval query logic directly on its connection.
+- [x] `SQLiteEvaluationLedger` delegates artifact operations to `SQLiteEvaluationArtifactCatalog`.
+- [x] `SQLiteEvaluationLedger` functions strictly as a thin transaction coordinator and persistence façade without holding private SQL implementation methods.
+- [x] Entire test suite remains green (`uv run pytest`).
 
 ## Blocked by
 

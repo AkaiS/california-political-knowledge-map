@@ -657,3 +657,40 @@ def test_definition_catalog_directly_owns_sqlite_persistence_without_ledger_priv
     assert len(listed) == 1
     assert listed[0].record_id == imported_case.record_id
 
+
+def test_sqlite_evaluation_artifact_catalog_owns_query_persistence(tmp_path):
+    ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
+
+    # Assert legacy private methods are removed from SQLiteEvaluationLedger facade
+    private_methods = (
+        "_register_artifact",
+        "_get_artifact",
+        "_get_artifact_by_id",
+        "_read_artifact",
+        "_resolve_artifact",
+        "_link_artifact",
+        "_link_definition_artifact",
+        "_list_artifact_links",
+    )
+    for method in private_methods:
+        assert not hasattr(
+            ledger, method
+        ), f"SQLiteEvaluationLedger should not define private method {method}"
+
+    # Verify SQLiteEvaluationArtifactCatalog methods work directly
+    artifact = ledger.artifact_catalog.register_artifact(
+        b"direct catalog artifact",
+        kind="test-output",
+        media_type="text/plain",
+        retention_class="run",
+        sensitivity_classification="internal",
+    )
+    assert artifact.byte_size == len(b"direct catalog artifact")
+
+    fetched = ledger.artifact_catalog.get_artifact(artifact.content_hash)
+    assert fetched == artifact
+
+    fetched_by_id = ledger.artifact_catalog.get_artifact_by_id(artifact.artifact_id)
+    assert fetched_by_id == artifact
+
+

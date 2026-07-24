@@ -499,8 +499,8 @@ class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
                 raise KeyError(
                     f"unknown Evaluation Artifact: {declared.content_hash}"
                 )
-            self._ledger._link_definition_artifact(
-                definition.identity.record_id, artifact, declared.role, commit=False
+            self._ledger.artifact_catalog.link_artifact_to_definition(
+                definition.identity.record_id, artifact, role=declared.role, commit=False
             )
 
     def _insert_gold_set_memberships(self, gold_set: EvaluationGoldSet) -> None:
@@ -1015,7 +1015,7 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
                     )
                 if result.task_outcome is not None:
                     for artifact in result.task_outcome.artifacts:
-                        self._ledger._link_artifact(
+                        self._ledger.artifact_catalog._link_artifact(
                             "evaluation_case_result_artifacts",
                             "case_result_id",
                             result.result_id,
@@ -1433,16 +1433,552 @@ class SQLiteEvaluationArtifactCatalog(_SQLiteLedgerCapability):
         super().__init__(connection)
         self._ledger = ledger
 
-    def register_artifact(self, *args: Any, **kwargs: Any) -> EvaluationArtifactRecord:
-        return self._ledger._register_artifact(*args, **kwargs)
+    def register_artifact(
+        self,
+        content: bytes | bytearray | None = None,
+        *,
+        content_hash: str | None = None,
+        byte_size: int | None = None,
+        kind: str,
+        media_type: str,
+        retention_class: str,
+        sensitivity_classification: str | None = None,
+        redaction_classification: str = "original",
+        sensitivity: str | None = None,
+        redaction: str | None = None,
+    ) -> EvaluationArtifactRecord:
+        """Register external content by hash, deduplicating identical metadata."""
+        if content is not None:
+            raw_content = bytes(content)
+            computed_hash = hashlib.sha256(raw_content).hexdigest()
+            if content_hash is not None and content_hash != computed_hash:
+                raise ValueError("content_hash does not match content")
+            content_hash = computed_hash
+            if byte_size is not None and byte_size != len(raw_content):
+                raise ValueError("byte_size does not match content")
+            byte_size = len(raw_content)
+        elif content_hash is None or byte_size is None:
+            raise ValueError("content or both content_hash and byte_size are required")
+
+        sensitivity_classification = sensitivity_classification or sensitivity
+        if sensitivity_classification is None:
+            raise ValueError("sensitivity_classification is required")
+        redaction_classification = redaction or redaction_classification
+        candidate = EvaluationArtifactRecord(
+            artifact_id=new_uuid7(),
+            content_hash=content_hash,
+            kind=kind,
+            media_type=media_type,
+            byte_size=byte_size,
+            retention_class=retention_class,
+            sensitivity_classification=sensitivity_classification,
+            redaction_classification=redaction_classification,
+        )
+        existing = self.connection.execute(
+            "SELECT * FROM evaluation_artifacts WHERE content_hash = ?",
+            (candidate.content_hash,),
+        ).fetchone()
+        if existing is not None:
+            existing_record = self._artifact_from_row(existing)
+            same_metadata = existing_record.model_copy(
+                update={"artifact_id": candidate.artifact_id}
+            )
+            if same_metadata != candidate:
+                raise ArtifactConflictError(
+                    "artifact content hash was reused with different metadata"
+                )
+            return existing_record
+
+        self.connection.execute(
+            """
+            INSERT INTO evaluation_artifacts (
+                artifact_id, content_hash, kind, media_type, byte_size,
+                retention_class, sensitivity_classification,
+                redaction_classification
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(candidate.artifact_id),
+                candidate.content_hash,
+                candidate.kind,
+                candidate.media_type,
+                candidate.byte_size,
+                candidate.retention_class,
+                candidate.sensitivity_classification,
+                candidate.redaction_classification,
+            ),
+        )
+        self.connection.commit()
+        return candidate
 
     def get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
-        return self._ledger._get_artifact(content_hash)
+        row = self.connection.execute(
+            "SELECT * FROM evaluation_artifacts WHERE content_hash = ?",
+            (content_hash,),
+        ).fetchone()
+        return None if row is None else self._artifact_from_row(row)
+
+    def get_artifact_by_id(self, artifact_id: UUID) -> EvaluationArtifactRecord:
+        row = self.connection.execute(
+            "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
+            (str(artifact_id),),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Artifact: {artifact_id}")
+        return self._artifact_from_row(row)
 
     def read_artifact(
         self, artifact: EvaluationArtifactRecord | UUID | str
     ) -> bytes:
-        return self._ledger._read_artifact(artifact)
+        record = self._resolve_artifact(artifact)
+        for location in self.list_artifact_locations(record):
+            if location.location_kind == "filesystem":
+                return Path(location.uri).read_bytes()
+        raise FileNotFoundError(
+            f"no readable location for Evaluation Artifact: {record.artifact_id}"
+        )
+
+    def put_artifact_location(
+        self,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        uri: str | None = None,
+        *,
+        location_key: str = "default",
+        location_kind: str = "external",
+        location: str | None = None,
+    ) -> ArtifactLocationRecord:
+        """Create or replace one named location without changing artifact identity."""
+        uri = uri or location
+        if uri is None:
+            raise ValueError("uri or location is required")
+        artifact_record = self._resolve_artifact(artifact)
+        existing = self.connection.execute(
+            """
+            SELECT * FROM evaluation_artifact_locations
+            WHERE artifact_id = ? AND location_key = ?
+            """,
+            (str(artifact_record.artifact_id), location_key),
+        ).fetchone()
+        location_id = UUID(existing["location_id"]) if existing else new_uuid7()
+        self.connection.execute(
+            """
+            INSERT INTO evaluation_artifact_locations (
+                location_id, artifact_id, location_key, location_kind, uri
+            ) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(artifact_id, location_key) DO UPDATE SET
+                location_kind = excluded.location_kind,
+                uri = excluded.uri
+            """,
+            (
+                str(location_id),
+                str(artifact_record.artifact_id),
+                location_key,
+                location_kind,
+                uri,
+            ),
+        )
+        self.connection.commit()
+        return ArtifactLocationRecord(
+            location_id=location_id,
+            artifact_id=artifact_record.artifact_id,
+            location_key=location_key,
+            location_kind=location_kind,
+            uri=uri,
+        )
+
+    def list_artifact_locations(
+        self, artifact: EvaluationArtifactRecord | UUID | str
+    ) -> list[ArtifactLocationRecord]:
+        artifact_record = self._resolve_artifact(artifact)
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_artifact_locations
+            WHERE artifact_id = ? ORDER BY location_key
+            """,
+            (str(artifact_record.artifact_id),),
+        ).fetchall()
+        return [
+            ArtifactLocationRecord(
+                location_id=UUID(row["location_id"]),
+                artifact_id=UUID(row["artifact_id"]),
+                location_key=row["location_key"],
+                location_kind=row["location_kind"],
+                uri=row["uri"],
+            )
+            for row in rows
+        ]
+
+    def register_redacted_derivative(
+        self,
+        source: EvaluationArtifactRecord | UUID | str,
+        content: bytes | bytearray | None = None,
+        *,
+        content_hash: str | None = None,
+        byte_size: int | None = None,
+        kind: str,
+        media_type: str,
+        retention_class: str,
+        sensitivity_classification: str,
+    ) -> EvaluationArtifactRecord:
+        """Register redacted bytes as a new artifact linked to their source."""
+        source_record = self._resolve_artifact(source)
+        derivative = self.register_artifact(
+            content,
+            content_hash=content_hash,
+            byte_size=byte_size,
+            kind=kind,
+            media_type=media_type,
+            retention_class=retention_class,
+            sensitivity_classification=sensitivity_classification,
+            redaction_classification="redacted",
+        )
+        if derivative.artifact_id == source_record.artifact_id:
+            raise ValueError("a redacted derivative must have different bytes")
+        self.connection.execute(
+            """
+            INSERT OR IGNORE INTO evaluation_artifact_derivatives (
+                source_artifact_id, derivative_artifact_id, relationship
+            ) VALUES (?, ?, 'redaction')
+            """,
+            (str(source_record.artifact_id), str(derivative.artifact_id)),
+        )
+        self.connection.commit()
+        return derivative
+
+    def list_artifact_derivatives(
+        self, source: EvaluationArtifactRecord | UUID | str
+    ) -> list[ArtifactDerivativeRecord]:
+        source_record = self._resolve_artifact(source)
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_artifact_derivatives
+            WHERE source_artifact_id = ? ORDER BY derivative_artifact_id
+            """,
+            (str(source_record.artifact_id),),
+        ).fetchall()
+        return [
+            ArtifactDerivativeRecord(
+                source_artifact_id=UUID(row["source_artifact_id"]),
+                derivative_artifact_id=UUID(row["derivative_artifact_id"]),
+                relationship=row["relationship"],
+            )
+            for row in rows
+        ]
+
+    def get_artifact_source(
+        self, artifact: EvaluationArtifactRecord | UUID | str
+    ) -> UUID | None:
+        artifact_record = self._resolve_artifact(artifact)
+        row = self.connection.execute(
+            """
+            SELECT source_artifact_id FROM evaluation_artifact_derivatives
+            WHERE derivative_artifact_id = ?
+            """,
+            (str(artifact_record.artifact_id),),
+        ).fetchone()
+        return None if row is None else UUID(row["source_artifact_id"])
+
+    def _resolve_artifact(
+        self, artifact: EvaluationArtifactRecord | UUID | str
+    ) -> EvaluationArtifactRecord:
+        if isinstance(artifact, EvaluationArtifactRecord):
+            return artifact
+        if isinstance(artifact, UUID):
+            row = self.connection.execute(
+                "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
+                (str(artifact),),
+            ).fetchone()
+        else:
+            try:
+                artifact_id = UUID(artifact)
+            except ValueError:
+                return self.get_artifact(artifact) or self._missing_artifact(artifact)
+            row = self.connection.execute(
+                "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
+                (str(artifact_id),),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown Evaluation Artifact: {artifact}")
+        return self._artifact_from_row(row)
+
+    @staticmethod
+    def _missing_artifact(value: str) -> EvaluationArtifactRecord:
+        raise KeyError(f"unknown Evaluation Artifact: {value}")
+
+    def link_artifact_to_definition(
+        self,
+        definition_record_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+        commit: bool = True,
+    ) -> EvaluationArtifactLinkRecord:
+        artifact_record = self._resolve_artifact(artifact)
+        link = EvaluationArtifactLinkRecord(
+            link_id=new_uuid7(),
+            definition_record_id=definition_record_id,
+            artifact_id=artifact_record.artifact_id,
+            role=role,
+            artifact=artifact_record,
+        )
+        existing = self.connection.execute(
+            """
+            SELECT * FROM evaluation_definition_artifacts
+            WHERE definition_record_id = ? AND artifact_id = ? AND role = ?
+            """,
+            (str(definition_record_id), str(link.artifact_id), link.role),
+        ).fetchone()
+        if existing is not None:
+            return EvaluationArtifactLinkRecord(
+                link_id=UUID(existing["link_id"]),
+                artifact_id=UUID(existing["artifact_id"]),
+                role=existing["role"],
+                definition_record_id=UUID(existing["definition_record_id"]),
+                artifact=self.get_artifact_by_id(UUID(existing["artifact_id"])),
+            )
+        self.connection.execute(
+            """
+            INSERT INTO evaluation_definition_artifacts (
+                link_id, definition_record_id, artifact_id, role
+            ) VALUES (?, ?, ?, ?)
+            """,
+            (
+                str(link.link_id), str(definition_record_id),
+                str(link.artifact_id), link.role,
+            ),
+        )
+        if commit:
+            self.connection.commit()
+        return link
+
+    def _link_artifact(
+        self,
+        table: str,
+        owner_column: str,
+        owner_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        role: str,
+        *,
+        commit: bool = True,
+    ) -> EvaluationArtifactLinkRecord:
+        artifact_record = self._resolve_artifact(artifact)
+        link = EvaluationArtifactLinkRecord(
+            link_id=new_uuid7(), artifact_id=artifact_record.artifact_id,
+            role=role, artifact=artifact_record,
+        )
+        existing = self.connection.execute(
+            f"SELECT * FROM {table} WHERE {owner_column} = ? AND artifact_id = ? AND role = ?",
+            (str(owner_id), str(link.artifact_id), link.role),
+        ).fetchone()
+        if existing is not None:
+            return EvaluationArtifactLinkRecord(
+                link_id=UUID(existing["link_id"]),
+                artifact_id=UUID(existing["artifact_id"]),
+                role=existing["role"],
+                artifact=self.get_artifact_by_id(UUID(existing["artifact_id"])),
+            )
+        self.connection.execute(
+            f"INSERT INTO {table} (link_id, {owner_column}, artifact_id, role) VALUES (?, ?, ?, ?)",
+            (str(link.link_id), str(owner_id), str(link.artifact_id), link.role),
+        )
+        if commit:
+            self.connection.commit()
+        return link
+
+    def link_consumed_artifact_to_run(
+        self,
+        run_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+    ) -> EvaluationArtifactLinkRecord:
+        return self._link_artifact(
+            "evaluation_run_consumed_artifacts", "run_id", run_id, artifact, role
+        )
+
+    def link_artifact_to_run(
+        self,
+        run_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+    ) -> EvaluationArtifactLinkRecord:
+        return self._link_artifact(
+            "evaluation_run_artifacts", "run_id", run_id, artifact, role
+        )
+
+    def link_artifact_to_case_result(
+        self,
+        case_result_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+    ) -> EvaluationArtifactLinkRecord:
+        return self._link_artifact(
+            "evaluation_case_result_artifacts", "case_result_id", case_result_id,
+            artifact, role,
+        )
+
+    def link_artifact_to_case_evaluator_execution(
+        self,
+        execution_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+    ) -> EvaluationArtifactLinkRecord:
+        return self._link_artifact(
+            "case_evaluator_execution_artifacts", "execution_id", execution_id,
+            artifact, role,
+        )
+
+    def link_artifact_to_report_evaluator_execution(
+        self,
+        execution_id: UUID,
+        artifact: EvaluationArtifactRecord | UUID | str,
+        *,
+        role: str,
+    ) -> EvaluationArtifactLinkRecord:
+        return self._link_artifact(
+            "report_evaluator_execution_artifacts", "execution_id", execution_id,
+            artifact, role,
+        )
+
+    def list_definition_artifacts(
+        self, definition_record_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        rows = self.connection.execute(
+            """
+            SELECT * FROM evaluation_definition_artifacts
+            WHERE definition_record_id = ? ORDER BY rowid
+            """,
+            (str(definition_record_id),),
+        ).fetchall()
+        return [
+            EvaluationArtifactLinkRecord(
+                link_id=UUID(row["link_id"]),
+                artifact_id=UUID(row["artifact_id"]),
+                role=row["role"],
+                definition_record_id=UUID(row["definition_record_id"]),
+                artifact=self.get_artifact_by_id(UUID(row["artifact_id"])),
+            )
+            for row in rows
+        ]
+
+    def _list_artifact_links(
+        self, table: str, owner_column: str, owner_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        rows = self.connection.execute(
+            f"SELECT * FROM {table} WHERE {owner_column} = ? ORDER BY rowid",
+            (str(owner_id),),
+        ).fetchall()
+        return [
+            EvaluationArtifactLinkRecord(
+                link_id=UUID(row["link_id"]),
+                artifact_id=UUID(row["artifact_id"]),
+                role=row["role"],
+                artifact=self.get_artifact_by_id(UUID(row["artifact_id"])),
+            )
+            for row in rows
+        ]
+
+    def list_consumed_artifacts(
+        self, run_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        return self._list_artifact_links(
+            "evaluation_run_consumed_artifacts", "run_id", run_id
+        )
+
+    def list_run_artifacts(self, run_id: UUID) -> list[EvaluationArtifactLinkRecord]:
+        return self._list_artifact_links("evaluation_run_artifacts", "run_id", run_id)
+
+    def list_case_result_artifacts(
+        self, case_result_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        return self._list_artifact_links(
+            "evaluation_case_result_artifacts", "case_result_id", case_result_id
+        )
+
+    def list_case_evaluator_execution_artifacts(
+        self, execution_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        return self._list_artifact_links(
+            "case_evaluator_execution_artifacts", "execution_id", execution_id
+        )
+
+    def list_report_evaluator_execution_artifacts(
+        self, execution_id: UUID
+    ) -> list[EvaluationArtifactLinkRecord]:
+        return self._list_artifact_links(
+            "report_evaluator_execution_artifacts", "execution_id", execution_id
+        )
+
+    def list_produced_artifacts(
+        self, run_id: UUID
+    ) -> list[EvaluationProducedArtifactRecord]:
+        rows = self.connection.execute(
+            """
+            SELECT artifact_id, role, 'run' AS producer_type, run_id AS producer_id
+            FROM evaluation_run_artifacts WHERE run_id = ?
+            UNION ALL
+            SELECT a.artifact_id, a.role, 'case_result', r.result_id
+            FROM evaluation_case_result_artifacts a
+            JOIN evaluation_case_results r ON r.result_id = a.case_result_id
+            WHERE r.run_id = ?
+            UNION ALL
+            SELECT a.artifact_id, a.role, 'case_evaluator_execution', a.execution_id
+            FROM case_evaluator_execution_artifacts a
+            JOIN case_evaluator_executions e ON e.execution_id = a.execution_id
+            JOIN evaluation_case_results c ON c.result_id = e.case_result_id
+            JOIN evaluation_runs r ON r.run_id = c.run_id
+            WHERE r.run_id = ?
+            UNION ALL
+            SELECT a.artifact_id, a.role, 'report_evaluator_execution', a.execution_id
+            FROM report_evaluator_execution_artifacts a
+            JOIN report_evaluator_executions e ON e.execution_id = a.execution_id
+            WHERE e.run_id = ?
+            ORDER BY producer_type, role
+            """,
+            (str(run_id), str(run_id), str(run_id), str(run_id)),
+        ).fetchall()
+        return [
+            EvaluationProducedArtifactRecord(
+                artifact_id=UUID(row["artifact_id"]),
+                role=row["role"],
+                producer_type=row["producer_type"],
+                producer_id=UUID(row["producer_id"]),
+                artifact=self.get_artifact_by_id(UUID(row["artifact_id"])),
+            )
+            for row in rows
+        ]
+
+    # Read/write names that make the replaceable-location behavior explicit.
+    add_artifact_location = put_artifact_location
+    replace_artifact_location = put_artifact_location
+    list_locations = list_artifact_locations
+    list_case_evaluator_artifacts = list_case_evaluator_execution_artifacts
+    list_report_evaluator_artifacts = list_report_evaluator_execution_artifacts
+    list_artifacts_consumed_by_run = list_consumed_artifacts
+    list_artifacts_produced_by_run = list_produced_artifacts
+    attach_artifact_to_definition = link_artifact_to_definition
+    attach_artifact_to_run = link_artifact_to_run
+    attach_artifact_to_case_result = link_artifact_to_case_result
+    attach_artifact_to_case_evaluator_execution = link_artifact_to_case_evaluator_execution
+    attach_artifact_to_report_evaluator_execution = (
+        link_artifact_to_report_evaluator_execution
+    )
+
+    @staticmethod
+    def _artifact_from_row(row: sqlite3.Row) -> EvaluationArtifactRecord:
+        return EvaluationArtifactRecord(
+            artifact_id=UUID(row["artifact_id"]),
+            content_hash=row["content_hash"],
+            kind=row["kind"],
+            media_type=row["media_type"],
+            byte_size=row["byte_size"],
+            retention_class=row["retention_class"],
+            sensitivity_classification=row["sensitivity_classification"],
+            redaction_classification=row["redaction_classification"],
+        )
 
 
 class EvaluationLedger(Protocol):
@@ -1759,6 +2295,10 @@ class SQLiteEvaluationLedger:
             "list_run_metric_observations_across_runs",
         )
         artifact_methods = (
+            "register_artifact",
+            "get_artifact",
+            "get_artifact_by_id",
+            "read_artifact",
             "put_artifact_location",
             "replace_artifact_location",
             "add_artifact_location",
@@ -1780,6 +2320,15 @@ class SQLiteEvaluationLedger:
             "list_case_evaluator_execution_artifacts",
             "list_report_evaluator_execution_artifacts",
             "list_produced_artifacts",
+            "list_case_evaluator_artifacts",
+            "list_report_evaluator_artifacts",
+            "list_artifacts_consumed_by_run",
+            "list_artifacts_produced_by_run",
+            "attach_artifact_to_definition",
+            "attach_artifact_to_run",
+            "attach_artifact_to_case_result",
+            "attach_artifact_to_case_evaluator_execution",
+            "attach_artifact_to_report_evaluator_execution",
         )
         for component, names in (
             (self.definition_catalog, definition_methods),
@@ -1787,7 +2336,7 @@ class SQLiteEvaluationLedger:
             (self.artifact_catalog, artifact_methods),
         ):
             for name in names:
-                handler = getattr(self, name)
+                handler = getattr(component, name, None) or getattr(self, name)
                 component.bind(name, handler)
                 setattr(self, name, getattr(component, name))
 
@@ -2354,58 +2903,43 @@ class SQLiteEvaluationLedger:
                 EvaluationRunStatus.FINALIZATION_PENDING.value,
             }:
                 raise ValueError("only an active Evaluation Run can freeze its aggregate manifest")
-            if row["frozen_aggregate_manifest_artifact_id"] is None:
-                pending = self._connection.execute(
-                    """
-                    SELECT 1 FROM evaluation_case_results
-                    WHERE run_id = ?
-                      AND (execution_disposition IN ('pending', 'cancelled')
-                           OR task_outcome_json IS NULL)
-                    LIMIT 1
-                    """,
-                    (str(run_id),),
-                ).fetchone()
-                if pending is not None:
-                    raise ValueError(
-                        "aggregate manifest requires every manifested case to be terminal"
-                    )
-        if row["frozen_aggregate_manifest_artifact_id"] is not None and report_provenance is None:
-            existing_artifact = self._get_artifact_by_id(
-                UUID(row["frozen_aggregate_manifest_artifact_id"])
+            if row["frozen_aggregate_manifest_artifact_id"] is not None and report_provenance is None:
+                existing_artifact = self.artifact_catalog.get_artifact_by_id(
+                    UUID(row["frozen_aggregate_manifest_artifact_id"])
+                )
+                existing_manifest = FrozenAggregateManifest.model_validate_json(
+                    self.artifact_catalog.read_artifact(existing_artifact)
+                )
+                base_keys = {
+                    "configuration_fingerprint",
+                    "selection_expression",
+                    "selection_provenance",
+                }
+                report_provenance = {
+                    key: value
+                    for key, value in existing_manifest.report_provenance.items()
+                    if key not in base_keys
+                }
+            manifest = self._build_frozen_aggregate_manifest(
+                run_id, report_provenance=report_provenance or {}
             )
-            existing_manifest = FrozenAggregateManifest.model_validate_json(
-                self.read_artifact(existing_artifact)
+            manifest_bytes = manifest.canonical_bytes
+            artifact = self.artifact_catalog.register_artifact(
+                manifest_bytes,
+                kind="frozen-aggregate-manifest",
+                media_type="application/json",
+                retention_class="run",
+                sensitivity_classification="internal",
             )
-            base_keys = {
-                "configuration_fingerprint",
-                "selection_expression",
-                "selection_provenance",
-            }
-            report_provenance = {
-                key: value
-                for key, value in existing_manifest.report_provenance.items()
-                if key not in base_keys
-            }
-        manifest = self._build_frozen_aggregate_manifest(
-            run_id, report_provenance=report_provenance or {}
-        )
-        manifest_bytes = manifest.canonical_bytes
-        artifact = self.register_artifact(
-            manifest_bytes,
-            kind="frozen-aggregate-manifest",
-            media_type="application/json",
-            retention_class="run",
-            sensitivity_classification="internal",
-        )
-        destination = self._artifact_root / f"{artifact.content_hash}.json"
-        if not destination.exists():
-            destination.write_bytes(manifest_bytes)
-        self.put_artifact_location(
-            artifact,
-            str(destination),
-            location_key="frozen-aggregate-manifest",
-            location_kind="filesystem",
-        )
+            destination = self._artifact_root / f"{artifact.content_hash}.json"
+            if not destination.exists():
+                destination.write_bytes(manifest_bytes)
+            self.artifact_catalog.put_artifact_location(
+                artifact,
+                str(destination),
+                location_key="frozen-aggregate-manifest",
+                location_kind="filesystem",
+            )
         with self._transaction_lock:
             try:
                 self._connection.execute("BEGIN")
@@ -2417,7 +2951,7 @@ class SQLiteEvaluationLedger:
                 if row is None:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
                 if row["frozen_aggregate_manifest_artifact_id"] is not None:
-                    existing = self._get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
+                    existing = self.artifact_catalog.get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
                     if existing.content_hash != artifact.content_hash:
                         raise ValueError(
                             "the aggregate manifest is already frozen with a different composition"
@@ -2443,7 +2977,7 @@ class SQLiteEvaluationLedger:
                     raise ValueError(
                         "aggregate manifest requires every manifested case to be terminal"
                     )
-                self._link_artifact(
+                self.artifact_catalog._link_artifact(
                     "evaluation_run_artifacts",
                     "run_id",
                     run_id,
@@ -2648,16 +3182,8 @@ class SQLiteEvaluationLedger:
             raise KeyError(f"unknown Evaluation Run: {run_id}")
         if row["frozen_aggregate_manifest_artifact_id"] is None:
             return None
-        return self._get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
+        return self.artifact_catalog.get_artifact_by_id(UUID(row["frozen_aggregate_manifest_artifact_id"]))
 
-    def _read_artifact(self, artifact: EvaluationArtifactRecord | UUID | str) -> bytes:
-        record = self._resolve_artifact(artifact)
-        for location in self.list_artifact_locations(record):
-            if location.location_kind == "filesystem":
-                return Path(location.uri).read_bytes()
-        raise FileNotFoundError(
-            f"no readable location for Evaluation Artifact: {record.artifact_id}"
-        )
 
     def _definition_for_run(
         self, run_id: UUID, kind: EvaluationDefinitionKind
@@ -3465,572 +3991,6 @@ class SQLiteEvaluationLedger:
             duration_seconds=row["duration_seconds"], failure_message=row["failure_message"],
             trace_id=row["trace_id"], span_id=row["span_id"],
         )
-
-
-
-    def _link_definition_artifact(
-        self,
-        definition_record_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        role: str,
-        *,
-        commit: bool = True,
-    ) -> EvaluationArtifactLinkRecord:
-        artifact_record = self._resolve_artifact(artifact)
-        link = EvaluationArtifactLinkRecord(
-            link_id=new_uuid7(),
-            definition_record_id=definition_record_id,
-            artifact_id=artifact_record.artifact_id,
-            role=role,
-            artifact=artifact_record,
-        )
-        existing = self._connection.execute(
-            """
-            SELECT * FROM evaluation_definition_artifacts
-            WHERE definition_record_id = ? AND artifact_id = ? AND role = ?
-            """,
-            (str(definition_record_id), str(link.artifact_id), link.role),
-        ).fetchone()
-        if existing is not None:
-            return EvaluationArtifactLinkRecord(
-                link_id=UUID(existing["link_id"]),
-                artifact_id=UUID(existing["artifact_id"]),
-                role=existing["role"],
-                definition_record_id=UUID(existing["definition_record_id"]),
-                artifact=self._get_artifact_by_id(UUID(existing["artifact_id"])),
-            )
-        self._connection.execute(
-            """
-            INSERT INTO evaluation_definition_artifacts (
-                link_id, definition_record_id, artifact_id, role
-            ) VALUES (?, ?, ?, ?)
-            """,
-            (
-                str(link.link_id), str(definition_record_id),
-                str(link.artifact_id), link.role,
-            ),
-        )
-        if commit:
-            self._connection.commit()
-        return link
-
-    def link_artifact_to_definition(
-        self,
-        definition_record_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        """Link an artifact to an authored definition revision by namespaced role."""
-        return self._link_definition_artifact(definition_record_id, artifact, role)
-
-    def _link_artifact(
-        self,
-        table: str,
-        owner_column: str,
-        owner_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        role: str,
-        *,
-        commit: bool = True,
-    ) -> EvaluationArtifactLinkRecord:
-        artifact_record = self._resolve_artifact(artifact)
-        link = EvaluationArtifactLinkRecord(
-            link_id=new_uuid7(), artifact_id=artifact_record.artifact_id,
-            role=role, artifact=artifact_record,
-        )
-        existing = self._connection.execute(
-            f"SELECT * FROM {table} WHERE {owner_column} = ? AND artifact_id = ? AND role = ?",
-            (str(owner_id), str(link.artifact_id), link.role),
-        ).fetchone()
-        if existing is not None:
-            return EvaluationArtifactLinkRecord(
-                link_id=UUID(existing["link_id"]),
-                artifact_id=UUID(existing["artifact_id"]),
-                role=existing["role"],
-                artifact=self._get_artifact_by_id(UUID(existing["artifact_id"])),
-            )
-        self._connection.execute(
-            f"INSERT INTO {table} (link_id, {owner_column}, artifact_id, role) VALUES (?, ?, ?, ?)",
-            (str(link.link_id), str(owner_id), str(link.artifact_id), link.role),
-        )
-        if commit:
-            self._connection.commit()
-        return link
-
-    def link_consumed_artifact_to_run(
-        self,
-        run_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        return self._link_artifact(
-            "evaluation_run_consumed_artifacts", "run_id", run_id, artifact, role
-        )
-
-    def link_artifact_to_run(
-        self,
-        run_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        return self._link_artifact(
-            "evaluation_run_artifacts", "run_id", run_id, artifact, role
-        )
-
-    def link_artifact_to_case_result(
-        self,
-        case_result_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        return self._link_artifact(
-            "evaluation_case_result_artifacts", "case_result_id", case_result_id,
-            artifact, role,
-        )
-
-    def link_artifact_to_case_evaluator_execution(
-        self,
-        execution_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        return self._link_artifact(
-            "case_evaluator_execution_artifacts", "execution_id", execution_id,
-            artifact, role,
-        )
-
-    def link_artifact_to_report_evaluator_execution(
-        self,
-        execution_id: UUID,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        *,
-        role: str,
-    ) -> EvaluationArtifactLinkRecord:
-        return self._link_artifact(
-            "report_evaluator_execution_artifacts", "execution_id", execution_id,
-            artifact, role,
-        )
-
-    def list_definition_artifacts(
-        self, definition_record_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_definition_artifacts
-            WHERE definition_record_id = ? ORDER BY rowid
-            """,
-            (str(definition_record_id),),
-        ).fetchall()
-        return [
-            EvaluationArtifactLinkRecord(
-                link_id=UUID(row["link_id"]),
-                artifact_id=UUID(row["artifact_id"]),
-                role=row["role"],
-                definition_record_id=UUID(row["definition_record_id"]),
-                artifact=self._get_artifact_by_id(UUID(row["artifact_id"])),
-            )
-            for row in rows
-        ]
-
-    def _list_artifact_links(
-        self, table: str, owner_column: str, owner_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        rows = self._connection.execute(
-            f"SELECT * FROM {table} WHERE {owner_column} = ? ORDER BY rowid",
-            (str(owner_id),),
-        ).fetchall()
-        return [
-            EvaluationArtifactLinkRecord(
-                link_id=UUID(row["link_id"]),
-                artifact_id=UUID(row["artifact_id"]),
-                role=row["role"],
-                artifact=self._get_artifact_by_id(UUID(row["artifact_id"])),
-            )
-            for row in rows
-        ]
-
-    def list_consumed_artifacts(
-        self, run_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        return self._list_artifact_links(
-            "evaluation_run_consumed_artifacts", "run_id", run_id
-        )
-
-    def list_run_artifacts(self, run_id: UUID) -> list[EvaluationArtifactLinkRecord]:
-        return self._list_artifact_links("evaluation_run_artifacts", "run_id", run_id)
-
-    def list_case_result_artifacts(
-        self, case_result_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        return self._list_artifact_links(
-            "evaluation_case_result_artifacts", "case_result_id", case_result_id
-        )
-
-    def list_case_evaluator_execution_artifacts(
-        self, execution_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        return self._list_artifact_links(
-            "case_evaluator_execution_artifacts", "execution_id", execution_id
-        )
-
-    def list_report_evaluator_execution_artifacts(
-        self, execution_id: UUID
-    ) -> list[EvaluationArtifactLinkRecord]:
-        return self._list_artifact_links(
-            "report_evaluator_execution_artifacts", "execution_id", execution_id
-        )
-
-    def list_produced_artifacts(
-        self, run_id: UUID
-    ) -> list[EvaluationProducedArtifactRecord]:
-        rows = self._connection.execute(
-            """
-            SELECT artifact_id, role, 'run' AS producer_type, run_id AS producer_id
-            FROM evaluation_run_artifacts WHERE run_id = ?
-            UNION ALL
-            SELECT a.artifact_id, a.role, 'case_result', r.result_id
-            FROM evaluation_case_result_artifacts a
-            JOIN evaluation_case_results r ON r.result_id = a.case_result_id
-            WHERE r.run_id = ?
-            UNION ALL
-            SELECT a.artifact_id, a.role, 'case_evaluator_execution', a.execution_id
-            FROM case_evaluator_execution_artifacts a
-            JOIN case_evaluator_executions e ON e.execution_id = a.execution_id
-            JOIN evaluation_case_results c ON c.result_id = e.case_result_id
-            JOIN evaluation_runs r ON r.run_id = c.run_id
-            WHERE r.run_id = ?
-            UNION ALL
-            SELECT a.artifact_id, a.role, 'report_evaluator_execution', a.execution_id
-            FROM report_evaluator_execution_artifacts a
-            JOIN report_evaluator_executions e ON e.execution_id = a.execution_id
-            WHERE e.run_id = ?
-            ORDER BY producer_type, role
-            """,
-            (str(run_id), str(run_id), str(run_id), str(run_id)),
-        ).fetchall()
-        return [
-            EvaluationProducedArtifactRecord(
-                artifact_id=UUID(row["artifact_id"]),
-                role=row["role"],
-                producer_type=row["producer_type"],
-                producer_id=UUID(row["producer_id"]),
-                artifact=self._get_artifact_by_id(UUID(row["artifact_id"])),
-            )
-            for row in rows
-        ]
-
-    # Short aliases retain a discoverable API for callers that use the subject
-    # name rather than the full execution-record name.
-    list_case_evaluator_artifacts = list_case_evaluator_execution_artifacts
-    list_report_evaluator_artifacts = list_report_evaluator_execution_artifacts
-    list_artifacts_consumed_by_run = list_consumed_artifacts
-    list_artifacts_produced_by_run = list_produced_artifacts
-    attach_artifact_to_definition = link_artifact_to_definition
-    attach_artifact_to_run = link_artifact_to_run
-    attach_artifact_to_case_result = link_artifact_to_case_result
-    attach_artifact_to_case_evaluator_execution = link_artifact_to_case_evaluator_execution
-    attach_artifact_to_report_evaluator_execution = (
-        link_artifact_to_report_evaluator_execution
-    )
-
-    def import_case(
-        self, evaluation_case: EvaluationCase[Any, Any, Any]
-    ) -> EvaluationDefinitionRecord:
-        return self.definition_catalog.import_case(evaluation_case)
-
-    def import_gold_set(self, gold_set: EvaluationGoldSet) -> EvaluationDefinitionRecord:
-        return self.definition_catalog.import_gold_set(gold_set)
-
-    def import_rubric(self, rubric: EvaluationRubric) -> EvaluationDefinitionRecord:
-        return self.definition_catalog.import_rubric(rubric)
-
-    def import_suite(self, suite: EvaluationSuite) -> EvaluationDefinitionRecord:
-        return self.definition_catalog.import_suite(suite)
-
-    def _register_artifact(
-        self,
-        content: bytes | bytearray | None = None,
-        *,
-        content_hash: str | None = None,
-        byte_size: int | None = None,
-        kind: str,
-        media_type: str,
-        retention_class: str,
-        sensitivity_classification: str | None = None,
-        redaction_classification: str = "original",
-        sensitivity: str | None = None,
-        redaction: str | None = None,
-    ) -> EvaluationArtifactRecord:
-        """Register external content by hash, deduplicating identical metadata."""
-        if content is not None:
-            raw_content = bytes(content)
-            computed_hash = hashlib.sha256(raw_content).hexdigest()
-            if content_hash is not None and content_hash != computed_hash:
-                raise ValueError("content_hash does not match content")
-            content_hash = computed_hash
-            if byte_size is not None and byte_size != len(raw_content):
-                raise ValueError("byte_size does not match content")
-            byte_size = len(raw_content)
-        elif content_hash is None or byte_size is None:
-            raise ValueError("content or both content_hash and byte_size are required")
-
-        sensitivity_classification = sensitivity_classification or sensitivity
-        if sensitivity_classification is None:
-            raise ValueError("sensitivity_classification is required")
-        redaction_classification = redaction or redaction_classification
-        candidate = EvaluationArtifactRecord(
-            artifact_id=new_uuid7(),
-            content_hash=content_hash,
-            kind=kind,
-            media_type=media_type,
-            byte_size=byte_size,
-            retention_class=retention_class,
-            sensitivity_classification=sensitivity_classification,
-            redaction_classification=redaction_classification,
-        )
-        existing = self._connection.execute(
-            "SELECT * FROM evaluation_artifacts WHERE content_hash = ?",
-            (candidate.content_hash,),
-        ).fetchone()
-        if existing is not None:
-            existing_record = self._artifact_from_row(existing)
-            same_metadata = existing_record.model_copy(
-                update={"artifact_id": candidate.artifact_id}
-            )
-            if same_metadata != candidate:
-                raise ArtifactConflictError(
-                    "artifact content hash was reused with different metadata"
-                )
-            return existing_record
-
-        self._connection.execute(
-            """
-            INSERT INTO evaluation_artifacts (
-                artifact_id, content_hash, kind, media_type, byte_size,
-                retention_class, sensitivity_classification,
-                redaction_classification
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                str(candidate.artifact_id),
-                candidate.content_hash,
-                candidate.kind,
-                candidate.media_type,
-                candidate.byte_size,
-                candidate.retention_class,
-                candidate.sensitivity_classification,
-                candidate.redaction_classification,
-            ),
-        )
-        self._connection.commit()
-        return candidate
-
-    def _get_artifact(self, content_hash: str) -> EvaluationArtifactRecord | None:
-        row = self._connection.execute(
-            "SELECT * FROM evaluation_artifacts WHERE content_hash = ?",
-            (content_hash,),
-        ).fetchone()
-        return None if row is None else self._artifact_from_row(row)
-
-    def _get_artifact_by_id(self, artifact_id: UUID) -> EvaluationArtifactRecord:
-        row = self._connection.execute(
-            "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
-            (str(artifact_id),),
-        ).fetchone()
-        if row is None:
-            raise KeyError(f"unknown Evaluation Artifact: {artifact_id}")
-        return self._artifact_from_row(row)
-
-    def put_artifact_location(
-        self,
-        artifact: EvaluationArtifactRecord | UUID | str,
-        uri: str | None = None,
-        *,
-        location_key: str = "default",
-        location_kind: str = "external",
-        location: str | None = None,
-    ) -> ArtifactLocationRecord:
-        """Create or replace one named location without changing artifact identity."""
-        uri = uri or location
-        if uri is None:
-            raise ValueError("uri or location is required")
-        artifact_record = self._resolve_artifact(artifact)
-        existing = self._connection.execute(
-            """
-            SELECT * FROM evaluation_artifact_locations
-            WHERE artifact_id = ? AND location_key = ?
-            """,
-            (str(artifact_record.artifact_id), location_key),
-        ).fetchone()
-        location_id = UUID(existing["location_id"]) if existing else new_uuid7()
-        self._connection.execute(
-            """
-            INSERT INTO evaluation_artifact_locations (
-                location_id, artifact_id, location_key, location_kind, uri
-            ) VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(artifact_id, location_key) DO UPDATE SET
-                location_kind = excluded.location_kind,
-                uri = excluded.uri
-            """,
-            (
-                str(location_id),
-                str(artifact_record.artifact_id),
-                location_key,
-                location_kind,
-                uri,
-            ),
-        )
-        self._connection.commit()
-        return ArtifactLocationRecord(
-            location_id=location_id,
-            artifact_id=artifact_record.artifact_id,
-            location_key=location_key,
-            location_kind=location_kind,
-            uri=uri,
-        )
-
-    def list_artifact_locations(
-        self, artifact: EvaluationArtifactRecord | UUID | str
-    ) -> list[ArtifactLocationRecord]:
-        artifact_record = self._resolve_artifact(artifact)
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_artifact_locations
-            WHERE artifact_id = ? ORDER BY location_key
-            """,
-            (str(artifact_record.artifact_id),),
-        ).fetchall()
-        return [
-            ArtifactLocationRecord(
-                location_id=UUID(row["location_id"]),
-                artifact_id=UUID(row["artifact_id"]),
-                location_key=row["location_key"],
-                location_kind=row["location_kind"],
-                uri=row["uri"],
-            )
-            for row in rows
-        ]
-
-    def register_redacted_derivative(
-        self,
-        source: EvaluationArtifactRecord | UUID | str,
-        content: bytes | bytearray | None = None,
-        *,
-        content_hash: str | None = None,
-        byte_size: int | None = None,
-        kind: str,
-        media_type: str,
-        retention_class: str,
-        sensitivity_classification: str,
-    ) -> EvaluationArtifactRecord:
-        """Register redacted bytes as a new artifact linked to their source."""
-        source_record = self._resolve_artifact(source)
-        derivative = self.register_artifact(
-            content,
-            content_hash=content_hash,
-            byte_size=byte_size,
-            kind=kind,
-            media_type=media_type,
-            retention_class=retention_class,
-            sensitivity_classification=sensitivity_classification,
-            redaction_classification="redacted",
-        )
-        if derivative.artifact_id == source_record.artifact_id:
-            raise ValueError("a redacted derivative must have different bytes")
-        self._connection.execute(
-            """
-            INSERT OR IGNORE INTO evaluation_artifact_derivatives (
-                source_artifact_id, derivative_artifact_id, relationship
-            ) VALUES (?, ?, 'redaction')
-            """,
-            (str(source_record.artifact_id), str(derivative.artifact_id)),
-        )
-        self._connection.commit()
-        return derivative
-
-    def list_artifact_derivatives(
-        self, source: EvaluationArtifactRecord | UUID | str
-    ) -> list[ArtifactDerivativeRecord]:
-        source_record = self._resolve_artifact(source)
-        rows = self._connection.execute(
-            """
-            SELECT * FROM evaluation_artifact_derivatives
-            WHERE source_artifact_id = ? ORDER BY derivative_artifact_id
-            """,
-            (str(source_record.artifact_id),),
-        ).fetchall()
-        return [
-            ArtifactDerivativeRecord(
-                source_artifact_id=UUID(row["source_artifact_id"]),
-                derivative_artifact_id=UUID(row["derivative_artifact_id"]),
-                relationship=row["relationship"],
-            )
-            for row in rows
-        ]
-
-    def get_artifact_source(
-        self, artifact: EvaluationArtifactRecord | UUID | str
-    ) -> UUID | None:
-        artifact_record = self._resolve_artifact(artifact)
-        row = self._connection.execute(
-            """
-            SELECT source_artifact_id FROM evaluation_artifact_derivatives
-            WHERE derivative_artifact_id = ?
-            """,
-            (str(artifact_record.artifact_id),),
-        ).fetchone()
-        return None if row is None else UUID(row["source_artifact_id"])
-
-    def _resolve_artifact(
-        self, artifact: EvaluationArtifactRecord | UUID | str
-    ) -> EvaluationArtifactRecord:
-        if isinstance(artifact, EvaluationArtifactRecord):
-            return artifact
-        if isinstance(artifact, UUID):
-            row = self._connection.execute(
-                "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
-                (str(artifact),),
-            ).fetchone()
-        else:
-            try:
-                artifact_id = UUID(artifact)
-            except ValueError:
-                return self.get_artifact(artifact) or self._missing_artifact(artifact)
-            row = self._connection.execute(
-                "SELECT * FROM evaluation_artifacts WHERE artifact_id = ?",
-                (str(artifact_id),),
-            ).fetchone()
-        if row is None:
-            raise KeyError(f"unknown Evaluation Artifact: {artifact}")
-        return self._artifact_from_row(row)
-
-    @staticmethod
-    def _missing_artifact(value: str) -> EvaluationArtifactRecord:
-        raise KeyError(f"unknown Evaluation Artifact: {value}")
-
-    # Read/write names that make the replaceable-location behavior explicit.
-    add_artifact_location = put_artifact_location
-    replace_artifact_location = put_artifact_location
-    list_locations = list_artifact_locations
-
-    @staticmethod
-    def _artifact_from_row(row: sqlite3.Row) -> EvaluationArtifactRecord:
-        return EvaluationArtifactRecord(
-            artifact_id=UUID(row["artifact_id"]),
-            content_hash=row["content_hash"],
-            kind=row["kind"],
-            media_type=row["media_type"],
-            byte_size=row["byte_size"],
-            retention_class=row["retention_class"],
-            sensitivity_classification=row["sensitivity_classification"],
-            redaction_classification=row["redaction_classification"],
-        )
-
 
 
 
