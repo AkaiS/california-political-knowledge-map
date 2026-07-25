@@ -16,7 +16,9 @@
 
 ### Issue tracker
 
-Issues and PRDs live as local markdown files under `.scratch/`. See [issue-tracker.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/docs/agents/issue-tracker.md).
+Issues and PRDs live as local Markdown under `work/`; `work/README.md` is the
+authoritative entry point. `.scratch/` is reserved for disposable runtime
+output. See [issue-tracker.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/docs/agents/issue-tracker.md).
 
 ### Triage labels
 
