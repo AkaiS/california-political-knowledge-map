@@ -31,6 +31,15 @@ promotion, each observation must be checked against the current code and tests.
 Stable IDs prevent bundled or duplicate notes from disappearing during that
 reconciliation.
 
+On 2026-07-25 the imported loose notes, previously held in a single
+undifferentiated `LN-*` list, were classified into the four evaluation-framework
+categories below and renumbered under category prefixes matching the rest of
+this queue: `EC`, `EP`, `ER`, and `ED`. Their wording is unchanged, and the
+[loose-note ID crosswalk](#loose-note-id-crosswalk) maps every retired `LN-*`
+identifier to its replacement so each entry still traces back to `## Loose
+Notes` in the immutable July 9 source note. Struck-through findings in that
+source remain intentionally omitted from this queue.
+
 ## Extraction and graph integrity
 
 - **IG-01 · P0:** Preserve multiple labels for extracted graph nodes.
@@ -58,6 +67,10 @@ reconciliation.
   metadata.
 - **ME-05 · P1:** Keep deterministic contract tests distinct from model-quality
   evaluations.
+
+This category covers whether the models themselves are good and dependable.
+Whether the evaluation framework that measures them is itself correct is a
+separate concern, held in the four evaluation-framework categories below.
 
 Related work exists under the excluded
 [Model Evaluation initiative](initiatives/model-evaluation/MAP.md); this queue
@@ -120,6 +133,91 @@ will not modify that initiative.
 - **RC-07 · P4:** Compare heuristics and logistic regression only after the
   Evaluation Gold Set and protocol are stable.
 
+## Evaluation contract and schema integrity
+
+Whether an authored evaluation definition means one unambiguous thing, and
+whether declared contracts can be bypassed.
+
+- **EC-01 · P0:** Validate structured metric values before JSON normalization so
+  forbidden Python containers and non-string mapping keys cannot be silently
+  coerced into accepted shapes.
+- **EC-02 · P0:** Prevent direct `ResolvedSchemaBinding` construction from
+  bypassing the explicit allowlisted Schema Registry.
+- **EC-03 · P2:** Reassess whether a separate component-owned Evaluation
+  Requirement Catalog is necessary when Evaluation Requirement Bindings carry
+  overlapping information.
+- **EC-04 · P2:** Remove compatibility shims that permit tests or nonexistent
+  ledger records to bypass production invariants.
+- **EC-05 · P2:** Keep the component-owned Evaluation Requirement Catalog out of
+  unrelated Evaluation Suite revision content.
+- **EC-06 · P3:** Decide whether every Evaluation Comparison Operation needs an
+  explicit version and when custom comparison logic is warranted.
+
+## Evaluation planning and validation
+
+Whether preflight produces a Resolved Evaluation Plan that the rest of execution
+actually trusts, instead of rederiving and revalidating the same decisions.
+
+- **EP-01 · P1:** Require a Resolved Evaluation Plan at the Suite execution
+  boundary when execution semantics depend on preflight.
+- **EP-02 · P2:** Centralize Evaluation Case–Suite compatibility predicates so
+  preflight accumulation and fail-fast validation cannot drift.
+- **EP-03 · P2:** Eliminate redundant case validation between Suite execution,
+  evaluator resolution, preflight, and durable execution.
+- **EP-04 · P2:** Make durable Evaluation Run execution consume the Resolved
+  Evaluation Plan produced by preflight instead of independently deriving
+  evaluator assignments.
+- **EP-05 · P2:** Construct Evaluation Runs from the Resolved Evaluation Plan
+  rather than accepting and revalidating duplicated plan-derived fields.
+
+## Evaluation run lifecycle and finalization
+
+Whether a run starts, stops, fails, and completes at the moments its contract
+says it should, and whether those transitions are reported truthfully.
+
+- **ER-01 · P0:** Normalize runtime task exceptions into provider-neutral,
+  conservatively redacted `TaskFailure` values with truthful category and
+  retryability; keep large or sensitive raw evidence outside relational
+  outcome JSON.
+- **ER-02 · P0:** Prove Evaluation Run completion requires all terminal task,
+  case-evaluator, report-evaluator, and manifest evidence—not merely completed
+  case evaluation.
+- **ER-03 · P0:** Honor a controlled stop after the final—or only—report
+  evaluator and before any Release Gate begins.
+- **ER-04 · P1:** Ensure the report-evaluator adapter does not silently discard
+  evaluator failures.
+- **ER-05 · P1:** Remove or reject the `run()` release-gate parameter if Release
+  Gates execute only during Evaluation Finalization.
+- **ER-06 · P1:** Allow same-run recovery when aggregate-manifest freezing fails
+  after the case phase has completed.
+- **ER-07 · P1:** Bound retryable finalization-renewal contention by the last
+  confirmed live authority interval. This is already represented by excluded
+  project work and must not be duplicated here.
+- **ER-08 · P2:** Measure and, if confirmed, optimize slow terminal recovery in
+  `assert_run_is_complete`.
+- **ER-09 · P2:** Consolidate repetitive guards that prevent report evaluation
+  before case completion or outside the durable runner.
+
+## Evaluation durability and artifacts
+
+Whether the Evaluation Ledger, its checkpoints, and its artifacts survive
+interruption without losing or corrupting evidence.
+
+- **ED-01 · P1:** Define and enforce robust Evaluation Artifact reads,
+  including integrity and missing-location behavior.
+- **ED-02 · P1:** Use one canonical checkpoint document and hash implementation
+  for checkpoint writes and integrity verification.
+- **ED-03 · P1:** Atomically checkpoint evaluator-produced artifacts with their
+  evaluator execution and observations.
+- **ED-04 · P2:** Consolidate duplicated synchronous and asynchronous recording
+  behavior in case- and report-evaluator adapters.
+- **ED-05 · P2:** Move framework-report materialization out of the Evaluation
+  Ledger persistence façade while preserving its atomic transaction boundary.
+- **ED-06 · P2:** Persist Evaluation Run Issues raised during a case in the same
+  atomic checkpoint as that case.
+- **ED-07 · P2:** Consolidate duplicated replay-consistency algorithms for
+  evaluator executions and observations.
+
 ## Retrieval and product exploration
 
 These ideas came from the original vision and project-breakdown sketch. They
@@ -142,73 +240,23 @@ concrete need.
 - **RP-10 · P4:** Consider hosted Neo4j and pipeline deployment after local
   operational semantics are stable.
 
-## Imported loose-note concerns
+## Loose-note ID crosswalk
 
-These entries were extracted from `## Loose Notes` in the immutable July 9
-source note. Struck-through findings are intentionally omitted from the active
-queue and will be accounted for in the final reconciliation trail.
+The `LN-*` identifiers were retired on 2026-07-25. Use this table to resolve any
+external reference to the retired identifier; it is a historical index, not a
+work queue.
 
-- **LN-01 · P3:** Decide whether every Evaluation Comparison Operation needs an
-  explicit version and when custom comparison logic is warranted.
-- **LN-02 · P0:** Normalize runtime task exceptions into provider-neutral,
-  conservatively redacted `TaskFailure` values with truthful category and
-  retryability; keep large or sensitive raw evidence outside relational
-  outcome JSON.
-- **LN-03 · P2:** Reassess whether a separate component-owned Evaluation
-  Requirement Catalog is necessary when Evaluation Requirement Bindings carry
-  overlapping information.
-- **LN-04 · P0:** Prove Evaluation Run completion requires all terminal task,
-  case-evaluator, report-evaluator, and manifest evidence—not merely completed
-  case evaluation.
-- **LN-05 · P2:** Remove compatibility shims that permit tests or nonexistent
-  ledger records to bypass production invariants.
-- **LN-06 · P2:** Centralize Evaluation Case–Suite compatibility predicates so
-  preflight accumulation and fail-fast validation cannot drift.
-- **LN-07 · P2:** Eliminate redundant case validation between Suite execution,
-  evaluator resolution, preflight, and durable execution.
-- **LN-08 · P2:** Make durable Evaluation Run execution consume the Resolved
-  Evaluation Plan produced by preflight instead of independently deriving
-  evaluator assignments.
-- **LN-09 · P2:** Construct Evaluation Runs from the Resolved Evaluation Plan
-  rather than accepting and revalidating duplicated plan-derived fields.
-- **LN-10 · P1:** Require a Resolved Evaluation Plan at the Suite execution
-  boundary when execution semantics depend on preflight.
-- **LN-11 · P1:** Ensure the report-evaluator adapter does not silently discard
-  evaluator failures.
-- **LN-12 · P1:** Remove or reject the `run()` release-gate parameter if Release
-  Gates execute only during Evaluation Finalization.
-- **LN-13 · P2:** Measure and, if confirmed, optimize slow terminal recovery in
-  `assert_run_is_complete`.
-- **LN-14 · P2:** Consolidate repetitive guards that prevent report evaluation
-  before case completion or outside the durable runner.
-- **LN-15 · P1:** Define and enforce robust Evaluation Artifact reads,
-  including integrity and missing-location behavior.
-- **LN-16 · P2:** Consolidate duplicated synchronous and asynchronous recording
-  behavior in case- and report-evaluator adapters.
-- **LN-17 · P1:** Use one canonical checkpoint document and hash implementation
-  for checkpoint writes and integrity verification.
-- **LN-18 · P2:** Move framework-report materialization out of the Evaluation
-  Ledger persistence façade while preserving its atomic transaction boundary.
-- **LN-19 · P1:** Atomically checkpoint evaluator-produced artifacts with their
-  evaluator execution and observations.
-- **LN-20 · P1:** Allow same-run recovery when aggregate-manifest freezing fails
-  after the case phase has completed.
-- **LN-21 · P2:** Persist Evaluation Run Issues raised during a case in the same
-  atomic checkpoint as that case.
-- **LN-22 · P2:** Keep the component-owned Evaluation Requirement Catalog out of
-  unrelated Evaluation Suite revision content.
-- **LN-23 · P0:** Validate structured metric values before JSON normalization so
-  forbidden Python containers and non-string mapping keys cannot be silently
-  coerced into accepted shapes.
-- **LN-24 · P0:** Prevent direct `ResolvedSchemaBinding` construction from
-  bypassing the explicit allowlisted Schema Registry.
-- **LN-25 · P0:** Honor a controlled stop after the final—or only—report
-  evaluator and before any Release Gate begins.
-- **LN-26 · P2:** Consolidate duplicated replay-consistency algorithms for
-  evaluator executions and observations.
-- **LN-27 · P1:** Bound retryable finalization-renewal contention by the last
-  confirmed live authority interval. This is already represented by excluded
-  project work and must not be duplicated here.
+| Retired | Current | Retired | Current | Retired | Current |
+| --- | --- | --- | --- | --- | --- |
+| LN-01 | EC-06 | LN-10 | EP-01 | LN-19 | ED-03 |
+| LN-02 | ER-01 | LN-11 | ER-04 | LN-20 | ER-06 |
+| LN-03 | EC-03 | LN-12 | ER-05 | LN-21 | ED-06 |
+| LN-04 | ER-02 | LN-13 | ER-08 | LN-22 | EC-05 |
+| LN-05 | EC-04 | LN-14 | ER-09 | LN-23 | EC-01 |
+| LN-06 | EP-02 | LN-15 | ED-01 | LN-24 | EC-02 |
+| LN-07 | EP-03 | LN-16 | ED-04 | LN-25 | ER-03 |
+| LN-08 | EP-04 | LN-17 | ED-02 | LN-26 | ED-07 |
+| LN-09 | EP-05 | LN-18 | ED-05 | LN-27 | ER-07 |
 
 ## Archived source
 
