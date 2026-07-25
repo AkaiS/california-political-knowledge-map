@@ -6,7 +6,7 @@ Work the **frontier**: any ticket whose blockers are all done. The first two tic
 
 ## Persist schema-tagged structured Metric Observations
 
-Labels: ready-for-agent
+Labels: completed
 
 **What to build:** Allow deterministic case and report evaluators to return concrete Pydantic models while the evaluation runner converts valid structured results into durable, schema-tagged object envelopes. Persist and fetch the complete envelope without reconstructing a runtime model, while preserving scalar observation behavior and the existing evaluator-failure path.
 
@@ -27,7 +27,7 @@ Labels: ready-for-agent
 
 ## Expose Metric Definition schemas through the Suite inventory
 
-Labels: ready-for-agent
+Labels: completed
 
 **What to build:** Make every structured schema already owned by a Suite's Metric Definitions discoverable through the Suite's derived schema inventory. Preserve Metric Definitions as the single authored authority and keep concrete Python model types in the runtime allowlist rather than in serializable Suite records.
 
@@ -44,7 +44,7 @@ Labels: ready-for-agent
 
 ## Materialize fetched structured observations into evaluator-owned models
 
-Labels: ready-for-agent
+Labels: completed
 
 **What to build:** Resolve each fetched structured observation through its singular Metric Definition and an allowlisted schema binding, then reconstruct the concrete evaluator-owned Pydantic model in an explicit persistence-free materialization step. Keep scalar observations directly usable and isolate materialization failures to the affected structured observation.
 

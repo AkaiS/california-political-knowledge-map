@@ -9,32 +9,59 @@ have not yet been shaped into executable work.
 
 ## Current attention
 
-### Waiting for human review
+### Ready for human
 
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
 - [Review Relevance Filter evaluations](projects/scraping-pipeline/issues/13-relevance-evals.md)
 - [Review Selector Healing evaluations](projects/scraping-pipeline/issues/14-healer-evals.md)
 
-### Open initiative branches
+### Ready for agent
+
+- [Create the Neo4j schema and vector index](projects/article-chunking-coreference/issues/03-neo4j-schema-vector-index.md)
+- [Integrate chunking and Coreference Resolution into the pipeline](projects/article-chunking-coreference/issues/04-pipeline-integration.md)
+- [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
+
+### Blocked initiative chain
 
 The [Model Evaluation map](initiatives/model-evaluation/MAP.md) is the current
-large-scale investigation. Its remaining open branches are:
+large-scale investigation. Its remaining specification branches are ordered,
+not parallel:
 
-- [Specify Relevance Filter evaluation](initiatives/model-evaluation/issues/04-specify-relevance-filter-evaluation.md)
-- [Specify Selector Healing evaluation](initiatives/model-evaluation/issues/05-specify-selector-healing-evaluation.md)
-- [Specify Coreference Resolution evaluation](initiatives/model-evaluation/issues/06-specify-coreference-evaluation.md)
-- [Specify Entity Extraction evaluation](initiatives/model-evaluation/issues/07-specify-entity-extraction-evaluation.md)
+1. [Specify Relevance Filter evaluation](initiatives/model-evaluation/issues/04-specify-relevance-filter-evaluation.md), blocked by the human Gold Set work.
+2. [Specify Selector Healing evaluation](initiatives/model-evaluation/issues/05-specify-selector-healing-evaluation.md), blocked by the Relevance Filter specification.
+3. [Specify Coreference Resolution evaluation](initiatives/model-evaluation/issues/06-specify-coreference-evaluation.md), blocked by the Selector Healing specification.
+4. [Specify Entity Extraction evaluation](initiatives/model-evaluation/issues/07-specify-entity-extraction-evaluation.md), blocked by the Coreference Resolution specification.
 
-### Reconciliation queue
+These retain `needs-triage` until their blockers are resolved; they are not
+currently executable.
 
-The migration preserved existing labels rather than guessing at intent.
-Before this index can become a reliable generated dashboard, reconcile:
+## Project state
 
-- Parent PRDs still labeled `ready-for-agent` even when all or most child issues
-  are complete.
-- Projects with completed acceptance criteria but pending human review.
-- Open concerns in [inbox.md](inbox.md) that now overlap completed evaluation
-  work.
+| Triage state | Projects |
+| --- | --- |
+| `ready-for-agent` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md) |
+| `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
+| `completed` | [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
+
+The completed [ReportCase Evidence Contract](projects/report-case-evidence-contract/)
+contains two issue records but no parent PRD.
+
+## Reconciliation record
+
+On 2026-07-24, project labels were reconciled with child acceptance criteria
+and the current test suite:
+
+- Stale parent labels were closed when every child issue was complete.
+- Checked Case Evaluation Requirements issues 10–12 and all Structured Metric
+  Observation tickets were relabeled `completed`.
+- The checked Scraping Pipeline Relevance Filter ticket was relabeled
+  `completed`; the project remains `ready-for-human` for its two evaluation
+  datasets.
+- Renewable Evaluation Finalization remains `ready-for-agent` because its
+  focused contention-boundary follow-up is unchecked.
+- The full deterministic suite passed: `453 passed`.
+- Historical observations in [inbox.md](inbox.md) remain untriaged candidates,
+  not executable tickets.
 
 ## Information model
 

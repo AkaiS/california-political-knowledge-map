@@ -1,6 +1,6 @@
 # Product Requirements: Coreference Reliability Improvements
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

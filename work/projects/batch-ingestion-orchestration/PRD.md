@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 # Product Requirements Document: Batch Ingestion Orchestration and Resiliency
 
@@ -84,4 +84,3 @@ We will build a robust `BatchIngestionService` and a unified production CLI entr
 ## Further Notes
 
 None.
-

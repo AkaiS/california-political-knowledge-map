@@ -1,6 +1,6 @@
 # Scraping Pipeline PRD
 
-Labels: ready-for-agent
+Labels: ready-for-human
 
 ## Problem Statement
 

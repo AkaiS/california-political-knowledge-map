@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 # PRD: CA Political Influence GraphRAG Engine - Entity Extraction and Semantic Similarity Playground
 

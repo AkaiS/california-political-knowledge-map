@@ -1,6 +1,6 @@
 # Product Requirements: Story Pipeline Coordinator
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

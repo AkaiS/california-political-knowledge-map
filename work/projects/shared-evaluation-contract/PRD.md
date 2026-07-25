@@ -1,6 +1,6 @@
 # Shared Evaluation Contract and Record Model
 
-Labels: ready-for-agent
+Labels: completed
 Source: [Define the shared evaluation contract and record model](../../initiatives/model-evaluation/issues/02-define-shared-evaluation-contract.md)
 
 ## Problem Statement

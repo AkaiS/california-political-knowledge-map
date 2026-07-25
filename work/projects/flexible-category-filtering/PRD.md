@@ -1,6 +1,6 @@
 # Scraping Pipeline: Flexible Category Filtering PRD
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
@@ -64,4 +64,3 @@ We will implement a looser, more flexible, publication-dependent category matchi
 
 - Extracting category tags dynamically from page content using LLMs or machine learning during the *discovery* phase (this remains a metadata-based check during the validation phase).
 - Automatic discovery of a publication's categories during crawling.
-

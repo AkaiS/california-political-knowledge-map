@@ -1,6 +1,6 @@
 # Evaluation Contract and Ledger Hardening
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

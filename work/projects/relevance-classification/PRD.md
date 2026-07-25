@@ -1,6 +1,6 @@
 Post-Extraction Relevance Classification & Silver-Standard Labeling
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

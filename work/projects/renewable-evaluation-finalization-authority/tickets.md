@@ -1,6 +1,6 @@
 # Tickets: Renewable Evaluation Finalization Authority
 
-Labels: ready-for-agent
+Labels: completed
 
 These tickets implement the [Renewable and Fenced Evaluation Finalization Authority PRD](PRD.md) as dependency-ordered, independently verifiable slices.
 

@@ -1,6 +1,6 @@
 # Freeze an aggregate manifest over terminal case checkpoints
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

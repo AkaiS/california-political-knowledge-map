@@ -6,15 +6,18 @@ yet been accepted as executable work. An inbox entry is not a commitment.
 During triage, move an item into an existing project issue, create a new project
 or initiative, mark it resolved with evidence, or deliberately discard it.
 
-## Immediate reconciliation
+## Reconciliation state
 
-- Re-run the July 9 code audit against the current tree. Evaluation contracts
-  and execution have changed substantially since that snapshot.
-- Reconcile the 12 migrated issues without a `Status:` field.
-- Reconcile parent PRD status with child issue status.
-- Decide whether the nine `ready-for-human` issues still need review or can be
-  accepted and closed.
-- Decide which remaining Model Evaluation branches should be shaped next.
+The executable tracker was reconciled on 2026-07-24. Parent project labels now
+reflect their unresolved child work, legacy checked tickets are labeled
+`completed`, and the Model Evaluation dependency chain is visible in
+[README.md](README.md).
+
+The entries below came primarily from the July 9 audit. They remain
+`needs-triage` candidates collectively: they have not been promoted into
+executable issues merely because they were captured here. Before promotion,
+verify the observation against the current code, remove overlap with completed
+evaluation infrastructure, and attach it to one bounded project.
 
 ## Extraction and graph integrity
 
@@ -116,4 +119,3 @@ The July 9 audit contains resolved items, completed work, detailed evidence, and
 historical observations that should not clutter the live inbox. It is preserved
 verbatim at
 [archive/imports/project-notes-2026-07-09.md](archive/imports/project-notes-2026-07-09.md).
-

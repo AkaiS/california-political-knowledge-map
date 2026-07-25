@@ -1,6 +1,6 @@
 # Materialize one typed ReportCase from an Evaluation Checkpoint
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

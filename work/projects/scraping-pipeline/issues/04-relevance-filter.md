@@ -1,6 +1,6 @@
 # 04. Relevance Filter & `rejected_articles`
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

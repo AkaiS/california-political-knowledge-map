@@ -1,6 +1,6 @@
 # Case Evaluation Requirements and Resumable Evaluation Execution
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

@@ -1,6 +1,6 @@
 # Resume Evaluation Finalization from a materialized aggregate manifest
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

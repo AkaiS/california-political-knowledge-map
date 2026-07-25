@@ -1,6 +1,6 @@
 # Schema-Tagged Structured Metric Observations
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
@@ -114,4 +114,3 @@ Extend the Suite's derived schema inventory to include the schemas already owned
 - The Suite schema inventory contains Schema References only. Concrete Pydantic types remain runtime capabilities supplied by an allowlisted registry.
 - Collections remain valid inside named structured fields, such as findings or table rows. Only an unlabelled collection at the root is prohibited.
 - The deferred fetch/materializer separation should be handled as a later focused cleanup rather than folded into this change.
-
