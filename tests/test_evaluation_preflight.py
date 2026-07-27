@@ -296,7 +296,9 @@ def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
         )
     )
     with pytest.raises(ValueError, match="input schema"):
-        _gold_set((compatible, unknown, incompatible))
+        _gold_set((compatible, unknown, incompatible)).validate_cases(
+            (compatible, unknown, incompatible)
+        )
 
     gold_set = _gold_set((compatible, unknown))
 

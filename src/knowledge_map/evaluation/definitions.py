@@ -356,7 +356,7 @@ class EvaluationSplit(str, Enum):
 
 
 class EvaluationCaseRevisionReference(BaseModel):
-    """A content-addressed reference to the exact case revision in a Gold Set."""
+    """An identity-only reference to the exact case revision in a Gold Set."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -364,9 +364,6 @@ class EvaluationCaseRevisionReference(BaseModel):
     business_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    input_schema: SchemaReference
-    output_schema: SchemaReference
-    metadata_schema: SchemaReference
 
     @classmethod
     def from_case(
@@ -377,9 +374,6 @@ class EvaluationCaseRevisionReference(BaseModel):
             business_id=evaluation_case.identity.business_id,
             revision=evaluation_case.identity.revision,
             content_hash=evaluation_case.content_hash,
-            input_schema=evaluation_case.input_schema,
-            output_schema=evaluation_case.expected_output_schema,
-            metadata_schema=evaluation_case.metadata_schema,
         )
 
 
@@ -410,23 +404,6 @@ class EvaluationGoldSet(_AuthoredDefinition):
         ]
         if len(revisions) != len(set(revisions)):
             raise ValueError("a Gold Set cannot contain a case revision more than once")
-        return self
-
-    @model_validator(mode="after")
-    def members_match_task_contract(self) -> "EvaluationGoldSet":
-        from .compatibility import evaluate_compatibility
-
-        issues = evaluate_compatibility(None, self)
-        if issues:
-            issue = issues[0]
-            assert issue.schema_role is not None
-            field_name = (
-                "output" if issue.schema_role == "expected_output" else issue.schema_role
-            )
-            raise ValueError(
-                f"Gold Set member {issue.case_business_id}@{issue.case_revision} "
-                f"has an incompatible {field_name} schema"
-            )
         return self
 
     def validate_cases(

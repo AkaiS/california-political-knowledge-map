@@ -799,28 +799,13 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
                     INSERT INTO evaluation_case_manifests (
                         manifest_id, run_id, ordinal, case_record_id,
                         case_business_id, case_revision, case_content_hash,
-                        input_schema_json, output_schema_json, metadata_schema_json, split
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        split
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         str(entry.manifest_id), str(entry.run_id), entry.ordinal,
                         str(entry.case_record_id), entry.case_business_id,
                         entry.case_revision, entry.case_content_hash,
-                        json.dumps(
-                            entry.case.input_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        json.dumps(
-                            entry.case.output_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
-                        json.dumps(
-                            entry.case.metadata_schema.model_dump(mode="json"),
-                            sort_keys=True,
-                            separators=(",", ":"),
-                        ),
                         entry.split.value,
                     ),
                 )
@@ -2248,15 +2233,6 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
                     business_id=row["case_business_id"],
                     revision=row["case_revision"],
                     content_hash=row["case_content_hash"],
-                    input_schema=SchemaReference.model_validate_json(
-                        row["input_schema_json"]
-                    ),
-                    output_schema=SchemaReference.model_validate_json(
-                        row["output_schema_json"]
-                    ),
-                    metadata_schema=SchemaReference.model_validate_json(
-                        row["metadata_schema_json"]
-                    ),
                 ),
                 split=EvaluationSplit(row["split"]),
             )
@@ -3872,9 +3848,6 @@ class SQLiteEvaluationLedger:
                 case_business_id TEXT NOT NULL,
                 case_revision INTEGER NOT NULL CHECK (case_revision >= 1),
                 case_content_hash TEXT NOT NULL,
-                input_schema_json TEXT NOT NULL,
-                output_schema_json TEXT NOT NULL,
-                metadata_schema_json TEXT NOT NULL,
                 split TEXT NOT NULL CHECK (split IN ('training', 'calibration', 'held-out')),
                 UNIQUE(run_id, case_record_id),
                 UNIQUE(run_id, ordinal)

@@ -306,9 +306,6 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
                     business_id="case-1",
                     revision=1,
                     content_hash="c" * 64,
-                    input_schema=suite_contract.input_schema,
-                    output_schema=suite_contract.output_schema,
-                    metadata_schema=suite_contract.metadata_schema,
                 ),
                 split=EvaluationSplit.TRAINING,
             ),
@@ -324,5 +321,4 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
             evaluator_resolver=lambda cfg: None,
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
-
 

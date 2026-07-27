@@ -2466,9 +2466,6 @@ def test_run_with_only_rubric_judged_cases_finalizes_a_well_formed_report(tmp_pa
                         business_id=case.identity.business_id,
                         revision=case.identity.revision,
                         content_hash=case.content_hash,
-                        input_schema=case.input_schema,
-                        output_schema=suite.task_contract.output_schema,
-                        metadata_schema=case.metadata_schema,
                     ),
                     split=EvaluationSplit.HELD_OUT,
                 )
@@ -2528,9 +2525,6 @@ def test_one_run_can_finalize_cases_with_and_without_expected_outputs(tmp_path):
                         business_id=case.identity.business_id,
                         revision=case.identity.revision,
                         content_hash=case.content_hash,
-                        input_schema=case.input_schema,
-                        output_schema=suite.task_contract.output_schema,
-                        metadata_schema=case.metadata_schema,
                     ),
                     split=EvaluationSplit.HELD_OUT,
                 )

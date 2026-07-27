@@ -452,21 +452,18 @@ def test_imported_gold_set_uses_relational_membership_rows(tmp_path):
     assert memberships[0].split is EvaluationSplit.HELD_OUT
 
 
-def test_import_rejects_a_gold_set_reference_whose_case_contract_changed(tmp_path):
+def test_import_rejects_a_gold_set_reference_whose_case_content_changed(tmp_path):
     ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
     case = make_case()
     ledger.import_definition(case)
-    forged_input_schema = SchemaReference.for_model(
-        Input, identity="tests.other-input", revision=1
-    )
     forged_reference = EvaluationCaseRevisionReference.from_case(case).model_copy(
-        update={"input_schema": forged_input_schema}
+        update={"content_hash": "f" * 64}
     )
     gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-contract", revision=1),
-        description="A contract-mismatched gold set.",
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-forged", revision=1),
+        description="A Gold Set with a forged case content hash.",
         task_contract=EvaluationTaskContract(
-            input_schema=forged_input_schema,
+            input_schema=case.input_schema,
             output_schema=case.expected_output_schema,
             metadata_schema=case.metadata_schema,
         ),
@@ -478,8 +475,22 @@ def test_import_rejects_a_gold_set_reference_whose_case_contract_changed(tmp_pat
         ),
     )
 
-    with pytest.raises(ValueError, match="contract"):
+    with pytest.raises(ValueError, match="exact Evaluation Case revision"):
         ledger.import_definition(gold_set)
+
+
+def test_evaluation_case_manifest_schema_stores_identity_only(tmp_path):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        columns = {
+            row["name"]
+            for row in ledger.connection.execute(
+                "PRAGMA table_info(evaluation_case_manifests)"
+            )
+        }
+
+    assert "input_schema_json" not in columns
+    assert "output_schema_json" not in columns
+    assert "metadata_schema_json" not in columns
 
 
 def test_artifact_catalog_deduplicates_bytes_and_preserves_immutable_metadata(tmp_path):
@@ -692,5 +703,4 @@ def test_sqlite_evaluation_artifact_catalog_owns_query_persistence(tmp_path):
 
     fetched_by_id = ledger.artifact_catalog.get_artifact_by_id(artifact.artifact_id)
     assert fetched_by_id == artifact
-
 

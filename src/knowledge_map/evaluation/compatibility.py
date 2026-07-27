@@ -36,43 +36,24 @@ def evaluate_compatibility(
 
     issues: list[EvaluationCompatibilityIssue] = []
     if gold_set is not None:
-        for membership in gold_set.memberships:
-            reference = membership.case
+        if suite is not None:
             issues.extend(
                 _schema_issues(
-                    case_business_id=reference.business_id,
-                    case_revision=reference.revision,
-                    source="gold_set_member",
+                    case_business_id=gold_set.identity.business_id,
+                    case_revision=gold_set.identity.revision,
+                    source="suite_gold_set",
                     actual_schemas=(
-                        reference.input_schema,
-                        reference.output_schema,
-                        reference.metadata_schema,
-                    ),
-                    expected_schemas=(
                         gold_set.task_contract.input_schema,
                         gold_set.task_contract.output_schema,
                         gold_set.task_contract.metadata_schema,
                     ),
+                    expected_schemas=(
+                        suite.task_contract.input_schema,
+                        suite.task_contract.output_schema,
+                        suite.task_contract.metadata_schema,
+                    ),
                 )
             )
-            if suite is not None:
-                issues.extend(
-                    _schema_issues(
-                        case_business_id=reference.business_id,
-                        case_revision=reference.revision,
-                        source="suite_gold_set",
-                        actual_schemas=(
-                            gold_set.task_contract.input_schema,
-                            gold_set.task_contract.output_schema,
-                            gold_set.task_contract.metadata_schema,
-                        ),
-                        expected_schemas=(
-                            suite.task_contract.input_schema,
-                            suite.task_contract.output_schema,
-                            suite.task_contract.metadata_schema,
-                        ),
-                    )
-                )
 
     target_contract = (
         suite.task_contract if suite is not None else gold_set.task_contract

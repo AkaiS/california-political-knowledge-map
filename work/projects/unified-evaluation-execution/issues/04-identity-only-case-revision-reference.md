@@ -1,6 +1,6 @@
 # Reduce the case revision reference to identity and rebuild the evaluation database
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). Breaking change to
 persisted canonical JSON; no migration is written.
@@ -32,17 +32,17 @@ production, so there is no compatibility break to signal.
 
 ## Acceptance criteria
 
-- [ ] The case revision reference carries only record identity, business identity, revision, and content hash.
-- [ ] Its input, expected-output, and metadata schema fields are removed, and the factory that derives a reference from a case no longer copies them.
-- [ ] Reconstruction of a reference from stored rows no longer reads or requires schema columns.
-- [ ] Authoring an Evaluation Gold Set whose member is incompatible with its Evaluation Task Contract still fails at construction.
-- [ ] Gold-set import still rejects a reference whose underlying Evaluation Case content changed.
-- [ ] Schema compatibility is decided where full Evaluation Case objects are available, via the shared predicate.
-- [ ] The evaluation database schema is regenerated; the database is dropped and recreated rather than migrated.
-- [ ] `document_store.db` is untouched by this change.
-- [ ] The evidence contract version remains 1.
-- [ ] Content-hash assertions on gold-set memberships and Frozen Aggregate Manifests are updated to their new values; the updates are recorded as expected consequences, not as behaviour changes.
-- [ ] The full deterministic test suite passes.
+- [x] The case revision reference carries only record identity, business identity, revision, and content hash.
+- [x] Its input, expected-output, and metadata schema fields are removed, and the factory that derives a reference from a case no longer copies them.
+- [x] Reconstruction of a reference from stored rows no longer reads or requires schema columns.
+- [x] Authoring an Evaluation Gold Set whose member is incompatible with its Evaluation Task Contract still fails at construction.
+- [x] Gold-set import still rejects a reference whose underlying Evaluation Case content changed.
+- [x] Schema compatibility is decided where full Evaluation Case objects are available, via the shared predicate.
+- [x] The evaluation database schema is regenerated; the database is dropped and recreated rather than migrated.
+- [x] `document_store.db` is untouched by this change.
+- [x] The evidence contract version remains 1.
+- [x] Content-hash assertions on gold-set memberships and Frozen Aggregate Manifests are updated to their new values; the updates are recorded as expected consequences, not as behaviour changes.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

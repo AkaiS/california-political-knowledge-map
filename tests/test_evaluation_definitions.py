@@ -572,6 +572,12 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
     restored_gold_set = EvaluationGoldSet.model_validate_json(gold_set.model_dump_json())
 
     assert restored_gold_set == gold_set
+    assert set(EvaluationCaseRevisionReference.model_fields) == {
+        "record_id",
+        "business_id",
+        "revision",
+        "content_hash",
+    }
     assert gold_set.memberships[0].case.content_hash == authored_case.content_hash
     assert gold_set.memberships[0].split is EvaluationSplit.HELD_OUT
 
@@ -622,15 +628,16 @@ def test_gold_set_binds_one_exact_task_contract_and_rejects_a_mismatched_member(
             )
         }
     )
+    incompatible_gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(
+            business_id="relevance-contract-gold", revision=2
+        ),
+        description="An incompatible population.",
+        task_contract=incompatible_contract,
+        memberships=gold_set.memberships,
+    )
     with pytest.raises(ValueError, match="input schema"):
-        EvaluationGoldSet(
-            identity=EvaluationGoldSetIdentity(
-                business_id="relevance-contract-gold", revision=2
-            ),
-            description="An incompatible population.",
-            task_contract=incompatible_contract,
-            memberships=gold_set.memberships,
-        )
+        incompatible_gold_set.validate_cases((authored_case,))
 
 
 def test_reusing_a_case_business_identity_and_revision_for_changed_content_is_rejected():
