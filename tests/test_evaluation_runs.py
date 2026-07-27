@@ -2440,6 +2440,140 @@ def test_finalization_materializes_typed_report_from_frozen_evidence(tmp_path):
     assert all(isinstance(case.metadata, Metadata) for case in reports[0].cases)
 
 
+def test_run_with_only_rubric_judged_cases_finalizes_a_well_formed_report(tmp_path):
+    authored_cases, gold_set, suite = _lifecycle_fixture("rubric-only")
+    cases = tuple(
+        EvaluationCase[Input, Output, Metadata](
+            identity=case.identity,
+            input_schema=case.input_schema,
+            metadata_schema=case.metadata_schema,
+            task_input=case.task_input,
+            metadata=case.metadata,
+            description=case.description,
+            tags=case.tags,
+            requirements=case.requirements,
+            artifacts=case.artifacts,
+        )
+        for case in authored_cases
+    )
+    gold_set = EvaluationGoldSet.model_validate(
+        {
+            **gold_set.model_dump(exclude={"content_hash"}),
+            "memberships": tuple(
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference(
+                        record_id=case.identity.record_id,
+                        business_id=case.identity.business_id,
+                        revision=case.identity.revision,
+                        content_hash=case.content_hash,
+                        input_schema=case.input_schema,
+                        output_schema=suite.task_contract.output_schema,
+                        metadata_schema=case.metadata_schema,
+                    ),
+                    split=EvaluationSplit.HELD_OUT,
+                )
+                for case in cases
+            ),
+        }
+    )
+    schemas = SchemaRegistry()
+    schemas.register(suite.task_contract.input_schema, Input)
+    schemas.register(suite.task_contract.output_schema, Output)
+    schemas.register(suite.task_contract.metadata_schema, Metadata)
+    reports = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        finalized = runner.finalize(
+            initial.run.run_id,
+            schemas=schemas,
+            evaluator_resolver=lambda configured: CaptureTypedReport(reports),
+        )
+
+    assert finalized.run.status == "completed"
+    assert [case.name for case in reports[0].cases] == ["case-1@1", "case-2@1"]
+    assert all(case.expected_output is None for case in reports[0].cases)
+    assert all(isinstance(case.output, Output) for case in reports[0].cases)
+
+
+def test_one_run_can_finalize_cases_with_and_without_expected_outputs(tmp_path):
+    authored_cases, gold_set, suite = _lifecycle_fixture("mixed-expected-outputs")
+    unlabeled = EvaluationCase[Input, Output, Metadata](
+        identity=authored_cases[1].identity,
+        input_schema=authored_cases[1].input_schema,
+        metadata_schema=authored_cases[1].metadata_schema,
+        task_input=authored_cases[1].task_input,
+        metadata=authored_cases[1].metadata,
+        description=authored_cases[1].description,
+    )
+    cases = (authored_cases[0], unlabeled)
+    gold_set = EvaluationGoldSet.model_validate(
+        {
+            **gold_set.model_dump(exclude={"content_hash"}),
+            "memberships": tuple(
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference(
+                        record_id=case.identity.record_id,
+                        business_id=case.identity.business_id,
+                        revision=case.identity.revision,
+                        content_hash=case.content_hash,
+                        input_schema=case.input_schema,
+                        output_schema=suite.task_contract.output_schema,
+                        metadata_schema=case.metadata_schema,
+                    ),
+                    split=EvaluationSplit.HELD_OUT,
+                )
+                for case in cases
+            ),
+        }
+    )
+    schemas = SchemaRegistry()
+    schemas.register(suite.task_contract.input_schema, Input)
+    schemas.register(suite.task_contract.output_schema, Output)
+    schemas.register(suite.task_contract.metadata_schema, Metadata)
+    reports = []
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(
+                answer=task_input.prompt.replace("prompt", "answer")
+            ),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        finalized = runner.finalize(
+            initial.run.run_id,
+            schemas=schemas,
+            evaluator_resolver=lambda configured: CaptureTypedReport(reports),
+        )
+
+    assert finalized.run.status == "completed"
+    assert len(reports[0].cases) == 2
+    assert reports[0].cases[0].expected_output == Output(answer="answer-1")
+    assert reports[0].cases[1].expected_output is None
+    assert [case.output for case in reports[0].cases] == [
+        Output(answer="answer-1"),
+        Output(answer="answer-2"),
+    ]
+
+
 def test_finalization_rejects_unresolved_frozen_schemas_before_evaluating(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("unresolved-finalization-schema")
     resolver_calls: list[str] = []
@@ -5399,4 +5533,3 @@ def test_sqlite_evaluation_execution_store_owns_query_persistence():
     assert not hasattr(SQLiteEvaluationLedger, "_complete_evaluation_run")
     assert not hasattr(SQLiteEvaluationLedger, "_validate_run_creation")
     assert not hasattr(SQLiteEvaluationLedger, "_assert_run_is_complete")
-

@@ -65,6 +65,35 @@ class ProviderSettings(BaseModel):
     auth_value: SecretStr
 
 
+def test_case_rejects_an_expected_output_that_violates_its_declared_schema():
+    with pytest.raises(
+        ValidationError,
+        match="expected_output_schema does not identify the exact Pydantic schema",
+    ):
+        EvaluationCase[RelevanceInput, RelevanceOutput, RelevanceMetadata](
+            identity=EvaluationCaseIdentity(
+                business_id="invalid-expected-output", revision=1
+            ),
+            input_schema=SchemaReference.for_model(
+                RelevanceInput, identity="ca-map.relevance.input", revision=1
+            ),
+            expected_output_schema=SchemaReference.for_model(
+                RelevanceBreakdown,
+                identity="ca-map.relevance.breakdown",
+                revision=1,
+            ),
+            metadata_schema=SchemaReference.for_model(
+                RelevanceMetadata,
+                identity="ca-map.relevance.metadata",
+                revision=1,
+            ),
+            task_input=RelevanceInput(headline="California budget negotiations continue"),
+            expected_output=RelevanceOutput(is_relevant=True),
+            metadata=RelevanceMetadata(source="human-reviewed"),
+            description="A malformed authored expected output.",
+        )
+
+
 @dataclass
 class ExactRelevanceOutput(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:

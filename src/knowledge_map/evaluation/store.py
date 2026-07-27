@@ -518,12 +518,17 @@ class SQLiteAuthoredDefinitionCatalog(_SQLiteLedgerCapability):
                 raise ValueError(
                     "Gold Set membership must reference an imported exact Evaluation Case revision"
                 )
-            expected_schemas = (
-                gold_set.task_contract.input_schema,
-                gold_set.task_contract.output_schema,
-                gold_set.task_contract.metadata_schema,
+            case_schemas = case_record.schema_references
+            required_schemas_match = (
+                len(case_schemas) in (2, 3)
+                and case_schemas[0] == gold_set.task_contract.input_schema
+                and case_schemas[-1] == gold_set.task_contract.metadata_schema
             )
-            if case_record.schema_references != expected_schemas:
+            declared_expected_schema_matches = (
+                len(case_schemas) == 2
+                or case_schemas[1] == gold_set.task_contract.output_schema
+            )
+            if not required_schemas_match or not declared_expected_schema_matches:
                 raise ValueError(
                     "Gold Set membership case does not implement the Gold Set task contract"
                 )
@@ -1507,9 +1512,9 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
             )
         if not isinstance(evidence, SuccessfulReportCaseEvidence):
             raise ValueError("completed case requires successful ReportCase evidence")
-        output_schema = expected_schema
-        if output_schema is None:
-            raise ValueError("successful ReportCase requires an output schema")
+        output_schema = self._ledger.get_frozen_suite(
+            UUID(row["run_id"])
+        ).task_contract.output_schema
         return ReportCase(
             name=evidence.name,
             inputs=typed_inputs,

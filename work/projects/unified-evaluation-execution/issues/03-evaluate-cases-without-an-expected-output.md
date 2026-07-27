@@ -1,6 +1,6 @@
 # Evaluate Evaluation Cases that declare no expected output
 
-Labels: ready-for-agent
+Labels: completed
 
 Fixes the defect described in the [Unified Evaluation Execution Path](../PRD.md).
 Independently valuable and independently shippable.
@@ -27,16 +27,16 @@ which is the ordinary supported condition.
 
 ## Acceptance criteria
 
-- [ ] Report case materialization validates the task's actual output against the Evaluation Task Contract's output schema from the frozen Evaluation Suite.
-- [ ] Materialization no longer treats a case's expected-output schema as the schema of the actual output.
-- [ ] A missing expected-output schema does not raise during materialization.
-- [ ] A case that declares an expected output still has that expected output validated against its declared expected-output schema, at authoring time as it is today.
-- [ ] A case whose expected output does not match its declared expected-output schema is still rejected, proven by a test.
-- [ ] A run whose cases all lack expected outputs completes execution, checkpointing, and finalization, and yields an Evaluation Report.
-- [ ] A single run mixing cases with and without expected outputs completes and yields a report covering all of them.
-- [ ] The Evaluation Report derived for a case without an expected output is well-formed and omits the expected output rather than substituting a placeholder.
-- [ ] The evidence contract version remains 1.
-- [ ] The full deterministic test suite passes.
+- [x] Report case materialization validates the task's actual output against the Evaluation Task Contract's output schema from the frozen Evaluation Suite.
+- [x] Materialization no longer treats a case's expected-output schema as the schema of the actual output.
+- [x] A missing expected-output schema does not raise during materialization.
+- [x] A case that declares an expected output still has that expected output validated against its declared expected-output schema, at authoring time as it is today.
+- [x] A case whose expected output does not match its declared expected-output schema is still rejected, proven by a test.
+- [x] A run whose cases all lack expected outputs completes execution, checkpointing, and finalization, and yields an Evaluation Report.
+- [x] A single run mixing cases with and without expected outputs completes and yields a report covering all of them.
+- [x] The Evaluation Report derived for a case without an expected output is well-formed and omits the expected output rather than substituting a placeholder.
+- [x] The evidence contract version remains 1.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
