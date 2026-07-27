@@ -20,8 +20,14 @@ have not yet been shaped into executable work.
 - [Create the Neo4j schema and vector index](projects/article-chunking-coreference/issues/03-neo4j-schema-vector-index.md)
 - [Integrate chunking and Coreference Resolution into the pipeline](projects/article-chunking-coreference/issues/04-pipeline-integration.md)
 - [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
-- [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
+- [Decide Suite, Gold Set, and Case compatibility in one place](projects/unified-evaluation-execution/issues/01-shared-suite-gold-set-case-compatibility-predicate.md)
+- [Evaluate Evaluation Cases that declare no expected output](projects/unified-evaluation-execution/issues/03-evaluate-cases-without-an-expected-output.md)
+- [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/05-declare-the-full-evidence-sink-protocol.md)
 - [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md)
+
+The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
+issues (02, 04, 06–10) are `ready-for-agent` but gated; each declares its blockers.
+Work the frontier: any issue whose blockers are all complete.
 
 ### Blocked initiative chain
 
