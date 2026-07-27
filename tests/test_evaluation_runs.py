@@ -74,7 +74,11 @@ from knowledge_map.evaluation import (
     evaluator_version_tag,
     preflight_selected_cases,
 )
-from knowledge_map.evaluation.store import SQLiteEvaluationLedger
+from knowledge_map.evaluation.store import (
+    InMemoryEvaluationEvidenceBuffer,
+    SQLiteEvaluationLedger,
+)
+from knowledge_map.evaluation.reporting import report_case_payload
 
 
 class Input(BaseModel):
@@ -534,6 +538,103 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
     assert [execution.status.value for execution in durable.report_evaluator_executions] == [
         "completed"
     ]
+
+
+def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("ephemeral-buffer")
+    database = tmp_path / "evaluation.sqlite"
+
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        report = evidence.materialize_aggregate_report(
+            result.run.run_id, _schemas_for(cases)
+        )
+
+    assert [case.name for case in report.cases] == ["case-1@1"]
+    assert report.cases[0].output == Output(answer="prompt-1")
+    assert not database.exists()
+
+
+def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
+    cases, gold_set, suite = _lifecycle_fixture("ephemeral-checkpoint")
+
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        EvaluationRunner(evidence).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        checkpoints = evidence.checkpoints
+
+    assert len(checkpoints) == 1
+    assert checkpoints[0].checkpoint_id is not None
+    assert checkpoints[0].checkpoint_content_hash is not None
+    assert len(checkpoints[0].checkpoint_content_hash) == 64
+
+
+def test_substituting_in_memory_evidence_preserves_materialized_case_evidence(
+    tmp_path,
+):
+    cases, gold_set, suite = _lifecycle_fixture(
+        "evidence-substitution", case_evaluator="exact-case"
+    )
+
+    def execute(store):
+        result = EvaluationRunner(store).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: ExactAnswer(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        return store.materialize_report_case(
+            result.case_results[0].result_id, _schemas_for(cases)
+        )
+
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        ephemeral_case = execute(evidence)
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        durable_case = execute(ledger)
+
+    volatile = {"task_duration", "total_duration", "trace_id", "span_id"}
+    ephemeral_evidence = report_case_payload(ephemeral_case)
+    durable_evidence = report_case_payload(durable_case)
+
+    def without_runtime_measurements(value):
+        if isinstance(value, dict):
+            return {
+                key: without_runtime_measurements(item)
+                for key, item in value.items()
+                if key not in volatile | {"duration_seconds"}
+            }
+        if isinstance(value, list):
+            return [without_runtime_measurements(item) for item in value]
+        return value
+
+    assert without_runtime_measurements(
+        ephemeral_evidence
+    ) == without_runtime_measurements(durable_evidence)
 
 
 def test_terminal_checkpoint_materializes_one_typed_report_case(tmp_path):
@@ -1239,6 +1340,43 @@ def _resolved_run_creation_inputs(ledger, suffix: str):
         for entry in manifest
     )
     return run, plan, manifest, pending_results
+
+
+def test_in_memory_and_durable_evidence_reject_the_same_invalid_checkpoint(
+    tmp_path,
+):
+    stores = (
+        InMemoryEvaluationEvidenceBuffer(),
+        SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite"),
+    )
+    try:
+        for index, store in enumerate(stores):
+            run, plan, manifest, pending = _resolved_run_creation_inputs(
+                store, f"invalid-evidence-{index}"
+            )
+            store.create_evaluation_run(run, plan, manifest, pending)
+            completed = pending[0].model_copy(
+                update={
+                    "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                    "task_outcome": TaskSuccess(output={"answer": "stable"}),
+                }
+            )
+
+            with pytest.raises(ValueError, match="unexpected"):
+                store.record_case_evaluation(
+                    completed,
+                    (),
+                    (),
+                    {
+                        "kind": "success",
+                        "name": "case-1@1",
+                        "output": {"answer": "stable"},
+                        "unexpected": "invalid canonical evidence",
+                    },
+                )
+    finally:
+        for store in stores:
+            store.close()
 
 
 def test_ledger_rejects_a_run_whose_suite_does_not_match_the_resolved_plan(

@@ -20,10 +20,11 @@ have not yet been shaped into executable work.
 - [Create the Neo4j schema and vector index](projects/article-chunking-coreference/issues/03-neo4j-schema-vector-index.md)
 - [Integrate chunking and Coreference Resolution into the pipeline](projects/article-chunking-coreference/issues/04-pipeline-integration.md)
 - [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
-- [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/05-declare-the-full-evidence-sink-protocol.md)
-- [Guard human relevance labels against automated overwrites](projects/pipeline-stage-ownership/issues/01-guard-human-relevance-labels.md)
+- [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/01-guard-human-relevance-labels.md)
 - [Remove the retired rejected-article helpers](projects/pipeline-stage-ownership/issues/02-remove-retired-rejected-article-helpers.md)
 - [Default relevance to PENDING and record fetch status](projects/pipeline-stage-ownership/issues/03-default-relevance-to-pending-and-record-fetch-status.md)
+- [Evaluate reports the same way on both paths](projects/unified-evaluation-execution/issues/07-unify-report-evaluation-across-both-paths.md)
+- [Make durable execution consume the plan preflight produced](projects/unified-evaluation-execution/issues/08-consume-the-preflight-plan-in-durable-execution.md)
 - [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
 
 The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
@@ -133,6 +134,14 @@ Labels: wayfinder:research, ready-for-human
 
 The triage-state label says what should happen next. Other labels describe the
 kind of work.
+
+## Archive
+
+- `archive/imports/` contains verbatim snapshots of the two Obsidian notes used
+  to seed this structure.
+- `archive/legacy-plans/` contains completed or superseded standalone plans
+  formerly located at the repository root.
+
 
 ## Archive
 
