@@ -229,6 +229,57 @@ def test_preflight_unions_all_relevant_bindings_once_and_retains_provenance():
     assert result.plan.cases[0].evaluators[2].provenance == ("tone",)
 
 
+def test_preflight_raises_once_with_every_distinct_compatibility_issue():
+    first = _case(
+        "first",
+        input_schema=SchemaReference.for_model(
+            Input, identity="other-input", revision=1
+        ),
+    )
+    second = _case("second", requirements=("unknown",)).model_copy(
+        update={
+            "metadata_schema": SchemaReference.for_model(
+                Metadata, identity="other-metadata", revision=1
+            )
+        }
+    )
+    gold_set = _gold_set((_case("member"),)).model_copy(
+        update={
+            "memberships": (
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference.from_case(first),
+                    split=EvaluationSplit.HELD_OUT,
+                ),
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference.from_case(second),
+                    split=EvaluationSplit.HELD_OUT,
+                ),
+            )
+        }
+    )
+
+    with pytest.raises(EvaluationPreflightError) as raised:
+        preflight_selected_cases(
+            suite=_suite(),
+            gold_set=gold_set,
+            cases=(first, second),
+        )
+
+    assert {
+        (
+            issue.category,
+            issue.case_business_id,
+            issue.schema_role,
+            issue.requirement,
+        )
+        for issue in raised.value.result.issues
+    } == {
+        ("task_contract", "first", "input", None),
+        ("task_contract", "second", "metadata", None),
+        ("unknown_requirement", "second", None, "unknown"),
+    }
+
+
 def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
     compatible = _case("compatible")
     unknown = _case("unknown", requirements=("not-in-catalog",))
@@ -249,11 +300,12 @@ def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
 
     gold_set = _gold_set((compatible, unknown))
 
-    full_run = preflight_selected_cases(
-        suite=suite,
-        gold_set=gold_set,
-        cases=(compatible, unknown),
-    )
+    with pytest.raises(EvaluationPreflightError) as raised:
+        preflight_selected_cases(
+            suite=suite,
+            gold_set=gold_set,
+            cases=(compatible, unknown),
+        )
     subset = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
@@ -261,10 +313,11 @@ def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
         selection={"compatible"},
     )
 
-    assert not full_run.is_compatible
-    assert {(issue.category, issue.case_business_id, issue.requirement) for issue in full_run.issues} == {
-        ("unknown_requirement", "unknown", "not-in-catalog"),
-        ("missing_requirement_binding", "unknown", "not-in-catalog"),
+    assert {
+        (issue.category, issue.case_business_id, issue.requirement)
+        for issue in raised.value.issues
+    } == {
+        ("unknown_requirement", "unknown", "not-in-catalog")
     }
     assert subset.is_compatible
     assert [entry.case.business_id for entry in subset.plan.cases] == ["compatible"]
@@ -295,16 +348,16 @@ def test_preflight_rejects_suite_and_gold_set_contract_mismatch_before_selection
         }
     )
 
-    result = preflight_selected_cases(
-        suite=suite,
-        gold_set=gold_set,
-        cases=(case,),
-        selection={"does-not-select-any-case"},
-    )
+    with pytest.raises(EvaluationPreflightError) as raised:
+        preflight_selected_cases(
+            suite=suite,
+            gold_set=gold_set,
+            cases=(case,),
+            selection={"does-not-select-any-case"},
+        )
 
-    assert not result.is_compatible
-    assert any(issue.category == "task_contract" for issue in result.issues)
-    assert any("Gold Set" in issue.message for issue in result.issues)
+    assert any(issue.category == "task_contract" for issue in raised.value.issues)
+    assert any("Gold Set" in issue.message for issue in raised.value.issues)
 
 
 def test_runner_rejects_an_incompatible_preflight_before_creating_a_run(tmp_path):

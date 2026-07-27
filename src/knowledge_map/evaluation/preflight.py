@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -100,6 +100,7 @@ class EvaluationPreflightIssue(BaseModel):
     case_business_id: str | None = None
     case_revision: int | None = Field(default=None, ge=1)
     requirement: str | None = None
+    schema_role: Literal["input", "expected_output", "metadata"] | None = None
 
 
 class EvaluationPreflightResult(BaseModel):
@@ -125,6 +126,11 @@ class EvaluationPreflightError(ValueError):
             + "; ".join(issue.message for issue in result.issues)
         )
 
+    @property
+    def issues(self) -> tuple[EvaluationPreflightIssue, ...]:
+        """Expose every actionable issue directly to callers."""
+        return self.result.issues
+
 
 def preflight_selected_cases(
     *,
@@ -138,45 +144,19 @@ def preflight_selected_cases(
 ) -> EvaluationPreflightResult:
     """Resolve selected members after validating the whole Gold Set contract."""
     compatibility_issues = evaluate_compatibility(suite, gold_set, cases)
-    contract_issues = [
+    issues = [
         _as_preflight_issue(issue)
         for issue in compatibility_issues
-        if issue.source == "suite_gold_set"
+        if issue.source in {"suite_gold_set", "gold_set_member"}
     ]
-    if contract_issues:
-        return EvaluationPreflightResult(issues=tuple(contract_issues))
-
-    membership_contract_issues = [
-        _as_preflight_issue(issue)
-        for issue in compatibility_issues
-        if issue.source == "gold_set_member"
-    ]
-    if membership_contract_issues:
-        return EvaluationPreflightResult(issues=tuple(membership_contract_issues))
 
     case_by_reference = {
         (case.identity.business_id, case.identity.revision): case for case in cases
     }
-    resolved_cases: list[EvaluationCase[Any, Any, Any]] = []
-    for membership in gold_set.memberships:
-        reference = membership.case
-        case = case_by_reference.get((reference.business_id, reference.revision))
-        if case is None or case.content_hash != reference.content_hash:
-            continue
-        resolved_cases.append(case)
-    resolved_contract_issues = [
-        _as_preflight_issue(issue, resolved=True)
-        for issue in evaluate_compatibility(None, gold_set, tuple(resolved_cases))
-        if issue.source == "case"
-    ]
-    if resolved_contract_issues:
-        return EvaluationPreflightResult(issues=tuple(resolved_contract_issues))
-
     selected_names = (
         set(selection) if selection is not None and not callable(selection) else None
     )
     selected: list[tuple[Any, EvaluationCase[Any, Any, Any]]] = []
-    issues: list[EvaluationPreflightIssue] = []
 
     for membership in gold_set.memberships:
         if split is not None and membership.split is not split:
@@ -207,7 +187,8 @@ def preflight_selected_cases(
         _collect_case_issues(suite, case, issues)
 
     if issues:
-        return EvaluationPreflightResult(issues=tuple(issues))
+        result = EvaluationPreflightResult(issues=_distinct_issues(issues))
+        raise EvaluationPreflightError(result)
 
     plan_cases = tuple(
         ResolvedEvaluationCase(
@@ -236,6 +217,25 @@ def preflight_selected_cases(
     return EvaluationPreflightResult(plan=plan)
 
 
+def _distinct_issues(
+    issues: Iterable[EvaluationPreflightIssue],
+) -> tuple[EvaluationPreflightIssue, ...]:
+    distinct: dict[
+        tuple[str, str | None, int | None, str | None, str | None],
+        EvaluationPreflightIssue,
+    ] = {}
+    for issue in issues:
+        key = (
+            issue.category,
+            issue.case_business_id,
+            issue.case_revision,
+            issue.requirement,
+            issue.schema_role,
+        )
+        distinct.setdefault(key, issue)
+    return tuple(distinct.values())
+
+
 def _collect_case_issues(
     suite: EvaluationSuite,
     case: EvaluationCase[Any, Any, Any],
@@ -246,7 +246,7 @@ def _collect_case_issues(
     issues.extend(_as_preflight_issue(issue) for issue in compatibility_issues)
 
     for requirement in case.requirements:
-        if not any(
+        if suite.requirement_catalog.contains(requirement) and not any(
             binding.requirement == requirement
             for binding in suite.requirement_bindings
         ):
@@ -264,8 +264,6 @@ def _collect_case_issues(
 
 def _as_preflight_issue(
     issue: EvaluationCompatibilityIssue,
-    *,
-    resolved: bool = False,
 ) -> EvaluationPreflightIssue:
     case_subject = f"{issue.case_business_id}@{issue.case_revision}"
     if issue.category == "unknown_requirement":
@@ -293,11 +291,6 @@ def _as_preflight_issue(
         message = (
             f"Gold Set member {case_subject} has an incompatible {field_name} schema"
         )
-    elif resolved:
-        message = (
-            f"resolved case {case_subject} has an incompatible {field_name} "
-            "schema for the Gold Set"
-        )
     else:
         message = (
             f"case {field_name} schema is incompatible with the suite task contract"
@@ -308,6 +301,7 @@ def _as_preflight_issue(
         message=message,
         case_business_id=issue.case_business_id,
         case_revision=issue.case_revision,
+        schema_role=issue.schema_role,
     )
 
 

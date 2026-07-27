@@ -35,7 +35,7 @@ from .reporting import (
     SchemaRegistry,
     report_case_payload,
 )
-from .preflight import EvaluationPreflightError, preflight_selected_cases
+from .preflight import preflight_selected_cases
 from .runs import (
     CaseEvaluatorExecution,
     CaseMetricObservation,
@@ -874,8 +874,6 @@ class EvaluationRunner:
             selection=selection,
             split=split,
         )
-        if not preflight.is_compatible:
-            raise EvaluationPreflightError(preflight)
 
         case_by_reference = case_reference_map(cases)
         assert preflight.plan is not None
