@@ -1066,7 +1066,6 @@ class EvaluationRunner:
                 task=guarded_task,
                 evaluator_resolver=resolve,
                 max_concurrency=configuration.case_concurrency,
-                case_lifecycle=checkpoint_sink.case_lifecycle,
                 include_report_evaluators=False,
             )
             if resolver_failure is not None:

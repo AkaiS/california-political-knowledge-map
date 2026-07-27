@@ -366,11 +366,19 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     checkpointed_reports: list[int] = []
 
     class RecordingCheckpointSink:
+        case_lifecycle = None
+
+        def record_task_outcome(self, task_input, outcome) -> None:
+            return None
+
         def checkpoint_case(self, case) -> None:
             checkpointed_cases.append(case.name)
 
         def checkpoint_report(self, report) -> None:
             checkpointed_reports.append(len(report.cases))
+
+        def checkpoint_partial_report_evidence(self) -> None:
+            return None
 
     binding = EvaluationTaskBinding(
         operation=lambda task_input: RequirementOutput(

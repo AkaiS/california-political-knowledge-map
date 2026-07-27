@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, ReportEvaluator
@@ -15,11 +15,20 @@ from pydantic_evals.reporting.analyses import ScalarResult
 from .definitions import EvaluationCase
 from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
 from .preflight import ResolvedEvaluationPlan
+from .runs import TaskOutcome
 from .suites import ConfiguredEvaluator, EvaluationSuite, _ConfiguredCaseEvaluator
 
 
+@runtime_checkable
 class EvaluationCheckpointSink(Protocol):
     """Persistence boundary exercised by both execution paths."""
+
+    def record_task_outcome(self, task_input: Any, outcome: TaskOutcome) -> None:
+        """Record the typed outcome produced by an Evaluation Task Binding."""
+
+    @property
+    def case_lifecycle(self) -> type[CaseLifecycle[Any, Any, Any]] | None:
+        """Provide lifecycle notification for terminal framework cases."""
 
     def checkpoint_case(self, case: Any) -> None:
         """Record one terminal successful or failed framework case."""
@@ -27,14 +36,27 @@ class EvaluationCheckpointSink(Protocol):
     def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
         """Record the aggregate report supplied to report evaluators."""
 
+    def checkpoint_partial_report_evidence(self) -> None:
+        """Record report evidence completed before orchestration stops."""
+
 
 class NoOpCheckpointSink:
     """Checkpoint sink for execution that intentionally has no ledger."""
+
+    def record_task_outcome(self, task_input: Any, outcome: TaskOutcome) -> None:
+        return None
+
+    @property
+    def case_lifecycle(self) -> None:
+        return None
 
     def checkpoint_case(self, case: Any) -> None:
         return None
 
     def checkpoint_report(self, report: EvaluationReport[Any, Any, Any]) -> None:
+        return None
+
+    def checkpoint_partial_report_evidence(self) -> None:
         return None
 
 
@@ -101,7 +123,10 @@ class EvaluationEngine:
     """Project one frozen plan into one multi-case Pydantic Evals Dataset."""
 
     def __init__(self, checkpoint_sink: EvaluationCheckpointSink | None = None):
-        self.checkpoint_sink = checkpoint_sink or NoOpCheckpointSink()
+        sink = checkpoint_sink if checkpoint_sink is not None else NoOpCheckpointSink()
+        if not isinstance(sink, EvaluationCheckpointSink):
+            raise TypeError("checkpoint_sink must implement EvaluationCheckpointSink")
+        self.checkpoint_sink = sink
 
     def execute(
         self,
@@ -113,7 +138,6 @@ class EvaluationEngine:
         task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         evaluator_resolver: EvaluatorResolver,
         max_concurrency: int = 1,
-        case_lifecycle: type[CaseLifecycle[Any, Any, Any]] | None = None,
         include_report_evaluators: bool = True,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute the exact case and evaluator assignments in ``plan``."""
@@ -224,9 +248,7 @@ class EvaluationEngine:
                     if task_binding.is_async
                     else task_binding.invoke(task_input)
                 )
-                recorder = getattr(self.checkpoint_sink, "record_task_outcome", None)
-                if recorder is not None:
-                    recorder(task_input, outcome)
+                self.checkpoint_sink.record_task_outcome(task_input, outcome)
                 if outcome.kind == "failure":
                     raise TaskBindingInvocationError(outcome)
                 return outcome.output
@@ -236,7 +258,7 @@ class EvaluationEngine:
             task,
             progress=False,
             max_concurrency=max_concurrency,
-            lifecycle=case_lifecycle,
+            lifecycle=self.checkpoint_sink.case_lifecycle,
         )
         report.analyses[:] = [
             analysis
@@ -246,7 +268,7 @@ class EvaluationEngine:
                 and analysis.title == _NO_RESULT_TITLE
             )
         ]
-        if case_lifecycle is None:
+        if self.checkpoint_sink.case_lifecycle is None:
             for case in (*report.cases, *report.failures):
                 self.checkpoint_sink.checkpoint_case(case)
         self.checkpoint_sink.checkpoint_report(report)

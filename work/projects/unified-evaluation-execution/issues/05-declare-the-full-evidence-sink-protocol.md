@@ -1,6 +1,6 @@
 # Declare the full evidence sink protocol
 
-Labels: ready-for-agent
+Labels: completed
 
 Prefactor for the [Unified Evaluation Execution Path](../PRD.md). No substitutable
 sink is possible while part of the contract is undeclared.
@@ -21,15 +21,15 @@ declaration change, not a semantic one.
 
 ## Acceptance criteria
 
-- [ ] Task-outcome recording is a declared method on the evidence sink protocol.
-- [ ] Case lifecycle notification is a declared method on the evidence sink protocol.
-- [ ] Partial report-evidence checkpointing is a declared method on the evidence sink protocol.
-- [ ] The executor calls each of these directly; no dynamic attribute probing for sink methods remains.
-- [ ] The durable, ledger-backed sink implements every method on the protocol.
-- [ ] An object missing any protocol method is rejected as a sink rather than silently accepted.
-- [ ] Durable Evaluation Run behaviour, recorded Evaluation Checkpoints, and Evaluation Report content are unchanged by this ticket.
-- [ ] Existing durable runner and ledger tests pass unmodified.
-- [ ] The full deterministic test suite passes.
+- [x] Task-outcome recording is a declared method on the evidence sink protocol.
+- [x] Case lifecycle notification is a declared method on the evidence sink protocol.
+- [x] Partial report-evidence checkpointing is a declared method on the evidence sink protocol.
+- [x] The executor calls each of these directly; no dynamic attribute probing for sink methods remains.
+- [x] The durable, ledger-backed sink implements every method on the protocol.
+- [x] An object missing any protocol method is rejected as a sink rather than silently accepted.
+- [x] Durable Evaluation Run behaviour, recorded Evaluation Checkpoints, and Evaluation Report content are unchanged by this ticket.
+- [x] Existing durable runner and ledger tests pass unmodified.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
