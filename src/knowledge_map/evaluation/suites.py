@@ -670,24 +670,20 @@ class EvaluationSuite(BaseModel):
         self, cases: tuple[EvaluationCase[Any, Any, Any], ...]
     ) -> tuple[EvaluationCase[Any, Any, Any], ...]:
         """Reject authored cases that do not exactly implement the suite task contract."""
-        for evaluation_case in cases:
-            if not evaluation_case.input_schema.is_exactly_compatible_with(
-                self.task_contract.input_schema
-            ):
-                raise ValueError("case input schema is incompatible with the suite")
-            if not evaluation_case.metadata_schema.is_exactly_compatible_with(
-                self.task_contract.metadata_schema
-            ):
-                raise ValueError("case metadata schema is incompatible with the suite")
-            if (
-                evaluation_case.expected_output_schema is None
-                or evaluation_case.expected_output is None
-                or not evaluation_case.expected_output_schema.is_exactly_compatible_with(
-                    self.task_contract.output_schema
+        from .compatibility import evaluate_compatibility
+
+        issues = evaluate_compatibility(self, None, cases)
+        if issues:
+            issue = issues[0]
+            if issue.category == "unknown_requirement":
+                raise ValueError(
+                    f"unknown Evaluation Requirement keys: {issue.requirement}"
                 )
-            ):
-                raise ValueError("case output schema is incompatible with the suite")
-            evaluation_case.validate_requirements(self.requirement_catalog)
+            assert issue.schema_role is not None
+            field_name = (
+                "output" if issue.schema_role == "expected_output" else issue.schema_role
+            )
+            raise ValueError(f"case {field_name} schema is incompatible with the suite")
         return cases
 
     def execute(

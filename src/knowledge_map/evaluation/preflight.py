@@ -21,6 +21,7 @@ from .suites import (
     ConfiguredEvaluatorReference,
     EvaluationSuite,
 )
+from .compatibility import EvaluationCompatibilityIssue, evaluate_compatibility
 
 
 class EvaluationDefinitionRevisionReference(BaseModel):
@@ -136,103 +137,38 @@ def preflight_selected_cases(
     split: EvaluationSplit | None = None,
 ) -> EvaluationPreflightResult:
     """Resolve selected members after validating the whole Gold Set contract."""
-    contract_subject = (
-        f"{gold_set.identity.business_id}@{gold_set.identity.revision}"
-    )
+    compatibility_issues = evaluate_compatibility(suite, gold_set, cases)
     contract_issues = [
-        EvaluationPreflightIssue(
-            category="task_contract",
-            subject=contract_subject,
-            message=(
-                f"Gold Set {field_name} schema is incompatible with the "
-                "Suite task contract"
-            ),
-        )
-        for field_name, gold_schema, suite_schema in (
-            (
-                "input",
-                gold_set.task_contract.input_schema,
-                suite.task_contract.input_schema,
-            ),
-            (
-                "output",
-                gold_set.task_contract.output_schema,
-                suite.task_contract.output_schema,
-            ),
-            (
-                "metadata",
-                gold_set.task_contract.metadata_schema,
-                suite.task_contract.metadata_schema,
-            ),
-        )
-        if not gold_schema.is_exactly_compatible_with(suite_schema)
+        _as_preflight_issue(issue)
+        for issue in compatibility_issues
+        if issue.source == "suite_gold_set"
     ]
     if contract_issues:
         return EvaluationPreflightResult(issues=tuple(contract_issues))
 
-    membership_contract_issues: list[EvaluationPreflightIssue] = []
-    for membership in gold_set.memberships:
-        reference = membership.case
-        for field_name, actual, expected in (
-            ("input", reference.input_schema, gold_set.task_contract.input_schema),
-            ("output", reference.output_schema, gold_set.task_contract.output_schema),
-            (
-                "metadata",
-                reference.metadata_schema,
-                gold_set.task_contract.metadata_schema,
-            ),
-        ):
-            if actual is None or not actual.is_exactly_compatible_with(expected):
-                membership_contract_issues.append(
-                    EvaluationPreflightIssue(
-                        category="task_contract",
-                        subject=f"{reference.business_id}@{reference.revision}",
-                        message=(
-                            f"Gold Set member {reference.business_id}@{reference.revision} "
-                            f"has an incompatible {field_name} schema"
-                        ),
-                        case_business_id=reference.business_id,
-                        case_revision=reference.revision,
-                    )
-                )
+    membership_contract_issues = [
+        _as_preflight_issue(issue)
+        for issue in compatibility_issues
+        if issue.source == "gold_set_member"
+    ]
     if membership_contract_issues:
         return EvaluationPreflightResult(issues=tuple(membership_contract_issues))
 
     case_by_reference = {
         (case.identity.business_id, case.identity.revision): case for case in cases
     }
-    resolved_contract_issues: list[EvaluationPreflightIssue] = []
+    resolved_cases: list[EvaluationCase[Any, Any, Any]] = []
     for membership in gold_set.memberships:
         reference = membership.case
         case = case_by_reference.get((reference.business_id, reference.revision))
         if case is None or case.content_hash != reference.content_hash:
             continue
-        for field_name, actual, expected in (
-            ("input", case.input_schema, gold_set.task_contract.input_schema),
-            (
-                "output",
-                case.expected_output_schema,
-                gold_set.task_contract.output_schema,
-            ),
-            (
-                "metadata",
-                case.metadata_schema,
-                gold_set.task_contract.metadata_schema,
-            ),
-        ):
-            if actual is None or not actual.is_exactly_compatible_with(expected):
-                resolved_contract_issues.append(
-                    EvaluationPreflightIssue(
-                        category="task_contract",
-                        subject=f"{reference.business_id}@{reference.revision}",
-                        message=(
-                            f"resolved case {reference.business_id}@{reference.revision} "
-                            f"has an incompatible {field_name} schema for the Gold Set"
-                        ),
-                        case_business_id=reference.business_id,
-                        case_revision=reference.revision,
-                    )
-                )
+        resolved_cases.append(case)
+    resolved_contract_issues = [
+        _as_preflight_issue(issue, resolved=True)
+        for issue in evaluate_compatibility(None, gold_set, tuple(resolved_cases))
+        if issue.source == "case"
+    ]
     if resolved_contract_issues:
         return EvaluationPreflightResult(issues=tuple(resolved_contract_issues))
 
@@ -306,35 +242,10 @@ def _collect_case_issues(
     issues: list[EvaluationPreflightIssue],
 ) -> None:
     case_subject = f"{case.identity.business_id}@{case.identity.revision}"
-    contract_fields = (
-        ("input", case.input_schema, suite.task_contract.input_schema),
-        ("output", case.expected_output_schema, suite.task_contract.output_schema),
-        ("metadata", case.metadata_schema, suite.task_contract.metadata_schema),
-    )
-    for field_name, case_schema, suite_schema in contract_fields:
-        if case_schema is None or not case_schema.is_exactly_compatible_with(suite_schema):
-            issues.append(
-                EvaluationPreflightIssue(
-                    category="task_contract",
-                    subject=case_subject,
-                    message=f"case {field_name} schema is incompatible with the suite task contract",
-                    case_business_id=case.identity.business_id,
-                    case_revision=case.identity.revision,
-                )
-            )
+    compatibility_issues = evaluate_compatibility(suite, None, (case,))
+    issues.extend(_as_preflight_issue(issue) for issue in compatibility_issues)
 
     for requirement in case.requirements:
-        if not suite.requirement_catalog.contains(requirement):
-            issues.append(
-                EvaluationPreflightIssue(
-                    category="unknown_requirement",
-                    subject=f"{case_subject}:{requirement}",
-                    message=f"Evaluation Requirement is unknown to the Suite catalog: {requirement}",
-                    case_business_id=case.identity.business_id,
-                    case_revision=case.identity.revision,
-                    requirement=requirement,
-                )
-            )
         if not any(
             binding.requirement == requirement
             for binding in suite.requirement_bindings
@@ -349,6 +260,55 @@ def _collect_case_issues(
                     requirement=requirement,
                 )
             )
+
+
+def _as_preflight_issue(
+    issue: EvaluationCompatibilityIssue,
+    *,
+    resolved: bool = False,
+) -> EvaluationPreflightIssue:
+    case_subject = f"{issue.case_business_id}@{issue.case_revision}"
+    if issue.category == "unknown_requirement":
+        return EvaluationPreflightIssue(
+            category="unknown_requirement",
+            subject=f"{case_subject}:{issue.requirement}",
+            message=(
+                "Evaluation Requirement is unknown to the Suite catalog: "
+                f"{issue.requirement}"
+            ),
+            case_business_id=issue.case_business_id,
+            case_revision=issue.case_revision,
+            requirement=issue.requirement,
+        )
+
+    assert issue.schema_role is not None
+    field_name = (
+        "output" if issue.schema_role == "expected_output" else issue.schema_role
+    )
+    if issue.source == "suite_gold_set":
+        message = (
+            f"Gold Set {field_name} schema is incompatible with the Suite task contract"
+        )
+    elif issue.source == "gold_set_member":
+        message = (
+            f"Gold Set member {case_subject} has an incompatible {field_name} schema"
+        )
+    elif resolved:
+        message = (
+            f"resolved case {case_subject} has an incompatible {field_name} "
+            "schema for the Gold Set"
+        )
+    else:
+        message = (
+            f"case {field_name} schema is incompatible with the suite task contract"
+        )
+    return EvaluationPreflightIssue(
+        category="task_contract",
+        subject=case_subject,
+        message=message,
+        case_business_id=issue.case_business_id,
+        case_revision=issue.case_revision,
+    )
 
 
 def _resolve_effective_evaluators(

@@ -20,7 +20,6 @@ have not yet been shaped into executable work.
 - [Create the Neo4j schema and vector index](projects/article-chunking-coreference/issues/03-neo4j-schema-vector-index.md)
 - [Integrate chunking and Coreference Resolution into the pipeline](projects/article-chunking-coreference/issues/04-pipeline-integration.md)
 - [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
-- [Decide Suite, Gold Set, and Case compatibility in one place](projects/unified-evaluation-execution/issues/01-shared-suite-gold-set-case-compatibility-predicate.md)
 - [Evaluate Evaluation Cases that declare no expected output](projects/unified-evaluation-execution/issues/03-evaluate-cases-without-an-expected-output.md)
 - [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/05-declare-the-full-evidence-sink-protocol.md)
 - [Guard human relevance labels against automated overwrites](projects/pipeline-stage-ownership/issues/01-guard-human-relevance-labels.md)

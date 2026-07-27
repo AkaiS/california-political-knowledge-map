@@ -414,47 +414,39 @@ class EvaluationGoldSet(_AuthoredDefinition):
 
     @model_validator(mode="after")
     def members_match_task_contract(self) -> "EvaluationGoldSet":
-        for membership in self.memberships:
-            reference = membership.case
-            for field_name, actual, expected in (
-                ("input", reference.input_schema, self.task_contract.input_schema),
-                ("output", reference.output_schema, self.task_contract.output_schema),
-                (
-                    "metadata",
-                    reference.metadata_schema,
-                    self.task_contract.metadata_schema,
-                ),
-            ):
-                if not actual.is_exactly_compatible_with(expected):
-                    raise ValueError(
-                        f"Gold Set member {reference.business_id}@{reference.revision} "
-                        f"has an incompatible {field_name} schema"
-                    )
+        from .compatibility import evaluate_compatibility
+
+        issues = evaluate_compatibility(None, self)
+        if issues:
+            issue = issues[0]
+            assert issue.schema_role is not None
+            field_name = (
+                "output" if issue.schema_role == "expected_output" else issue.schema_role
+            )
+            raise ValueError(
+                f"Gold Set member {issue.case_business_id}@{issue.case_revision} "
+                f"has an incompatible {field_name} schema"
+            )
         return self
 
     def validate_cases(
         self, cases: tuple[EvaluationCase[Any, Any, Any], ...]
     ) -> tuple[EvaluationCase[Any, Any, Any], ...]:
         """Revalidate supplied case values against this Gold Set's contract."""
-        for evaluation_case in cases:
-            for field_name, actual, expected in (
-                ("input", evaluation_case.input_schema, self.task_contract.input_schema),
-                (
-                    "output",
-                    evaluation_case.expected_output_schema,
-                    self.task_contract.output_schema,
-                ),
-                (
-                    "metadata",
-                    evaluation_case.metadata_schema,
-                    self.task_contract.metadata_schema,
-                ),
-            ):
-                if not actual.is_exactly_compatible_with(expected):
-                    raise ValueError(
-                        f"case {evaluation_case.identity.business_id}@{evaluation_case.identity.revision} "
-                        f"has an incompatible {field_name} schema for the Gold Set"
-                    )
+        from .compatibility import evaluate_compatibility
+
+        issues = evaluate_compatibility(None, self, cases)
+        case_issues = [issue for issue in issues if issue.source == "case"]
+        if case_issues:
+            issue = case_issues[0]
+            assert issue.schema_role is not None
+            field_name = (
+                "output" if issue.schema_role == "expected_output" else issue.schema_role
+            )
+            raise ValueError(
+                f"case {issue.case_business_id}@{issue.case_revision} "
+                f"has an incompatible {field_name} schema for the Gold Set"
+            )
         return cases
 
 

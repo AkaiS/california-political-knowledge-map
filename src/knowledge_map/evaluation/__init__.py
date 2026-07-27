@@ -93,6 +93,7 @@ from .preflight import (
     ResolvedEvaluationPlan,
     preflight_selected_cases,
 )
+from .compatibility import EvaluationCompatibilityIssue, evaluate_compatibility
 from .store import (
     ArtifactConflictError,
     ArtifactLocation,
@@ -202,6 +203,8 @@ __all__ = [
     "ResolvedEvaluationCase",
     "ResolvedEvaluationPlan",
     "preflight_selected_cases",
+    "EvaluationCompatibilityIssue",
+    "evaluate_compatibility",
     "ArtifactConflictError",
     "ArtifactLocation",
     "ArtifactDerivativeRecord",
