@@ -170,6 +170,10 @@ actually trusts, instead of rederiving and revalidating the same decisions.
 - **EP-05 · P2:** Construct Evaluation Runs from the Resolved Evaluation Plan
   rather than accepting and revalidating duplicated plan-derived fields.
 
+EP-01 through EP-05 were shaped on 2026-07-27 into
+[Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md).
+They remain listed here as the origin of that project, not as open candidates.
+
 ## Evaluation run lifecycle and finalization
 
 Whether a run starts, stops, fails, and completes at the moments its contract
