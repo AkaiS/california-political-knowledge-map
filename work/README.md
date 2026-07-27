@@ -23,11 +23,17 @@ have not yet been shaped into executable work.
 - [Decide Suite, Gold Set, and Case compatibility in one place](projects/unified-evaluation-execution/issues/01-shared-suite-gold-set-case-compatibility-predicate.md)
 - [Evaluate Evaluation Cases that declare no expected output](projects/unified-evaluation-execution/issues/03-evaluate-cases-without-an-expected-output.md)
 - [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/05-declare-the-full-evidence-sink-protocol.md)
-- [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md)
+- [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
 
 The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
 issues (02, 04, 06–10) are `ready-for-agent` but gated; each declares its blockers.
 Work the frontier: any issue whose blockers are all complete.
+
+The [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md)
+issues 01–03 are `ready-for-agent` but gated. Issue 01, the validating factory,
+is blocked by the Unified Evaluation Execution Path's shared compatibility
+predicate, and issues 02 and 03 are blocked by 01. Its glossary issue 04 is
+listed above because it has no blockers.
 
 ### Blocked initiative chain
 
