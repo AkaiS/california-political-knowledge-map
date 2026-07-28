@@ -26,7 +26,6 @@ from .definitions import (
     EvaluationCase,
     EvaluationGoldSet,
     EvaluationRubric,
-    EvaluationSplit,
     new_uuid7,
 )
 from .engine import EvaluationEngine
@@ -36,7 +35,7 @@ from .reporting import (
     iter_report_evaluator_calls,
     report_case_payload,
 )
-from .preflight import preflight_selected_cases
+from .preflight import ResolvedEvaluationPlan
 from .runs import (
     CaseEvaluatorExecution,
     CaseMetricObservation,
@@ -806,6 +805,7 @@ class EvaluationRunner:
     def run(
         self,
         *,
+        plan: ResolvedEvaluationPlan,
         suite: EvaluationSuite,
         gold_set: EvaluationGoldSet,
         cases: tuple[EvaluationCase[Any, Any, Any], ...],
@@ -815,12 +815,8 @@ class EvaluationRunner:
         schemas: SchemaRegistry | None = None,
         task: Callable[[Any], Any] | None = None,
         task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
-        selection: Callable[[EvaluationCase[Any, Any, Any]], bool]
-        | Iterable[str]
-        | None = None,
         selection_expression: str | None = None,
         selection_provenance: Mapping[str, Any] | None = None,
-        split: EvaluationSplit | None = None,
         retry_of_run_id: UUID | None = None,
         should_cancel: Callable[[], bool] | None = None,
         release_gates: Mapping[str, Callable[[EvaluationRunResult], bool]] | None = None,
@@ -832,60 +828,15 @@ class EvaluationRunner:
         if retry_of_run_id is not None:
             if self.ledger.get_evaluation_run(retry_of_run_id) is None:
                 raise KeyError(f"unknown Evaluation Run: {retry_of_run_id}")
-            predecessor_manifest = self.ledger.list_evaluation_case_manifest(
-                retry_of_run_id
-            )
-            predecessor_results = {
-                result.manifest_id: result
-                for result in self.ledger.list_evaluation_case_results(retry_of_run_id)
-            }
-            incomplete_cases = frozenset(
-                (entry.case_business_id, entry.case_revision)
-                for entry in predecessor_manifest
-                if predecessor_results[entry.manifest_id].execution_disposition
-                in {
-                    EvaluationCaseDisposition.PENDING,
-                    EvaluationCaseDisposition.CANCELLED,
-                }
-            )
-            if incomplete_cases:
-                def is_incomplete(case: EvaluationCase[Any, Any, Any]) -> bool:
-                    return (
-                        case.identity.business_id,
-                        case.identity.revision,
-                    ) in incomplete_cases
-
-                if selection is None:
-                    selection = is_incomplete
-                elif callable(selection):
-                    requested_selection = selection
-                    selection = lambda case: (
-                        is_incomplete(case) and requested_selection(case)
-                    )
-                else:
-                    requested_names = frozenset(selection)
-                    selection = lambda case: (
-                        is_incomplete(case)
-                        and case.identity.business_id in requested_names
-                    )
-
-        preflight = preflight_selected_cases(
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            selection=selection,
-            split=split,
-        )
 
         case_by_reference = case_reference_map(cases)
-        assert preflight.plan is not None
         memberships_by_key = {
             (membership.case.business_id, membership.case.revision): membership
             for membership in gold_set.memberships
         }
         selected_memberships = tuple(
             memberships_by_key[(planned.case.business_id, planned.case.revision)]
-            for planned in preflight.plan.cases
+            for planned in plan.cases
         )
         selected_cases = tuple(
             case_by_reference[(m.case.business_id, m.case.revision)]
@@ -918,14 +869,14 @@ class EvaluationRunner:
             )
         rubric_records = tuple(self.ledger.import_rubric(rubric) for rubric in rubrics)
         run = EvaluationRunRecord(
-            suite_record_id=suite_record.record_id,
-            suite_business_id=suite_record.business_id,
-            suite_revision=suite_record.revision,
-            suite_content_hash=suite_record.content_hash,
-            gold_set_record_id=gold_record.record_id,
-            gold_set_business_id=gold_record.business_id,
-            gold_set_revision=gold_record.revision,
-            gold_set_content_hash=gold_record.content_hash,
+            suite_record_id=plan.suite.record_id,
+            suite_business_id=plan.suite.business_id,
+            suite_revision=plan.suite.revision,
+            suite_content_hash=plan.suite.content_hash,
+            gold_set_record_id=plan.gold_set.record_id,
+            gold_set_business_id=plan.gold_set.business_id,
+            gold_set_revision=plan.gold_set.revision,
+            gold_set_content_hash=plan.gold_set.content_hash,
             configuration=configuration,
             selection_expression=selection_expression,
             selection_provenance={
@@ -964,7 +915,7 @@ class EvaluationRunner:
         )
         self.ledger.create_evaluation_run(
             run=run,
-            plan=preflight.plan,
+            plan=plan,
             manifest=manifest,
             pending_results=pending_results,
         )
@@ -1062,7 +1013,7 @@ class EvaluationRunner:
                 return task(task_input)
 
             evaluation_report = EvaluationEngine(checkpoint_sink).execute(
-                plan=preflight.plan,
+                plan=plan,
                 suite=suite,
                 cases=selected_cases,
                 task=guarded_task,
@@ -1529,24 +1480,6 @@ class EvaluationRunner:
     @staticmethod
     def _safe_error_message(message: str) -> str:
         return message.split(": ", 1)[1] if ": " in message else message
-
-    @staticmethod
-    def _resolve_memberships(gold_set: EvaluationGoldSet, case_by_reference: Mapping[tuple[str, int], EvaluationCase[Any, Any, Any]], *, selection: Callable[[EvaluationCase[Any, Any, Any]], bool] | Iterable[str] | None, split: EvaluationSplit | None) -> tuple[Any, ...]:
-        names = set(selection) if selection is not None and not callable(selection) else None
-        resolved = []
-        for membership in gold_set.memberships:
-            if split is not None and membership.split is not split:
-                continue
-            key = (membership.case.business_id, membership.case.revision)
-            case = case_by_reference.get(key)
-            if case is None or case.content_hash != membership.case.content_hash:
-                raise ValueError("Gold Set membership requires the exact supplied case revision")
-            if callable(selection) and not selection(case):
-                continue
-            if names is not None and membership.case.business_id not in names:
-                continue
-            resolved.append(membership)
-        return tuple(resolved)
 
     @staticmethod
     def _case_observations(configured: ConfiguredEvaluator, output: Any, execution_id: Any, definitions: tuple[EvaluationMetricDefinition, ...]) -> list[CaseMetricObservation]:

@@ -314,6 +314,7 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
     runner = EvaluationRunner(MagicMock())
     with pytest.raises(ValueError, match="task_binding contract does not match"):
         runner.run(
+            plan=plan,
             suite=suite,
             gold_set=gold_set,
             cases=(),
@@ -321,4 +322,3 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
             evaluator_resolver=lambda cfg: None,
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
-

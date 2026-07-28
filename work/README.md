@@ -24,7 +24,6 @@ have not yet been shaped into executable work.
 - [Remove the retired rejected-article helpers](projects/pipeline-stage-ownership/issues/02-remove-retired-rejected-article-helpers.md)
 - [Default relevance to PENDING and record fetch status](projects/pipeline-stage-ownership/issues/03-default-relevance-to-pending-and-record-fetch-status.md)
 - [Evaluate reports the same way on both paths](projects/unified-evaluation-execution/issues/07-unify-report-evaluation-across-both-paths.md)
-- [Make durable execution consume the plan preflight produced](projects/unified-evaluation-execution/issues/08-consume-the-preflight-plan-in-durable-execution.md)
 - [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
 
 The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)

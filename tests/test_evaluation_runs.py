@@ -98,6 +98,45 @@ class ComponentConfiguration(BaseModel):
     api_key: SecretStr
 
 
+def _run(runner: EvaluationRunner, **kwargs):
+    """Preflight legacy durable-run scenarios at the new public boundary."""
+    plan = kwargs.pop("plan", None)
+    selection = kwargs.pop("selection", None)
+    split = kwargs.pop("split", None)
+    if plan is None:
+        retry_of_run_id = kwargs.get("retry_of_run_id")
+        if retry_of_run_id is not None:
+            results = {
+                result.manifest_id: result
+                for result in runner.ledger.list_evaluation_case_results(
+                    retry_of_run_id
+                )
+            }
+            incomplete = {
+                entry.case_business_id
+                for entry in runner.ledger.list_evaluation_case_manifest(
+                    retry_of_run_id
+                )
+                if results[entry.manifest_id].execution_disposition
+                in {
+                    EvaluationCaseDisposition.PENDING,
+                    EvaluationCaseDisposition.CANCELLED,
+                }
+            }
+            if selection is not None:
+                incomplete.intersection_update(selection)
+            selection = incomplete
+        plan = preflight_selected_cases(
+            suite=kwargs["suite"],
+            gold_set=kwargs["gold_set"],
+            cases=kwargs["cases"],
+            selection=selection,
+            split=split,
+        ).plan
+    assert plan is not None
+    return runner.run(plan=plan, **kwargs)
+
+
 @dataclass
 class ControllableClock:
     current: datetime
@@ -365,16 +404,26 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
         requirement_bindings=(
             EvaluationRequirementBinding(
                 requirement="grounded",
-                evaluators=(ConfiguredEvaluatorReference(name="grounding"),),
+                evaluators=(
+                    ConfiguredEvaluatorReference(name="universal"),
+                    ConfiguredEvaluatorReference(name="grounding"),
+                ),
             ),
         ),
         report_evaluators=(ConfiguredEvaluator(name="count-cases", evaluator_revision=1),),
     )
     universal_calls: list[str] = []
     grounding_calls: list[str] = []
+    plan = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=cases,
+    ).plan
+    assert plan is not None
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
+            plan=plan,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -394,6 +443,10 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
     assert result.run.status == "finalization_pending"
     assert universal_calls == ["case-1@1", "case-2@1"]
     assert grounding_calls == ["case-1@1"]
+    assert plan.cases[0].evaluators[0].provenance == (
+        "suite-wide",
+        "grounded",
+    )
     assert [execution.evaluator_name for execution in result.case_evaluator_executions] == [
         "universal",
         "grounding",
@@ -440,7 +493,7 @@ def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_fai
         monkeypatch.setattr(
             ledger.execution_store, "_insert_case_observation", fail_observation_insert
         )
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -497,7 +550,7 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -545,7 +598,7 @@ def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path
     database = tmp_path / "evaluation.sqlite"
 
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        result = _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -569,7 +622,7 @@ def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-checkpoint")
 
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        EvaluationRunner(evidence).run(
+        _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -597,7 +650,7 @@ def test_substituting_in_memory_evidence_preserves_materialized_case_evidence(
     )
 
     def execute(store):
-        result = EvaluationRunner(store).run(
+        result = _run(EvaluationRunner(store),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -647,7 +700,7 @@ def test_terminal_checkpoint_materializes_one_typed_report_case(tmp_path):
     registry.register(cases[0].metadata_schema, Metadata)
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -696,7 +749,7 @@ def test_mapping_case_evaluator_identity_survives_checkpoint_and_aggregate_mater
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -734,7 +787,7 @@ def test_mapping_case_evaluator_identity_survives_checkpoint_and_aggregate_mater
 def test_typed_report_case_rejects_an_unallowlisted_schema(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("unknown-report-schema")
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -757,7 +810,7 @@ def test_materialization_rejects_corrupted_stored_report_case_evidence(tmp_path)
     registry = _schemas_for(cases)
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -808,7 +861,7 @@ def test_failed_terminal_checkpoint_materializes_a_typed_report_case_failure(tmp
         raise RuntimeError("provider unavailable")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1077,7 +1130,8 @@ def test_runner_persists_the_resolved_plan_as_canonical_ledger_data(tmp_path):
     assert expected_plan is not None
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
+            plan=expected_plan,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1094,6 +1148,32 @@ def test_runner_persists_the_resolved_plan_as_canonical_ledger_data(tmp_path):
         assert stored_plan.canonical_json == expected_plan.canonical_json
 
 
+def test_runner_does_not_accept_selection_alongside_a_resolved_plan(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("resolved-plan-selection")
+    plan = preflight_selected_cases(
+        suite=suite,
+        gold_set=gold_set,
+        cases=cases,
+        selection=("case-1",),
+    ).plan
+    assert plan is not None
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        with pytest.raises(TypeError, match="unexpected keyword argument 'selection'"):
+            EvaluationRunner(ledger).run(
+                plan=plan,
+                suite=suite,
+                gold_set=gold_set,
+                cases=cases,
+                selection=("case-2",),
+                task=lambda task_input: Output(answer=task_input.prompt),
+                evaluator_resolver=lambda configured: CountCases(),
+                configuration=EvaluationRunConfiguration(
+                    provider="deterministic", model="fixture"
+                ),
+            )
+
+
 def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
     tmp_path,
 ):
@@ -1105,7 +1185,7 @@ def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1262,7 +1342,7 @@ def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
                 active -= 1
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1623,7 +1703,7 @@ def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
         )
 
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1664,7 +1744,7 @@ def test_case_evaluator_failure_is_separate_from_task_and_run_status(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1719,7 +1799,7 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1752,7 +1832,7 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
         }
     )
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        result = _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1779,7 +1859,7 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
 def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-none")
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        result = _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1800,7 +1880,7 @@ def test_durable_report_evaluator_returning_nothing_records_no_observation(tmp_p
     cases, gold_set, suite = _lifecycle_fixture("durable-report-evaluator-none")
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1829,7 +1909,7 @@ def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path)
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1957,7 +2037,7 @@ def test_runner_persists_normalized_logfire_execution_identity(tmp_path, monkeyp
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2020,7 +2100,7 @@ def test_runner_marks_authored_case_artifacts_as_run_inputs(tmp_path):
             }
         )
 
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2118,7 +2198,7 @@ def test_subset_run_consumes_artifacts_from_only_manifested_case_revisions(tmp_p
             role="evaluation.suite.definition",
         )
 
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2202,7 +2282,7 @@ def test_full_population_run_consumes_artifacts_from_every_case_revision(tmp_pat
             }
         )
 
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2248,7 +2328,7 @@ def test_runner_marks_authored_rubric_artifacts_as_run_inputs(tmp_path):
             }
         )
 
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2274,7 +2354,7 @@ def test_cancelled_run_retains_completed_cases_and_pending_envelopes(tmp_path):
         return checks == 2
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2303,7 +2383,7 @@ def test_process_interruption_preserves_prior_case_checkpoints(tmp_path):
             return Output(answer=task_input.prompt)
 
         with pytest.raises(KeyboardInterrupt):
-            EvaluationRunner(ledger).run(
+            _run(EvaluationRunner(ledger),
                 suite=suite,
                 gold_set=gold_set,
                 cases=cases,
@@ -2340,7 +2420,7 @@ def test_interrupted_finalization_retains_partial_report_evaluation(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2386,7 +2466,7 @@ def test_controlled_finalization_stop_leaves_run_pending_after_inflight_evaluato
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2456,7 +2536,7 @@ def test_controlled_stop_release_failure_preserves_result_and_allows_later_recov
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2516,7 +2596,7 @@ def test_release_cleanup_failure_does_not_mask_finalization_error(
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2560,7 +2640,7 @@ def test_incomplete_cases_cannot_freeze_the_aggregate_report(tmp_path):
         return checks == 2
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2588,7 +2668,7 @@ def test_complete_cases_freeze_one_report_and_finalize_explicitly(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        result = runner.run(
+        result = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2634,7 +2714,7 @@ def test_finalization_materializes_typed_report_from_frozen_evidence(tmp_path):
     reports = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2699,7 +2779,7 @@ def test_run_with_only_rubric_judged_cases_finalizes_a_well_formed_report(tmp_pa
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2758,7 +2838,7 @@ def test_one_run_can_finalize_cases_with_and_without_expected_outputs(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2791,7 +2871,7 @@ def test_finalization_rejects_unresolved_frozen_schemas_before_evaluating(tmp_pa
     resolver_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2820,7 +2900,7 @@ def test_finalization_rejects_a_tampered_frozen_case_definition(tmp_path):
     resolver_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2862,7 +2942,7 @@ def test_finalization_rejects_an_unsupported_evidence_contract(tmp_path, monkeyp
     cases, gold_set, suite = _lifecycle_fixture("unsupported-evidence-contract")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2901,7 +2981,7 @@ def test_completed_cases_freeze_an_ordered_content_addressed_aggregate_manifest(
     cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2950,7 +3030,7 @@ def test_aggregate_manifest_freeze_is_idempotent_and_rejects_replacement(tmp_pat
     cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest-replay")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -2976,7 +3056,7 @@ def test_finalization_rejects_a_tampered_frozen_aggregate_manifest(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("aggregate-manifest-tamper")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3004,7 +3084,7 @@ def test_finalization_claim_allows_one_live_owner_and_exposes_expiry(tmp_path):
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3039,7 +3119,7 @@ def test_finalization_authority_uses_one_shared_ledger_clock(tmp_path):
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3078,7 +3158,7 @@ def test_replacing_expired_finalization_claim_records_factual_recovery_issue(tmp
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3125,7 +3205,7 @@ def test_ordinary_finalization_claim_acquisition_records_no_recovery_issue(tmp_p
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3156,7 +3236,7 @@ def test_rejected_competing_finalization_claim_acquisition_records_no_recovery_i
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3193,7 +3273,7 @@ def test_report_checkpoint_samples_time_after_obtaining_the_write_position(tmp_p
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(database, clock=clock) as claim_ledger:
-        initial = EvaluationRunner(claim_ledger).run(
+        initial = _run(EvaluationRunner(claim_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3258,7 +3338,7 @@ def test_report_checkpoint_replay_is_one_atomic_idempotent_success(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("report-checkpoint-replay")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3308,7 +3388,7 @@ def test_finalization_retries_report_checkpoint_without_reevaluating(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3350,7 +3430,7 @@ def test_finalization_replays_an_ambiguously_acknowledged_checkpoint(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3395,7 +3475,7 @@ def test_finalization_retries_completion_after_ambiguous_commit(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3436,7 +3516,7 @@ def test_report_checkpoint_rejects_conflicting_execution_replay_atomically(tmp_p
     cases, gold_set, suite = _lifecycle_fixture("conflicting-report-execution")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3505,7 +3585,7 @@ def test_report_checkpoint_rejects_conflicting_observation_replay_atomically(
     )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3634,7 +3714,7 @@ def test_run_metric_observations_can_be_compared_across_runs_by_canonical_metric
         configuration = EvaluationRunConfiguration(
             provider="deterministic", model="fixture"
         )
-        first = runner.run(
+        first = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3642,7 +3722,7 @@ def test_run_metric_observations_can_be_compared_across_runs_by_canonical_metric
             evaluator_resolver=lambda configured: CountCases(),
             configuration=configuration,
         )
-        second = runner.run(
+        second = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3760,7 +3840,7 @@ def test_report_checkpoint_retry_stops_at_confirmed_claim_expiry(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3808,7 +3888,7 @@ def test_report_checkpoint_does_not_retry_non_retryable_persistence_defect(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3846,7 +3926,7 @@ def test_finalization_claim_renews_from_ledger_time_without_changing_identity(tm
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3883,7 +3963,7 @@ def test_finalization_claim_renewal_rejects_wrong_released_and_expired_claims(tm
     clock = ControllableClock(datetime(2026, 7, 17, 12, tzinfo=timezone.utc))
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3939,7 +4019,7 @@ def test_finalize_refuses_a_live_claim_before_resolving_report_evaluators(tmp_pa
     database = tmp_path / "evaluation.sqlite"
 
     with SQLiteEvaluationLedger(database) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -3987,7 +4067,7 @@ def test_finalization_resumes_missing_report_work_and_skips_failed_terminal_work
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4067,7 +4147,7 @@ def test_expired_finalization_claim_recovers_only_missing_report_work(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4137,7 +4217,7 @@ def test_competing_finalizers_have_one_active_worker_and_one_report_execution(tm
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(database) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4205,7 +4285,7 @@ def test_stale_finalizer_discards_inflight_result_and_raises_typed_claim_loss(
     gate_calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4297,7 +4377,7 @@ def test_recovery_worker_alone_persists_one_terminal_execution_after_claim_loss(
     calls_b: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4369,7 +4449,7 @@ def test_claim_loss_during_release_gate_discards_gate_outcomes(tmp_path, monkeyp
     gate_calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4447,7 +4527,7 @@ def test_heartbeat_keeps_a_long_running_release_gate_authoritative(
     gate_calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4532,7 +4612,7 @@ def test_completion_racing_with_heartbeat_response_does_not_report_claim_loss(
     completion_committed = threading.Event()
 
     with SQLiteEvaluationLedger(database, clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4588,7 +4668,7 @@ def test_expired_finalizer_without_successor_raises_claim_loss(tmp_path, monkeyp
     calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4651,7 +4731,7 @@ def test_renewal_failure_is_typed_telemetry_and_not_a_run_issue(
     calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4726,7 +4806,7 @@ def test_transient_renewal_contention_pauses_work_until_authority_is_reconfirmed
     calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4793,7 +4873,7 @@ def test_transient_renewal_contention_becomes_claim_loss_at_confirmed_expiry(
     calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4845,7 +4925,7 @@ def test_transient_renewal_and_ownership_contention_stop_at_confirmed_expiry(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite", clock=clock) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -4903,7 +4983,7 @@ def _assert_long_running_finalizer_stays_authoritative(
     evaluator_calls: list[str] = []
 
     with SQLiteEvaluationLedger(database, clock=clock) as first_ledger:
-        initial = EvaluationRunner(first_ledger).run(
+        initial = _run(EvaluationRunner(first_ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5047,7 +5127,7 @@ def test_completion_rejects_report_execution_with_wrong_frozen_evaluator_identit
     cases, gold_set, suite = _lifecycle_fixture("wrong-report-evaluator-identity")
 
     with SQLiteEvaluationLedger(tmp_path / "wrong-report-evaluator-identity.sqlite") as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5104,7 +5184,7 @@ def test_completion_rejects_report_execution_with_wrong_frozen_configuration(
     with SQLiteEvaluationLedger(
         tmp_path / "wrong-report-evaluator-configuration.sqlite"
     ) as ledger:
-        initial = EvaluationRunner(ledger).run(
+        initial = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5149,7 +5229,7 @@ def test_orchestration_failure_keeps_prior_case_commits_and_leaves_run_failed(
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         monkeypatch.setattr(ledger, "freeze_aggregate_manifest", fail_report_freeze)
-        result = EvaluationRunner(ledger).run(
+        result = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5170,7 +5250,7 @@ def test_retry_is_a_new_run_linked_to_its_predecessor(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("retry")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        first = EvaluationRunner(ledger).run(
+        first = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5178,7 +5258,7 @@ def test_retry_is_a_new_run_linked_to_its_predecessor(tmp_path):
             evaluator_resolver=lambda configured: CountCases(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
         )
-        second = EvaluationRunner(ledger).run(
+        second = _run(EvaluationRunner(ledger),
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5209,7 +5289,7 @@ def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
         first_task_calls: list[str] = []
-        first = runner.run(
+        first = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5223,7 +5303,7 @@ def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
         )
 
         retry_task_calls: list[str] = []
-        second = runner.run(
+        second = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5285,7 +5365,7 @@ def test_missing_metrics_and_gate_failures_are_run_diagnostics(tmp_path):
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5423,7 +5503,7 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
             return Output(answer=task_input.prompt.replace("prompt", "answer"))
 
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5547,7 +5627,7 @@ def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_pat
         schemas = _schemas_for(cases)
         schemas.register(case_metric.structured_schema, TableResult)
         schemas.register(report_metric.structured_schema, TableResult)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5625,7 +5705,7 @@ def test_mismatched_structured_evaluator_output_is_failure_evidence_without_obse
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -5706,7 +5786,7 @@ def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
-        initial = runner.run(
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,

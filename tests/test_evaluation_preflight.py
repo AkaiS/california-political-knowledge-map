@@ -14,8 +14,6 @@ from knowledge_map.evaluation import (
     EvaluationRequirement,
     EvaluationRequirementBinding,
     EvaluationPreflightError,
-    EvaluationRunConfiguration,
-    EvaluationRunner,
     EvaluationSplit,
     EvaluationSuite,
     EvaluationSuiteIdentity,
@@ -23,7 +21,6 @@ from knowledge_map.evaluation import (
     SchemaReference,
     preflight_selected_cases,
 )
-from knowledge_map.evaluation.store import SQLiteEvaluationLedger
 
 
 class Input(BaseModel):
@@ -362,7 +359,7 @@ def test_preflight_rejects_suite_and_gold_set_contract_mismatch_before_selection
     assert any("Gold Set" in issue.message for issue in raised.value.issues)
 
 
-def test_runner_rejects_an_incompatible_preflight_before_creating_a_run(tmp_path):
+def test_incompatible_preflight_cannot_produce_a_plan_for_run_creation():
     first = _case("first", requirements=("grounding",))
     second = _case("second", requirements=("unknown",))
     suite = _suite(
@@ -374,23 +371,15 @@ def test_runner_rejects_an_incompatible_preflight_before_creating_a_run(tmp_path
     )
     gold_set = _gold_set((first, second))
 
-    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        try:
-            EvaluationRunner(ledger).run(
-                suite=suite,
-                gold_set=gold_set,
-                cases=(first, second),
-                task=lambda value: value,
-                evaluator_resolver=lambda configured: configured,
-                configuration=EvaluationRunConfiguration(
-                    provider="deterministic", model="fixture"
-                ),
-            )
-        except EvaluationPreflightError as error:
-            assert {issue.requirement for issue in error.result.issues} == {
-                "grounding",
-                "unknown",
-            }
-        else:
-            raise AssertionError("an incompatible preflight must reject run creation")
-        assert ledger.list_evaluation_runs() == []
+    with pytest.raises(EvaluationPreflightError) as raised:
+        preflight_selected_cases(
+            suite=suite,
+            gold_set=gold_set,
+            cases=(first, second),
+        )
+
+    assert raised.value.result.plan is None
+    assert {issue.requirement for issue in raised.value.result.issues} == {
+        "grounding",
+        "unknown",
+    }
