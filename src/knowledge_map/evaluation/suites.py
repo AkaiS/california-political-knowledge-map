@@ -24,7 +24,12 @@ from .definitions import (
     content_fingerprint,
     new_uuid7,
 )
-from .reporting import ResolvedSchemaBinding, SchemaRegistry, evaluator_version_tag
+from .reporting import (
+    ResolvedSchemaBinding,
+    SchemaRegistry,
+    evaluator_version_tag,
+    iter_report_evaluator_calls,
+)
 from uuid import UUID
 
 
@@ -741,10 +746,6 @@ class EvaluationSuite(BaseModel):
             self._resolve_case_evaluator(configured, evaluator_resolver)
             for configured in suite_wide_configured
         ]
-        report_evaluators = [
-            self._resolve_report_evaluator(configured, evaluator_resolver)
-            for configured in self.report_evaluators
-        ]
         dataset = Dataset(
             name=f"{self.identity.business_id}@{self.identity.revision}",
             cases=[
@@ -766,11 +767,20 @@ class EvaluationSuite(BaseModel):
                 for evaluation_case in selected_cases
             ],
             evaluators=case_evaluators,
-            report_evaluators=report_evaluators,
         )
-        return dataset.evaluate_sync(
+        report = dataset.evaluate_sync(
             task, progress=False, max_concurrency=max_concurrency
         )
+        report.analyses.extend(
+            call.output
+            for call in iter_report_evaluator_calls(
+                report=report,
+                configured_evaluators=self.report_evaluators,
+                evaluator_resolver=evaluator_resolver,
+            )
+            if call.failure_message is None and call.output is not None
+        )
+        return report
 
     @staticmethod
     def _resolve_case_evaluator(
@@ -781,13 +791,3 @@ class EvaluationSuite(BaseModel):
         if not isinstance(resolved, Evaluator):
             raise ValueError(f"{configured.name} did not resolve to a case evaluator")
         return _ConfiguredCaseEvaluator(configured, resolved)
-
-    @staticmethod
-    def _resolve_report_evaluator(
-        configured: ConfiguredEvaluator,
-        resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
-    ) -> ReportEvaluator:
-        resolved = resolver(configured)
-        if not isinstance(resolved, ReportEvaluator):
-            raise ValueError(f"{configured.name} did not resolve to a report evaluator")
-        return resolved

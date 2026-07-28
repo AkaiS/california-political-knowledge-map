@@ -1213,6 +1213,7 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         issues: Iterable[EvaluationRunIssue] = (),
         gate_outcomes: Iterable[EvaluationGateOutcome] = (),
         finalization_claim_id: UUID | None = None,
+        require_finalization_claim: bool = True,
     ) -> EvaluationRunRecord:
         issue_items = tuple(issues)
         gate_items = tuple(gate_outcomes)
@@ -1227,7 +1228,11 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
                 if row is None:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
                 if row["status"] != EvaluationRunStatus.COMPLETED.value:
-                    if row["status"] == EvaluationRunStatus.FINALIZATION_PENDING.value:
+                    if (
+                        require_finalization_claim
+                        and row["status"]
+                        == EvaluationRunStatus.FINALIZATION_PENDING.value
+                    ):
                         if finalization_claim_id is None:
                             raise ValueError(
                                 "Evaluation Run completion requires its exact live finalization claim"
@@ -3327,6 +3332,10 @@ class SQLiteEvaluationLedger:
         )
         self._bind_capability_methods()
 
+    @property
+    def is_ephemeral(self) -> bool:
+        return False
+
     def close(self) -> None:
         self._connection.close()
 
@@ -4003,6 +4012,10 @@ class InMemoryEvaluationEvidenceBuffer:
         return getattr(self._store, name)
 
     @property
+    def is_ephemeral(self) -> bool:
+        return True
+
+    @property
     def checkpoints(self) -> tuple[EvaluationCaseResult, ...]:
         """Return terminal case checkpoints in run and manifest order."""
         return tuple(
@@ -4010,6 +4023,24 @@ class InMemoryEvaluationEvidenceBuffer:
             for run in self._store.list_evaluation_runs()
             for result in self._store.list_evaluation_case_results(run.run_id)
             if result.checkpoint_id is not None
+        )
+
+    def complete_evaluation_run(
+        self,
+        run_id: UUID,
+        *,
+        issues: Iterable[EvaluationRunIssue] = (),
+        gate_outcomes: Iterable[EvaluationGateOutcome] = (),
+        finalization_claim_id: UUID | None = None,
+    ) -> EvaluationRunRecord:
+        """Complete ephemeral report work without creating fencing authority."""
+        if finalization_claim_id is not None:
+            raise ValueError("ephemeral evaluation does not use finalization claims")
+        return self._store.execution_store.complete_evaluation_run(
+            run_id,
+            issues=issues,
+            gate_outcomes=gate_outcomes,
+            require_finalization_claim=False,
         )
 
     def close(self) -> None:

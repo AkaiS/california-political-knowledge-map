@@ -10,12 +10,12 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, ReportEvaluator
 from pydantic_evals.lifecycle import CaseLifecycle
 from pydantic_evals.reporting import EvaluationReport
-from pydantic_evals.reporting.analyses import ScalarResult
 
 from .definitions import EvaluationCase
 from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
 from .preflight import ResolvedEvaluationPlan
 from .runs import TaskOutcome
+from .reporting import iter_report_evaluator_calls
 from .suites import ConfiguredEvaluator, EvaluationSuite, _ConfiguredCaseEvaluator
 
 
@@ -61,63 +61,6 @@ class NoOpCheckpointSink:
 
 
 EvaluatorResolver = Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator]
-
-_NO_RESULT_TITLE = "__knowledge_map_no_report_result__"
-
-
-class _NoneSafeReportEvaluator(ReportEvaluator):
-    """Keep a valid framework report when a portable evaluator returns no result."""
-
-    def __init__(self, delegate: ReportEvaluator) -> None:
-        self.delegate = delegate
-
-    def get_serialization_name(self) -> str:
-        return self.delegate.get_serialization_name()
-
-    def evaluate(self, ctx: Any) -> Any:
-        result = self.delegate.evaluate(ctx)
-        if result is None:
-            return ScalarResult(title=_NO_RESULT_TITLE, value=0)
-        return result
-
-    async def evaluate_async(self, ctx: Any) -> Any:
-        result = await self.delegate.evaluate_async(ctx)
-        if result is None:
-            return ScalarResult(title=_NO_RESULT_TITLE, value=0)
-        return result
-
-
-class _DeferredReportEvaluator(ReportEvaluator):
-    """Resolve report evaluators only after the complete case report exists."""
-
-    def __init__(
-        self,
-        configured: ConfiguredEvaluator,
-        resolver: EvaluatorResolver,
-    ) -> None:
-        self.configured = configured
-        self.resolver = resolver
-        self._delegate: ReportEvaluator | None = None
-
-    def get_serialization_name(self) -> str:
-        return self.configured.name
-
-    def _resolved(self) -> ReportEvaluator:
-        if self._delegate is None:
-            resolved = self.resolver(self.configured)
-            if not isinstance(resolved, ReportEvaluator):
-                raise ValueError(
-                    f"{self.configured.name} did not resolve to a report evaluator"
-                )
-            self._delegate = resolved
-        return self._delegate
-
-    def evaluate(self, ctx: Any) -> Any:
-        return self._resolved().evaluate(ctx)
-
-    async def evaluate_async(self, ctx: Any) -> Any:
-        return await self._resolved().evaluate_async(ctx)
-
 
 class EvaluationEngine:
     """Project one frozen plan into one multi-case Pydantic Evals Dataset."""
@@ -225,21 +168,10 @@ class EvaluationEngine:
                 )
             )
 
-        report_evaluators = (
-            tuple(
-                _NoneSafeReportEvaluator(
-                    _DeferredReportEvaluator(configured, evaluator_resolver)
-                )
-                for configured in suite.report_evaluators
-            )
-            if include_report_evaluators
-            else ()
-        )
         dataset = Dataset(
             name=f"{suite.identity.business_id}@{suite.identity.revision}",
             cases=dataset_cases,
             evaluators=dataset_evaluators,
-            report_evaluators=report_evaluators,
         )
         if task_binding is not None:
             def bound_task(task_input: Any) -> Any:
@@ -260,18 +192,20 @@ class EvaluationEngine:
             max_concurrency=max_concurrency,
             lifecycle=self.checkpoint_sink.case_lifecycle,
         )
-        report.analyses[:] = [
-            analysis
-            for analysis in report.analyses
-            if not (
-                isinstance(analysis, ScalarResult)
-                and analysis.title == _NO_RESULT_TITLE
-            )
-        ]
         if self.checkpoint_sink.case_lifecycle is None:
             for case in (*report.cases, *report.failures):
                 self.checkpoint_sink.checkpoint_case(case)
         self.checkpoint_sink.checkpoint_report(report)
+        if include_report_evaluators:
+            report.analyses.extend(
+                call.output
+                for call in iter_report_evaluator_calls(
+                    report=report,
+                    configured_evaluators=suite.report_evaluators,
+                    evaluator_resolver=evaluator_resolver,
+                )
+                if call.failure_message is None and call.output is not None
+            )
         return report
 
     @staticmethod
@@ -286,13 +220,3 @@ class EvaluationEngine:
             raise ValueError(
                 "Resolved Evaluation Plan does not belong to the supplied Evaluation Suite"
             )
-
-    @staticmethod
-    def _resolve_report_evaluator(
-        configured: ConfiguredEvaluator,
-        resolver: EvaluatorResolver,
-    ) -> ReportEvaluator:
-        resolved = resolver(configured)
-        if not isinstance(resolved, ReportEvaluator):
-            raise ValueError(f"{configured.name} did not resolve to a report evaluator")
-        return _NoneSafeReportEvaluator(resolved)

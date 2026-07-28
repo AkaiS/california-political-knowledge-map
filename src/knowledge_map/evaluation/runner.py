@@ -33,6 +33,7 @@ from .engine import EvaluationEngine
 from .bindings import EvaluationTaskBinding
 from .reporting import (
     SchemaRegistry,
+    iter_report_evaluator_calls,
     report_case_payload,
 )
 from .preflight import preflight_selected_cases
@@ -811,6 +812,7 @@ class EvaluationRunner:
         rubrics: tuple[EvaluationRubric, ...] = (),
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         configuration: EvaluationRunConfiguration,
+        schemas: SchemaRegistry | None = None,
         task: Callable[[Any], Any] | None = None,
         task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         selection: Callable[[EvaluationCase[Any, Any, Any]], bool]
@@ -1070,6 +1072,32 @@ class EvaluationRunner:
             )
             if resolver_failure is not None:
                 raise resolver_failure
+            if getattr(self.ledger, "is_ephemeral", False):
+                materialization_schemas = schemas or self._execution_schema_registry(
+                    suite=suite,
+                    cases=selected_cases,
+                    task_binding=task_binding,
+                    report=evaluation_report,
+                )
+                materialized_report = self.ledger.materialize_aggregate_report(
+                    run.run_id, materialization_schemas
+                )
+                self._evaluate_report_evaluators(
+                    run_id=run.run_id,
+                    suite=suite,
+                    report=materialized_report,
+                    evaluator_resolver=evaluator_resolver,
+                    existing=(),
+                    issues=issues,
+                    guard=lambda: None,
+                    should_stop=None,
+                    checkpoint=lambda execution, observations, new_issues: (
+                        self.ledger.record_report_evaluation(
+                            [execution], observations, new_issues
+                        )
+                    ),
+                )
+                self.ledger.complete_evaluation_run(run.run_id, issues=issues)
             completed_run = self.ledger.get_evaluation_run(run.run_id)
             if completed_run is None:  # pragma: no cover - ledger invariant
                 raise KeyError(f"unknown Evaluation Run: {run.run_id}")
@@ -1211,92 +1239,33 @@ class EvaluationRunner:
             raise ValueError("Evaluation Finalization has no frozen aggregate manifest")
         report = self.ledger.materialize_aggregate_report(run_id, schemas)
         existing = self.ledger.list_report_evaluator_executions(run_id)
-        completed_names = {
-            (execution.evaluator_name, execution.evaluator_revision,
-             execution.configuration_fingerprint)
-            for execution in existing
-        }
         issues = list(run.issues)
-        trace_id, span_id = report.trace_id, report.span_id
-        for configured in suite.report_evaluators:
-            self._ensure_finalization_claim(heartbeat)
-            if should_stop_finalization is not None and should_stop_finalization():
-                return self._build_result(
-                    run,
-                    tuple(self.ledger.list_evaluation_case_manifest(run_id)),
+        stopped = self._evaluate_report_evaluators(
+            run_id=run_id,
+            suite=suite,
+            report=report,
+            evaluator_resolver=evaluator_resolver,
+            existing=existing,
+            issues=issues,
+            guard=lambda: self._ensure_finalization_claim(heartbeat),
+            should_stop=should_stop_finalization,
+            checkpoint=lambda execution, observations, new_issues: (
+                self._retry_finalization_persistence(
+                    lambda: self.ledger.record_report_evaluation(
+                        [execution],
+                        observations,
+                        new_issues,
+                        finalization_claim_id=claim.claim_id,
+                    ),
+                    heartbeat,
+                    operation_name="report_checkpoint",
                 )
-            identity = (
-                configured.name,
-                configured.evaluator_revision,
-                configured.configuration_fingerprint,
-            )
-            if identity in completed_names:
-                continue
-            self._ensure_finalization_claim(heartbeat)
-            started = time.perf_counter()
-            issue_start = len(issues)
-            execution = ReportEvaluatorExecution(
-                run_id=run_id,
-                evaluator_name=configured.name,
-                evaluator_revision=configured.evaluator_revision,
-                configuration_fingerprint=configured.configuration_fingerprint,
-                status=EvaluationProducerStatus.COMPLETED,
-                duration_seconds=0,
-                trace_id=trace_id,
-                span_id=span_id,
-            )
-            observations: list[RunMetricObservation] = []
-            try:
-                resolved = evaluator_resolver(configured)
-                if not isinstance(resolved, ReportEvaluator):
-                    raise ValueError(
-                        f"{configured.name} did not resolve to a report evaluator"
-                    )
-                output = resolved.evaluate(
-                    ReportEvaluatorContext(
-                        name=configured.name,
-                        report=report,
-                        experiment_metadata=report.experiment_metadata,
-                    )
-                )
-                if inspect.isawaitable(output):
-                    output = asyncio.run(output)
-                observations = self._run_observations(
-                    configured,
-                    output,
-                    execution.execution_id,
-                    suite.metrics,
-                )
-            except Exception as exc:
-                execution = execution.model_copy(
-                    update={
-                        "status": EvaluationProducerStatus.FAILED,
-                        "failure_message": f"{type(exc).__name__}: {exc}",
-                    }
-                )
-            self._ensure_finalization_claim(heartbeat)
-            execution = execution.model_copy(
-                update={"duration_seconds": time.perf_counter() - started}
-            )
-            produced = {observation.metric.namespaced_name for observation in observations}
-            for metric in configured.metrics:
-                if metric.namespaced_name not in produced:
-                    issues.append(
-                        EvaluationRunIssue(
-                            category="missing_metric",
-                            subject=f"report:{configured.name}",
-                            message=f"required metric {metric.namespaced_name} was not produced",
-                        )
-                    )
-            self._retry_finalization_persistence(
-                lambda: self.ledger.record_report_evaluation(
-                    [execution],
-                    observations,
-                    issues[issue_start:],
-                    finalization_claim_id=claim.claim_id,
-                ),
-                heartbeat,
-                operation_name="report_checkpoint",
+            ),
+        )
+        if stopped:
+            return self._build_result(
+                run,
+                tuple(self.ledger.list_evaluation_case_manifest(run_id)),
             )
 
         pending_run = self.ledger.get_evaluation_run(run_id)
@@ -1353,6 +1322,132 @@ class EvaluationRunner:
         return self._build_result(
             completed_run, tuple(self.ledger.list_evaluation_case_manifest(run_id))
         )
+
+    def _evaluate_report_evaluators(
+        self,
+        *,
+        run_id: UUID,
+        suite: EvaluationSuite,
+        report: EvaluationReport[Any, Any, Any],
+        evaluator_resolver: Callable[
+            [ConfiguredEvaluator], Evaluator | ReportEvaluator
+        ],
+        existing: Iterable[ReportEvaluatorExecution],
+        issues: list[EvaluationRunIssue],
+        guard: Callable[[], None],
+        should_stop: Callable[[], bool] | None,
+        checkpoint: Callable[
+            [
+                ReportEvaluatorExecution,
+                list[RunMetricObservation],
+                list[EvaluationRunIssue],
+            ],
+            None,
+        ],
+    ) -> bool:
+        """Run report evaluators with shared ephemeral and durable semantics."""
+        terminal = {
+            (
+                execution.evaluator_name,
+                execution.evaluator_revision,
+                execution.configuration_fingerprint,
+            )
+            for execution in existing
+        }
+        stopped = False
+
+        def stop_requested() -> bool:
+            nonlocal stopped
+            stopped = should_stop is not None and should_stop()
+            return stopped
+
+        calls = iter_report_evaluator_calls(
+            report=report,
+            configured_evaluators=suite.report_evaluators,
+            evaluator_resolver=evaluator_resolver,
+            completed_identities=terminal,
+            guard=guard,
+            should_stop=stop_requested if should_stop is not None else None,
+        )
+        for call in calls:
+            configured = call.configured
+            issue_start = len(issues)
+            execution = ReportEvaluatorExecution(
+                run_id=run_id,
+                evaluator_name=configured.name,
+                evaluator_revision=configured.evaluator_revision,
+                configuration_fingerprint=configured.configuration_fingerprint,
+                status=(
+                    EvaluationProducerStatus.FAILED
+                    if call.failure_message
+                    else EvaluationProducerStatus.COMPLETED
+                ),
+                duration_seconds=call.duration_seconds,
+                failure_message=call.failure_message,
+                trace_id=report.trace_id,
+                span_id=report.span_id,
+            )
+            observations: list[RunMetricObservation] = []
+            if call.failure_message is None:
+                try:
+                    observations = self._run_observations(
+                        configured,
+                        call.output,
+                        execution.execution_id,
+                        suite.metrics,
+                    )
+                except Exception as exc:
+                    execution = execution.model_copy(
+                        update={
+                            "status": EvaluationProducerStatus.FAILED,
+                            "failure_message": f"{type(exc).__name__}: {exc}",
+                        }
+                    )
+            produced = {
+                observation.metric.namespaced_name for observation in observations
+            }
+            for metric in configured.metrics:
+                if metric.namespaced_name not in produced:
+                    issues.append(
+                        EvaluationRunIssue(
+                            category="missing_metric",
+                            subject=f"report:{configured.name}",
+                            message=(
+                                f"required metric {metric.namespaced_name} "
+                                "was not produced"
+                            ),
+                        )
+                    )
+            checkpoint(execution, observations, issues[issue_start:])
+        return stopped
+
+    @staticmethod
+    def _execution_schema_registry(
+        *,
+        suite: EvaluationSuite,
+        cases: tuple[EvaluationCase[Any, Any, Any], ...],
+        task_binding: EvaluationTaskBinding[Any, Any, Any] | None,
+        report: EvaluationReport[Any, Any, Any],
+    ) -> SchemaRegistry:
+        """Infer the task schemas already present in one ephemeral execution."""
+        schemas = SchemaRegistry()
+        for case in cases:
+            schemas.register(suite.task_contract.input_schema, type(case.task_input))
+            schemas.register(suite.task_contract.metadata_schema, type(case.metadata))
+
+        output_model = task_binding.output_model if task_binding is not None else None
+        if output_model is None:
+            output_model = next(
+                (
+                    type(case.output)
+                    for case in report.cases
+                    if isinstance(case.output, BaseModel)
+                ),
+                None,
+            )
+        if output_model is not None:
+            schemas.register(suite.task_contract.output_schema, output_model)
+        return schemas
 
     def _retry_finalization_persistence(
         self,

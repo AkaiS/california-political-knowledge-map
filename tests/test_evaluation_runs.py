@@ -1742,6 +1742,86 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
         assert result.run_observations == ()
 
 
+def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_report():
+    cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-failure")
+    suite = suite.model_copy(
+        update={
+            "report_evaluators": (
+                ConfiguredEvaluator(name="failing-report", evaluator_revision=1),
+            )
+        }
+    )
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: FailingReportEvaluator(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        report = evidence.materialize_aggregate_report(
+            result.run.run_id, _schemas_for(cases)
+        )
+
+    assert result.run.status == "completed"
+    assert len(report.cases) == 2
+    assert report.failures == []
+    assert result.report_evaluator_executions[0].status.value == "failed"
+    assert "report evaluator is unavailable" in (
+        result.report_evaluator_executions[0].failure_message or ""
+    )
+    assert result.run_observations == ()
+
+
+def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
+    cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-none")
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+    assert result.run.status == "completed"
+    assert result.report_evaluator_executions[0].status.value == "completed"
+    assert result.report_evaluator_executions[0].failure_message is None
+    assert result.run_observations == ()
+
+
+def test_durable_report_evaluator_returning_nothing_records_no_observation(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("durable-report-evaluator-none")
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+        initial = runner.run(
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
+        )
+
+    assert result.run.status == "completed"
+    assert result.report_evaluator_executions[0].status.value == "completed"
+    assert result.report_evaluator_executions[0].failure_message is None
+    assert result.run_observations == ()
+
+
 def test_run_artifact_read_models_preserve_smallest_execution_producer(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture(
         "artifact-links", case_evaluator="exact-case"

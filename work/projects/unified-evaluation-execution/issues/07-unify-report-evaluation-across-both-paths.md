@@ -1,6 +1,6 @@
 # Evaluate reports the same way on both paths
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md).
 
@@ -30,17 +30,17 @@ claims or heartbeats, because there is no contention to fence.
 
 ## Acceptance criteria
 
-- [ ] Report evaluators run after report materialization on both the durable and the ephemeral path.
-- [ ] One evaluator loop serves both paths; there is no per-path copy of report evaluation.
-- [ ] The `pydantic_evals` report-evaluator hook is no longer used for report evaluation.
-- [ ] The None-safe and deferred report-evaluator wrapper classes are deleted.
-- [ ] A report evaluator that raises is recorded as a failed execution and the run still produces an Evaluation Report, on both paths, proven by a test on each.
-- [ ] A report evaluator that returns nothing produces no observations and no error, on both paths, proven by a test on each.
-- [ ] Durable report evaluation remains inside the claim-fenced Evaluation Finalization phase.
-- [ ] Durable Evaluation Finalization remains resumable after a report-evaluator failure, per ADR 0011.
-- [ ] Existing finalization claim, renewal, and fencing tests pass unmodified, per ADR 0012.
-- [ ] Ephemeral report evaluation runs without claims or heartbeats.
-- [ ] The full deterministic test suite passes.
+- [x] Report evaluators run after report materialization on both the durable and the ephemeral path.
+- [x] One evaluator loop serves both paths; there is no per-path copy of report evaluation.
+- [x] The `pydantic_evals` report-evaluator hook is no longer used for report evaluation.
+- [x] The None-safe and deferred report-evaluator wrapper classes are deleted.
+- [x] A report evaluator that raises is recorded as a failed execution and the run still produces an Evaluation Report, on both paths, proven by a test on each.
+- [x] A report evaluator that returns nothing produces no observations and no error, on both paths, proven by a test on each.
+- [x] Durable report evaluation remains inside the claim-fenced Evaluation Finalization phase.
+- [x] Durable Evaluation Finalization remains resumable after a report-evaluator failure, per ADR 0011.
+- [x] Existing finalization claim, renewal, and fencing tests pass unmodified, per ADR 0012.
+- [x] Ephemeral report evaluation runs without claims or heartbeats.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

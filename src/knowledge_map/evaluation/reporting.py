@@ -2,19 +2,90 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
+import time
 from dataclasses import asdict, dataclass, is_dataclass
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from pydantic_evals.evaluators import EvaluatorFailure, EvaluatorSpec
+from pydantic_evals.evaluators import (
+    EvaluatorFailure,
+    EvaluatorSpec,
+    ReportEvaluator,
+    ReportEvaluatorContext,
+)
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 from pydantic_evals.evaluators.evaluator import EvaluationResult
 
 from .definitions import SchemaReference, canonical_json
+
+
+@dataclass(frozen=True)
+class ReportEvaluatorCall:
+    """One portable report-evaluator execution before evidence persistence."""
+
+    configured: Any
+    output: Any = None
+    failure_message: str | None = None
+    duration_seconds: float = 0.0
+
+
+def iter_report_evaluator_calls(
+    *,
+    report: EvaluationReport[Any, Any, Any],
+    configured_evaluators: Iterable[Any],
+    evaluator_resolver: Callable[[Any], Any],
+    completed_identities: Iterable[tuple[str, int, str]] = (),
+    guard: Callable[[], None] = lambda: None,
+    should_stop: Callable[[], bool] | None = None,
+) -> Iterator[ReportEvaluatorCall]:
+    """Invoke configured report evaluators identically for every execution path."""
+    completed = set(completed_identities)
+    for configured in configured_evaluators:
+        guard()
+        if should_stop is not None and should_stop():
+            return
+        identity = (
+            configured.name,
+            configured.evaluator_revision,
+            configured.configuration_fingerprint,
+        )
+        if identity in completed:
+            continue
+
+        guard()
+        started = time.perf_counter()
+        output = None
+        failure_message = None
+        try:
+            resolved = evaluator_resolver(configured)
+            if not isinstance(resolved, ReportEvaluator):
+                raise ValueError(
+                    f"{configured.name} did not resolve to a report evaluator"
+                )
+            output = resolved.evaluate(
+                ReportEvaluatorContext(
+                    name=configured.name,
+                    report=report,
+                    experiment_metadata=report.experiment_metadata,
+                )
+            )
+            if inspect.isawaitable(output):
+                output = asyncio.run(output)
+        except Exception as exc:
+            failure_message = f"{type(exc).__name__}: {exc}"
+        guard()
+        yield ReportEvaluatorCall(
+            configured=configured,
+            output=output,
+            failure_message=failure_message,
+            duration_seconds=time.perf_counter() - started,
+        )
 
 
 class SchemaRegistry:
