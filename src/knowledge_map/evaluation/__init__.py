@@ -75,7 +75,6 @@ from .runs import (
 )
 from .runner import EvaluationRunner
 from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
-from .engine import EvaluationCheckpointSink, EvaluationEngine, NoOpCheckpointSink
 from .reporting import (
     ResolvedSchemaBinding,
     SchemaRegistry,
@@ -189,9 +188,6 @@ __all__ = [
     "EvaluationRunner",
     "EvaluationTaskBinding",
     "TaskBindingInvocationError",
-    "EvaluationCheckpointSink",
-    "EvaluationEngine",
-    "NoOpCheckpointSink",
     "SchemaRegistry",
     "ResolvedSchemaBinding",
     "materialize_structured_metric_observation",

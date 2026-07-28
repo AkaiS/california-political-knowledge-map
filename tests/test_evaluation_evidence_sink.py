@@ -7,7 +7,6 @@ from knowledge_map.evaluation import (
     EvaluationCase,
     EvaluationCaseIdentity,
     EvaluationCaseRevisionReference,
-    EvaluationEngine,
     EvaluationGoldSet,
     EvaluationGoldSetIdentity,
     EvaluationGoldSetMembership,
@@ -20,6 +19,7 @@ from knowledge_map.evaluation import (
     TaskSuccess,
     preflight_selected_cases,
 )
+from knowledge_map.evaluation.engine import EvaluationEngine
 
 
 @pytest.mark.parametrize(

@@ -7,9 +7,7 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorSpec, ReportEvaluator
-from pydantic_evals.reporting import EvaluationReport
 
 from .definitions import (
     EvaluationCase,
@@ -28,7 +26,6 @@ from .reporting import (
     ResolvedSchemaBinding,
     SchemaRegistry,
     evaluator_version_tag,
-    iter_report_evaluator_calls,
 )
 from uuid import UUID
 
@@ -600,7 +597,6 @@ class EvaluationSuite(BaseModel):
         self, evaluation_case: EvaluationCase[Any, Any, Any]
     ) -> tuple[ConfiguredEvaluator, ...]:
         """Resolve the additive, deduplicated case evaluator assignment for a case."""
-        self.validate_cases((evaluation_case,))
         references = list(self._suite_wide_case_evaluator_references())
         bindings = {binding.requirement: binding for binding in self.requirement_bindings}
         for requirement in evaluation_case.requirements:
@@ -690,97 +686,6 @@ class EvaluationSuite(BaseModel):
             )
             raise ValueError(f"case {field_name} schema is incompatible with the suite")
         return cases
-
-    def execute(
-        self,
-        *,
-        cases: tuple[EvaluationCase[Any, Any, Any], ...],
-        task: Callable[[Any], Any] | None = None,
-        task_binding: Any | None = None,
-        evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
-        plan: "ResolvedEvaluationPlan | None" = None,
-        checkpoint_sink: "EvaluationCheckpointSink | None" = None,
-        max_concurrency: int = 1,
-    ) -> EvaluationReport[Any, Any, Any]:
-        """Execute compatible cases through the provider-neutral pydantic-evals seam."""
-        if (task is None) == (task_binding is None):
-            raise ValueError("provide exactly one task or task_binding")
-        if task_binding is not None and not task_binding.contract.is_exactly_compatible_with(self.task_contract):
-            raise ValueError("task_binding contract does not match the Suite/Gold Set contract")
-        if plan is not None:
-            from .engine import EvaluationEngine
-
-            return EvaluationEngine(checkpoint_sink).execute(
-                plan=plan,
-                suite=self,
-                cases=cases,
-                task=task,
-                task_binding=task_binding,
-                evaluator_resolver=evaluator_resolver,
-                max_concurrency=max_concurrency,
-            )
-
-        selected_cases = self.validate_cases(cases)
-        if task_binding is not None:
-            from .bindings import TaskBindingInvocationError
-
-            def bound_task(task_input: Any) -> Any:
-                import asyncio
-
-                outcome = (
-                    asyncio.run(task_binding.invoke_async(task_input))
-                    if task_binding.is_async
-                    else task_binding.invoke(task_input)
-                )
-                if outcome.kind == "failure":
-                    raise TaskBindingInvocationError(outcome)
-                return outcome.output
-
-            task = bound_task
-        suite_wide_references = self._suite_wide_case_evaluator_references()
-        configured_by_name = {evaluator.name: evaluator for evaluator in self.case_evaluators}
-        suite_wide_configured = tuple(
-            configured_by_name[reference.name] for reference in suite_wide_references
-        )
-        case_evaluators = [
-            self._resolve_case_evaluator(configured, evaluator_resolver)
-            for configured in suite_wide_configured
-        ]
-        dataset = Dataset(
-            name=f"{self.identity.business_id}@{self.identity.revision}",
-            cases=[
-                Case(
-                    name=(
-                        f"{evaluation_case.identity.business_id}"
-                        f"@{evaluation_case.identity.revision}"
-                    ),
-                    inputs=evaluation_case.task_input,
-                    expected_output=evaluation_case.expected_output,
-                    metadata=evaluation_case.metadata,
-                    evaluators=tuple(
-                        self._resolve_case_evaluator(configured, evaluator_resolver)
-                        for configured in self.resolve_case_evaluators(evaluation_case)
-                        if configured.name
-                        not in {reference.name for reference in suite_wide_references}
-                    ),
-                )
-                for evaluation_case in selected_cases
-            ],
-            evaluators=case_evaluators,
-        )
-        report = dataset.evaluate_sync(
-            task, progress=False, max_concurrency=max_concurrency
-        )
-        report.analyses.extend(
-            call.output
-            for call in iter_report_evaluator_calls(
-                report=report,
-                configured_evaluators=self.report_evaluators,
-                evaluator_resolver=evaluator_resolver,
-            )
-            if call.failure_message is None and call.output is not None
-        )
-        return report
 
     @staticmethod
     def _resolve_case_evaluator(

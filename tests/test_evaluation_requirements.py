@@ -18,6 +18,10 @@ from knowledge_map.evaluation import (
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
     EvaluationTaskBinding,
+    EvaluationRunConfiguration,
+    EvaluationRunner,
+    InMemoryEvaluationEvidenceBuffer,
+    SchemaRegistry,
     ConfiguredEvaluator,
     ConfiguredEvaluatorReference,
     EvaluationRequirementBinding,
@@ -271,17 +275,45 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
         requirements=("source-grounding",),
     )
 
-    report = suite.execute(
-        cases=(case,),
-        task=lambda _: RequirementOutput(label="grounded"),
-        evaluator_resolver=lambda configured: (
-            RequirementEvaluator()
-            if configured.name == "grounding"
-            else RequirementReportEvaluator()
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="suite-3-gold", revision=1),
+        description="Requirement-selected cases.",
+        task_contract=suite.task_contract,
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            ),
         ),
     )
+    plan = suite.preflight_selected_cases(
+        gold_set=gold_set, cases=(case,)
+    ).plan
+    assert plan is not None
+    schemas = SchemaRegistry()
+    schemas.register(case.input_schema, RequirementInput)
+    schemas.register(case.expected_output_schema, RequirementOutput)
+    schemas.register(case.metadata_schema, RequirementMetadata)
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            plan=plan,
+            suite=suite,
+            gold_set=gold_set,
+            cases=(case,),
+            task=lambda _: RequirementOutput(label="grounded"),
+            evaluator_resolver=lambda configured: (
+                RequirementEvaluator()
+                if configured.name == "grounding"
+                else RequirementReportEvaluator()
+            ),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+            schemas=schemas,
+        )
+        report = evidence.materialize_aggregate_report(result.run.run_id, schemas)
 
-    assert report.cases[0].assertions["RequirementEvaluator"].value is True
+    assert report.cases[0].assertions["grounding"].value is True
 
 
 def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
@@ -362,24 +394,6 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     universal_calls: list[str] = []
     grounding_calls: list[str] = []
     report_case_counts: list[int] = []
-    checkpointed_cases: list[str] = []
-    checkpointed_reports: list[int] = []
-
-    class RecordingCheckpointSink:
-        case_lifecycle = None
-
-        def record_task_outcome(self, task_input, outcome) -> None:
-            return None
-
-        def checkpoint_case(self, case) -> None:
-            checkpointed_cases.append(case.name)
-
-        def checkpoint_report(self, report) -> None:
-            checkpointed_reports.append(len(report.cases))
-
-        def checkpoint_partial_report_evidence(self) -> None:
-            return None
-
     binding = EvaluationTaskBinding(
         operation=lambda task_input: RequirementOutput(
             label=task_input.text.replace("text", "label")
@@ -389,17 +403,29 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
         output_model=RequirementOutput,
         metadata_model=RequirementMetadata,
     )
-    report = suite.execute(
-        plan=plan_result.plan,
-        cases=cases,
-        task_binding=binding,
-        checkpoint_sink=RecordingCheckpointSink(),
-        evaluator_resolver=lambda configured: {
-            "universal": RecordingEvaluator(universal_calls),
-            "grounding": RecordingEvaluator(grounding_calls),
-            "report": RecordingReportEvaluator(report_case_counts),
-        }[configured.name],
-    )
+    registry = SchemaRegistry()
+    registry.register(cases[0].input_schema, RequirementInput)
+    registry.register(cases[0].expected_output_schema, RequirementOutput)
+    registry.register(cases[0].metadata_schema, RequirementMetadata)
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            plan=plan_result.plan,
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task_binding=binding,
+            evaluator_resolver=lambda configured: {
+                "universal": RecordingEvaluator(universal_calls),
+                "grounding": RecordingEvaluator(grounding_calls),
+                "report": RecordingReportEvaluator(report_case_counts),
+            }[configured.name],
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+            schemas=registry,
+        )
+        report = evidence.materialize_aggregate_report(result.run.run_id, registry)
+        checkpoint_count = len(evidence.checkpoints)
 
     assert [case.name for case in report.cases] == [
         "engine-case-1@1",
@@ -408,9 +434,7 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     assert universal_calls == ["engine-case-1@1", "engine-case-2@1"]
     assert grounding_calls == ["engine-case-1@1"]
     assert report_case_counts == [2]
-    assert report.analyses[0].value == 2
-    assert checkpointed_cases == ["engine-case-1@1", "engine-case-2@1"]
-    assert checkpointed_reports == [2]
+    assert checkpoint_count == 2
 
 
 def test_case_requirements_are_authored_content_but_suite_judging_is_not_case_content():

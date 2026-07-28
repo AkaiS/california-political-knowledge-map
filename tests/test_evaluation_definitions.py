@@ -20,12 +20,17 @@ from knowledge_map.evaluation import (
     EvaluationSplit,
     EvaluationCase,
     EvaluationCaseIdentity,
+    EvaluationRunConfiguration,
+    EvaluationRunner,
+    InMemoryEvaluationEvidenceBuffer,
+    SchemaRegistry,
     AuthoredDefinitionConflictError,
     DeclaredArtifactReference,
     SchemaReference,
     assert_same_revision_content,
     canonical_configuration_json,
     configuration_fingerprint,
+    preflight_selected_cases,
 )
 from knowledge_map.evaluation.suites import (
     CustomComparisonOperation,
@@ -343,17 +348,50 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
         ),
     )
 
-    report = suite.execute(
-        cases=(authored_case,),
-        task=lambda input: RelevanceOutput(is_relevant="California" in input.headline),
-        evaluator_resolver=lambda configured: {
-            "exact-output": ExactRelevanceOutput(),
-            "case-count": CountEvaluatedCases(),
-        }[configured.name],
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="relevance-gold", revision=1),
+        description="Reviewed relevance cases.",
+        task_contract=suite.task_contract,
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(authored_case),
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
     )
+    plan = preflight_selected_cases(
+        suite=suite, gold_set=gold_set, cases=(authored_case,)
+    ).plan
+    assert plan is not None
+    schemas = SchemaRegistry()
+    schemas.register(input_schema, RelevanceInput)
+    schemas.register(output_schema, RelevanceOutput)
+    schemas.register(metadata_schema, RelevanceMetadata)
 
-    assert report.cases[0].assertions["ExactRelevanceOutput"].value is True
-    assert report.analyses[0].value == 1
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            plan=plan,
+            suite=suite,
+            gold_set=gold_set,
+            cases=(authored_case,),
+            task=lambda input: RelevanceOutput(
+                is_relevant="California" in input.headline
+            ),
+            evaluator_resolver=lambda configured: {
+                "exact-output": ExactRelevanceOutput(),
+                "case-count": CountEvaluatedCases(),
+            }[configured.name],
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+            schemas=schemas,
+        )
+        report = evidence.materialize_aggregate_report(result.run.run_id, schemas)
+
+    # Runner-materialized evidence is addressed by the authored Configured
+    # Evaluator name rather than the implementation class name.
+    assert report.cases[0].assertions["exact-output"].value is True
+    assert result.report_evaluator_executions[0].status == "completed"
 
 
 def test_suite_rejects_a_revision_without_a_report_evaluator():
@@ -376,6 +414,17 @@ def test_suite_rejects_a_revision_without_a_report_evaluator():
         )
 
 
+def test_suite_is_a_definition_without_an_execution_entry_point():
+    assert not hasattr(EvaluationSuite, "execute")
+
+
+def test_evaluation_engine_is_not_exported_as_a_public_entry_point():
+    import knowledge_map.evaluation as evaluation
+
+    assert not hasattr(evaluation, "EvaluationEngine")
+    assert "EvaluationEngine" not in evaluation.__all__
+
+
 @pytest.mark.parametrize("forbidden_setting", [{"provider": "openai"}, {"model": "gpt-5"}])
 def test_suite_evaluator_configuration_rejects_provider_and_model_settings(forbidden_setting):
     with pytest.raises(ValueError, match="provider or model"):
@@ -386,7 +435,7 @@ def test_suite_evaluator_configuration_rejects_provider_and_model_settings(forbi
         )
 
 
-def test_suite_rejects_a_case_with_an_incompatible_schema_before_task_execution():
+def test_preflight_rejects_a_case_with_an_incompatible_schema_before_task_execution():
     suite_input_schema = SchemaReference.for_model(
         RelevanceInput, identity="ca-map.relevance.input", revision=1
     )
@@ -424,12 +473,23 @@ def test_suite_rejects_a_case_with_an_incompatible_schema_before_task_execution(
     )
 
     with pytest.raises(ValueError, match="case input schema"):
-        suite.execute(
-            cases=(incompatible_case,),
-            task=lambda _: pytest.fail("the incompatible case must never execute"),
-            evaluator_resolver=lambda _: pytest.fail(
-                "evaluator resolution must happen after case validation"
+        suite.preflight_selected_cases(
+            gold_set=EvaluationGoldSet(
+                identity=EvaluationGoldSetIdentity(
+                    business_id="incompatible-gold", revision=1
+                ),
+                description="An incompatible authored population.",
+                task_contract=suite.task_contract,
+                memberships=(
+                    EvaluationGoldSetMembership(
+                        case=EvaluationCaseRevisionReference.from_case(
+                            incompatible_case
+                        ),
+                        split=EvaluationSplit.HELD_OUT,
+                    ),
+                ),
             ),
+            cases=(incompatible_case,),
         )
 
 

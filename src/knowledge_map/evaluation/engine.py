@@ -106,8 +106,6 @@ class EvaluationEngine:
                     "Resolved Evaluation Plan requires the exact supplied Evaluation Case revision"
                 )
             selected_cases.append(evaluation_case)
-        suite.validate_cases(tuple(selected_cases))
-
         configured_by_name = {configured.name: configured for configured in suite.case_evaluators}
         suite_wide_names = tuple(
             dict.fromkeys(

@@ -541,12 +541,23 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
 
     captured_reports: list = []
 
-    in_memory = suite.execute(
-        plan=plan_result.plan,
-        cases=cases,
-        task=lambda task_input: Output(answer=task_input.prompt),
-        evaluator_resolver=resolve,
-    )
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        in_memory_result = _run(
+            EvaluationRunner(evidence),
+            plan=plan_result.plan,
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=resolve,
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+            schemas=_schemas_for(cases),
+        )
+        in_memory = evidence.materialize_aggregate_report(
+            in_memory_result.run.run_id, _schemas_for(cases)
+        )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
@@ -572,13 +583,13 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
 
     assert durable.run.status == "completed"
     assert in_memory.cases[0].output.model_dump() == durable.case_results[0].task_outcome.output
-    assert list(in_memory.cases[0].assertions) == ["ExactAnswer"]
+    assert list(in_memory.cases[0].assertions) == ["exact-case"]
     configured = suite.case_evaluators[0]
     expected_version = evaluator_version_tag(
         configured.evaluator_revision,
         configured.configuration_fingerprint,
     )
-    assert in_memory.cases[0].assertions["ExactAnswer"].evaluator_version == expected_version
+    assert in_memory.cases[0].assertions["exact-case"].evaluator_version == expected_version
     assert checkpoint_case.assertions["exact-case"].evaluator_version == expected_version
     assert (
         captured_reports[0].cases[0].assertions["exact-case"].evaluator_version
@@ -587,7 +598,8 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
     assert [execution.evaluator_name for execution in durable.case_evaluator_executions] == [
         "exact-case"
     ]
-    assert in_memory.analyses[0].value == len(durable.case_results) == 1
+    assert len(in_memory_result.case_results) == len(durable.case_results) == 1
+    assert in_memory_result.report_evaluator_executions[0].status == "completed"
     assert [execution.status.value for execution in durable.report_evaluator_executions] == [
         "completed"
     ]
@@ -1209,6 +1221,24 @@ def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
 def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
     cases = tuple(_case(number) for number in range(1, 5))
     _, _, suite = _lifecycle_fixture("shared-concurrency")
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(
+            business_id="shared-concurrency-gold", revision=1
+        ),
+        description="Concurrent execution cases.",
+        task_contract=suite.task_contract,
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for case in cases
+        ),
+    )
+    plan = preflight_selected_cases(
+        suite=suite, gold_set=gold_set, cases=cases
+    ).plan
+    assert plan is not None
     active = 0
     maximum_active = 0
     lock = threading.Lock()
@@ -1225,12 +1255,24 @@ def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
             with lock:
                 active -= 1
 
-    report = suite.execute(
-        cases=cases,
-        task=task,
-        evaluator_resolver=lambda configured: CountCases(),
-        max_concurrency=2,
-    )
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = EvaluationRunner(evidence).run(
+            plan=plan,
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            task=task,
+            evaluator_resolver=lambda configured: CountCases(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic",
+                model="fixture",
+                case_concurrency=2,
+            ),
+            schemas=_schemas_for(cases),
+        )
+        report = evidence.materialize_aggregate_report(
+            result.run.run_id, _schemas_for(cases)
+        )
 
     assert len(report.cases) == len(cases)
     assert maximum_active == 2

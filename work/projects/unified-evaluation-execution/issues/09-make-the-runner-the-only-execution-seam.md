@@ -1,6 +1,6 @@
 # Make the runner the only execution seam
 
-Labels: ready-for-agent
+Labels: ready-for-human
 
 Closes inbox items EP-01 and EP-03 for the
 [Unified Evaluation Execution Path](../PRD.md). The largest change in the project,
@@ -33,17 +33,28 @@ execution. Validation happens once, at preflight.
 
 ## Acceptance criteria
 
-- [ ] `EvaluationRunner.run` requires a Resolved Evaluation Plan and has no plan-less branch.
-- [ ] Durability is determined by the evidence sink the runner was constructed over, not by an argument to the run call.
-- [ ] `EvaluationSuite.execute` is removed.
-- [ ] `EvaluationSuite` retains its definition responsibilities: resolving Configured Evaluators, exposing report evaluators, metrics, Evaluation Requirement Bindings, and its Evaluation Task Contract.
-- [ ] All seven former `EvaluationSuite.execute` call sites execute through a runner over an in-memory evidence sink, with their original assertions intact.
-- [ ] Any assertion that could not survive the migration unchanged is called out explicitly as a semantic change rather than silently rewritten.
-- [ ] `EvaluationEngine` is no longer exported as a public entry point.
-- [ ] A happy-path test of plan-driven execution exists, closing the gap where the engine was covered only by a task-binding rejection test.
-- [ ] Redundant case validation is removed from evaluator resolution and from durable execution.
-- [ ] The existing test that all execution entry points reject a mismatched Task Binding contract is updated to the single remaining seam and still passes, per ADR 0007.
-- [ ] The full deterministic test suite passes.
+- [x] `EvaluationRunner.run` requires a Resolved Evaluation Plan and has no plan-less branch.
+- [x] Durability is determined by the evidence sink the runner was constructed over, not by an argument to the run call.
+- [x] `EvaluationSuite.execute` is removed.
+- [x] `EvaluationSuite` retains its definition responsibilities: resolving Configured Evaluators, exposing report evaluators, metrics, Evaluation Requirement Bindings, and its Evaluation Task Contract.
+- [x] All seven former `EvaluationSuite.execute` call sites execute through a runner over an in-memory evidence sink, with their original assertions intact.
+- [x] Any assertion that could not survive the migration unchanged is called out explicitly as a semantic change rather than silently rewritten.
+- [x] `EvaluationEngine` is no longer exported as a public entry point.
+- [x] A happy-path test of plan-driven execution exists, closing the gap where the engine was covered only by a task-binding rejection test.
+- [x] Redundant case validation is removed from evaluator resolution and from durable execution.
+- [x] The existing test that all execution entry points reject a mismatched Task Binding contract is updated to the single remaining seam and still passes, per ADR 0007.
+- [x] The full deterministic test suite passes.
+
+## Surfaced semantic changes
+
+- Runner-materialized case evidence addresses assertions by the authored
+  Configured Evaluator name, not the evaluator implementation class name.
+- Free-form report-evaluator `ScalarResult` analyses are not canonical checkpoint
+  evidence. Migrated tests assert persisted report-evaluator completion (or the
+  evaluator's recorded invocation) instead; declared metric observations remain
+  the durable report-output contract.
+- Incompatible authored cases now fail during preflight, before a Resolved
+  Evaluation Plan exists, rather than at an execution entry point.
 
 ## Blocked by
 

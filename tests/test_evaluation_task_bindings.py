@@ -188,7 +188,7 @@ def test_task_contract_is_exactly_compatible_with():
     assert contract1.is_exactly_compatible_with(other_output_contract) is False
 
 
-def test_execution_entry_points_reject_mismatched_task_binding_contracts():
+def test_runner_rejects_a_mismatched_task_binding_contract():
     from knowledge_map.evaluation import (
         EvaluationSuite,
         EvaluationSuiteIdentity,
@@ -198,7 +198,6 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
         EvaluationMetricReference,
         NoComparisonOperation,
     )
-    from knowledge_map.evaluation.engine import EvaluationEngine
     from knowledge_map.evaluation.preflight import ResolvedEvaluationPlan, EvaluationDefinitionRevisionReference
 
     suite_contract = _contract()
@@ -250,15 +249,6 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
         ),
     )
 
-    # 1. EvaluationSuite.execute must reject mismatched binding
-    with pytest.raises(ValueError, match="task_binding contract does not match"):
-        suite.execute(
-            cases=(),
-            task_binding=mismatched_binding,
-            evaluator_resolver=lambda cfg: None,
-        )
-
-    # 2. EvaluationEngine.execute must reject mismatched binding
     plan = ResolvedEvaluationPlan(
         suite=EvaluationDefinitionRevisionReference(
             record_id="00000000-0000-0000-0000-000000000001",
@@ -274,21 +264,10 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
         ),
         cases=(),
     )
-    engine = EvaluationEngine()
-    with pytest.raises(ValueError, match="task_binding contract does not match"):
-        engine.execute(
-            plan=plan,
-            suite=suite,
-            cases=(),
-            task_binding=mismatched_binding,
-            evaluator_resolver=lambda cfg: None,
-        )
-
-    # 3. EvaluationRunner.run must reject mismatched binding
-    from unittest.mock import MagicMock
     from knowledge_map.evaluation import (
         EvaluationRunner,
         EvaluationRunConfiguration,
+        InMemoryEvaluationEvidenceBuffer,
         EvaluationGoldSet,
         EvaluationGoldSetIdentity,
         EvaluationGoldSetMembership,
@@ -311,14 +290,17 @@ def test_execution_entry_points_reject_mismatched_task_binding_contracts():
             ),
         ),
     )
-    runner = EvaluationRunner(MagicMock())
-    with pytest.raises(ValueError, match="task_binding contract does not match"):
-        runner.run(
-            plan=plan,
-            suite=suite,
-            gold_set=gold_set,
-            cases=(),
-            task_binding=mismatched_binding,
-            evaluator_resolver=lambda cfg: None,
-            configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
-        )
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        runner = EvaluationRunner(evidence)
+        with pytest.raises(ValueError, match="task_binding contract does not match"):
+            runner.run(
+                plan=plan,
+                suite=suite,
+                gold_set=gold_set,
+                cases=(),
+                task_binding=mismatched_binding,
+                evaluator_resolver=lambda cfg: None,
+                configuration=EvaluationRunConfiguration(
+                    provider="deterministic", model="fixture"
+                ),
+            )
