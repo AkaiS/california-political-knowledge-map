@@ -200,7 +200,27 @@ def canonical_report_bytes(report: EvaluationReport[Any, Any, Any]) -> bytes:
         "trace_id": report.trace_id,
         "span_id": report.span_id,
     }
-    return canonical_json(_json_value(payload)).encode("utf-8")
+    return canonical_json(_canonical_report_value(_json_value(payload))).encode("utf-8")
+
+
+def _canonical_report_value(value: Any) -> Any:
+    """Remove wall-clock measurements while preserving report semantics."""
+    if isinstance(value, dict):
+        canonical = {
+            key: _canonical_report_value(item)
+            for key, item in value.items()
+            if key != "duration_seconds"
+        }
+        for field in ("task_duration", "total_duration"):
+            if field in canonical:
+                canonical[field] = 0
+        for field in ("trace_id", "span_id"):
+            if field in canonical:
+                canonical[field] = None
+        return canonical
+    if isinstance(value, list):
+        return [_canonical_report_value(item) for item in value]
+    return value
 
 
 def report_case_payload(
@@ -274,6 +294,10 @@ def report_from_bytes(content: bytes) -> EvaluationReport[Any, Any, Any]:
                     name: _evaluation_result(result)
                     for name, result in raw.get("assertions", {}).items()
                 },
+                evaluator_failures=[
+                    _evaluator_failure(failure)
+                    for failure in raw.get("evaluator_failures", [])
+                ],
                 task_duration=raw.get("task_duration", 0),
                 total_duration=raw.get("total_duration", 0),
                 source_case_name=raw.get("source_case_name"),

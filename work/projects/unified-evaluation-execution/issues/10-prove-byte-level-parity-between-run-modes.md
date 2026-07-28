@@ -1,6 +1,6 @@
 # Prove byte-level parity between ephemeral and durable runs
 
-Labels: ready-for-agent
+Labels: completed
 
 Closes the [Unified Evaluation Execution Path](../PRD.md). This is the ticket that
 turns structural parity from a claim into a check.
@@ -23,13 +23,18 @@ that it is the shared basis for comparing both.
 
 ## Acceptance criteria
 
-- [ ] A test runs one Resolved Evaluation Plan through both an ephemeral and a durable runner and asserts the canonical Evaluation Report bytes are identical.
-- [ ] Parity is asserted over a plan with several Evaluation Cases and several evaluators, not a single trivial case.
-- [ ] Parity holds for a run containing at least one Evaluation Case with no expected output.
-- [ ] Parity holds for a run in which a report evaluator failed, so the equivalence covers recorded failures and not only the happy path.
-- [ ] Canonical report serialization and deserialization are round-trip tested directly.
-- [ ] The former field-by-field parity test is replaced by the byte-level test rather than kept alongside it.
-- [ ] The full deterministic test suite passes, and the passing count is recorded so the project's before-and-after state is on record.
+- [x] A test runs one Resolved Evaluation Plan through both an ephemeral and a durable runner and asserts the canonical Evaluation Report bytes are identical.
+- [x] Parity is asserted over a plan with several Evaluation Cases and several evaluators, not a single trivial case.
+- [x] Parity holds for a run containing at least one Evaluation Case with no expected output.
+- [x] Parity holds for a run in which a report evaluator failed, so the equivalence covers recorded failures and not only the happy path.
+- [x] Canonical report serialization and deserialization are round-trip tested directly.
+- [x] The former field-by-field parity test is replaced by the byte-level test rather than kept alongside it.
+- [x] The full deterministic test suite passes, and the passing count is recorded so the project's before-and-after state is on record.
+
+## Verification
+
+- Before: `453 passed`, recorded in `work/README.md` on 2026-07-24.
+- After: `482 passed` on 2026-07-27 (`uv run pytest -q`).
 
 ## Blocked by
 

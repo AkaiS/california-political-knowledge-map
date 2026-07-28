@@ -18,11 +18,12 @@ from pydantic_evals.evaluators import (
     Evaluator,
     EvaluatorContext,
     EvaluatorFailure,
+    EvaluatorSpec,
     ReportEvaluator,
     ReportEvaluatorContext,
 )
 from pydantic_evals.reporting.analyses import ScalarResult, TableResult
-from pydantic_evals.reporting import ReportCaseFailure
+from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from knowledge_map.evaluation import (
     CaseEvaluatorExecution,
@@ -78,7 +79,11 @@ from knowledge_map.evaluation.store import (
     InMemoryEvaluationEvidenceBuffer,
     SQLiteEvaluationLedger,
 )
-from knowledge_map.evaluation.reporting import report_case_payload
+from knowledge_map.evaluation.reporting import (
+    canonical_report_bytes,
+    report_case_payload,
+    report_from_bytes,
+)
 
 
 class Input(BaseModel):
@@ -513,36 +518,65 @@ def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_fai
         assert ledger.list_case_metric_observations(case_result.result_id) == []
 
 
-def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp_path):
-    cases, gold_set, suite = _lifecycle_fixture(
+def test_ephemeral_and_durable_runs_produce_identical_canonical_report_bytes(tmp_path):
+    cases, gold_set, base_suite = _lifecycle_fixture(
         "shared-parity", case_evaluator="exact-case"
+    )
+    unlabeled = EvaluationCase[Input, Output, Metadata](
+        identity=cases[1].identity,
+        input_schema=cases[1].input_schema,
+        metadata_schema=cases[1].metadata_schema,
+        task_input=cases[1].task_input,
+        metadata=cases[1].metadata,
+        description=cases[1].description,
+    )
+    cases = (cases[0], unlabeled)
+    gold_set = EvaluationGoldSet.model_validate(
+        {
+            **gold_set.model_dump(exclude={"content_hash"}),
+            "memberships": tuple(
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference.from_case(case),
+                    split=EvaluationSplit.HELD_OUT,
+                )
+                for case in cases
+            ),
+        }
+    )
+    suite = base_suite.model_copy(
+        update={
+            "case_evaluators": (
+                ConfiguredEvaluator(name="exact-case", evaluator_revision=1),
+                ConfiguredEvaluator(name="always-pass", evaluator_revision=1),
+            ),
+            "suite_case_evaluators": (
+                ConfiguredEvaluatorReference(name="exact-case"),
+                ConfiguredEvaluatorReference(name="always-pass"),
+            ),
+            "report_evaluators": (
+                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
+                ConfiguredEvaluator(name="failing-report", evaluator_revision=1),
+            ),
+        }
     )
     plan_result = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
         cases=cases,
-        selection=("case-1",),
     )
     assert plan_result.plan is not None
 
-    class IndependentlyVersionedExactAnswer(ExactAnswer):
-        def get_default_evaluation_name(self) -> str:
-            return "ExactAnswer"
-
-        def get_evaluator_version(self) -> str:
-            return "implementation-version-must-not-win"
-
     def resolve(configured):
-        return (
-            IndependentlyVersionedExactAnswer()
-            if configured.name == "exact-case"
-            else CountCases()
-        )
-
-    captured_reports: list = []
+        if configured.name == "exact-case":
+            return ExactAnswer()
+        if configured.name == "always-pass":
+            return NoObservationEvaluator()
+        if configured.name == "failing-report":
+            return FailingReportEvaluator()
+        return CountCases()
 
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        in_memory_result = _run(
+        ephemeral_result = _run(
             EvaluationRunner(evidence),
             plan=plan_result.plan,
             suite=suite,
@@ -555,54 +589,88 @@ def test_one_case_plan_has_equivalent_in_memory_and_durable_report_semantics(tmp
             ),
             schemas=_schemas_for(cases),
         )
-        in_memory = evidence.materialize_aggregate_report(
-            in_memory_result.run.run_id, _schemas_for(cases)
+        ephemeral_report = evidence.materialize_aggregate_report(
+            ephemeral_result.run.run_id, _schemas_for(cases)
         )
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
         initial = _run(runner,
+            plan=plan_result.plan,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
-            selection=("case-1",),
             task=lambda task_input: Output(answer=task_input.prompt),
             evaluator_resolver=resolve,
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
         )
-        checkpoint_case = ledger.materialize_report_case(
-            initial.case_results[0].result_id, _schemas_for(cases)
-        )
         durable = runner.finalize(
             initial.run.run_id,
             schemas=_schemas_for(cases),
-            evaluator_resolver=lambda configured: CaptureTypedReport(captured_reports),
+            evaluator_resolver=resolve,
+        )
+        durable_report = ledger.materialize_aggregate_report(
+            initial.run.run_id, _schemas_for(cases)
         )
 
     assert durable.run.status == "completed"
-    assert in_memory.cases[0].output.model_dump() == durable.case_results[0].task_outcome.output
-    assert list(in_memory.cases[0].assertions) == ["exact-case"]
-    configured = suite.case_evaluators[0]
-    expected_version = evaluator_version_tag(
-        configured.evaluator_revision,
-        configured.configuration_fingerprint,
-    )
-    assert in_memory.cases[0].assertions["exact-case"].evaluator_version == expected_version
-    assert checkpoint_case.assertions["exact-case"].evaluator_version == expected_version
-    assert (
-        captured_reports[0].cases[0].assertions["exact-case"].evaluator_version
-        == expected_version
-    )
-    assert [execution.evaluator_name for execution in durable.case_evaluator_executions] == [
-        "exact-case"
+    ephemeral_bytes = canonical_report_bytes(ephemeral_report)
+    durable_bytes = canonical_report_bytes(durable_report)
+    assert ephemeral_bytes == durable_bytes
+    assert len(ephemeral_report.cases) == len(durable_report.cases) == 2
+    assert ephemeral_report.cases[1].expected_output is None
+    assert [execution.status for execution in ephemeral_result.report_evaluator_executions] == [
+        "completed",
+        "failed",
     ]
-    assert len(in_memory_result.case_results) == len(durable.case_results) == 1
-    assert in_memory_result.report_evaluator_executions[0].status == "completed"
     assert [execution.status.value for execution in durable.report_evaluator_executions] == [
-        "completed"
+        "completed",
+        "failed",
     ]
+
+
+def test_canonical_report_serialization_round_trips():
+    report = EvaluationReport(
+        name="round-trip",
+        cases=[
+            ReportCase(
+                name="case-1@1",
+                inputs={"prompt": "question"},
+                metadata={"source": "fixture"},
+                expected_output=None,
+                output={"answer": "response"},
+                metrics={"tokens": 7},
+                attributes={"provider": "deterministic"},
+                scores={},
+                labels={},
+                assertions={},
+                evaluator_failures=[
+                    EvaluatorFailure(
+                        name="judge",
+                        error_message="judge unavailable",
+                        error_stacktrace="RuntimeError: judge unavailable",
+                        source=EvaluatorSpec(name="Judge", arguments={"strict": True}),
+                        evaluator_version="revision-2",
+                        error_type="RuntimeError",
+                    )
+                ],
+                task_duration=0.25,
+                total_duration=0.5,
+                trace_id="1" * 32,
+                span_id="2" * 16,
+            )
+        ],
+        experiment_metadata={"seed": 42},
+        trace_id="3" * 32,
+        span_id="4" * 16,
+    )
+
+    serialized = canonical_report_bytes(report)
+    restored = report_from_bytes(serialized)
+
+    assert canonical_report_bytes(restored) == serialized
 
 
 def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path):
