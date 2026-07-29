@@ -22,7 +22,7 @@ from knowledge_map.evaluation import (
     EvaluationCaseIdentity,
     EvaluationRunConfiguration,
     EvaluationRunner,
-    InMemoryEvaluationEvidenceBuffer,
+    SQLiteEvaluationLedger,
     SchemaRegistry,
     AuthoredDefinitionConflictError,
     DeclaredArtifactReference,
@@ -368,7 +368,7 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
     schemas.register(output_schema, RelevanceOutput)
     schemas.register(metadata_schema, RelevanceMetadata)
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = runner.run(
             plan=plan,

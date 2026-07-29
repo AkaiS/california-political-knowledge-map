@@ -1,5 +1,6 @@
 import hashlib
 
+import knowledge_map.evaluation as evaluation
 from pydantic import BaseModel
 import pytest
 
@@ -24,7 +25,6 @@ from knowledge_map.evaluation import (
 )
 from knowledge_map.evaluation.store import (
     EvaluationDefinitionKind,
-    InMemoryEvaluationEvidenceBuffer,
     SQLiteAuthoredDefinitionCatalog,
     SQLiteEvaluationArtifactCatalog,
     SQLiteEvaluationExecutionStore,
@@ -80,6 +80,20 @@ def test_evaluation_ledger_uses_one_shared_connection_for_decomposed_capabilitie
         } == {id(ledger.connection)}
 
 
+def test_evaluation_ledger_can_be_constructed_for_in_memory_authoring(tmp_path):
+    database_path = tmp_path / "evaluation.sqlite"
+
+    with SQLiteEvaluationLedger.in_memory() as ledger:
+        assert ledger.connection.execute("PRAGMA database_list").fetchone()["file"] == ""
+
+    assert not database_path.exists()
+
+
+def test_evaluation_package_exports_only_the_ledger_evidence_boundary():
+    assert not hasattr(evaluation, "InMemoryEvaluationEvidenceBuffer")
+    assert not hasattr(evaluation, "EvaluationEvidenceSource")
+
+
 def test_closing_an_in_memory_ledger_removes_its_temporary_artifact_area(
     tmp_path, monkeypatch
 ):
@@ -121,8 +135,8 @@ def test_closing_an_evaluation_ledger_twice_does_not_raise():
     ledger.close()
 
 
-def test_closing_an_in_memory_evidence_buffer_twice_does_not_raise():
-    evidence = InMemoryEvaluationEvidenceBuffer()
+def test_closing_an_in_memory_ledger_twice_does_not_raise():
+    evidence = SQLiteEvaluationLedger.in_memory()
 
     evidence.close()
     evidence.close()

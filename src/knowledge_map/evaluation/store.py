@@ -3210,18 +3210,6 @@ class EvaluationLedger(Protocol):
     def complete_evaluation_run(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-class EvaluationEvidenceSource(Protocol):
-    """Read canonical checkpoint evidence as derived framework reports."""
-
-    def materialize_report_case(
-        self, result_id: UUID, schemas: SchemaRegistry
-    ) -> ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any]: ...
-
-    def materialize_aggregate_report(
-        self, run_id: UUID, schemas: SchemaRegistry
-    ) -> EvaluationReport[Any, Any, Any]: ...
-
-
 def _definition_kind(definition: Any) -> EvaluationDefinitionKind:
     if isinstance(definition, EvaluationCase):
         return EvaluationDefinitionKind.CASE
@@ -3294,6 +3282,13 @@ def _definition_metadata(definition: Any) -> dict[str, Any]:
 
 class SQLiteEvaluationLedger:
     """A relational ledger for imported definitions and artifact metadata."""
+
+    @classmethod
+    def in_memory(
+        cls, *, clock: Callable[[], datetime] | None = None
+    ) -> "SQLiteEvaluationLedger":
+        """Create a ledger whose records persist only for its process lifetime."""
+        return cls(":memory:", clock=clock)
 
     def __init__(
         self,
@@ -3990,40 +3985,6 @@ class SQLiteEvaluationLedger:
             """
         )
         self._connection.commit()
-
-
-class InMemoryEvaluationEvidenceBuffer:
-    """Canonical evaluation evidence retained only for this process lifetime.
-
-    The buffer deliberately reuses the ledger's validation and materialization
-    implementation against SQLite's in-memory transport.  Its temporary
-    content-addressed artifact area is removed when the buffer closes.
-    """
-
-    def __init__(self, *, clock: Callable[[], datetime] | None = None) -> None:
-        self._store = SQLiteEvaluationLedger(":memory:", clock=clock)
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._store, name)
-
-    @property
-    def checkpoints(self) -> tuple[EvaluationCaseResult, ...]:
-        """Return terminal case checkpoints in run and manifest order."""
-        return tuple(
-            result
-            for run in self._store.list_evaluation_runs()
-            for result in self._store.list_evaluation_case_results(run.run_id)
-            if result.checkpoint_id is not None
-        )
-
-    def close(self) -> None:
-        self._store.close()
-
-    def __enter__(self) -> "InMemoryEvaluationEvidenceBuffer":
-        return self
-
-    def __exit__(self, *_: Any) -> None:
-        self.close()
 
 
 # Domain-oriented aliases keep the persistence implementation name out of

@@ -1,6 +1,6 @@
 # Delete the in-memory evidence buffer and the unused evidence-source protocol
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). This is the
 subtraction the three preceding tickets make safe.
@@ -32,15 +32,19 @@ the Evaluation Ledger rather than a bare connection string at every call site.
 
 ## Acceptance criteria
 
-- [ ] A named constructor on the Evaluation Ledger produces a ledger that persists nothing to a database file, so the authoring intent is expressible without a magic connection string.
-- [ ] An evaluation runs end to end over that ledger and produces an Evaluation Report, with no database file created on disk.
-- [ ] The in-memory evidence buffer type no longer exists and is no longer exported from the evaluation package.
-- [ ] The evidence-source protocol no longer exists and is no longer exported.
-- [ ] Every test that constructed the buffer constructs an in-memory Evaluation Ledger instead.
-- [ ] The terminal-checkpoint accessor the buffer offered remains available to the tests that used it, without a production type existing solely to provide it.
-- [ ] Evidence validation, Evaluation Checkpoint identity, and content hashing are unchanged; evidence produced in memory stays indistinguishable in shape from persisted evidence.
-- [ ] The Evaluation Report remains a derived projection, per ADR 0011.
-- [ ] The full deterministic test suite passes.
+- [x] A named constructor on the Evaluation Ledger produces a ledger that persists nothing to a database file, so the authoring intent is expressible without a magic connection string.
+- [x] An evaluation runs end to end over that ledger and produces an Evaluation Report, with no database file created on disk.
+- [x] The in-memory evidence buffer type no longer exists and is no longer exported from the evaluation package.
+- [x] The evidence-source protocol no longer exists and is no longer exported.
+- [x] Every test that constructed the buffer constructs an in-memory Evaluation Ledger instead.
+- [x] The terminal-checkpoint accessor the buffer offered remains available to the tests that used it, without a production type existing solely to provide it.
+- [x] Evidence validation, Evaluation Checkpoint identity, and content hashing are unchanged; evidence produced in memory stays indistinguishable in shape from persisted evidence.
+- [x] The Evaluation Report remains a derived projection, per ADR 0011.
+- [x] The full deterministic test suite passes.
+
+## Verification
+
+- `493 passed` on 2026-07-29 (`uv run pytest -q`).
 
 ## Blocked by
 

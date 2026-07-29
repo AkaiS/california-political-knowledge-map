@@ -20,7 +20,7 @@ from knowledge_map.evaluation import (
     EvaluationTaskBinding,
     EvaluationRunConfiguration,
     EvaluationRunner,
-    InMemoryEvaluationEvidenceBuffer,
+    SQLiteEvaluationLedger,
     SchemaRegistry,
     ConfiguredEvaluator,
     ConfiguredEvaluatorReference,
@@ -294,7 +294,7 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
     schemas.register(case.input_schema, RequirementInput)
     schemas.register(case.expected_output_schema, RequirementOutput)
     schemas.register(case.metadata_schema, RequirementMetadata)
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = runner.run(
             plan=plan,
@@ -416,7 +416,7 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     registry.register(cases[0].input_schema, RequirementInput)
     registry.register(cases[0].expected_output_schema, RequirementOutput)
     registry.register(cases[0].metadata_schema, RequirementMetadata)
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = runner.run(
             plan=plan_result.plan,
@@ -443,7 +443,11 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
             }[configured.name],
         )
         report = evidence.materialize_aggregate_report(result.run.run_id, registry)
-        checkpoint_count = len(evidence.checkpoints)
+        checkpoint_count = sum(
+            result.checkpoint_id is not None
+            for run in evidence.list_evaluation_runs()
+            for result in evidence.list_evaluation_case_results(run.run_id)
+        )
 
     assert [case.name for case in report.cases] == [
         "engine-case-1@1",

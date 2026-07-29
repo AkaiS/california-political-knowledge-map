@@ -76,7 +76,6 @@ from knowledge_map.evaluation import (
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import (
-    InMemoryEvaluationEvidenceBuffer,
     SQLiteEvaluationLedger,
 )
 from knowledge_map.evaluation.reporting import (
@@ -575,7 +574,7 @@ def test_ephemeral_and_durable_runs_produce_identical_canonical_report_bytes(tmp
             return FailingReportEvaluator()
         return CountCases()
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         ephemeral_runner = EvaluationRunner(evidence)
         ephemeral_initial = _run(
             ephemeral_runner,
@@ -682,7 +681,7 @@ def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-buffer")
     database = tmp_path / "evaluation.sqlite"
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         result = _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
@@ -712,7 +711,7 @@ def test_in_memory_execution_stops_before_evaluation_finalization():
             report_evaluator_calls.append(len(ctx.report.cases))
             return None
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         result = _run(
             EvaluationRunner(evidence),
             suite=suite,
@@ -740,7 +739,7 @@ def test_in_memory_run_completes_through_evaluation_finalization():
             report_evaluator_calls.append(len(ctx.report.cases))
             return None
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = _run(
             runner,
@@ -769,7 +768,7 @@ def test_in_memory_run_completes_through_evaluation_finalization():
 
 
 def test_evaluation_stores_do_not_advertise_ephemerality(tmp_path):
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         assert not hasattr(evidence, "is_ephemeral")
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
@@ -779,7 +778,7 @@ def test_evaluation_stores_do_not_advertise_ephemerality(tmp_path):
 def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-checkpoint")
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         _run(EvaluationRunner(evidence),
             suite=suite,
             gold_set=gold_set,
@@ -792,7 +791,12 @@ def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
             ),
         )
 
-        checkpoints = evidence.checkpoints
+        checkpoints = tuple(
+            result
+            for run in evidence.list_evaluation_runs()
+            for result in evidence.list_evaluation_case_results(run.run_id)
+            if result.checkpoint_id is not None
+        )
 
     assert len(checkpoints) == 1
     assert checkpoints[0].checkpoint_id is not None
@@ -823,7 +827,7 @@ def test_substituting_in_memory_evidence_preserves_materialized_case_evidence(
             result.case_results[0].result_id, _schemas_for(cases)
         )
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         ephemeral_case = execute(evidence)
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         durable_case = execute(ledger)
@@ -1401,7 +1405,7 @@ def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
             with lock:
                 active -= 1
 
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         result = EvaluationRunner(evidence).run(
             plan=plan,
             suite=suite,
@@ -1613,7 +1617,7 @@ def test_in_memory_and_durable_evidence_reject_the_same_invalid_checkpoint(
     tmp_path,
 ):
     stores = (
-        InMemoryEvaluationEvidenceBuffer(),
+        SQLiteEvaluationLedger.in_memory(),
         SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite"),
     )
     try:
@@ -2018,7 +2022,7 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
             )
         }
     )
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = _run(runner,
             suite=suite,
@@ -2051,7 +2055,7 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
 
 def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-none")
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = _run(runner,
             suite=suite,

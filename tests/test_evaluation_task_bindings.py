@@ -267,7 +267,7 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
     from knowledge_map.evaluation import (
         EvaluationRunner,
         EvaluationRunConfiguration,
-        InMemoryEvaluationEvidenceBuffer,
+        SQLiteEvaluationLedger,
         EvaluationGoldSet,
         EvaluationGoldSetIdentity,
         EvaluationGoldSetMembership,
@@ -290,7 +290,7 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
             ),
         ),
     )
-    with InMemoryEvaluationEvidenceBuffer() as evidence:
+    with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         with pytest.raises(ValueError, match="task_binding contract does not match"):
             runner.run(
