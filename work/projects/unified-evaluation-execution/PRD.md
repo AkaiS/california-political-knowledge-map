@@ -103,7 +103,7 @@ ordinary, supported condition it is. `EvaluationCaseRevisionReference` becomes i
 35. As an evaluation maintainer, I want `EvaluationCaseRevisionReference` reduced to identity fields, so that it does not duplicate what the Evaluation Task Contract already binds.
 36. As an evaluation maintainer, I want schema compatibility checked where full Evaluation Case objects are available, so that the check has enough information to be meaningful.
 37. As an evaluation maintainer, I want gold-set import to keep rejecting a reference whose underlying case content changed, so that slimming the reference does not weaken forgery detection.
-38. As an evaluation author, I want the Gold Set's own contract validation to keep working after the reference is slimmed, so that authoring an incompatible member still fails immediately.
+38. As an evaluation author, I want an incompatible Gold Set member rejected at every seam that holds full Evaluation Cases — `EvaluationGoldSet.validate_cases` and preflight — so that slimming the reference relocates the check rather than removing it.
 39. As a database user, I want the evaluation database rebuilt rather than migrated, so that we do not carry a migration for evidence that has never been produced in anger.
 40. As a database user, I want `document_store.db` left untouched, so that scraped content survives the rebuild.
 41. As a release owner, I want the evidence contract version left at 1, so that we do not signal a compatibility break to consumers that do not exist.
@@ -137,7 +137,8 @@ ordinary, supported condition it is. `EvaluationCaseRevisionReference` becomes i
 - A case's `expected_output_schema`, when present, continues to validate that case's `expected_output`. When absent, materialization proceeds without an expected output rather than raising.
 - `EvaluationCaseRevisionReference` is reduced to `record_id`, `business_id`, `revision`, and `content_hash`. Its input, output, and metadata schema fields are removed, and `from_case` stops copying them.
 - Gold-set import continues to re-derive schemas from the stored case record and check them against the Gold Set's Evaluation Task Contract, which is where forgery detection already lives and is unaffected by the slimming.
-- `EvaluationGoldSet`'s member-versus-contract validator continues to operate on full Evaluation Case objects at authoring time.
+- `EvaluationGoldSet`'s member-versus-contract validator is removed, because the slimmed reference makes it impossible: `memberships` holds `EvaluationCaseRevisionReference` objects, which after slimming carry no schemas, so a `model_validator` has nothing to compare. Schema compatibility is therefore decided only where full Evaluation Case objects are in hand — `EvaluationGoldSet.validate_cases`, called explicitly by an author, and preflight, which every run passes through. Construction-time validation of `EvaluationGoldSet` is limited to identity-level invariants, principally the rejection of a duplicate case revision.
+- A directly constructed `EvaluationGoldSet` is therefore not self-validating against its Evaluation Task Contract. This is the accepted consequence of slimming the reference, not an oversight: an author who bypasses `validate_cases` is caught at preflight before a run is created.
 - This is a breaking change to persisted canonical JSON and content fingerprints for gold-set memberships and Frozen Aggregate Manifests. No migration is written. The evaluation database is dropped and recreated. `document_store.db` is not touched.
 - The evidence contract version stays at 1.
 

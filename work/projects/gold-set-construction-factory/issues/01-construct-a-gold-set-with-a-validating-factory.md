@@ -42,6 +42,15 @@ ledger import, where that check already lives. `EvaluationGoldSet`'s own
 validators are untouched and direct construction keeps working, so stored Gold
 Sets still deserialize.
 
+Be aware of what those validators now cover. The Unified Evaluation Execution
+project slimmed `EvaluationCaseRevisionReference` to identity fields, which made a
+construction-time member-versus-contract check impossible and removed it. The only
+model validator left is `does_not_repeat_a_case_revision`. So a directly
+constructed Gold Set can hold members that are schema-incompatible with its
+Evaluation Task Contract, and nothing objects until `validate_cases` or preflight.
+This factory is the first construction-time schema check to exist since that
+change — it is closing a real gap, not adding sugar over an existing guarantee.
+
 ## Acceptance criteria
 
 - [ ] A public factory function in a new module dedicated to Gold Set assembly returns a frozen `EvaluationGoldSet` from identity, description, Evaluation Task Contract, tags, declared Evaluation Artifacts, Evaluation Cases, a split ratio, and an optional pinned case-to-split map.
@@ -60,7 +69,7 @@ Sets still deserialize.
 - [ ] Declared Evaluation Artifacts pass through unresolved, and a factory-built Gold Set with declared artifacts still fails ledger import when an artifact is absent from the catalog.
 - [ ] A factory-built Gold Set imports cleanly into a `SQLiteEvaluationLedger` and produces the expected membership rows.
 - [ ] The factory performs no I/O, takes no Evaluation Ledger, and executes nothing.
-- [ ] `EvaluationGoldSet`'s existing validators are unchanged and direct construction still works.
+- [ ] `EvaluationGoldSet`'s existing validators are unchanged and direct construction still works. Do not attempt to restore a member-versus-contract `model_validator`; the slimmed reference carries no schemas and it cannot work.
 - [ ] The full deterministic test suite passes.
 
 ## Blocked by

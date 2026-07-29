@@ -14,6 +14,8 @@ from knowledge_map.evaluation import (
     EvaluationRequirement,
     EvaluationRequirementBinding,
     EvaluationPreflightError,
+    EvaluationRunConfiguration,
+    EvaluationRunner,
     EvaluationSplit,
     EvaluationSuite,
     EvaluationSuiteIdentity,
@@ -21,6 +23,7 @@ from knowledge_map.evaluation import (
     SchemaReference,
     preflight_selected_cases,
 )
+from knowledge_map.evaluation.store import SQLiteEvaluationLedger
 
 
 class Input(BaseModel):
@@ -277,7 +280,7 @@ def test_preflight_raises_once_with_every_distinct_compatibility_issue():
     }
 
 
-def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
+def test_validate_cases_rejects_a_case_contract_mismatch_before_selection():
     compatible = _case("compatible")
     unknown = _case("unknown", requirements=("not-in-catalog",))
     incompatible = _case(
@@ -292,10 +295,12 @@ def test_gold_set_authoring_rejects_a_case_contract_mismatch_before_selection():
             )
         )
     )
+    # Construction does not check member-versus-contract schemas: the slimmed
+    # EvaluationCaseRevisionReference carries none. validate_cases is the seam.
+    incompatible_gold_set = _gold_set((compatible, unknown, incompatible))
+
     with pytest.raises(ValueError, match="input schema"):
-        _gold_set((compatible, unknown, incompatible)).validate_cases(
-            (compatible, unknown, incompatible)
-        )
+        incompatible_gold_set.validate_cases((compatible, unknown, incompatible))
 
     gold_set = _gold_set((compatible, unknown))
 
@@ -383,3 +388,49 @@ def test_incompatible_preflight_cannot_produce_a_plan_for_run_creation():
         "grounding",
         "unknown",
     }
+
+
+def test_incompatible_preflight_leaves_no_evaluation_run_in_the_ledger(tmp_path):
+    """An incompatible preflight must not accumulate a run, per ADR 0005.
+
+    `EvaluationRunner.run` now requires a Resolved Evaluation Plan, and an
+    incompatible preflight produces none, so the runner cannot be reached at all.
+    That is a stronger guarantee than the runner rejecting the attempt, but it is
+    only worth anything if the ledger stays empty — which is what this asserts.
+    """
+    first = _case("first", requirements=("grounding",))
+    second = _case("second", requirements=("unknown",))
+    suite = _suite(
+        catalog=EvaluationRequirementCatalog(
+            requirements=(
+                EvaluationRequirement(key="grounding", semantic_description="Grounding."),
+            )
+        )
+    )
+    gold_set = _gold_set((first, second))
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        runner = EvaluationRunner(ledger)
+
+        with pytest.raises(EvaluationPreflightError) as raised:
+            preflight_selected_cases(
+                suite=suite,
+                gold_set=gold_set,
+                cases=(first, second),
+            )
+
+        # There is no plan to hand to the runner, so no run can be created.
+        assert raised.value.result.plan is None
+        with pytest.raises(TypeError, match="plan"):
+            runner.run(
+                suite=suite,
+                gold_set=gold_set,
+                cases=(first, second),
+                task=lambda value: value,
+                evaluator_resolver=lambda configured: configured,
+                configuration=EvaluationRunConfiguration(
+                    provider="deterministic", model="fixture"
+                ),
+            )
+
+        assert ledger.list_evaluation_runs() == []

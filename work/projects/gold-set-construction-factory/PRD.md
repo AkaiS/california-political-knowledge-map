@@ -89,7 +89,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 27. As an evaluation author, I want artifact existence checked at ledger import as it is today, so that the existing validation point is preserved.
 28. As an evaluation author, I want the factory to return a frozen `EvaluationGoldSet`, so that the result is immutable the moment it exists.
 29. As an evaluation author, I want the returned Gold Set to have a stable content hash, so that two identical constructions are recognizably the same.
-30. As an evaluation maintainer, I want `EvaluationGoldSet`'s own validators kept, so that a hand-constructed Gold Set still cannot be invalid.
+30. As an evaluation maintainer, I want `EvaluationGoldSet`'s remaining validators kept, so that a hand-constructed Gold Set still cannot violate the identity-level invariants they enforce. Note that these no longer include member-versus-contract schema compatibility, which the Unified Evaluation Execution project removed when it slimmed `EvaluationCaseRevisionReference`; a hand-constructed Gold Set can be schema-invalid until `validate_cases` or preflight sees it.
 31. As an evaluation maintainer, I want the factory to be the recommended path rather than the only one, so that deserialization from stored JSON keeps working.
 32. As an evaluation maintainer, I want the factory in its own module, so that construction logic does not accumulate inside the definitions module.
 33. As an evaluation maintainer, I want the factory to be a function rather than a mutable builder, so that there is no partially built Gold Set to reason about.
@@ -99,7 +99,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 37. As an evaluation operator, I want a ratio that does not sum to one rejected, so that a typo does not silently produce a partial population.
 38. As an evaluation operator, I want to select cases from a Gold Set by split when running, so that the splits are actually usable, as the runner already supports.
 39. As a test maintainer, I want the existing hand-built gold sets in tests migrated to the factory, so that the factory is exercised by the whole suite rather than by its own tests alone.
-40. As a test maintainer, I want migrated tests that intentionally build an invalid Gold Set to keep constructing it directly, so that the model's own validators stay covered.
+40. As a test maintainer, I want migrated tests that intentionally build an invalid Gold Set to keep constructing it directly, so that the remaining model validator and the ledger's import checks stay covered. Only `does_not_repeat_a_case_revision` is still a model validator; the schema-mismatch sites now assert against `validate_cases`, and the forgery site asserts against ledger import.
 41. As a documentation maintainer, I want the Gold Set glossary entry to describe the construction and revisioning flow, so that the domain language matches what the code supports.
 42. As a documentation maintainer, I want Evaluation Split added to the glossary with the meaning of each of the three splits, so that `calibration` is not left to interpretation.
 
@@ -121,7 +121,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 - The revision operation increments the revision number itself and rejects a no-op revision that neither adds nor removes anything.
 - Declared Evaluation Artifacts are passed through unresolved. Their existence in the artifact catalog continues to be validated at ledger import, which is where that check already lives.
 - The factory does not touch the Evaluation Ledger, does not execute anything, and has no I/O.
-- `EvaluationGoldSet`'s existing validators are retained unchanged. The factory is the recommended construction path, not a replacement for the model's own invariants, and direct construction must keep working so stored Gold Sets can be deserialized.
+- `EvaluationGoldSet`'s existing validators are retained unchanged, and direct construction must keep working so stored Gold Sets can be deserialized. Those validators cover identity-level invariants only; member-versus-contract schema compatibility is no longer among them, so the factory is not merely a convenience over the model's own invariants — for schema compatibility it is the only construction-time check there is.
 - `EvaluationSplit` keeps all three members. `calibration` is documented as reservation from the agent-tuning loop so judge behaviour can be observed against those cases.
 - The `CONTEXT.md` glossary gains an Evaluation Split entry defining all three splits, and the Evaluation Gold Set entry is extended to describe construction and revisioning.
 
@@ -144,7 +144,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 - Test that a no-op revision is rejected and that the revision number increments correctly.
 - Test that a Gold Set built by the factory imports cleanly into a `SQLiteEvaluationLedger` and produces the expected membership rows, reusing the existing ledger import test pattern.
 - Test that declared artifacts pass through construction unresolved and are still validated at import.
-- Migrate the seventeen hand-built gold sets in the existing tests to the factory, except those that deliberately construct an invalid Gold Set to exercise the model's own validators. Those keep constructing directly.
+- Migrate the seventeen hand-built gold sets in the existing tests to the factory, except those that deliberately construct an invalid Gold Set in order to assert a rejection from a non-factory seam. Those keep constructing directly. Be precise about which seam each one exercises: the duplicate-revision site is the only true model validator, the schema-mismatch sites assert against `EvaluationGoldSet.validate_cases`, and the forged-contract site asserts against ledger import. Routing any of them through the factory would move the assertion to the wrong seam.
 - The migration is where the split machinery finally gets exercised across the suite. Expect some tests that assumed everything was `held-out` to need explicit pinning; pin rather than reshape the test.
 
 ## Out of Scope

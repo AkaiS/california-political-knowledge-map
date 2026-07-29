@@ -642,7 +642,7 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
     assert gold_set.memberships[0].split is EvaluationSplit.HELD_OUT
 
 
-def test_gold_set_binds_one_exact_task_contract_and_rejects_a_mismatched_member():
+def test_gold_set_binds_one_exact_task_contract_and_validate_cases_rejects_a_mismatched_member():
     authored_case = EvaluationCase[RelevanceInput, RelevanceOutput, RelevanceMetadata](
         identity=EvaluationCaseIdentity(business_id="relevance-contract-001", revision=1),
         input_schema=SchemaReference.for_model(
@@ -688,6 +688,8 @@ def test_gold_set_binds_one_exact_task_contract_and_rejects_a_mismatched_member(
             )
         }
     )
+    # Construction succeeds: the slimmed EvaluationCaseRevisionReference carries no
+    # schemas, so a model_validator has nothing to compare. validate_cases is the seam.
     incompatible_gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(
             business_id="relevance-contract-gold", revision=2
@@ -696,6 +698,7 @@ def test_gold_set_binds_one_exact_task_contract_and_rejects_a_mismatched_member(
         task_contract=incompatible_contract,
         memberships=gold_set.memberships,
     )
+
     with pytest.raises(ValueError, match="input schema"):
         incompatible_gold_set.validate_cases((authored_case,))
 

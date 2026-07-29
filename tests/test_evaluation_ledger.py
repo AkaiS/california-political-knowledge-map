@@ -479,6 +479,44 @@ def test_import_rejects_a_gold_set_reference_whose_case_content_changed(tmp_path
         ledger.import_definition(gold_set)
 
 
+def test_import_rejects_a_gold_set_whose_contract_the_stored_case_does_not_implement(
+    tmp_path,
+):
+    """Import re-derives schemas from the stored case and checks the contract.
+
+    The reference itself is honest — identity and content hash both match the
+    imported case. Only the Gold Set's task contract is forged. Before
+    `EvaluationCaseRevisionReference` was slimmed this was caught by forging a
+    schema on the reference; that field is gone, so the check is now reached
+    only through the stored case record. Per ADR 0006 this is where forgery
+    detection lives.
+    """
+    ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
+    case = make_case()
+    ledger.import_definition(case)
+    forged_input_schema = SchemaReference.for_model(
+        Input, identity="tests.other-input", revision=1
+    )
+    gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-contract", revision=1),
+        description="A contract-mismatched gold set.",
+        task_contract=EvaluationTaskContract(
+            input_schema=forged_input_schema,
+            output_schema=case.expected_output_schema,
+            metadata_schema=case.metadata_schema,
+        ),
+        memberships=(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(case),
+                split=EvaluationSplit.HELD_OUT,
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="implement the Gold Set task contract"):
+        ledger.import_definition(gold_set)
+
+
 def test_evaluation_case_manifest_schema_stores_identity_only(tmp_path):
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         columns = {

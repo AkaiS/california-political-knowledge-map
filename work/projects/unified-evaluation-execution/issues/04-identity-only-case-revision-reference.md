@@ -35,7 +35,7 @@ production, so there is no compatibility break to signal.
 - [x] The case revision reference carries only record identity, business identity, revision, and content hash.
 - [x] Its input, expected-output, and metadata schema fields are removed, and the factory that derives a reference from a case no longer copies them.
 - [x] Reconstruction of a reference from stored rows no longer reads or requires schema columns.
-- [x] Authoring an Evaluation Gold Set whose member is incompatible with its Evaluation Task Contract still fails at construction.
+- [x] Authoring an Evaluation Gold Set whose member is incompatible with its Evaluation Task Contract is rejected by `EvaluationGoldSet.validate_cases`, and by preflight before a run is created. It is **not** rejected at construction: the slimmed reference carries no schemas, so a `model_validator` has nothing to compare. The `members_match_task_contract` validator was removed for this reason. See the corresponding Implementation Decision in the PRD.
 - [x] Gold-set import still rejects a reference whose underlying Evaluation Case content changed.
 - [x] Schema compatibility is decided where full Evaluation Case objects are available, via the shared predicate.
 - [x] The evaluation database schema is regenerated; the database is dropped and recreated rather than migrated.
