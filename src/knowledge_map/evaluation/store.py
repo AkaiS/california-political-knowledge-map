@@ -3312,9 +3312,11 @@ class SQLiteEvaluationLedger:
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         if str(db_path) == ":memory:":
             self._artifact_root = Path(tempfile.mkdtemp(prefix="evaluation-artifacts-"))
+            self._owns_artifact_root = True
         else:
             database_path = Path(db_path)
             self._artifact_root = database_path.parent / f".{database_path.name}.artifacts"
+            self._owns_artifact_root = False
         self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._connection.execute("PRAGMA foreign_keys = ON")
         self.schema_installer = SQLiteEvaluationSchemaInstaller(
@@ -3338,6 +3340,8 @@ class SQLiteEvaluationLedger:
 
     def close(self) -> None:
         self._connection.close()
+        if self._owns_artifact_root:
+            shutil.rmtree(self._artifact_root, ignore_errors=True)
 
     def __enter__(self) -> "SQLiteEvaluationLedger":
         return self
@@ -4044,9 +4048,7 @@ class InMemoryEvaluationEvidenceBuffer:
         )
 
     def close(self) -> None:
-        artifact_root = self._store._artifact_root
         self._store.close()
-        shutil.rmtree(artifact_root)
 
     def __enter__(self) -> "InMemoryEvaluationEvidenceBuffer":
         return self

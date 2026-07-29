@@ -24,6 +24,7 @@ from knowledge_map.evaluation import (
 )
 from knowledge_map.evaluation.store import (
     EvaluationDefinitionKind,
+    InMemoryEvaluationEvidenceBuffer,
     SQLiteAuthoredDefinitionCatalog,
     SQLiteEvaluationArtifactCatalog,
     SQLiteEvaluationExecutionStore,
@@ -77,6 +78,54 @@ def test_evaluation_ledger_uses_one_shared_connection_for_decomposed_capabilitie
                 ledger.artifact_catalog,
             )
         } == {id(ledger.connection)}
+
+
+def test_closing_an_in_memory_ledger_removes_its_temporary_artifact_area(
+    tmp_path, monkeypatch
+):
+    artifact_area = tmp_path / "temporary-artifacts"
+
+    def create_temporary_artifact_area(*, prefix):
+        assert prefix == "evaluation-artifacts-"
+        artifact_area.mkdir()
+        return str(artifact_area)
+
+    monkeypatch.setattr(
+        "knowledge_map.evaluation.store.tempfile.mkdtemp",
+        create_temporary_artifact_area,
+    )
+
+    ledger = SQLiteEvaluationLedger()
+    assert artifact_area.is_dir()
+
+    ledger.close()
+
+    assert not artifact_area.exists()
+
+
+def test_closing_a_file_backed_ledger_preserves_its_artifact_area(tmp_path):
+    database_path = tmp_path / "evaluation.sqlite"
+    artifact_area = tmp_path / ".evaluation.sqlite.artifacts"
+    ledger = SQLiteEvaluationLedger(database_path)
+    assert artifact_area.is_dir()
+
+    ledger.close()
+
+    assert artifact_area.is_dir()
+
+
+def test_closing_an_evaluation_ledger_twice_does_not_raise():
+    ledger = SQLiteEvaluationLedger()
+
+    ledger.close()
+    ledger.close()
+
+
+def test_closing_an_in_memory_evidence_buffer_twice_does_not_raise():
+    evidence = InMemoryEvaluationEvidenceBuffer()
+
+    evidence.close()
+    evidence.close()
 
 
 def test_schema_installer_creates_the_clean_current_run_schema(tmp_path):
@@ -741,4 +790,3 @@ def test_sqlite_evaluation_artifact_catalog_owns_query_persistence(tmp_path):
 
     fetched_by_id = ledger.artifact_catalog.get_artifact_by_id(artifact.artifact_id)
     assert fetched_by_id == artifact
-

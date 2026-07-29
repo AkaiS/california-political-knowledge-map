@@ -1,6 +1,6 @@
 # Own temporary artifact cleanup in the Evaluation Ledger
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). A prefactor: it makes
 the buffer removable without leaking, so the deletion that follows is a pure
@@ -27,13 +27,13 @@ where the responsibility lives, not what an author observes.
 
 ## Acceptance criteria
 
-- [ ] An Evaluation Ledger that created its own temporary artifact area removes that area when it is closed.
-- [ ] An Evaluation Ledger constructed over a caller-supplied database file leaves that database's artifact directory in place when it is closed.
-- [ ] The in-memory evidence buffer no longer removes the artifact area and no longer reads the ledger's private state.
-- [ ] Closing a ledger twice, or closing both the buffer and the ledger it wraps, does not raise.
-- [ ] No temporary artifact directories survive a full run of the deterministic suite.
-- [ ] Durable Evaluation Run and Evaluation Finalization behaviour is unchanged; existing tests pass unmodified.
-- [ ] The full deterministic test suite passes.
+- [x] An Evaluation Ledger that created its own temporary artifact area removes that area when it is closed.
+- [x] An Evaluation Ledger constructed over a caller-supplied database file leaves that database's artifact directory in place when it is closed.
+- [x] The in-memory evidence buffer no longer removes the artifact area and no longer reads the ledger's private state.
+- [x] Closing a ledger twice, or closing both the buffer and the ledger it wraps, does not raise.
+- [x] No temporary artifact directories survive a full run of the deterministic suite.
+- [x] Durable Evaluation Run and Evaluation Finalization behaviour is unchanged; existing tests pass unmodified.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
