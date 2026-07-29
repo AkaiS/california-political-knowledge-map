@@ -369,7 +369,8 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
     schemas.register(metadata_schema, RelevanceMetadata)
 
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        runner = EvaluationRunner(evidence)
+        initial = runner.run(
             plan=plan,
             suite=suite,
             gold_set=gold_set,
@@ -384,7 +385,14 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
             schemas=schemas,
+            evaluator_resolver=lambda configured: {
+                "exact-output": ExactRelevanceOutput(),
+                "case-count": CountEvaluatedCases(),
+            }[configured.name],
         )
         report = evidence.materialize_aggregate_report(result.run.run_id, schemas)
 

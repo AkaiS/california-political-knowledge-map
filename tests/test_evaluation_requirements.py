@@ -295,7 +295,8 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
     schemas.register(case.expected_output_schema, RequirementOutput)
     schemas.register(case.metadata_schema, RequirementMetadata)
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        runner = EvaluationRunner(evidence)
+        initial = runner.run(
             plan=plan,
             suite=suite,
             gold_set=gold_set,
@@ -309,7 +310,15 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
             schemas=schemas,
+            evaluator_resolver=lambda configured: (
+                RequirementEvaluator()
+                if configured.name == "grounding"
+                else RequirementReportEvaluator()
+            ),
         )
         report = evidence.materialize_aggregate_report(result.run.run_id, schemas)
 
@@ -408,7 +417,8 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     registry.register(cases[0].expected_output_schema, RequirementOutput)
     registry.register(cases[0].metadata_schema, RequirementMetadata)
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = EvaluationRunner(evidence).run(
+        runner = EvaluationRunner(evidence)
+        initial = runner.run(
             plan=plan_result.plan,
             suite=suite,
             gold_set=gold_set,
@@ -422,7 +432,15 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
             schemas=registry,
+            evaluator_resolver=lambda configured: {
+                "universal": RecordingEvaluator(universal_calls),
+                "grounding": RecordingEvaluator(grounding_calls),
+                "report": RecordingReportEvaluator(report_case_counts),
+            }[configured.name],
         )
         report = evidence.materialize_aggregate_report(result.run.run_id, registry)
         checkpoint_count = len(evidence.checkpoints)

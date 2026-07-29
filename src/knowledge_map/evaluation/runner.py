@@ -797,7 +797,7 @@ class _DurableCheckpointSink:
 
 
 class EvaluationRunner:
-    """Execute a typed suite and persist its complete successful evidence."""
+    """Execute a Resolved Evaluation Plan and freeze its case evidence."""
 
     def __init__(self, ledger: EvaluationLedger):
         self.ledger = ledger
@@ -812,7 +812,6 @@ class EvaluationRunner:
         rubrics: tuple[EvaluationRubric, ...] = (),
         evaluator_resolver: Callable[[ConfiguredEvaluator], Evaluator | ReportEvaluator],
         configuration: EvaluationRunConfiguration,
-        schemas: SchemaRegistry | None = None,
         task: Callable[[Any], Any] | None = None,
         task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         selection_expression: str | None = None,
@@ -1009,7 +1008,7 @@ class EvaluationRunner:
                 assert task is not None
                 return task(task_input)
 
-            evaluation_report = EvaluationEngine(checkpoint_sink).execute(
+            EvaluationEngine(checkpoint_sink).execute(
                 plan=plan,
                 suite=suite,
                 cases=selected_cases,
@@ -1020,32 +1019,6 @@ class EvaluationRunner:
             )
             if resolver_failure is not None:
                 raise resolver_failure
-            if getattr(self.ledger, "is_ephemeral", False):
-                materialization_schemas = schemas or self._execution_schema_registry(
-                    suite=suite,
-                    cases=selected_cases,
-                    task_binding=task_binding,
-                    report=evaluation_report,
-                )
-                materialized_report = self.ledger.materialize_aggregate_report(
-                    run.run_id, materialization_schemas
-                )
-                self._evaluate_report_evaluators(
-                    run_id=run.run_id,
-                    suite=suite,
-                    report=materialized_report,
-                    evaluator_resolver=evaluator_resolver,
-                    existing=(),
-                    issues=issues,
-                    guard=lambda: None,
-                    should_stop=None,
-                    checkpoint=lambda execution, observations, new_issues: (
-                        self.ledger.record_report_evaluation(
-                            [execution], observations, new_issues
-                        )
-                    ),
-                )
-                self.ledger.complete_evaluation_run(run.run_id, issues=issues)
             completed_run = self.ledger.get_evaluation_run(run.run_id)
             if completed_run is None:  # pragma: no cover - ledger invariant
                 raise KeyError(f"unknown Evaluation Run: {run.run_id}")
@@ -1368,34 +1341,6 @@ class EvaluationRunner:
                     )
             checkpoint(execution, observations, issues[issue_start:])
         return stopped
-
-    @staticmethod
-    def _execution_schema_registry(
-        *,
-        suite: EvaluationSuite,
-        cases: tuple[EvaluationCase[Any, Any, Any], ...],
-        task_binding: EvaluationTaskBinding[Any, Any, Any] | None,
-        report: EvaluationReport[Any, Any, Any],
-    ) -> SchemaRegistry:
-        """Infer the task schemas already present in one ephemeral execution."""
-        schemas = SchemaRegistry()
-        for case in cases:
-            schemas.register(suite.task_contract.input_schema, type(case.task_input))
-            schemas.register(suite.task_contract.metadata_schema, type(case.metadata))
-
-        output_model = task_binding.output_model if task_binding is not None else None
-        if output_model is None:
-            output_model = next(
-                (
-                    type(case.output)
-                    for case in report.cases
-                    if isinstance(case.output, BaseModel)
-                ),
-                None,
-            )
-        if output_model is not None:
-            schemas.register(suite.task_contract.output_schema, output_model)
-        return schemas
 
     def _retry_finalization_persistence(
         self,

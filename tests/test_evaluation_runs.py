@@ -576,8 +576,9 @@ def test_ephemeral_and_durable_runs_produce_identical_canonical_report_bytes(tmp
         return CountCases()
 
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        ephemeral_result = _run(
-            EvaluationRunner(evidence),
+        ephemeral_runner = EvaluationRunner(evidence)
+        ephemeral_initial = _run(
+            ephemeral_runner,
             plan=plan_result.plan,
             suite=suite,
             gold_set=gold_set,
@@ -587,7 +588,11 @@ def test_ephemeral_and_durable_runs_produce_identical_canonical_report_bytes(tmp
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        ephemeral_result = ephemeral_runner.finalize(
+            ephemeral_initial.run.run_id,
             schemas=_schemas_for(cases),
+            evaluator_resolver=resolve,
         )
         ephemeral_report = evidence.materialize_aggregate_report(
             ephemeral_result.run.run_id, _schemas_for(cases)
@@ -696,6 +701,79 @@ def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path
     assert [case.name for case in report.cases] == ["case-1@1"]
     assert report.cases[0].output == Output(answer="prompt-1")
     assert not database.exists()
+
+
+def test_in_memory_execution_stops_before_evaluation_finalization():
+    cases, gold_set, suite = _lifecycle_fixture("in-memory-execution-boundary")
+    report_evaluator_calls: list[int] = []
+
+    class RecordingReportEvaluator(ReportEvaluator):
+        def evaluate(self, ctx: ReportEvaluatorContext):
+            report_evaluator_calls.append(len(ctx.report.cases))
+            return None
+
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        result = _run(
+            EvaluationRunner(evidence),
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: RecordingReportEvaluator(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+    assert result.run.status == "finalization_pending"
+    assert result.report_evaluator_executions == ()
+    assert report_evaluator_calls == []
+
+
+def test_in_memory_run_completes_through_evaluation_finalization():
+    cases, gold_set, suite = _lifecycle_fixture("in-memory-finalization-boundary")
+    report_evaluator_calls: list[int] = []
+
+    class RecordingReportEvaluator(ReportEvaluator):
+        def evaluate(self, ctx: ReportEvaluatorContext):
+            report_evaluator_calls.append(len(ctx.report.cases))
+            return None
+
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        runner = EvaluationRunner(evidence)
+        initial = _run(
+            runner,
+            suite=suite,
+            gold_set=gold_set,
+            cases=cases,
+            selection=("case-1",),
+            task=lambda task_input: Output(answer=task_input.prompt),
+            evaluator_resolver=lambda configured: RecordingReportEvaluator(),
+            configuration=EvaluationRunConfiguration(
+                provider="deterministic", model="fixture"
+            ),
+        )
+
+        completed = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: RecordingReportEvaluator(),
+        )
+
+    assert completed.run.status == "completed"
+    assert [execution.status for execution in completed.report_evaluator_executions] == [
+        "completed"
+    ]
+    assert report_evaluator_calls == [1]
+
+
+def test_evaluation_stores_do_not_advertise_ephemerality(tmp_path):
+    with InMemoryEvaluationEvidenceBuffer() as evidence:
+        assert not hasattr(evidence, "is_ephemeral")
+
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        assert not hasattr(ledger, "is_ephemeral")
 
 
 def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
@@ -1336,7 +1414,6 @@ def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
                 model="fixture",
                 case_concurrency=2,
             ),
-            schemas=_schemas_for(cases),
         )
         report = evidence.materialize_aggregate_report(
             result.run.run_id, _schemas_for(cases)
@@ -1942,7 +2019,8 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
         }
     )
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = _run(EvaluationRunner(evidence),
+        runner = EvaluationRunner(evidence)
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1951,6 +2029,11 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: FailingReportEvaluator(),
         )
         report = evidence.materialize_aggregate_report(
             result.run.run_id, _schemas_for(cases)
@@ -1969,7 +2052,8 @@ def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_repor
 def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
     cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-none")
     with InMemoryEvaluationEvidenceBuffer() as evidence:
-        result = _run(EvaluationRunner(evidence),
+        runner = EvaluationRunner(evidence)
+        initial = _run(runner,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
@@ -1978,6 +2062,11 @@ def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
             configuration=EvaluationRunConfiguration(
                 provider="deterministic", model="fixture"
             ),
+        )
+        result = runner.finalize(
+            initial.run.run_id,
+            schemas=_schemas_for(cases),
+            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
         )
 
     assert result.run.status == "completed"

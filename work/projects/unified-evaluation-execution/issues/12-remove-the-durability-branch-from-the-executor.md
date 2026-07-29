@@ -1,6 +1,6 @@
 # Remove the durability branch from the executor
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). This is the ticket
 that makes executing a Resolved Evaluation Plan mean one thing.
@@ -33,13 +33,13 @@ test suite unmodified.
 
 ## Acceptance criteria
 
-- [ ] The executor does not inspect its store to decide what work to perform.
-- [ ] Executing a Resolved Evaluation Plan performs the identical sequence of operations over an in-memory store and over a file-backed Evaluation Ledger.
-- [ ] Deriving the Evaluation Report and running report evaluators happens only in Evaluation Finalization, on every path.
-- [ ] Every caller that previously obtained a completed Evaluation Run or report evaluator executions from execution alone obtains them through Evaluation Finalization.
-- [ ] No ephemerality flag remains on either store, and nothing probes for one.
-- [ ] Existing durable Evaluation Run, Evaluation Finalization, claim, and fencing tests pass unmodified.
-- [ ] The full deterministic test suite passes.
+- [x] The executor does not inspect its store to decide what work to perform.
+- [x] Executing a Resolved Evaluation Plan performs the identical sequence of operations over an in-memory store and over a file-backed Evaluation Ledger.
+- [x] Deriving the Evaluation Report and running report evaluators happens only in Evaluation Finalization, on every path.
+- [x] Every caller that previously obtained a completed Evaluation Run or report evaluator executions from execution alone obtains them through Evaluation Finalization.
+- [x] No ephemerality flag remains on either store, and nothing probes for one.
+- [x] Existing durable Evaluation Run, Evaluation Finalization, claim, and fencing tests pass unmodified.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
