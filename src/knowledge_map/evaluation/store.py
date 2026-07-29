@@ -1213,7 +1213,6 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         issues: Iterable[EvaluationRunIssue] = (),
         gate_outcomes: Iterable[EvaluationGateOutcome] = (),
         finalization_claim_id: UUID | None = None,
-        require_finalization_claim: bool = True,
     ) -> EvaluationRunRecord:
         issue_items = tuple(issues)
         gate_items = tuple(gate_outcomes)
@@ -1228,11 +1227,7 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
                 if row is None:
                     raise KeyError(f"unknown Evaluation Run: {run_id}")
                 if row["status"] != EvaluationRunStatus.COMPLETED.value:
-                    if (
-                        require_finalization_claim
-                        and row["status"]
-                        == EvaluationRunStatus.FINALIZATION_PENDING.value
-                    ):
+                    if row["status"] == EvaluationRunStatus.FINALIZATION_PENDING.value:
                         if finalization_claim_id is None:
                             raise ValueError(
                                 "Evaluation Run completion requires its exact live finalization claim"

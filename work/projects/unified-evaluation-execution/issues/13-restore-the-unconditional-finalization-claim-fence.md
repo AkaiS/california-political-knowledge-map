@@ -1,6 +1,6 @@
 # Restore the unconditional finalization claim fence
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). This ticket returns
 ADR 0012's fencing guarantee to the Evaluation Ledger, where it belongs.
@@ -33,12 +33,12 @@ durable fencing behaviour moved, which is not what this ticket is for.
 
 ## Acceptance criteria
 
-- [ ] Completing an Evaluation Run awaiting finalization always requires its exact live finalization claim.
-- [ ] No parameter, flag, or argument can waive that requirement.
-- [ ] No store, buffer, or wrapper overrides run completion to bypass fencing.
-- [ ] Existing finalization claim, renewal, heartbeat, expiry, and competing-worker tests pass unmodified, per ADR 0012.
-- [ ] Terminal-checkpoint recovery and resumable finalization behaviour are unchanged, per ADR 0011.
-- [ ] The full deterministic test suite passes.
+- [x] Completing an Evaluation Run awaiting finalization always requires its exact live finalization claim.
+- [x] No parameter, flag, or argument can waive that requirement.
+- [x] No store, buffer, or wrapper overrides run completion to bypass fencing.
+- [x] Existing finalization claim, renewal, heartbeat, expiry, and competing-worker tests pass unmodified, per ADR 0012.
+- [x] Terminal-checkpoint recovery and resumable finalization behaviour are unchanged, per ADR 0011.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
