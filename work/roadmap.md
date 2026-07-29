@@ -82,8 +82,11 @@ Expected work includes:
 - Graph-aware reranking.
 - Citation and evidence presentation.
 
-This outcome is still at roadmap level and should become an initiative before
-implementation tickets are created.
+The [Useful Graph Retrieval initiative](initiatives/useful-graph-retrieval/MAP.md)
+maps this area. It designs retrieval against the settled graph ontology, targets
+a developer-first consumer with a citation-bearing contract that a later chat UI
+can render unchanged, and produces the retrieval and answering contract that the
+Model Evaluation initiative is waiting on.
 
 ### 5. Broader public-data coverage
 

@@ -35,6 +35,16 @@ is blocked by the Unified Evaluation Execution Path's shared compatibility
 predicate, and issues 02 and 03 are blocked by 01. Its glossary issue 04 is
 listed above because it has no blockers.
 
+### Useful Graph Retrieval frontier
+
+The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
+charted on 2026-07-29 and holds ten tickets. Three are takeable now; the rest
+declare their blockers.
+
+- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-human`. Every other retrieval decision waits on it.
+- [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
+- [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `ready-for-agent`.
+
 ### Blocked initiative chain
 
 The [Model Evaluation map](initiatives/model-evaluation/MAP.md) is the current
