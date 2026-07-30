@@ -201,6 +201,17 @@ says it should, and whether those transitions are reported truthfully.
   `assert_run_is_complete`.
 - **ER-09 · P2:** Consolidate repetitive guards that prevent report evaluation
   before case completion or outside the durable runner.
+- **ER-10 · P1:** Retry a case whose task failed for a transient reason (IO or
+  API) within its own Evaluation Run, so one flaky call does not force the whole
+  caseload to be re-run later. Desired behavior; no such mechanism exists today.
+  A transient failure lands as a terminal `FAILED` disposition on first attempt,
+  and the runner's only retry loops are SQLite contention and finalization
+  persistence. This does not conflict with the point-in-time Evaluation Run: the
+  run has not reached terminal evidence and no new run is created, so it is not
+  the resumption CONTEXT.md reserves for Evaluation Finalization. Open question
+  before shaping: whether a case that exhausts its transient retries is `FAILED`
+  with the run still completing, or leaves the run incomplete. Depends on
+  truthful retryability from ER-01.
 
 ## Evaluation durability and artifacts
 

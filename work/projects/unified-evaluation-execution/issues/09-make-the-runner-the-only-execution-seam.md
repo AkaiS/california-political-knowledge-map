@@ -1,6 +1,6 @@
 # Make the runner the only execution seam
 
-Labels: ready-for-human
+Labels: completed
 
 Closes inbox items EP-01 and EP-03 for the
 [Unified Evaluation Execution Path](../PRD.md). The largest change in the project,
@@ -42,6 +42,7 @@ execution. Validation happens once, at preflight.
 - [x] `EvaluationEngine` is no longer exported as a public entry point.
 - [x] A happy-path test of plan-driven execution exists, closing the gap where the engine was covered only by a task-binding rejection test.
 - [x] Redundant case validation is removed from evaluator resolution and from durable execution.
+- [x] A retry run manifests exactly the Resolved Evaluation Plan it is given and never narrows to its predecessor's non-terminal cases.
 - [x] The existing test that all execution entry points reject a mismatched Task Binding contract is updated to the single remaining seam and still passes, per ADR 0007.
 - [x] The full deterministic test suite passes.
 
@@ -55,6 +56,17 @@ execution. Validation happens once, at preflight.
   the durable report-output contract.
 - Incompatible authored cases now fail during preflight, before a Resolved
   Evaluation Plan exists, rather than at an execution entry point.
+- A retry no longer narrows to its predecessor's PENDING and CANCELLED cases; it
+  executes the whole plan it is given. This corrects a defect rather than
+  trading one behaviour for another. An Evaluation Run measures its whole
+  caseload at one moment, so per CONTEXT.md "incomplete case execution requires
+  a distinct linked retry, while incomplete report evaluation may resume as
+  Evaluation Finalization on the same run" — resumption is reserved for
+  finalization, and narrowing had made a retry resume case execution instead.
+  `retry_of_run_id` is provenance linking one run to its predecessor, not an
+  instruction to pick up where that run stopped. A caller who genuinely wants a
+  narrower caseload preflights a narrower plan, which makes the narrowing
+  explicit and visible in the frozen plan.
 
 ## Blocked by
 

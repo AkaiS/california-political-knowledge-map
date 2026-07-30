@@ -5262,7 +5262,10 @@ def test_retry_of_an_incomplete_run_manifests_its_whole_plan(tmp_path):
         ]
         # The retry is a distinct linked run over the whole caseload: the runner
         # manifests exactly the plan it is given and never narrows to the
-        # predecessor's non-terminal cases.
+        # predecessor's non-terminal cases. Per CONTEXT.md's Evaluation Run,
+        # incomplete case execution requires a distinct linked retry; only
+        # report evaluation may resume on the same run. `retry_of_run_id` is
+        # provenance, not an instruction to resume where the predecessor stopped.
         assert second.run.retry_of_run_id == first.run.run_id
         assert [entry.case_business_id for entry in second.manifest] == [
             "case-1",
