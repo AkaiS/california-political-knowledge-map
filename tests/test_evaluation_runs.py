@@ -107,28 +107,6 @@ def _run(runner: EvaluationRunner, **kwargs):
     selection = kwargs.pop("selection", None)
     split = kwargs.pop("split", None)
     if plan is None:
-        retry_of_run_id = kwargs.get("retry_of_run_id")
-        if retry_of_run_id is not None:
-            results = {
-                result.manifest_id: result
-                for result in runner.ledger.list_evaluation_case_results(
-                    retry_of_run_id
-                )
-            }
-            incomplete = {
-                entry.case_business_id
-                for entry in runner.ledger.list_evaluation_case_manifest(
-                    retry_of_run_id
-                )
-                if results[entry.manifest_id].execution_disposition
-                in {
-                    EvaluationCaseDisposition.PENDING,
-                    EvaluationCaseDisposition.CANCELLED,
-                }
-            }
-            if selection is not None:
-                incomplete.intersection_update(selection)
-            selection = incomplete
         plan = preflight_selected_cases(
             suite=kwargs["suite"],
             gold_set=kwargs["gold_set"],
@@ -5237,7 +5215,7 @@ def test_retry_is_a_new_run_linked_to_its_predecessor(tmp_path):
         ]
 
 
-def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
+def test_retry_of_an_incomplete_run_manifests_its_whole_plan(tmp_path):
     cases, gold_set, suite = _lifecycle_fixture("retry-incomplete")
     checks = 0
 
@@ -5274,7 +5252,6 @@ def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
             evaluator_resolver=lambda configured: CountCases(),
             configuration=EvaluationRunConfiguration(provider="deterministic", model="fixture"),
             retry_of_run_id=first.run.run_id,
-            selection=("case-1", "case-2"),
         )
 
         assert first.run.status == "cancelled"
@@ -5283,15 +5260,23 @@ def test_retry_of_an_incomplete_run_manifests_only_nonterminal_cases(tmp_path):
             "completed",
             "pending",
         ]
+        # The retry is a distinct linked run over the whole caseload: the runner
+        # manifests exactly the plan it is given and never narrows to the
+        # predecessor's non-terminal cases.
         assert second.run.retry_of_run_id == first.run.run_id
-        assert [entry.case_business_id for entry in second.manifest] == ["case-2"]
+        assert [entry.case_business_id for entry in second.manifest] == [
+            "case-1",
+            "case-2",
+        ]
         assert [planned.case.business_id for planned in ledger.get_resolved_evaluation_plan(second.run.run_id).cases] == [
-            "case-2"
+            "case-1",
+            "case-2",
         ]
         assert [result.execution_disposition.value for result in second.case_results] == [
-            "completed"
+            "completed",
+            "completed",
         ]
-        assert retry_task_calls == ["prompt-2"]
+        assert retry_task_calls == ["prompt-1", "prompt-2"]
         assert ledger.list_evaluation_case_manifest(first.run.run_id) == list(first.manifest)
 
 
