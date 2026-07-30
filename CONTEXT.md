@@ -164,7 +164,7 @@ The adapter protocol and its concrete implementation that extracts entities and 
 _Avoid_: Extractor model, agent helper
 
 **Evaluation Gold Set**:
-A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. It binds one exact Evaluation Task Contract, and every member implements that contract's input, expected-output, and metadata schemas.
+A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. It binds one exact Evaluation Task Contract, and every member implements that contract's input and metadata schemas, and its expected-output schema where the member declares an expected output. Members are validated against the contract by the construction factory, which is the supported way to build one.
 _Avoid_: Test fixtures, benchmark data, model labels
 
 **Evaluation Case**:
