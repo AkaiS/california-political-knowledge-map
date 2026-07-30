@@ -90,6 +90,15 @@ and the current test suite:
 - Historical observations in [inbox.md](inbox.md) remain untriaged candidates,
   not executable tickets.
 
+On 2026-07-29, after the Unified Evaluation Execution Path collapsed to a single
+runner-only execution seam:
+
+- The full deterministic suite passed: `489 passed`.
+- The per-issue counts in that project's issues 10, 14, and 15 (`482`, `493`,
+  `489`) are dated observations of the suite at those moments. They are a
+  before-and-after record, not invariants: each is left as measured, and an
+  unexplained movement between them is the signal to investigate.
+
 ## Information model
 
 | Level | Purpose | Location |

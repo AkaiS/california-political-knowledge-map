@@ -42,6 +42,14 @@ Expect the suite to get smaller. That is the intended outcome, not a regression.
 - [x] Coverage of report evaluator failure, report evaluators returning nothing, invalid checkpoint rejection, and terminal checkpoint retention is retained.
 - [x] The full deterministic test suite passes.
 
+## Verification
+
+- `489 passed` on 2026-07-29 (`uv run pytest -q`).
+- Four fewer than the `493 passed` recorded by issue 14, accounted for by the
+  pair collapses above: the byte-parity test and the in-memory evidence
+  substitution test were deleted with their subjects, and two ephemeral/durable
+  report-evaluator pairs were each merged into their durable variant.
+
 ## Blocked by
 
 - 14 — Delete the in-memory evidence buffer and the unused evidence-source protocol.
