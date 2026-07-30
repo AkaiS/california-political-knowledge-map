@@ -15,9 +15,15 @@ problem and hides the rest, so discovering five issues takes five runs.
 
 Preflight accumulates every issue the shared compatibility predicate finds and,
 if any exist, raises a single typed error carrying the whole collection. A caller
-can catch that error and present every issue. The runner catches it before
-creating an Evaluation Run, so the Evaluation Ledger does not accumulate runs
-that never had a chance of executing.
+can catch that error and present every issue. The Evaluation Ledger does not
+accumulate runs that never had a chance of executing.
+
+The runner no longer catches that error, because it no longer calls preflight:
+issue 09 made `EvaluationRunner.run` require a Resolved Evaluation Plan. The
+fence moved rather than disappeared — a failed preflight raises instead of
+returning, so no plan exists and the runner cannot be reached. `ResolvedEvaluationPlan`
+is un-constructible outside `preflight_selected_cases` to keep that the only way
+in. See the corresponding Implementation Decision in the PRD.
 
 ## Acceptance criteria
 
@@ -27,7 +33,8 @@ that never had a chance of executing.
 - [x] A preflight over a Gold Set with multiple distinct problems reports all of them in one raise, proven by a test asserting on the full set rather than on a single message.
 - [x] Contract schema mismatches and unknown Evaluation Requirements are distinguishable within the reported collection.
 - [x] Preflight over a compatible Suite and Gold Set still returns a Resolved Evaluation Plan and raises nothing.
-- [x] The existing test that the runner rejects an incompatible preflight before creating an Evaluation Run still passes.
+- [x] An incompatible preflight cannot reach the runner at all. The original criterion — that the runner rejects an incompatible preflight before creating an Evaluation Run — is retracted: after issue 09 the runner does not call preflight, so it has nothing to reject. The test now asserts the guarantee that replaced it, that a raised preflight leaves the Evaluation Ledger empty.
+- [x] A Resolved Evaluation Plan cannot be constructed outside `preflight_selected_cases`, so the runner cannot be handed a plan whose cases were never checked. Reading a stored plan back goes through a named rehydration seam that re-verifies its content hash.
 - [x] No Evaluation Run row is created when preflight fails.
 - [x] The existing parametrized preflight mismatch tests still pass.
 - [x] The full deterministic test suite passes.

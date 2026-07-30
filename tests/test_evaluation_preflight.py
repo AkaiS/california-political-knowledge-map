@@ -388,9 +388,9 @@ def test_incompatible_preflight_leaves_no_evaluation_run_in_the_ledger(tmp_path)
     """An incompatible preflight must not accumulate a run, per ADR 0005.
 
     `EvaluationRunner.run` now requires a Resolved Evaluation Plan, and an
-    incompatible preflight produces none, so the runner cannot be reached at all.
-    That is a stronger guarantee than the runner rejecting the attempt, but it is
-    only worth anything if the ledger stays empty — which is what this asserts.
+    incompatible preflight produces none. Preflight is therefore the fence the
+    runner used to be, and it is only worth anything if the ledger stays empty
+    afterwards — which is what this asserts.
     """
     first = _case("first", requirements=("grounding",))
     second = _case("second", requirements=("unknown",))
@@ -416,16 +416,51 @@ def test_incompatible_preflight_leaves_no_evaluation_run_in_the_ledger(tmp_path)
         # Preflight raised instead of returning, so there is no plan to hand
         # to the runner and no run can be created.
         assert raised.value.issues
-        with pytest.raises(TypeError, match="plan"):
-            runner.run(
-                suite=suite,
-                gold_set=gold_set,
-                cases=(first, second),
-                task=lambda value: value,
-                evaluator_resolver=lambda configured: configured,
-                configuration=EvaluationRunConfiguration(
-                    provider="deterministic", model="fixture"
-                ),
-            )
-
         assert ledger.list_evaluation_runs() == []
+
+
+def test_a_resolved_evaluation_plan_cannot_be_constructed_outside_preflight():
+    """Only preflight may resolve a plan, so the fence cannot be walked around.
+
+    A plan asserts its cases were checked against the Suite task contract and
+    the runner does not re-check, so hand-building one would reach execution
+    with unchecked cases.
+    """
+    from knowledge_map.evaluation.preflight import (
+        EvaluationDefinitionRevisionReference,
+        ResolvedEvaluationPlan,
+    )
+
+    reference = EvaluationDefinitionRevisionReference(
+        record_id="00000000-0000-0000-0000-000000000001",
+        business_id="fabricated",
+        revision=1,
+        content_hash="a" * 64,
+    )
+
+    with pytest.raises(TypeError, match="cannot be constructed directly"):
+        ResolvedEvaluationPlan(suite=reference, gold_set=reference, cases=())
+
+    # model_validate is not a way around it either.
+    with pytest.raises(TypeError, match="cannot be constructed directly"):
+        ResolvedEvaluationPlan.model_validate(
+            {
+                "suite": reference.model_dump(mode="json"),
+                "gold_set": reference.model_dump(mode="json"),
+                "cases": [],
+            }
+        )
+
+
+def test_a_frozen_plan_rehydrates_from_its_own_stored_bytes():
+    """The ledger must still read back plan bytes it froze, fence notwithstanding."""
+    from knowledge_map.evaluation.preflight import ResolvedEvaluationPlan
+
+    case = _case("first")
+    plan = preflight_selected_cases(
+        suite=_suite(), gold_set=_gold_set((case,)), cases=(case,)
+    )
+
+    rehydrated = ResolvedEvaluationPlan.from_frozen_json(plan.canonical_json)
+
+    assert rehydrated == plan

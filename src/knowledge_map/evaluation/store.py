@@ -1326,7 +1326,7 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         ).fetchone()
         if plan_row is None:
             raise ValueError("Evaluation Run cannot complete without its frozen plan")
-        plan = ResolvedEvaluationPlan.model_validate_json(plan_row["plan_json"])
+        plan = ResolvedEvaluationPlan.from_frozen_json(plan_row["plan_json"])
         suite = self._definition_for_run(run_id, EvaluationDefinitionKind.SUITE)
         case_evaluators = {
             evaluator["name"]: evaluator
@@ -2209,7 +2209,7 @@ class SQLiteEvaluationExecutionStore(_SQLiteLedgerCapability):
         return (
             None
             if row is None
-            else ResolvedEvaluationPlan.model_validate_json(row["plan_json"])
+            else ResolvedEvaluationPlan.from_frozen_json(row["plan_json"])
         )
 
     def list_evaluation_runs(self) -> list[EvaluationRunRecord]:

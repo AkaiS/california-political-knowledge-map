@@ -198,7 +198,6 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
         EvaluationMetricReference,
         NoComparisonOperation,
     )
-    from knowledge_map.evaluation.preflight import ResolvedEvaluationPlan, EvaluationDefinitionRevisionReference
 
     suite_contract = _contract()
     mismatched_contract = EvaluationTaskContract(
@@ -249,21 +248,6 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
         ),
     )
 
-    plan = ResolvedEvaluationPlan(
-        suite=EvaluationDefinitionRevisionReference(
-            record_id="00000000-0000-0000-0000-000000000001",
-            business_id="test-suite",
-            revision=1,
-            content_hash="a" * 64,
-        ),
-        gold_set=EvaluationDefinitionRevisionReference(
-            record_id="00000000-0000-0000-0000-000000000002",
-            business_id="test-gold-set",
-            revision=1,
-            content_hash="b" * 64,
-        ),
-        cases=(),
-    )
     from knowledge_map.evaluation import (
         EvaluationRunner,
         EvaluationRunConfiguration,
@@ -290,6 +274,11 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
             ),
         ),
     )
+
+    # The contract guard fires before the plan is read, so an empty plan is
+    # enough — but it still has to come from preflight, the only plan source.
+    plan = suite.preflight_selected_cases(gold_set=gold_set, cases=(), selection=())
+
     with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         with pytest.raises(ValueError, match="task_binding contract does not match"):

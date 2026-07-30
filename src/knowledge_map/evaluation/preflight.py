@@ -55,8 +55,22 @@ class ResolvedEvaluationCase(BaseModel):
     evaluators: tuple[ResolvedCaseEvaluator, ...] = ()
 
 
+_PLAN_RESOLUTION_AUTHORITY = object()
+"""Token proving a plan came from `preflight_selected_cases` and nowhere else."""
+
+
 class ResolvedEvaluationPlan(BaseModel):
-    """The authoritative, immutable assignment consumed by run execution."""
+    """The authoritative, immutable assignment consumed by run execution.
+
+    Only `preflight_selected_cases` may construct one. A plan asserts that its
+    cases were checked against the Suite task contract, and direct construction
+    would let a caller fabricate that assertion and reach the runner with
+    incompatible cases — the runner does not re-check.
+
+    The one other way in is `from_frozen_json`, which the ledger uses to read
+    back plan bytes it already froze; that path re-verifies `content_hash`
+    against the content, so it cannot launder a fabricated plan.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -64,6 +78,28 @@ class ResolvedEvaluationPlan(BaseModel):
     gold_set: EvaluationDefinitionRevisionReference
     cases: tuple[ResolvedEvaluationCase, ...]
     content_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+    def __init__(self, **data: Any) -> None:
+        if data.pop("resolution_authority", None) is not _PLAN_RESOLUTION_AUTHORITY:
+            raise TypeError(
+                "ResolvedEvaluationPlan is resolved by preflight_selected_cases; "
+                "it cannot be constructed directly. To read back a stored plan, "
+                "use ResolvedEvaluationPlan.from_frozen_json"
+            )
+        super().__init__(**data)
+
+    @classmethod
+    def from_frozen_json(cls, plan_json: str | bytes) -> "ResolvedEvaluationPlan":
+        """Rehydrate a plan from the bytes a ledger froze for a run.
+
+        Pydantic routes `model_validate`/`model_validate_json` through a custom
+        `__init__`, so those raise like direct construction does; this is the
+        deliberate seam for stored plans. A stored `content_hash` that does not
+        match the stored content is rejected by `model_post_init`.
+        """
+        return cls(
+            resolution_authority=_PLAN_RESOLUTION_AUTHORITY, **json.loads(plan_json)
+        )
 
     def model_post_init(self, __context: Any) -> None:
         fingerprint = content_fingerprint(
@@ -185,6 +221,7 @@ def preflight_selected_cases(
         for membership, case in selected
     )
     return ResolvedEvaluationPlan(
+        resolution_authority=_PLAN_RESOLUTION_AUTHORITY,
         suite=EvaluationDefinitionRevisionReference(
             record_id=suite.identity.record_id,
             business_id=suite.identity.business_id,
