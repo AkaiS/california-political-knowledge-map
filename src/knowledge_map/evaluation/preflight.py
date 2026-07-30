@@ -147,7 +147,7 @@ def preflight_selected_cases(
     issues = [
         _as_preflight_issue(issue)
         for issue in compatibility_issues
-        if issue.source in {"suite_gold_set", "gold_set_member"}
+        if issue.source == "suite_gold_set"
     ]
 
     case_by_reference = {
@@ -286,10 +286,6 @@ def _as_preflight_issue(
     if issue.source == "suite_gold_set":
         message = (
             f"Gold Set {field_name} schema is incompatible with the Suite task contract"
-        )
-    elif issue.source == "gold_set_member":
-        message = (
-            f"Gold Set member {case_subject} has an incompatible {field_name} schema"
         )
     else:
         message = (

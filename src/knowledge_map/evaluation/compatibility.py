@@ -18,7 +18,7 @@ class EvaluationCompatibilityIssue(BaseModel):
     category: Literal["contract_schema_mismatch", "unknown_requirement"]
     case_business_id: str
     case_revision: int
-    source: Literal["case", "gold_set_member", "suite_gold_set"] = "case"
+    source: Literal["case", "suite_gold_set"] = "case"
     schema_role: Literal["input", "expected_output", "metadata"] | None = None
     actual_schema: SchemaReference | None = None
     expected_schema: SchemaReference | None = None
@@ -93,7 +93,7 @@ def _schema_issues(
     *,
     case_business_id: str,
     case_revision: int,
-    source: Literal["case", "gold_set_member", "suite_gold_set"],
+    source: Literal["case", "suite_gold_set"],
     actual_schemas: tuple[
         SchemaReference | None, SchemaReference | None, SchemaReference | None
     ],
