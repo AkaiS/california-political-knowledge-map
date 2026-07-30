@@ -1,6 +1,6 @@
 # Collapse the redundant run-mode test pairs
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). The suite stops
 asserting that one code path agrees with itself.
@@ -30,17 +30,17 @@ Expect the suite to get smaller. That is the intended outcome, not a regression.
 
 ## Acceptance criteria
 
-- [ ] The test asserting that ephemeral and durable runs produce identical canonical report bytes is deleted; its subject no longer exists.
-- [ ] The test asserting that canonical report serialization round-trips is kept unchanged.
-- [ ] The test asserting that substituting in-memory evidence preserves materialized case evidence is deleted; nothing is being substituted.
-- [ ] The test asserting that in-memory and durable evidence reject the same invalid checkpoint is collapsed to a single case over one store.
-- [ ] The ephemeral and durable tests of a report evaluator that raises are merged into one, retaining the durable variant.
-- [ ] The ephemeral and durable tests of a report evaluator that returns nothing are merged into one, retaining the durable variant.
-- [ ] The test covering report materialization from in-memory evidence is renamed to describe the behaviour rather than the deleted type, and keeps its assertions.
-- [ ] The test covering retention of content-addressed terminal checkpoints is renamed on the same basis, and keeps its assertions.
-- [ ] No remaining test name refers to an evidence buffer, an ephemeral sink, or a durable-versus-ephemeral distinction.
-- [ ] Coverage of report evaluator failure, report evaluators returning nothing, invalid checkpoint rejection, and terminal checkpoint retention is retained.
-- [ ] The full deterministic test suite passes.
+- [x] The test asserting that ephemeral and durable runs produce identical canonical report bytes is deleted; its subject no longer exists.
+- [x] The test asserting that canonical report serialization round-trips is kept unchanged.
+- [x] The test asserting that substituting in-memory evidence preserves materialized case evidence is deleted; nothing is being substituted.
+- [x] The test asserting that in-memory and durable evidence reject the same invalid checkpoint is collapsed to a single case over one store.
+- [x] The ephemeral and durable tests of a report evaluator that raises are merged into one, retaining the durable variant.
+- [x] The ephemeral and durable tests of a report evaluator that returns nothing are merged into one, retaining the durable variant.
+- [x] The test covering report materialization from in-memory evidence is renamed to describe the behaviour rather than the deleted type, and keeps its assertions.
+- [x] The test covering retention of content-addressed terminal checkpoints is renamed on the same basis, and keeps its assertions.
+- [x] No remaining test name refers to an evidence buffer, an ephemeral sink, or a durable-versus-ephemeral distinction.
+- [x] Coverage of report evaluator failure, report evaluators returning nothing, invalid checkpoint rejection, and terminal checkpoint retention is retained.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

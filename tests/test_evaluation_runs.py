@@ -80,7 +80,6 @@ from knowledge_map.evaluation.store import (
 )
 from knowledge_map.evaluation.reporting import (
     canonical_report_bytes,
-    report_case_payload,
     report_from_bytes,
 )
 
@@ -103,7 +102,7 @@ class ComponentConfiguration(BaseModel):
 
 
 def _run(runner: EvaluationRunner, **kwargs):
-    """Preflight legacy durable-run scenarios at the new public boundary."""
+    """Preflight run scenarios at the public boundary."""
     plan = kwargs.pop("plan", None)
     selection = kwargs.pop("selection", None)
     split = kwargs.pop("split", None)
@@ -363,15 +362,15 @@ class RecordingCaseEvaluator(Evaluator):
         return True
 
 
-def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
+def test_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
     cases = (_case(1), _case(2))
     cases = (
         cases[0].model_copy(update={"requirements": ("grounded",)}),
         cases[1],
     )
     gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-durable-plan", revision=1),
-        description="Durable shared-engine cases.",
+        identity=EvaluationGoldSetIdentity(business_id="gold-set-plan", revision=1),
+        description="Shared-engine cases.",
         task_contract=EvaluationTaskContract(
             input_schema=cases[0].input_schema,
             output_schema=cases[0].expected_output_schema,
@@ -386,8 +385,8 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
         ),
     )
     suite = EvaluationSuite(
-        identity=EvaluationSuiteIdentity(business_id="suite-durable-plan", revision=1),
-        description="Durable shared-engine suite.",
+        identity=EvaluationSuiteIdentity(business_id="suite-plan", revision=1),
+        description="Shared-engine suite.",
         requirement_catalog=EvaluationRequirementCatalog(
             requirements=(
                 EvaluationRequirement(
@@ -458,7 +457,7 @@ def test_durable_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
     ]
 
 
-def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_failure(
+def test_case_checkpoint_rolls_back_all_case_evidence_on_persistence_failure(
     tmp_path, monkeypatch
 ):
     cases, gold_set, base_suite = _lifecycle_fixture(
@@ -517,124 +516,6 @@ def test_durable_case_checkpoint_rolls_back_all_case_evidence_on_persistence_fai
         assert ledger.list_case_metric_observations(case_result.result_id) == []
 
 
-def test_ephemeral_and_durable_runs_produce_identical_canonical_report_bytes(tmp_path):
-    cases, gold_set, base_suite = _lifecycle_fixture(
-        "shared-parity", case_evaluator="exact-case"
-    )
-    unlabeled = EvaluationCase[Input, Output, Metadata](
-        identity=cases[1].identity,
-        input_schema=cases[1].input_schema,
-        metadata_schema=cases[1].metadata_schema,
-        task_input=cases[1].task_input,
-        metadata=cases[1].metadata,
-        description=cases[1].description,
-    )
-    cases = (cases[0], unlabeled)
-    gold_set = EvaluationGoldSet.model_validate(
-        {
-            **gold_set.model_dump(exclude={"content_hash"}),
-            "memberships": tuple(
-                EvaluationGoldSetMembership(
-                    case=EvaluationCaseRevisionReference.from_case(case),
-                    split=EvaluationSplit.HELD_OUT,
-                )
-                for case in cases
-            ),
-        }
-    )
-    suite = base_suite.model_copy(
-        update={
-            "case_evaluators": (
-                ConfiguredEvaluator(name="exact-case", evaluator_revision=1),
-                ConfiguredEvaluator(name="always-pass", evaluator_revision=1),
-            ),
-            "suite_case_evaluators": (
-                ConfiguredEvaluatorReference(name="exact-case"),
-                ConfiguredEvaluatorReference(name="always-pass"),
-            ),
-            "report_evaluators": (
-                ConfiguredEvaluator(name="count-cases", evaluator_revision=1),
-                ConfiguredEvaluator(name="failing-report", evaluator_revision=1),
-            ),
-        }
-    )
-    plan_result = preflight_selected_cases(
-        suite=suite,
-        gold_set=gold_set,
-        cases=cases,
-    )
-    assert plan_result.plan is not None
-
-    def resolve(configured):
-        if configured.name == "exact-case":
-            return ExactAnswer()
-        if configured.name == "always-pass":
-            return NoObservationEvaluator()
-        if configured.name == "failing-report":
-            return FailingReportEvaluator()
-        return CountCases()
-
-    with SQLiteEvaluationLedger.in_memory() as evidence:
-        ephemeral_runner = EvaluationRunner(evidence)
-        ephemeral_initial = _run(
-            ephemeral_runner,
-            plan=plan_result.plan,
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=resolve,
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
-        )
-        ephemeral_result = ephemeral_runner.finalize(
-            ephemeral_initial.run.run_id,
-            schemas=_schemas_for(cases),
-            evaluator_resolver=resolve,
-        )
-        ephemeral_report = evidence.materialize_aggregate_report(
-            ephemeral_result.run.run_id, _schemas_for(cases)
-        )
-
-    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        runner = EvaluationRunner(ledger)
-        initial = _run(runner,
-            plan=plan_result.plan,
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=resolve,
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
-        )
-        durable = runner.finalize(
-            initial.run.run_id,
-            schemas=_schemas_for(cases),
-            evaluator_resolver=resolve,
-        )
-        durable_report = ledger.materialize_aggregate_report(
-            initial.run.run_id, _schemas_for(cases)
-        )
-
-    assert durable.run.status == "completed"
-    ephemeral_bytes = canonical_report_bytes(ephemeral_report)
-    durable_bytes = canonical_report_bytes(durable_report)
-    assert ephemeral_bytes == durable_bytes
-    assert len(ephemeral_report.cases) == len(durable_report.cases) == 2
-    assert ephemeral_report.cases[1].expected_output is None
-    assert [execution.status for execution in ephemeral_result.report_evaluator_executions] == [
-        "completed",
-        "failed",
-    ]
-    assert [execution.status.value for execution in durable.report_evaluator_executions] == [
-        "completed",
-        "failed",
-    ]
-
-
 def test_canonical_report_serialization_round_trips():
     report = EvaluationReport(
         name="round-trip",
@@ -677,8 +558,8 @@ def test_canonical_report_serialization_round_trips():
     assert canonical_report_bytes(restored) == serialized
 
 
-def test_runner_materializes_a_report_from_an_in_memory_evidence_buffer(tmp_path):
-    cases, gold_set, suite = _lifecycle_fixture("ephemeral-buffer")
+def test_runner_materializes_a_report(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("report-materialization")
     database = tmp_path / "evaluation.sqlite"
 
     with SQLiteEvaluationLedger.in_memory() as evidence:
@@ -775,8 +656,8 @@ def test_evaluation_stores_do_not_advertise_ephemerality(tmp_path):
         assert not hasattr(ledger, "is_ephemeral")
 
 
-def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
-    cases, gold_set, suite = _lifecycle_fixture("ephemeral-checkpoint")
+def test_run_retains_content_addressed_terminal_checkpoints():
+    cases, gold_set, suite = _lifecycle_fixture("checkpoint-retention")
 
     with SQLiteEvaluationLedger.in_memory() as evidence:
         _run(EvaluationRunner(evidence),
@@ -802,54 +683,6 @@ def test_in_memory_buffer_retains_content_addressed_terminal_checkpoints():
     assert checkpoints[0].checkpoint_id is not None
     assert checkpoints[0].checkpoint_content_hash is not None
     assert len(checkpoints[0].checkpoint_content_hash) == 64
-
-
-def test_substituting_in_memory_evidence_preserves_materialized_case_evidence(
-    tmp_path,
-):
-    cases, gold_set, suite = _lifecycle_fixture(
-        "evidence-substitution", case_evaluator="exact-case"
-    )
-
-    def execute(store):
-        result = _run(EvaluationRunner(store),
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            selection=("case-1",),
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=lambda configured: ExactAnswer(),
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
-        )
-        return store.materialize_report_case(
-            result.case_results[0].result_id, _schemas_for(cases)
-        )
-
-    with SQLiteEvaluationLedger.in_memory() as evidence:
-        ephemeral_case = execute(evidence)
-    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
-        durable_case = execute(ledger)
-
-    volatile = {"task_duration", "total_duration", "trace_id", "span_id"}
-    ephemeral_evidence = report_case_payload(ephemeral_case)
-    durable_evidence = report_case_payload(durable_case)
-
-    def without_runtime_measurements(value):
-        if isinstance(value, dict):
-            return {
-                key: without_runtime_measurements(item)
-                for key, item in value.items()
-                if key not in volatile | {"duration_seconds"}
-            }
-        if isinstance(value, list):
-            return [without_runtime_measurements(item) for item in value]
-        return value
-
-    assert without_runtime_measurements(
-        ephemeral_evidence
-    ) == without_runtime_measurements(durable_evidence)
 
 
 def test_terminal_checkpoint_materializes_one_typed_report_case(tmp_path):
@@ -1491,15 +1324,15 @@ def test_ledger_serializes_concurrent_terminal_case_checkpoints(tmp_path, monkey
     ("configured_concurrency", "expected_maximum"),
     ((None, 1), (2, 2)),
 )
-def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
+def test_runner_honors_case_bound_and_checkpoints_each_case_once(
     tmp_path, configured_concurrency, expected_maximum
 ):
     cases = tuple(_case(number) for number in range(1, 5))
     gold_set = EvaluationGoldSet(
         identity=EvaluationGoldSetIdentity(
-            business_id="gold-set-durable-concurrency", revision=1
+            business_id="gold-set-concurrency", revision=1
         ),
-        description="Concurrent durable cases.",
+        description="Concurrent cases.",
         task_contract=EvaluationTaskContract(
             input_schema=cases[0].input_schema,
             output_schema=cases[0].expected_output_schema,
@@ -1514,7 +1347,7 @@ def test_durable_runner_honors_case_bound_and_checkpoints_each_case_once(
         ),
     )
     _, _, suite = _lifecycle_fixture(
-        "durable-concurrency", case_evaluator="exact-case"
+        "concurrency", case_evaluator="exact-case"
     )
     active = 0
     maximum_active = 0
@@ -1613,41 +1446,31 @@ def _resolved_run_creation_inputs(ledger, suffix: str):
     return run, plan, manifest, pending_results
 
 
-def test_in_memory_and_durable_evidence_reject_the_same_invalid_checkpoint(
-    tmp_path,
-):
-    stores = (
-        SQLiteEvaluationLedger.in_memory(),
-        SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite"),
-    )
-    try:
-        for index, store in enumerate(stores):
-            run, plan, manifest, pending = _resolved_run_creation_inputs(
-                store, f"invalid-evidence-{index}"
-            )
-            store.create_evaluation_run(run, plan, manifest, pending)
-            completed = pending[0].model_copy(
-                update={
-                    "execution_disposition": EvaluationCaseDisposition.COMPLETED,
-                    "task_outcome": TaskSuccess(output={"answer": "stable"}),
-                }
-            )
+def test_ledger_rejects_an_invalid_checkpoint(tmp_path):
+    with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
+        run, plan, manifest, pending = _resolved_run_creation_inputs(
+            ledger, "invalid-evidence"
+        )
+        ledger.create_evaluation_run(run, plan, manifest, pending)
+        completed = pending[0].model_copy(
+            update={
+                "execution_disposition": EvaluationCaseDisposition.COMPLETED,
+                "task_outcome": TaskSuccess(output={"answer": "stable"}),
+            }
+        )
 
-            with pytest.raises(ValueError, match="unexpected"):
-                store.record_case_evaluation(
-                    completed,
-                    (),
-                    (),
-                    {
-                        "kind": "success",
-                        "name": "case-1@1",
-                        "output": {"answer": "stable"},
-                        "unexpected": "invalid canonical evidence",
-                    },
-                )
-    finally:
-        for store in stores:
-            store.close()
+        with pytest.raises(ValueError, match="unexpected"):
+            ledger.record_case_evaluation(
+                completed,
+                (),
+                (),
+                {
+                    "kind": "success",
+                    "name": "case-1@1",
+                    "output": {"answer": "stable"},
+                    "unexpected": "invalid canonical evidence",
+                },
+            )
 
 
 def test_ledger_rejects_a_run_whose_suite_does_not_match_the_resolved_plan(
@@ -2013,74 +1836,8 @@ def test_report_evaluator_failure_is_retained_without_failing_the_run(tmp_path):
         assert result.run_observations == ()
 
 
-def test_ephemeral_report_evaluator_failure_is_recorded_without_destroying_report():
-    cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-failure")
-    suite = suite.model_copy(
-        update={
-            "report_evaluators": (
-                ConfiguredEvaluator(name="failing-report", evaluator_revision=1),
-            )
-        }
-    )
-    with SQLiteEvaluationLedger.in_memory() as evidence:
-        runner = EvaluationRunner(evidence)
-        initial = _run(runner,
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=lambda configured: FailingReportEvaluator(),
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
-        )
-        result = runner.finalize(
-            initial.run.run_id,
-            schemas=_schemas_for(cases),
-            evaluator_resolver=lambda configured: FailingReportEvaluator(),
-        )
-        report = evidence.materialize_aggregate_report(
-            result.run.run_id, _schemas_for(cases)
-        )
-
-    assert result.run.status == "completed"
-    assert len(report.cases) == 2
-    assert report.failures == []
-    assert result.report_evaluator_executions[0].status.value == "failed"
-    assert "report evaluator is unavailable" in (
-        result.report_evaluator_executions[0].failure_message or ""
-    )
-    assert result.run_observations == ()
-
-
-def test_ephemeral_report_evaluator_returning_nothing_records_no_observation():
-    cases, gold_set, suite = _lifecycle_fixture("ephemeral-report-evaluator-none")
-    with SQLiteEvaluationLedger.in_memory() as evidence:
-        runner = EvaluationRunner(evidence)
-        initial = _run(runner,
-            suite=suite,
-            gold_set=gold_set,
-            cases=cases,
-            task=lambda task_input: Output(answer=task_input.prompt),
-            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
-            configuration=EvaluationRunConfiguration(
-                provider="deterministic", model="fixture"
-            ),
-        )
-        result = runner.finalize(
-            initial.run.run_id,
-            schemas=_schemas_for(cases),
-            evaluator_resolver=lambda configured: NoObservationReportEvaluator(),
-        )
-
-    assert result.run.status == "completed"
-    assert result.report_evaluator_executions[0].status.value == "completed"
-    assert result.report_evaluator_executions[0].failure_message is None
-    assert result.run_observations == ()
-
-
-def test_durable_report_evaluator_returning_nothing_records_no_observation(tmp_path):
-    cases, gold_set, suite = _lifecycle_fixture("durable-report-evaluator-none")
+def test_report_evaluator_returning_nothing_records_no_observation(tmp_path):
+    cases, gold_set, suite = _lifecycle_fixture("report-evaluator-none")
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
         runner = EvaluationRunner(ledger)
         initial = _run(runner,
