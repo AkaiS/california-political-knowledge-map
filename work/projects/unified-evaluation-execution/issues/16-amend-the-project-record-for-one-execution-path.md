@@ -1,6 +1,6 @@
 # Amend the project record for a single execution path
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of the [Unified Evaluation Execution Path](../PRD.md). The record should say
 what the code does, and should retract what it no longer claims.
@@ -34,15 +34,15 @@ entered `CONTEXT.md`, and with the buffer gone they do not need to.
 
 ## Acceptance criteria
 
-- [ ] The PRD no longer claims the ephemeral sink is a different store from the Evaluation Ledger.
-- [ ] The user stories describing a second evidence sink implementation, a sink-agnostic evidence source, and running without a ledger are marked retracted, each with its reason.
-- [ ] The user story and testing decision requiring byte-level parity between run modes are marked retracted, and the record states that parity is now structural because there is one execution path.
-- [ ] Issue 06 is marked superseded and names the tickets that replaced it.
-- [ ] Issue 07's criterion that ephemeral report evaluation runs without claims or heartbeats is retracted.
-- [ ] Issue 05 records that the evidence sink protocol survives for the engine's checkpoint sink, while the two-implementations justification does not.
-- [ ] Retractions state the reasoning, so a reader can see what was intended and why it was reversed.
-- [ ] `work/README.md` reflects the project's current issue set.
-- [ ] No new `CONTEXT.md` glossary entries are introduced.
+- [x] The PRD no longer claims the ephemeral sink is a different store from the Evaluation Ledger.
+- [x] The user stories describing a second evidence sink implementation, a sink-agnostic evidence source, and running without a ledger are marked retracted, each with its reason.
+- [x] The user story and testing decision requiring byte-level parity between run modes are marked retracted, and the record states that parity is now structural because there is one execution path.
+- [x] Issue 06 is marked superseded and names the tickets that replaced it.
+- [x] Issue 07's criterion that ephemeral report evaluation runs without claims or heartbeats is retracted.
+- [x] Issue 05 records that the evidence sink protocol survives for the engine's checkpoint sink, while the two-implementations justification does not.
+- [x] Retractions state the reasoning, so a reader can see what was intended and why it was reversed.
+- [x] `work/README.md` reflects the project's current issue set.
+- [x] No new `CONTEXT.md` glossary entries are introduced.
 
 ## Blocked by
 

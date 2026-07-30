@@ -14,21 +14,17 @@ have not yet been shaped into executable work.
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
 - [Review Relevance Filter evaluations](projects/scraping-pipeline/issues/13-relevance-evals.md)
 - [Review Selector Healing evaluations](projects/scraping-pipeline/issues/14-healer-evals.md)
+- [Review the runner-only evaluation execution seam](projects/unified-evaluation-execution/issues/09-make-the-runner-the-only-execution-seam.md)
 
 ### Ready for agent
 
 - [Create the Neo4j schema and vector index](projects/article-chunking-coreference/issues/03-neo4j-schema-vector-index.md)
 - [Integrate chunking and Coreference Resolution into the pipeline](projects/article-chunking-coreference/issues/04-pipeline-integration.md)
 - [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
-- [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/01-guard-human-relevance-labels.md)
+- [Guard human relevance labels against automated overwrites](projects/pipeline-stage-ownership/issues/01-guard-human-relevance-labels.md)
 - [Remove the retired rejected-article helpers](projects/pipeline-stage-ownership/issues/02-remove-retired-rejected-article-helpers.md)
 - [Default relevance to PENDING and record fetch status](projects/pipeline-stage-ownership/issues/03-default-relevance-to-pending-and-record-fetch-status.md)
-- [Evaluate reports the same way on both paths](projects/unified-evaluation-execution/issues/07-unify-report-evaluation-across-both-paths.md)
 - [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
-
-The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
-issues (02, 04, 06–10) are `ready-for-agent` but gated; each declares its blockers.
-Work the frontier: any issue whose blockers are all complete.
 
 The [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md) issues
 04–10 are `ready-for-agent` but gated; each declares its blockers. Issue 01 is
@@ -70,8 +66,8 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
-| `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
+| `ready-for-agent` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md) |
+| `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
 | `completed` | [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 
 The completed [ReportCase Evidence Contract](projects/report-case-evidence-contract/)
@@ -133,14 +129,6 @@ Labels: wayfinder:research, ready-for-human
 
 The triage-state label says what should happen next. Other labels describe the
 kind of work.
-
-## Archive
-
-- `archive/imports/` contains verbatim snapshots of the two Obsidian notes used
-  to seed this structure.
-- `archive/legacy-plans/` contains completed or superseded standalone plans
-  formerly located at the repository root.
-
 
 ## Archive
 

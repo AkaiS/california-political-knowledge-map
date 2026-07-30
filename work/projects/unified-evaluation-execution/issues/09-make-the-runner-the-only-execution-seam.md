@@ -13,15 +13,15 @@ work out which of three entry points has the semantics they need, because two of
 them are gone.
 
 `EvaluationRunner.run` requires a Resolved Evaluation Plan. There is no plan-less
-branch, so no run can silently derive its own evaluator assignments. Durability
-remains a property of the evidence sink the runner was constructed with, decided
-at construction rather than by an argument to the call.
+branch, so no run can silently derive its own evaluator assignments. Persistence
+is decided when constructing the Evaluation Ledger rather than by an argument to
+the call; its named in-memory constructor creates no database file.
 
 `EvaluationSuite.execute` is removed. `EvaluationSuite` goes back to being a
 definition: it answers questions about its Configured Evaluators, report
 evaluators, metrics, Evaluation Requirement Bindings, and Evaluation Task
 Contract, and it executes nothing. Its seven existing call sites move to a runner
-constructed over an in-memory evidence sink; their assertions should survive the
+constructed over an in-memory Evaluation Ledger; their assertions should survive the
 move, and any that does not is a semantic change worth surfacing rather than
 quietly accommodating.
 
@@ -34,10 +34,10 @@ execution. Validation happens once, at preflight.
 ## Acceptance criteria
 
 - [x] `EvaluationRunner.run` requires a Resolved Evaluation Plan and has no plan-less branch.
-- [x] Durability is determined by the evidence sink the runner was constructed over, not by an argument to the run call.
+- [x] Persistence is determined by the Evaluation Ledger's construction, not by an argument to the run call.
 - [x] `EvaluationSuite.execute` is removed.
 - [x] `EvaluationSuite` retains its definition responsibilities: resolving Configured Evaluators, exposing report evaluators, metrics, Evaluation Requirement Bindings, and its Evaluation Task Contract.
-- [x] All seven former `EvaluationSuite.execute` call sites execute through a runner over an in-memory evidence sink, with their original assertions intact.
+- [x] All seven former `EvaluationSuite.execute` call sites execute through a runner over an in-memory Evaluation Ledger, with their original assertions intact.
 - [x] Any assertion that could not survive the migration unchanged is called out explicitly as a semantic change rather than silently rewritten.
 - [x] `EvaluationEngine` is no longer exported as a public entry point.
 - [x] A happy-path test of plan-driven execution exists, closing the gap where the engine was covered only by a task-binding rejection test.

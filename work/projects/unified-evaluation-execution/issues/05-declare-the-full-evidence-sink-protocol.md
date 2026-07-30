@@ -19,6 +19,15 @@ rather than probing for them. The durable, ledger-backed sink implements the
 whole protocol and its behaviour is unchanged by this ticket — this is a
 declaration change, not a semantic one.
 
+## Subsequent amendment
+
+The protocol survives as the contract for the checkpoint sink driven by the
+internal Evaluation Engine. Its original two-implementations justification does
+not: the in-memory buffer introduced by issue 06 only wrapped an Evaluation
+Ledger over SQLite's in-memory transport and forwarded calls to it. Issue 14
+removed that façade. Keeping the protocol makes the engine's dependency explicit;
+it no longer promises substitutable ledger and buffer implementations.
+
 ## Acceptance criteria
 
 - [x] Task-outcome recording is a declared method on the evidence sink protocol.

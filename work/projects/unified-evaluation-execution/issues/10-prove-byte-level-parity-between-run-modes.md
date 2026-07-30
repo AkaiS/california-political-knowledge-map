@@ -5,6 +5,11 @@ Labels: completed
 Closes the [Unified Evaluation Execution Path](../PRD.md). This is the ticket that
 turns structural parity from a claim into a check.
 
+> **Parity portion superseded by issues 14 and 15.** Issue 14 removed the second
+> store façade, making parity structural, and issue 15 deleted the resulting
+> self-comparison. Canonical report round-trip coverage survives because it tests
+> serialization behavior independently of run-mode parity.
+
 ## What to build
 
 An author can trust that an in-memory run tells them what the durable run will
@@ -23,12 +28,12 @@ that it is the shared basis for comparing both.
 
 ## Acceptance criteria
 
-- [x] A test runs one Resolved Evaluation Plan through both an ephemeral and a durable runner and asserts the canonical Evaluation Report bytes are identical.
-- [x] Parity is asserted over a plan with several Evaluation Cases and several evaluators, not a single trivial case.
-- [x] Parity holds for a run containing at least one Evaluation Case with no expected output.
-- [x] Parity holds for a run in which a report evaluator failed, so the equivalence covers recorded failures and not only the happy path.
+- ~~A test runs one Resolved Evaluation Plan through both an ephemeral and a durable runner and asserts the canonical Evaluation Report bytes are identical.~~ **Retracted:** issue 15 deleted this test after issue 14 reduced it to comparing one path with itself.
+- ~~Parity is asserted over a plan with several Evaluation Cases and several evaluators, not a single trivial case.~~ **Retracted:** there are no two implementations whose parity can diverge.
+- ~~Parity holds for a run containing at least one Evaluation Case with no expected output.~~ **Retracted as a parity criterion:** expected-output coverage remains on the shared path.
+- ~~Parity holds for a run in which a report evaluator failed, so the equivalence covers recorded failures and not only the happy path.~~ **Retracted as a parity criterion:** evaluator-failure coverage remains on the shared, claim-fenced path.
 - [x] Canonical report serialization and deserialization are round-trip tested directly.
-- [x] The former field-by-field parity test is replaced by the byte-level test rather than kept alongside it.
+- ~~The former field-by-field parity test is replaced by the byte-level test rather than kept alongside it.~~ **Retracted:** issue 15 removed the byte-level replacement because its subject no longer exists.
 - [x] The full deterministic test suite passes, and the passing count is recorded so the project's before-and-after state is on record.
 
 ## Verification
