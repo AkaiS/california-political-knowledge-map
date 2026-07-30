@@ -22,7 +22,8 @@ re-derived.
 Two things worth stating plainly, because they are easy to get wrong. Canonical
 report serialization round-tripping was added by this project and is **kept**: it
 was asked for independently of parity and still covers real behaviour on the
-shared path. And where an ephemeral test and a durable test of the same
+shared path. *(Reversed 2026-07-30 — see the criterion below; the serializer has
+no caller.)* And where an ephemeral test and a durable test of the same
 behaviour become duplicates, the surviving test is the durable one, because it
 exercises the claim-fenced path as well.
 
@@ -31,7 +32,7 @@ Expect the suite to get smaller. That is the intended outcome, not a regression.
 ## Acceptance criteria
 
 - [x] The test asserting that ephemeral and durable runs produce identical canonical report bytes is deleted; its subject no longer exists.
-- [x] The test asserting that canonical report serialization round-trips is kept unchanged.
+- ~~The test asserting that canonical report serialization round-trips is kept unchanged.~~ **Superseded (2026-07-30):** the test was deleted along with `canonical_report_bytes` and `report_from_bytes`. See issue 10 for the reasoning — the serializer has no caller and contradicts ADR 0011. The judgement recorded below that this test "covers real behaviour on the shared path" was wrong: it covered a function no path calls.
 - [x] The test asserting that substituting in-memory evidence preserves materialized case evidence is deleted; nothing is being substituted.
 - [x] The test asserting that in-memory and durable evidence reject the same invalid checkpoint is collapsed to a single case over one store.
 - [x] The ephemeral and durable tests of a report evaluator that raises are merged into one, retaining the durable variant.
@@ -45,6 +46,10 @@ Expect the suite to get smaller. That is the intended outcome, not a regression.
 ## Verification
 
 - `489 passed` on 2026-07-29 (`uv run pytest -q`).
+- `490 passed` on 2026-07-30 after the review corrections to issues 10 and 12
+  (`uv run pytest -q`). The intervening rise to 491 came from the preflight,
+  plan-integrity, and retry commits `83ded04`, `1632250`, `92ec393`, and
+  `2fe91d0`; the drop to 490 is the deleted canonical round-trip test.
 - Four fewer than the `493 passed` recorded by issue 14, accounted for by the
   pair collapses above: the byte-parity test and the in-memory evidence
   substitution test were deleted with their subjects, and two ephemeral/durable

@@ -15,7 +15,6 @@ from .definitions import EvaluationCase
 from .bindings import EvaluationTaskBinding, TaskBindingInvocationError
 from .preflight import ResolvedEvaluationPlan
 from .runs import TaskOutcome
-from .reporting import iter_report_evaluator_calls
 from .suites import ConfiguredEvaluator, EvaluationSuite, _ConfiguredCaseEvaluator
 
 
@@ -81,7 +80,6 @@ class EvaluationEngine:
         task_binding: EvaluationTaskBinding[Any, Any, Any] | None = None,
         evaluator_resolver: EvaluatorResolver,
         max_concurrency: int = 1,
-        include_report_evaluators: bool = True,
     ) -> EvaluationReport[Any, Any, Any]:
         """Execute the exact case and evaluator assignments in ``plan``."""
         if (task is None) == (task_binding is None):
@@ -194,16 +192,6 @@ class EvaluationEngine:
             for case in (*report.cases, *report.failures):
                 self.checkpoint_sink.checkpoint_case(case)
         self.checkpoint_sink.checkpoint_report(report)
-        if include_report_evaluators:
-            report.analyses.extend(
-                call.output
-                for call in iter_report_evaluator_calls(
-                    report=report,
-                    configured_evaluators=suite.report_evaluators,
-                    evaluator_resolver=evaluator_resolver,
-                )
-                if call.failure_message is None and call.output is not None
-            )
         return report
 
     @staticmethod

@@ -142,7 +142,6 @@ def test_engine_uses_the_sink_case_lifecycle_for_terminal_case_notification():
         evaluator_resolver=lambda configured: pytest.fail(
             f"unexpected evaluator resolution: {configured.name}"
         ),
-        include_report_evaluators=False,
     )
 
     assert [result.name for result in terminal_cases] == ["case@1"]
@@ -183,7 +182,6 @@ def test_engine_records_task_binding_outcomes_through_the_sink_contract():
         evaluator_resolver=lambda configured: pytest.fail(
             f"unexpected evaluator resolution: {configured.name}"
         ),
-        include_report_evaluators=False,
     )
 
     assert len(recorded_outcomes) == 1

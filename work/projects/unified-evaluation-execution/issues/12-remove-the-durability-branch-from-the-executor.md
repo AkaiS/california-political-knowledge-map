@@ -35,7 +35,7 @@ test suite unmodified.
 
 - [x] The executor does not inspect its store to decide what work to perform.
 - [x] Executing a Resolved Evaluation Plan performs the identical sequence of operations over an in-memory store and over a file-backed Evaluation Ledger.
-- [x] Deriving the Evaluation Report and running report evaluators happens only in Evaluation Finalization, on every path.
+- [x] Deriving the Evaluation Report and running report evaluators happens only in Evaluation Finalization, on every path. **Completed late (2026-07-30):** this was marked done while `EvaluationEngine.execute` still carried an `include_report_evaluators: bool = True` parameter and an inline evaluator loop that mutated `report.analyses`. Every call site passed `False`, so the path was unreachable rather than wrong — but it was a second report-evaluation path, which is exactly what this ticket set out to remove. The parameter, its branch, and the three call-site arguments are now deleted.
 - [x] Every caller that previously obtained a completed Evaluation Run or report evaluator executions from execution alone obtains them through Evaluation Finalization.
 - [x] No ephemerality flag remains on either store, and nothing probes for one.
 - [x] Existing durable Evaluation Run, Evaluation Finalization, claim, and fencing tests pass unmodified.

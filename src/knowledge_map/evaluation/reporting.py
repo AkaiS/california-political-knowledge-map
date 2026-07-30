@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
 import time
 from dataclasses import asdict, dataclass, is_dataclass
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -22,7 +21,7 @@ from pydantic_evals.evaluators import (
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 from pydantic_evals.evaluators.evaluator import EvaluationResult
 
-from .definitions import SchemaReference, canonical_json
+from .definitions import SchemaReference
 
 
 @dataclass(frozen=True)
@@ -190,39 +189,6 @@ def _json_value(value: Any) -> Any:
     return value
 
 
-def canonical_report_bytes(report: EvaluationReport[Any, Any, Any]) -> bytes:
-    """Serialize one report to deterministic bytes for content addressing."""
-    payload = {
-        "name": report.name,
-        "cases": report.cases,
-        "failures": report.failures,
-        "experiment_metadata": report.experiment_metadata,
-        "trace_id": report.trace_id,
-        "span_id": report.span_id,
-    }
-    return canonical_json(_canonical_report_value(_json_value(payload))).encode("utf-8")
-
-
-def _canonical_report_value(value: Any) -> Any:
-    """Remove wall-clock measurements while preserving report semantics."""
-    if isinstance(value, dict):
-        canonical = {
-            key: _canonical_report_value(item)
-            for key, item in value.items()
-            if key != "duration_seconds"
-        }
-        for field in ("task_duration", "total_duration"):
-            if field in canonical:
-                canonical[field] = 0
-        for field in ("trace_id", "span_id"):
-            if field in canonical:
-                canonical[field] = None
-        return canonical
-    if isinstance(value, list):
-        return [_canonical_report_value(item) for item in value]
-    return value
-
-
 def report_case_payload(
     case: ReportCase[Any, Any, Any] | ReportCaseFailure[Any, Any, Any]
 ) -> dict[str, Any]:
@@ -268,49 +234,3 @@ def _evaluator_failure(value: Any) -> EvaluatorFailure:
     )
 
 
-def report_from_bytes(content: bytes) -> EvaluationReport[Any, Any, Any]:
-    """Load the report input without consulting mutable authored definitions."""
-    payload = json.loads(content)
-    cases = []
-    for raw in payload["cases"]:
-        cases.append(
-            ReportCase(
-                name=raw["name"],
-                inputs=raw["inputs"],
-                metadata=raw.get("metadata"),
-                expected_output=raw.get("expected_output"),
-                output=raw["output"],
-                metrics=raw.get("metrics", {}),
-                attributes=raw.get("attributes", {}),
-                scores={
-                    name: _evaluation_result(result)
-                    for name, result in raw.get("scores", {}).items()
-                },
-                labels={
-                    name: _evaluation_result(result)
-                    for name, result in raw.get("labels", {}).items()
-                },
-                assertions={
-                    name: _evaluation_result(result)
-                    for name, result in raw.get("assertions", {}).items()
-                },
-                evaluator_failures=[
-                    _evaluator_failure(failure)
-                    for failure in raw.get("evaluator_failures", [])
-                ],
-                task_duration=raw.get("task_duration", 0),
-                total_duration=raw.get("total_duration", 0),
-                source_case_name=raw.get("source_case_name"),
-                trace_id=raw.get("trace_id"),
-                span_id=raw.get("span_id"),
-            )
-        )
-    failures = [ReportCaseFailure(**raw) for raw in payload.get("failures", [])]
-    return EvaluationReport(
-        name=payload["name"],
-        cases=cases,
-        failures=failures,
-        experiment_metadata=payload.get("experiment_metadata"),
-        trace_id=payload.get("trace_id"),
-        span_id=payload.get("span_id"),
-    )

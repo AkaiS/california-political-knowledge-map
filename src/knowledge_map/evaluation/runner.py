@@ -1015,7 +1015,6 @@ class EvaluationRunner:
                 task=guarded_task,
                 evaluator_resolver=resolve,
                 max_concurrency=configuration.case_concurrency,
-                include_report_evaluators=False,
             )
             if resolver_failure is not None:
                 raise resolver_failure

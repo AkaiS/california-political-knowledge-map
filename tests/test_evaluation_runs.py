@@ -18,12 +18,11 @@ from pydantic_evals.evaluators import (
     Evaluator,
     EvaluatorContext,
     EvaluatorFailure,
-    EvaluatorSpec,
     ReportEvaluator,
     ReportEvaluatorContext,
 )
 from pydantic_evals.reporting.analyses import ScalarResult, TableResult
-from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
+from pydantic_evals.reporting import ReportCaseFailure
 
 from knowledge_map.evaluation import (
     CaseEvaluatorExecution,
@@ -77,10 +76,6 @@ from knowledge_map.evaluation import (
 )
 from knowledge_map.evaluation.store import (
     SQLiteEvaluationLedger,
-)
-from knowledge_map.evaluation.reporting import (
-    canonical_report_bytes,
-    report_from_bytes,
 )
 
 
@@ -492,48 +487,6 @@ def test_case_checkpoint_rolls_back_all_case_evidence_on_persistence_failure(
         assert case_result.execution_disposition is EvaluationCaseDisposition.PENDING
         assert ledger.list_case_evaluator_executions(case_result.result_id) == []
         assert ledger.list_case_metric_observations(case_result.result_id) == []
-
-
-def test_canonical_report_serialization_round_trips():
-    report = EvaluationReport(
-        name="round-trip",
-        cases=[
-            ReportCase(
-                name="case-1@1",
-                inputs={"prompt": "question"},
-                metadata={"source": "fixture"},
-                expected_output=None,
-                output={"answer": "response"},
-                metrics={"tokens": 7},
-                attributes={"provider": "deterministic"},
-                scores={},
-                labels={},
-                assertions={},
-                evaluator_failures=[
-                    EvaluatorFailure(
-                        name="judge",
-                        error_message="judge unavailable",
-                        error_stacktrace="RuntimeError: judge unavailable",
-                        source=EvaluatorSpec(name="Judge", arguments={"strict": True}),
-                        evaluator_version="revision-2",
-                        error_type="RuntimeError",
-                    )
-                ],
-                task_duration=0.25,
-                total_duration=0.5,
-                trace_id="1" * 32,
-                span_id="2" * 16,
-            )
-        ],
-        experiment_metadata={"seed": 42},
-        trace_id="3" * 32,
-        span_id="4" * 16,
-    )
-
-    serialized = canonical_report_bytes(report)
-    restored = report_from_bytes(serialized)
-
-    assert canonical_report_bytes(restored) == serialized
 
 
 def test_runner_materializes_a_report(tmp_path):
