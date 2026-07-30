@@ -82,33 +82,30 @@ def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
         ),
     )
 
-    result = preflight_selected_cases(
+    plan = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
         cases=(case,),
     )
 
-    assert result.is_compatible
-    assert result.issues == ()
-    assert result.plan is not None
-    assert result.plan.suite.business_id == "suite"
-    assert result.plan.suite.revision == 4
-    assert result.plan.gold_set.revision == 2
-    assert len(result.plan.cases) == 1
-    planned_case = result.plan.cases[0]
+    assert plan.suite.business_id == "suite"
+    assert plan.suite.revision == 4
+    assert plan.gold_set.revision == 2
+    assert len(plan.cases) == 1
+    planned_case = plan.cases[0]
     assert planned_case.case == EvaluationCaseRevisionReference.from_case(case)
     assert planned_case.requirements == ()
     assert planned_case.evaluators[0].reference == ConfiguredEvaluatorReference(
         name="exact", evaluator_revision=2
     )
     assert planned_case.evaluators[0].provenance == ("suite-wide",)
-    second_result = preflight_selected_cases(
+    second_plan = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
         cases=(case,),
     )
-    assert result.plan.canonical_json == second_result.plan.canonical_json
-    assert result.plan.readable_json != result.plan.canonical_json
+    assert plan.canonical_json == second_plan.canonical_json
+    assert plan.readable_json != plan.canonical_json
 
 
 def _case(
@@ -212,21 +209,20 @@ def test_preflight_unions_all_relevant_bindings_once_and_retains_provenance():
         ),
     )
 
-    result = preflight_selected_cases(suite=suite, gold_set=_gold_set((case,)), cases=(case,))
+    plan = preflight_selected_cases(suite=suite, gold_set=_gold_set((case,)), cases=(case,))
 
-    assert result.is_compatible
-    assert [entry.reference.name for entry in result.plan.cases[0].evaluators] == [
+    assert [entry.reference.name for entry in plan.cases[0].evaluators] == [
         "exact",
         "grounding",
         "tone",
     ]
-    assert result.plan.cases[0].evaluators[0].provenance == (
+    assert plan.cases[0].evaluators[0].provenance == (
         "suite-wide",
         "grounding",
         "tone",
     )
-    assert result.plan.cases[0].evaluators[1].provenance == ("grounding",)
-    assert result.plan.cases[0].evaluators[2].provenance == ("tone",)
+    assert plan.cases[0].evaluators[1].provenance == ("grounding",)
+    assert plan.cases[0].evaluators[2].provenance == ("tone",)
 
 
 def test_preflight_raises_once_with_every_distinct_compatibility_issue():
@@ -272,7 +268,7 @@ def test_preflight_raises_once_with_every_distinct_compatibility_issue():
             issue.schema_role,
             issue.requirement,
         )
-        for issue in raised.value.result.issues
+        for issue in raised.value.issues
     } == {
         ("task_contract", "first", "input", None),
         ("task_contract", "second", "metadata", None),
@@ -310,7 +306,7 @@ def test_validate_cases_rejects_a_case_contract_mismatch_before_selection():
             gold_set=gold_set,
             cases=(compatible, unknown),
         )
-    subset = preflight_selected_cases(
+    subset_plan = preflight_selected_cases(
         suite=suite,
         gold_set=gold_set,
         cases=(compatible, unknown),
@@ -323,8 +319,7 @@ def test_validate_cases_rejects_a_case_contract_mismatch_before_selection():
     } == {
         ("unknown_requirement", "unknown", "not-in-catalog")
     }
-    assert subset.is_compatible
-    assert [entry.case.business_id for entry in subset.plan.cases] == ["compatible"]
+    assert [entry.case.business_id for entry in subset_plan.cases] == ["compatible"]
 
 
 @pytest.mark.parametrize("mismatched_field", ("input", "output", "metadata"))
@@ -383,8 +378,7 @@ def test_incompatible_preflight_cannot_produce_a_plan_for_run_creation():
             cases=(first, second),
         )
 
-    assert raised.value.result.plan is None
-    assert {issue.requirement for issue in raised.value.result.issues} == {
+    assert {issue.requirement for issue in raised.value.issues} == {
         "grounding",
         "unknown",
     }
@@ -419,8 +413,9 @@ def test_incompatible_preflight_leaves_no_evaluation_run_in_the_ledger(tmp_path)
                 cases=(first, second),
             )
 
-        # There is no plan to hand to the runner, so no run can be created.
-        assert raised.value.result.plan is None
+        # Preflight raised instead of returning, so there is no plan to hand
+        # to the runner and no run can be created.
+        assert raised.value.issues
         with pytest.raises(TypeError, match="plan"):
             runner.run(
                 suite=suite,

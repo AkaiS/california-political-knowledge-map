@@ -105,7 +105,7 @@ def _execution_fixture():
     )
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=(case,)
-    ).plan
+    )
     assert plan is not None
     return case, suite, plan
 

@@ -361,7 +361,7 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
     )
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=(authored_case,)
-    ).plan
+    )
     assert plan is not None
     schemas = SchemaRegistry()
     schemas.register(input_schema, RelevanceInput)

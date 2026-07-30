@@ -651,7 +651,7 @@ class EvaluationSuite(BaseModel):
         | Iterable[str]
         | None = None,
         split: EvaluationSplit | None = None,
-    ) -> "EvaluationPreflightResult":
+    ) -> "ResolvedEvaluationPlan":
         """Resolve selected Gold Set cases before an Evaluation Run is created."""
         from .preflight import preflight_selected_cases
 
@@ -663,7 +663,7 @@ class EvaluationSuite(BaseModel):
             split=split,
         )
 
-    def preflight(self, **kwargs: Any) -> "EvaluationPreflightResult":
+    def preflight(self, **kwargs: Any) -> "ResolvedEvaluationPlan":
         """Convenience alias for the Suite-owned preflight boundary."""
         return self.preflight_selected_cases(**kwargs)
 

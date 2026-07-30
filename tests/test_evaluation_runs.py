@@ -135,7 +135,7 @@ def _run(runner: EvaluationRunner, **kwargs):
             cases=kwargs["cases"],
             selection=selection,
             split=split,
-        ).plan
+        )
     assert plan is not None
     return runner.run(plan=plan, **kwargs)
 
@@ -421,7 +421,7 @@ def test_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
         suite=suite,
         gold_set=gold_set,
         cases=cases,
-    ).plan
+    )
     assert plan is not None
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
@@ -1121,7 +1121,7 @@ def test_runner_persists_the_resolved_plan_as_canonical_ledger_data(tmp_path):
         suite=suite,
         gold_set=gold_set,
         cases=cases,
-    ).plan
+    )
     assert expected_plan is not None
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
@@ -1150,7 +1150,7 @@ def test_runner_does_not_accept_selection_alongside_a_resolved_plan(tmp_path):
         gold_set=gold_set,
         cases=cases,
         selection=("case-1",),
-    ).plan
+    )
     assert plan is not None
 
     with SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite") as ledger:
@@ -1220,7 +1220,7 @@ def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
     )
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=cases
-    ).plan
+    )
     assert plan is not None
     active = 0
     maximum_active = 0
@@ -1407,7 +1407,7 @@ def _resolved_run_creation_inputs(ledger, suffix: str):
         suite=suite,
         gold_set=gold_set,
         cases=cases,
-    ).plan
+    )
     assert plan is not None
     for case in cases:
         ledger.import_case(case)
@@ -5013,7 +5013,7 @@ def test_ledger_completion_requires_frozen_report_and_case_evaluator_evidence(tm
         case_records = tuple(ledger.import_case(case) for case in cases)
         gold_record = ledger.import_gold_set(gold_set)
         suite_record = ledger.import_suite(suite)
-        plan = preflight_selected_cases(suite=suite, gold_set=gold_set, cases=cases).plan
+        plan = preflight_selected_cases(suite=suite, gold_set=gold_set, cases=cases)
         assert plan is not None
         run = EvaluationRunRecord(
             suite_record_id=suite_record.record_id,

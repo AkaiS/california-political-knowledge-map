@@ -103,33 +103,15 @@ class EvaluationPreflightIssue(BaseModel):
     schema_role: Literal["input", "expected_output", "metadata"] | None = None
 
 
-class EvaluationPreflightResult(BaseModel):
-    """A complete preflight report; a plan exists only when it is compatible."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    plan: ResolvedEvaluationPlan | None = None
-    issues: tuple[EvaluationPreflightIssue, ...] = ()
-
-    @property
-    def is_compatible(self) -> bool:
-        return not self.issues and self.plan is not None
-
-
 class EvaluationPreflightError(ValueError):
-    """Raised when a run attempts to proceed with an incompatible preflight."""
+    """Raised when a Suite and its selected cases cannot be paired for a run."""
 
-    def __init__(self, result: EvaluationPreflightResult):
-        self.result = result
+    def __init__(self, issues: tuple[EvaluationPreflightIssue, ...]):
+        self.issues = issues
         super().__init__(
             "Evaluation preflight failed: "
-            + "; ".join(issue.message for issue in result.issues)
+            + "; ".join(issue.message for issue in issues)
         )
-
-    @property
-    def issues(self) -> tuple[EvaluationPreflightIssue, ...]:
-        """Expose every actionable issue directly to callers."""
-        return self.result.issues
 
 
 def preflight_selected_cases(
@@ -141,8 +123,12 @@ def preflight_selected_cases(
     | Iterable[str]
     | None = None,
     split: EvaluationSplit | None = None,
-) -> EvaluationPreflightResult:
-    """Resolve selected members after validating the whole Gold Set contract."""
+) -> ResolvedEvaluationPlan:
+    """Resolve selected members after validating the whole Gold Set contract.
+
+    Either every selected member resolves and the authoritative plan is
+    returned, or `EvaluationPreflightError` carries every actionable issue.
+    """
     compatibility_issues = evaluate_compatibility(suite, gold_set, cases)
     issues = [
         _as_preflight_issue(issue)
@@ -187,8 +173,7 @@ def preflight_selected_cases(
         _collect_case_issues(suite, case, issues)
 
     if issues:
-        result = EvaluationPreflightResult(issues=_distinct_issues(issues))
-        raise EvaluationPreflightError(result)
+        raise EvaluationPreflightError(_distinct_issues(issues))
 
     plan_cases = tuple(
         ResolvedEvaluationCase(
@@ -199,7 +184,7 @@ def preflight_selected_cases(
         )
         for membership, case in selected
     )
-    plan = ResolvedEvaluationPlan(
+    return ResolvedEvaluationPlan(
         suite=EvaluationDefinitionRevisionReference(
             record_id=suite.identity.record_id,
             business_id=suite.identity.business_id,
@@ -214,7 +199,6 @@ def preflight_selected_cases(
         ),
         cases=plan_cases,
     )
-    return EvaluationPreflightResult(plan=plan)
 
 
 def _distinct_issues(

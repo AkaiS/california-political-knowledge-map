@@ -288,7 +288,7 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
     )
     plan = suite.preflight_selected_cases(
         gold_set=gold_set, cases=(case,)
-    ).plan
+    )
     assert plan is not None
     schemas = SchemaRegistry()
     schemas.register(case.input_schema, RequirementInput)
@@ -397,8 +397,7 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
             for case in cases
         ),
     )
-    plan_result = suite.preflight_selected_cases(gold_set=gold_set, cases=cases)
-    assert plan_result.plan is not None
+    plan = suite.preflight_selected_cases(gold_set=gold_set, cases=cases)
 
     universal_calls: list[str] = []
     grounding_calls: list[str] = []
@@ -419,7 +418,7 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
     with SQLiteEvaluationLedger.in_memory() as evidence:
         runner = EvaluationRunner(evidence)
         initial = runner.run(
-            plan=plan_result.plan,
+            plan=plan,
             suite=suite,
             gold_set=gold_set,
             cases=cases,
