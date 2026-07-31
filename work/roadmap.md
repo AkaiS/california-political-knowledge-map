@@ -33,6 +33,7 @@ system-scoped failures.
 Existing project areas:
 
 - [Scraping Pipeline](projects/scraping-pipeline/PRD.md)
+- [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md)
 - [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md)
 - [Relevance Classification](projects/relevance-classification/PRD.md)
 - [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md)

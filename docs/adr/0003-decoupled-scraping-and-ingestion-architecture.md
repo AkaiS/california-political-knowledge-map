@@ -12,6 +12,8 @@ We decouple scraping from validation to ensure crawlers continue caching HTML pa
 
 An asynchronous `Selector Healing Pipeline` (powered by a Generator/Critic LLM loop capped at 3 iterations) is triggered only when the circuit breaker trips — not on individual validation failures — so isolated transient failures never spend LLM calls; we accept losing occasional articles in exchange. It generates selector proposals from the cached failed HTML and JSON-LD ground truth, persisting them in the SQLite database for review. A human must verify and approve the proposed selectors before they are activated. A similar `Publication Bootstrapper` loop is used to initialize new Publications.
 
+We treat raw HTML as recoverable rather than durable. It is deleted as soon as its extracted content is stored as a Story, and all other raw HTML expires 30 days after it was scraped, regardless of validation state. A `Re-fetch` stage restores HTML on demand for articles that are `RELEVANT` but hold no content, and every fetch records its HTTP status so that permanently dead URLs (terminal 4xx) are abandoned while transient failures remain retryable. This replaces the earlier policy of retaining failed-article HTML indefinitely: retention becomes a single uniform rule, and purging becomes non-destructive because anything purged can be restored while its URL is still live. The cost is that the `Selector Healing Pipeline` draws only on failed HTML inside the retention window.
+
 ## Considered Options
 
 * **Selectors in configuration file**: Storing selectors directly in a static configuration file. This makes it difficult to maintain selector history or support different selectors for different periods of time without code deployment.
@@ -19,11 +21,14 @@ An asynchronous `Selector Healing Pipeline` (powered by a Generator/Critic LLM l
 * **Registry in DB vs Config File**: Storing publication metadata (URLs, crawl rules, discovery strategies) in a SQLite table vs a local configuration file. We chose a SQLite table to unify all operational, stateful, and configuration data in the database.
 * **BM25 Relevance filter**: Scoring relevance against a local corpus. Rejected because BM25 ranking is corpus-dependent and doesn't directly answer "is this a California political article?", and requires maintaining a text corpus.
 * **Fully Autonomous Healing**: Activating LLM-generated selectors automatically. This was rejected in favor of human verification to prevent malformed or noisy HTML extractions from entering the knowledge graph.
+* **Indefinite retention of failed HTML**: Keeping raw HTML for `VALIDATION_FAILED` articles forever so that healing always has material available. Rejected once re-fetching existed: the failure class grows without bound and is the least likely to be read, while a recorded fetch status makes restoration cheap and predictable for URLs that are still reachable.
+* **Per-state retention matrix**: Distinct retention rules per validation state (indefinite for failures, 30 days post-ingestion for successes, 30 days for `UNVALIDATABLE`). Rejected as difficult to reason about and to verify; a single timer plus immediate deletion on Story creation expresses the same intent with two rules.
 
 ## Consequences
 
 * **Data Integrity**: Articles are validated against JSON-LD ground truth, preventing layout drift and boilerplate text from contaminating the database.
 * **Robust Selector Resolution**: Using success windows and proximity matching allows the scraper to select the most appropriate selectors for any fetch date, with automatic fallback through historical versions if validation fails.
 * **Resiliency to Layout Changes**: Website design changes do not halt scraping. Decoupled scraping ensures raw HTML pages are cached continuously while the circuit breaker prevents LLM/API call waste on broken validation loops.
-* **HTML Storage Efficiency**: Storing raw HTML indefinitely for failures (supporting healing) while purging raw HTML for successfully processed pages after 30 days keeps database growth bounded.
+* **HTML Storage Efficiency**: Raw HTML is deleted immediately once a Story holds its extracted content, and everything else expires 30 days after it was scraped. Retention is one rule rather than a per-state matrix, and re-fetch makes it recoverable rather than lossy.
+* **Time-Bounded Healing Material**: The `Selector Healing Pipeline` can only draw on failed HTML still inside the retention window. Drift discovered after that window requires re-fetching the failed articles first, which succeeds only while their URLs remain reachable.
 
