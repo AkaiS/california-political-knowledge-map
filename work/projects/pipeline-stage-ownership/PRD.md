@@ -1,6 +1,6 @@
-  Pipeline Stage Ownership: Validation, Relevance, and Story Migration
+# Pipeline Stage Ownership: Validation, Relevance, and Raw HTML Lifecycle
 
-Labels: proposed
+Labels: ready-for-agent
 
 ## Parent
 
@@ -10,52 +10,53 @@ Labels: proposed
 
 Validation and relevance classification write into each other's database
 columns, so running one stage destroys the other's results. The failure is
-reproducible: running `classifier label --review-all` followed by `validate`
-erases every human relevance label.
+reproducible: running `classifier label --review-all` followed by
+`validate-articles` erases every human relevance label.
 
 The sequence is a two-step clobber, and each step crosses a stage boundary in
 the opposite direction:
 
 1. `--review-all` selects cached articles by relevance provenance alone, with no
-   validation filter ([main.py:859](../../../src/knowledge_map/cli/main.py:859)).
-   Answering `y` writes `validation = 'PENDING'` and `n` writes
-   `validation = NULL` ([main.py:896](../../../src/knowledge_map/cli/main.py:896)).
-   A relevance command re-queued already-`VALIDATED` articles for validation.
-2. `validate_pending_articles` picks those rows back up and runs post-validation
+   validation filter. Answering `y` writes `validation = 'PENDING'` and `n`
+   writes `validation = NULL`. A relevance command re-queued already-`VALIDATED`
+   articles for validation.
+2. `validate_pending_articles` picks those rows back up and runs post-extraction
    relevance unconditionally, overwriting `relevance_status` and stamping
-   `relevance_label_source = 'MODEL'` or `'LLM'` over `'HUMAN'`
-   ([validation.py:652-673](../../../src/knowledge_map/core/validation.py:652)).
-   A validation command destroyed the human labels.
+   `relevance_label_source = 'MODEL'` or `'LLM'` over `'HUMAN'`. A validation
+   command destroyed the human labels.
 
 The structural cause is that `update_relevance_status` takes `validation` as a
-**required positional parameter** and always includes it in its `UPDATE`
-([sqlite_db.py:858](../../../src/knowledge_map/adapters/sqlite_db.py:858)). Every
+required positional parameter and always includes it in its `UPDATE`. Every
 relevance caller is forced to name a validation value, so the boundary violation
 is not an oversight — it is what the function signature demands.
+
+The damage is already present and is not recoverable. Of 79 cached articles only
+three retain a `HUMAN` label, and they are exactly the three the overwrite could
+not reach: one answered `n` (which set `validation = NULL`, so the validator
+never re-selected it), one whose re-validation failed before the relevance block
+ran, and one still sitting at `validation = 'PENDING'` awaiting the next run that
+would destroy it. Every `HUMAN` label that successfully re-validated is now
+indistinguishable from a genuine `LLM` classification. No database backup or log
+covering the incident exists.
 
 Three further defects share the same cause:
 
 - `classifier reevaluate` selects `relevance_status IN ('INCONCLUSIVE',
-  'IRRELEVANT')` with **no `HUMAN` filter at all**
-  ([main.py:943](../../../src/knowledge_map/cli/main.py:943)) and writes
-  `validation` on transition
-  ([main.py:968](../../../src/knowledge_map/cli/main.py:968)). This is a second,
-  independent human-label-loss path, reachable without ever running
-  `--review-all`.
-- The `IRRELEVANT` branch of post-validation relevance passes `validation=None`
-  ([validation.py:664](../../../src/knowledge_map/core/validation.py:664)),
-  erasing the `VALIDATED` status written 60 lines earlier. A successfully
-  validated but irrelevant article ends with `validation = NULL`.
-- `validation = 'VALIDATED'` is committed before the story content is saved, and
-  an **async LLM classification call** sits between the two
-  ([validation.py:634-650](../../../src/knowledge_map/core/validation.py:634)).
-  Any exception there is swallowed by the outer handler
-  ([validation.py:743](../../../src/knowledge_map/core/validation.py:743)),
-  leaving `VALIDATED` with no story row.
+  'IRRELEVANT')` with no `HUMAN` filter at all, and writes `validation` on
+  transition. This is a second, independent human-label-loss path, reachable
+  without ever running `--review-all`.
+- `relevance_status` defaults to `'RELEVANT'` at the schema level. Twenty-two
+  articles are currently marked relevant purely by column default, having never
+  been assessed by any classifier; seventeen of them had reached the story queue.
+- Cache rows whose `raw_html` is `NULL` enter the validation loop, where ground
+  truth extraction raises `TypeError` on `None` markup. The exception is
+  swallowed by the loop's outer handler, so no status is written and the row
+  re-enters the loop on every subsequent run — a silent, permanent retry.
 
-Relevance is also being assigned to articles whose extraction never succeeded.
-Those articles have none of the information the ingestion process requires, so
-the classification is both premature and unusable.
+Separately, the pipeline cannot currently train the relevance classifier it is
+designed around. The trainer reads embeddings by relevance class from the cache
+and finds 39 usable positive examples and **zero** negatives, because every
+`IRRELEVANT` row predates post-extraction relevance and carries no embedding.
 
 Resolves inbox items RC-01, RC-05, and RC-02.
 
@@ -63,271 +64,382 @@ Resolves inbox items RC-01, RC-05, and RC-02.
 
 Give each pipeline stage exclusive ownership of a disjoint set of columns, and
 enforce that ownership through function signatures rather than convention. A
-stage may freely *read* another stage's columns; only the owning stage may
-*write* them.
+stage may freely read another stage's columns; only the owning stage may write
+them.
 
-Relevance classification is gated on successful validation. Story creation is
-removed from both validation and relevance and becomes its own migration stage,
-which can run automatically after a relevance pass or be invoked on its own.
+The design rests on one invariant, from which the rest follows:
+
+> `validation = 'VALIDATED'` if and only if a `stories` row exists for that URL.
+
+Validation state answers exactly one question — *do we hold extracted content for
+this article?* Extraction and validation are the same operation, and the story
+row is where its output lives. An article whose relevance is decided against is
+not stored, so its validation state returns to null and the work would be redone
+if the decision were ever reversed. Re-extraction is local parsing with no
+network cost, so this is a cheap trade for a state model with no ambiguous
+middles.
+
+Two independent conditions govern whether work is repeated:
+
+| Question | Condition |
+| --- | --- |
+| Skip extraction? | A `stories` row already exists |
+| Skip relevance? | `relevance_status` is not `'PENDING'` |
+
+Neither substitutes for the other. The first is memoization — a story proves
+extraction already ran and produced content. The second is provenance — any
+decision, human or automated, means relevance has been settled and must not be
+recomputed. A human marking an already-extracted article relevant hits both: no
+re-extraction, no reclassification.
+
+Relevance never runs on an article whose extraction has not succeeded, because
+before extraction there is nothing to classify beyond page metadata, and the
+ingestion process could not consume the result regardless.
+
+Raw HTML becomes disposable. It is deleted the moment its content is durably
+stored as a story, and otherwise expires on a uniform thirty-day timer. What
+makes this safe is a re-fetch stage that can restore HTML on demand for any
+article that needs it, guided by a recorded HTTP status so dead URLs are not
+retried indefinitely.
 
 ### Stage ownership
 
 | Stage | Owns (exclusive write) | Reads |
 | --- | --- | --- |
-| Discovery | `url`, `publication_id`, `raw_html`, `scraped_at`; initial `validation = 'PENDING'`, `relevance_status = 'PENDING'` | — |
-| Validation | `validation`, `validation_date`, `extracted_*` fields | `raw_html` |
-| Relevance | `relevance_status`, `relevance_label_source`, `headline`, `description`, `embedding` | `validation`, `extracted_*` |
-| Migration | `stories.*`, `story_links.*` | `validation`, `relevance_status`, `extracted_*` |
-| Ingestion | `stories.status` transitions | `stories.*` |
+| Discovery / re-fetch | `raw_html`, `scraped_at`, `fetch_status` | `relevance_status`, `validation`, `stories` |
+| Metadata extraction | `headline`, `description`, `embedding` | `raw_html`, `raw_metadata_json` |
+| Validation | `validation`, `validation_date`, `stories`, `story_links` | `raw_html`, `relevance_status` |
+| Relevance | `relevance_status`, `relevance_label_source` | `headline`, `description`, `embedding`, extracted content |
+| Ingestion | `stories.status` transitions | `stories` |
 
-Validation never reads or writes relevance columns. Relevance never writes
-`validation` or `validation_date`. Neither writes `stories`.
+Relevance never writes `validation` — its writer accepts no such parameter. The
+one coupled transition is deliberate and lives at the call site, not in the
+writer: deciding `IRRELEVANT` or `INCONCLUSIVE` discards content, so the caller
+explicitly sets `validation = NULL` and removes any un-ingested story row,
+preserving the invariant.
 
-### Stage sequence
-
-1. **Discovery** caches the row with `validation = 'PENDING'` and
-   `relevance_status = 'PENDING'`. Unchanged.
-2. **Validation** processes `validation = 'PENDING'` rows plus the existing
-   `VALIDATION_FAILED` retry window. On success it persists the extracted fields
-   onto the cache row, then sets `validation = 'VALIDATED'`. It persists nothing
-   else.
-3. **Relevance** processes `validation = 'VALIDATED' AND relevance_status =
-   'PENDING' AND relevance_label_source != 'HUMAN'`. Nothing outside that set is
-   eligible.
-4. **Migration** copies `validation = 'VALIDATED' AND relevance_status =
-   'RELEVANT'` cache rows into `stories` with `status = 'UNPROCESSED'`, plus
-   their `story_links`.
-5. **Ingestion** consumes `stories.status = 'UNPROCESSED'`. Unchanged.
-
-### Why the cache row must carry the extracted fields
-
-Removing story writing from validation leaves the extracted title, author,
-published date, body, and links with nowhere to live between stages 2 and 4.
-Re-extracting from `raw_html` at migration time is not viable: it duplicates the
-whole of validation's work, and `purge_html_cache` nulls `raw_html` once a story
-reaches `COMPLETED`
-([sqlite_db.py:1191](../../../src/knowledge_map/adapters/sqlite_db.py:1191)).
-
-The cache row therefore becomes the staging record and `stories` becomes a pure
-ingestion queue derived from it. This is the same ownership statement as
-"validation owns extracted content and metadata," made physical.
+Metadata extraction is separated from relevance so that `headline`,
+`description`, and `embedding` are populated whenever HTML is present and they
+are missing — including for `HUMAN`-labeled rows where classification is skipped
+entirely. Coupling them to the classifier is what currently starves human-labeled
+articles of the representation the trainer needs.
 
 ## User Stories
 
-1. As a developer, I want to run `classifier label --review-all` without
-   changing any article's validation state, so that reviewing labels never
-   re-queues validated work.
-2. As a developer, I want `validate` to leave every relevance column untouched,
-   so that re-running validation can never destroy a human label.
-3. As a developer, I want `classifier reevaluate` to skip `HUMAN`-labeled
+1. As a developer, I want `validate-articles` to leave every relevance column
+   untouched, so that re-running validation can never destroy a human label.
+2. As a developer, I want `classifier reevaluate` to skip `HUMAN`-labeled
    articles, so that retraining the model cannot overwrite my ground truth.
-4. As a developer, I want relevance classification to run only on successfully
-   validated articles, so that I never label articles whose content the
-   ingestion process does not have.
-5. As a developer, I want `validation = 'VALIDATED'` to be written only after
-   the extracted content is durably stored, so that an interruption can never
-   leave a validated row without its content.
-6. As a developer, I want story creation to be a separate migration step I can
-   invoke on its own, so that I can re-run it after labeling without re-running
-   validation.
+3. As a developer, I want the relevance writer to reject machine updates to
+   `HUMAN` rows at the database level, so that a label applied concurrently with
+   a running classifier still survives.
+4. As a developer, I want an automated relevance write that was rejected to be
+   reported back to its caller, so that story creation never acts on a discarded
+   classification.
+5. As a developer, I want relevance classification to run only when
+   `relevance_status` is `'PENDING'`, so that no decision — human or automated —
+   is ever recomputed.
+6. As a developer, I want validation to skip extraction when a story already
+   exists, so that reviewing an article's relevance does not pay for extraction a
+   second time.
+7. As a developer, I want that skip defeated when selectors have been created
+   since the article was validated, so that healed publications re-extract rather
+   than serve content from selectors that prompted the heal.
+8. As a developer, I want an article marked irrelevant to leave no story row and
+   no validation state, so that "we hold content for this article" is never
+   claimed falsely.
+9. As a developer, I want an article whose relevance is reversed to be
+   re-extracted automatically, so that correcting a false negative actually
+   reaches the graph.
+10. As a developer, I want `relevance_status` to default to `'PENDING'`, so that
+    an article is never treated as relevant merely because nothing has assessed
+    it.
+11. As a developer, I want articles with no cached HTML excluded from the
+    validation queue, so that the loop stops failing silently and retrying
+    forever.
+12. As a developer, I want a re-fetch stage that restores HTML for relevant
+    articles that lack it, so that articles can be recovered after purging or
+    after a relevance reversal.
+13. As a developer, I want the HTTP status of every fetch recorded, so that
+    permanently dead URLs are abandoned while transient failures are retried.
+14. As a developer, I want re-fetching to write only HTML and fetch state, so
+    that restoring content cannot wipe the label that requested it.
+15. As a developer, I want re-fetch to run before the validation loop in the same
+    invocation, so that recovered articles are validated without a second
+    command.
+16. As a developer, I want raw HTML deleted as soon as its story is stored, so
+    that the database does not retain content it has already extracted.
+17. As a developer, I want all other raw HTML to expire on a uniform thirty-day
+    timer, so that retention is one rule rather than a per-state matrix.
+18. As a developer, I want manual review to select only articles not already
+    human-labeled, so that I am never asked to re-answer a question I have
+    answered.
+19. As a developer, I want marking an article relevant to queue it for
+    extraction, so that a human decision produces a story without further
+    commands.
+20. As a developer, I want the review queue driven by `relevance_status`, so that
+    relevance state is not encoded in the validation column.
+21. As a data scientist, I want embeddings backfilled for existing irrelevant
+    articles, so that the relevance classifier has negative examples and can be
+    trained at all.
+22. As a data scientist, I want human labels excluded from training input, so
+    that they remain an independent evaluation set.
+23. As a data scientist, I want the gold-standard example query to return both
+    classes without depending on the stories table, so that the LLM classifier
+    does not silently degrade to one-sided prompting.
 
 ## Implementation Decisions
 
 ### Schema
 
-- Add to `scraped_html_cache`: `extracted_title`, `extracted_author`,
-  `extracted_published_date`, `extracted_content`, `extracted_links_json`. The
-  `extracted_` prefix keeps these distinct from the relevance-owned `headline`
-  and `description`, which are page metadata rather than extraction output.
-- Use the existing table-rebuild migration path in `init_db`
-  ([sqlite_db.py:60-145](../../../src/knowledge_map/adapters/sqlite_db.py:60)),
-  which already takes a `.backup` copy before rebuilding.
-- Leave `'PENDING_RELEVANCE'` in the `validation` CHECK constraint. Nothing will
-  write it after this change; removing the enum value is a separate rebuild and
-  is deferred to the inbox.
+- `scraped_html_cache.relevance_status` default changes from `'RELEVANT'` to
+  `'PENDING'`. This default is load-bearing: `'PENDING'` is the discriminator for
+  whether relevance has been decided, so an implicit `'RELEVANT'` silently
+  defeats it.
+- Add `scraped_html_cache.fetch_status` as an integer HTTP status code. A code
+  rather than a boolean, so retry policy derives from it directly — 4xx terminal,
+  5xx and timeouts retryable — and so a 404 is distinguishable from a 429 when
+  inspecting state. Backfill `200` where `raw_html` is present, so `NULL` means
+  "never fetched" rather than "fetched before the column existed".
+- Remove `'PENDING_RELEVANCE'` from the `validation` CHECK constraint. It is a
+  relevance state stored in the validation column and is redundant with
+  `relevance_status = 'INCONCLUSIVE'`.
+- Retire `'IRRELEVANT'` from the `stories.status` vocabulary. Irrelevant articles
+  no longer produce story rows, so the value has no writer.
+- Use the existing table-rebuild migration path in `init_db`, which already takes
+  a `.backup` copy before rebuilding.
 
 ### Database writers
 
-Each column group gets exactly one writer, and no writer accepts a parameter for
-a column it does not own.
+Each column group gets one writer, and no writer accepts a parameter for a column
+it does not own.
 
-- `update_cached_html_status(url, validation)` — unchanged. The **only** writer
-  of `validation` and `validation_date`.
-- `update_cached_html_extraction(url, title, author, published_date, content, links)`
-  — new. Validation-owned writer for the `extracted_*` fields.
-- `update_cached_html_relevance(url, relevance_status, label_source)` — new.
-  Writes those two columns and nothing else. Used by the review commands
-  (`--review-all`, `reevaluate`), which operate on articles whose metadata
-  already exists.
-- `update_relevance_status(url, status, label_source, headline, description, embedding)`
-  — **drop the `validation` parameter entirely.** Retained for the automated
-  classifier, which is the only caller that computes and persists the
-  headline/description/embedding representation. Removing the parameter is what
-  makes the boundary unbreakable: relevance code can no longer express a
-  validation write.
-- `migrate_relevant_stories(db_path) -> int` — new. Selects `validation =
-  'VALIDATED' AND relevance_status = 'RELEVANT'`, inserts into `stories` with
-  `status = 'UNPROCESSED'` and the row's `extracted_*` values, and writes
-  `story_links`. Idempotent via the existing `INSERT OR IGNORE` on the unique
-  `url` ([sqlite_db.py:229](../../../src/knowledge_map/adapters/sqlite_db.py:229)).
-  Returns the number of stories created.
+- A single relevance writer takes URL, status, and label source, and **no
+  `validation` parameter**. Removing the parameter is what makes the boundary
+  unbreakable: relevance code can no longer express a validation write.
+- That writer appends `AND relevance_label_source != 'HUMAN'` to its predicate
+  unless the incoming label source is itself `'HUMAN'`. The discriminator falls
+  out of the argument already being passed — no new flag, and manual labeling
+  keeps working by construction. This guards against a label applied between the
+  validator reading a row and writing its classification.
+- The writer returns the effective status and source. SQLite's `changes()`
+  reports rows matched by the `UPDATE`, so a zero result unambiguously means the
+  guard excluded the row. Callers act on the returned value, never on the value
+  they attempted to write.
+- A metadata writer populates `headline`, `description`, and `embedding`. It is
+  idempotent and runs whenever those are missing and HTML or stored metadata is
+  available, independent of whether relevance runs.
+- A re-fetch writer updates `raw_html`, `scraped_at`, and `fetch_status` only. It
+  must not reuse `cache_scraped_html`, which is `INSERT OR REPLACE` with defaults
+  of `relevance_status='RELEVANT'` and `relevance_label_source='KEYWORD'` and
+  would destroy exactly the label that queued the re-fetch.
 - Delete `save_rejected_article` and `get_rejected_article`. Neither is called
-  from `src/`; the `save_rejected_article` import in
-  [discovery.py:11](../../../src/knowledge_map/core/discovery.py:11) is dead and
-  both discovery call sites already use
-  `cache_scraped_html(..., relevance_status="PENDING")`.
+  from `src/`; the surviving import in the discovery module is dead, and both
+  discovery call sites already cache with `relevance_status='PENDING'`.
 
-### Validation
+### Validation loop
 
-`validate_pending_articles` persists validation state and extracted fields only.
-Remove the relevance block
-([validation.py:620-673](../../../src/knowledge_map/core/validation.py:620)) and
-the `save_story` call
-([validation.py:675-684](../../../src/knowledge_map/core/validation.py:675))
-outright.
+Selection adds `raw_html IS NOT NULL` alongside the existing `PENDING` and
+`VALIDATION_FAILED`-retry predicates, which eliminates the silent `TypeError`
+retry loop.
 
-Per-article write order on success becomes:
+Per article:
 
-1. `widen_selector_version_window(...)`
-2. `update_cached_html_extraction(...)`
-3. `update_cached_html_status(url, 'VALIDATED')`
+1. If a story exists for the URL **and** no selector version has been created
+   since `validation_date`, set `validation = 'VALIDATED'` and stop. Extraction
+   is skipped.
+2. Otherwise extract. Failure yields `VALIDATION_FAILED` and failure points as
+   today; absent JSON-LD ground truth yields `UNVALIDATABLE`.
+3. On success, ensure `headline`, `description`, and `embedding` are populated.
+4. If `relevance_status` is `'PENDING'`, run automated relevance — logistic model
+   where weights exist, LLM fallback on `INCONCLUSIVE` or absent weights — and
+   persist through the guarded writer. Otherwise skip relevance entirely.
+5. On the effective decision:
+   - `RELEVANT` — write the story with `status = 'UNPROCESSED'` and its links,
+     set `validation = 'VALIDATED'`, then delete `raw_html`.
+   - `IRRELEVANT` or `INCONCLUSIVE` — write no story, set `validation = NULL`.
 
-Writing `VALIDATED` last gives the required invariant without a cross-connection
-transaction. Every adapter helper opens and commits its own `sqlite3.connect`,
-so a shared transaction would be an adapter-layer refactor; with this ordering an
-interruption instead leaves `validation = 'PENDING'` with extracted fields
-already written, and the next run simply redoes the article.
+Retaining `INCONCLUSIVE` at `validation = NULL` rather than `'VALIDATED'` is
+deliberate: it holds no content, so claiming validation would break the
+invariant, and a later human decision must be able to queue it for extraction.
 
-With relevance removed, the function no longer awaits anything. Keep it `async`
-for now to avoid touching the three CLI call sites
-([main.py:566](../../../src/knowledge_map/cli/main.py:566),
-[596](../../../src/knowledge_map/cli/main.py:596),
-[610](../../../src/knowledge_map/cli/main.py:610)); note the cleanup in the
-inbox.
+### Relevance reversal
 
-### Relevance
+Marking an article `IRRELEVANT` sets `validation = NULL` and deletes its story
+row **only when that story has not been ingested**. A story at `COMPLETED` has
+corresponding Neo4j nodes whose removal is materially more work; those rows are
+left in place and the case is deferred. This is the one path where the invariant
+is knowingly suspended, and it is bounded to already-ingested articles.
 
-Move the classification logic out of `validation.py` into
-`relevance_classification.py` as `classify_validated_articles(db_path)`,
-selecting:
+Marking an article `RELEVANT` sets `validation = 'PENDING'`. If a story exists,
+the validation loop's skip promotes it to `'VALIDATED'` without re-extracting; if
+not, extraction runs and produces one.
 
-```sql
-WHERE validation = 'VALIDATED'
-  AND relevance_status = 'PENDING'
-  AND relevance_label_source != 'HUMAN'
-```
+### Re-fetch stage
 
-Behavior within a row is unchanged: metadata embedding, logistic model when
-weights exist, LLM fallback on `INCONCLUSIVE` or absent weights. It reads
-`extracted_title` and `extracted_content` from the cache row rather than from
-in-memory extraction output. It calls `update_relevance_status` and writes no
-validation column, so the `validation=None` erasure on the `IRRELEVANT` path
-disappears by construction.
+Selects articles that are `RELEVANT`, have no `raw_html`, have no story row, and
+whose `fetch_status` is either null or not a terminal 4xx. The story-row
+predicate is what prevents re-downloading the entire completed corpus once
+immediate purging is in effect.
 
-`stories.status = 'IRRELEVANT'`
-([validation.py:681](../../../src/knowledge_map/core/validation.py:681)) is
-retired. Irrelevant articles simply never migrate. `stories.status` returns to
-its single purpose of tracking ingestion progress, and the training dataset is
-read from the cache instead.
+It runs before the validation loop within the same command invocation, so
+recovered articles are validated in one pass, and is additionally exposed as a
+standalone command. The crawler logic is extracted from the discovery service and
+shared by both callers; the persistence call differs between them.
 
-### CLI
+### Purge
 
-- `classifier label` without `--review-all`: replace the
-  `validation = 'PENDING_RELEVANCE'` selector
-  ([main.py:865](../../../src/knowledge_map/cli/main.py:865)) with
-  `relevance_status = 'INCONCLUSIVE' AND relevance_label_source != 'HUMAN'`.
-  This removes the last dependence on a relevance state stored in the validation
-  column.
-- `classifier label` with `--review-all`: add `AND validation = 'VALIDATED'` to
-  the selector. A human answer calls `update_cached_html_relevance` and changes
-  only `relevance_status` and `relevance_label_source = 'HUMAN'`. Drop the
-  `validation = "PENDING"` / `None` assignment
-  ([main.py:896](../../../src/knowledge_map/cli/main.py:896)) and the
-  `get_metadata_embedding` backfill — a validated row always has its embedding
-  from the classify stage.
-- `classifier reevaluate`: narrow the selector to
-  `relevance_status = 'INCONCLUSIVE' AND relevance_label_source != 'HUMAN' AND
-  validation = 'VALIDATED'`. Restricting to `INCONCLUSIVE` for now is
-  deliberate; widening it is an inbox item with a defined two-step path.
-  Transitions call `update_cached_html_relevance` and write no validation
-  column.
-- Add `ca-map migrate-stories` invoking `migrate_relevant_stories`, reporting
-  the count created.
-- The `validate` command runs validation, then `classify_validated_articles`,
-  then `migrate_relevant_stories`, preserving today's end-to-end behavior from a
-  single command.
-- Run migration at the end of `--review-all` and `reevaluate` as well, so a
-  label change promoting an article to `RELEVANT` reaches `stories` without a
-  second command.
+Two rules replace the current per-state matrix:
 
-### Ingestion eligibility
+- `raw_html` is deleted immediately when validation succeeds and a story is
+  stored.
+- All other `raw_html` expires thirty days after `scraped_at`, regardless of
+  validation state.
 
-Unchanged and unqualified: `stories.status = 'UNPROCESSED'` with non-empty
-content ([sqlite_db.py:310](../../../src/knowledge_map/adapters/sqlite_db.py:310)).
-Validation and relevance are enforced by the migration gate, so ingestion does
-not need to re-check them.
+This supersedes ADR 0003's commitment to retaining failed-article HTML
+indefinitely for healing. The trade is accepted because re-fetch makes purging
+recoverable: a publication whose selectors drift after its failed articles expire
+can restore them on demand, provided the URLs are still live. ADR 0003 is amended
+to record the new retention policy.
 
-### Gold standard examples
+### Command surfaces
 
-`get_gold_standard_examples`
-([sqlite_db.py:824](../../../src/knowledge_map/adapters/sqlite_db.py:824)) joins
-`scraped_html_cache` to `stories` for article content. Once irrelevant articles
-no longer receive story rows, the `IRRELEVANT` half of the balanced set silently
-returns empty and the LLM agent degrades to a one-sided few-shot prompt without
-raising. Rewrite it to read `extracted_title` and `extracted_content` from the
-cache and drop the join.
+- `classifier label --review-all` selects articles whose label source is not
+  `'HUMAN'`. A human answer writes `relevance_status` and
+  `relevance_label_source = 'HUMAN'`, and applies the reversal rules above.
+- `classifier label` without `--review-all` selects
+  `relevance_status = 'INCONCLUSIVE' AND relevance_label_source != 'HUMAN'`,
+  replacing the `validation = 'PENDING_RELEVANCE'` selector.
+- `classifier reevaluate` selects the same set and writes only relevance columns.
+  Restricting it to `INCONCLUSIVE` is deliberate for now; widening it has a
+  defined two-step path recorded in the inbox.
+- `validate-articles` runs re-fetch, then the validation loop.
+
+### Training data backfill
+
+A one-off script populates `headline` and `description` from `raw_metadata_json`
+where present — twelve of the thirteen embedding-less rows retain usable metadata
+from the retired `rejected_articles` table — falling back to metadata extraction
+from `raw_html` for the remainder, then generates embeddings. This requires no
+network access; the data is already in the database in a column the trainer does
+not read.
+
+The resulting set is roughly 39 positive to 10 negative examples. That is enough
+to fit, thin enough that growing the human-labeled set remains the real
+constraint, and skewed enough that the positives — being LLM-derived — will train
+an imitator of the LLM rather than of ground truth. The three surviving human
+labels are held out as evaluation rather than folded into training.
+
+`get_gold_standard_examples` currently joins `stories` for article text and will
+return no negative class once irrelevant articles stop producing stories,
+degrading the LLM agent to one-sided few-shot prompting without raising. It is
+rewritten to read `headline` and `description` from the cache with no join, which
+also fixes an existing asymmetry where human-labeled articles without story rows
+were silently excluded.
 
 ## Testing Decisions
 
-- **Regression, the reported failure:** seed a `VALIDATED` article, apply a
-  `HUMAN` label via `--review-all`, run `validate_pending_articles`, and assert
-  `relevance_status` and `relevance_label_source = 'HUMAN'` are unchanged and
-  `validation` is still `'VALIDATED'`.
-- **Regression, the second path:** seed a `HUMAN`-labeled `IRRELEVANT` article,
-  run `reevaluate` with weights that would classify it `RELEVANT`, and assert
-  the label is untouched.
-- Assert `update_relevance_status` and `update_cached_html_relevance` cannot
-  write `validation` — inspect the generated SQL or assert the column is
-  unchanged across a call.
-- Assert `classify_validated_articles` skips rows with `validation` in
-  `PENDING`, `VALIDATION_FAILED`, `UNVALIDATABLE`.
-- Assert a successfully validated but `IRRELEVANT` article retains
-  `validation = 'VALIDATED'` and receives no story row.
-- Assert write ordering: with `update_cached_html_status` patched to raise, the
-  extracted fields are present and `validation` is still `'PENDING'`.
-- Assert `migrate_relevant_stories` is idempotent — two runs produce one story
-  row and one set of `story_links`.
-- Assert `get_gold_standard_examples` still returns both classes when no
-  irrelevant article has a story row.
-- Update the four test files referencing the removed functions:
-  `tests/test_db.py`, `tests/test_incremental_discovery.py`,
-  `tests/test_relevance_filter.py`, `tests/test_relevance_classifier.py`.
-  `tests/test_archive_crawl.py` uses `get_rejected_article` for assertions and
-  needs a direct cache query instead.
+A good test here asserts externally observable database state after invoking a
+public entry point. It does not assert which helper was called or how a statement
+was composed. Existing tests in `tests/test_article_validator.py` establish the
+pattern: seed a temporary SQLite database, patch only the external adapters — the
+classifier weight loader, the embedding adapter, and the LLM classification
+agent — and assert on rows afterward.
 
-## Sequencing
+Three seams, two of which already exist.
 
-1. Schema migration and the new/narrowed database writers, with their tests.
-   Nothing behavioral changes yet.
-2. Strip relevance and story writing from `validate_pending_articles`; reorder
-   the `VALIDATED` write. Pipeline is temporarily incomplete.
-3. Add `classify_validated_articles` and `migrate_relevant_stories`; wire the
-   `validate` command to the three-stage sequence. Pipeline is whole again.
-4. Narrow the review commands and add `migrate-stories`.
-5. Delete `save_rejected_article`/`get_rejected_article`, fix
-   `get_gold_standard_examples`, update tests.
+**Primary — the validator entry point.** Running against a temporary database
+with only external adapters patched, this covers the majority of the spec: the
+`HUMAN` guard, relevance conditionality, the story-exists skip and its defeat by
+newer selectors, the invariant across every branch, and the `validation = NULL`
+transitions. The re-fetch stage is invoked from inside this entry point
+specifically so it is exercised at the same seam, needing only the crawler
+patched.
 
-Steps 2 and 3 must land together; between them no story rows are produced.
+**Secondary — the relevance writer.** Required as its own seam only for the
+concurrent case, where a `HUMAN` label must be applied between read and write.
+Because the manual labeling command delegates to this same writer, human labeling
+needs no separate seam and the CLI's input loop stays untested.
 
-## Deferred to inbox
+**Tertiary — the purge function.** Retention policy in isolation.
 
-- Re-fetch raw HTML for cache rows whose HTML was purged but which need
-  re-evaluation.
-- Widen `reevaluate` coverage. Step one: include `IRRELEVANT` alongside
-  `INCONCLUSIVE`, both guaranteed never ingested, still excluding `HUMAN`. Step
-  two: include `RELEVANT`, which requires removing already-ingested nodes from
-  the Neo4j graph — substantially more work.
-- Remove `'PENDING_RELEVANCE'` from the `validation` CHECK constraint once no
-  rows carry it.
-- Clean up existing `stories` rows with `status = 'IRRELEVANT'`.
-- Make `validate_pending_articles` synchronous now that it awaits nothing.
+Specific assertions:
+
+- The reported regression end to end: seed a validated article, apply a `HUMAN`
+  label, run validation, assert the label and its source are unchanged.
+- The second loss path: seed a `HUMAN`-labeled article, run reevaluate with
+  weights that would reclassify it, assert the label is untouched.
+- A machine write against a `HUMAN` row reports rejection to its caller, and the
+  caller creates no story from the discarded classification.
+- Relevance is not invoked at all — not the weight loader, the embedding adapter,
+  or the LLM agent — for a row whose `relevance_status` is not `'PENDING'`.
+- Extraction is skipped when a story exists, and performed when a selector
+  version postdates `validation_date`.
+- The invariant holds after every branch: relevant articles end `'VALIDATED'`
+  with a story; irrelevant and inconclusive articles end at null validation with
+  no story.
+- A row with null `raw_html` is not selected by the validation loop.
+- Re-fetch preserves `relevance_status`, `relevance_label_source`, `headline`,
+  `description`, and `embedding` across a restore.
+- Re-fetch does not select articles that already have a story row, and abandons
+  URLs whose recorded status is a terminal 4xx.
+- Raw HTML is absent immediately after a story is written, and present for an
+  article that failed validation within the retention window.
+- Reversing a relevance decision on an un-ingested article removes its story;
+  reversing it on an ingested article does not.
+- `get_gold_standard_examples` returns both classes with no story rows present.
+- The backfill produces embeddings for both classes, verified by the trainer's
+  own selection query returning a non-zero count per class.
+
+Test files referencing the deleted rejected-article helpers require updating:
+`tests/test_db.py`, `tests/test_incremental_discovery.py`,
+`tests/test_relevance_filter.py`, `tests/test_relevance_classifier.py`, and
+`tests/test_archive_crawl.py`, which uses the getter for assertions and needs a
+direct cache query instead.
+
+## Out of Scope
+
+- Moving relevance classification ahead of validation. This is the intended
+  destination, not a divergence — the classifier is simply not trained yet, and
+  the current post-extraction placement exists because the LLM classifies far
+  better with article body text than with page metadata alone. The move happens
+  once the classifier is trained and evaluated.
+- Widening `reevaluate` beyond `INCONCLUSIVE`.
+- Removing Neo4j nodes for articles whose relevance is reversed after ingestion.
+- Recovering the human labels already lost. No backup or log covering the
+  incident exists.
+- Training or evaluating the relevance classifier. This spec produces its
+  dataset; using it is separate work.
+- Making the validator synchronous.
+
+## Further Notes
+
+The `HUMAN` guard should land first and on its own. One cache row is currently
+`relevance_status = 'RELEVANT'`, `relevance_label_source = 'HUMAN'`, and
+`validation = 'PENDING'` — the next `validate-articles` run destroys it under
+present behavior. That row is one of only three surviving human labels.
+
+Take a database backup before the schema migration. Human labels are now
+expensive to produce and there is no other copy.
+
+Ordering thereafter: schema and writers, then the validation loop, then the
+command surfaces, then re-fetch and purge, then the backfill. The backfill is
+last because it depends on the metadata writer but nothing depends on it.
+
+Two observations worth carrying forward. Validation's per-article cost is local
+CPU, but its *failure accounting* is not: failure points accrue at up to three
+per failing article and trip a circuit breaker at ten, which spawns a
+generator/critic healing loop — the most expensive operation in the pipeline.
+That accounting is currently blind to relevance, so roughly four irrelevant
+articles that fail extraction can trigger a full healing cycle for content
+outside the subject matter. This is the strongest argument for eventually moving
+the classifier ahead of validation, and it is stronger than the compute argument.
+Usefully, metadata extraction reads JSON-LD and meta tags rather than publication
+selectors, so it still works on pages where selector extraction fails — which is
+exactly what a pre-validation gate would need.
+
+Second: the twenty-two default-relevant articles are a live instance of the
+schema-default defect, not a hypothetical. Seventeen had reached the story queue
+without assessment and have since been removed from `stories`; their cache rows
+remain and will be reclassified once `relevance_status` defaults correctly and
+they are marked `'PENDING'`.
