@@ -355,11 +355,12 @@ def test_cli_classifier_label_default(tmp_path, monkeypatch):
     db_path = str(db_file)
     init_db(db_path)
     
-    # 1. Insert an article with validation = 'PENDING_RELEVANCE'
+    # 1. Insert an inconclusive, non-human article for the default review queue
     cache_scraped_html(
         "https://example.com/pending-rel", "pub1", "<html></html>",
-        validation="PENDING_RELEVANCE", headline="California Budget Proposal",
-        description="Gavin Newsom proposes a new budget.", db_path=db_path
+        validation=None, headline="California Budget Proposal",
+        description="Gavin Newsom proposes a new budget.",
+        relevance_status="INCONCLUSIVE", relevance_label_source="LLM", db_path=db_path
     )
     
     # 2. Insert another article with validation = None and relevance_label_source = 'LLM' (should NOT be reviewed by default)
@@ -404,7 +405,7 @@ def test_cli_classifier_label_default(tmp_path, monkeypatch):
         # Verify the second was not labeled/changed
         cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/llm-labeled",))
         row = cursor.fetchone()
-        assert row["relevance_status"] == "RELEVANT" # default from cache_scraped_html
+        assert row["relevance_status"] == "PENDING"
         assert row["relevance_label_source"] == "KEYWORD"
     finally:
         conn.close()
@@ -424,14 +425,16 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
     cache_scraped_html(
         "https://example.com/llm-labeled", "pub1", "<html></html>",
         validation=None, headline="LLM Labeled Article",
-        description="This was classified by LLM.", relevance_label_source="LLM", db_path=db_path
+        description="This was classified by LLM.", relevance_status="RELEVANT",
+        relevance_label_source="LLM", db_path=db_path
     )
     
     # 2. Insert another article with relevance_label_source = 'HUMAN' (should NOT be reviewed)
     cache_scraped_html(
         "https://example.com/human-labeled", "pub1", "<html></html>",
         validation=None, headline="Human Labeled Article",
-        description="This was classified by Human.", relevance_label_source="HUMAN", db_path=db_path
+        description="This was classified by Human.", relevance_status="RELEVANT",
+        relevance_label_source="HUMAN", db_path=db_path
     )
     
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
@@ -509,4 +512,3 @@ def test_cli_classifier_reevaluate_excludes_human_labels(tmp_path, monkeypatch):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
-

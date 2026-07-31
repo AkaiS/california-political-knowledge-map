@@ -1,6 +1,6 @@
 # Default relevance to PENDING and record fetch status
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -35,14 +35,14 @@ produce and there is no other copy.
 
 ## Acceptance criteria
 
-- [ ] A newly cached article whose relevance nothing has assessed has `relevance_status = 'PENDING'`.
-- [ ] The twenty-two articles marked relevant by the old default are `'PENDING'` after migration.
-- [ ] Articles carrying a real classification — from a keyword match, a model, an LLM, or a human — keep their status and source across the migration.
-- [ ] Every cache row holding raw HTML has a recorded fetch status of `200`; rows that were never fetched have none.
-- [ ] `'PENDING_RELEVANCE'` is rejected by the validation constraint.
-- [ ] `classifier label` without `--review-all` presents articles selected by `relevance_status = 'INCONCLUSIVE'` and a non-human label source, and no longer reads the validation column.
-- [ ] The migration runs through the existing table-rebuild path, which takes its own copy before rebuilding.
-- [ ] The full deterministic test suite passes.
+- [x] A newly cached article whose relevance nothing has assessed has `relevance_status = 'PENDING'`.
+- [x] The twenty-two articles marked relevant by the old default are `'PENDING'` after migration.
+- [x] Articles carrying a real classification — from a keyword match, a model, an LLM, or a human — keep their status and source across the migration.
+- [x] Every cache row holding raw HTML has a recorded fetch status of `200`; rows that were never fetched have none.
+- [x] `'PENDING_RELEVANCE'` is rejected by the validation constraint.
+- [x] `classifier label` without `--review-all` presents articles selected by `relevance_status = 'INCONCLUSIVE'` and a non-human label source, and no longer reads the validation column.
+- [x] The migration runs through the existing table-rebuild path, which takes its own copy before rebuilding.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

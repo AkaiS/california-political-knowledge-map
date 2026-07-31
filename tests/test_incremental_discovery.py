@@ -34,6 +34,7 @@ def test_db_schema_initialization(tmp_path):
         assert "description" in columns
         assert "embedding" in columns
         assert "relevance_status" in columns
+        assert columns["fetch_status"] == "INTEGER"
         assert "raw_metadata_json" in columns
         
     finally:
@@ -78,6 +79,8 @@ def test_database_helpers(tmp_path):
     assert cached["publication_id"] == "testpub"
     assert cached["raw_html"] == "<html>story 1</html>"
     assert cached["validation"] == "PENDING"
+    assert cached["relevance_status"] == "PENDING"
+    assert cached["fetch_status"] == 200
     
     # 4. Update validation status
     update_cached_html_status(url_1, "VALIDATED", db_path=db_path)
@@ -218,6 +221,7 @@ async def test_listing_page_discovery_service(tmp_path):
     # 3. Mock CrawlResult for article page
     mock_article_result = MagicMock()
     mock_article_result.success = True
+    mock_article_result.status_code = 206
     mock_article_result.html = """
     <html>
     <head>
@@ -265,6 +269,7 @@ async def test_listing_page_discovery_service(tmp_path):
         assert "scraped raw content" in cached["raw_html"]
         assert cached["validation"] == "PENDING"
         assert cached["relevance_status"] == "PENDING"
+        assert cached["fetch_status"] == 206
         
         # Verify check_robots_txt config was passed as True because use_robots_txt is True
         # Let's inspect arun calls
@@ -518,8 +523,6 @@ async def test_listing_page_discovery_soup_fallback_text(tmp_path):
         scraped_urls = await service.discover_and_scrape_for_publication(pub)
         # Should be scraped because the fallback gets the text "California Senate Approves Newsom Nominee for High Court" (>= 25 chars and >= 5 words)
         assert scraped_urls == ["https://test.com/politics/nested-text-story"]
-
-
 
 
 

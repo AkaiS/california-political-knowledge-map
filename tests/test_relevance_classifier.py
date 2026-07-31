@@ -99,7 +99,7 @@ def test_schema_migration(tmp_path):
     # Check relevant article
     assert rows["https://example.com/relevant"][1] == "<html>relevant article</html>"
     assert rows["https://example.com/relevant"][2] == "PENDING"
-    assert rows["https://example.com/relevant"][3] == "RELEVANT"
+    assert rows["https://example.com/relevant"][3] == "PENDING"
 
     # Check irrelevant article
     assert rows["https://example.com/irrelevant"][1] is None
@@ -110,7 +110,7 @@ def test_schema_migration(tmp_path):
 
     # Check inconclusive article
     assert rows["https://example.com/inconclusive"][1] is None
-    assert rows["https://example.com/inconclusive"][2] == "PENDING_RELEVANCE"
+    assert rows["https://example.com/inconclusive"][2] is None
     assert rows["https://example.com/inconclusive"][3] == "INCONCLUSIVE"
     meta_inconclusive = json.loads(rows["https://example.com/inconclusive"][4])
     assert meta_inconclusive["headline"] == "Local politics maybe"

@@ -439,9 +439,12 @@ class ListingPageDiscoveryService:
                             res = await crawler.arun(url=url, config=run_config)
                             if res.success:
                                 raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                                status_code = getattr(res, "status_code", None)
+                                fetch_status = status_code if isinstance(status_code, int) else 200
                                 cache_scraped_html(
                                     url, pub_id, raw_html, validation="PENDING",
-                                    relevance_status="PENDING", db_path=self.db_path
+                                    relevance_status="PENDING", fetch_status=fetch_status,
+                                    db_path=self.db_path
                                 )
                                 scraped_urls.append(url)
                                 logger.info(f"Cached candidate article '{url}' with status 'PENDING'")
@@ -617,6 +620,8 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                                 return False
 
                             raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                            status_code = getattr(res, "status_code", None)
+                            fetch_status = status_code if isinstance(status_code, int) else 200
                             
                             # Check historical cutoff
                             pub_date = extract_published_date(raw_html)
@@ -627,7 +632,8 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                             # Cache candidate article immediately
                             cache_scraped_html(
                                 url, pub_id, raw_html, validation="PENDING",
-                                relevance_status="PENDING", db_path=self.db_path
+                                relevance_status="PENDING", fetch_status=fetch_status,
+                                db_path=self.db_path
                             )
                             scraped_urls.append(url)
                             logger.info(f"Archive crawl: Cached candidate article '{url}' with status 'PENDING'")

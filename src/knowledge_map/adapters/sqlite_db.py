@@ -74,8 +74,17 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
             cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='scraped_html_cache'")
             table_sql = cursor.fetchone()[0]
             
+            cursor.execute("PRAGMA table_info(scraped_html_cache)")
+            column_info = {row[1]: row for row in cursor.fetchall()}
+            relevance_default = column_info.get("relevance_status", (None,) * 5)[4]
+
             # Check if we need the new migration
-            needs_new_migration = ("relevance_label_source" not in columns) or ("'PENDING'" not in table_sql)
+            needs_new_migration = (
+                "relevance_label_source" not in columns
+                or "fetch_status" not in columns
+                or relevance_default != "'PENDING'"
+                or "PENDING_RELEVANCE" in table_sql
+            )
             has_headline = "headline" in columns
 
             if not has_headline or needs_new_migration:
@@ -90,31 +99,65 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                         url TEXT PRIMARY KEY,
                         publication_id TEXT NOT NULL,
                         raw_html TEXT,
-                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')) DEFAULT 'PENDING',
+                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
                         validation_date DATETIME,
                         scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         headline TEXT,
                         description TEXT,
                         embedding BLOB,
-                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'RELEVANT',
+                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
                         relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                        fetch_status INTEGER,
                         raw_metadata_json TEXT,
                         FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                     )
                 """)
-                
-                # Determine which columns to copy
-                valid_new_columns = {
-                    "url", "publication_id", "raw_html", "validation", "validation_date",
-                    "scraped_at", "headline", "description", "embedding", "relevance_status",
-                    "relevance_label_source", "raw_metadata_json"
-                }
-                columns_to_copy = [col for col in columns if col in valid_new_columns]
-                columns_str = ", ".join(columns_to_copy)
-                
+
+                def old_column(name: str, fallback: str = "NULL") -> str:
+                    return name if name in columns else fallback
+
+                relevance_source = old_column("relevance_label_source", "'KEYWORD'")
+                raw_metadata = old_column("raw_metadata_json")
+                relevance_status = old_column("relevance_status", "'PENDING'")
+                migrated_relevance_status = f"""
+                    CASE
+                        WHEN {relevance_status} = 'RELEVANT'
+                         AND COALESCE({relevance_source}, 'KEYWORD') = 'KEYWORD'
+                         AND {raw_metadata} IS NULL
+                        THEN 'PENDING'
+                        ELSE {relevance_status}
+                    END
+                """
+                validation = old_column("validation")
+                migrated_validation = f"CASE WHEN {validation} = 'PENDING_RELEVANCE' THEN NULL ELSE {validation} END"
+                raw_html = old_column("raw_html")
+                fetch_status = (
+                    f"COALESCE(fetch_status, CASE WHEN {raw_html} IS NOT NULL THEN 200 ELSE NULL END)"
+                    if "fetch_status" in columns
+                    else f"CASE WHEN {raw_html} IS NOT NULL THEN 200 ELSE NULL END"
+                )
+
                 cursor.execute(f"""
-                    INSERT INTO scraped_html_cache ({columns_str})
-                    SELECT {columns_str} FROM scraped_html_cache_old
+                    INSERT INTO scraped_html_cache (
+                        url, publication_id, raw_html, validation, validation_date,
+                        scraped_at, headline, description, embedding, relevance_status,
+                        relevance_label_source, fetch_status, raw_metadata_json
+                    )
+                    SELECT
+                        {old_column('url')},
+                        {old_column('publication_id')},
+                        {old_column('raw_html')},
+                        {migrated_validation},
+                        {old_column('validation_date')},
+                        {old_column('scraped_at', 'CURRENT_TIMESTAMP')},
+                        {old_column('headline')},
+                        {old_column('description')},
+                        {old_column('embedding')},
+                        {migrated_relevance_status},
+                        {relevance_source},
+                        {fetch_status},
+                        {raw_metadata}
+                    FROM scraped_html_cache_old
                 """)
                 
                 cursor.execute("DROP TABLE scraped_html_cache_old")
@@ -126,12 +169,11 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     cursor.execute("SELECT url, publication_id, relevance_status, metadata_json, checked_at FROM rejected_articles")
                     rejected_rows = cursor.fetchall()
                     for r_url, r_pub_id, r_status, r_meta, r_checked in rejected_rows:
-                        r_validation = "PENDING_RELEVANCE" if r_status == "INCONCLUSIVE" else None
                         cursor.execute("""
                             INSERT OR REPLACE INTO scraped_html_cache (
                                 url, publication_id, raw_html, validation, relevance_status, raw_metadata_json, scraped_at
                             ) VALUES (?, ?, NULL, ?, ?, ?, ?)
-                        """, (r_url, r_pub_id, r_validation, r_status, r_meta, r_checked))
+                        """, (r_url, r_pub_id, None, r_status, r_meta, r_checked))
                     cursor.execute("DROP TABLE rejected_articles")
         else:
             # Create scraped_html_cache table with new schema
@@ -140,14 +182,15 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     url TEXT PRIMARY KEY,
                     publication_id TEXT NOT NULL,
                     raw_html TEXT,
-                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE', 'PENDING_RELEVANCE')) DEFAULT 'PENDING',
+                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
                     validation_date DATETIME,
                     scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     headline TEXT,
                     description TEXT,
                     embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'RELEVANT',
+                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
                     relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                    fetch_status INTEGER,
                     raw_metadata_json TEXT,
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                 )
@@ -676,9 +719,10 @@ def cache_scraped_html(
     headline: Optional[str] = None,
     description: Optional[str] = None,
     embedding: Optional[list[float]] = None,
-    relevance_status: str = "RELEVANT",
+    relevance_status: str = "PENDING",
     raw_metadata_json: Optional[dict[str, Any]] = None,
     relevance_label_source: str = "KEYWORD",
+    fetch_status: Optional[int] = None,
     db_path: str = DEFAULT_DB_PATH
 ) -> None:
     """
@@ -691,13 +735,19 @@ def cache_scraped_html(
         cursor = conn.cursor()
         meta_str = json.dumps(raw_metadata_json) if raw_metadata_json is not None else None
         embedding_blob = serialize_embedding(embedding)
+        recorded_fetch_status = 200 if raw_html is not None and fetch_status is None else fetch_status
         cursor.execute("""
             INSERT OR REPLACE INTO scraped_html_cache (
                 url, publication_id, raw_html, validation, validation_date,
-                headline, description, embedding, relevance_status, relevance_label_source, raw_metadata_json
+                headline, description, embedding, relevance_status, relevance_label_source,
+                fetch_status, raw_metadata_json
             )
-            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
-        """, (url, publication_id, raw_html, validation, headline, description, embedding_blob, relevance_status, relevance_label_source, meta_str))
+            VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            url, publication_id, raw_html, validation, headline, description,
+            embedding_blob, relevance_status, relevance_label_source,
+            recorded_fetch_status, meta_str,
+        ))
         conn.commit()
     finally:
         conn.close()
@@ -715,7 +765,8 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
         cursor = conn.cursor()
         cursor.execute("""
             SELECT url, publication_id, raw_html, validation, validation_date, scraped_at,
-                   headline, description, embedding, relevance_status, relevance_label_source, raw_metadata_json
+                   headline, description, embedding, relevance_status, relevance_label_source,
+                   fetch_status, raw_metadata_json
             FROM scraped_html_cache
             WHERE url = ?
         """, (url,))
@@ -1198,11 +1249,6 @@ def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
         }
     finally:
         conn.close()
-
-
-
-
-
 
 
 

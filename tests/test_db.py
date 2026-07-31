@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import pytest
 from knowledge_map.adapters.sqlite_db import init_db, save_story, get_all_stories
 
@@ -278,14 +279,10 @@ def test_sqlite_status_tracker(tmp_path):
 
 
 def test_sqlite_relevance_schema_migration(tmp_path):
-    # 1. Create a DB with the old schema (no relevance_label_source column, old relevance_status CHECK constraint)
     db_file = tmp_path / "test_relevance_migration.db"
     db_path = str(db_file)
-    
-    # Initialize DB first to create all tables
     init_db(db_path)
-    
-    import sqlite3
+
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
@@ -301,61 +298,102 @@ def test_sqlite_relevance_schema_migration(tmp_path):
                 headline TEXT,
                 description TEXT,
                 embedding BLOB,
-                relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')) DEFAULT 'RELEVANT',
+                relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'RELEVANT',
+                relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
                 raw_metadata_json TEXT,
                 FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
             )
         """)
         cursor.execute("INSERT OR IGNORE INTO publications (id, name, base_url) VALUES ('pub1', 'Pub 1', 'http://example.com')")
-        cursor.execute("""
-            INSERT INTO scraped_html_cache (url, publication_id, relevance_status)
-            VALUES ('http://example.com/art1', 'pub1', 'RELEVANT')
-        """)
+        for index in range(22):
+            cursor.execute("""
+                INSERT INTO scraped_html_cache (url, publication_id, raw_html, headline)
+                VALUES (?, 'pub1', ?, ?)
+            """, (
+                f"http://example.com/unassessed-{index}",
+                "<html>cached</html>" if index == 0 else None,
+                "Previously extracted headline" if index == 1 else None,
+            ))
+        classified_rows = [
+            ("keyword", "RELEVANT", "KEYWORD", '{"headline": "California Legislature"}'),
+            ("model", "IRRELEVANT", "MODEL", None),
+            ("llm", "INCONCLUSIVE", "LLM", None),
+            ("human", "RELEVANT", "HUMAN", None),
+        ]
+        cursor.executemany("""
+            INSERT INTO scraped_html_cache (
+                url, publication_id, validation, relevance_status,
+                relevance_label_source, raw_metadata_json
+            ) VALUES (?, 'pub1', 'PENDING_RELEVANCE', ?, ?, ?)
+        """, [
+            (f"http://example.com/{name}", status, source, metadata)
+            for name, status, source, metadata in classified_rows
+        ])
         conn.commit()
     finally:
         conn.close()
-        
-    # 2. Run init_db which should perform the migration
+
     init_db(db_path)
 
-    
-    # 3. Verify columns and constraints
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        
-        # Verify the new column 'relevance_label_source' exists
         cursor.execute("PRAGMA table_info(scraped_html_cache)")
-        columns = {col[1]: col[2] for col in cursor.fetchall()}
-        assert "relevance_label_source" in columns
-        
-        # Verify the default value is 'KEYWORD' for the existing row
-        cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("http://example.com/art1",))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == "RELEVANT"
-        assert row[1] == "KEYWORD"
-        
-        # Verify we can insert/update relevance_status to 'PENDING'
+        columns = {col[1]: col for col in cursor.fetchall()}
+        assert columns["fetch_status"][2].upper() == "INTEGER"
+        assert columns["relevance_status"][4] == "'PENDING'"
+
         cursor.execute("""
-            INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-            VALUES ('http://example.com/art2', 'pub1', 'PENDING', 'MODEL')
+            SELECT COUNT(*) FROM scraped_html_cache
+            WHERE url LIKE 'http://example.com/unassessed-%'
+              AND relevance_status = 'PENDING'
+        """)
+        assert cursor.fetchone()[0] == 22
+
+        cursor.execute("""
+            SELECT relevance_status, relevance_label_source, validation
+            FROM scraped_html_cache
+            WHERE url IN (
+                'http://example.com/keyword', 'http://example.com/model',
+                'http://example.com/llm', 'http://example.com/human'
+            )
+            ORDER BY url
+        """)
+        assert cursor.fetchall() == [
+            ("RELEVANT", "HUMAN", None),
+            ("RELEVANT", "KEYWORD", None),
+            ("INCONCLUSIVE", "LLM", None),
+            ("IRRELEVANT", "MODEL", None),
+        ]
+
+        cursor.execute("""
+            SELECT fetch_status FROM scraped_html_cache
+            WHERE url = 'http://example.com/unassessed-0'
+        """)
+        assert cursor.fetchone()[0] == 200
+        cursor.execute("""
+            SELECT fetch_status FROM scraped_html_cache
+            WHERE url = 'http://example.com/unassessed-1'
+        """)
+        assert cursor.fetchone()[0] is None
+
+        cursor.execute("""
+            INSERT INTO scraped_html_cache (url, publication_id)
+            VALUES ('http://example.com/new', 'pub1')
         """)
         conn.commit()
-        
-        cursor.execute("SELECT relevance_status FROM scraped_html_cache WHERE url = ?", ("http://example.com/art2",))
+        cursor.execute("SELECT relevance_status FROM scraped_html_cache WHERE url = 'http://example.com/new'")
         assert cursor.fetchone()[0] == "PENDING"
-        
-        # Verify CHECK constraint on relevance_label_source (must fail for invalid value)
+
         with pytest.raises(sqlite3.IntegrityError):
             cursor.execute("""
-                INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-                VALUES ('http://example.com/art3', 'pub1', 'RELEVANT', 'INVALID_SOURCE')
+                INSERT INTO scraped_html_cache (url, publication_id, validation)
+                VALUES ('http://example.com/invalid-validation', 'pub1', 'PENDING_RELEVANCE')
             """)
-            conn.commit()
-            
     finally:
         conn.close()
+
+    assert os.path.exists(db_path + ".backup")
 
 
 def test_get_gold_standard_examples(tmp_path):
@@ -544,5 +582,3 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
-
-

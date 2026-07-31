@@ -862,7 +862,8 @@ def main(args=None):
                     cursor.execute("""
                         SELECT url, headline, description, embedding
                         FROM scraped_html_cache
-                        WHERE validation = 'PENDING_RELEVANCE'
+                        WHERE relevance_status = 'INCONCLUSIVE'
+                          AND (relevance_label_source IS NULL OR relevance_label_source != 'HUMAN')
                     """)
                 rows = cursor.fetchall()
             finally:
@@ -872,7 +873,7 @@ def main(args=None):
                 if getattr(parsed_args, "review_all", False):
                     print("No articles with relevance_label_source != 'HUMAN' found to label.")
                 else:
-                    print("No articles with PENDING_RELEVANCE validation found to label.")
+                    print("No non-human INCONCLUSIVE articles found to label.")
                 sys.exit(0)
                 
             print(f"Found {len(rows)} articles requiring relevance labeling.")
@@ -964,8 +965,6 @@ def main(args=None):
                 if new_status != old_status:
                     if new_status == "RELEVANT":
                         new_validation = "PENDING"
-                    elif new_status == "INCONCLUSIVE":
-                        new_validation = "PENDING_RELEVANCE"
                     else:
                         new_validation = None
                         
