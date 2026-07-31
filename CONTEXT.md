@@ -164,12 +164,16 @@ The adapter protocol and its concrete implementation that extracts entities and 
 _Avoid_: Extractor model, agent helper
 
 **Evaluation Gold Set**:
-A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. It binds one exact Evaluation Task Contract, and every member implements that contract's input and metadata schemas, and its expected-output schema where the member declares an expected output. Members are validated against the contract by the construction factory, which is the supported way to build one.
+A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. It is constructed by declaring its identity, description, one exact Evaluation Task Contract, and tags; populating it with validated Evaluation Cases and declared Evaluation Artifacts; and locking the result into an immutable revision. Revision N+1 is derived from revision N by adding or removing cases while preserving the split of every surviving case revision; the Evaluation Task Contract is fixed for the life of the Gold Set identity, so changing it requires a new business identity.
 _Avoid_: Test fixtures, benchmark data, model labels
 
 **Evaluation Case**:
 An immutable, stably identified authored example declaring zero or more distinct Evaluation Requirements, whose revisions preserve changes to its input, expected outcome, requirements, or authoritative artifacts. Evaluation Gold Set versions assign exact Evaluation Case revisions to splits without rewriting earlier membership.
 _Avoid_: Test case, sample, fixture, gold-set row
+
+**Evaluation Split**:
+Exactly one role assigned to each Evaluation Case revision in an Evaluation Gold Set revision: `training` supplies material for tuning agent behaviour; `calibration` reserves cases from the agent-tuning loop so judge behaviour can be observed without those cases feeding agent iteration, and does not mean stored expected judgments; `held-out` reserves evidence for confirming that tuned behaviour generalizes. A case revision therefore cannot participate in a tuning loop and the held-out evidence set at the same time.
+_Avoid_: Dataset partition, fold, case label
 
 **Evaluation Task Contract**:
 The exact typed input, output, and metadata boundary of one component operation evaluated by an Evaluation Suite. All of the suite's Evaluation Cases implement this shared contract; heterogeneous shapes are explicit variants within its schemas rather than case-specific contracts.

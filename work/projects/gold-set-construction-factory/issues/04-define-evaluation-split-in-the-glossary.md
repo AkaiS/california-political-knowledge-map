@@ -1,6 +1,6 @@
 # Define Evaluation Split in the glossary and describe the construction flow
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of [Evaluation Gold Set Construction and Revisioning](../PRD.md). Independent of
 the code tickets; can start immediately.
@@ -32,12 +32,12 @@ identity.
 
 ## Acceptance criteria
 
-- [ ] `CONTEXT.md` has an Evaluation Split glossary entry defining all three splits.
-- [ ] The entry documents `calibration` as reservation from the agent-tuning loop for observing judge behaviour, and explicitly not as stored expected judgments.
-- [ ] The entry records that exactly one split is assigned per Evaluation Case revision.
-- [ ] The Evaluation Gold Set entry describes the construction flow and the revisioning flow, including that revisioning preserves surviving cases' splits.
-- [ ] The Evaluation Gold Set entry records that the Evaluation Task Contract cannot change across revisions and that a different contract requires a new business identity.
-- [ ] Both entries follow the existing glossary entry format, including the _Avoid_ line convention.
+- [x] `CONTEXT.md` has an Evaluation Split glossary entry defining all three splits.
+- [x] The entry documents `calibration` as reservation from the agent-tuning loop for observing judge behaviour, and explicitly not as stored expected judgments.
+- [x] The entry records that exactly one split is assigned per Evaluation Case revision.
+- [x] The Evaluation Gold Set entry describes the construction flow and the revisioning flow, including that revisioning preserves surviving cases' splits.
+- [x] The Evaluation Gold Set entry records that the Evaluation Task Contract cannot change across revisions and that a different contract requires a new business identity.
+- [x] Both entries follow the existing glossary entry format, including the _Avoid_ line convention.
 
 ## Blocked by
 
