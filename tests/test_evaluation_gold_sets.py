@@ -65,12 +65,13 @@ DEFAULT_RATIO = {
 def make_case(
     business_id: str,
     *,
+    revision: int = 1,
     input_schema: SchemaReference = INPUT_SCHEMA,
     expected_output_schema: SchemaReference | None = OUTPUT_SCHEMA,
     metadata_schema: SchemaReference = METADATA_SCHEMA,
 ) -> EvaluationCase:
     return EvaluationCase(
-        identity=EvaluationCaseIdentity(business_id=business_id, revision=1),
+        identity=EvaluationCaseIdentity(business_id=business_id, revision=revision),
         input_schema=input_schema,
         expected_output_schema=expected_output_schema,
         metadata_schema=metadata_schema,
@@ -356,6 +357,67 @@ def test_revision_assigns_only_new_cases_by_the_construction_rule():
     assert assignments(revised)["added"] is assignments(independently_constructed)[
         "added"
     ]
+
+
+def test_adding_a_surviving_business_id_supersedes_it_and_keeps_its_split():
+    previous = construct(
+        (make_case("first"), make_case("second")),
+        pinned_splits={
+            "first": EvaluationSplit.HELD_OUT,
+            "second": EvaluationSplit.TRAINING,
+        },
+    )
+    updated = make_case("first", revision=2)
+
+    revised = revise(previous, cases_to_add=(updated,))
+
+    memberships = {
+        membership.case.business_id: membership
+        for membership in revised.gold_set.memberships
+    }
+    assert len(revised.gold_set.memberships) == 2
+    assert memberships["first"].case.revision == updated.identity.revision
+    assert memberships["first"].split is EvaluationSplit.HELD_OUT
+    assert revised.split_counts[EvaluationSplit.HELD_OUT] == 1
+
+
+def test_revision_pins_an_added_case_to_a_split():
+    previous = construct((make_case("first"),))
+
+    revised = revise(
+        previous,
+        cases_to_add=(make_case("added"),),
+        pinned_splits={"added": EvaluationSplit.HELD_OUT},
+    )
+
+    assert assignments(revised)["added"] is EvaluationSplit.HELD_OUT
+
+
+def test_a_surviving_case_keeps_its_split_against_a_conflicting_pin():
+    previous = construct(
+        (make_case("first"),),
+        pinned_splits={"first": EvaluationSplit.HELD_OUT},
+    )
+
+    revised = revise(
+        previous,
+        cases_to_add=(make_case("first", revision=2),),
+        pinned_splits={"first": EvaluationSplit.TRAINING},
+    )
+
+    assert assignments(revised)["first"] is EvaluationSplit.HELD_OUT
+    assert revised.gold_set.memberships[0].case.revision == 2
+
+
+def test_revision_rejects_pins_naming_cases_it_is_not_adding():
+    previous = construct((make_case("first"),))
+
+    with pytest.raises(ValueError, match="unknown cases"):
+        revise(
+            previous,
+            cases_to_add=(make_case("added"),),
+            pinned_splits={"absent": EvaluationSplit.HELD_OUT},
+        )
 
 
 def test_removal_only_revision_needs_no_split_ratio():

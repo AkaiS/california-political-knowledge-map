@@ -85,9 +85,12 @@ def revise_evaluation_gold_set(
     cases_to_add: Iterable[EvaluationCase[Any, Any, Any]] = (),
     case_business_ids_to_remove: Iterable[str] = (),
     split_ratio: Mapping[EvaluationSplit | str, float] | None = None,
+    pinned_splits: Mapping[str, EvaluationSplit | str] | None = None,
 ) -> EvaluationGoldSetConstructionResult:
     """Derive the next immutable revision while preserving surviving splits."""
     added_cases = tuple(cases_to_add)
+    normalized_pins = _normalize_pinned_splits(pinned_splits)
+    _require_known_pins(added_cases, normalized_pins)
     removed_business_ids = frozenset(case_business_ids_to_remove)
     if not added_cases and not removed_business_ids:
         raise ValueError("an Evaluation Gold Set revision must add or remove cases")
@@ -112,19 +115,37 @@ def revise_evaluation_gold_set(
         for membership in previous.memberships
         if membership.case.business_id not in removed_business_ids
     )
+    surviving_splits = {
+        membership.case.business_id: membership.split
+        for membership in surviving_memberships
+    }
+    # A survivor's inherited split outranks any pin, so no revision can walk a
+    # case out of held-out. A pin on a survivor is discarded, not refused: a
+    # misplaced pin is recoverable, a migrated case silently pollutes every
+    # later measurement.
+    predetermined_splits = {**normalized_pins, **surviving_splits}
+    superseded_business_ids = {
+        evaluation_case.identity.business_id for evaluation_case in added_cases
+    }
     added_memberships = tuple(
         EvaluationGoldSetMembership(
             case=EvaluationCaseRevisionReference.from_case(evaluation_case),
-            split=_split_for_business_id(
+            split=_assigned_split(
                 evaluation_case.identity.business_id,
                 normalized_ratio,
+                predetermined_splits,
             ),
         )
         for evaluation_case in added_cases
     )
+    retained_memberships = tuple(
+        membership
+        for membership in surviving_memberships
+        if membership.case.business_id not in superseded_business_ids
+    )
     memberships = tuple(
         sorted(
-            (*surviving_memberships, *added_memberships),
+            (*retained_memberships, *added_memberships),
             key=_membership_sort_key,
         )
     )
@@ -251,10 +272,11 @@ def _split_for_business_id(
 def _assigned_split(
     business_id: str,
     split_ratio: Mapping[EvaluationSplit, float],
-    pinned_splits: Mapping[str, EvaluationSplit],
+    predetermined_splits: Mapping[str, EvaluationSplit],
 ) -> EvaluationSplit:
-    if business_id in pinned_splits:
-        return pinned_splits[business_id]
+    """Honour an already-decided split — an author's pin, or one a revision inherits."""
+    if business_id in predetermined_splits:
+        return predetermined_splits[business_id]
     return _split_for_business_id(business_id, split_ratio)
 
 
