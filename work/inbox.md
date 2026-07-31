@@ -84,7 +84,10 @@ will not modify that initiative.
   split, and reason while excluding it from future Evaluation Runs. Define
   reintroduction semantics at the business-identity level so a formerly
   `held-out` or `calibration` case cannot later enter `training` and pollute
-  evaluations merely because its intervening membership was retired.
+  evaluations merely because its intervening membership was retired. Retirement
+  is recorded through the Evaluation Ledger transaction facade
+  ([ADR 0010](../docs/adr/0010-keep-one-evaluation-ledger-transaction-facade.md)),
+  so this spans the Gold Set revision API and the ledger together.
 
 ## Scraping and validation
 
