@@ -1,6 +1,6 @@
 # Construct an Evaluation Gold Set with a validating factory
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of [Evaluation Gold Set Construction and Revisioning](../PRD.md). This is the
 supported construction path the rest of the project builds on.
@@ -53,24 +53,24 @@ change — it is closing a real gap, not adding sugar over an existing guarantee
 
 ## Acceptance criteria
 
-- [ ] A public factory function in a new module dedicated to Gold Set assembly returns a frozen `EvaluationGoldSet` from identity, description, Evaluation Task Contract, tags, declared Evaluation Artifacts, Evaluation Cases, a split ratio, and an optional pinned case-to-split map.
-- [ ] The factory derives every case revision reference itself; the caller passes plain Evaluation Cases.
-- [ ] The factory reports the realized split counts alongside the constructed Gold Set, and those counts match the actual memberships.
-- [ ] Case-versus-contract validation delegates to the shared compatibility predicate; no schema comparison is implemented in this module.
-- [ ] Every incompatible case is reported in a single raise, each identifying the case and the mismatching schema; the mismatch is covered for input, expected-output, and metadata schemas.
-- [ ] A case declaring no expected-output schema is accepted.
-- [ ] Split assignment is derived from each case's stable business identity and the requested ratio, and depends on neither iteration order nor population membership.
-- [ ] Shuffling the input cases leaves the resulting memberships and split assignments unchanged.
-- [ ] Constructing with N cases and then with those N plus one more leaves every original case's split unchanged.
-- [ ] Realized proportions approximate the requested ratio on a population large enough for the claim to be meaningful.
-- [ ] A ratio that does not sum to one is rejected; a ratio with a zero share yields an empty split rather than an error.
-- [ ] Pinned cases receive their pinned split and are excluded from ratio-based assignment.
-- [ ] Two constructions with identical inputs produce identical content hashes.
-- [ ] Declared Evaluation Artifacts pass through unresolved, and a factory-built Gold Set with declared artifacts still fails ledger import when an artifact is absent from the catalog.
-- [ ] A factory-built Gold Set imports cleanly into a `SQLiteEvaluationLedger` and produces the expected membership rows.
-- [ ] The factory performs no I/O, takes no Evaluation Ledger, and executes nothing.
-- [ ] `EvaluationGoldSet`'s existing validators are unchanged and direct construction still works. Do not attempt to restore a member-versus-contract `model_validator`; the slimmed reference carries no schemas and it cannot work.
-- [ ] The full deterministic test suite passes.
+- [x] A public factory function in a new module dedicated to Gold Set assembly returns a frozen `EvaluationGoldSet` from identity, description, Evaluation Task Contract, tags, declared Evaluation Artifacts, Evaluation Cases, a split ratio, and an optional pinned case-to-split map.
+- [x] The factory derives every case revision reference itself; the caller passes plain Evaluation Cases.
+- [x] The factory reports the realized split counts alongside the constructed Gold Set, and those counts match the actual memberships.
+- [x] Case-versus-contract validation delegates to the shared compatibility predicate; no schema comparison is implemented in this module.
+- [x] Every incompatible case is reported in a single raise, each identifying the case and the mismatching schema; the mismatch is covered for input, expected-output, and metadata schemas.
+- [x] A case declaring no expected-output schema is accepted.
+- [x] Split assignment is derived from each case's stable business identity and the requested ratio, and depends on neither iteration order nor population membership.
+- [x] Shuffling the input cases leaves the resulting memberships and split assignments unchanged.
+- [x] Constructing with N cases and then with those N plus one more leaves every original case's split unchanged.
+- [x] Realized proportions approximate the requested ratio on a population large enough for the claim to be meaningful.
+- [x] A ratio that does not sum to one is rejected; a ratio with a zero share yields an empty split rather than an error.
+- [x] Pinned cases receive their pinned split and are excluded from ratio-based assignment.
+- [x] Two constructions with identical inputs produce identical content hashes.
+- [x] Declared Evaluation Artifacts pass through unresolved, and a factory-built Gold Set with declared artifacts still fails ledger import when an artifact is absent from the catalog.
+- [x] A factory-built Gold Set imports cleanly into a `SQLiteEvaluationLedger` and produces the expected membership rows.
+- [x] The factory performs no I/O, takes no Evaluation Ledger, and executes nothing.
+- [x] `EvaluationGoldSet`'s existing validators are unchanged and direct construction still works. Do not attempt to restore a member-versus-contract `model_validator`; the slimmed reference carries no schemas and it cannot work.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

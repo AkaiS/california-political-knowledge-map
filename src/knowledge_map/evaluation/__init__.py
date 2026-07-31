@@ -92,6 +92,11 @@ from .preflight import (
     preflight_selected_cases,
 )
 from .compatibility import EvaluationCompatibilityIssue, evaluate_compatibility
+from .gold_sets import (
+    EvaluationGoldSetConstructionError,
+    EvaluationGoldSetConstructionResult,
+    construct_evaluation_gold_set,
+)
 from .store import (
     ArtifactConflictError,
     ArtifactLocation,
@@ -199,6 +204,9 @@ __all__ = [
     "preflight_selected_cases",
     "EvaluationCompatibilityIssue",
     "evaluate_compatibility",
+    "EvaluationGoldSetConstructionError",
+    "EvaluationGoldSetConstructionResult",
+    "construct_evaluation_gold_set",
     "ArtifactConflictError",
     "ArtifactLocation",
     "ArtifactDerivativeRecord",
