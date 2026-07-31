@@ -1,6 +1,6 @@
 # Migrate the hand-built gold sets in the test suite to the factory
 
-Labels: ready-for-agent
+Labels: completed
 
 Part of [Evaluation Gold Set Construction and Revisioning](../PRD.md). This is where
 the split machinery finally gets exercised by something other than its own tests.
@@ -41,13 +41,13 @@ happens to produce.
 
 ## Acceptance criteria
 
-- [ ] Every hand-built Gold Set in the test suite is constructed through the factory, except the sites that deliberately build an invalid Gold Set to exercise a non-factory seam.
-- [ ] The sites that deliberately build an invalid Gold Set still construct `EvaluationGoldSet` directly, and still assert the same rejection from the same seam — the model validator, `validate_cases`, or ledger import respectively, per the list above.
-- [ ] Module-local gold-set helpers construct through the factory, so their callers migrate with them.
-- [ ] Tests that depend on a specific case being in a specific split pin that case explicitly rather than relying on the ratio.
-- [ ] No test asserts on how a split was computed internally; assertions are on the resulting memberships.
-- [ ] Content-hash and membership assertions are updated to their new values where migration changes them, and the updates are recorded as expected consequences rather than behaviour changes.
-- [ ] The full deterministic test suite passes.
+- [x] Every hand-built Gold Set in the test suite is constructed through the factory, except the sites that deliberately build an invalid Gold Set to exercise a non-factory seam.
+- [x] The sites that deliberately build an invalid Gold Set still construct `EvaluationGoldSet` directly, and still assert the same rejection from the same seam — the model validator, `validate_cases`, or ledger import respectively, per the list above.
+- [x] Module-local gold-set helpers construct through the factory, so their callers migrate with them.
+- [x] Tests that depend on a specific case being in a specific split pin that case explicitly rather than relying on the ratio.
+- [x] No test asserts on how a split was computed internally; assertions are on the resulting memberships.
+- [x] Content-hash and membership assertions are updated to their new values where migration changes them, and the updates are recorded as expected consequences rather than behaviour changes.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

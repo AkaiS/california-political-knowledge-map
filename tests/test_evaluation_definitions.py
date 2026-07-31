@@ -30,6 +30,7 @@ from knowledge_map.evaluation import (
     assert_same_revision_content,
     canonical_configuration_json,
     configuration_fingerprint,
+    construct_evaluation_gold_set,
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.suites import (
@@ -46,6 +47,13 @@ from knowledge_map.evaluation.suites import (
     NoComparisonOperation,
     OrderedComparisonOperation,
 )
+
+
+TEST_SPLIT_RATIO = {
+    EvaluationSplit.TRAINING: 0.6,
+    EvaluationSplit.CALIBRATION: 0.2,
+    EvaluationSplit.HELD_OUT: 0.2,
+}
 
 
 class RelevanceInput(BaseModel):
@@ -348,17 +356,14 @@ def test_suite_executes_deterministic_task_and_evaluators_through_pydantic_evals
         ),
     )
 
-    gold_set = EvaluationGoldSet(
+    gold_set = construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(business_id="relevance-gold", revision=1),
         description="Reviewed relevance cases.",
         task_contract=suite.task_contract,
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(authored_case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
-    )
+        cases=(authored_case,),
+        split_ratio=TEST_SPLIT_RATIO,
+        pinned_splits={authored_case.identity.business_id: EvaluationSplit.HELD_OUT},
+    ).gold_set
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=(authored_case,)
     )
@@ -621,7 +626,7 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
         metadata=RelevanceMetadata(source="human-reviewed"),
         description="A California policy headline is relevant.",
     )
-    gold_set = EvaluationGoldSet(
+    gold_set = construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(business_id="relevance-gold", revision=1),
         description="Reviewed relevance examples.",
         task_contract=EvaluationTaskContract(
@@ -629,13 +634,10 @@ def test_gold_set_membership_freezes_an_exact_case_revision_and_owns_its_split()
             output_schema=authored_case.expected_output_schema,
             metadata_schema=authored_case.metadata_schema,
         ),
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(authored_case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
-    )
+        cases=(authored_case,),
+        split_ratio=TEST_SPLIT_RATIO,
+        pinned_splits={authored_case.identity.business_id: EvaluationSplit.HELD_OUT},
+    ).gold_set
 
     restored_gold_set = EvaluationGoldSet.model_validate_json(gold_set.model_dump_json())
 
@@ -673,19 +675,15 @@ def test_gold_set_binds_one_exact_task_contract_and_validate_cases_rejects_a_mis
         metadata_schema=authored_case.metadata_schema,
     )
 
-    gold_set = EvaluationGoldSet(
+    gold_set = construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(
             business_id="relevance-contract-gold", revision=1
         ),
         description="Reviewed relevance examples.",
         task_contract=contract,
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(authored_case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
-    )
+        cases=(authored_case,),
+        split_ratio=TEST_SPLIT_RATIO,
+    ).gold_set
 
     assert gold_set.task_contract == contract
 

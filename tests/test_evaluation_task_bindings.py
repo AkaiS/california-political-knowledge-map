@@ -249,31 +249,37 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
     )
 
     from knowledge_map.evaluation import (
+        EvaluationCase,
+        EvaluationCaseIdentity,
         EvaluationRunner,
         EvaluationRunConfiguration,
         SQLiteEvaluationLedger,
-        EvaluationGoldSet,
         EvaluationGoldSetIdentity,
-        EvaluationGoldSetMembership,
-        EvaluationCaseRevisionReference,
         EvaluationSplit,
+        construct_evaluation_gold_set,
     )
-    gold_set = EvaluationGoldSet(
+    case = EvaluationCase(
+        identity=EvaluationCaseIdentity(business_id="case-1", revision=1),
+        input_schema=suite_contract.input_schema,
+        expected_output_schema=suite_contract.output_schema,
+        metadata_schema=suite_contract.metadata_schema,
+        task_input=Input(prompt="prompt"),
+        expected_output=Output(answer="answer"),
+        metadata=Metadata(source="fixture"),
+        description="A task-binding guard case.",
+    )
+    gold_set = construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(business_id="test-gold-set", revision=1),
         description="Gold set description",
         task_contract=suite_contract,
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference(
-                    record_id="00000000-0000-0000-0000-000000000003",
-                    business_id="case-1",
-                    revision=1,
-                    content_hash="c" * 64,
-                ),
-                split=EvaluationSplit.TRAINING,
-            ),
-        ),
-    )
+        cases=(case,),
+        split_ratio={
+            EvaluationSplit.TRAINING: 0.6,
+            EvaluationSplit.CALIBRATION: 0.2,
+            EvaluationSplit.HELD_OUT: 0.2,
+        },
+        pinned_splits={case.identity.business_id: EvaluationSplit.TRAINING},
+    ).gold_set
 
     # The contract guard fires before the plan is read, so an empty plan is
     # enough — but it still has to come from preflight, the only plan source.

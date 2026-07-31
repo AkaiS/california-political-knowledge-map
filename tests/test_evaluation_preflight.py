@@ -21,9 +21,17 @@ from knowledge_map.evaluation import (
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
     SchemaReference,
+    construct_evaluation_gold_set,
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
+
+
+TEST_SPLIT_RATIO = {
+    EvaluationSplit.TRAINING: 0.6,
+    EvaluationSplit.CALIBRATION: 0.2,
+    EvaluationSplit.HELD_OUT: 0.2,
+}
 
 
 class Input(BaseModel):
@@ -66,7 +74,7 @@ def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
         suite_case_evaluators=(ConfiguredEvaluatorReference(name="exact"),),
         report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
     )
-    gold_set = EvaluationGoldSet(
+    gold_set = construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(business_id="gold", revision=2),
         description="A gold set.",
         task_contract=EvaluationTaskContract(
@@ -74,13 +82,10 @@ def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
             output_schema=case.expected_output_schema,
             metadata_schema=case.metadata_schema,
         ),
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
-    )
+        cases=(case,),
+        split_ratio=TEST_SPLIT_RATIO,
+        pinned_splits={case.identity.business_id: EvaluationSplit.HELD_OUT},
+    ).gold_set
 
     plan = preflight_selected_cases(
         suite=suite,
@@ -133,7 +138,7 @@ def _case(
 
 
 def _gold_set(cases: tuple[EvaluationCase[Input, Output, Metadata], ...]) -> EvaluationGoldSet:
-    return EvaluationGoldSet(
+    return construct_evaluation_gold_set(
         identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
         description="A gold set.",
         task_contract=EvaluationTaskContract(
@@ -141,14 +146,9 @@ def _gold_set(cases: tuple[EvaluationCase[Input, Output, Metadata], ...]) -> Eva
             output_schema=cases[0].expected_output_schema,
             metadata_schema=cases[0].metadata_schema,
         ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
-    )
+        cases=cases,
+        split_ratio=TEST_SPLIT_RATIO,
+    ).gold_set
 
 
 def _suite(
@@ -293,7 +293,22 @@ def test_validate_cases_rejects_a_case_contract_mismatch_before_selection():
     )
     # Construction does not check member-versus-contract schemas: the slimmed
     # EvaluationCaseRevisionReference carries none. validate_cases is the seam.
-    incompatible_gold_set = _gold_set((compatible, unknown, incompatible))
+    incompatible_gold_set = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
+        description="A gold set.",
+        task_contract=EvaluationTaskContract(
+            input_schema=compatible.input_schema,
+            output_schema=compatible.expected_output_schema,
+            metadata_schema=compatible.metadata_schema,
+        ),
+        memberships=tuple(
+            EvaluationGoldSetMembership(
+                case=EvaluationCaseRevisionReference.from_case(evaluation_case),
+                split=EvaluationSplit.HELD_OUT,
+            )
+            for evaluation_case in (compatible, unknown, incompatible)
+        ),
+    )
 
     with pytest.raises(ValueError, match="input schema"):
         incompatible_gold_set.validate_cases((compatible, unknown, incompatible))

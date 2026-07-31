@@ -71,6 +71,7 @@ from knowledge_map.evaluation import (
     SuccessfulReportCaseEvidence,
     TaskFailure,
     TaskSuccess,
+    construct_evaluation_gold_set,
     evaluator_version_tag,
     preflight_selected_cases,
 )
@@ -341,21 +342,10 @@ def test_runner_uses_the_frozen_plan_for_case_evaluator_scope(tmp_path):
         cases[0].model_copy(update={"requirements": ("grounded",)}),
         cases[1],
     )
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-plan", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set-plan",
         description="Shared-engine cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     suite = EvaluationSuite(
         identity=EvaluationSuiteIdentity(business_id="suite-plan", revision=1),
@@ -1010,21 +1000,10 @@ def test_checkpoint_rejects_evidence_variant_disposition_and_outcome_mismatches(
 
 def _lifecycle_fixture(suffix: str, *, case_evaluator: str | None = None):
     cases = (_case(1), _case(2))
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id=f"gold-set-{suffix}", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id=f"gold-set-{suffix}",
         description="Lifecycle cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     suite = EvaluationSuite(
         identity=EvaluationSuiteIdentity(business_id=f"suite-{suffix}", revision=1),
@@ -1135,19 +1114,11 @@ def test_ledger_round_trip_preserves_case_concurrency_and_its_fingerprint(
 def test_shared_suite_execution_honors_an_explicit_case_concurrency_bound():
     cases = tuple(_case(number) for number in range(1, 5))
     _, _, suite = _lifecycle_fixture("shared-concurrency")
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(
-            business_id="shared-concurrency-gold", revision=1
-        ),
+    gold_set = _gold_set(
+        cases,
+        business_id="shared-concurrency-gold",
         description="Concurrent execution cases.",
         task_contract=suite.task_contract,
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=cases
@@ -1259,23 +1230,10 @@ def test_runner_honors_case_bound_and_checkpoints_each_case_once(
     tmp_path, configured_concurrency, expected_maximum
 ):
     cases = tuple(_case(number) for number in range(1, 5))
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(
-            business_id="gold-set-concurrency", revision=1
-        ),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set-concurrency",
         description="Concurrent cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     _, _, suite = _lifecycle_fixture(
         "concurrency", case_evaluator="exact-case"
@@ -1586,21 +1544,10 @@ def test_case_result_persists_task_artifacts_at_case_scope(tmp_path):
 
 def test_runner_records_task_failure_without_misclassifying_the_run(tmp_path):
     cases = (_case(1), _case(2))
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-task-failure", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set-task-failure",
         description="Task failure cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     count_metric = EvaluationMetricDefinition(
         namespaced_name="tests.task-failure-count",
@@ -5308,23 +5255,40 @@ def _case(number: int) -> EvaluationCase[Input, Output, Metadata]:
     )
 
 
+def _gold_set(
+    cases: tuple[EvaluationCase[Input, Output, Metadata], ...],
+    *,
+    business_id: str,
+    description: str,
+    task_contract: EvaluationTaskContract | None = None,
+) -> EvaluationGoldSet:
+    contract = task_contract or EvaluationTaskContract(
+        input_schema=cases[0].input_schema,
+        output_schema=cases[0].expected_output_schema,
+        metadata_schema=cases[0].metadata_schema,
+    )
+    return construct_evaluation_gold_set(
+        identity=EvaluationGoldSetIdentity(business_id=business_id, revision=1),
+        description=description,
+        task_contract=contract,
+        cases=cases,
+        split_ratio={
+            EvaluationSplit.TRAINING: 0.6,
+            EvaluationSplit.CALIBRATION: 0.2,
+            EvaluationSplit.HELD_OUT: 0.2,
+        },
+        pinned_splits={
+            case.identity.business_id: EvaluationSplit.HELD_OUT for case in cases
+        },
+    ).gold_set
+
+
 def test_runner_records_a_complete_deterministic_run(tmp_path):
     cases = (_case(1), _case(2))
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set",
         description="Deterministic cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     exact_metric = EvaluationMetricDefinition(
         namespaced_name="tests.exact",
@@ -5475,20 +5439,10 @@ def test_runner_records_a_complete_deterministic_run(tmp_path):
 
 def test_case_and_report_structured_observations_round_trip_as_envelopes(tmp_path):
     cases = (_case(1),)
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-both", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set-both",
         description="One deterministic case.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(cases[0]),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
     )
     case_metric = EvaluationMetricDefinition(
         namespaced_name="tests.case-table",
@@ -5634,21 +5588,10 @@ def test_mismatched_structured_evaluator_output_is_failure_evidence_without_obse
 
 def test_runner_freezes_a_subset_and_records_no_observation_invocations(tmp_path):
     cases = (_case(1), _case(2))
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-subset", revision=1),
+    gold_set = _gold_set(
+        cases,
+        business_id="gold-set-subset",
         description="Deterministic cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        memberships=tuple(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            )
-            for case in cases
-        ),
     )
     input_schema = cases[0].input_schema
     output_schema = cases[0].expected_output_schema
