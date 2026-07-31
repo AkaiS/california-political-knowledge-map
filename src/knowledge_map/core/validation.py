@@ -650,7 +650,7 @@ class ArticleValidatorService:
                             label_source = "LLM"
                     
                     if relevance_status == "RELEVANT":
-                        persist_relevance_label(
+                        relevance_update = persist_relevance_label(
                             url,
                             "RELEVANT",
                             "VALIDATED",
@@ -661,7 +661,7 @@ class ArticleValidatorService:
                             db_path=self.db_path
                         )
                     else:
-                        persist_relevance_label(
+                        relevance_update = persist_relevance_label(
                             url,
                             "IRRELEVANT",
                             None,
@@ -672,16 +672,26 @@ class ArticleValidatorService:
                             db_path=self.db_path
                         )
 
-                    story = {
-                        "title": extracted["title"],
-                        "url": url,
-                        "author": author_field,
-                        "published_date": pub_date_str,
-                        "content": extracted["body"],
-                        "status": "UNPROCESSED" if relevance_status == "RELEVANT" else "IRRELEVANT",
-                        "links": extract_links_from_elements(extracted.get("body_elements", []), url)
-                    }
-                    save_story(story, db_path=self.db_path)
+                    if relevance_update.applied:
+                        story = {
+                            "title": extracted["title"],
+                            "url": url,
+                            "author": author_field,
+                            "published_date": pub_date_str,
+                            "content": extracted["body"],
+                            "status": "UNPROCESSED" if relevance_update.status == "RELEVANT" else "IRRELEVANT",
+                            "links": extract_links_from_elements(extracted.get("body_elements", []), url)
+                        }
+                        save_story(story, db_path=self.db_path)
+                    else:
+                        logger.info(
+                            "Discarded automated relevance classification for human-labeled article",
+                            extra={
+                                "url": url,
+                                "persisted_relevance_status": relevance_update.status,
+                                "persisted_relevance_label_source": relevance_update.label_source,
+                            },
+                        )
                     logger.info("Validation outcome: VALIDATED", extra={
                         "url": url,
                         "publication_id": publication_id,

@@ -1,9 +1,15 @@
 import sqlite3
 import os
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, NamedTuple, Optional
 
 DEFAULT_DB_PATH = "document_store.db"
+
+
+class RelevanceUpdateResult(NamedTuple):
+    status: str
+    label_source: Optional[str]
+    applied: bool
 
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     """
@@ -864,9 +870,12 @@ def update_relevance_status(
     description: Optional[str] = None,
     embedding: Optional[list[float]] = None,
     db_path: str = DEFAULT_DB_PATH
-) -> None:
+) -> RelevanceUpdateResult:
     """
-    Updates the relevance status, validation, headline, description, and embedding of a cached article.
+    Updates relevance data unless an automated write would replace a human label.
+
+    Returns the effective persisted relevance status and source together with
+    whether this write was applied.
     """
     import json
     from knowledge_map.core.relevance import serialize_embedding
@@ -893,14 +902,39 @@ def update_relevance_status(
             updates.append("embedding = ?")
             params.append(serialize_embedding(embedding))
             
-        params.append(url)
+        params.extend((url, relevance_label_source))
         query = f"""
             UPDATE scraped_html_cache
             SET {", ".join(updates)}
             WHERE url = ?
+              AND (
+                relevance_label_source IS NULL
+                OR relevance_label_source != 'HUMAN'
+                OR ? = 'HUMAN'
+              )
+            RETURNING relevance_status, relevance_label_source
         """
         cursor.execute(query, tuple(params))
+        row = cursor.fetchone()
+        applied = row is not None
+
+        if row is None:
+            cursor.execute("""
+                SELECT relevance_status, relevance_label_source
+                FROM scraped_html_cache
+                WHERE url = ?
+            """, (url,))
+            row = cursor.fetchone()
+
+        if row is None:
+            raise ValueError(f"Cached article not found: {url}")
+
         conn.commit()
+        return RelevanceUpdateResult(
+            status=row[0],
+            label_source=row[1],
+            applied=applied,
+        )
     finally:
         conn.close()
 
@@ -1219,7 +1253,6 @@ def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
         }
     finally:
         conn.close()
-
 
 
 

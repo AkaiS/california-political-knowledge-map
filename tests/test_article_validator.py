@@ -1486,6 +1486,100 @@ async def test_post_extraction_relevance_logistic_regression_relevant(tmp_path):
 
 
 @pytest.mark.anyio
+async def test_validation_preserves_human_relevance_label_and_discards_model_result(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_all_stories,
+        get_cached_html,
+        init_db,
+        register_publication,
+        update_relevance_status,
+    )
+    from knowledge_map.core.selectors import add_selector_version
+    from knowledge_map.schemas.selectors import ArticleSelectors
+
+    db_path = str(tmp_path / "human-label-validation.db")
+    url = "https://calmatters.org/politics/human-reviewed"
+    init_db(db_path)
+    register_publication(
+        "calmatters",
+        "CalMatters",
+        "https://calmatters.org",
+        db_path=db_path,
+    )
+    now = datetime.now(timezone.utc)
+    add_selector_version(
+        publication_id="calmatters",
+        selectors=ArticleSelectors(
+            title="h1.entry-title",
+            author="span.author",
+            date="time",
+            body="div.entry-content",
+        ),
+        earliest_success_date=now - timedelta(days=1),
+        latest_success_date=now + timedelta(days=1),
+        db_path=db_path,
+    )
+    raw_html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": "Human Reviewed Article",
+            "datePublished": "2026-07-02T18:11:34-07:00",
+            "author": {"name": "Ana B. Ibarra"},
+            "wordCount": 10
+        }
+        </script>
+    </head>
+    <body>
+        <h1 class="entry-title">Human Reviewed Article</h1>
+        <span class="author">By Ana B. Ibarra</span>
+        <time datetime="2026-07-02T18:11:34-07:00"></time>
+        <div class="entry-content">This is a body text. Stopword stopword stopword stopword stopword.</div>
+    </body>
+    </html>
+    """
+    cache_scraped_html(
+        url,
+        "calmatters",
+        raw_html,
+        validation="VALIDATED",
+        db_path=db_path,
+    )
+    update_relevance_status(
+        url,
+        "RELEVANT",
+        "PENDING",
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.core.validation.load_classifier_weights",
+        return_value={"coefficients": [1.0], "intercept": 0.0, "n_samples": 10},
+    ), patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        return_value=[0.1] * 768,
+    ), patch(
+        "knowledge_map.core.validation.classify_article",
+        return_value="IRRELEVANT",
+    ):
+        service = ArticleValidatorService(db_path=db_path)
+        await service.validate_pending_articles()
+
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+    assert get_all_stories(db_path=db_path) == []
+
+
+@pytest.mark.anyio
 async def test_post_extraction_relevance_logistic_regression_irrelevant(tmp_path):
     from datetime import datetime, timezone, timedelta
     from unittest.mock import patch
@@ -1826,7 +1920,6 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
     assert cached["headline"] == "Target Article Title"
     assert cached["description"] == "Target Article Description"
     assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
-
 
 
 

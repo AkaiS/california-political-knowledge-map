@@ -478,6 +478,71 @@ def test_relevance_label_source_updates(tmp_path):
     assert cached.get("relevance_label_source") == "MODEL"
 
 
+def test_update_relevance_status_protects_human_labels(tmp_path):
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_cached_html,
+        init_db,
+        update_relevance_status,
+    )
+
+    db_path = str(tmp_path / "human-label-guard.db")
+    url = "https://example.com/human-reviewed"
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        "<html></html>",
+        validation="PENDING",
+        headline="Automated headline",
+        relevance_status="INCONCLUSIVE",
+        relevance_label_source="MODEL",
+        db_path=db_path,
+    )
+
+    human_label = update_relevance_status(
+        url,
+        "RELEVANT",
+        "PENDING",
+        relevance_label_source="HUMAN",
+        headline="Human headline",
+        db_path=db_path,
+    )
+
+    assert human_label.applied is True
+
+    rejected = update_relevance_status(
+        url,
+        "IRRELEVANT",
+        None,
+        relevance_label_source="MODEL",
+        headline="Automated headline",
+        db_path=db_path,
+    )
+
+    assert rejected.status == "RELEVANT"
+    assert rejected.label_source == "HUMAN"
+    assert rejected.applied is False
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+    assert cached["validation"] == "PENDING"
+    assert cached["headline"] == "Human headline"
+
+    applied = update_relevance_status(
+        url,
+        "IRRELEVANT",
+        None,
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+
+    assert applied.status == "IRRELEVANT"
+    assert applied.label_source == "HUMAN"
+    assert applied.applied is True
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["relevance_status"] == "IRRELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
 
 
 

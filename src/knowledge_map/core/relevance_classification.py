@@ -4,7 +4,11 @@ import logging
 from typing import Optional
 
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
-from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH, update_relevance_status
+from knowledge_map.adapters.sqlite_db import (
+    DEFAULT_DB_PATH,
+    RelevanceUpdateResult,
+    update_relevance_status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +42,9 @@ def persist_relevance_label(
     description: Optional[str],
     embedding: Optional[list[float]],
     db_path: str = DEFAULT_DB_PATH,
-) -> None:
+) -> RelevanceUpdateResult:
     """Persist a relevance decision with its reusable metadata representation."""
-    update_relevance_status(
+    return update_relevance_status(
         url,
         relevance_status,
         validation,

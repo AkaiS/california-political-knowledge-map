@@ -473,3 +473,40 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
         conn.close()
 
 
+def test_cli_classifier_reevaluate_excludes_human_labels(tmp_path, monkeypatch):
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_cached_html,
+        init_db,
+    )
+    from knowledge_map.cli.main import main
+
+    db_path = str(tmp_path / "reevaluate-human-label.db")
+    url = "https://example.com/human-irrelevant"
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        "<html></html>",
+        validation=None,
+        headline="Human reviewed",
+        description="California politics",
+        embedding=[0.2] * 768,
+        relevance_status="IRRELEVANT",
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+
+    with patch("knowledge_map.core.relevance.classify_article", return_value="RELEVANT") as classify:
+        with pytest.raises(SystemExit) as exc_info:
+            main(["classifier", "reevaluate"])
+
+    assert exc_info.value.code == 0
+    classify.assert_not_called()
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["relevance_status"] == "IRRELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+

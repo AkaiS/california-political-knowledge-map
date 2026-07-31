@@ -898,7 +898,7 @@ def main(args=None):
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
                         embedding = get_metadata_embedding(headline, description, embedding)
 
-                        persist_relevance_label(
+                        relevance_update = persist_relevance_label(
                             url,
                             status,
                             validation,
@@ -908,7 +908,10 @@ def main(args=None):
                             embedding=embedding,
                             db_path=db_path
                         )
-                        print(f"Labeled: {status} -> validation: {validation}")
+                        print(
+                            f"Labeled: {relevance_update.status} "
+                            f"({relevance_update.label_source}) -> validation: {validation}"
+                        )
                         break
                     elif choice == 's':
                         print("Skipped.")
@@ -941,6 +944,7 @@ def main(args=None):
                     SELECT url, headline, description, embedding, relevance_status
                     FROM scraped_html_cache
                     WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
+                      AND (relevance_label_source IS NULL OR relevance_label_source != 'HUMAN')
                 """)
                 rows = cursor.fetchall()
             finally:
@@ -965,9 +969,19 @@ def main(args=None):
                     else:
                         new_validation = None
                         
-                    update_relevance_status(url, new_status, new_validation, db_path=db_path)
-                    print(f"URL: {url} transitioned: {old_status} -> {new_status} (validation: {new_validation})")
-                    transition_count += 1
+                    relevance_update = update_relevance_status(
+                        url,
+                        new_status,
+                        new_validation,
+                        relevance_label_source="MODEL",
+                        db_path=db_path,
+                    )
+                    if relevance_update.applied:
+                        print(
+                            f"URL: {url} transitioned: {old_status} -> "
+                            f"{relevance_update.status} (validation: {new_validation})"
+                        )
+                        transition_count += 1
                     
             print(f"Reevaluation completed. {transition_count} records transitioned to new states.")
             sys.exit(0)
