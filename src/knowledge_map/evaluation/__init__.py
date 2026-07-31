@@ -96,6 +96,7 @@ from .gold_sets import (
     EvaluationGoldSetConstructionError,
     EvaluationGoldSetConstructionResult,
     construct_evaluation_gold_set,
+    revise_evaluation_gold_set,
 )
 from .store import (
     ArtifactConflictError,
@@ -207,6 +208,7 @@ __all__ = [
     "EvaluationGoldSetConstructionError",
     "EvaluationGoldSetConstructionResult",
     "construct_evaluation_gold_set",
+    "revise_evaluation_gold_set",
     "ArtifactConflictError",
     "ArtifactLocation",
     "ArtifactDerivativeRecord",

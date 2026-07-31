@@ -17,6 +17,7 @@ from knowledge_map.evaluation import (
     SQLiteEvaluationLedger,
     SchemaReference,
     construct_evaluation_gold_set,
+    revise_evaluation_gold_set,
 )
 
 
@@ -111,6 +112,15 @@ def assignments(result):
         membership.case.business_id: membership.split
         for membership in result.gold_set.memberships
     }
+
+
+def revise(previous, **overrides):
+    arguments = {
+        "previous": previous.gold_set,
+        "split_ratio": DEFAULT_RATIO,
+    }
+    arguments.update(overrides)
+    return revise_evaluation_gold_set(**arguments)
 
 
 def test_constructs_references_and_reports_actual_split_counts():
@@ -284,3 +294,137 @@ def test_identical_inputs_produce_identical_content_hashes():
     second = construct(cases, identity=identity)
 
     assert first.gold_set.content_hash == second.gold_set.content_hash
+
+
+@pytest.mark.parametrize(
+    ("cases_to_add", "case_business_ids_to_remove", "expected_business_ids"),
+    [
+        ((make_case("added"),), (), {"added", "first", "second"}),
+        ((), ("first",), {"second"}),
+        ((make_case("added"),), ("first",), {"added", "second"}),
+    ],
+)
+def test_revision_adds_and_removes_cases_while_preserving_surviving_splits(
+    cases_to_add,
+    case_business_ids_to_remove,
+    expected_business_ids,
+):
+    previous = construct(
+        (make_case("first"), make_case("second")),
+        pinned_splits={
+            "first": EvaluationSplit.CALIBRATION,
+            "second": EvaluationSplit.HELD_OUT,
+        },
+    )
+
+    revised = revise(
+        previous,
+        cases_to_add=cases_to_add,
+        case_business_ids_to_remove=case_business_ids_to_remove,
+    )
+
+    assert revised.gold_set.identity.business_id == previous.gold_set.identity.business_id
+    assert revised.gold_set.identity.revision == previous.gold_set.identity.revision + 1
+    assert set(assignments(revised)) == expected_business_ids
+    if "second" in expected_business_ids:
+        assert assignments(revised)["second"] is EvaluationSplit.HELD_OUT
+    if "first" in expected_business_ids:
+        assert assignments(revised)["first"] is EvaluationSplit.CALIBRATION
+
+
+def test_revision_assigns_only_new_cases_by_the_construction_rule():
+    survivor = make_case("survivor")
+    added = make_case("added")
+    previous = construct(
+        (survivor,),
+        pinned_splits={"survivor": EvaluationSplit.HELD_OUT},
+    )
+    all_training = {
+        EvaluationSplit.TRAINING: 1.0,
+        EvaluationSplit.CALIBRATION: 0.0,
+        EvaluationSplit.HELD_OUT: 0.0,
+    }
+
+    revised = revise(
+        previous,
+        cases_to_add=(added,),
+        split_ratio=all_training,
+    )
+    independently_constructed = construct((added,), split_ratio=all_training)
+
+    assert assignments(revised)["survivor"] is EvaluationSplit.HELD_OUT
+    assert assignments(revised)["added"] is assignments(independently_constructed)[
+        "added"
+    ]
+
+
+def test_revision_rejects_a_no_op_and_unknown_removals():
+    previous = construct((make_case("first"),))
+
+    with pytest.raises(ValueError, match="must add or remove"):
+        revise(previous)
+    with pytest.raises(ValueError, match="absent from the previous"):
+        revise(previous, case_business_ids_to_remove=("unknown",))
+
+
+def test_revision_rejects_a_changed_task_contract_with_the_remedy():
+    previous = construct((make_case("first"),))
+    changed_contract = EvaluationTaskContract(
+        input_schema=INPUT_SCHEMA,
+        output_schema=SchemaReference.for_model(
+            AlternateOutput, identity="tests.alternate-output", revision=1
+        ),
+        metadata_schema=METADATA_SCHEMA,
+    )
+
+    with pytest.raises(ValueError, match="use a new Gold Set business identity"):
+        revise(
+            previous,
+            cases_to_add=(make_case("added"),),
+            task_contract=changed_contract,
+        )
+
+
+def test_revision_accumulates_added_case_compatibility_issues():
+    previous = construct((make_case("first"),))
+    incompatible_cases = (
+        make_case(
+            "wrong-input",
+            input_schema=SchemaReference.for_model(
+                AlternateInput, identity="tests.alternate-input", revision=1
+            ),
+        ),
+        make_case(
+            "wrong-metadata",
+            metadata_schema=SchemaReference.for_model(
+                AlternateMetadata, identity="tests.alternate-metadata", revision=1
+            ),
+        ),
+    )
+
+    with pytest.raises(EvaluationGoldSetConstructionError) as raised:
+        revise(previous, cases_to_add=incompatible_cases)
+
+    assert [(issue.case_business_id, issue.schema_role) for issue in raised.value.issues] == [
+        ("wrong-input", "input"),
+        ("wrong-metadata", "metadata"),
+    ]
+
+
+def test_revision_result_is_frozen_and_inherits_authored_metadata():
+    artifact = DeclaredArtifactReference(content_hash="a" * 64, role="source")
+    previous = construct(
+        (make_case("first"),),
+        description="Original description.",
+        tags=("stable",),
+        artifacts=(artifact,),
+    )
+
+    revised = revise(previous, cases_to_add=(make_case("added"),))
+
+    assert revised.gold_set.description == previous.gold_set.description
+    assert revised.gold_set.tags == previous.gold_set.tags
+    assert revised.gold_set.artifacts == previous.gold_set.artifacts
+    assert revised.gold_set.task_contract == previous.gold_set.task_contract
+    with pytest.raises(Exception, match="frozen"):
+        revised.gold_set.description = "changed"

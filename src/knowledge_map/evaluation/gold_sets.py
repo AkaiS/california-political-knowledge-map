@@ -75,20 +75,99 @@ def construct_evaluation_gold_set(
         artifacts=tuple(artifacts),
         memberships=memberships,
     )
+    _validate_cases(gold_set, case_items)
+    return _construction_result(gold_set)
 
-    issues = tuple(
-        issue
-        for issue in evaluate_compatibility(None, gold_set, case_items)
-        if issue.source == "case"
+
+def revise_evaluation_gold_set(
+    *,
+    previous: EvaluationGoldSet,
+    cases_to_add: Iterable[EvaluationCase[Any, Any, Any]] = (),
+    case_business_ids_to_remove: Iterable[str] = (),
+    split_ratio: Mapping[EvaluationSplit | str, float],
+    task_contract: EvaluationTaskContract | None = None,
+) -> EvaluationGoldSetConstructionResult:
+    """Derive the next immutable revision while preserving surviving splits."""
+    normalized_ratio = _normalize_split_ratio(split_ratio)
+    added_cases = tuple(cases_to_add)
+    removed_business_ids = frozenset(case_business_ids_to_remove)
+    if not added_cases and not removed_business_ids:
+        raise ValueError("an Evaluation Gold Set revision must add or remove cases")
+
+    revised_contract = previous.task_contract if task_contract is None else task_contract
+    if not revised_contract.is_exactly_compatible_with(previous.task_contract):
+        raise ValueError(
+            "an Evaluation Task Contract cannot change during revision; "
+            "use a new Gold Set business identity"
+        )
+
+    previous_business_ids = {
+        membership.case.business_id for membership in previous.memberships
+    }
+    unknown_removals = sorted(removed_business_ids - previous_business_ids)
+    if unknown_removals:
+        raise ValueError(
+            "cannot remove cases absent from the previous Gold Set revision: "
+            + ", ".join(unknown_removals)
+        )
+
+    surviving_memberships = tuple(
+        membership
+        for membership in previous.memberships
+        if membership.case.business_id not in removed_business_ids
     )
-    if issues:
-        raise EvaluationGoldSetConstructionError(issues)
+    added_memberships = tuple(
+        EvaluationGoldSetMembership(
+            case=EvaluationCaseRevisionReference.from_case(evaluation_case),
+            split=_split_for_business_id(
+                evaluation_case.identity.business_id,
+                normalized_ratio,
+            ),
+        )
+        for evaluation_case in added_cases
+    )
+    memberships = tuple(
+        sorted(
+            (*surviving_memberships, *added_memberships),
+            key=_membership_sort_key,
+        )
+    )
+    revised = EvaluationGoldSet(
+        identity=EvaluationGoldSetIdentity(
+            business_id=previous.identity.business_id,
+            revision=previous.identity.revision + 1,
+        ),
+        description=previous.description,
+        task_contract=revised_contract,
+        tags=previous.tags,
+        artifacts=previous.artifacts,
+        memberships=memberships,
+    )
+    _validate_cases(revised, added_cases)
+    return _construction_result(revised)
 
-    counts = Counter(membership.split for membership in memberships)
+
+def _construction_result(
+    gold_set: EvaluationGoldSet,
+) -> EvaluationGoldSetConstructionResult:
+    counts = Counter(membership.split for membership in gold_set.memberships)
     return EvaluationGoldSetConstructionResult(
         gold_set=gold_set,
         split_counts={split: counts[split] for split in EvaluationSplit},
     )
+
+
+def _validate_cases(
+    gold_set: EvaluationGoldSet,
+    cases: tuple[EvaluationCase[Any, Any, Any], ...],
+) -> None:
+    issues = tuple(
+        issue
+        for issue in evaluate_compatibility(None, gold_set, cases)
+        if issue.source == "case"
+    )
+    if issues:
+        raise EvaluationGoldSetConstructionError(issues)
 
 
 def _normalize_split_ratio(
@@ -145,6 +224,17 @@ def _case_sort_key(
         evaluation_case.identity.revision,
         evaluation_case.content_hash,
         str(evaluation_case.identity.record_id),
+    )
+
+
+def _membership_sort_key(
+    membership: EvaluationGoldSetMembership,
+) -> tuple[str, int, str, str]:
+    return (
+        membership.case.business_id,
+        membership.case.revision,
+        membership.case.content_hash,
+        str(membership.case.record_id),
     )
 
 
