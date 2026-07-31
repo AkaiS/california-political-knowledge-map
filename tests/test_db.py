@@ -429,7 +429,7 @@ def test_get_gold_standard_examples(tmp_path):
 
 
 def test_relevance_label_source_updates(tmp_path):
-    from knowledge_map.adapters.sqlite_db import update_relevance_status, cache_scraped_html, save_rejected_article, get_cached_html
+    from knowledge_map.adapters.sqlite_db import update_relevance_status, cache_scraped_html, get_cached_html
     db_file = tmp_path / "test_updates.db"
     db_path = str(db_file)
     init_db(db_path)
@@ -464,10 +464,11 @@ def test_relevance_label_source_updates(tmp_path):
     assert cached["validation"] == "VALIDATION_FAILED"
     assert cached.get("relevance_label_source") == "HUMAN"
     
-    # 3. Test save_rejected_article with relevance_label_source
-    save_rejected_article(
+    # 3. Test cache_scraped_html with a different relevance_label_source
+    cache_scraped_html(
         url="http://example.com/art2",
         publication_id="pub1",
+        raw_html=None,
         relevance_status="INCONCLUSIVE",
         relevance_label_source="MODEL",
         db_path=db_path
@@ -543,6 +544,5 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
-
 
 

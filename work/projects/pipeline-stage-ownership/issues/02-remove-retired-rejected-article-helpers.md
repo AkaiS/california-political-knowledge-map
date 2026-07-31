@@ -1,6 +1,6 @@
 # Remove the retired rejected-article helpers
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -24,10 +24,10 @@ readable.
 
 ## Acceptance criteria
 
-- [ ] Neither rejected-article helper exists, and no module imports them.
-- [ ] Discovery continues to cache articles it filters out with `relevance_status = 'PENDING'`, unchanged in behavior.
-- [ ] Tests previously asserting through the rejected-article getter assert against the cache directly and still prove the same behavior.
-- [ ] The full deterministic test suite passes.
+- [x] Neither rejected-article helper exists, and no module imports them.
+- [x] Discovery continues to cache articles it filters out with `relevance_status = 'PENDING'`, unchanged in behavior.
+- [x] Tests previously asserting through the rejected-article getter assert against the cache directly and still prove the same behavior.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

@@ -64,8 +64,6 @@ def test_database_helpers(tmp_path):
     
     url_1 = "https://test.com/story-1"
     url_2 = "https://test.com/story-2"
-    url_3 = "https://test.com/story-3"
-    
     # 2. Check is_url_known is False initially
     assert not is_url_known(url_1, db_path=db_path)
     
@@ -95,12 +93,6 @@ def test_database_helpers(tmp_path):
     }
     save_story(story, db_path=db_path)
     assert is_url_known(url_2, db_path=db_path)
-    
-    # 6. Check in rejected_articles
-    assert not is_url_known(url_3, db_path=db_path)
-    from knowledge_map.adapters.sqlite_db import save_rejected_article
-    save_rejected_article(url_3, "testpub", "IRRELEVANT", db_path=db_path)
-    assert is_url_known(url_3, db_path=db_path)
 
 
 def test_url_filtering():
@@ -526,7 +518,6 @@ async def test_listing_page_discovery_soup_fallback_text(tmp_path):
         scraped_urls = await service.discover_and_scrape_for_publication(pub)
         # Should be scraped because the fallback gets the text "California Senate Approves Newsom Nominee for High Court" (>= 25 chars and >= 5 words)
         assert scraped_urls == ["https://test.com/politics/nested-text-story"]
-
 
 
 

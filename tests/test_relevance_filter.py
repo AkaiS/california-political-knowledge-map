@@ -3,51 +3,8 @@ import pytest
 from knowledge_map.adapters.sqlite_db import (
     init_db,
     register_publication,
-    save_rejected_article,
-    get_rejected_article,
     is_url_known
 )
-
-def test_save_and_get_rejected_article(tmp_path):
-    db_file = tmp_path / "test_relevance.db"
-    db_path = str(db_file)
-    init_db(db_path)
-    
-    # Register publication
-    register_publication(
-        pub_id="testpub",
-        name="Test Pub",
-        base_url="https://test.com",
-        db_path=db_path
-    )
-    
-    url = "https://test.com/irrelevant-story"
-    metadata = {"headline": "Pancakes are tasty", "description": "Here is a recipe"}
-    
-    # Initially not known
-    assert not is_url_known(url, db_path=db_path)
-    assert get_rejected_article(url, db_path=db_path) is None
-    
-    # Save as rejected
-    save_rejected_article(
-        url=url,
-        publication_id="testpub",
-        relevance_status="IRRELEVANT",
-        metadata_json=metadata,
-        db_path=db_path
-    )
-    
-    # Now it should be known
-    assert is_url_known(url, db_path=db_path)
-    
-    # Verify retrieved record
-    record = get_rejected_article(url, db_path=db_path)
-    assert record is not None
-    assert record["url"] == url
-    assert record["publication_id"] == "testpub"
-    assert record["relevance_status"] == "IRRELEVANT"
-    assert record["metadata_json"] == metadata
-
 
 def test_extract_metadata():
     from knowledge_map.core.relevance import extract_metadata
@@ -175,7 +132,6 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         init_db,
         register_publication,
         get_cached_html,
-        get_rejected_article,
         get_publication
     )
     from knowledge_map.core.discovery import ListingPageDiscoveryService
@@ -308,10 +264,6 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         assert cached_inconclusive["relevance_status"] == "PENDING"
         assert "Local transit update" in cached_inconclusive["raw_html"]
 
-        # Verify no rejected article is saved at this stage
-        assert get_rejected_article("https://test.com/politics/irrelevant-2", db_path=db_path) is None
-        assert get_rejected_article("https://test.com/local/inconclusive-3", db_path=db_path) is None
-
         # E. Second run: listing page contains only the previously rejected/inconclusive URLs
         # They should be skipped and NOT fetched by crawl4ai again (using is_url_known)
         mock_listing_result_2 = MagicMock()
@@ -338,7 +290,6 @@ async def test_listing_page_discovery_with_relevance_filter(tmp_path):
         
         # Verify arun was only called for the news listing page, not the individual articles
         assert mock_crawler_instance.arun.call_count == 1
-
 
 
 

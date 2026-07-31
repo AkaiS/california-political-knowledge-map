@@ -8,7 +8,7 @@ import dateutil.parser
 from bs4 import BeautifulSoup
 
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, DomainMapper
-from knowledge_map.adapters.sqlite_db import is_url_known, cache_scraped_html, save_rejected_article, DEFAULT_DB_PATH
+from knowledge_map.adapters.sqlite_db import is_url_known, cache_scraped_html, DEFAULT_DB_PATH
 from knowledge_map.config import settings
 
 logger = logging.getLogger(__name__)

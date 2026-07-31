@@ -9,9 +9,7 @@ from knowledge_map.adapters.sqlite_db import (
     get_cached_html,
     update_relevance_status,
     clear_cached_html,
-    is_url_known,
-    save_rejected_article,
-    get_rejected_article
+    is_url_known
 )
 from knowledge_map.core.relevance import (
     serialize_embedding,
@@ -164,31 +162,37 @@ def test_model_inference_boundaries(tmp_path):
         knowledge_map.core.relevance._cached_weights = None
 
 
-def test_sqlite_db_consolidation_helpers(tmp_path):
-    """Verify consolidation database methods: save_rejected_article, get_rejected_article, is_url_known, etc."""
+def test_sqlite_cache_helpers(tmp_path):
+    """Verify cache metadata, relevance fields, and URL recognition."""
     db_file = tmp_path / "test_helpers.db"
     db_path = str(db_file)
     init_db(db_path)
 
-    # Save a couple of rejected/inconclusive records
-    save_rejected_article("https://example.com/1", "pub1", "IRRELEVANT", {"headline": "H1"}, db_path=db_path)
-    save_rejected_article("https://example.com/2", "pub1", "INCONCLUSIVE", {"headline": "H2"}, db_path=db_path)
+    cache_scraped_html(
+        "https://example.com/1", "pub1", None,
+        relevance_status="IRRELEVANT", raw_metadata_json={"headline": "H1"},
+        db_path=db_path
+    )
+    cache_scraped_html(
+        "https://example.com/2", "pub1", None,
+        relevance_status="INCONCLUSIVE", raw_metadata_json={"headline": "H2"},
+        db_path=db_path
+    )
 
     # Verify is_url_known
     assert is_url_known("https://example.com/1", db_path=db_path) is True
     assert is_url_known("https://example.com/2", db_path=db_path) is True
     assert is_url_known("https://example.com/nonexistent", db_path=db_path) is False
 
-    # Verify get_rejected_article
-    r1 = get_rejected_article("https://example.com/1", db_path=db_path)
-    assert r1 is not None
-    assert r1["relevance_status"] == "IRRELEVANT"
-    assert r1["metadata_json"] == {"headline": "H1"}
+    cached_1 = get_cached_html("https://example.com/1", db_path=db_path)
+    assert cached_1 is not None
+    assert cached_1["relevance_status"] == "IRRELEVANT"
+    assert cached_1["raw_metadata_json"] == {"headline": "H1"}
 
-    r2 = get_rejected_article("https://example.com/2", db_path=db_path)
-    assert r2 is not None
-    assert r2["relevance_status"] == "INCONCLUSIVE"
-    assert r2["metadata_json"] == {"headline": "H2"}
+    cached_2 = get_cached_html("https://example.com/2", db_path=db_path)
+    assert cached_2 is not None
+    assert cached_2["relevance_status"] == "INCONCLUSIVE"
+    assert cached_2["raw_metadata_json"] == {"headline": "H2"}
 
     # Verify cache_scraped_html with new columns
     embedding = [0.1] * 768
@@ -305,4 +309,3 @@ def test_model_training_filters_source(tmp_path):
             weights = json.load(f)
         # Should only train on the 6 HUMAN/LLM samples, ignoring the 6 KEYWORD/MODEL samples
         assert weights["n_samples"] == 6
-

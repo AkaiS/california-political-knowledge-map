@@ -772,61 +772,6 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
         conn.close()
 
 
-def save_rejected_article(
-    url: str,
-    publication_id: str,
-    relevance_status: str,
-    metadata_json: Optional[Dict[str, Any]] = None,
-    relevance_label_source: str = "KEYWORD",
-    db_path: str = DEFAULT_DB_PATH
-) -> None:
-    """
-    Saves a rejected or inconclusive article to the scraped_html_cache table.
-    """
-    import json
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.cursor()
-        meta_str = json.dumps(metadata_json) if metadata_json is not None else None
-        validation = "PENDING_RELEVANCE" if relevance_status == "INCONCLUSIVE" else None
-        cursor.execute("""
-            INSERT OR REPLACE INTO scraped_html_cache (
-                url, publication_id, raw_html, validation, relevance_status, relevance_label_source, raw_metadata_json, scraped_at
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """, (url, publication_id, validation, relevance_status, relevance_label_source, meta_str))
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def get_rejected_article(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[str, Any]]:
-    """
-    Retrieves a rejected article record from scraped_html_cache by URL.
-    """
-    import json
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT url, publication_id, relevance_status, raw_metadata_json AS metadata_json, scraped_at AS checked_at
-            FROM scraped_html_cache
-            WHERE url = ? AND relevance_status IN ('IRRELEVANT', 'INCONCLUSIVE')
-        """, (url,))
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        d = dict(row)
-        if d["metadata_json"]:
-            try:
-                d["metadata_json"] = json.loads(d["metadata_json"])
-            except Exception:
-                pass
-        return d
-    finally:
-        conn.close()
-
-
 def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
     Retrieves balanced human-labeled examples (max 3 per class) by joining cache and stories.
@@ -1253,7 +1198,6 @@ def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
         }
     finally:
         conn.close()
-
 
 
 

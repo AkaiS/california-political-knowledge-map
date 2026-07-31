@@ -116,7 +116,6 @@ async def test_archive_crawl_first_run(tmp_path):
         init_db,
         register_publication,
         get_cached_html,
-        get_rejected_article,
         get_publication,
         get_discovery_state
     )
@@ -225,10 +224,7 @@ async def test_archive_crawl_first_run(tmp_path):
         assert cached_2 is not None
         assert cached_2["validation"] == "PENDING"
         assert cached_2["relevance_status"] == "PENDING"
-
-        # Verify no rejected article is saved
-        rejected = get_rejected_article("https://test.com/politics/irrelevant-2", db_path=db_path)
-        assert rejected is None
+        assert "Sports Baking Special" in cached_2["raw_html"]
 
 
 @pytest.mark.anyio
@@ -555,4 +551,3 @@ async def test_archive_crawl_category_filtering(tmp_path, caplog):
         assert len(stats_log) == 1
         assert getattr(stats_log[0], "category_filtered", 0) == 2
         assert getattr(stats_log[0], "new_candidates_found", 0) == 1
-
