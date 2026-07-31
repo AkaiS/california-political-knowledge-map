@@ -358,6 +358,33 @@ def test_revision_assigns_only_new_cases_by_the_construction_rule():
     ]
 
 
+def test_removal_only_revision_needs_no_split_ratio():
+    previous = construct(
+        (make_case("first"), make_case("second")),
+        pinned_splits={
+            "first": EvaluationSplit.CALIBRATION,
+            "second": EvaluationSplit.HELD_OUT,
+        },
+    )
+
+    revised = revise_evaluation_gold_set(
+        previous=previous.gold_set,
+        case_business_ids_to_remove=("first",),
+    )
+
+    assert assignments(revised) == {"second": EvaluationSplit.HELD_OUT}
+
+
+def test_revision_rejects_added_cases_without_a_split_ratio():
+    previous = construct((make_case("first"),))
+
+    with pytest.raises(ValueError, match="split ratio is required"):
+        revise_evaluation_gold_set(
+            previous=previous.gold_set,
+            cases_to_add=(make_case("added"),),
+        )
+
+
 def test_revision_rejects_a_no_op_and_unknown_removals():
     previous = construct((make_case("first"),))
 
@@ -367,7 +394,7 @@ def test_revision_rejects_a_no_op_and_unknown_removals():
         revise(previous, case_business_ids_to_remove=("unknown",))
 
 
-def test_revision_rejects_a_changed_task_contract_with_the_remedy():
+def test_revision_offers_no_seam_to_change_the_task_contract():
     previous = construct((make_case("first"),))
     changed_contract = EvaluationTaskContract(
         input_schema=INPUT_SCHEMA,
@@ -377,12 +404,15 @@ def test_revision_rejects_a_changed_task_contract_with_the_remedy():
         metadata_schema=METADATA_SCHEMA,
     )
 
-    with pytest.raises(ValueError, match="use a new Gold Set business identity"):
+    with pytest.raises(TypeError, match="task_contract"):
         revise(
             previous,
             cases_to_add=(make_case("added"),),
             task_contract=changed_contract,
         )
+
+    revised = revise(previous, cases_to_add=(make_case("added"),))
+    assert revised.gold_set.task_contract == previous.gold_set.task_contract
 
 
 def test_revision_accumulates_added_case_compatibility_issues():

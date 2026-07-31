@@ -84,22 +84,18 @@ def revise_evaluation_gold_set(
     previous: EvaluationGoldSet,
     cases_to_add: Iterable[EvaluationCase[Any, Any, Any]] = (),
     case_business_ids_to_remove: Iterable[str] = (),
-    split_ratio: Mapping[EvaluationSplit | str, float],
-    task_contract: EvaluationTaskContract | None = None,
+    split_ratio: Mapping[EvaluationSplit | str, float] | None = None,
 ) -> EvaluationGoldSetConstructionResult:
     """Derive the next immutable revision while preserving surviving splits."""
-    normalized_ratio = _normalize_split_ratio(split_ratio)
     added_cases = tuple(cases_to_add)
     removed_business_ids = frozenset(case_business_ids_to_remove)
     if not added_cases and not removed_business_ids:
         raise ValueError("an Evaluation Gold Set revision must add or remove cases")
-
-    revised_contract = previous.task_contract if task_contract is None else task_contract
-    if not revised_contract.is_exactly_compatible_with(previous.task_contract):
+    if added_cases and split_ratio is None:
         raise ValueError(
-            "an Evaluation Task Contract cannot change during revision; "
-            "use a new Gold Set business identity"
+            "a split ratio is required to assign the Evaluation Cases being added"
         )
+    normalized_ratio = {} if split_ratio is None else _normalize_split_ratio(split_ratio)
 
     previous_business_ids = {
         membership.case.business_id for membership in previous.memberships
@@ -138,7 +134,7 @@ def revise_evaluation_gold_set(
             revision=previous.identity.revision + 1,
         ),
         description=previous.description,
-        task_contract=revised_contract,
+        task_contract=previous.task_contract,
         tags=previous.tags,
         artifacts=previous.artifacts,
         memberships=memberships,
