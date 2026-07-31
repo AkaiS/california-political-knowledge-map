@@ -23,11 +23,20 @@ have not yet been shaped into executable work.
 - [Decide Suite, Gold Set, and Case compatibility in one place](projects/unified-evaluation-execution/issues/01-shared-suite-gold-set-case-compatibility-predicate.md)
 - [Evaluate Evaluation Cases that declare no expected output](projects/unified-evaluation-execution/issues/03-evaluate-cases-without-an-expected-output.md)
 - [Declare the full evidence sink protocol](projects/unified-evaluation-execution/issues/05-declare-the-full-evidence-sink-protocol.md)
+- [Guard human relevance labels against automated overwrites](projects/pipeline-stage-ownership/issues/01-guard-human-relevance-labels.md)
+- [Remove the retired rejected-article helpers](projects/pipeline-stage-ownership/issues/02-remove-retired-rejected-article-helpers.md)
+- [Default relevance to PENDING and record fetch status](projects/pipeline-stage-ownership/issues/03-default-relevance-to-pending-and-record-fetch-status.md)
 - [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
 
 The remaining [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md)
 issues (02, 04, 06–10) are `ready-for-agent` but gated; each declares its blockers.
 Work the frontier: any issue whose blockers are all complete.
+
+The [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md) issues
+04–10 are `ready-for-agent` but gated; each declares its blockers. Issue 01 is
+the urgent one: one surviving human relevance label sits at
+`validation = 'PENDING'` and the next validation run destroys it under present
+behavior. Take a database backup before issue 03 migrates the schema.
 
 The [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md)
 issues 01–03 are `ready-for-agent` but gated. Issue 01, the validating factory,
@@ -63,7 +72,7 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
+| `ready-for-agent` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 
