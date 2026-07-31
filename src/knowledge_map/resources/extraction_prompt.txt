@@ -24,23 +24,8 @@ Each entity must have:
 }
 ```
 
-Do not generate graph primary keys in this prompt. The string
-`20260729_124737_e55a21` is a Hermes conversation/session identifier, not an
-entity identifier and not an ID format to copy. The extraction adapter will assign
-or reconcile graph identity separately from this LLM response.
-
 `properties` must contain the canonical `name` when the entity has a name, plus only
-values supported by the text. When an external identifier is explicitly present,
-preserve it as an observation in `external_identifiers`, formatted as an array of
-`{"source": "...", "value": "..."}` objects. It is not the entity id. Identifier
-nodes and `HAS_IDENTIFIER` relationships are deferred and must not be emitted by
-this prompt.
-
-Use the ontology's external identifier fields when the source provides them (for
-example, an OpenStates ID, State Legislature ID, FPPC ID, corporate registry ID,
-ledger tracking ID, or other source-qualified identifier). Do not fabricate an
-external identifier and do not use an article-local name as though it were an
-authoritative registry ID.
+values supported by the text.
 
 ## Closed ontology
 

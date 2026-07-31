@@ -39,7 +39,7 @@
 
 #### `:Politician`
 
-- `id`: `STRING` _(Primary Key: State Legislature ID or OpenStates ID)_
+- `id`: `STRING`
     
 - `first_name`: `STRING`
     
@@ -141,7 +141,7 @@
         
     - `:BallotMeasureCampaign`
         
-- `id`: `STRING` _(Primary Key: FPPC ID Number)_
+- `id`: `STRING`
     
 - `name`: `STRING` _(Official committee name, e.g., "Working Californians Against Prop X")_
     
@@ -156,13 +156,27 @@
     
     - `:PAC` | `:IE_Committee` | `:Corporation` | `:LaborUnion` | `:TradeAssociation` | `:NonProfit` | `:AdvocacyGroup` | `:GrassrootsMovement` | `:TribalNation` | `:GovernmentAgency` | `:MediaOrganization`
         
-- `id`: `STRING` _(Primary Key: State corporate registry ID, or custom deterministic hash for informal movements)_
+- `id`: `STRING`
     
 - `name`: `STRING`
     
 - `industry_sector`: `STRING` _(e.g., "Oil & Gas", "Tech", "Labor - Education")_
     
 - `fppc_id`: `STRING` _(Optional: Used if they are a formally registered lobbyist employer)_
+
+#### `:ExternalIdentifier`
+    
+- `scheme`: `STRING` _(e.g., "openstates-person", "california-legislature-person", "california-fppc-committee", "california-business-registry")_
+    
+- `value`: `STRING` _(e.g., "AB999", "SB555", "CA-90210")_
+    
+- `source`: `STRING` _(e.g., "OpenStates", "California Legislature", "FPPC", "California Secretary of State")_
+    
+- `source_url`: `STRING` _(e.g., "https://openstates.org/person/CA/", "https://www.legislature.ca.gov/", "https://www.fppc.ca.gov/", "https://www.sos.ca.gov/")_
+    
+- `verified_at`: `DATETIME` _(e.g., "2026-01-01T00:00:00")_
+    
+- `status`: `STRING` _(e.g., "ACTIVE", "DEPRECATED", "UNVERIFIED")_
     
 
 ## 2. Relationships & Properties
@@ -192,3 +206,4 @@
 | `:NewsArticle`                   | `HAS_CHUNK`           | `:Chunk`                 | _None_                                                                                  | Parent-to-child composition for RAG slicing.                   |
 | `:Chunk`                         | `MENTIONS`            | _Any Core Entity_        | _None_                                                                                  | Hard edge created when an entity is extracted from that chunk. |
 | `:NewsArticle` \| `:Chunk`       | `DISCUSSES_TOPIC`     | `:PolicyArea`            | _None_                                                                                  | Direct thematic edge for generalized policy news articles.     |
+| _Any resolvable core entity_     | `HAS_IDENTIFIER`      | `:ExternalIdentifier`    | _None_                                                                                  | Connects an internal entity to an identifier assigned by an external authority. |
