@@ -76,6 +76,16 @@ Related work exists under the excluded
 [Model Evaluation initiative](initiatives/model-evaluation/MAP.md); this queue
 will not modify that initiative.
 
+## Evaluation population integrity
+
+- **EG-01 · P1:** Replace destructive removal of Evaluation Cases from later
+  Evaluation Gold Set revisions with an explicit retirement or invalidation
+  state. Preserve each retired case's business identity, exact revision, prior
+  split, and reason while excluding it from future Evaluation Runs. Define
+  reintroduction semantics at the business-identity level so a formerly
+  `held-out` or `calibration` case cannot later enter `training` and pollute
+  evaluations merely because its intervening membership was retired.
+
 ## Scraping and validation
 
 - **SV-01 · P0:** Verify current CalMatters extraction quality against retained
