@@ -8,4 +8,4 @@ manual_checks/*
 .scratch/dlq/*
 .scratch/pipeline.log
 */ralph-queue.txt
-.logfire/logfire_credentials.json
+.logfire/*
