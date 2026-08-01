@@ -89,8 +89,20 @@ A multi-stage pipeline component that filters discovered URLs using a path block
 _Avoid_: Topic classifier, page filter
 
 **Relevance Status**:
-The automated classification assigned to a discovered article URL, which determines whether it is scraped (`RELEVANT`), discarded (`IRRELEVANT`), or routed for human review (`INCONCLUSIVE`). `INCONCLUSIVE` is not a human ground-truth label; human labels are binary: `RELEVANT` or `IRRELEVANT`.
-_Avoid_: Relevance score, category
+The California-political-relevance decision recorded against a cached article, which determines whether it is extracted into a Story (`RELEVANT`), discarded (`IRRELEVANT`), or routed for human review (`INCONCLUSIVE`). `PENDING` is the absence of a decision rather than a decision: it is the default for a newly cached article and the only status that admits classification, so no settled decision is ever recomputed. `INCONCLUSIVE` is not a human ground-truth label; human labels are binary: `RELEVANT` or `IRRELEVANT`.
+_Avoid_: Relevance score, category, unclassified, PENDING_RELEVANCE
+
+**Relevance Label Source**:
+The provenance of an article's Relevance Status, naming which stage decided it: the keyword-and-blocklist Relevance Filter (`KEYWORD`), the LLM classifier agent (`LLM`), the trained relevance classifier (`MODEL`), or a person in manual review (`HUMAN`). It is the authority ordering, not a description: a `HUMAN` label is ground truth and no automated stage may overwrite it, which is why the relevance writer reports back the source and status actually persisted rather than the ones attempted.
+_Avoid_: Classifier name, label type, labeled_by, confidence
+
+**Validation Status**:
+The record of whether extracted content is held for a cached article, valid exactly when a Story row exists for that URL: awaiting or queued for extraction (`PENDING`), extracted and stored (`VALIDATED`), extracted but contradicting its ground-truth baseline (`VALIDATION_FAILED`), or holding no JSON-LD to validate against (`UNVALIDATABLE`). It answers only that question — it carries no relevance meaning, and only the validation stage writes it.
+_Avoid_: Article state, processing status, pipeline stage, scrape status
+
+**Fetch Status**:
+The HTTP status code recorded against a cached article by the fetch that last attempted it, retained after its raw HTML is purged so that recovery can distinguish a permanently dead URL (terminal 4xx, abandoned) from a transient failure or an unattempted URL (5xx or absent, retryable). An unknown outcome is absent rather than assumed successful.
+_Avoid_: Response code, error code, scrape result, http_code
 
 **Validation Circuit Breaker**:
 A safety mechanism that automatically pauses the validation pipeline for a Publication if its validation failure points reach or exceed the threshold, triggering a single Selector Healing Pipeline run while allowing raw scraping to continue.
