@@ -5,19 +5,17 @@ from knowledge_map.evaluation import (
     ConfiguredEvaluator,
     EvaluationCase,
     EvaluationCaseIdentity,
-    EvaluationCaseRevisionReference,
     EvaluationGoldSet,
-    EvaluationGoldSetIdentity,
-    EvaluationGoldSetMembership,
     EvaluationRequirement,
     EvaluationRequirementCatalog,
-    EvaluationSplit,
     EvaluationSuite,
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
     SchemaReference,
     evaluate_compatibility,
 )
+
+from conftest import build_gold_set
 
 
 class Input(BaseModel):
@@ -66,16 +64,11 @@ def _definitions(case: EvaluationCase) -> tuple[EvaluationSuite, EvaluationGoldS
         task_contract=contract,
         report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
     )
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="gold",
         description="Compatibility Gold Set.",
         task_contract=contract,
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
     )
     return suite, gold_set
 

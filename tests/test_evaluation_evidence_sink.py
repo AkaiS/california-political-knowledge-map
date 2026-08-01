@@ -6,11 +6,6 @@ from knowledge_map.evaluation import (
     ConfiguredEvaluator,
     EvaluationCase,
     EvaluationCaseIdentity,
-    EvaluationCaseRevisionReference,
-    EvaluationGoldSet,
-    EvaluationGoldSetIdentity,
-    EvaluationGoldSetMembership,
-    EvaluationSplit,
     EvaluationSuite,
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
@@ -20,6 +15,8 @@ from knowledge_map.evaluation import (
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.engine import EvaluationEngine
+
+from conftest import build_gold_set
 
 
 @pytest.mark.parametrize(
@@ -92,16 +89,11 @@ def _execution_fixture():
             ConfiguredEvaluator(name="unused-report", evaluator_revision=1),
         ),
     )
-    gold_set = EvaluationGoldSet(
-        identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="gold",
         description="A lifecycle gold set.",
         task_contract=contract,
-        memberships=(
-            EvaluationGoldSetMembership(
-                case=EvaluationCaseRevisionReference.from_case(case),
-                split=EvaluationSplit.HELD_OUT,
-            ),
-        ),
     )
     plan = preflight_selected_cases(
         suite=suite, gold_set=gold_set, cases=(case,)
