@@ -254,10 +254,11 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
         EvaluationRunner,
         EvaluationRunConfiguration,
         SQLiteEvaluationLedger,
-        EvaluationGoldSetIdentity,
         EvaluationSplit,
-        construct_evaluation_gold_set,
     )
+
+    from conftest import build_gold_set
+
     case = EvaluationCase(
         identity=EvaluationCaseIdentity(business_id="case-1", revision=1),
         input_schema=suite_contract.input_schema,
@@ -268,18 +269,13 @@ def test_runner_rejects_a_mismatched_task_binding_contract():
         metadata=Metadata(source="fixture"),
         description="A task-binding guard case.",
     )
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="test-gold-set", revision=1),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="test-gold-set",
         description="Gold set description",
         task_contract=suite_contract,
-        cases=(case,),
-        split_ratio={
-            EvaluationSplit.TRAINING: 0.6,
-            EvaluationSplit.CALIBRATION: 0.2,
-            EvaluationSplit.HELD_OUT: 0.2,
-        },
-        pinned_splits={case.identity.business_id: EvaluationSplit.TRAINING},
-    ).gold_set
+        split=EvaluationSplit.TRAINING,
+    )
 
     # The contract guard fires before the plan is read, so an empty plan is
     # enough — but it still has to come from preflight, the only plan source.

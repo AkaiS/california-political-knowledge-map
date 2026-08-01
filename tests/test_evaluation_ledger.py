@@ -22,7 +22,6 @@ from knowledge_map.evaluation import (
     EvaluationTaskContract,
     NoComparisonOperation,
     SchemaReference,
-    construct_evaluation_gold_set,
 )
 from knowledge_map.evaluation.store import (
     EvaluationDefinitionKind,
@@ -33,12 +32,7 @@ from knowledge_map.evaluation.store import (
     SQLiteEvaluationSchemaInstaller,
 )
 
-
-TEST_SPLIT_RATIO = {
-    EvaluationSplit.TRAINING: 0.6,
-    EvaluationSplit.CALIBRATION: 0.2,
-    EvaluationSplit.HELD_OUT: 0.2,
-}
+from conftest import build_gold_set
 
 
 class Input(BaseModel):
@@ -497,18 +491,11 @@ def test_imported_gold_set_uses_relational_membership_rows(tmp_path):
     ledger = SQLiteEvaluationLedger(tmp_path / "evaluation.sqlite")
     case = make_case()
     ledger.import_definition(case)
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="gold-set-001", revision=1),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="gold-set-001",
         description="Held-out cases.",
-        task_contract=EvaluationTaskContract(
-            input_schema=case.input_schema,
-            output_schema=case.expected_output_schema,
-            metadata_schema=case.metadata_schema,
-        ),
-        cases=(case,),
-        split_ratio=TEST_SPLIT_RATIO,
-        pinned_splits={case.identity.business_id: EvaluationSplit.HELD_OUT},
-    ).gold_set
+    )
 
     gold_set_record = ledger.import_definition(gold_set)
 

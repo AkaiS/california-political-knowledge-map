@@ -36,7 +36,6 @@ from knowledge_map.evaluation import (
     EvaluationCaseIdentity,
     EvaluationCaseRevisionReference,
     EvaluationGoldSet,
-    EvaluationGoldSetIdentity,
     EvaluationGoldSetMembership,
     EvaluationMetricDefinition,
     EvaluationMetricObservation,
@@ -71,13 +70,14 @@ from knowledge_map.evaluation import (
     SuccessfulReportCaseEvidence,
     TaskFailure,
     TaskSuccess,
-    construct_evaluation_gold_set,
     evaluator_version_tag,
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import (
     SQLiteEvaluationLedger,
 )
+
+from conftest import build_gold_set
 
 
 class Input(BaseModel):
@@ -5262,25 +5262,12 @@ def _gold_set(
     description: str,
     task_contract: EvaluationTaskContract | None = None,
 ) -> EvaluationGoldSet:
-    contract = task_contract or EvaluationTaskContract(
-        input_schema=cases[0].input_schema,
-        output_schema=cases[0].expected_output_schema,
-        metadata_schema=cases[0].metadata_schema,
-    )
-    return construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id=business_id, revision=1),
+    return build_gold_set(
+        cases,
+        business_id=business_id,
         description=description,
-        task_contract=contract,
-        cases=cases,
-        split_ratio={
-            EvaluationSplit.TRAINING: 0.6,
-            EvaluationSplit.CALIBRATION: 0.2,
-            EvaluationSplit.HELD_OUT: 0.2,
-        },
-        pinned_splits={
-            case.identity.business_id: EvaluationSplit.HELD_OUT for case in cases
-        },
-    ).gold_set
+        task_contract=task_contract,
+    )
 
 
 def test_runner_records_a_complete_deterministic_run(tmp_path):

@@ -7,8 +7,6 @@ from pydantic_evals.reporting.analyses import ScalarResult
 from knowledge_map.evaluation import (
     EvaluationCase,
     EvaluationCaseIdentity,
-    EvaluationGoldSetIdentity,
-    EvaluationSplit,
     EvaluationRequirement,
     EvaluationRequirementCatalog,
     EvaluationSuite,
@@ -23,16 +21,10 @@ from knowledge_map.evaluation import (
     ConfiguredEvaluatorReference,
     EvaluationRequirementBinding,
     assert_same_revision_content,
-    construct_evaluation_gold_set,
     SchemaReference,
 )
 
-
-TEST_SPLIT_RATIO = {
-    EvaluationSplit.TRAINING: 0.6,
-    EvaluationSplit.CALIBRATION: 0.2,
-    EvaluationSplit.HELD_OUT: 0.2,
-}
+from conftest import build_gold_set
 
 
 class RequirementInput(BaseModel):
@@ -280,14 +272,12 @@ def test_requirement_selected_evaluators_run_only_for_cases_that_declare_them():
         requirements=("source-grounding",),
     )
 
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="suite-3-gold", revision=1),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="suite-3-gold",
         description="Requirement-selected cases.",
         task_contract=suite.task_contract,
-        cases=(case,),
-        split_ratio=TEST_SPLIT_RATIO,
-        pinned_splits={case.identity.business_id: EvaluationSplit.HELD_OUT},
-    ).gold_set
+    )
     plan = suite.preflight_selected_cases(
         gold_set=gold_set, cases=(case,)
     )
@@ -383,20 +373,11 @@ def test_shared_engine_executes_a_frozen_plan_as_one_multi_case_report():
         ),
         report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
     )
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="shared-engine-gold", revision=1),
+    gold_set = build_gold_set(
+        cases,
+        business_id="shared-engine-gold",
         description="The shared-engine population.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        cases=cases,
-        split_ratio=TEST_SPLIT_RATIO,
-        pinned_splits={
-            case.identity.business_id: EvaluationSplit.HELD_OUT for case in cases
-        },
-    ).gold_set
+    )
     plan = suite.preflight_selected_cases(gold_set=gold_set, cases=cases)
 
     universal_calls: list[str] = []
@@ -487,17 +468,12 @@ def test_case_requirements_are_authored_content_but_suite_judging_is_not_case_co
         description=base_case.description,
         requirements=("source-grounding",),
     )
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="gold-5", revision=1),
+    gold_set = build_gold_set(
+        (base_case,),
+        business_id="gold-5",
         description="A reviewed case population.",
-        task_contract=EvaluationTaskContract(
-            input_schema=base_case.input_schema,
-            output_schema=base_case.expected_output_schema,
-            metadata_schema=base_case.metadata_schema,
-        ),
-        cases=(base_case,),
-        split_ratio=TEST_SPLIT_RATIO,
-    ).gold_set
+        split=None,
+    )
     catalog = EvaluationRequirementCatalog(
         requirements=(
             EvaluationRequirement(

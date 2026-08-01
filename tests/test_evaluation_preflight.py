@@ -21,17 +21,11 @@ from knowledge_map.evaluation import (
     EvaluationSuiteIdentity,
     EvaluationTaskContract,
     SchemaReference,
-    construct_evaluation_gold_set,
     preflight_selected_cases,
 )
 from knowledge_map.evaluation.store import SQLiteEvaluationLedger
 
-
-TEST_SPLIT_RATIO = {
-    EvaluationSplit.TRAINING: 0.6,
-    EvaluationSplit.CALIBRATION: 0.2,
-    EvaluationSplit.HELD_OUT: 0.2,
-}
+from conftest import build_gold_set
 
 
 class Input(BaseModel):
@@ -74,18 +68,12 @@ def test_preflight_builds_a_plan_with_suite_wide_evaluator_for_selected_case():
         suite_case_evaluators=(ConfiguredEvaluatorReference(name="exact"),),
         report_evaluators=(ConfiguredEvaluator(name="report", evaluator_revision=1),),
     )
-    gold_set = construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="gold", revision=2),
+    gold_set = build_gold_set(
+        (case,),
+        business_id="gold",
         description="A gold set.",
-        task_contract=EvaluationTaskContract(
-            input_schema=case.input_schema,
-            output_schema=case.expected_output_schema,
-            metadata_schema=case.metadata_schema,
-        ),
-        cases=(case,),
-        split_ratio=TEST_SPLIT_RATIO,
-        pinned_splits={case.identity.business_id: EvaluationSplit.HELD_OUT},
-    ).gold_set
+        revision=2,
+    )
 
     plan = preflight_selected_cases(
         suite=suite,
@@ -138,17 +126,12 @@ def _case(
 
 
 def _gold_set(cases: tuple[EvaluationCase[Input, Output, Metadata], ...]) -> EvaluationGoldSet:
-    return construct_evaluation_gold_set(
-        identity=EvaluationGoldSetIdentity(business_id="gold", revision=1),
+    return build_gold_set(
+        cases,
+        business_id="gold",
         description="A gold set.",
-        task_contract=EvaluationTaskContract(
-            input_schema=cases[0].input_schema,
-            output_schema=cases[0].expected_output_schema,
-            metadata_schema=cases[0].metadata_schema,
-        ),
-        cases=cases,
-        split_ratio=TEST_SPLIT_RATIO,
-    ).gold_set
+        split=None,
+    )
 
 
 def _suite(
