@@ -172,7 +172,7 @@ def test_reports_every_schema_mismatch_in_one_error():
         ("wrong-metadata", "metadata"),
     ]
     assert "wrong-input@1" in str(raised.value)
-    assert "expected-output schema" in str(raised.value)
+    assert "output schema" in str(raised.value)
 
 
 def test_accepts_a_case_without_an_expected_output():

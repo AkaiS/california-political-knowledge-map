@@ -281,11 +281,7 @@ def _assigned_split(
 
 
 def _compatibility_issue_message(issue: EvaluationCompatibilityIssue) -> str:
-    assert issue.schema_role is not None
-    schema_name = (
-        "expected-output" if issue.schema_role == "expected_output" else issue.schema_role
-    )
     return (
         f"case {issue.case_business_id}@{issue.case_revision} has an incompatible "
-        f"{schema_name} schema"
+        f"{issue.schema_role_name} schema"
     )

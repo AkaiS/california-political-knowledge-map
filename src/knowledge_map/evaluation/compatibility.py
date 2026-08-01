@@ -24,6 +24,14 @@ class EvaluationCompatibilityIssue(BaseModel):
     expected_schema: SchemaReference | None = None
     requirement: str | None = None
 
+    @property
+    def schema_role_name(self) -> str:
+        """Name this issue's schema role to a reader: a case's expected output is
+        the task's output, and every seam that reports an incompatibility says so
+        the same way."""
+        assert self.schema_role is not None
+        return "output" if self.schema_role == "expected_output" else self.schema_role
+
 
 def evaluate_compatibility(
     suite: EvaluationSuite | None,

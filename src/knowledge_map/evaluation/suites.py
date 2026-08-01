@@ -680,11 +680,9 @@ class EvaluationSuite(BaseModel):
                 raise ValueError(
                     f"unknown Evaluation Requirement keys: {issue.requirement}"
                 )
-            assert issue.schema_role is not None
-            field_name = (
-                "output" if issue.schema_role == "expected_output" else issue.schema_role
+            raise ValueError(
+                f"case {issue.schema_role_name} schema is incompatible with the suite"
             )
-            raise ValueError(f"case {field_name} schema is incompatible with the suite")
         return cases
 
     @staticmethod

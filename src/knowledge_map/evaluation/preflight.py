@@ -300,10 +300,7 @@ def _as_preflight_issue(
             requirement=issue.requirement,
         )
 
-    assert issue.schema_role is not None
-    field_name = (
-        "output" if issue.schema_role == "expected_output" else issue.schema_role
-    )
+    field_name = issue.schema_role_name
     if issue.source == "suite_gold_set":
         message = (
             f"Gold Set {field_name} schema is incompatible with the Suite task contract"

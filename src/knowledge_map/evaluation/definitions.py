@@ -416,13 +416,9 @@ class EvaluationGoldSet(_AuthoredDefinition):
         case_issues = [issue for issue in issues if issue.source == "case"]
         if case_issues:
             issue = case_issues[0]
-            assert issue.schema_role is not None
-            field_name = (
-                "output" if issue.schema_role == "expected_output" else issue.schema_role
-            )
             raise ValueError(
                 f"case {issue.case_business_id}@{issue.case_revision} "
-                f"has an incompatible {field_name} schema for the Gold Set"
+                f"has an incompatible {issue.schema_role_name} schema for the Gold Set"
             )
         return cases
 
