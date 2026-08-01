@@ -57,15 +57,20 @@ def construct_evaluation_gold_set(
     _require_known_pins(case_items, normalized_pins)
 
     memberships = tuple(
-        EvaluationGoldSetMembership(
-            case=EvaluationCaseRevisionReference.from_case(evaluation_case),
-            split=_assigned_split(
-                evaluation_case.identity.business_id,
-                normalized_ratio,
-                normalized_pins,
+        sorted(
+            (
+                EvaluationGoldSetMembership(
+                    case=EvaluationCaseRevisionReference.from_case(evaluation_case),
+                    split=_assigned_split(
+                        evaluation_case.identity.business_id,
+                        normalized_ratio,
+                        normalized_pins,
+                    ),
+                )
+                for evaluation_case in case_items
             ),
+            key=_membership_sort_key,
         )
-        for evaluation_case in sorted(case_items, key=_case_sort_key)
     )
     gold_set = EvaluationGoldSet(
         identity=identity,
@@ -231,17 +236,6 @@ def _require_known_pins(
     unknown = sorted(set(pinned_splits) - business_ids)
     if unknown:
         raise ValueError("pinned splits name unknown cases: " + ", ".join(unknown))
-
-
-def _case_sort_key(
-    evaluation_case: EvaluationCase[Any, Any, Any],
-) -> tuple[str, int, str, str]:
-    return (
-        evaluation_case.identity.business_id,
-        evaluation_case.identity.revision,
-        evaluation_case.content_hash,
-        str(evaluation_case.identity.record_id),
-    )
 
 
 def _membership_sort_key(
