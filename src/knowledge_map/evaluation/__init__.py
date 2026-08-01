@@ -95,6 +95,7 @@ from .compatibility import EvaluationCompatibilityIssue, evaluate_compatibility
 from .gold_sets import (
     EvaluationGoldSetConstructionError,
     EvaluationGoldSetConstructionResult,
+    OverruledPin,
     construct_evaluation_gold_set,
     revise_evaluation_gold_set,
 )
@@ -207,6 +208,7 @@ __all__ = [
     "evaluate_compatibility",
     "EvaluationGoldSetConstructionError",
     "EvaluationGoldSetConstructionResult",
+    "OverruledPin",
     "construct_evaluation_gold_set",
     "revise_evaluation_gold_set",
     "ArtifactConflictError",

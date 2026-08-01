@@ -21,11 +21,20 @@ from .definitions import (
 )
 
 
+class OverruledPin(NamedTuple):
+    """A pin a revision kept but could not honour, and the split that won."""
+
+    case_business_id: str
+    pinned_split: EvaluationSplit
+    inherited_split: EvaluationSplit
+
+
 class EvaluationGoldSetConstructionResult(NamedTuple):
-    """A constructed Gold Set and its realized membership counts."""
+    """A constructed Gold Set, its realized membership counts, and any refused pins."""
 
     gold_set: EvaluationGoldSet
     split_counts: dict[EvaluationSplit, int]
+    overruled_pins: tuple[OverruledPin, ...] = ()
 
 
 class EvaluationGoldSetConstructionError(ValueError):
@@ -129,6 +138,7 @@ def revise_evaluation_gold_set(
     # misplaced pin is recoverable, a migrated case silently pollutes every
     # later measurement.
     predetermined_splits = {**normalized_pins, **surviving_splits}
+    overruled_pins = _overruled_pins(normalized_pins, surviving_splits)
     superseded_business_ids = {
         evaluation_case.identity.business_id for evaluation_case in added_cases
     }
@@ -166,16 +176,18 @@ def revise_evaluation_gold_set(
         memberships=memberships,
     )
     _validate_cases(revised, added_cases)
-    return _construction_result(revised)
+    return _construction_result(revised, overruled_pins)
 
 
 def _construction_result(
     gold_set: EvaluationGoldSet,
+    overruled_pins: tuple[OverruledPin, ...] = (),
 ) -> EvaluationGoldSetConstructionResult:
     counts = Counter(membership.split for membership in gold_set.memberships)
     return EvaluationGoldSetConstructionResult(
         gold_set=gold_set,
         split_counts={split: counts[split] for split in EvaluationSplit},
+        overruled_pins=overruled_pins,
     )
 
 
@@ -226,6 +238,23 @@ def _normalize_pinned_splits(
         }
     except ValueError as exc:
         raise ValueError("pinned splits must use valid Evaluation Split values") from exc
+
+
+def _overruled_pins(
+    pinned_splits: Mapping[str, EvaluationSplit],
+    surviving_splits: Mapping[str, EvaluationSplit],
+) -> tuple[OverruledPin, ...]:
+    """Report each pin the revision kept but could not honour, so an author who
+    asked for a reassignment learns it did not happen."""
+    return tuple(
+        OverruledPin(
+            case_business_id=business_id,
+            pinned_split=pinned,
+            inherited_split=surviving_splits[business_id],
+        )
+        for business_id, pinned in sorted(pinned_splits.items())
+        if business_id in surviving_splits and surviving_splits[business_id] is not pinned
+    )
 
 
 def _require_known_pins(

@@ -14,6 +14,7 @@ from knowledge_map.evaluation import (
     EvaluationGoldSetIdentity,
     EvaluationSplit,
     EvaluationTaskContract,
+    OverruledPin,
     SQLiteEvaluationLedger,
     SchemaReference,
     construct_evaluation_gold_set,
@@ -418,6 +419,40 @@ def test_a_surviving_case_keeps_its_split_against_a_conflicting_pin():
 
     assert assignments(revised)["first"] is EvaluationSplit.HELD_OUT
     assert revised.gold_set.memberships[0].case.revision == 2
+    # The pin is refused without failing the revision, but the result says so,
+    # so an author who asked for a reassignment learns it did not happen.
+    assert revised.overruled_pins == (
+        OverruledPin(
+            case_business_id="first",
+            pinned_split=EvaluationSplit.TRAINING,
+            inherited_split=EvaluationSplit.HELD_OUT,
+        ),
+    )
+
+
+def test_a_pin_matching_the_inherited_split_is_not_reported_as_overruled():
+    previous = construct(
+        (make_case("first"),),
+        pinned_splits={"first": EvaluationSplit.HELD_OUT},
+    )
+
+    revised = revise(
+        previous,
+        cases_to_add=(make_case("first", revision=2),),
+        pinned_splits={"first": EvaluationSplit.HELD_OUT},
+    )
+
+    assert revised.overruled_pins == ()
+
+
+def test_construction_and_unconflicted_revision_report_no_overruled_pins():
+    previous = construct(
+        (make_case("first"),),
+        pinned_splits={"first": EvaluationSplit.HELD_OUT},
+    )
+
+    assert previous.overruled_pins == ()
+    assert revise(previous, cases_to_add=(make_case("second"),)).overruled_pins == ()
 
 
 def test_revision_rejects_pins_naming_cases_it_is_not_adding():
