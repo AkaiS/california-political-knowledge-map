@@ -95,7 +95,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 33. As an evaluation maintainer, I want the factory to be a function rather than a mutable builder, so that there is no partially built Gold Set to reason about.
 34. As an evaluation operator, I want `calibration` to mean cases reserved from the agent-tuning loop, so that the split has a documented meaning.
 35. As an evaluation operator, I want the one-split-per-case-revision constraint preserved, so that a case cannot be in a tuning loop and the held-out set simultaneously.
-36. As an evaluation operator, I want to request a ratio that omits a split entirely, so that a population with no calibration cases is expressible.
+36. As an evaluation operator, I want to empty a split by giving it a zero share rather than by leaving it out, so that a population with no calibration cases reads as `calibration: 0.0` and an omitted split reads as the mistake it usually is.
 37. As an evaluation operator, I want a ratio that does not sum to one rejected, so that a typo does not silently produce a partial population.
 38. As an evaluation operator, I want to select cases from a Gold Set by split when running, so that the splits are actually usable, as the runner already supports.
 39. As a test maintainer, I want the existing hand-built gold sets in tests migrated to the factory, so that the factory is exercised by the whole suite rather than by its own tests alone.
@@ -113,7 +113,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 - A case with no expected-output schema is valid. The contract's output schema governs actual outputs; a case's expected output is optional.
 - Split assignment is deterministic, computed from the case's stable business identity and the requested ratio. It must not depend on iteration order, on the size of the population, or on which other cases are present.
 - Explicitly pinned cases take their pinned split and are removed from the pool before ratio-based assignment, so pinning does not distort the remaining division.
-- The split ratio is expressed over the three splits and must sum to one. A split may be given a zero share. A ratio that does not sum to one is rejected.
+- The split ratio is expressed over all three splits and must sum to one. A split may be given a zero share, and that is the only way to empty it: a ratio that omits a split is rejected rather than read as zero, so a dropped key cannot silently reassign a population. A ratio that does not sum to one is rejected.
 - The factory reports the realized split counts alongside the constructed Gold Set, because for small populations the realized division can differ noticeably from the requested ratio and the author should see that.
 - Revisioning is a separate factory operation taking the previous `EvaluationGoldSet`, the cases to add, and the case identities to remove.
 - The revision operation preserves the split of every surviving case exactly, reading it from the previous revision's membership rather than recomputing it. Only newly added cases are assigned, by the same deterministic rule.
@@ -135,7 +135,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 - Test order-independence directly: shuffle the input cases and assert the resulting memberships and split assignments are unchanged.
 - Test population-independence directly: construct with N cases, then with those N plus one more, and assert every original case kept its split. This is the property that makes revisioning safe and it deserves an explicit test rather than being implied by the revision tests.
 - Test that requested ratios produce approximately correct realized proportions on a population large enough for the claim to be meaningful, and that the reported realized counts match the actual memberships.
-- Test that a ratio not summing to one is rejected, and that a ratio with a zero share produces an empty split rather than an error.
+- Test that a ratio not summing to one is rejected, that a ratio with a zero share produces an empty split rather than an error, and that a ratio omitting a split is rejected rather than treated as that zero.
 - Test that explicitly pinned cases receive their pinned split and are excluded from ratio-based assignment.
 - Test that an incompatible case is rejected, and separately that multiple incompatible cases are all reported in a single raise. Parametrize the mismatch across input, output, and metadata schemas, following the existing parametrized preflight mismatch test.
 - Test that a case with no expected output is accepted.

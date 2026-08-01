@@ -239,6 +239,17 @@ def test_ratio_validation_and_zero_share():
         EvaluationSplit.HELD_OUT: 1,
     }
 
+    # Emptying a split is spelled `0.0`, never by leaving the key out: a dropped
+    # key would otherwise silently redistribute the population it named.
+    with pytest.raises(ValueError, match="training, calibration, and held-out"):
+        construct(
+            (case,),
+            split_ratio={
+                EvaluationSplit.TRAINING: 0.8,
+                EvaluationSplit.HELD_OUT: 0.2,
+            },
+        )
+
 
 def test_pinned_cases_override_assignment_without_changing_other_cases():
     pinned = make_case("pinned")
