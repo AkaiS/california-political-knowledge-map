@@ -649,3 +649,77 @@ def test_record_failed_fetch_creates_a_contentless_row(tmp_path):
     # A later terminal status settles it
     record_failed_fetch(url, "pub1", 410, db_path=db_path)
     assert is_url_known(url, db_path=db_path)
+
+
+def _seed_labeled_articles(db_path):
+    """Seeds one article per label source, including one with no source at all."""
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html
+
+    for slug, status, source in (
+        ("human", "INCONCLUSIVE", "HUMAN"),
+        ("machine", "INCONCLUSIVE", "MODEL"),
+        ("irrelevant", "IRRELEVANT", "KEYWORD"),
+        ("relevant", "RELEVANT", "LLM"),
+    ):
+        cache_scraped_html(
+            url=f"http://example.com/{slug}",
+            publication_id="pub1",
+            raw_html="<html></html>",
+            validation="PENDING",
+            relevance_status=status,
+            relevance_label_source=source,
+            db_path=db_path,
+        )
+
+    # A row predating the label-source column, so its source is NULL
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("""
+            INSERT INTO scraped_html_cache
+                (url, publication_id, raw_html, validation, relevance_status,
+                 relevance_label_source)
+            VALUES (?, 'pub1', '<html></html>', 'PENDING', 'INCONCLUSIVE', NULL)
+        """, ("http://example.com/unsourced",))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_get_articles_for_human_labeling_skips_human_labeled_articles(tmp_path):
+    from knowledge_map.adapters.sqlite_db import get_articles_for_human_labeling
+
+    db_path = str(tmp_path / "test_labeling.db")
+    init_db(db_path)
+    _seed_labeled_articles(db_path)
+
+    urls = {row[0] for row in get_articles_for_human_labeling(db_path=db_path)}
+    # An unset source is not a human one, so those articles stay labelable
+    assert urls == {"http://example.com/machine", "http://example.com/unsourced"}
+
+    all_urls = {
+        row[0]
+        for row in get_articles_for_human_labeling(include_all=True, db_path=db_path)
+    }
+    assert all_urls == {
+        "http://example.com/machine",
+        "http://example.com/unsourced",
+        "http://example.com/irrelevant",
+        "http://example.com/relevant",
+    }
+
+
+def test_get_machine_labeled_for_reevaluation_skips_human_and_relevant(tmp_path):
+    from knowledge_map.adapters.sqlite_db import get_machine_labeled_for_reevaluation
+
+    db_path = str(tmp_path / "test_reevaluation.db")
+    init_db(db_path)
+    _seed_labeled_articles(db_path)
+
+    rows = get_machine_labeled_for_reevaluation(db_path=db_path)
+    assert {row[0] for row in rows} == {
+        "http://example.com/machine",
+        "http://example.com/irrelevant",
+        "http://example.com/unsourced",
+    }
+    # Callers read the prior status off the last column
+    assert {row[0]: row[4] for row in rows}["http://example.com/irrelevant"] == "IRRELEVANT"

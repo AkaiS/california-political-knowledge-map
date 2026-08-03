@@ -905,6 +905,62 @@ def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str,
         conn.close()
 
 
+def get_articles_for_human_labeling(
+    include_all: bool = False,
+    db_path: str = DEFAULT_DB_PATH,
+) -> List[tuple]:
+    """
+    Retrieves cached articles a human may still label, as
+    (url, headline, description, embedding) rows.
+
+    By default only INCONCLUSIVE articles are offered, since those are the ones
+    the classifier could not decide. `include_all` widens the set to every
+    machine-labeled article, for reviewing decisions the classifier did make.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        if include_all:
+            cursor.execute("""
+                SELECT url, headline, description, embedding
+                FROM scraped_html_cache
+                WHERE relevance_label_source IS NOT 'HUMAN'
+            """)
+        else:
+            cursor.execute("""
+                SELECT url, headline, description, embedding
+                FROM scraped_html_cache
+                WHERE relevance_status = 'INCONCLUSIVE'
+                  AND relevance_label_source IS NOT 'HUMAN'
+            """)
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List[tuple]:
+    """
+    Retrieves machine-labeled articles the classifier may reconsider, as
+    (url, headline, description, embedding, relevance_status) rows.
+
+    Only INCONCLUSIVE and IRRELEVANT articles are returned: reevaluation exists
+    to promote articles a weaker classifier passed over, not to revisit ones
+    already accepted as RELEVANT.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT url, headline, description, embedding, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
+              AND relevance_label_source IS NOT 'HUMAN'
+        """)
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
 def update_relevance_status(
     url: str,
     status: str,
@@ -947,15 +1003,14 @@ def update_relevance_status(
             params.append(serialize_embedding(embedding))
             
         params.extend((url, relevance_label_source))
+        # `IS NOT` rather than `!=` so a row with no recorded source counts as
+        # non-human instead of failing the comparison against NULL. Only another
+        # human write may replace a human label.
         query = f"""
             UPDATE scraped_html_cache
             SET {", ".join(updates)}
             WHERE url = ?
-              AND (
-                relevance_label_source IS NULL
-                OR relevance_label_source != 'HUMAN'
-                OR ? = 'HUMAN'
-              )
+              AND (relevance_label_source IS NOT 'HUMAN' OR ? = 'HUMAN')
             RETURNING relevance_status, relevance_label_source
         """
         cursor.execute(query, tuple(params))

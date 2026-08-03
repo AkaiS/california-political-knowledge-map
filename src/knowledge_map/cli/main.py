@@ -843,34 +843,18 @@ def main(args=None):
         init_db(db_path)
 
         if parsed_args.classifier_action == "label":
+            from knowledge_map.adapters.sqlite_db import get_articles_for_human_labeling
             from knowledge_map.core.relevance import deserialize_embedding
             from knowledge_map.core.relevance_classification import (
                 get_metadata_embedding,
                 persist_relevance_label,
             )
-            
-            conn = sqlite3.connect(db_path)
-            try:
-                cursor = conn.cursor()
-                if getattr(parsed_args, "review_all", False):
-                    cursor.execute("""
-                        SELECT url, headline, description, embedding
-                        FROM scraped_html_cache
-                        WHERE relevance_label_source IS NULL OR relevance_label_source != 'HUMAN'
-                    """)
-                else:
-                    cursor.execute("""
-                        SELECT url, headline, description, embedding
-                        FROM scraped_html_cache
-                        WHERE relevance_status = 'INCONCLUSIVE'
-                          AND (relevance_label_source IS NULL OR relevance_label_source != 'HUMAN')
-                    """)
-                rows = cursor.fetchall()
-            finally:
-                conn.close()
-                
+
+            review_all = getattr(parsed_args, "review_all", False)
+            rows = get_articles_for_human_labeling(include_all=review_all, db_path=db_path)
+
             if not rows:
-                if getattr(parsed_args, "review_all", False):
+                if review_all:
                     print("No articles with relevance_label_source != 'HUMAN' found to label.")
                 else:
                     print("No non-human INCONCLUSIVE articles found to label.")
@@ -935,22 +919,14 @@ def main(args=None):
             sys.exit(0)
 
         elif parsed_args.classifier_action == "reevaluate":
-            from knowledge_map.adapters.sqlite_db import update_relevance_status
+            from knowledge_map.adapters.sqlite_db import (
+                get_machine_labeled_for_reevaluation,
+                update_relevance_status,
+            )
             from knowledge_map.core.relevance import deserialize_embedding, classify_article
-            
-            conn = sqlite3.connect(db_path)
-            try:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT url, headline, description, embedding, relevance_status
-                    FROM scraped_html_cache
-                    WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
-                      AND (relevance_label_source IS NULL OR relevance_label_source != 'HUMAN')
-                """)
-                rows = cursor.fetchall()
-            finally:
-                conn.close()
-                
+
+            rows = get_machine_labeled_for_reevaluation(db_path=db_path)
+
             if not rows:
                 print("No inconclusive or irrelevant records found to reevaluate.")
                 sys.exit(0)
