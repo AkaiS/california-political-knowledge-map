@@ -551,3 +551,92 @@ async def test_archive_crawl_category_filtering(tmp_path, caplog):
         assert len(stats_log) == 1
         assert getattr(stats_log[0], "category_filtered", 0) == 2
         assert getattr(stats_log[0], "new_candidates_found", 0) == 1
+
+
+@pytest.mark.anyio
+async def test_archive_crawl_records_fetch_status_for_dead_urls(tmp_path):
+    """
+    The archive path applies the same rule as listing discovery: a URL that no
+    longer resolves to an article is recorded by its status, not cached.
+    """
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        get_publication,
+        get_cached_html,
+        is_url_known,
+        save_discovery_state
+    )
+    from knowledge_map.core.discovery import ArchiveDiscoveryService
+
+    db_file = tmp_path / "test_archive_fetch_status.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    register_publication(
+        pub_id="testpub",
+        name="Test Pub",
+        base_url="https://test.com",
+        crawl_delay=0.01,
+        max_concurrency=2,
+        use_robots_txt=False,
+        db_path=db_path
+    )
+
+    gone_url = "https://test.com/politics/gone"
+    live_url = "https://test.com/politics/live"
+    save_discovery_state(
+        "testpub",
+        {"urls": [gone_url, live_url], "current_index": 0, "cutoff_reached": False},
+        db_path=db_path
+    )
+
+    article_html = """
+    <html>
+    <head>
+        <script type="application/ld+json">
+        {"headline": "Newsom Signs New Bill", "datePublished": "2026-07-02T12:00:00Z"}
+        </script>
+    </head>
+    </html>
+    """
+
+    mock_gone = MagicMock()
+    mock_gone.success = True
+    mock_gone.status_code = 404
+    mock_gone.redirected_status_code = 404
+    mock_gone.html = "<html><body>Page not found</body></html>"
+
+    mock_live = MagicMock()
+    mock_live.success = True
+    mock_live.status_code = 200
+    mock_live.redirected_status_code = 200
+    mock_live.html = article_html
+
+    mock_crawler_instance = AsyncMock()
+
+    async def mock_arun(url, config=None):
+        return mock_gone if url == gone_url else mock_live
+
+    mock_crawler_instance.arun.side_effect = mock_arun
+
+    with patch("knowledge_map.core.discovery.DomainMapper"), \
+         patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass:
+        MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
+
+        service = ArchiveDiscoveryService(db_path=db_path)
+        pub = get_publication("testpub", db_path=db_path)
+        scraped_urls = await service.run_archive_crawl(pub)
+
+    assert scraped_urls == [live_url]
+
+    gone = get_cached_html(gone_url, db_path=db_path)
+    assert gone["raw_html"] is None
+    assert gone["validation"] is None
+    assert gone["fetch_status"] == 404
+    assert is_url_known(gone_url, db_path=db_path)
+
+    live = get_cached_html(live_url, db_path=db_path)
+    assert live["raw_html"] == article_html
+    assert live["fetch_status"] == 200

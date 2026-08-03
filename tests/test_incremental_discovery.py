@@ -531,3 +531,106 @@ async def test_listing_page_discovery_soup_fallback_text(tmp_path):
 
 
 
+
+
+@pytest.mark.anyio
+async def test_discovery_records_fetch_status_without_caching_non_articles(tmp_path):
+    """
+    A candidate that does not return the article is recorded by its fetch status
+    alone, so it never reaches the validator as if it were content.
+    """
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from knowledge_map.adapters.sqlite_db import (
+        init_db,
+        register_publication,
+        get_cached_html,
+        get_publication,
+        is_url_known
+    )
+    from knowledge_map.core.discovery import ListingPageDiscoveryService
+
+    db_file = tmp_path / "test_fetch_status.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    register_publication(
+        pub_id="testpub",
+        name="Test Pub",
+        base_url="https://test.com",
+        crawl_delay=0.01,
+        max_concurrency=4,
+        use_robots_txt=False,
+        discovery_config_json='{"listing_urls": ["https://test.com/news"]}',
+        db_path=db_path
+    )
+
+    gone_url = "https://test.com/politics/gone-story"
+    blocked_url = "https://test.com/politics/blocked-story"
+    moved_url = "https://test.com/politics/moved-story"
+    timeout_url = "https://test.com/politics/timeout-story"
+
+    mock_listing_result = MagicMock()
+    mock_listing_result.success = True
+    mock_listing_result.links = {
+        "internal": [
+            {"href": url, "text": "This is a valid long link text description"}
+            for url in (gone_url, blocked_url, moved_url, timeout_url)
+        ]
+    }
+
+    def crawl_result(success, status_code, redirected_status_code, html=""):
+        res = MagicMock()
+        res.success = success
+        res.status_code = status_code
+        res.redirected_status_code = redirected_status_code
+        res.html = html
+        res.error_message = "" if success else "boom"
+        return res
+
+    article_html = "<html><body>real article body</body></html>"
+    results = {
+        # The article is gone: a 200-shaped crawl of a 404 error page.
+        gone_url: crawl_result(True, 404, 404, "<html><body>Page not found</body></html>"),
+        # Anti-bot blocking: refused, but the URL still exists.
+        blocked_url: crawl_result(False, 503, 503, ""),
+        # Reached through a redirect: the first hop is a 301, the last a 200.
+        moved_url: crawl_result(True, 301, 200, article_html),
+        # Navigation error: no status at all.
+        timeout_url: crawl_result(False, None, None, ""),
+    }
+
+    mock_crawler_instance = AsyncMock()
+
+    async def mock_arun(url, config=None):
+        if url == "https://test.com/news":
+            return mock_listing_result
+        return results[url]
+
+    mock_crawler_instance.arun.side_effect = mock_arun
+
+    with patch("knowledge_map.core.discovery.AsyncWebCrawler") as MockCrawlerClass:
+        MockCrawlerClass.return_value.__aenter__.return_value = mock_crawler_instance
+        service = ListingPageDiscoveryService(db_path=db_path)
+        pub = get_publication("testpub", db_path=db_path)
+        scraped_urls = await service.discover_and_scrape_for_publication(pub)
+
+    # Only the redirected article delivered content
+    assert scraped_urls == [moved_url]
+    moved = get_cached_html(moved_url, db_path=db_path)
+    assert moved["raw_html"] == article_html
+    assert moved["validation"] == "PENDING"
+    assert moved["fetch_status"] == 200  # the last hop, not the 301
+
+    # The 404 is recorded, but no error page is cached and nothing awaits validation
+    gone = get_cached_html(gone_url, db_path=db_path)
+    assert gone is not None
+    assert gone["raw_html"] is None
+    assert gone["validation"] is None
+    assert gone["fetch_status"] == 404
+
+    # Terminal statuses are not fetched again; refusals and errors stay retryable
+    assert is_url_known(gone_url, db_path=db_path)
+    assert not is_url_known(blocked_url, db_path=db_path)
+    assert not is_url_known(timeout_url, db_path=db_path)
+    assert get_cached_html(blocked_url, db_path=db_path)["fetch_status"] == 503
+    assert get_cached_html(timeout_url, db_path=db_path)["fetch_status"] is None

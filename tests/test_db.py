@@ -582,3 +582,70 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
+
+
+def test_record_failed_fetch_preserves_an_existing_row(tmp_path):
+    """
+    Recording a failed fetch must not reuse the discovery cache writer's
+    whole-row replacement, which would discard the labels already on the row.
+    """
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_cached_html,
+        is_url_known,
+        record_failed_fetch,
+    )
+    db_file = tmp_path / "test_failed_fetch.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    url = "http://example.com/labelled"
+    cache_scraped_html(
+        url=url,
+        publication_id="pub1",
+        raw_html="<html></html>",
+        validation="VALIDATED",
+        relevance_status="RELEVANT",
+        relevance_label_source="HUMAN",
+        headline="Human headline",
+        db_path=db_path
+    )
+
+    record_failed_fetch(url, "pub1", 503, db_path=db_path)
+
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["fetch_status"] == 503
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+    assert cached["headline"] == "Human headline"
+    assert cached["validation"] == "VALIDATED"
+    assert cached["raw_html"] == "<html></html>"
+    # A row that still holds content stays known regardless of the failure
+    assert is_url_known(url, db_path=db_path)
+
+
+def test_record_failed_fetch_creates_a_contentless_row(tmp_path):
+    from knowledge_map.adapters.sqlite_db import (
+        get_cached_html,
+        is_url_known,
+        record_failed_fetch,
+    )
+    db_file = tmp_path / "test_failed_fetch_new.db"
+    db_path = str(db_file)
+    init_db(db_path)
+
+    url = "http://example.com/never-fetched"
+    record_failed_fetch(url, "pub1", 500, db_path=db_path)
+
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["raw_html"] is None
+    assert cached["fetch_status"] == 500
+    # Null validation keeps the row out of the validation loop's selection
+    assert cached["validation"] is None
+    assert cached["relevance_status"] == "PENDING"
+    # Retryable, so discovery offers it again
+    assert not is_url_known(url, db_path=db_path)
+
+    # A later terminal status settles it
+    record_failed_fetch(url, "pub1", 410, db_path=db_path)
+    assert is_url_known(url, db_path=db_path)

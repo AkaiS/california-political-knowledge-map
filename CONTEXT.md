@@ -101,7 +101,7 @@ The record of whether extracted content is held for a cached article, valid exac
 _Avoid_: Article state, processing status, pipeline stage, scrape status
 
 **Fetch Status**:
-The HTTP status code recorded against a cached article by the fetch that last attempted it, retained after its raw HTML is purged so that recovery can distinguish a permanently dead URL (terminal 4xx, abandoned) from a transient failure or an unattempted URL (5xx or absent, retryable). An unknown outcome is absent rather than assumed successful.
+The HTTP status code recorded against a cached article by the fetch that last attempted it, retained after its raw HTML is purged so that recovery can distinguish a permanently dead URL (terminal 4xx, abandoned) from a transient failure or an unattempted URL (5xx or absent, retryable). It is the status of the last response in a redirect chain, not the first. A fetch that returned no article records the status it got, or none at all, rather than a successful one.
 _Avoid_: Response code, error code, scrape result, http_code
 
 **Validation Circuit Breaker**:

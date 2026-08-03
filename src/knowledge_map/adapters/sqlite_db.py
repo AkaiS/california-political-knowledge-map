@@ -5,6 +5,11 @@ from typing import List, Dict, Any, NamedTuple, Optional
 
 DEFAULT_DB_PATH = "document_store.db"
 
+# Fetch statuses meaning the URL is permanently gone, so it is never fetched
+# again. Blocking statuses (403, 429, 503) are deliberately absent: they say we
+# were refused, not that the article stopped existing.
+TERMINAL_FETCH_STATUSES = (404, 410)
+
 
 class RelevanceUpdateResult(NamedTuple):
     status: str
@@ -803,9 +808,42 @@ def update_cached_html_status(url: str, validation: str, db_path: str = DEFAULT_
         conn.close()
 
 
+def record_failed_fetch(
+    url: str,
+    publication_id: str,
+    fetch_status: Optional[int],
+    db_path: str = DEFAULT_DB_PATH
+) -> None:
+    """
+    Records the outcome of a fetch that returned no article content.
+
+    Writes the fetch status and nothing else. Validation is left null because no
+    content is held, which also keeps the row out of the validation loop. An
+    existing row keeps its raw HTML, relevance decision, and metadata; only the
+    recorded status changes.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO scraped_html_cache (url, publication_id, raw_html, validation, fetch_status)
+            VALUES (?, ?, NULL, NULL, ?)
+            ON CONFLICT(url) DO UPDATE SET fetch_status = excluded.fetch_status
+        """, (url, publication_id, fetch_status))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
-    Checks if a URL is already present in stories or scraped_html_cache.
+    Checks whether discovery has already dealt with a URL and should skip it.
+
+    A cache row left by a fetch that returned no content does not make a URL
+    known unless its recorded status is terminal. A URL that timed out or
+    returned 5xx stays discoverable so the next crawl retries it, while one that
+    is permanently gone is not fetched again. A row holding raw HTML or carrying
+    a relevance decision is known either way.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -814,8 +852,18 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
         cursor.execute("SELECT 1 FROM stories WHERE url = ?", (url,))
         if cursor.fetchone() is not None:
             return True
-        # Check scraped_html_cache
-        cursor.execute("SELECT 1 FROM scraped_html_cache WHERE url = ?", (url,))
+        # Check scraped_html_cache, ignoring rows that only record a retryable
+        # fetch failure
+        placeholders = ", ".join("?" for _ in TERMINAL_FETCH_STATUSES)
+        cursor.execute(f"""
+            SELECT 1 FROM scraped_html_cache
+            WHERE url = ?
+              AND NOT (
+                raw_html IS NULL
+                AND relevance_status = 'PENDING'
+                AND (fetch_status IS NULL OR fetch_status NOT IN ({placeholders}))
+              )
+        """, (url, *TERMINAL_FETCH_STATUSES))
         if cursor.fetchone() is not None:
             return True
         return False
