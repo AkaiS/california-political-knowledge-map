@@ -879,12 +879,10 @@ def main(args=None):
                 get_articles_for_human_labeling,
                 update_article_metadata,
                 update_cached_html_status,
+                update_relevance_status,
             )
             from knowledge_map.core.relevance import deserialize_embedding
-            from knowledge_map.core.relevance_classification import (
-                get_metadata_embedding,
-                persist_relevance_label,
-            )
+            from knowledge_map.core.relevance_classification import get_metadata_embedding
 
             review_all = getattr(parsed_args, "review_all", False)
             rows = get_articles_for_human_labeling(include_all=review_all, db_path=db_path)
@@ -926,7 +924,7 @@ def main(args=None):
                             db_path=db_path,
                         )
 
-                        relevance_update = persist_relevance_label(
+                        relevance_update = update_relevance_status(
                             url,
                             status,
                             "HUMAN",

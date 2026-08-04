@@ -7,11 +7,9 @@ from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.sqlite_db import (
     DEFAULT_DB_PATH,
     ArticleMetadataUpdateResult,
-    RelevanceUpdateResult,
     get_articles_for_metadata_backfill,
     get_cached_html,
     update_article_metadata,
-    update_relevance_status,
 )
 from knowledge_map.core.relevance import extract_metadata
 
@@ -41,21 +39,6 @@ def get_metadata_embedding(
     except Exception:
         logger.warning("Failed to generate relevance metadata embedding", exc_info=True)
         return None
-
-
-def persist_relevance_label(
-    url: str,
-    relevance_status: str,
-    label_source: str,
-    db_path: str = DEFAULT_DB_PATH,
-) -> RelevanceUpdateResult:
-    """Persist only the relevance decision owned by the classification stage."""
-    return update_relevance_status(
-        url,
-        relevance_status,
-        label_source,
-        db_path=db_path,
-    )
 
 
 def _find_metadata_value(data: Any, *keys: str) -> Optional[str]:

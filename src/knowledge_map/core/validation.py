@@ -19,7 +19,8 @@ from knowledge_map.adapters.sqlite_db import (
     increment_publication_failure_points,
     reset_publication_failure_points,
     pause_publication_validation,
-    unpause_publication_validation
+    unpause_publication_validation,
+    update_relevance_status,
 )
 from knowledge_map.core.selectors import (
     get_selector_versions_by_proximity,
@@ -27,10 +28,7 @@ from knowledge_map.core.selectors import (
 )
 from knowledge_map.core.relevance import load_classifier_weights, classify_article
 from knowledge_map.core.relevance_agent import classify_article_with_llm
-from knowledge_map.core.relevance_classification import (
-    populate_article_metadata,
-    persist_relevance_label,
-)
+from knowledge_map.core.relevance_classification import populate_article_metadata
 
 logger = logging.getLogger(__name__)
 from knowledge_map.schemas.pipeline import ArticleStatus
@@ -713,7 +711,7 @@ class ArticleValidatorService:
                                 effective_relevance_status = "IRRELEVANT"
                                 label_source = "LLM"
 
-                        relevance_update = persist_relevance_label(
+                        relevance_update = update_relevance_status(
                             url,
                             effective_relevance_status,
                             label_source,
