@@ -25,6 +25,21 @@ class ArticleMetadataUpdateResult(NamedTuple):
     embedding: Optional[list[float]]
     applied: bool
 
+
+def legacy_column_reader(columns: List[str]):
+    """
+    Builds the reader a table migration uses to select from its pre-migration
+    table, given that table's actual `columns`.
+
+    The returned function yields SQL for reading `column`, or the literal
+    `fallback` when the pre-migration table predates that column.
+    """
+    def legacy_value(column: str, fallback: str = "NULL") -> str:
+        return column if column in columns else fallback
+
+    return legacy_value
+
+
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Initializes the SQLite database and creates the stories table if it doesn't exist.
@@ -127,12 +142,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     )
                 """)
 
-                def legacy_value(name: str, fallback: str = "NULL") -> str:
-                    """
-                    SQL for reading `name` out of the pre-migration table, or the
-                    literal `fallback` when that table predates the column.
-                    """
-                    return name if name in columns else fallback
+                legacy_value = legacy_column_reader(columns)
 
                 relevance_source = legacy_value("relevance_label_source", "'KEYWORD'")
                 raw_metadata = legacy_value("raw_metadata_json")
@@ -233,8 +243,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 import shutil
                 shutil.copy2(db_path, db_path + ".backup")
 
-            def legacy_story_value(column: str, fallback: str = "NULL") -> str:
-                return column if column in story_columns else fallback
+            legacy_story_value = legacy_column_reader(story_columns)
 
             legacy_status = legacy_story_value("status", "'UNPROCESSED'")
 
