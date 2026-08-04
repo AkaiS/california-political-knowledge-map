@@ -560,52 +560,60 @@ class ArticleValidatorService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
+                WITH latest_selector AS (
+                    SELECT publication_id, MAX(created_at) AS max_created_at
+                    FROM publication_selectors
+                    GROUP BY publication_id
+                ),
+                candidate AS (
+                    SELECT
+                        c.url,
+                        c.publication_id,
+                        c.raw_html,
+                        c.scraped_at,
+                        c.relevance_status,
+                        c.validation,
+                        c.validation_date,
+                        s.id AS story_id,
+                        s.title AS story_title,
+                        s.author AS story_author,
+                        s.published_date AS story_published_date,
+                        s.content AS story_content,
+                        ls.max_created_at,
+                        COALESCE(ls.max_created_at > c.validation_date, 0)
+                            AS selectors_created_after_validation
+                    FROM scraped_html_cache c
+                    JOIN publications p ON c.publication_id = p.id
+                    LEFT JOIN stories s ON s.url = c.url
+                    LEFT JOIN latest_selector ls ON ls.publication_id = c.publication_id
+                    WHERE p.validation_paused = 0
+                )
                 SELECT
-                    c.url,
-                    c.publication_id,
-                    c.raw_html,
-                    c.scraped_at,
-                    c.relevance_status,
-                    c.validation_date,
-                    s.id AS story_id,
-                    s.title AS story_title,
-                    s.author AS story_author,
-                    s.published_date AS story_published_date,
-                    s.content AS story_content,
-                    EXISTS (
-                        SELECT 1
-                        FROM publication_selectors newer_selector
-                        WHERE newer_selector.publication_id = c.publication_id
-                          AND newer_selector.created_at > c.validation_date
-                    ) AS selectors_created_after_validation
-                FROM scraped_html_cache c
-                JOIN publications p ON c.publication_id = p.id
-                LEFT JOIN stories s ON s.url = c.url
-                WHERE p.validation_paused = 0
-                  AND (
-                    c.validation = 'PENDING'
-                    OR (
-                      c.validation = 'VALIDATION_FAILED'
-                      AND c.validation_date < (
-                        SELECT COALESCE(MAX(created_at), '1970-01-01 00:00:00')
-                        FROM publication_selectors
-                        WHERE publication_id = p.id
+                    url,
+                    publication_id,
+                    raw_html,
+                    scraped_at,
+                    relevance_status,
+                    validation_date,
+                    story_id,
+                    story_title,
+                    story_author,
+                    story_published_date,
+                    story_content,
+                    selectors_created_after_validation
+                FROM candidate
+                WHERE (
+                        validation = 'PENDING'
+                        OR (
+                          validation = 'VALIDATION_FAILED'
+                          AND validation_date < COALESCE(max_created_at, '1970-01-01 00:00:00')
+                        )
                       )
-                    )
-                  )
                   AND (
-                    c.raw_html IS NOT NULL
-                    OR (
-                      s.id IS NOT NULL
-                      AND NOT EXISTS (
-                        SELECT 1
-                        FROM publication_selectors newer_selector
-                        WHERE newer_selector.publication_id = c.publication_id
-                          AND newer_selector.created_at > c.validation_date
+                        raw_html IS NOT NULL
+                        OR (story_id IS NOT NULL AND NOT selectors_created_after_validation)
                       )
-                    )
-                  )
-                ORDER BY CASE WHEN c.validation = 'VALIDATION_FAILED' THEN 0 ELSE 1 END ASC, c.scraped_at ASC
+                ORDER BY CASE WHEN validation = 'VALIDATION_FAILED' THEN 0 ELSE 1 END ASC, scraped_at ASC
             """)
             rows = cursor.fetchall()
         finally:
