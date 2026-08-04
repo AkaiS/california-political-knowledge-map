@@ -40,7 +40,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
-                status TEXT DEFAULT 'UNPROCESSED',
+                status TEXT CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', 'FAILED_DLQ', 'SYSTEM_ERROR')) DEFAULT 'UNPROCESSED',
                 completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -211,26 +211,95 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                 )
             """)
-        # Safe migration: add column 'content' if it's missing in an existing database
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
-            
-        # Safe migration: add column 'status' if it's missing in an existing database
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN status TEXT DEFAULT 'UNPROCESSED'")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
+        cursor.execute("PRAGMA table_info(stories)")
+        story_columns = [row[1] for row in cursor.fetchall()]
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='stories'")
+        stories_sql = cursor.fetchone()[0]
+        story_status_constraint = (
+            "CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', "
+            "'FAILED_DLQ', 'SYSTEM_ERROR'))"
+        )
+        needs_story_migration = (
+            "content" not in story_columns
+            or "status" not in story_columns
+            or "completed_at" not in story_columns
+            or story_status_constraint not in stories_sql
+        )
 
-        # Safe migration: add column 'completed_at' if it's missing in stories table
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN completed_at DATETIME")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
+        if needs_story_migration:
+            if os.path.exists(db_path):
+                import shutil
+                shutil.copy2(db_path, db_path + ".backup")
+
+            def legacy_story_value(column: str, fallback: str = "NULL") -> str:
+                return column if column in story_columns else fallback
+
+            legacy_status = legacy_story_value("status", "'UNPROCESSED'")
+
+            cursor.execute("""
+                CREATE TABLE stories_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL UNIQUE,
+                    category TEXT,
+                    author TEXT,
+                    published_date TEXT,
+                    summary TEXT,
+                    content TEXT,
+                    status TEXT CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', 'FAILED_DLQ', 'SYSTEM_ERROR')) DEFAULT 'UNPROCESSED',
+                    completed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute(f"""
+                INSERT INTO stories_new (
+                    id, title, url, category, author, published_date, summary,
+                    content, status, completed_at, created_at
+                )
+                SELECT
+                    id,
+                    title,
+                    url,
+                    {legacy_story_value('category')},
+                    {legacy_story_value('author')},
+                    {legacy_story_value('published_date')},
+                    {legacy_story_value('summary')},
+                    {legacy_story_value('content')},
+                    COALESCE({legacy_status}, 'UNPROCESSED'),
+                    {legacy_story_value('completed_at')},
+                    {legacy_story_value('created_at', 'CURRENT_TIMESTAMP')}
+                FROM stories
+                WHERE COALESCE({legacy_status}, 'UNPROCESSED') != 'IRRELEVANT'
+            """)
+            existing_tables = {
+                row[0]
+                for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            }
+            if "story_links" in existing_tables:
+                cursor.execute(f"""
+                    DELETE FROM story_links
+                    WHERE story_id IN (
+                        SELECT id
+                        FROM stories
+                        WHERE COALESCE({legacy_status}, 'UNPROCESSED') = 'IRRELEVANT'
+                    )
+                """)
+            cursor.execute("DROP TABLE stories")
+            cursor.execute("ALTER TABLE stories_new RENAME TO stories")
+            cursor.execute("""
+                UPDATE scraped_html_cache
+                SET validation = CASE
+                        WHEN EXISTS (
+                            SELECT 1 FROM stories WHERE stories.url = scraped_html_cache.url
+                        ) THEN 'VALIDATED'
+                        ELSE NULL
+                    END,
+                    validation_date = CURRENT_TIMESTAMP
+                WHERE validation = 'VALIDATED'
+                   OR EXISTS (
+                        SELECT 1 FROM stories WHERE stories.url = scraped_html_cache.url
+                   )
+            """)
             
         # Safe migration: add column 'tripping_article_url' if it's missing in publications table
         try:
@@ -1415,5 +1484,3 @@ def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
         }
     finally:
         conn.close()
-
-

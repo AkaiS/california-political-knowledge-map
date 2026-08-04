@@ -1477,6 +1477,7 @@ async def test_post_extraction_relevance_logistic_regression_relevant(tmp_path):
     assert cached["validation"] == "VALIDATED"
     assert cached["relevance_status"] == "RELEVANT"
     assert cached["relevance_label_source"] == "MODEL"
+    assert cached["raw_html"] is None
     
     # Validate story insertion with status UNPROCESSED
     stories = get_all_stories(db_path=db_path)
@@ -1486,7 +1487,7 @@ async def test_post_extraction_relevance_logistic_regression_relevant(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_validation_preserves_human_relevance_label_and_discards_model_result(tmp_path):
+async def test_validation_skips_classification_for_settled_relevance(tmp_path):
     from datetime import datetime, timedelta, timezone
     from unittest.mock import patch
 
@@ -1496,6 +1497,7 @@ async def test_validation_preserves_human_relevance_label_and_discards_model_res
         get_cached_html,
         init_db,
         register_publication,
+        update_article_metadata,
         update_cached_html_status,
         update_relevance_status,
     )
@@ -1559,25 +1561,155 @@ async def test_validation_preserves_human_relevance_label_and_discards_model_res
         "HUMAN",
         db_path=db_path,
     )
+    update_article_metadata(
+        url,
+        "Human Reviewed Article",
+        "Human-reviewed description",
+        [0.1] * 768,
+        db_path=db_path,
+    )
     update_cached_html_status(url, "PENDING", db_path=db_path)
 
     with patch(
         "knowledge_map.core.validation.load_classifier_weights",
         return_value={"coefficients": [1.0], "intercept": 0.0, "n_samples": 10},
-    ), patch(
+    ) as mock_weights, patch(
         "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
         return_value=[0.1] * 768,
-    ), patch(
+    ) as mock_embedding, patch(
         "knowledge_map.core.validation.classify_article",
         return_value="IRRELEVANT",
-    ):
+    ) as mock_classifier, patch(
+        "knowledge_map.core.validation.classify_article_with_llm",
+    ) as mock_llm:
         service = ArticleValidatorService(db_path=db_path)
         await service.validate_pending_articles()
 
+    mock_weights.assert_not_called()
+    mock_embedding.assert_not_called()
+    mock_classifier.assert_not_called()
+    mock_llm.assert_not_called()
     cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] == "VALIDATED"
     assert cached["relevance_status"] == "RELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
+    assert cached["headline"] == "Human Reviewed Article"
+    assert cached["description"] == "Human-reviewed description"
+    assert cached["embedding"] == pytest.approx([0.1] * 768)
+    assert cached["raw_html"] is None
+    stories = get_all_stories(db_path=db_path)
+    assert len(stories) == 1
+    assert stories[0]["url"] == url
+    assert stories[0]["status"] == "UNPROCESSED"
+
+
+@pytest.mark.anyio
+async def test_validation_inconclusive_has_no_story_and_null_validation(
+    tmp_path,
+    mock_metadata_embedding,
+):
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_all_stories,
+        get_cached_html,
+        init_db,
+        register_publication,
+    )
+
+    db_path = str(tmp_path / "inconclusive-validation.db")
+    url = "https://calmatters.org/politics/inconclusive"
+    init_db(db_path)
+    register_publication(
+        "calmatters",
+        "CalMatters",
+        "https://calmatters.org",
+        db_path=db_path,
+    )
+    cache_scraped_html(
+        url,
+        "calmatters",
+        "<html><body>cached article</body></html>",
+        validation="PENDING",
+        headline="Inconclusive Article",
+        description="Stored description",
+        relevance_status="INCONCLUSIVE",
+        db_path=db_path,
+    )
+    validation_result = {
+        "status": "VALIDATED",
+        "errors": [],
+        "failure_points": 0,
+        "selector_version_id": 1,
+        "extracted": {
+            "title": "Inconclusive Article",
+            "author": "Reporter",
+            "date": "2026-08-03T12:00:00Z",
+            "body": "Extracted body",
+            "body_elements": [],
+        },
+    }
+
+    with patch.object(
+        ArticleValidatorService,
+        "validate_article",
+        return_value=validation_result,
+    ), patch(
+        "knowledge_map.core.validation.widen_selector_version_window",
+    ), patch(
+        "knowledge_map.core.validation.load_classifier_weights",
+    ) as mock_weights, patch(
+        "knowledge_map.core.validation.classify_article",
+    ) as mock_classifier, patch(
+        "knowledge_map.core.validation.classify_article_with_llm",
+    ) as mock_llm:
+        service = ArticleValidatorService(db_path=db_path)
+        await service.validate_pending_articles()
+
+    mock_weights.assert_not_called()
+    mock_classifier.assert_not_called()
+    mock_llm.assert_not_called()
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["validation"] is None
+    assert cached["relevance_status"] == "INCONCLUSIVE"
+    assert cached["headline"] == "Inconclusive Article"
+    assert cached["description"] == "Stored description"
+    assert cached["embedding"] == pytest.approx([0.0] * 768)
     assert get_all_stories(db_path=db_path) == []
+
+
+@pytest.mark.anyio
+async def test_validation_does_not_select_rows_without_cached_html(tmp_path):
+    from knowledge_map.adapters.sqlite_db import (
+        cache_scraped_html,
+        get_cached_html,
+        init_db,
+        register_publication,
+    )
+
+    db_path = str(tmp_path / "missing-html-validation.db")
+    url = "https://calmatters.org/politics/missing-html"
+    init_db(db_path)
+    register_publication(
+        "calmatters",
+        "CalMatters",
+        "https://calmatters.org",
+        db_path=db_path,
+    )
+    cache_scraped_html(
+        url,
+        "calmatters",
+        None,
+        validation="PENDING",
+        db_path=db_path,
+    )
+
+    with patch.object(ArticleValidatorService, "validate_article") as mock_validate:
+        service = ArticleValidatorService(db_path=db_path)
+        results = await service.validate_pending_articles()
+
+    assert results == []
+    mock_validate.assert_not_called()
+    assert get_cached_html(url, db_path=db_path)["validation"] == "PENDING"
 
 
 @pytest.mark.anyio
@@ -1657,11 +1789,7 @@ async def test_post_extraction_relevance_logistic_regression_irrelevant(tmp_path
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "MODEL"
     
-    # Story should be inserted with status IRRELEVANT
-    stories = get_all_stories(db_path=db_path)
-    assert len(stories) == 1
-    assert stories[0]["url"] == url
-    assert stories[0]["status"] == "IRRELEVANT"
+    assert get_all_stories(db_path=db_path) == []
 
 
 @pytest.mark.anyio
@@ -1833,9 +1961,7 @@ async def test_post_extraction_relevance_no_weights_fallback(
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "LLM"
     
-    stories = get_all_stories(db_path=db_path)
-    assert len(stories) == 1
-    assert stories[0]["status"] == "IRRELEVANT"
+    assert get_all_stories(db_path=db_path) == []
 
 
 @pytest.mark.anyio
@@ -1925,4 +2051,3 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
     assert cached["headline"] == "Target Article Title"
     assert cached["description"] == "Target Article Description"
     assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
-

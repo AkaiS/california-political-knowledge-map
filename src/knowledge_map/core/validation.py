@@ -9,6 +9,7 @@ from typing import List, Optional, Any, Dict, Tuple
 from bs4 import BeautifulSoup
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
+    clear_cached_html,
     save_story,
     update_cached_html_status,
     DEFAULT_DB_PATH,
@@ -555,10 +556,11 @@ class ArticleValidatorService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT c.url, c.publication_id, c.raw_html, c.scraped_at
+                SELECT c.url, c.publication_id, c.raw_html, c.scraped_at, c.relevance_status
                 FROM scraped_html_cache c
                 JOIN publications p ON c.publication_id = p.id
                 WHERE p.validation_paused = 0
+                  AND c.raw_html IS NOT NULL
                   AND (
                     c.validation = 'PENDING'
                     OR (
@@ -587,6 +589,7 @@ class ArticleValidatorService:
             url = row["url"]
             publication_id = row["publication_id"]
             raw_html = row["raw_html"]
+            relevance_status = row["relevance_status"]
             from knowledge_map.core.selectors import parse_db_datetime
             scraped_at = parse_db_datetime(row["scraped_at"]) if row["scraped_at"] else datetime.datetime.now(datetime.timezone.utc)
 
@@ -596,14 +599,12 @@ class ArticleValidatorService:
 
             circuit_breaker_tripped = False
             try:
-                article_metadata = populate_article_metadata(url, db_path=self.db_path)
                 res = self.validate_article(url, publication_id, raw_html, scraped_at)
                 status = res["status"]
-                
-                update_cached_html_status(url, status, db_path=self.db_path)
 
                 if status == "VALIDATED":
                     extracted = res["extracted"]
+                    article_metadata = populate_article_metadata(url, db_path=self.db_path)
                     
                     version_id = res["selector_version_id"]
                     widen_selector_version_window(version_id, scraped_at, db_path=self.db_path)
@@ -618,68 +619,69 @@ class ArticleValidatorService:
                     else:
                         pub_date_str = extracted["date"]
 
-                    # Run post-extraction relevance classification
                     title = extracted.get("title", "").strip()
                     body = extracted.get("body", "").strip()
-                    
                     headline = article_metadata.headline or title
                     description = article_metadata.description or ""
-                    
-                    weights = load_classifier_weights()
-                    relevance_status = "INCONCLUSIVE"
-                    label_source = "KEYWORD"
                     embedding = article_metadata.embedding
-                    
-                    if weights and embedding:
-                        # Classify using model
-                        relevance_status = classify_article(headline, description, embedding)
-                        label_source = "MODEL"
-                    
-                    # Fallback to LLM agent if model is inconclusive or weights don't exist
-                    if relevance_status == "INCONCLUSIVE" or not weights:
-                        try:
-                            classification_res = await classify_article_with_llm(title, body, db_path=self.db_path)
-                            relevance_status = classification_res.classification
-                            label_source = "LLM"
-                        except Exception as e:
-                            logger.error(f"LLM relevance classification failed: {e}", exc_info=True)
-                            relevance_status = "IRRELEVANT"
-                            label_source = "LLM"
-                    
-                    relevance_update = persist_relevance_label(
-                        url,
-                        relevance_status,
-                        label_source,
-                        db_path=self.db_path,
-                    )
 
-                    if relevance_update.applied and relevance_update.status != "RELEVANT":
-                        update_cached_html_status(url, None, db_path=self.db_path)
+                    effective_relevance_status = relevance_status
+                    if relevance_status == "PENDING":
+                        weights = load_classifier_weights()
+                        effective_relevance_status = "INCONCLUSIVE"
+                        label_source = "KEYWORD"
 
-                    if relevance_update.applied:
+                        if weights and embedding:
+                            effective_relevance_status = classify_article(
+                                headline,
+                                description,
+                                embedding,
+                            )
+                            label_source = "MODEL"
+
+                        if effective_relevance_status == "INCONCLUSIVE" or not weights:
+                            try:
+                                classification_res = await classify_article_with_llm(
+                                    title,
+                                    body,
+                                    db_path=self.db_path,
+                                )
+                                effective_relevance_status = classification_res.classification
+                                label_source = "LLM"
+                            except Exception as e:
+                                logger.error(f"LLM relevance classification failed: {e}", exc_info=True)
+                                effective_relevance_status = "IRRELEVANT"
+                                label_source = "LLM"
+
+                        relevance_update = persist_relevance_label(
+                            url,
+                            effective_relevance_status,
+                            label_source,
+                            db_path=self.db_path,
+                        )
+                        effective_relevance_status = relevance_update.status
+
+                    if effective_relevance_status == "RELEVANT":
                         story = {
                             "title": extracted["title"],
                             "url": url,
                             "author": author_field,
                             "published_date": pub_date_str,
                             "content": extracted["body"],
-                            "status": "UNPROCESSED" if relevance_update.status == "RELEVANT" else "IRRELEVANT",
+                            "status": "UNPROCESSED",
                             "links": extract_links_from_elements(extracted.get("body_elements", []), url)
                         }
                         save_story(story, db_path=self.db_path)
+                        update_cached_html_status(url, "VALIDATED", db_path=self.db_path)
+                        clear_cached_html(url, db_path=self.db_path)
                     else:
-                        logger.info(
-                            "Discarded automated relevance classification for human-labeled article",
-                            extra={
-                                "url": url,
-                                "persisted_relevance_status": relevance_update.status,
-                                "persisted_relevance_label_source": relevance_update.label_source,
-                            },
-                        )
-                    logger.info("Validation outcome: VALIDATED", extra={
+                        update_cached_html_status(url, None, db_path=self.db_path)
+
+                    logger.info("Validation extraction succeeded", extra={
                         "url": url,
                         "publication_id": publication_id,
-                        "validation_status": "VALIDATED",
+                        "validation_status": "VALIDATED" if effective_relevance_status == "RELEVANT" else None,
+                        "relevance_status": effective_relevance_status,
                         "failure_points": 0,
                         "errors": []
                     })
@@ -689,6 +691,7 @@ class ArticleValidatorService:
                         reset_publication_failure_points(publication_id, db_path=self.db_path)
 
                 elif status == "VALIDATION_FAILED":
+                    update_cached_html_status(url, status, db_path=self.db_path)
                     logger.info("Validation outcome: VALIDATION_FAILED", extra={
                         "url": url,
                         "publication_id": publication_id,
@@ -719,6 +722,7 @@ class ArticleValidatorService:
                             circuit_breaker_tripped = True
 
                 elif status == "UNVALIDATABLE":
+                    update_cached_html_status(url, status, db_path=self.db_path)
                     logger.info("Validation outcome: UNVALIDATABLE", extra={
                         "url": url,
                         "publication_id": publication_id,

@@ -175,6 +175,21 @@ def test_sqlite_status_column(tmp_path):
         conn.close()
 
 
+def test_story_status_rejects_irrelevant(tmp_path):
+    db_path = str(tmp_path / "test_story_status_constraint.db")
+    init_db(db_path)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO stories (title, url, content, status) VALUES (?, ?, ?, ?)",
+                ("Irrelevant Story", "http://example.com/irrelevant-story", "Content", "IRRELEVANT"),
+            )
+    finally:
+        conn.close()
+
+
 def test_sqlite_status_migration(tmp_path):
     # 1. Create a DB with the old schema (no status column)
     db_file = tmp_path / "test_migration.db"
@@ -421,13 +436,8 @@ def test_get_gold_standard_examples(tmp_path):
                 VALUES (?, 'pub1', 'RELEVANT', 'HUMAN')
             """, (url,))
             
-        # 2. Insert 4 IRRELEVANT human-labeled examples (should limit to 3)
         for i in range(1, 5):
             url = f"http://example.com/irrel{i}"
-            cursor.execute("""
-                INSERT INTO stories (title, url, content, status)
-                VALUES (?, ?, ?, 'IRRELEVANT')
-            """, (f"Irrelevant Title {i}", url, f"Irrelevant Content {i}"))
             cursor.execute("""
                 INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
                 VALUES (?, 'pub1', 'IRRELEVANT', 'HUMAN')
@@ -450,14 +460,13 @@ def test_get_gold_standard_examples(tmp_path):
     # Retrieve gold standard examples
     examples = get_gold_standard_examples(db_path)
     
-    # We should have exactly 6 examples: 3 RELEVANT, 3 IRRELEVANT
-    assert len(examples) == 6
+    assert len(examples) == 3
     
     relevant = [ex for ex in examples if ex["relevance_status"] == "RELEVANT"]
     irrelevant = [ex for ex in examples if ex["relevance_status"] == "IRRELEVANT"]
     
     assert len(relevant) == 3
-    assert len(irrelevant) == 3
+    assert irrelevant == []
     
     # Check shape/keys of returned dictionaries
     for ex in examples:
