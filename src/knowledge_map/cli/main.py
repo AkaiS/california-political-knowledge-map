@@ -612,7 +612,7 @@ def main(args=None):
 
         from knowledge_map.core.html_refetch import HtmlRefetchService
         service = HtmlRefetchService(db_path=db_path)
-        print("Restoring raw HTML for relevant articles...")
+        print("Refetching raw HTML for relevant articles...")
         refetched_urls = asyncio.run(service.refetch_relevant_articles())
         print(f"Refetch complete: {len(refetched_urls)} articles refetched.")
         sys.exit(0)
@@ -625,7 +625,7 @@ def main(args=None):
         
         from knowledge_map.core.html_refetch import HtmlRefetchService
         refetch_service = HtmlRefetchService(db_path=db_path)
-        print("Restoring raw HTML for relevant articles...")
+        print("Refetching raw HTML for relevant articles...")
         refetched_urls = asyncio.run(refetch_service.refetch_relevant_articles())
         print(f"Refetch complete: {len(refetched_urls)} articles refetched.")
 
