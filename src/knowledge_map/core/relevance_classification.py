@@ -97,7 +97,7 @@ def populate_article_metadata(
     )
 
 
-def backfill_relevance_training_data(
+def backfill_article_metadata(
     db_path: str = DEFAULT_DB_PATH,
 ) -> MetadataBackfillResult:
     """Populate cached metadata and embeddings without fetching article URLs."""

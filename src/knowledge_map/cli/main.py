@@ -865,9 +865,9 @@ def main(args=None):
         init_db(db_path)
 
         if parsed_args.classifier_action == "backfill":
-            from knowledge_map.core.relevance_classification import backfill_relevance_training_data
+            from knowledge_map.core.relevance_classification import backfill_article_metadata
 
-            result = backfill_relevance_training_data(db_path=db_path)
+            result = backfill_article_metadata(db_path=db_path)
             print(
                 f"Backfilled {result.updated} of {result.candidates} cached articles."
             )

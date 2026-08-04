@@ -11,7 +11,7 @@ from knowledge_map.adapters.sqlite_db import (
     clear_cached_html,
     is_url_known
 )
-from knowledge_map.core.relevance_classification import backfill_relevance_training_data
+from knowledge_map.core.relevance_classification import backfill_article_metadata
 from knowledge_map.core.relevance import (
     serialize_embedding,
     deserialize_embedding,
@@ -370,8 +370,8 @@ def test_backfill_populates_training_data_offline_and_is_idempotent(tmp_path):
         "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
         side_effect=[[0.25, 0.75], [0.0, 1.0]],
     ) as embed_text, patch("httpx.get") as network_get:
-        first = backfill_relevance_training_data(db_path=db_path)
-        second = backfill_relevance_training_data(db_path=db_path)
+        first = backfill_article_metadata(db_path=db_path)
+        second = backfill_article_metadata(db_path=db_path)
 
     assert first.candidates == 2
     assert first.updated == 2
