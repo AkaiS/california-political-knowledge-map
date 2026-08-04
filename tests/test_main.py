@@ -414,7 +414,7 @@ def test_cli_classifier_label_default(tmp_path, monkeypatch):
 def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
     import sqlite3
     from unittest.mock import patch
-    from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, init_db, save_story
     from knowledge_map.cli.main import main
     
     db_file = tmp_path / "test_cli_label_review_all.db"
@@ -427,6 +427,15 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
         validation=None, headline="LLM Labeled Article",
         description="This was classified by LLM.", relevance_status="RELEVANT",
         relevance_label_source="LLM", db_path=db_path
+    )
+    save_story(
+        {
+            "title": "LLM Labeled Article",
+            "url": "https://example.com/llm-labeled",
+            "content": "Previously extracted content",
+            "status": "UNPROCESSED",
+        },
+        db_path=db_path,
     )
     
     # 2. Insert another article with relevance_label_source = 'HUMAN' (should NOT be reviewed)
@@ -466,6 +475,11 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
         assert row["relevance_status"] == "IRRELEVANT"
         assert row["validation"] is None
         assert row["relevance_label_source"] == "HUMAN"
+        cursor.execute(
+            "SELECT 1 FROM stories WHERE url = ?",
+            ("https://example.com/llm-labeled",),
+        )
+        assert cursor.fetchone() is None
         
         # Verify the second was not changed
         cursor.execute("SELECT relevance_status, relevance_label_source FROM scraped_html_cache WHERE url = ?", ("https://example.com/human-labeled",))
@@ -474,6 +488,67 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
         assert row["relevance_label_source"] == "HUMAN"
     finally:
         conn.close()
+
+
+def test_cli_classifier_label_irrelevant_keeps_completed_story(tmp_path, monkeypatch):
+    import sqlite3
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, init_db, save_story
+    from knowledge_map.cli.main import main
+
+    db_path = str(tmp_path / "test_cli_label_completed_story.db")
+    url = "https://example.com/ingested-story"
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        "<html></html>",
+        validation="VALIDATED",
+        headline="Ingested Story",
+        description="Already represented in the graph.",
+        relevance_status="RELEVANT",
+        relevance_label_source="LLM",
+        db_path=db_path,
+    )
+    save_story(
+        {
+            "title": "Ingested Story",
+            "url": url,
+            "content": "Previously extracted content",
+            "status": "COMPLETED",
+        },
+        db_path=db_path,
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", db_path)
+
+    with patch("builtins.input", side_effect=["n"]), patch(
+        "knowledge_map.core.relevance_classification.get_metadata_embedding",
+        return_value=[0.3] * 768,
+    ):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["classifier", "label", "--review-all"])
+
+    assert exc_info.value.code == 0
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cache_row = conn.execute(
+            """
+            SELECT relevance_status, validation, relevance_label_source
+            FROM scraped_html_cache
+            WHERE url = ?
+            """,
+            (url,),
+        ).fetchone()
+        story_row = conn.execute(
+            "SELECT status FROM stories WHERE url = ?",
+            (url,),
+        ).fetchone()
+
+    assert cache_row["relevance_status"] == "IRRELEVANT"
+    assert cache_row["validation"] is None
+    assert cache_row["relevance_label_source"] == "HUMAN"
+    assert story_row["status"] == "COMPLETED"
 
 
 def test_cli_classifier_reevaluate_excludes_human_labels(tmp_path, monkeypatch):

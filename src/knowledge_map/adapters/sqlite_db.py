@@ -447,6 +447,30 @@ def delete_story(url: str, db_path: str = DEFAULT_DB_PATH) -> None:
     finally:
         conn.close()
 
+
+def delete_uningested_story(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
+    """Delete a Story unless ingestion has completed, returning whether it was removed."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM story_links
+            WHERE story_id = (
+                SELECT id
+                FROM stories
+                WHERE url = ? AND status IS NOT 'COMPLETED'
+            )
+        """, (url,))
+        cursor.execute("""
+            DELETE FROM stories
+            WHERE url = ? AND status IS NOT 'COMPLETED'
+        """, (url,))
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
 def get_last_n_stories(n: int = 5, db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
     Retrieves the last n inserted stories from the database.

@@ -844,6 +844,7 @@ def main(args=None):
 
         if parsed_args.classifier_action == "label":
             from knowledge_map.adapters.sqlite_db import (
+                delete_uningested_story,
                 get_articles_for_human_labeling,
                 update_article_metadata,
                 update_cached_html_status,
@@ -882,7 +883,7 @@ def main(args=None):
                         sys.exit(0)
                     if choice in ('y', 'n'):
                         status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
-                        validation = "PENDING" if choice == 'y' else None
+                        validation = "PENDING" if status == "RELEVANT" else None
                         
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
                         embedding = get_metadata_embedding(headline, description, embedding)
@@ -902,6 +903,8 @@ def main(args=None):
                         )
                         if relevance_update.applied:
                             update_cached_html_status(url, validation, db_path=db_path)
+                            if status == "IRRELEVANT":
+                                delete_uningested_story(url, db_path=db_path)
                         print(
                             f"Labeled: {relevance_update.status} "
                             f"({relevance_update.label_source}) -> validation: {validation}"
