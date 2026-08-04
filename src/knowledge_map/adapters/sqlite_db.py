@@ -995,6 +995,61 @@ def record_failed_fetch(
         conn.close()
 
 
+def get_articles_needing_html_restore(
+    db_path: str = DEFAULT_DB_PATH,
+) -> List[Dict[str, Any]]:
+    """Return relevant, unmaterialized articles whose HTML can be retried."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        placeholders = ", ".join("?" for _ in TERMINAL_FETCH_STATUSES)
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT
+                c.url,
+                c.publication_id,
+                p.crawl_delay,
+                p.max_concurrency,
+                p.use_robots_txt
+            FROM scraped_html_cache c
+            JOIN publications p ON p.id = c.publication_id
+            LEFT JOIN stories s ON s.url = c.url
+            WHERE c.relevance_status = 'RELEVANT'
+              AND c.raw_html IS NULL
+              AND s.id IS NULL
+              AND (c.fetch_status IS NULL OR c.fetch_status NOT IN ({placeholders}))
+            ORDER BY c.scraped_at ASC
+        """, TERMINAL_FETCH_STATUSES)
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def restore_cached_html(
+    url: str,
+    raw_html: Optional[str],
+    fetch_status: Optional[int],
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
+    """Record a restore attempt without changing downstream stage state."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        recorded_fetch_status = 200 if raw_html is not None and fetch_status is None else fetch_status
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET raw_html = ?,
+                scraped_at = CURRENT_TIMESTAMP,
+                fetch_status = ?
+            WHERE url = ?
+        """, (raw_html, recorded_fetch_status, url))
+        if cursor.rowcount == 0:
+            raise ValueError(f"Cached article not found: {url}")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
     Checks whether discovery has already dealt with a URL and should skip it.

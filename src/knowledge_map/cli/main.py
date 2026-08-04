@@ -35,6 +35,7 @@ CLI_COMMAND_HELP = {
     "update-publication": "Update an existing Publication in the database",
     "update-sources": "Run incremental scraping/discovery for registered publications",
     "scrape-archive": "Run archive crawl using DomainMapper",
+    "restore-html": "Restore raw HTML for relevant articles that need extraction",
     "validate-articles": "Run validation on pending articles in raw HTML cache",
     "review-selectors": "Review unresolved selector proposals and promote/reject them",
     "heal-selectors": "Manually trigger or retry selector self-healing for a publication",
@@ -193,6 +194,9 @@ def main(args=None):
     # Scrape-archive subcommand
     archive_parser = subparsers.add_parser("scrape-archive", help=CLI_COMMAND_HELP["scrape-archive"])
     archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
+
+    # Restore-html subcommand
+    subparsers.add_parser("restore-html", help=CLI_COMMAND_HELP["restore-html"])
 
     # Validate-articles subcommand
     subparsers.add_parser("validate-articles", help=CLI_COMMAND_HELP["validate-articles"])
@@ -598,12 +602,30 @@ def main(args=None):
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
 
+    elif parsed_args.action == "restore-html":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+
+        from knowledge_map.core.html_restore import HtmlRestoreService
+        service = HtmlRestoreService(db_path=db_path)
+        print("Restoring raw HTML for relevant articles...")
+        restored_urls = asyncio.run(service.restore_relevant_articles())
+        print(f"Restore complete: {len(restored_urls)} articles restored.")
+        sys.exit(0)
+
     elif parsed_args.action == "validate-articles":
         db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
         # Ensure database is initialized
         from knowledge_map.adapters.sqlite_db import init_db
         init_db(db_path)
         
+        from knowledge_map.core.html_restore import HtmlRestoreService
+        restore_service = HtmlRestoreService(db_path=db_path)
+        print("Restoring raw HTML for relevant articles...")
+        restored_urls = asyncio.run(restore_service.restore_relevant_articles())
+        print(f"Restore complete: {len(restored_urls)} articles restored.")
+
         from knowledge_map.core.validation import ArticleValidatorService
         service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")

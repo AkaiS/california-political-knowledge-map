@@ -1,0 +1,71 @@
+import asyncio
+import logging
+from collections import defaultdict
+from typing import Any, Dict, List
+
+from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
+
+from knowledge_map.adapters.sqlite_db import (
+    get_articles_needing_html_restore,
+    restore_cached_html,
+)
+from knowledge_map.config import settings
+from knowledge_map.core.crawling import fetch_article
+from knowledge_map.core.discovery import PolitenessLimiter
+
+logger = logging.getLogger(__name__)
+
+
+class HtmlRestoreService:
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or settings.batch_ingestion.db_path
+
+    async def restore_relevant_articles(self) -> List[str]:
+        candidates = get_articles_needing_html_restore(db_path=self.db_path)
+        if not candidates:
+            logger.info("No relevant articles need raw HTML restored.")
+            return []
+
+        candidates_by_publication: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for candidate in candidates:
+            candidates_by_publication[candidate["publication_id"]].append(candidate)
+
+        restored_urls = []
+        async with AsyncWebCrawler() as crawler:
+            for publication_candidates in candidates_by_publication.values():
+                publication = publication_candidates[0]
+                limiter = PolitenessLimiter(
+                    crawl_delay=publication["crawl_delay"],
+                    max_concurrency=publication["max_concurrency"],
+                )
+                run_config = CrawlerRunConfig(
+                    cache_mode=CacheMode.BYPASS,
+                    check_robots_txt=bool(publication["use_robots_txt"]),
+                )
+
+                async def restore(candidate: Dict[str, Any]) -> None:
+                    async with limiter:
+                        result = await fetch_article(crawler, candidate["url"], run_config)
+                        restore_cached_html(
+                            candidate["url"],
+                            result.raw_html,
+                            result.fetch_status,
+                            db_path=self.db_path,
+                        )
+                        if result.has_article_content:
+                            restored_urls.append(candidate["url"])
+                        else:
+                            logger.error(
+                                "Failed to restore '%s': %s",
+                                candidate["url"],
+                                result.error_message,
+                                extra={
+                                    "url": candidate["url"],
+                                    "publication_id": candidate["publication_id"],
+                                    "fetch_status": result.fetch_status,
+                                },
+                            )
+
+                await asyncio.gather(*(restore(candidate) for candidate in publication_candidates))
+
+        return restored_urls

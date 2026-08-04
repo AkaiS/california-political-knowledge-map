@@ -1,6 +1,6 @@
 # Restore HTML for relevant articles that lack it
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -31,15 +31,15 @@ service and shared by both callers; only the persistence call differs.
 
 ## Acceptance criteria
 
-- [ ] Re-fetch selects relevant articles that have no raw HTML and no Story row.
-- [ ] Re-fetch does not select an article that already has a Story row.
-- [ ] Re-fetch does not select an article whose recorded fetch status is a terminal 4xx, and does select one whose status is a 5xx or absent.
-- [ ] Every fetch records its HTTP status, including failures.
-- [ ] A restore preserves `relevance_status`, `relevance_label_source`, `headline`, `description`, and `embedding` unchanged.
-- [ ] Running the validation command re-fetches and then validates in a single invocation, so a purged relevant article ends the run with a Story.
-- [ ] Re-fetch is invocable on its own.
-- [ ] Discovery and re-fetch share one crawler implementation and differ only in how they persist the result.
-- [ ] The full deterministic test suite passes.
+- [x] Re-fetch selects relevant articles that have no raw HTML and no Story row.
+- [x] Re-fetch does not select an article that already has a Story row.
+- [x] Re-fetch does not select an article whose recorded fetch status is a terminal 4xx, and does select one whose status is a 5xx or absent.
+- [x] Every fetch records its HTTP status, including failures.
+- [x] A restore preserves `relevance_status`, `relevance_label_source`, `headline`, `description`, and `embedding` unchanged.
+- [x] Running the validation command re-fetches and then validates in a single invocation, so a purged relevant article ends the run with a Story.
+- [x] Re-fetch is invocable on its own.
+- [x] Discovery and re-fetch share one crawler implementation and differ only in how they persist the result.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

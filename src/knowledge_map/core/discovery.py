@@ -15,37 +15,10 @@ from knowledge_map.adapters.sqlite_db import (
     DEFAULT_DB_PATH,
 )
 from knowledge_map.config import settings
+from knowledge_map.core.crawling import fetch_article
 
 logger = logging.getLogger(__name__)
 
-
-def effective_fetch_status(res: Any) -> Optional[int]:
-    """
-    The status of the final response of a fetch, or None when the crawler
-    reported none.
-
-    Crawl4AI reports the *first* hop of a redirect chain in `status_code` and the
-    last in `redirected_status_code`, so an article reached through a 301 has a
-    `status_code` of 301. The last hop is what says whether we got the article.
-    """
-    for candidate in (
-        getattr(res, "redirected_status_code", None),
-        getattr(res, "status_code", None),
-    ):
-        if isinstance(candidate, int):
-            return candidate
-    return None
-
-
-def holds_article_content(fetch_status: Optional[int]) -> bool:
-    """
-    Whether a fetch delivered the article itself rather than an error page.
-
-    An unreported status is treated as content: the crawler substitutes 200 for
-    the responseless cases it handles (raw and file URLs, aborted downloads), so
-    a missing status means unknown, not failed.
-    """
-    return fetch_status is None or 200 <= fetch_status < 300
 
 try:
     import logfire
@@ -470,24 +443,26 @@ class ListingPageDiscoveryService:
                     async def fetch_and_cache(url: str):
                         async with limiter:
                             logger.info(f"Fetching candidate article '{url}' for '{pub_id}'")
-                            res = await crawler.arun(url=url, config=run_config)
-                            fetch_status = effective_fetch_status(res)
-                            if not res.success or not holds_article_content(fetch_status):
-                                error_msg = getattr(res, "error_message", "")
+                            fetch_result = await fetch_article(crawler, url, run_config)
+                            if not fetch_result.has_article_content:
                                 logger.error(
-                                    f"Failed to fetch candidate '{url}': {error_msg}",
+                                    f"Failed to fetch candidate '{url}': {fetch_result.error_message}",
                                     extra={
                                         "url": url,
                                         "publication_id": pub_id,
-                                        "fetch_status": fetch_status
+                                        "fetch_status": fetch_result.fetch_status
                                     }
                                 )
-                                record_failed_fetch(url, pub_id, fetch_status, db_path=self.db_path)
+                                record_failed_fetch(
+                                    url,
+                                    pub_id,
+                                    fetch_result.fetch_status,
+                                    db_path=self.db_path,
+                                )
                                 return
-                            raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
                             cache_scraped_html(
-                                url, pub_id, raw_html, validation="PENDING",
-                                relevance_status="PENDING", fetch_status=fetch_status,
+                                url, pub_id, fetch_result.raw_html, validation="PENDING",
+                                relevance_status="PENDING", fetch_status=fetch_result.fetch_status,
                                 db_path=self.db_path
                             )
                             scraped_urls.append(url)
@@ -655,21 +630,25 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                         new_candidates_found_count += 1
                         async with limiter:
                             logger.info(f"Archive crawl: fetching candidate '{url}' for '{pub_id}'")
-                            res = await crawler.arun(url=url, config=run_config)
-                            fetch_status = effective_fetch_status(res)
-                            if not res.success or not holds_article_content(fetch_status):
+                            fetch_result = await fetch_article(crawler, url, run_config)
+                            if not fetch_result.has_article_content:
                                 logger.error(
-                                    f"Archive crawl: failed to fetch '{url}': {res.error_message}",
+                                    f"Archive crawl: failed to fetch '{url}': {fetch_result.error_message}",
                                     extra={
                                         "url": url,
                                         "publication_id": pub_id,
-                                        "fetch_status": fetch_status
+                                        "fetch_status": fetch_result.fetch_status
                                     }
                                 )
-                                record_failed_fetch(url, pub_id, fetch_status, db_path=self.db_path)
+                                record_failed_fetch(
+                                    url,
+                                    pub_id,
+                                    fetch_result.fetch_status,
+                                    db_path=self.db_path,
+                                )
                                 return False
 
-                            raw_html = getattr(res, "html", "") or getattr(res, "cleaned_html", "") or ""
+                            raw_html = fetch_result.raw_html or ""
 
                             # Check historical cutoff
                             pub_date = extract_published_date(raw_html)
@@ -680,7 +659,7 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                             # Cache candidate article immediately
                             cache_scraped_html(
                                 url, pub_id, raw_html, validation="PENDING",
-                                relevance_status="PENDING", fetch_status=fetch_status,
+                                relevance_status="PENDING", fetch_status=fetch_result.fetch_status,
                                 db_path=self.db_path
                             )
                             scraped_urls.append(url)
