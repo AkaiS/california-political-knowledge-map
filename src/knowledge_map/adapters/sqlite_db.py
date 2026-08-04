@@ -118,12 +118,16 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     )
                 """)
 
-                def old_column(name: str, fallback: str = "NULL") -> str:
+                def legacy_value(name: str, fallback: str = "NULL") -> str:
+                    """
+                    SQL for reading `name` out of the pre-migration table, or the
+                    literal `fallback` when that table predates the column.
+                    """
                     return name if name in columns else fallback
 
-                relevance_source = old_column("relevance_label_source", "'KEYWORD'")
-                raw_metadata = old_column("raw_metadata_json")
-                relevance_status = old_column("relevance_status", "'PENDING'")
+                relevance_source = legacy_value("relevance_label_source", "'KEYWORD'")
+                raw_metadata = legacy_value("raw_metadata_json")
+                relevance_status = legacy_value("relevance_status", "'PENDING'")
                 migrated_relevance_status = f"""
                     CASE
                         WHEN {relevance_status} = 'RELEVANT'
@@ -133,9 +137,9 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                         ELSE {relevance_status}
                     END
                 """
-                validation = old_column("validation")
+                validation = legacy_value("validation")
                 migrated_validation = f"CASE WHEN {validation} = 'PENDING_RELEVANCE' THEN NULL ELSE {validation} END"
-                raw_html = old_column("raw_html")
+                raw_html = legacy_value("raw_html")
                 fetch_status = (
                     f"COALESCE(fetch_status, CASE WHEN {raw_html} IS NOT NULL THEN 200 ELSE NULL END)"
                     if "fetch_status" in columns
@@ -149,15 +153,15 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                         relevance_label_source, fetch_status, raw_metadata_json
                     )
                     SELECT
-                        {old_column('url')},
-                        {old_column('publication_id')},
-                        {old_column('raw_html')},
+                        {legacy_value('url')},
+                        {legacy_value('publication_id')},
+                        {legacy_value('raw_html')},
                         {migrated_validation},
-                        {old_column('validation_date')},
-                        {old_column('scraped_at', 'CURRENT_TIMESTAMP')},
-                        {old_column('headline')},
-                        {old_column('description')},
-                        {old_column('embedding')},
+                        {legacy_value('validation_date')},
+                        {legacy_value('scraped_at', 'CURRENT_TIMESTAMP')},
+                        {legacy_value('headline')},
+                        {legacy_value('description')},
+                        {legacy_value('embedding')},
                         {migrated_relevance_status},
                         {relevance_source},
                         {fetch_status},
