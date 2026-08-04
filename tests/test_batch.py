@@ -29,6 +29,7 @@ from knowledge_map.core.exceptions import (
     PipelineLockError
 )
 from knowledge_map.cli.main import main
+from knowledge_map.schemas.stories import Story
 from test_pipeline import (
     MockDatabaseAdapter,
     MockEmbeddingAdapter,
@@ -78,41 +79,41 @@ def test_get_unprocessed_stories(tmp_path):
     init_db(db_path)
 
     # 1. Unprocessed story with content (should be returned)
-    story1 = {
-        "title": "Unprocessed 1",
-        "url": "http://example.com/unproc1",
-        "content": "Valid content 1"
-    }
+    story1 = Story(
+        title="Unprocessed 1",
+        url="http://example.com/unproc1",
+        content="Valid content 1"
+    )
     # 2. Unprocessed story with empty content (should NOT be returned)
-    story2 = {
-        "title": "Unprocessed Empty",
-        "url": "http://example.com/unproc2",
-        "content": ""
-    }
+    story2 = Story(
+        title="Unprocessed Empty",
+        url="http://example.com/unproc2",
+        content=""
+    )
     # 3. Unprocessed story with None content (should NOT be returned)
-    story3 = {
-        "title": "Unprocessed None",
-        "url": "http://example.com/unproc3",
-        "content": None
-    }
+    story3 = Story(
+        title="Unprocessed None",
+        url="http://example.com/unproc3",
+        content=None
+    )
     # 4. Processing story with content (should NOT be returned)
-    story4 = {
-        "title": "Processing 1",
-        "url": "http://example.com/proc1",
-        "content": "Valid content 4"
-    }
+    story4 = Story(
+        title="Processing 1",
+        url="http://example.com/proc1",
+        content="Valid content 4"
+    )
     # 5. Completed story with content (should NOT be returned)
-    story5 = {
-        "title": "Completed 1",
-        "url": "http://example.com/comp1",
-        "content": "Valid content 5"
-    }
+    story5 = Story(
+        title="Completed 1",
+        url="http://example.com/comp1",
+        content="Valid content 5"
+    )
     # 6. Another unprocessed story with content (should be returned, ordered by ID asc)
-    story6 = {
-        "title": "Unprocessed 2",
-        "url": "http://example.com/unproc4",
-        "content": "Valid content 6"
-    }
+    story6 = Story(
+        title="Unprocessed 2",
+        url="http://example.com/unproc4",
+        content="Valid content 6"
+    )
 
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
@@ -122,8 +123,8 @@ def test_get_unprocessed_stories(tmp_path):
     save_story(story6, db_path=db_path)
 
     # Update statuses
-    update_story_status(story4["url"], "PROCESSING", db_path=db_path)
-    update_story_status(story5["url"], "COMPLETED", db_path=db_path)
+    update_story_status(story4.url, "PROCESSING", db_path=db_path)
+    update_story_status(story5.url, "COMPLETED", db_path=db_path)
 
     stories = get_unprocessed_stories(db_path=db_path)
     assert len(stories) == 2
@@ -137,16 +138,16 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     init_db(db_path)
 
     # Save two unprocessed stories
-    story1 = {
-        "title": "Story A",
-        "url": "http://example.com/a",
-        "content": "Content of Story A"
-    }
-    story2 = {
-        "title": "Story B",
-        "url": "http://example.com/b",
-        "content": "Content of Story B"
-    }
+    story1 = Story(
+        title="Story A",
+        url="http://example.com/a",
+        content="Content of Story A"
+    )
+    story2 = Story(
+        title="Story B",
+        url="http://example.com/b",
+        content="Content of Story B"
+    )
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
 
@@ -249,11 +250,11 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     init_db(db_path)
     
     # Save a story
-    story = {
-        "title": "Transition Title",
-        "url": "http://example.com/transition",
-        "content": "Transition content."
-    }
+    story = Story(
+        title="Transition Title",
+        url="http://example.com/transition",
+        content="Transition content."
+    )
     save_story(story, db_path=db_path)
     
     # Use real SQLite status tracker
@@ -279,7 +280,7 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "COMPLETED"
     finally:
         conn.close()
@@ -324,8 +325,8 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story1 = {"title": "Story 1", "url": "http://example.com/1", "content": "Content 1"}
-    story2 = {"title": "Story 2", "url": "http://example.com/2", "content": "Content 2"}
+    story1 = Story(title="Story 1", url="http://example.com/1", content="Content 1")
+    story2 = Story(title="Story 2", url="http://example.com/2", content="Content 2")
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
@@ -360,8 +361,8 @@ def test_batch_ingestion_resilience_extraction_error(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story1 = {"title": "Story 1", "url": "http://example.com/1", "content": "Content 1"}
-    story2 = {"title": "Story 2", "url": "http://example.com/2", "content": "Content 2"}
+    story1 = Story(title="Story 1", url="http://example.com/1", content="Content 1")
+    story2 = Story(title="Story 2", url="http://example.com/2", content="Content 2")
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
@@ -397,11 +398,11 @@ def test_batch_ingestion_consecutive_system_errors(tmp_path):
     
     # 4 stories
     for i in range(1, 5):
-        save_story({
-            "title": f"Story {i}",
-            "url": f"http://example.com/{i}",
-            "content": f"Content {i}"
-        }, db_path=db_path)
+        save_story(Story(
+            title=f"Story {i}",
+            url=f"http://example.com/{i}",
+            content=f"Content {i}",
+        ), db_path=db_path)
         
     mock_pipeline = MagicMock()
     mock_status_tracker = MagicMock()
@@ -434,11 +435,11 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
     
     # 3 stories
     for i in range(1, 4):
-        save_story({
-            "title": f"Story {i}",
-            "url": f"http://example.com/{i}",
-            "content": f"Content {i}"
-        }, db_path=db_path)
+        save_story(Story(
+            title=f"Story {i}",
+            url=f"http://example.com/{i}",
+            content=f"Content {i}",
+        ), db_path=db_path)
         
     mock_pipeline = MagicMock()
     mock_status_tracker = MagicMock()
@@ -665,11 +666,11 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
 
     # Save 4 stories
     for i in range(1, 5):
-        save_story({
-            "title": f"Story {i}",
-            "url": f"http://example.com/{i}",
-            "content": f"Content {i}"
-        }, db_path=db_path)
+        save_story(Story(
+            title=f"Story {i}",
+            url=f"http://example.com/{i}",
+            content=f"Content {i}",
+        ), db_path=db_path)
 
     mock_pipeline = MagicMock()
     mock_status_tracker = MagicMock()
@@ -729,11 +730,11 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
     db_path_reset = str(db_file_reset)
     init_db(db_path_reset)
     for i in range(1, 4):
-         save_story({
-             "title": f"Story {i}",
-             "url": f"http://example.com/{i}",
-             "content": f"Content {i}"
-         }, db_path=db_path_reset)
+         save_story(Story(
+             title=f"Story {i}",
+             url=f"http://example.com/{i}",
+             content=f"Content {i}",
+         ), db_path=db_path_reset)
 
     settings_reset = BatchIngestionSettings(
         db_path=db_path_reset,

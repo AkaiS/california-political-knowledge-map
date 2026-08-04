@@ -33,6 +33,8 @@ from knowledge_map.core.relevance_classification import (
 )
 
 logger = logging.getLogger(__name__)
+from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.stories import Story, StoryLink
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.utils.urls import clean_and_resolve_url
 
@@ -713,15 +715,15 @@ class ArticleValidatorService:
 
                     if effective_relevance_status == "RELEVANT":
                         if not extraction_skipped:
-                            story = {
-                                "title": extracted["title"],
-                                "url": url,
-                                "author": author_field,
-                                "published_date": pub_date_str,
-                                "content": extracted["body"],
-                                "status": "UNPROCESSED",
-                                "links": extract_links_from_elements(extracted.get("body_elements", []), url)
-                            }
+                            story = Story(
+                                title=extracted["title"],
+                                url=url,
+                                author=author_field,
+                                published_date=pub_date_str,
+                                content=extracted["body"],
+                                status=ArticleStatus.UNPROCESSED,
+                                links=extract_links_from_elements(extracted.get("body_elements", []), url),
+                            )
                             replace_story(story, db_path=self.db_path)
                         update_cached_html_status(url, "VALIDATED", db_path=self.db_path)
                         clear_cached_html(url, db_path=self.db_path)
@@ -863,7 +865,7 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
     }
 
 
-def extract_links_from_elements(elements: List[Any], base_url: str) -> List[Dict[str, str]]:
+def extract_links_from_elements(elements: List[Any], base_url: str) -> List[StoryLink]:
     """
     Extracts, resolves, and deduplicates all hyperlinks from body elements.
     Only keeps links in the body that are not self-links and have valid http/https schemes.
@@ -876,10 +878,7 @@ def extract_links_from_elements(elements: List[Any], base_url: str) -> List[Dict
             resolved = clean_and_resolve_url(base_url, href)
             if resolved and resolved not in seen:
                 seen.add(resolved)
-                links.append({
-                    "text": a.get_text().strip(),
-                    "url": resolved
-                })
+                links.append(StoryLink(text=a.get_text().strip(), url=resolved))
     return links
 
 
@@ -941,14 +940,14 @@ def run_recovery_check(
         else:
             pub_date_str = extracted["date"]
 
-        story = {
-            "title": extracted["title"],
-            "url": trigger_article_url,
-            "author": author_field,
-            "published_date": pub_date_str,
-            "content": extracted["body"],
-            "links": extract_links_from_elements(extracted.get("body_elements", []), trigger_article_url)
-        }
+        story = Story(
+            title=extracted["title"],
+            url=trigger_article_url,
+            author=author_field,
+            published_date=pub_date_str,
+            content=extracted["body"],
+            links=extract_links_from_elements(extracted.get("body_elements", []), trigger_article_url),
+        )
         save_story(story, db_path=db_path)
 
         # Reset failure points & unpause validation

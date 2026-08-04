@@ -1,7 +1,9 @@
 import sqlite3
 import os
 import json
-from typing import List, Dict, Any, NamedTuple, Optional
+from typing import List, Dict, Any, NamedTuple, Optional, Tuple
+
+from knowledge_map.schemas.stories import Story, StoryLink
 
 DEFAULT_DB_PATH = "document_store.db"
 
@@ -350,7 +352,29 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     finally:
         conn.close()
 
-def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
+def _story_columns(story: Story) -> Tuple[Any, ...]:
+    """The stories-table column values for a Story, in table order."""
+    return (
+        story.title,
+        story.url,
+        story.category,
+        story.author,
+        story.published_date,
+        story.summary,
+        story.content,
+        story.status.value,
+    )
+
+
+def _save_story_links(cursor: sqlite3.Cursor, story_id: int, links: List[StoryLink]) -> None:
+    for link in links:
+        cursor.execute("""
+            INSERT OR IGNORE INTO story_links (story_id, text, url)
+            VALUES (?, ?, ?)
+        """, (story_id, link.text, link.url))
+
+
+def save_story(story: Story, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
     Saves a single story to the database.
     Uses INSERT OR IGNORE to handle the UNIQUE constraint on url.
@@ -362,37 +386,22 @@ def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
         cursor.execute("""
             INSERT OR IGNORE INTO stories (title, url, category, author, published_date, summary, content, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            story.get("title"),
-            story.get("url"),
-            story.get("category"),
-            story.get("author"),
-            story.get("published_date"),
-            story.get("summary"),
-            story.get("content"),
-            story.get("status", "UNPROCESSED")
-        ))
+        """, _story_columns(story))
         inserted = cursor.rowcount > 0
-        
+
         # Get the ID of the story to associate the links
-        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.get("url"),))
+        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.url,))
         row = cursor.fetchone()
         if row:
-            story_id = row[0]
-            if "links" in story:
-                for link in story["links"]:
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO story_links (story_id, text, url)
-                        VALUES (?, ?, ?)
-                    """, (story_id, link.get("text"), link.get("url")))
-                    
+            _save_story_links(cursor, row[0], story.links)
+
         conn.commit()
         return inserted
     finally:
         conn.close()
 
 
-def replace_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> None:
+def replace_story(story: Story, db_path: str = DEFAULT_DB_PATH) -> None:
     """Replace extracted Story fields and links for a URL."""
     conn = sqlite3.connect(db_path)
     try:
@@ -409,25 +418,12 @@ def replace_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> None
                 content = excluded.content,
                 status = excluded.status,
                 completed_at = NULL
-        """, (
-            story.get("title"),
-            story.get("url"),
-            story.get("category"),
-            story.get("author"),
-            story.get("published_date"),
-            story.get("summary"),
-            story.get("content"),
-            story.get("status", "UNPROCESSED"),
-        ))
+        """, _story_columns(story))
 
-        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.get("url"),))
+        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.url,))
         story_id = cursor.fetchone()[0]
         cursor.execute("DELETE FROM story_links WHERE story_id = ?", (story_id,))
-        for link in story.get("links", []):
-            cursor.execute("""
-                INSERT OR IGNORE INTO story_links (story_id, text, url)
-                VALUES (?, ?, ?)
-            """, (story_id, link.get("text"), link.get("url")))
+        _save_story_links(cursor, story_id, story.links)
         conn.commit()
     finally:
         conn.close()

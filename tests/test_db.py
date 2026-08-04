@@ -2,6 +2,7 @@ import os
 import sqlite3
 import pytest
 from knowledge_map.adapters.sqlite_db import init_db, save_story, get_all_stories
+from knowledge_map.schemas.stories import Story, StoryLink
 
 def test_get_all_stories(tmp_path):
     db_file = tmp_path / "test_stories.db"
@@ -11,35 +12,35 @@ def test_get_all_stories(tmp_path):
     init_db(db_path)
     
     # Setup test stories
-    story_with_content = {
-        "title": "Story with content",
-        "url": "http://example.com/1",
-        "category": "Politics",
-        "author": "Author A",
-        "published_date": "2026-06-24",
-        "summary": "Summary A",
-        "content": "This is actual news content."
-    }
+    story_with_content = Story(
+        title="Story with content",
+        url="http://example.com/1",
+        category="Politics",
+        author="Author A",
+        published_date="2026-06-24",
+        summary="Summary A",
+        content="This is actual news content."
+    )
     
-    story_without_content = {
-        "title": "Story without content",
-        "url": "http://example.com/2",
-        "category": "Politics",
-        "author": "Author B",
-        "published_date": "2026-06-24",
-        "summary": "Summary B",
-        "content": ""  # empty content
-    }
+    story_without_content = Story(
+        title="Story without content",
+        url="http://example.com/2",
+        category="Politics",
+        author="Author B",
+        published_date="2026-06-24",
+        summary="Summary B",
+        content=""  # empty content
+    )
     
-    story_none_content = {
-        "title": "Story with None content",
-        "url": "http://example.com/3",
-        "category": "Politics",
-        "author": "Author C",
-        "published_date": "2026-06-24",
-        "summary": "Summary C",
-        "content": None  # None content
-    }
+    story_none_content = Story(
+        title="Story with None content",
+        url="http://example.com/3",
+        category="Politics",
+        author="Author C",
+        published_date="2026-06-24",
+        summary="Summary C",
+        content=None  # None content
+    )
     
     save_story(story_with_content, db_path=db_path)
     save_story(story_without_content, db_path=db_path)
@@ -86,19 +87,19 @@ def test_save_story_with_links(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Story with links",
-        "url": "http://example.com/story-1",
-        "category": "Politics",
-        "author": "Author A",
-        "published_date": "2026-06-24",
-        "summary": "Summary",
-        "content": "Content here.",
-        "links": [
-            {"text": "Link Text 1", "url": "http://example.com/target-1"},
-            {"text": "Link Text 2", "url": "http://example.com/target-2"}
+    story = Story(
+        title="Story with links",
+        url="http://example.com/story-1",
+        category="Politics",
+        author="Author A",
+        published_date="2026-06-24",
+        summary="Summary",
+        content="Content here.",
+        links=[
+            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
+            StoryLink(text="Link Text 2", url="http://example.com/target-2")
         ]
-    }
+    )
     
     assert save_story(story, db_path=db_path) is True
     
@@ -125,17 +126,17 @@ def test_save_story_links_uniqueness(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Story with duplicate links",
-        "url": "http://example.com/story-1",
-        "category": "Politics",
-        "content": "Content here.",
-        "links": [
-            {"text": "Link Text 1", "url": "http://example.com/target-1"},
-            {"text": "Duplicate Link Text 1", "url": "http://example.com/target-1"},  # same URL
-            {"text": "Link Text 2", "url": "http://example.com/target-2"}
+    story = Story(
+        title="Story with duplicate links",
+        url="http://example.com/story-1",
+        category="Politics",
+        content="Content here.",
+        links=[
+            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
+            StoryLink(text="Duplicate Link Text 1", url="http://example.com/target-1"),  # same URL
+            StoryLink(text="Link Text 2", url="http://example.com/target-2")
         ]
-    }
+    )
     
     save_story(story, db_path=db_path)
     stories = get_all_stories(db_path=db_path)
@@ -154,12 +155,12 @@ def test_sqlite_status_column(tmp_path):
     init_db(db_path)
     
     # Save a story
-    story = {
-        "title": "Test Status Default",
-        "url": "http://example.com/status-test",
-        "category": "Politics",
-        "content": "Some content."
-    }
+    story = Story(
+        title="Test Status Default",
+        url="http://example.com/status-test",
+        category="Politics",
+        content="Some content."
+    )
     save_story(story, db_path=db_path)
     
     # Check default status is 'UNPROCESSED'
@@ -167,7 +168,7 @@ def test_sqlite_status_column(tmp_path):
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         row = cursor.fetchone()
         assert row is not None
         assert row[0] == "UNPROCESSED"
@@ -242,26 +243,26 @@ def test_update_story_status(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Test Story Status",
-        "url": "http://example.com/update-test",
-        "content": "Content"
-    }
+    story = Story(
+        title="Test Story Status",
+        url="http://example.com/update-test",
+        content="Content"
+    )
     save_story(story, db_path=db_path)
     
     # Update status to PROCESSING
-    update_story_status(story["url"], "PROCESSING", db_path=db_path)
+    update_story_status(story.url, "PROCESSING", db_path=db_path)
     
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "PROCESSING"
         
         # Update to COMPLETED
-        update_story_status(story["url"], "COMPLETED", db_path=db_path)
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        update_story_status(story.url, "COMPLETED", db_path=db_path)
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "COMPLETED"
     finally:
         conn.close()
@@ -273,21 +274,21 @@ def test_sqlite_status_tracker(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Test Tracker Story",
-        "url": "http://example.com/tracker-test",
-        "content": "Content"
-    }
+    story = Story(
+        title="Test Tracker Story",
+        url="http://example.com/tracker-test",
+        content="Content"
+    )
     save_story(story, db_path=db_path)
     
     tracker = SQLiteStatusTracker(db_path=db_path)
-    tracker.update_status(story["url"], "PROCESSING")
+    tracker.update_status(story.url, "PROCESSING")
     
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "PROCESSING"
     finally:
         conn.close()

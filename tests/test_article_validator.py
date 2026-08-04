@@ -11,6 +11,7 @@ from knowledge_map.core.validation import (
     count_words
 )
 from unittest.mock import patch
+from knowledge_map.schemas.stories import Story, StoryLink
 
 @pytest.fixture(autouse=True)
 def mock_relevance_agent():
@@ -1238,12 +1239,12 @@ def test_extract_links_from_elements():
     links = extract_links_from_elements(elements, base_url)
     assert len(links) == 2
     # Verify relative URL resolved and deduplicated/normalized
-    assert links[0]["text"] == "a relative link"
-    assert links[0]["url"] == "https://calmatters.org/politics/news"
+    assert links[0] == StoryLink(text="a relative link", url="https://calmatters.org/politics/news")
 
     # Verify tracking parameter stripped
-    assert links[1]["text"] == "an absolute link with tracking"
-    assert links[1]["url"] == "https://example.com/target"
+    assert links[1] == StoryLink(
+        text="an absolute link with tracking", url="https://example.com/target"
+    )
 
 @pytest.mark.anyio
 async def test_validate_pending_articles_extracts_and_saves_links(
@@ -1637,14 +1638,14 @@ async def test_validation_skips_extraction_when_story_exists(tmp_path):
         db_path=db_path,
     )
     save_story(
-        {
-            "title": "Already Extracted",
-            "url": url,
-            "author": "Reporter",
-            "published_date": "2026-08-03T12:00:00Z",
-            "content": "Previously extracted body",
-            "status": "UNPROCESSED",
-        },
+        Story(
+            title="Already Extracted",
+            url=url,
+            author="Reporter",
+            published_date="2026-08-03T12:00:00Z",
+            content="Previously extracted body",
+            status="UNPROCESSED",
+        ),
         db_path=db_path,
     )
     update_cached_html_status(url, "PENDING", db_path=db_path)
@@ -1698,14 +1699,14 @@ async def test_story_skip_still_classifies_pending_relevance(tmp_path):
         db_path=db_path,
     )
     save_story(
-        {
-            "title": "Classify Existing Story",
-            "url": url,
-            "author": "Reporter",
-            "published_date": "2026-08-03T12:00:00Z",
-            "content": "Previously extracted body",
-            "status": "UNPROCESSED",
-        },
+        Story(
+            title="Classify Existing Story",
+            url=url,
+            author="Reporter",
+            published_date="2026-08-03T12:00:00Z",
+            content="Previously extracted body",
+            status="UNPROCESSED",
+        ),
         db_path=db_path,
     )
     update_cached_html_status(url, "PENDING", db_path=db_path)
@@ -1772,15 +1773,15 @@ async def test_newer_selector_reextracts_and_replaces_story(tmp_path):
         db_path=db_path,
     )
     save_story(
-        {
-            "title": "Old Story",
-            "url": url,
-            "author": "Old Reporter",
-            "published_date": "2026-08-02T12:00:00Z",
-            "content": "Stale extracted body",
-            "status": "COMPLETED",
-            "links": [{"text": "Old Link", "url": "https://example.com/old"}],
-        },
+        Story(
+            title="Old Story",
+            url=url,
+            author="Old Reporter",
+            published_date="2026-08-02T12:00:00Z",
+            content="Stale extracted body",
+            status="COMPLETED",
+            links=[StoryLink(text="Old Link", url="https://example.com/old")],
+        ),
         db_path=db_path,
     )
     selector_id = add_selector_version(

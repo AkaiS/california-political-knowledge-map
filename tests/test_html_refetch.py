@@ -16,6 +16,7 @@ from knowledge_map.adapters.sqlite_db import (
     save_story,
 )
 from knowledge_map.core.html_refetch import HtmlRefetchService
+from knowledge_map.schemas.stories import Story
 
 
 def _register_publication(db_path: str) -> None:
@@ -58,11 +59,11 @@ def test_refetch_selection_requires_relevant_missing_html_without_story(tmp_path
         )
 
     save_story(
-        {
-            "title": "Already extracted",
-            "url": "https://test.example/has-story",
-            "content": "Stored content",
-        },
+        Story(
+            title="Already extracted",
+            url="https://test.example/has-story",
+            content="Stored content",
+        ),
         db_path=db_path,
     )
 

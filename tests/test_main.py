@@ -11,6 +11,7 @@ from knowledge_map.core.exceptions import PipelineLockError, PipelineRateLimitEr
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.adapters.sqlite_db import init_db, save_story
 from knowledge_map.config import BatchIngestionSettings
+from knowledge_map.schemas.stories import Story
 
 def test_console_notifier_warning_banner(caplog):
     with caplog.at_level(logging.CRITICAL):
@@ -25,11 +26,11 @@ def test_batch_ingestion_rate_limit_lock_notifier(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     for i in range(1, 4):
-        save_story({
-            "title": f"Story {i}",
-            "url": f"http://example.com/{i}",
-            "content": f"Content {i}"
-        }, db_path=db_path)
+        save_story(Story(
+            title=f"Story {i}",
+            url=f"http://example.com/{i}",
+            content=f"Content {i}",
+        ), db_path=db_path)
         
     mock_pipeline = MagicMock()
     mock_status_tracker = MagicMock()
@@ -429,12 +430,12 @@ def test_cli_classifier_label_review_all(tmp_path, monkeypatch):
         relevance_label_source="LLM", db_path=db_path
     )
     save_story(
-        {
-            "title": "LLM Labeled Article",
-            "url": "https://example.com/llm-labeled",
-            "content": "Previously extracted content",
-            "status": "UNPROCESSED",
-        },
+        Story(
+            title="LLM Labeled Article",
+            url="https://example.com/llm-labeled",
+            content="Previously extracted content",
+            status="UNPROCESSED",
+        ),
         db_path=db_path,
     )
     
@@ -512,12 +513,12 @@ def test_cli_classifier_label_irrelevant_keeps_completed_story(tmp_path, monkeyp
         db_path=db_path,
     )
     save_story(
-        {
-            "title": "Ingested Story",
-            "url": url,
-            "content": "Previously extracted content",
-            "status": "COMPLETED",
-        },
+        Story(
+            title="Ingested Story",
+            url=url,
+            content="Previously extracted content",
+            status="COMPLETED",
+        ),
         db_path=db_path,
     )
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
