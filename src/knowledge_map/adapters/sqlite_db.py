@@ -995,7 +995,7 @@ def record_failed_fetch(
         conn.close()
 
 
-def get_articles_needing_html_restore(
+def get_articles_needing_html_refetch(
     db_path: str = DEFAULT_DB_PATH,
 ) -> List[Dict[str, Any]]:
     """Return relevant, unmaterialized articles whose HTML can be retried."""
@@ -1025,13 +1025,13 @@ def get_articles_needing_html_restore(
         conn.close()
 
 
-def restore_cached_html(
+def store_refetched_html(
     url: str,
     raw_html: Optional[str],
     fetch_status: Optional[int],
     db_path: str = DEFAULT_DB_PATH,
 ) -> None:
-    """Record a restore attempt without changing downstream stage state."""
+    """Record a refetch attempt without changing downstream stage state."""
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()

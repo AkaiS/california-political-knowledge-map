@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
 
 from knowledge_map.adapters.sqlite_db import (
-    get_articles_needing_html_restore,
-    restore_cached_html,
+    get_articles_needing_html_refetch,
+    store_refetched_html,
 )
 from knowledge_map.config import settings
 from knowledge_map.core.crawling import fetch_article
@@ -16,21 +16,21 @@ from knowledge_map.core.discovery import PolitenessLimiter
 logger = logging.getLogger(__name__)
 
 
-class HtmlRestoreService:
+class HtmlRefetchService:
     def __init__(self, db_path: str = None):
         self.db_path = db_path or settings.batch_ingestion.db_path
 
-    async def restore_relevant_articles(self) -> List[str]:
-        candidates = get_articles_needing_html_restore(db_path=self.db_path)
+    async def refetch_relevant_articles(self) -> List[str]:
+        candidates = get_articles_needing_html_refetch(db_path=self.db_path)
         if not candidates:
-            logger.info("No relevant articles need raw HTML restored.")
+            logger.info("No relevant articles need a raw HTML refetch.")
             return []
 
         candidates_by_publication: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
         for candidate in candidates:
             candidates_by_publication[candidate["publication_id"]].append(candidate)
 
-        restored_urls = []
+        refetched_urls = []
         async with AsyncWebCrawler() as crawler:
             for publication_candidates in candidates_by_publication.values():
                 publication = publication_candidates[0]
@@ -43,20 +43,20 @@ class HtmlRestoreService:
                     check_robots_txt=bool(publication["use_robots_txt"]),
                 )
 
-                async def restore(candidate: Dict[str, Any]) -> None:
+                async def refetch(candidate: Dict[str, Any]) -> None:
                     async with limiter:
                         result = await fetch_article(crawler, candidate["url"], run_config)
-                        restore_cached_html(
+                        store_refetched_html(
                             candidate["url"],
                             result.raw_html,
                             result.fetch_status,
                             db_path=self.db_path,
                         )
                         if result.has_article_content:
-                            restored_urls.append(candidate["url"])
+                            refetched_urls.append(candidate["url"])
                         else:
                             logger.error(
-                                "Failed to restore '%s': %s",
+                                "Failed to refetch '%s': %s",
                                 candidate["url"],
                                 result.error_message,
                                 extra={
@@ -66,6 +66,6 @@ class HtmlRestoreService:
                                 },
                             )
 
-                await asyncio.gather(*(restore(candidate) for candidate in publication_candidates))
+                await asyncio.gather(*(refetch(candidate) for candidate in publication_candidates))
 
-        return restored_urls
+        return refetched_urls

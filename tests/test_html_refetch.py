@@ -7,15 +7,15 @@ import pytest
 
 from knowledge_map.adapters.sqlite_db import (
     cache_scraped_html,
-    get_articles_needing_html_restore,
+    get_articles_needing_html_refetch,
     get_cached_html,
     get_all_stories,
     init_db,
     register_publication,
-    restore_cached_html,
+    store_refetched_html,
     save_story,
 )
-from knowledge_map.core.html_restore import HtmlRestoreService
+from knowledge_map.core.html_refetch import HtmlRefetchService
 
 
 def _register_publication(db_path: str) -> None:
@@ -29,8 +29,8 @@ def _register_publication(db_path: str) -> None:
     )
 
 
-def test_restore_selection_requires_relevant_missing_html_without_story(tmp_path):
-    db_path = str(tmp_path / "restore_selection.db")
+def test_refetch_selection_requires_relevant_missing_html_without_story(tmp_path):
+    db_path = str(tmp_path / "refetch_selection.db")
     init_db(db_path)
     _register_publication(db_path)
 
@@ -66,13 +66,13 @@ def test_restore_selection_requires_relevant_missing_html_without_story(tmp_path
         db_path=db_path,
     )
 
-    candidates = get_articles_needing_html_restore(db_path=db_path)
+    candidates = get_articles_needing_html_refetch(db_path=db_path)
 
     assert {candidate["url"] for candidate in candidates} == selected_urls
 
 
-def test_restore_writer_preserves_relevance_and_metadata(tmp_path):
-    db_path = str(tmp_path / "restore_writer.db")
+def test_refetch_writer_preserves_relevance_and_metadata(tmp_path):
+    db_path = str(tmp_path / "refetch_writer.db")
     init_db(db_path)
     _register_publication(db_path)
     url = "https://test.example/preserved"
@@ -98,10 +98,10 @@ def test_restore_writer_preserves_relevance_and_metadata(tmp_path):
             (old_scraped_at, url),
         )
 
-    restore_cached_html(url, "<html>restored</html>", 200, db_path=db_path)
+    store_refetched_html(url, "<html>refetched</html>", 200, db_path=db_path)
 
     cached = get_cached_html(url, db_path=db_path)
-    assert cached["raw_html"] == "<html>restored</html>"
+    assert cached["raw_html"] == "<html>refetched</html>"
     assert cached["fetch_status"] == 200
     assert cached["scraped_at"] != old_scraped_at
     assert cached["validation"] == "PENDING"
@@ -112,12 +112,12 @@ def test_restore_writer_preserves_relevance_and_metadata(tmp_path):
     assert cached["embedding"] == pytest.approx(embedding)
     assert cached["raw_metadata_json"] == {"source": "preserved"}
 
-    restore_cached_html(url, "<html>restored again</html>", None, db_path=db_path)
+    store_refetched_html(url, "<html>refetched again</html>", None, db_path=db_path)
     assert get_cached_html(url, db_path=db_path)["fetch_status"] == 200
 
 
-def test_restore_records_success_and_failure_statuses(tmp_path):
-    db_path = str(tmp_path / "restore_statuses.db")
+def test_refetch_records_success_and_failure_statuses(tmp_path):
+    db_path = str(tmp_path / "refetch_statuses.db")
     init_db(db_path)
     _register_publication(db_path)
     success_url = "https://test.example/success"
@@ -150,52 +150,52 @@ def test_restore_records_success_and_failure_statuses(tmp_path):
 
     crawler.arun.side_effect = fetch
 
-    with patch("knowledge_map.core.html_restore.AsyncWebCrawler") as crawler_class:
+    with patch("knowledge_map.core.html_refetch.AsyncWebCrawler") as crawler_class:
         crawler_class.return_value.__aenter__.return_value = crawler
-        restored_urls = asyncio.run(
-            HtmlRestoreService(db_path=db_path).restore_relevant_articles()
+        refetched_urls = asyncio.run(
+            HtmlRefetchService(db_path=db_path).refetch_relevant_articles()
         )
 
-    assert restored_urls == [success_url]
+    assert refetched_urls == [success_url]
     assert get_cached_html(success_url, db_path=db_path)["fetch_status"] == 200
     failed = get_cached_html(failure_url, db_path=db_path)
     assert failed["raw_html"] is None
     assert failed["fetch_status"] == 503
-    assert {row["url"] for row in get_articles_needing_html_restore(db_path=db_path)} == {
+    assert {row["url"] for row in get_articles_needing_html_refetch(db_path=db_path)} == {
         failure_url
     }
 
 
-def test_discovery_and_restore_share_article_fetcher():
-    from knowledge_map.core import crawling, discovery, html_restore
+def test_discovery_and_refetch_share_article_fetcher():
+    from knowledge_map.core import crawling, discovery, html_refetch
 
     assert discovery.fetch_article is crawling.fetch_article
-    assert html_restore.fetch_article is crawling.fetch_article
+    assert html_refetch.fetch_article is crawling.fetch_article
 
 
-def test_restore_html_cli_is_standalone(tmp_path, monkeypatch):
+def test_refetch_html_cli_is_standalone(tmp_path, monkeypatch):
     from knowledge_map.cli.main import main
 
-    db_path = str(tmp_path / "restore_cli.db")
+    db_path = str(tmp_path / "refetch_cli.db")
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
 
-    with patch("knowledge_map.core.html_restore.HtmlRestoreService") as service_class:
-        service_class.return_value.restore_relevant_articles = AsyncMock(
-            return_value=["https://test.example/restored"]
+    with patch("knowledge_map.core.html_refetch.HtmlRefetchService") as service_class:
+        service_class.return_value.refetch_relevant_articles = AsyncMock(
+            return_value=["https://test.example/refetched"]
         )
         with pytest.raises(SystemExit) as exit_info:
-            main(["restore-html"])
+            main(["refetch-html"])
 
     assert exit_info.value.code == 0
-    service_class.return_value.restore_relevant_articles.assert_awaited_once()
+    service_class.return_value.refetch_relevant_articles.assert_awaited_once()
 
 
-def test_validate_cli_restores_then_validates_in_one_invocation(tmp_path, monkeypatch):
+def test_validate_cli_refetches_then_validates_in_one_invocation(tmp_path, monkeypatch):
     from knowledge_map.cli.main import main
     from knowledge_map.core.selectors import add_selector_version
     from knowledge_map.schemas.selectors import ArticleSelectors
 
-    db_path = str(tmp_path / "restore_then_validate.db")
+    db_path = str(tmp_path / "refetch_then_validate.db")
     init_db(db_path)
     _register_publication(db_path)
     url = "https://test.example/recovered"
@@ -225,7 +225,7 @@ def test_validate_cli_restores_then_validates_in_one_invocation(tmp_path, monkey
         latest_success_date=now + timedelta(days=1),
         db_path=db_path,
     )
-    restored_html = """
+    refetched_html = """
     <html>
       <head>
         <script type="application/ld+json">
@@ -252,13 +252,13 @@ def test_validate_cli_restores_then_validates_in_one_invocation(tmp_path, monkey
         success=True,
         status_code=200,
         redirected_status_code=None,
-        html=restored_html,
+        html=refetched_html,
     )
     crawler = AsyncMock()
     crawler.arun.return_value = crawler_result
     monkeypatch.setenv("SQLITE_DB_PATH", db_path)
 
-    with patch("knowledge_map.core.html_restore.AsyncWebCrawler") as crawler_class:
+    with patch("knowledge_map.core.html_refetch.AsyncWebCrawler") as crawler_class:
         crawler_class.return_value.__aenter__.return_value = crawler
         with pytest.raises(SystemExit) as exit_info:
             main(["validate-articles"])

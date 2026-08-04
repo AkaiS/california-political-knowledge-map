@@ -84,6 +84,10 @@ _Avoid_: Proposal file, selector draft, candidate report
 A persistent database store (the `scraped_html_cache` table) holding the raw HTML content of scraped articles to support asynchronous self-healing, offline re-scraping, and validation recovery before being purged after 30 days.
 _Avoid_: Page cache, web archive, HTML file cache
 
+**Raw HTML Refetch**:
+The stage that fetches an article's raw HTML again on demand, for articles that are `RELEVANT` but hold no content in the Raw HTML Store because it was deleted on Story creation or expired at 30 days. It makes retention recoverable rather than lossy: it rewrites only the raw HTML and the Fetch Status, never Relevance Status or Validation Status, and it succeeds only while the URL is still reachable.
+_Avoid_: Restore, HTML restore, re-fetch, re-scrape, recovery
+
 **Relevance Filter**:
 A multi-stage pipeline component that filters discovered URLs using a path blocklist and evaluates extracted metadata (headlines and descriptions) against target keywords to determine California political relevance.
 _Avoid_: Topic classifier, page filter
