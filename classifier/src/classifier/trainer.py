@@ -16,6 +16,24 @@ WEIGHTS_PATH = os.path.join(
     "classifier_weights.json"
 )
 
+
+def get_training_rows(db_path: str = DEFAULT_DB_PATH) -> list[tuple[bytes, str]]:
+    """Return LLM-labeled embedded examples used to train the classifier."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT embedding, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT')
+              AND embedding IS NOT NULL
+              AND relevance_label_source = 'LLM'
+        """)
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
 def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Pulls labeled articles with embeddings from the SQLite database,
@@ -25,19 +43,7 @@ def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
         print(f"Database file not found: {db_path}")
         return
 
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT embedding, relevance_status
-            FROM scraped_html_cache
-            WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT')
-              AND embedding IS NOT NULL
-              AND relevance_label_source IN ('HUMAN', 'LLM')
-        """)
-        rows = cursor.fetchall()
-    finally:
-        conn.close()
+    rows = get_training_rows(db_path)
 
     if not rows:
         print("No labeled articles with embeddings found in the database. Cannot train.")

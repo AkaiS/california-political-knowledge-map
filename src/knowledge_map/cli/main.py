@@ -42,6 +42,7 @@ CLI_COMMAND_HELP = {
     "purge-cache": "Purge eligible raw HTML cache rows according to retention policy",
     "classifier": "Run relevance classifier commands",
     "classifier label": "Run active learning labeling feedback loop",
+    "classifier backfill": "Backfill cached relevance metadata and embeddings",
     "classifier train": "Train the classifier using scikit-learn LogisticRegression",
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
 }
@@ -219,6 +220,7 @@ def main(args=None):
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
     label_parser = classifier_sub.add_parser("label", help=CLI_COMMAND_HELP["classifier label"])
     label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
+    classifier_sub.add_parser("backfill", help=CLI_COMMAND_HELP["classifier backfill"])
     classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
     classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
 
@@ -862,7 +864,16 @@ def main(args=None):
         from knowledge_map.adapters.sqlite_db import init_db
         init_db(db_path)
 
-        if parsed_args.classifier_action == "label":
+        if parsed_args.classifier_action == "backfill":
+            from knowledge_map.core.relevance_classification import backfill_relevance_training_data
+
+            result = backfill_relevance_training_data(db_path=db_path)
+            print(
+                f"Backfilled {result.updated} of {result.candidates} cached articles."
+            )
+            sys.exit(0)
+
+        elif parsed_args.classifier_action == "label":
             from knowledge_map.adapters.sqlite_db import (
                 delete_uningested_story,
                 get_articles_for_human_labeling,

@@ -250,13 +250,13 @@ def test_cli_classifier_train_success(tmp_path, monkeypatch):
     db_path = str(db_file)
     init_db(db_path)
     
-    # Insert 3 HUMAN relevant, 3 LLM irrelevant
+    # Insert 3 LLM relevant and 3 LLM irrelevant examples.
     for i in range(3):
         cache_scraped_html(
-            f"https://example.com/human-rel/{i}", "pub1", None,
+            f"https://example.com/llm-rel/{i}", "pub1", None,
             validation="PENDING", headline="R", description="D",
             embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
-            relevance_label_source="HUMAN", db_path=db_path
+            relevance_label_source="LLM", db_path=db_path
         )
         cache_scraped_html(
             f"https://example.com/llm-irrel/{i}", "pub1", None,

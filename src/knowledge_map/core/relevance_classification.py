@@ -1,13 +1,14 @@
 """Shared operations for metadata-based relevance classification."""
 
 import logging
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.sqlite_db import (
     DEFAULT_DB_PATH,
     ArticleMetadataUpdateResult,
     RelevanceUpdateResult,
+    get_articles_for_metadata_backfill,
     get_cached_html,
     update_article_metadata,
     update_relevance_status,
@@ -15,6 +16,11 @@ from knowledge_map.adapters.sqlite_db import (
 from knowledge_map.core.relevance import extract_metadata
 
 logger = logging.getLogger(__name__)
+
+
+class MetadataBackfillResult(NamedTuple):
+    candidates: int
+    updated: int
 
 
 def get_metadata_embedding(
@@ -85,13 +91,13 @@ def populate_article_metadata(
 
     headline = (
         cached.get("headline")
-        or html_metadata.get("headline")
         or _find_metadata_value(stored_metadata, "headline", "title")
+        or html_metadata.get("headline")
     )
     description = (
         cached.get("description")
-        or html_metadata.get("description")
         or _find_metadata_value(stored_metadata, "description", "summary")
+        or html_metadata.get("description")
     )
     embedding = get_metadata_embedding(
         headline,
@@ -106,3 +112,15 @@ def populate_article_metadata(
         embedding,
         db_path=db_path,
     )
+
+
+def backfill_relevance_training_data(
+    db_path: str = DEFAULT_DB_PATH,
+) -> MetadataBackfillResult:
+    """Populate cached metadata and embeddings without fetching article URLs."""
+    urls = get_articles_for_metadata_backfill(db_path=db_path)
+    updated = 0
+    for url in urls:
+        result = populate_article_metadata(url, db_path=db_path)
+        updated += int(result.applied)
+    return MetadataBackfillResult(candidates=len(urls), updated=updated)

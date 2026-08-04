@@ -417,40 +417,44 @@ def test_get_gold_standard_examples(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    # Let's insert some publications, stories, and cache entries
+    # Insert cache-only examples; no Story rows are required.
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO publications (id, name, base_url) VALUES ('pub1', 'Pub 1', 'http://example.com')")
         
-        # 1. Insert 4 RELEVANT human-labeled examples (should limit to 3)
+        # Insert 4 examples per class; each class should be limited to 3.
         for i in range(1, 5):
             url = f"http://example.com/rel{i}"
             cursor.execute("""
-                INSERT INTO stories (title, url, content, status)
-                VALUES (?, ?, ?, 'UNPROCESSED')
-            """, (f"Relevant Title {i}", url, f"Relevant Content {i}"))
-            cursor.execute("""
-                INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-                VALUES (?, 'pub1', 'RELEVANT', 'HUMAN')
-            """, (url,))
+                INSERT INTO scraped_html_cache (
+                    url, publication_id, headline, description,
+                    relevance_status, relevance_label_source
+                )
+                VALUES (?, 'pub1', ?, ?, 'RELEVANT', 'HUMAN')
+            """, (url, f"Relevant Title {i}", f"Relevant Content {i}"))
             
         for i in range(1, 5):
             url = f"http://example.com/irrel{i}"
             cursor.execute("""
-                INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-                VALUES (?, 'pub1', 'IRRELEVANT', 'HUMAN')
-            """, (url,))
+                INSERT INTO scraped_html_cache (
+                    url, publication_id, headline, description,
+                    relevance_status, relevance_label_source
+                )
+                VALUES (?, 'pub1', ?, ?, 'IRRELEVANT', 'HUMAN')
+            """, (url, f"Irrelevant Title {i}", f"Irrelevant Content {i}"))
             
         # 3. Insert some non-HUMAN labeled examples (should be ignored)
         cursor.execute("""
-            INSERT INTO stories (title, url, content, status)
-            VALUES ('Model Title', 'http://example.com/model1', 'Model Content', 'UNPROCESSED')
-        """)
-        cursor.execute("""
-            INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-            VALUES ('http://example.com/model1', 'pub1', 'RELEVANT', 'MODEL')
+            INSERT INTO scraped_html_cache (
+                url, publication_id, headline, description,
+                relevance_status, relevance_label_source
+            )
+            VALUES (
+                'http://example.com/model1', 'pub1', 'Model Title',
+                'Model Content', 'RELEVANT', 'MODEL'
+            )
         """)
         
         conn.commit()
@@ -460,13 +464,13 @@ def test_get_gold_standard_examples(tmp_path):
     # Retrieve gold standard examples
     examples = get_gold_standard_examples(db_path)
     
-    assert len(examples) == 3
+    assert len(examples) == 6
     
     relevant = [ex for ex in examples if ex["relevance_status"] == "RELEVANT"]
     irrelevant = [ex for ex in examples if ex["relevance_status"] == "IRRELEVANT"]
     
     assert len(relevant) == 3
-    assert irrelevant == []
+    assert len(irrelevant) == 3
     
     # Check shape/keys of returned dictionaries
     for ex in examples:

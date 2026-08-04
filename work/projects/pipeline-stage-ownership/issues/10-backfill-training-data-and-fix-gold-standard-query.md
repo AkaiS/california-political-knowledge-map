@@ -1,6 +1,6 @@
 # Backfill training data and fix the gold-standard query
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -36,15 +36,15 @@ human-labeled articles without Story rows were excluded.
 
 ## Acceptance criteria
 
-- [ ] Every irrelevant and inconclusive article that had usable stored metadata has a headline, a description, and an embedding after the backfill.
-- [ ] Articles without stored metadata but with raw HTML have theirs extracted from the HTML.
-- [ ] The backfill requires no network calls.
-- [ ] The trainer's own selection query returns a non-zero count for both the relevant and the irrelevant class.
-- [ ] Human-labeled articles are excluded from training input and remain available as an evaluation set.
-- [ ] The gold-standard example query returns both classes with no Story rows present in the database.
-- [ ] The gold-standard example query includes human-labeled articles that have no Story row.
-- [ ] The backfill is idempotent: a second run changes nothing.
-- [ ] The full deterministic test suite passes.
+- [x] Every irrelevant and inconclusive article that had usable stored metadata has a headline, a description, and an embedding after the backfill.
+- [x] Articles without stored metadata but with raw HTML have theirs extracted from the HTML.
+- [x] The backfill requires no network calls.
+- [x] The trainer's own selection query returns a non-zero count for both the relevant and the irrelevant class.
+- [x] Human-labeled articles are excluded from training input and remain available as an evaluation set.
+- [x] The gold-standard example query returns both classes with no Story rows present in the database.
+- [x] The gold-standard example query includes human-labeled articles that have no Story row.
+- [x] The backfill is idempotent: a second run changes nothing.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

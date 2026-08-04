@@ -1088,34 +1088,57 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
 
 def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
-    Retrieves balanced human-labeled examples (max 3 per class) by joining cache and stories.
+    Retrieve balanced human-labeled examples (max 3 per class) from the cache.
     """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         cursor = conn.cursor()
-        
-        # Get up to 3 relevant human-labeled stories
+
         cursor.execute("""
-            SELECT s.title, s.content, c.relevance_status
-            FROM scraped_html_cache c
-            JOIN stories s ON c.url = s.url
-            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'RELEVANT'
+            SELECT headline AS title, description AS content, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_label_source = 'HUMAN'
+              AND relevance_status = 'RELEVANT'
+              AND headline IS NOT NULL
+              AND description IS NOT NULL
             LIMIT 3
         """)
         relevant = [dict(row) for row in cursor.fetchall()]
-        
-        # Get up to 3 irrelevant human-labeled stories
+
         cursor.execute("""
-            SELECT s.title, s.content, c.relevance_status
-            FROM scraped_html_cache c
-            JOIN stories s ON c.url = s.url
-            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'IRRELEVANT'
+            SELECT headline AS title, description AS content, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_label_source = 'HUMAN'
+              AND relevance_status = 'IRRELEVANT'
+              AND headline IS NOT NULL
+              AND description IS NOT NULL
             LIMIT 3
         """)
         irrelevant = [dict(row) for row in cursor.fetchall()]
-        
+
         return relevant + irrelevant
+    finally:
+        conn.close()
+
+
+def get_articles_for_metadata_backfill(db_path: str = DEFAULT_DB_PATH) -> List[str]:
+    """Return decided articles whose cached metadata is incomplete."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT url
+            FROM scraped_html_cache
+            WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')
+              AND (
+                  headline IS NULL OR TRIM(headline) = ''
+                  OR description IS NULL OR TRIM(description) = ''
+                  OR embedding IS NULL
+              )
+            ORDER BY url
+        """)
+        return [row[0] for row in cursor.fetchall()]
     finally:
         conn.close()
 
