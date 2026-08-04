@@ -54,6 +54,22 @@ source remain intentionally omitted from this queue.
   Extraction protocol.
 - **IG-08 · P3:** Decide whether Neo4j vector-index readiness is a connection
   invariant or an explicit startup/migration concern.
+- **IG-09 · P1:** Define reversal semantics for a Source Article whose relevance
+  flips away from `RELEVANT` after ingestion has completed. Both writers —
+  the validation loop and `classifier reevaluate` — call
+  `delete_uningested_story`, which deliberately spares a `COMPLETED` Story.
+  The SQLite row therefore survives at null validation, knowingly breaking the
+  [issue 05](projects/pipeline-stage-ownership/issues/05-enforce-the-story-invariant-in-the-validation-loop.md)
+  invariant that a Story exists exactly when validation is `'VALIDATED'`, and
+  the article's Neo4j nodes stay live with no reversal signal on the relational
+  side. Decide what the reversal should mean — retract the graph nodes, mark the
+  Story retracted while retaining it, or accept the divergence and record it as
+  an explicit exception to the invariant — and make the skipped deletion
+  observable either way; today it returns `False` and nothing logs it. Scoped
+  out of
+  [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md)
+  as "Removing Neo4j nodes for articles whose relevance is reversed after
+  ingestion," so this is the capture point for the deferred decision.
 
 ## Model reliability and evaluation
 

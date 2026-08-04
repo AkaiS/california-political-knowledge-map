@@ -452,21 +452,6 @@ def replace_story(story: Story, db_path: str = DEFAULT_DB_PATH) -> None:
         conn.close()
 
 
-def delete_story(url: str, db_path: str = DEFAULT_DB_PATH) -> None:
-    """Delete a Story and its dependent links by URL."""
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            DELETE FROM story_links
-            WHERE story_id = (SELECT id FROM stories WHERE url = ?)
-        """, (url,))
-        cursor.execute("DELETE FROM stories WHERE url = ?", (url,))
-        conn.commit()
-    finally:
-        conn.close()
-
-
 def delete_uningested_story(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """Delete a Story unless ingestion has completed, returning whether it was removed."""
     conn = sqlite3.connect(db_path)

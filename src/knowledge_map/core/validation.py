@@ -10,7 +10,6 @@ from bs4 import BeautifulSoup
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
     clear_cached_html,
-    delete_story,
     replace_story,
     save_story,
     update_cached_html_status,
@@ -21,6 +20,7 @@ from knowledge_map.adapters.sqlite_db import (
     pause_publication_validation,
     unpause_publication_validation,
     update_relevance_status,
+    delete_uningested_story,
 )
 from knowledge_map.core.selectors import (
     get_selector_versions_by_proximity,
@@ -739,7 +739,7 @@ class ArticleValidatorService:
                         update_cached_html_status(url, ValidationStatus.VALIDATED, db_path=self.db_path)
                         clear_cached_html(url, db_path=self.db_path)
                     else:
-                        delete_story(url, db_path=self.db_path)
+                        delete_uningested_story(url, db_path=self.db_path)
                         update_cached_html_status(url, None, db_path=self.db_path)
 
                     logger.info("Validation content available", extra={
