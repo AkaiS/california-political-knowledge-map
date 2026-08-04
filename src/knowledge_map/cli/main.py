@@ -854,8 +854,6 @@ def main(args=None):
         
         print("Purging raw HTML cache...")
         counts = purge_html_cache(db_path=db_path)
-        print(f"Purged {counts['validated']} validated rows.")
-        print(f"Purged {counts['unvalidatable']} unvalidatable rows.")
         print(f"Total rows purged: {counts['total']}.")
         sys.exit(0)
 

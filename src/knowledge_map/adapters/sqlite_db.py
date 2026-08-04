@@ -1581,41 +1581,20 @@ def get_latest_selector_proposal(
 
 def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
     """
-    Applies the Raw HTML Store retention policy to purge raw HTML from the cache.
+    Purge raw HTML scraped more than thirty days ago while retaining cache metadata.
     """
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        
-        # 1. Purge VALIDATED rows older than 30 days based on their completed story status
         cursor.execute("""
             UPDATE scraped_html_cache
             SET raw_html = NULL
-            WHERE validation = 'VALIDATED'
-              AND url IN (
-                  SELECT url FROM stories
-                  WHERE status = 'COMPLETED'
-                    AND completed_at < datetime('now', '-30 days')
-              )
+            WHERE scraped_at < datetime('now', '-30 days')
               AND raw_html IS NOT NULL
         """)
-        validated_count = cursor.rowcount
-        
-        # 2. Purge UNVALIDATABLE rows older than 30 days
-        cursor.execute("""
-            UPDATE scraped_html_cache
-            SET raw_html = NULL
-            WHERE validation = 'UNVALIDATABLE'
-              AND validation_date < datetime('now', '-30 days')
-              AND raw_html IS NOT NULL
-        """)
-        unvalidatable_count = cursor.rowcount
-        
+        purged_count = cursor.rowcount
+
         conn.commit()
-        return {
-            "validated": validated_count,
-            "unvalidatable": unvalidatable_count,
-            "total": validated_count + unvalidatable_count
-        }
+        return {"total": purged_count}
     finally:
         conn.close()
