@@ -114,6 +114,7 @@ will not modify that initiative.
   case exists.
 - **SV-11 · P4:** Promote opaque discovery configuration only after a field
   needs independent querying.
+- **SV-12 · P2:** Make logging less verbose, don't allow failed validation to log entire html pages
 
 ## Ingestion and operations
 
