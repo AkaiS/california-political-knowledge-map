@@ -32,6 +32,11 @@ from knowledge_map.core.relevance_classification import populate_article_metadat
 
 logger = logging.getLogger(__name__)
 from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.relevance import (
+    LabelSource,
+    RelevanceStatus,
+    ValidationStatus,
+)
 from knowledge_map.schemas.stories import Story, StoryLink
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.utils.urls import clean_and_resolve_url
@@ -628,7 +633,7 @@ class ArticleValidatorService:
             url = row["url"]
             publication_id = row["publication_id"]
             raw_html = row["raw_html"]
-            relevance_status = row["relevance_status"]
+            relevance_status = RelevanceStatus(row["relevance_status"])
             extraction_skipped = bool(
                 row["story_id"]
                 and not row["selectors_created_after_validation"]
@@ -657,9 +662,9 @@ class ArticleValidatorService:
                     }
                 else:
                     res = self.validate_article(url, publication_id, raw_html, scraped_at)
-                status = res["status"]
+                status = ValidationStatus(res["status"])
 
-                if status == "VALIDATED":
+                if status == ValidationStatus.VALIDATED:
                     extracted = res["extracted"]
                     article_metadata = populate_article_metadata(url, db_path=self.db_path)
                     
@@ -684,32 +689,32 @@ class ArticleValidatorService:
                     embedding = article_metadata.embedding
 
                     effective_relevance_status = relevance_status
-                    if relevance_status == "PENDING":
+                    if relevance_status == RelevanceStatus.PENDING:
                         weights = load_classifier_weights()
-                        effective_relevance_status = "INCONCLUSIVE"
-                        label_source = "KEYWORD"
+                        effective_relevance_status = RelevanceStatus.INCONCLUSIVE
+                        label_source = LabelSource.KEYWORD
 
                         if weights and embedding:
-                            effective_relevance_status = classify_article(
+                            effective_relevance_status = RelevanceStatus(classify_article(
                                 headline,
                                 description,
                                 embedding,
-                            )
-                            label_source = "MODEL"
+                            ))
+                            label_source = LabelSource.MODEL
 
-                        if effective_relevance_status == "INCONCLUSIVE" or not weights:
+                        if effective_relevance_status == RelevanceStatus.INCONCLUSIVE or not weights:
                             try:
                                 classification_res = await classify_article_with_llm(
                                     title,
                                     body,
                                     db_path=self.db_path,
                                 )
-                                effective_relevance_status = classification_res.classification
-                                label_source = "LLM"
+                                effective_relevance_status = RelevanceStatus(classification_res.classification)
+                                label_source = LabelSource.LLM
                             except Exception as e:
                                 logger.error(f"LLM relevance classification failed: {e}", exc_info=True)
-                                effective_relevance_status = "IRRELEVANT"
-                                label_source = "LLM"
+                                effective_relevance_status = RelevanceStatus.IRRELEVANT
+                                label_source = LabelSource.LLM
 
                         relevance_update = update_relevance_status(
                             url,
@@ -719,7 +724,7 @@ class ArticleValidatorService:
                         )
                         effective_relevance_status = relevance_update.status
 
-                    if effective_relevance_status == "RELEVANT":
+                    if effective_relevance_status == RelevanceStatus.RELEVANT:
                         if not extraction_skipped:
                             story = Story(
                                 title=extracted["title"],
@@ -731,7 +736,7 @@ class ArticleValidatorService:
                                 links=extract_links_from_elements(extracted.get("body_elements", []), url),
                             )
                             replace_story(story, db_path=self.db_path)
-                        update_cached_html_status(url, "VALIDATED", db_path=self.db_path)
+                        update_cached_html_status(url, ValidationStatus.VALIDATED, db_path=self.db_path)
                         clear_cached_html(url, db_path=self.db_path)
                     else:
                         delete_story(url, db_path=self.db_path)
@@ -740,8 +745,8 @@ class ArticleValidatorService:
                     logger.info("Validation content available", extra={
                         "url": url,
                         "publication_id": publication_id,
-                        "validation_status": "VALIDATED" if effective_relevance_status == "RELEVANT" else None,
-                        "relevance_status": effective_relevance_status,
+                        "validation_status": ValidationStatus.VALIDATED.value if effective_relevance_status == RelevanceStatus.RELEVANT else None,
+                        "relevance_status": effective_relevance_status.value,
                         "failure_points": 0,
                         "errors": []
                     })
@@ -751,7 +756,7 @@ class ArticleValidatorService:
                         if pub and not pub.get("validation_paused"):
                             reset_publication_failure_points(publication_id, db_path=self.db_path)
 
-                elif status == "VALIDATION_FAILED":
+                elif status == ValidationStatus.VALIDATION_FAILED:
                     update_cached_html_status(url, status, db_path=self.db_path)
                     logger.info("Validation outcome: VALIDATION_FAILED", extra={
                         "url": url,
@@ -782,7 +787,7 @@ class ArticleValidatorService:
                             trigger_selector_healing_stub(publication_id, url, db_path=self.db_path)
                             circuit_breaker_tripped = True
 
-                elif status == "UNVALIDATABLE":
+                elif status == ValidationStatus.UNVALIDATABLE:
                     update_cached_html_status(url, status, db_path=self.db_path)
                     logger.info("Validation outcome: UNVALIDATABLE", extra={
                         "url": url,
@@ -924,11 +929,11 @@ def run_recovery_check(
     # Run validation
     validator = ArticleValidatorService(db_path=db_path)
     res = validator.validate_article(trigger_article_url, publication_id, raw_html, scraped_at)
-    status = res["status"]
+    status = ValidationStatus(res["status"])
 
     update_cached_html_status(trigger_article_url, status, db_path=db_path)
 
-    if status == "VALIDATED":
+    if status == ValidationStatus.VALIDATED:
         # Widen selector version window
         version_id = res.get("selector_version_id")
         if version_id:

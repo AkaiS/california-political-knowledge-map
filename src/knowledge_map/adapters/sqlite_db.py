@@ -3,9 +3,23 @@ import os
 import json
 from typing import List, Dict, Any, NamedTuple, Optional, Tuple
 
+from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.relevance import (
+    LabelSource,
+    RelevanceStatus,
+    ValidationStatus,
+    sql_check_values,
+)
 from knowledge_map.schemas.stories import Story, StoryLink
 
 DEFAULT_DB_PATH = "document_store.db"
+
+# Rendered from the domain enums so the table constraints cannot drift from the
+# vocabularies the pipeline writes.
+STORY_STATUS_CHECK = sql_check_values(ArticleStatus)
+VALIDATION_CHECK = sql_check_values(ValidationStatus)
+RELEVANCE_STATUS_CHECK = sql_check_values(RelevanceStatus)
+LABEL_SOURCE_CHECK = sql_check_values(LabelSource)
 
 # Fetch statuses meaning the URL is permanently gone, so it is never fetched
 # again. Blocking statuses (403, 429, 503) are deliberately absent: they say we
@@ -14,8 +28,8 @@ TERMINAL_FETCH_STATUSES = (404, 410)
 
 
 class RelevanceUpdateResult(NamedTuple):
-    status: str
-    label_source: Optional[str]
+    status: RelevanceStatus
+    label_source: Optional[LabelSource]
     applied: bool
 
 
@@ -47,7 +61,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS stories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -57,7 +71,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
-                status TEXT CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', 'FAILED_DLQ', 'SYSTEM_ERROR')) DEFAULT 'UNPROCESSED',
+                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED.value}',
                 completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -123,19 +137,19 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     
                 cursor.execute("ALTER TABLE scraped_html_cache RENAME TO scraped_html_cache_old")
                 
-                cursor.execute("""
+                cursor.execute(f"""
                     CREATE TABLE scraped_html_cache (
                         url TEXT PRIMARY KEY,
                         publication_id TEXT NOT NULL,
                         raw_html TEXT,
-                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
+                        validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING.value}',
                         validation_date DATETIME,
                         scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         headline TEXT,
                         description TEXT,
                         embedding BLOB,
-                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
-                        relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                        relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING.value}',
+                        relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD.value}',
                         fetch_status INTEGER,
                         raw_metadata_json TEXT,
                         FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
@@ -205,19 +219,19 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     cursor.execute("DROP TABLE rejected_articles")
         else:
             # Create scraped_html_cache table with new schema
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS scraped_html_cache (
                     url TEXT PRIMARY KEY,
                     publication_id TEXT NOT NULL,
                     raw_html TEXT,
-                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
+                    validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING.value}',
                     validation_date DATETIME,
                     scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     headline TEXT,
                     description TEXT,
                     embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
-                    relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                    relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING.value}',
+                    relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD.value}',
                     fetch_status INTEGER,
                     raw_metadata_json TEXT,
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
@@ -247,7 +261,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
 
             legacy_status = legacy_story_value("status", "'UNPROCESSED'")
 
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE stories_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title TEXT NOT NULL,
@@ -257,7 +271,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     published_date TEXT,
                     summary TEXT,
                     content TEXT,
-                    status TEXT CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', 'FAILED_DLQ', 'SYSTEM_ERROR')) DEFAULT 'UNPROCESSED',
+                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED.value}',
                     completed_at DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -956,9 +970,15 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
         conn.close()
 
 
-def update_cached_html_status(url: str, validation: Optional[str], db_path: str = DEFAULT_DB_PATH) -> None:
+def update_cached_html_status(
+    url: str,
+    validation: Optional[ValidationStatus],
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
     """
     Updates the validation status and sets validation_date to CURRENT_TIMESTAMP.
+
+    A null `validation` clears the article out of the validation stage entirely.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -967,7 +987,7 @@ def update_cached_html_status(url: str, validation: Optional[str], db_path: str 
             UPDATE scraped_html_cache
             SET validation = ?, validation_date = CURRENT_TIMESTAMP
             WHERE url = ?
-        """, (validation, url))
+        """, (ValidationStatus(validation).value if validation else None, url))
         conn.commit()
     finally:
         conn.close()
@@ -1206,8 +1226,8 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
 
 def update_relevance_status(
     url: str,
-    status: str,
-    relevance_label_source: str,
+    status: RelevanceStatus,
+    relevance_label_source: LabelSource,
     db_path: str = DEFAULT_DB_PATH
 ) -> RelevanceUpdateResult:
     """
@@ -1223,14 +1243,21 @@ def update_relevance_status(
         # `IS NOT` rather than `!=` so a row with no recorded source counts as
         # non-human instead of failing the comparison against NULL. Only another
         # human write may replace a human label.
-        query = """
+        query = f"""
             UPDATE scraped_html_cache
             SET relevance_status = ?, relevance_label_source = ?
             WHERE url = ?
-              AND (relevance_label_source IS NOT 'HUMAN' OR ? = 'HUMAN')
+              AND (
+                relevance_label_source IS NOT '{LabelSource.HUMAN.value}'
+                OR ? = '{LabelSource.HUMAN.value}'
+              )
             RETURNING relevance_status, relevance_label_source
         """
-        cursor.execute(query, (status, relevance_label_source, url, relevance_label_source))
+        source_value = LabelSource(relevance_label_source).value
+        cursor.execute(
+            query,
+            (RelevanceStatus(status).value, source_value, url, source_value),
+        )
         row = cursor.fetchone()
         applied = row is not None
 
@@ -1247,8 +1274,8 @@ def update_relevance_status(
 
         conn.commit()
         return RelevanceUpdateResult(
-            status=row[0],
-            label_source=row[1],
+            status=RelevanceStatus(row[0]),
+            label_source=LabelSource(row[1]) if row[1] else None,
             applied=applied,
         )
     finally:

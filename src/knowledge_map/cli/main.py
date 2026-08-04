@@ -20,6 +20,7 @@ from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
+from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus, ValidationStatus
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
@@ -911,8 +912,8 @@ def main(args=None):
                         print("\nExiting labeling tool.")
                         sys.exit(0)
                     if choice in ('y', 'n'):
-                        status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
-                        validation = "PENDING" if status == "RELEVANT" else None
+                        status = RelevanceStatus.RELEVANT if choice == 'y' else RelevanceStatus.IRRELEVANT
+                        validation = ValidationStatus.PENDING if status == RelevanceStatus.RELEVANT else None
                         
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
                         embedding = get_metadata_embedding(headline, description, embedding)
@@ -927,12 +928,12 @@ def main(args=None):
                         relevance_update = update_relevance_status(
                             url,
                             status,
-                            "HUMAN",
+                            LabelSource.HUMAN,
                             db_path=db_path
                         )
                         if relevance_update.applied:
                             update_cached_html_status(url, validation, db_path=db_path)
-                            if status == "IRRELEVANT":
+                            if status == RelevanceStatus.IRRELEVANT:
                                 delete_uningested_story(url, db_path=db_path)
                         print(
                             f"Labeled: {relevance_update.status} "
@@ -979,17 +980,17 @@ def main(args=None):
                 if not embedding:
                     continue
                     
-                new_status = classify_article(headline, description, embedding)
-                if new_status != old_status:
-                    if new_status == "RELEVANT":
-                        new_validation = "PENDING"
+                new_status = RelevanceStatus(classify_article(headline, description, embedding))
+                if new_status != RelevanceStatus(old_status):
+                    if new_status == RelevanceStatus.RELEVANT:
+                        new_validation = ValidationStatus.PENDING
                     else:
                         new_validation = None
                         
                     relevance_update = update_relevance_status(
                         url,
                         new_status,
-                        "MODEL",
+                        LabelSource.MODEL,
                         db_path=db_path,
                     )
                     if relevance_update.applied:
