@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
     clear_cached_html,
+    delete_story,
+    replace_story,
     save_story,
     update_cached_html_status,
     DEFAULT_DB_PATH,
@@ -556,11 +558,28 @@ class ArticleValidatorService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT c.url, c.publication_id, c.raw_html, c.scraped_at, c.relevance_status
+                SELECT
+                    c.url,
+                    c.publication_id,
+                    c.raw_html,
+                    c.scraped_at,
+                    c.relevance_status,
+                    c.validation_date,
+                    s.id AS story_id,
+                    s.title AS story_title,
+                    s.author AS story_author,
+                    s.published_date AS story_published_date,
+                    s.content AS story_content,
+                    EXISTS (
+                        SELECT 1
+                        FROM publication_selectors newer_selector
+                        WHERE newer_selector.publication_id = c.publication_id
+                          AND newer_selector.created_at > c.validation_date
+                    ) AS selectors_created_after_validation
                 FROM scraped_html_cache c
                 JOIN publications p ON c.publication_id = p.id
+                LEFT JOIN stories s ON s.url = c.url
                 WHERE p.validation_paused = 0
-                  AND c.raw_html IS NOT NULL
                   AND (
                     c.validation = 'PENDING'
                     OR (
@@ -569,6 +588,18 @@ class ArticleValidatorService:
                         SELECT COALESCE(MAX(created_at), '1970-01-01 00:00:00')
                         FROM publication_selectors
                         WHERE publication_id = p.id
+                      )
+                    )
+                  )
+                  AND (
+                    c.raw_html IS NOT NULL
+                    OR (
+                      s.id IS NOT NULL
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM publication_selectors newer_selector
+                        WHERE newer_selector.publication_id = c.publication_id
+                          AND newer_selector.created_at > c.validation_date
                       )
                     )
                   )
@@ -590,6 +621,10 @@ class ArticleValidatorService:
             publication_id = row["publication_id"]
             raw_html = row["raw_html"]
             relevance_status = row["relevance_status"]
+            extraction_skipped = bool(
+                row["story_id"]
+                and not row["selectors_created_after_validation"]
+            )
             from knowledge_map.core.selectors import parse_db_datetime
             scraped_at = parse_db_datetime(row["scraped_at"]) if row["scraped_at"] else datetime.datetime.now(datetime.timezone.utc)
 
@@ -599,15 +634,30 @@ class ArticleValidatorService:
 
             circuit_breaker_tripped = False
             try:
-                res = self.validate_article(url, publication_id, raw_html, scraped_at)
+                if extraction_skipped:
+                    res = {
+                        "status": "VALIDATED",
+                        "errors": [],
+                        "failure_points": 0,
+                        "extracted": {
+                            "title": row["story_title"],
+                            "author": row["story_author"],
+                            "date": row["story_published_date"],
+                            "body": row["story_content"],
+                            "body_elements": [],
+                        },
+                    }
+                else:
+                    res = self.validate_article(url, publication_id, raw_html, scraped_at)
                 status = res["status"]
 
                 if status == "VALIDATED":
                     extracted = res["extracted"]
                     article_metadata = populate_article_metadata(url, db_path=self.db_path)
                     
-                    version_id = res["selector_version_id"]
-                    widen_selector_version_window(version_id, scraped_at, db_path=self.db_path)
+                    if not extraction_skipped:
+                        version_id = res["selector_version_id"]
+                        widen_selector_version_window(version_id, scraped_at, db_path=self.db_path)
 
                     normalized_authors = normalize_author_string(extracted["author"])
                     author_field = ", ".join(normalized_authors) if normalized_authors else None
@@ -662,22 +712,24 @@ class ArticleValidatorService:
                         effective_relevance_status = relevance_update.status
 
                     if effective_relevance_status == "RELEVANT":
-                        story = {
-                            "title": extracted["title"],
-                            "url": url,
-                            "author": author_field,
-                            "published_date": pub_date_str,
-                            "content": extracted["body"],
-                            "status": "UNPROCESSED",
-                            "links": extract_links_from_elements(extracted.get("body_elements", []), url)
-                        }
-                        save_story(story, db_path=self.db_path)
+                        if not extraction_skipped:
+                            story = {
+                                "title": extracted["title"],
+                                "url": url,
+                                "author": author_field,
+                                "published_date": pub_date_str,
+                                "content": extracted["body"],
+                                "status": "UNPROCESSED",
+                                "links": extract_links_from_elements(extracted.get("body_elements", []), url)
+                            }
+                            replace_story(story, db_path=self.db_path)
                         update_cached_html_status(url, "VALIDATED", db_path=self.db_path)
                         clear_cached_html(url, db_path=self.db_path)
                     else:
+                        delete_story(url, db_path=self.db_path)
                         update_cached_html_status(url, None, db_path=self.db_path)
 
-                    logger.info("Validation extraction succeeded", extra={
+                    logger.info("Validation content available", extra={
                         "url": url,
                         "publication_id": publication_id,
                         "validation_status": "VALIDATED" if effective_relevance_status == "RELEVANT" else None,
@@ -686,9 +738,10 @@ class ArticleValidatorService:
                         "errors": []
                     })
                     
-                    pub = get_publication(publication_id, db_path=self.db_path)
-                    if pub and not pub.get("validation_paused"):
-                        reset_publication_failure_points(publication_id, db_path=self.db_path)
+                    if not extraction_skipped:
+                        pub = get_publication(publication_id, db_path=self.db_path)
+                        if pub and not pub.get("validation_paused"):
+                            reset_publication_failure_points(publication_id, db_path=self.db_path)
 
                 elif status == "VALIDATION_FAILED":
                     update_cached_html_status(url, status, db_path=self.db_path)

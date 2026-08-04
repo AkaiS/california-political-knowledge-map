@@ -391,6 +391,62 @@ def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
     finally:
         conn.close()
 
+
+def replace_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> None:
+    """Replace extracted Story fields and links for a URL."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO stories (title, url, category, author, published_date, summary, content, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                category = excluded.category,
+                author = excluded.author,
+                published_date = excluded.published_date,
+                summary = excluded.summary,
+                content = excluded.content,
+                status = excluded.status,
+                completed_at = NULL
+        """, (
+            story.get("title"),
+            story.get("url"),
+            story.get("category"),
+            story.get("author"),
+            story.get("published_date"),
+            story.get("summary"),
+            story.get("content"),
+            story.get("status", "UNPROCESSED"),
+        ))
+
+        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.get("url"),))
+        story_id = cursor.fetchone()[0]
+        cursor.execute("DELETE FROM story_links WHERE story_id = ?", (story_id,))
+        for link in story.get("links", []):
+            cursor.execute("""
+                INSERT OR IGNORE INTO story_links (story_id, text, url)
+                VALUES (?, ?, ?)
+            """, (story_id, link.get("text"), link.get("url")))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_story(url: str, db_path: str = DEFAULT_DB_PATH) -> None:
+    """Delete a Story and its dependent links by URL."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM story_links
+            WHERE story_id = (SELECT id FROM stories WHERE url = ?)
+        """, (url,))
+        cursor.execute("DELETE FROM stories WHERE url = ?", (url,))
+        conn.commit()
+    finally:
+        conn.close()
+
 def get_last_n_stories(n: int = 5, db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
     Retrieves the last n inserted stories from the database.
