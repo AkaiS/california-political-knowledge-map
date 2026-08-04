@@ -9,7 +9,7 @@ class ArticleFetchResult:
     error_message: str = ""
 
     @property
-    def has_article_content(self) -> bool:
+    def has_raw_html(self) -> bool:
         return self.raw_html is not None
 
 

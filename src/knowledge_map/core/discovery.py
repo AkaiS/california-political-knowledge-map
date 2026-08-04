@@ -444,7 +444,7 @@ class ListingPageDiscoveryService:
                         async with limiter:
                             logger.info(f"Fetching candidate article '{url}' for '{pub_id}'")
                             fetch_result = await fetch_article(crawler, url, run_config)
-                            if not fetch_result.has_article_content:
+                            if not fetch_result.has_raw_html:
                                 logger.error(
                                     f"Failed to fetch candidate '{url}': {fetch_result.error_message}",
                                     extra={
@@ -631,7 +631,7 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
                         async with limiter:
                             logger.info(f"Archive crawl: fetching candidate '{url}' for '{pub_id}'")
                             fetch_result = await fetch_article(crawler, url, run_config)
-                            if not fetch_result.has_article_content:
+                            if not fetch_result.has_raw_html:
                                 logger.error(
                                     f"Archive crawl: failed to fetch '{url}': {fetch_result.error_message}",
                                     extra={

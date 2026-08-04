@@ -52,7 +52,7 @@ class HtmlRefetchService:
                             result.fetch_status,
                             db_path=self.db_path,
                         )
-                        if result.has_article_content:
+                        if result.has_raw_html:
                             refetched_urls.append(candidate["url"])
                         else:
                             logger.error(
