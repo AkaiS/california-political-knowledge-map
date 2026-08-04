@@ -25,7 +25,7 @@ from knowledge_map.core.selectors import (
 from knowledge_map.core.relevance import load_classifier_weights, classify_article
 from knowledge_map.core.relevance_agent import classify_article_with_llm
 from knowledge_map.core.relevance_classification import (
-    get_metadata_embedding,
+    populate_article_metadata,
     persist_relevance_label,
 )
 
@@ -596,6 +596,7 @@ class ArticleValidatorService:
 
             circuit_breaker_tripped = False
             try:
+                article_metadata = populate_article_metadata(url, db_path=self.db_path)
                 res = self.validate_article(url, publication_id, raw_html, scraped_at)
                 status = res["status"]
                 
@@ -621,17 +622,13 @@ class ArticleValidatorService:
                     title = extracted.get("title", "").strip()
                     body = extracted.get("body", "").strip()
                     
-                    from knowledge_map.core.relevance import extract_metadata
-                    meta = extract_metadata(raw_html)
-                    headline = title
-                    description = (meta.get("description") or "").strip()
+                    headline = article_metadata.headline or title
+                    description = article_metadata.description or ""
                     
                     weights = load_classifier_weights()
                     relevance_status = "INCONCLUSIVE"
                     label_source = "KEYWORD"
-                    embedding = None
-                    
-                    embedding = get_metadata_embedding(headline, description)
+                    embedding = article_metadata.embedding
                     
                     if weights and embedding:
                         # Classify using model
@@ -649,28 +646,15 @@ class ArticleValidatorService:
                             relevance_status = "IRRELEVANT"
                             label_source = "LLM"
                     
-                    if relevance_status == "RELEVANT":
-                        relevance_update = persist_relevance_label(
-                            url,
-                            "RELEVANT",
-                            "VALIDATED",
-                            label_source,
-                            headline=headline,
-                            description=description,
-                            embedding=embedding,
-                            db_path=self.db_path
-                        )
-                    else:
-                        relevance_update = persist_relevance_label(
-                            url,
-                            "IRRELEVANT",
-                            None,
-                            label_source,
-                            headline=headline,
-                            description=description,
-                            embedding=embedding,
-                            db_path=self.db_path
-                        )
+                    relevance_update = persist_relevance_label(
+                        url,
+                        relevance_status,
+                        label_source,
+                        db_path=self.db_path,
+                    )
+
+                    if relevance_update.applied and relevance_update.status != "RELEVANT":
+                        update_cached_html_status(url, None, db_path=self.db_path)
 
                     if relevance_update.applied:
                         story = {

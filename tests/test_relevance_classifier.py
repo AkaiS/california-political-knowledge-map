@@ -223,10 +223,10 @@ def test_sqlite_cache_helpers(tmp_path):
     assert len(c3_cleared["embedding"]) == 768 # kept embedding
 
     # Verify update_relevance_status
-    update_relevance_status("https://example.com/3", "IRRELEVANT", None, db_path=db_path)
+    update_relevance_status("https://example.com/3", "IRRELEVANT", "MODEL", db_path=db_path)
     c3_updated = get_cached_html("https://example.com/3", db_path=db_path)
     assert c3_updated["relevance_status"] == "IRRELEVANT"
-    assert c3_updated["validation"] is None
+    assert c3_updated["validation"] == "PENDING"
 
 
 def test_model_training(tmp_path):

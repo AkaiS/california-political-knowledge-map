@@ -16,6 +16,13 @@ class RelevanceUpdateResult(NamedTuple):
     label_source: Optional[str]
     applied: bool
 
+
+class ArticleMetadataUpdateResult(NamedTuple):
+    headline: Optional[str]
+    description: Optional[str]
+    embedding: Optional[list[float]]
+    applied: bool
+
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Initializes the SQLite database and creates the stories table if it doesn't exist.
@@ -795,7 +802,7 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
         conn.close()
 
 
-def update_cached_html_status(url: str, validation: str, db_path: str = DEFAULT_DB_PATH) -> None:
+def update_cached_html_status(url: str, validation: Optional[str], db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Updates the validation status and sets validation_date to CURRENT_TIMESTAMP.
     """
@@ -968,11 +975,7 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
 def update_relevance_status(
     url: str,
     status: str,
-    validation: Optional[str],
-    relevance_label_source: Optional[str] = None,
-    headline: Optional[str] = None,
-    description: Optional[str] = None,
-    embedding: Optional[list[float]] = None,
+    relevance_label_source: str,
     db_path: str = DEFAULT_DB_PATH
 ) -> RelevanceUpdateResult:
     """
@@ -981,43 +984,21 @@ def update_relevance_status(
     Returns the effective persisted relevance status and source together with
     whether this write was applied.
     """
-    import json
-    from knowledge_map.core.relevance import serialize_embedding
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        
-        updates = ["relevance_status = ?", "validation = ?"]
-        params = [status, validation]
-        
-        if relevance_label_source is not None:
-            updates.append("relevance_label_source = ?")
-            params.append(relevance_label_source)
-            
-        if headline is not None:
-            updates.append("headline = ?")
-            params.append(headline)
-            
-        if description is not None:
-            updates.append("description = ?")
-            params.append(description)
-            
-        if embedding is not None:
-            updates.append("embedding = ?")
-            params.append(serialize_embedding(embedding))
-            
-        params.extend((url, relevance_label_source))
+
         # `IS NOT` rather than `!=` so a row with no recorded source counts as
         # non-human instead of failing the comparison against NULL. Only another
         # human write may replace a human label.
-        query = f"""
+        query = """
             UPDATE scraped_html_cache
-            SET {", ".join(updates)}
+            SET relevance_status = ?, relevance_label_source = ?
             WHERE url = ?
               AND (relevance_label_source IS NOT 'HUMAN' OR ? = 'HUMAN')
             RETURNING relevance_status, relevance_label_source
         """
-        cursor.execute(query, tuple(params))
+        cursor.execute(query, (status, relevance_label_source, url, relevance_label_source))
         row = cursor.fetchone()
         applied = row is not None
 
@@ -1036,6 +1017,84 @@ def update_relevance_status(
         return RelevanceUpdateResult(
             status=row[0],
             label_source=row[1],
+            applied=applied,
+        )
+    finally:
+        conn.close()
+
+
+def update_article_metadata(
+    url: str,
+    headline: Optional[str],
+    description: Optional[str],
+    embedding: Optional[list[float]],
+    db_path: str = DEFAULT_DB_PATH,
+) -> ArticleMetadataUpdateResult:
+    """Populate missing article metadata without replacing stored values."""
+    from knowledge_map.core.relevance import deserialize_embedding, serialize_embedding
+
+    normalized_headline = headline.strip() if headline and headline.strip() else None
+    normalized_description = description.strip() if description and description.strip() else None
+    serialized_embedding = serialize_embedding(embedding) if embedding is not None else None
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE scraped_html_cache
+            SET headline = CASE
+                    WHEN headline IS NULL OR TRIM(headline) = '' THEN ?
+                    ELSE headline
+                END,
+                description = CASE
+                    WHEN description IS NULL OR TRIM(description) = '' THEN ?
+                    ELSE description
+                END,
+                embedding = CASE
+                    WHEN embedding IS NULL THEN ?
+                    ELSE embedding
+                END
+            WHERE url = ?
+              AND (
+                  ((headline IS NULL OR TRIM(headline) = '') AND ? IS NOT NULL)
+                  OR ((description IS NULL OR TRIM(description) = '') AND ? IS NOT NULL)
+                  OR (embedding IS NULL AND ? IS NOT NULL)
+              )
+            RETURNING headline, description, embedding
+            """,
+            (
+                normalized_headline,
+                normalized_description,
+                serialized_embedding,
+                url,
+                normalized_headline,
+                normalized_description,
+                serialized_embedding,
+            ),
+        )
+        row = cursor.fetchone()
+        applied = row is not None
+
+        if row is None:
+            cursor.execute(
+                """
+                SELECT headline, description, embedding
+                FROM scraped_html_cache
+                WHERE url = ?
+                """,
+                (url,),
+            )
+            row = cursor.fetchone()
+
+        if row is None:
+            raise ValueError(f"Cached article not found: {url}")
+
+        conn.commit()
+        return ArticleMetadataUpdateResult(
+            headline=row[0],
+            description=row[1],
+            embedding=deserialize_embedding(row[2]) if row[2] is not None else None,
             applied=applied,
         )
     finally:
@@ -1356,6 +1415,5 @@ def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
         }
     finally:
         conn.close()
-
 
 

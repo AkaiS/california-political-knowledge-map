@@ -1,6 +1,6 @@
 # Give relevance and validation disjoint writers
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -29,13 +29,13 @@ label also skips the only code that would ever write them.
 
 ## Acceptance criteria
 
-- [ ] The relevance writer accepts no validation parameter, and no relevance call site passes one.
-- [ ] Writing a relevance decision leaves the validation column unchanged unless the calling stage sets it explicitly.
-- [ ] The human-label guard and the effective-value return from ticket 01 still hold after the signature change.
-- [ ] The metadata writer populates `headline`, `description`, and `embedding` for an article that has raw HTML or stored metadata and lacks them, without consulting relevance state.
-- [ ] Running the metadata writer twice over the same article changes nothing the second time.
-- [ ] An article with a `HUMAN` label and no classification run still receives its headline, description, and embedding.
-- [ ] The full deterministic test suite passes.
+- [x] The relevance writer accepts no validation parameter, and no relevance call site passes one.
+- [x] Writing a relevance decision leaves the validation column unchanged unless the calling stage sets it explicitly.
+- [x] The human-label guard and the effective-value return from ticket 01 still hold after the signature change.
+- [x] The metadata writer populates `headline`, `description`, and `embedding` for an article that has raw HTML or stored metadata and lacks them, without consulting relevance state.
+- [x] Running the metadata writer twice over the same article changes nothing the second time.
+- [x] An article with a `HUMAN` label and no classification run still receives its headline, description, and embedding.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

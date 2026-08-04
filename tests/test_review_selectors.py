@@ -505,7 +505,7 @@ async def test_post_recovery_prioritization(tmp_path):
         
     mock_relevance = RelevanceClassification(classification="RELEVANT")
     with patch(
-        "knowledge_map.core.validation.get_metadata_embedding",
+        "knowledge_map.core.relevance_classification.get_metadata_embedding",
         return_value=[0.0] * 768,
     ) as mock_embedding, patch(
         "knowledge_map.core.validation.classify_article_with_llm",

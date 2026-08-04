@@ -492,14 +492,13 @@ def test_relevance_label_source_updates(tmp_path):
     update_relevance_status(
         url="http://example.com/art1",
         status="IRRELEVANT",
-        validation="VALIDATION_FAILED",
         relevance_label_source="HUMAN",
         db_path=db_path
     )
     cached = get_cached_html("http://example.com/art1", db_path=db_path)
     assert cached is not None
     assert cached["relevance_status"] == "IRRELEVANT"
-    assert cached["validation"] == "VALIDATION_FAILED"
+    assert cached["validation"] == "VALIDATED"
     assert cached.get("relevance_label_source") == "HUMAN"
     
     # 3. Test cache_scraped_html with a different relevance_label_source
@@ -542,9 +541,7 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     human_label = update_relevance_status(
         url,
         "RELEVANT",
-        "PENDING",
-        relevance_label_source="HUMAN",
-        headline="Human headline",
+        "HUMAN",
         db_path=db_path,
     )
 
@@ -553,9 +550,7 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     rejected = update_relevance_status(
         url,
         "IRRELEVANT",
-        None,
-        relevance_label_source="MODEL",
-        headline="Automated headline",
+        "MODEL",
         db_path=db_path,
     )
 
@@ -566,13 +561,12 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     assert cached["relevance_status"] == "RELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
     assert cached["validation"] == "PENDING"
-    assert cached["headline"] == "Human headline"
+    assert cached["headline"] == "Automated headline"
 
     applied = update_relevance_status(
         url,
         "IRRELEVANT",
-        None,
-        relevance_label_source="HUMAN",
+        "HUMAN",
         db_path=db_path,
     )
 
@@ -582,6 +576,84 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
+
+
+def test_populate_article_metadata_is_idempotent_for_human_labeled_article(tmp_path):
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, get_cached_html, init_db
+    from knowledge_map.core.relevance_classification import populate_article_metadata
+
+    db_path = str(tmp_path / "article-metadata.db")
+    url = "https://example.com/human-metadata"
+    embedding = [0.25] * 768
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        """
+        <html><head>
+          <meta property="og:title" content="Human reviewed headline">
+          <meta name="description" content="Human reviewed description">
+        </head></html>
+        """,
+        relevance_status="RELEVANT",
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        return_value=embedding,
+    ) as embed_text:
+        first = populate_article_metadata(url, db_path=db_path)
+        second = populate_article_metadata(url, db_path=db_path)
+
+    assert first.applied is True
+    assert second.applied is False
+    assert embed_text.call_count == 1
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Human reviewed headline"
+    assert cached["description"] == "Human reviewed description"
+    assert cached["embedding"] == pytest.approx(embedding, rel=1e-5)
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+
+
+def test_populate_article_metadata_uses_stored_metadata_without_html(tmp_path):
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, get_cached_html, init_db
+    from knowledge_map.core.relevance_classification import populate_article_metadata
+
+    db_path = str(tmp_path / "stored-article-metadata.db")
+    url = "https://example.com/stored-metadata"
+    embedding = [0.5] * 768
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        None,
+        raw_metadata_json={
+            "article": {
+                "title": "Stored headline",
+                "summary": "Stored description",
+            }
+        },
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        return_value=embedding,
+    ):
+        result = populate_article_metadata(url, db_path=db_path)
+
+    assert result.applied is True
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Stored headline"
+    assert cached["description"] == "Stored description"
+    assert cached["embedding"] == pytest.approx(embedding, rel=1e-5)
 
 
 def test_record_failed_fetch_preserves_an_existing_row(tmp_path):

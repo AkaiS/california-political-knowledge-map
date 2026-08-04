@@ -843,7 +843,11 @@ def main(args=None):
         init_db(db_path)
 
         if parsed_args.classifier_action == "label":
-            from knowledge_map.adapters.sqlite_db import get_articles_for_human_labeling
+            from knowledge_map.adapters.sqlite_db import (
+                get_articles_for_human_labeling,
+                update_article_metadata,
+                update_cached_html_status,
+            )
             from knowledge_map.core.relevance import deserialize_embedding
             from knowledge_map.core.relevance_classification import (
                 get_metadata_embedding,
@@ -882,17 +886,22 @@ def main(args=None):
                         
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
                         embedding = get_metadata_embedding(headline, description, embedding)
+                        update_article_metadata(
+                            url,
+                            headline,
+                            description,
+                            embedding,
+                            db_path=db_path,
+                        )
 
                         relevance_update = persist_relevance_label(
                             url,
                             status,
-                            validation,
                             "HUMAN",
-                            headline=headline,
-                            description=description,
-                            embedding=embedding,
                             db_path=db_path
                         )
+                        if relevance_update.applied:
+                            update_cached_html_status(url, validation, db_path=db_path)
                         print(
                             f"Labeled: {relevance_update.status} "
                             f"({relevance_update.label_source}) -> validation: {validation}"
@@ -921,6 +930,7 @@ def main(args=None):
         elif parsed_args.classifier_action == "reevaluate":
             from knowledge_map.adapters.sqlite_db import (
                 get_machine_labeled_for_reevaluation,
+                update_cached_html_status,
                 update_relevance_status,
             )
             from knowledge_map.core.relevance import deserialize_embedding, classify_article
@@ -947,11 +957,11 @@ def main(args=None):
                     relevance_update = update_relevance_status(
                         url,
                         new_status,
-                        new_validation,
-                        relevance_label_source="MODEL",
+                        "MODEL",
                         db_path=db_path,
                     )
                     if relevance_update.applied:
+                        update_cached_html_status(url, new_validation, db_path=db_path)
                         print(
                             f"URL: {url} transitioned: {old_status} -> "
                             f"{relevance_update.status} (validation: {new_validation})"

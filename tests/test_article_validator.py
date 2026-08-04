@@ -23,7 +23,7 @@ def mock_relevance_agent():
 @pytest.fixture
 def mock_metadata_embedding():
     with patch(
-        "knowledge_map.core.validation.get_metadata_embedding",
+        "knowledge_map.core.relevance_classification.get_metadata_embedding",
         return_value=[0.0] * 768,
     ) as mock_fn:
         yield mock_fn
@@ -1496,6 +1496,7 @@ async def test_validation_preserves_human_relevance_label_and_discards_model_res
         get_cached_html,
         init_db,
         register_publication,
+        update_cached_html_status,
         update_relevance_status,
     )
     from knowledge_map.core.selectors import add_selector_version
@@ -1555,10 +1556,10 @@ async def test_validation_preserves_human_relevance_label_and_discards_model_res
     update_relevance_status(
         url,
         "RELEVANT",
-        "PENDING",
-        relevance_label_source="HUMAN",
+        "HUMAN",
         db_path=db_path,
     )
+    update_cached_html_status(url, "PENDING", db_path=db_path)
 
     with patch(
         "knowledge_map.core.validation.load_classifier_weights",
@@ -1913,14 +1914,15 @@ async def test_post_extraction_relevance_embedding_heading_description(tmp_path)
         mock_embed.assert_called_once_with("Target Article Title Target Article Description")
         
         # Verify classify_article was called with headline + description
-        mock_classify.assert_called_once_with("Target Article Title", "Target Article Description", mock_embedding)
+        mock_classify.assert_called_once()
+        classify_headline, classify_description, classify_embedding = mock_classify.call_args.args
+        assert classify_headline == "Target Article Title"
+        assert classify_description == "Target Article Description"
+        assert classify_embedding == pytest.approx(mock_embedding, rel=1e-5)
         
     # Verify cached row in DB has headline, description, and embedding updated
     cached = get_cached_html(url, db_path=db_path)
     assert cached["headline"] == "Target Article Title"
     assert cached["description"] == "Target Article Description"
     assert cached["embedding"] == pytest.approx(mock_embedding, rel=1e-5)
-
-
-
 
