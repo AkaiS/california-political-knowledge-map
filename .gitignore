@@ -9,3 +9,4 @@ manual_checks/*
 .scratch/pipeline.log
 */ralph-queue.txt
 .logfire/*
+.claude/*
