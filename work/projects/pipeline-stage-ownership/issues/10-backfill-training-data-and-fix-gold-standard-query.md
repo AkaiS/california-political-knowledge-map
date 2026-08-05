@@ -1,6 +1,6 @@
 # Backfill training data and fix the gold-standard query
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
