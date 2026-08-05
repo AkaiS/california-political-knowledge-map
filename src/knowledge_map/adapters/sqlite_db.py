@@ -21,6 +21,12 @@ VALIDATION_CHECK = sql_check_values(ValidationStatus)
 RELEVANCE_STATUS_CHECK = sql_check_values(RelevanceStatus)
 LABEL_SOURCE_CHECK = sql_check_values(LabelSource)
 
+# Every relevance status except PENDING: an article some classifier has ruled on,
+# whichever way it ruled.
+DECIDED_RELEVANCE_STATUSES = ", ".join(
+    f"'{status.value}'" for status in RelevanceStatus if status is not RelevanceStatus.PENDING
+)
+
 # Fetch statuses meaning the URL is permanently gone, so it is never fetched
 # again. Blocking statuses (403, 429, 503) are deliberately absent: they say we
 # were refused, not that the article stopped existing.
@@ -71,7 +77,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
-                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED.value}',
+                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
                 completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -121,7 +127,14 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
             column_info = {row[1]: row for row in cursor.fetchall()}
             relevance_default = column_info.get("relevance_status", (None,) * 5)[4]
 
-            # Check if we need the new migration
+            # Check if we need the new migration.
+            #
+            # Status strings inside migration code are frozen literals, never
+            # rendered from the domain enums. A migration describes the shape a
+            # database had at a point in history — including retired values like
+            # `PENDING_RELEVANCE` that no enum carries any more — so it must not
+            # move when the current vocabulary does. Runtime queries are the
+            # opposite: those bind to the enums.
             needs_new_migration = (
                 "relevance_label_source" not in columns
                 or "fetch_status" not in columns
@@ -142,14 +155,14 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                         url TEXT PRIMARY KEY,
                         publication_id TEXT NOT NULL,
                         raw_html TEXT,
-                        validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING.value}',
+                        validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING}',
                         validation_date DATETIME,
                         scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         headline TEXT,
                         description TEXT,
                         embedding BLOB,
-                        relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING.value}',
-                        relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD.value}',
+                        relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING}',
+                        relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD}',
                         fetch_status INTEGER,
                         raw_metadata_json TEXT,
                         FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
@@ -224,14 +237,14 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     url TEXT PRIMARY KEY,
                     publication_id TEXT NOT NULL,
                     raw_html TEXT,
-                    validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING.value}',
+                    validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING}',
                     validation_date DATETIME,
                     scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     headline TEXT,
                     description TEXT,
                     embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING.value}',
-                    relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD.value}',
+                    relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING}',
+                    relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD}',
                     fetch_status INTEGER,
                     raw_metadata_json TEXT,
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
@@ -241,6 +254,12 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
         story_columns = [row[1] for row in cursor.fetchall()]
         cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='stories'")
         stories_sql = cursor.fetchone()[0]
+        # Deliberately a frozen literal, not `STORY_STATUS_CHECK`: this is the
+        # schema shape that migration 0003 produced, and it stays fixed at that
+        # historical text. Deriving it from `ArticleStatus` would make any future
+        # member silently rebuild the table and back up every existing database
+        # as a side effect of editing an enum. A new member needs a new,
+        # hand-written migration step here instead.
         story_status_constraint = (
             "CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', "
             "'FAILED_DLQ', 'SYSTEM_ERROR'))"
@@ -271,7 +290,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     published_date TEXT,
                     summary TEXT,
                     content TEXT,
-                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED.value}',
+                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
                     completed_at DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -457,17 +476,17 @@ def delete_uningested_story(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             DELETE FROM story_links
             WHERE story_id = (
                 SELECT id
                 FROM stories
-                WHERE url = ? AND status IS NOT 'COMPLETED'
+                WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
             )
         """, (url,))
-        cursor.execute("""
+        cursor.execute(f"""
             DELETE FROM stories
-            WHERE url = ? AND status IS NOT 'COMPLETED'
+            WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
         """, (url,))
         deleted = cursor.rowcount > 0
         conn.commit()
@@ -1024,7 +1043,7 @@ def get_articles_needing_html_refetch(
             FROM scraped_html_cache c
             JOIN publications p ON p.id = c.publication_id
             LEFT JOIN stories s ON s.url = c.url
-            WHERE c.relevance_status = 'RELEVANT'
+            WHERE c.relevance_status = '{RelevanceStatus.RELEVANT}'
               AND c.raw_html IS NULL
               AND s.id IS NULL
               AND (c.fetch_status IS NULL OR c.fetch_status NOT IN ({placeholders}))
@@ -1085,7 +1104,7 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
             WHERE url = ?
               AND NOT (
                 raw_html IS NULL
-                AND relevance_status = 'PENDING'
+                AND relevance_status = '{RelevanceStatus.PENDING}'
                 AND (fetch_status IS NULL OR fetch_status NOT IN ({placeholders}))
               )
         """, (url, *TERMINAL_FETCH_STATUSES))
@@ -1105,22 +1124,22 @@ def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str,
     try:
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT headline AS title, description AS content, relevance_status
             FROM scraped_html_cache
-            WHERE relevance_label_source = 'HUMAN'
-              AND relevance_status = 'RELEVANT'
+            WHERE relevance_label_source = '{LabelSource.HUMAN}'
+              AND relevance_status = '{RelevanceStatus.RELEVANT}'
               AND headline IS NOT NULL
               AND description IS NOT NULL
             LIMIT 3
         """)
         relevant = [dict(row) for row in cursor.fetchall()]
 
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT headline AS title, description AS content, relevance_status
             FROM scraped_html_cache
-            WHERE relevance_label_source = 'HUMAN'
-              AND relevance_status = 'IRRELEVANT'
+            WHERE relevance_label_source = '{LabelSource.HUMAN}'
+              AND relevance_status = '{RelevanceStatus.IRRELEVANT}'
               AND headline IS NOT NULL
               AND description IS NOT NULL
             LIMIT 3
@@ -1137,10 +1156,10 @@ def get_articles_for_metadata_backfill(db_path: str = DEFAULT_DB_PATH) -> List[s
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT url
             FROM scraped_html_cache
-            WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE')
+            WHERE relevance_status IN ({DECIDED_RELEVANCE_STATUSES})
               AND (
                   headline IS NULL OR TRIM(headline) = ''
                   OR description IS NULL OR TRIM(description) = ''
@@ -1169,17 +1188,17 @@ def get_articles_for_human_labeling(
     try:
         cursor = conn.cursor()
         if include_all:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT url, headline, description, embedding
                 FROM scraped_html_cache
-                WHERE relevance_label_source IS NOT 'HUMAN'
+                WHERE relevance_label_source IS NOT '{LabelSource.HUMAN}'
             """)
         else:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT url, headline, description, embedding
                 FROM scraped_html_cache
-                WHERE relevance_status = 'INCONCLUSIVE'
-                  AND relevance_label_source IS NOT 'HUMAN'
+                WHERE relevance_status = '{RelevanceStatus.INCONCLUSIVE}'
+                  AND relevance_label_source IS NOT '{LabelSource.HUMAN}'
             """)
         return cursor.fetchall()
     finally:
@@ -1198,11 +1217,14 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT url, headline, description, embedding, relevance_status
             FROM scraped_html_cache
-            WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
-              AND relevance_label_source IS NOT 'HUMAN'
+            WHERE relevance_status IN (
+                    '{RelevanceStatus.INCONCLUSIVE}',
+                    '{RelevanceStatus.IRRELEVANT}'
+                  )
+              AND relevance_label_source IS NOT '{LabelSource.HUMAN}'
         """)
         return cursor.fetchall()
     finally:
@@ -1233,8 +1255,8 @@ def update_relevance_status(
             SET relevance_status = ?, relevance_label_source = ?
             WHERE url = ?
               AND (
-                relevance_label_source IS NOT '{LabelSource.HUMAN.value}'
-                OR ? = '{LabelSource.HUMAN.value}'
+                relevance_label_source IS NOT '{LabelSource.HUMAN}'
+                OR ? = '{LabelSource.HUMAN}'
               )
             RETURNING relevance_status, relevance_label_source
         """

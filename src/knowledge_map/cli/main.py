@@ -220,7 +220,7 @@ def main(args=None):
     classifier_parser = subparsers.add_parser("classifier", help=CLI_COMMAND_HELP["classifier"])
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
     label_parser = classifier_sub.add_parser("label", help=CLI_COMMAND_HELP["classifier label"])
-    label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
+    label_parser.add_argument("--review-all", action="store_true", help=f"Query all cached articles with relevance_label_source != '{LabelSource.HUMAN}'")
     classifier_sub.add_parser("backfill", help=CLI_COMMAND_HELP["classifier backfill"])
     classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
     classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
@@ -890,9 +890,9 @@ def main(args=None):
 
             if not rows:
                 if review_all:
-                    print("No articles with relevance_label_source != 'HUMAN' found to label.")
+                    print(f"No articles with relevance_label_source != '{LabelSource.HUMAN}' found to label.")
                 else:
-                    print("No non-human INCONCLUSIVE articles found to label.")
+                    print(f"No non-human {RelevanceStatus.INCONCLUSIVE} articles found to label.")
                 sys.exit(0)
                 
             print(f"Found {len(rows)} articles requiring relevance labeling.")

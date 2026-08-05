@@ -562,7 +562,7 @@ class ArticleValidatorService:
         rows = []
         try:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(f"""
                 WITH latest_selector AS (
                     SELECT publication_id, MAX(created_at) AS max_created_at
                     FROM publication_selectors
@@ -606,9 +606,9 @@ class ArticleValidatorService:
                     selectors_created_after_validation
                 FROM candidate
                 WHERE (
-                        validation = 'PENDING'
+                        validation = '{ValidationStatus.PENDING}'
                         OR (
-                          validation = 'VALIDATION_FAILED'
+                          validation = '{ValidationStatus.VALIDATION_FAILED}'
                           AND validation_date < COALESCE(max_created_at, '1970-01-01 00:00:00')
                         )
                       )
@@ -616,7 +616,7 @@ class ArticleValidatorService:
                         raw_html IS NOT NULL
                         OR (story_id IS NOT NULL AND NOT selectors_created_after_validation)
                       )
-                ORDER BY CASE WHEN validation = 'VALIDATION_FAILED' THEN 0 ELSE 1 END ASC, scraped_at ASC
+                ORDER BY CASE WHEN validation = '{ValidationStatus.VALIDATION_FAILED}' THEN 0 ELSE 1 END ASC, scraped_at ASC
             """)
             rows = cursor.fetchall()
         finally:
@@ -745,7 +745,7 @@ class ArticleValidatorService:
                     logger.info("Validation content available", extra={
                         "url": url,
                         "publication_id": publication_id,
-                        "validation_status": ValidationStatus.VALIDATED.value if effective_relevance_status == RelevanceStatus.RELEVANT else None,
+                        "validation_status": ValidationStatus.VALIDATED if effective_relevance_status == RelevanceStatus.RELEVANT else None,
                         "relevance_status": effective_relevance_status.value,
                         "failure_points": 0,
                         "errors": []

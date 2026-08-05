@@ -9,10 +9,10 @@ Member order matches the `CHECK` constraints these enums render, so the
 generated DDL is textually identical to what it replaced.
 """
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 
-class RelevanceStatus(str, Enum):
+class RelevanceStatus(StrEnum):
     """Where an article sits in the relevance classification stage."""
 
     RELEVANT = "RELEVANT"
@@ -21,7 +21,7 @@ class RelevanceStatus(str, Enum):
     PENDING = "PENDING"
 
 
-class ValidationStatus(str, Enum):
+class ValidationStatus(StrEnum):
     """Where an article sits in the extraction/validation stage."""
 
     PENDING = "PENDING"
@@ -30,7 +30,7 @@ class ValidationStatus(str, Enum):
     UNVALIDATABLE = "UNVALIDATABLE"
 
 
-class LabelSource(str, Enum):
+class LabelSource(StrEnum):
     """What produced a relevance label.
 
     `HUMAN` is privileged: only another human write may replace it.

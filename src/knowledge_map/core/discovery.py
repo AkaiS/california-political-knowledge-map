@@ -14,6 +14,7 @@ from knowledge_map.adapters.sqlite_db import (
     record_failed_fetch,
     DEFAULT_DB_PATH,
 )
+from knowledge_map.schemas.relevance import RelevanceStatus, ValidationStatus
 from knowledge_map.config import settings
 from knowledge_map.core.crawling import fetch_article
 
@@ -461,12 +462,17 @@ class ListingPageDiscoveryService:
                                 )
                                 return
                             cache_scraped_html(
-                                url, pub_id, fetch_result.raw_html, validation="PENDING",
-                                relevance_status="PENDING", fetch_status=fetch_result.fetch_status,
+                                url, pub_id, fetch_result.raw_html,
+                                validation=ValidationStatus.PENDING,
+                                relevance_status=RelevanceStatus.PENDING,
+                                fetch_status=fetch_result.fetch_status,
                                 db_path=self.db_path
                             )
                             scraped_urls.append(url)
-                            logger.info(f"Cached candidate article '{url}' with status 'PENDING'")
+                            logger.info(
+                                f"Cached candidate article '{url}' with status "
+                                f"'{RelevanceStatus.PENDING}'"
+                            )
 
                     await asyncio.gather(*(fetch_and_cache(url) for url in candidate_urls))
                     
@@ -658,12 +664,17 @@ class ArchiveDiscoveryService(ListingPageDiscoveryService):
 
                             # Cache candidate article immediately
                             cache_scraped_html(
-                                url, pub_id, raw_html, validation="PENDING",
-                                relevance_status="PENDING", fetch_status=fetch_result.fetch_status,
+                                url, pub_id, raw_html,
+                                validation=ValidationStatus.PENDING,
+                                relevance_status=RelevanceStatus.PENDING,
+                                fetch_status=fetch_result.fetch_status,
                                 db_path=self.db_path
                             )
                             scraped_urls.append(url)
-                            logger.info(f"Archive crawl: Cached candidate article '{url}' with status 'PENDING'")
+                            logger.info(
+                                f"Archive crawl: Cached candidate article '{url}' with status "
+                                f"'{RelevanceStatus.PENDING}'"
+                            )
 
                         return False
 
