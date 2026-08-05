@@ -23,7 +23,7 @@ class HtmlRefetchService:
     async def refetch_relevant_articles(self) -> List[str]:
         candidates = get_articles_needing_html_refetch(db_path=self.db_path)
         if not candidates:
-            logger.info("No relevant articles need a raw HTML refetch.")
+            logger.info("No articles need a raw HTML refetch.")
             return []
 
         candidates_by_publication: Dict[str, List[Dict[str, Any]]] = defaultdict(list)

@@ -1027,13 +1027,27 @@ def record_failed_fetch(
 def get_articles_needing_html_refetch(
     db_path: str = DEFAULT_DB_PATH,
 ) -> List[Dict[str, Any]]:
-    """Return relevant, unmaterialized articles whose HTML can be retried."""
+    """Return unmaterialized articles whose HTML can be retried.
+
+    Two populations qualify. Articles already known to be relevant are always
+    worth restoring. Articles that failed validation are worth restoring only
+    once a newer selector version exists, because that is the moment the
+    validation loop will pick them up again; the predicate mirrors the one in
+    `ArticleValidator.validate_pending_cache`. A failed article that has been
+    purged and has no new selectors to try is left alone rather than refetched
+    on the retention clock with no consumer waiting.
+    """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         placeholders = ", ".join("?" for _ in TERMINAL_FETCH_STATUSES)
         cursor = conn.cursor()
         cursor.execute(f"""
+            WITH latest_selector AS (
+                SELECT publication_id, MAX(created_at) AS max_created_at
+                FROM publication_selectors
+                GROUP BY publication_id
+            )
             SELECT
                 c.url,
                 c.publication_id,
@@ -1043,7 +1057,14 @@ def get_articles_needing_html_refetch(
             FROM scraped_html_cache c
             JOIN publications p ON p.id = c.publication_id
             LEFT JOIN stories s ON s.url = c.url
-            WHERE c.relevance_status = '{RelevanceStatus.RELEVANT}'
+            LEFT JOIN latest_selector ls ON ls.publication_id = c.publication_id
+            WHERE (
+                    c.relevance_status = '{RelevanceStatus.RELEVANT}'
+                    OR (
+                        c.validation = '{ValidationStatus.VALIDATION_FAILED}'
+                        AND c.validation_date < COALESCE(ls.max_created_at, '1970-01-01 00:00:00')
+                    )
+                  )
               AND c.raw_html IS NULL
               AND s.id IS NULL
               AND (c.fetch_status IS NULL OR c.fetch_status NOT IN ({placeholders}))

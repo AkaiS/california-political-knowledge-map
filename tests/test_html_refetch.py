@@ -72,6 +72,96 @@ def test_refetch_selection_requires_relevant_missing_html_without_story(tmp_path
     assert {candidate["url"] for candidate in candidates} == selected_urls
 
 
+def _set_validation(db_path: str, url: str, validation: str, validation_date: str) -> None:
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE scraped_html_cache SET validation = ?, validation_date = ? WHERE url = ?",
+            (validation, validation_date, url),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _insert_selector_version(db_path: str, publication_id: str, created_at: str) -> None:
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            """
+            INSERT INTO publication_selectors (publication_id, selectors_json, created_at)
+            VALUES (?, '{}', ?)
+            """,
+            (publication_id, created_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_refetch_selection_includes_failed_articles_only_under_newer_selectors(tmp_path):
+    db_path = str(tmp_path / "refetch_failed_selection.db")
+    init_db(db_path)
+    _register_publication(db_path)
+    register_publication(
+        "stalepub",
+        "Stale Publication",
+        "https://stale.example",
+        crawl_delay=0,
+        max_concurrency=2,
+        db_path=db_path,
+    )
+    register_publication(
+        "nopub",
+        "No Selectors Publication",
+        "https://none.example",
+        crawl_delay=0,
+        max_concurrency=2,
+        db_path=db_path,
+    )
+
+    # Purged failed article whose publication healed after it last failed.
+    healed_url = "https://test.example/healed-since-failure"
+    # Purged failed article whose only selector version predates its failure.
+    stale_url = "https://stale.example/no-new-selectors"
+    # Purged failed article for a publication that has never had selectors.
+    unhealed_url = "https://none.example/never-healed"
+
+    for url, publication_id in (
+        (healed_url, "testpub"),
+        (stale_url, "stalepub"),
+        (unhealed_url, "nopub"),
+    ):
+        cache_scraped_html(
+            url,
+            publication_id,
+            None,
+            relevance_status="PENDING",
+            db_path=db_path,
+        )
+        _set_validation(db_path, url, "VALIDATION_FAILED", "2026-01-01 00:00:00")
+
+    _insert_selector_version(db_path, "testpub", "2026-02-01 00:00:00")
+    _insert_selector_version(db_path, "stalepub", "2025-12-01 00:00:00")
+
+    candidates = get_articles_needing_html_refetch(db_path=db_path)
+
+    assert {candidate["url"] for candidate in candidates} == {healed_url}
+
+
+def test_refetch_selection_excludes_failed_article_that_already_has_html(tmp_path):
+    db_path = str(tmp_path / "refetch_failed_with_html.db")
+    init_db(db_path)
+    _register_publication(db_path)
+    url = "https://test.example/failed-but-retained"
+
+    cache_scraped_html(url, "testpub", "<html></html>", relevance_status="PENDING", db_path=db_path)
+    _set_validation(db_path, url, "VALIDATION_FAILED", "2026-01-01 00:00:00")
+    _insert_selector_version(db_path, "testpub", "2026-02-01 00:00:00")
+
+    assert get_articles_needing_html_refetch(db_path=db_path) == []
+
+
 def test_refetch_writer_preserves_relevance_and_metadata(tmp_path):
     db_path = str(tmp_path / "refetch_writer.db")
     init_db(db_path)
