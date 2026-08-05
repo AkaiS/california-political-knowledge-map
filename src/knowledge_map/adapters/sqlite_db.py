@@ -991,7 +991,7 @@ def update_cached_html_status(
             UPDATE scraped_html_cache
             SET validation = ?, validation_date = CURRENT_TIMESTAMP
             WHERE url = ?
-        """, (ValidationStatus(validation).value if validation else None, url))
+        """, (validation, url))
         conn.commit()
     finally:
         conn.close()
