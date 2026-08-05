@@ -1,6 +1,6 @@
 # Backfill training data and fix the gold-standard query
 
-Labels: completed
+Labels: ready-for-agent
 
 ## Parent
 
@@ -40,7 +40,7 @@ human-labeled articles without Story rows were excluded.
 - [x] Articles without stored metadata but with raw HTML have theirs extracted from the HTML.
 - [x] The backfill requires no network calls.
 - [x] The trainer's own selection query returns a non-zero count for both the relevant and the irrelevant class.
-- [x] Human-labeled articles are excluded from training input and remain available as an evaluation set.
+- [ ] ~~Human-labeled articles are excluded from training input and remain available as an evaluation set.~~ Withdrawn; see the 2026-08-04 comment. Superseded by the Evaluation Split access rules in [Build the initial Relevance Filter Evaluation Gold Set](../../../initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md).
 - [x] The gold-standard example query returns both classes with no Story rows present in the database.
 - [x] The gold-standard example query includes human-labeled articles that have no Story row.
 - [x] The backfill is idempotent: a second run changes nothing.
@@ -50,3 +50,54 @@ human-labeled articles without Story rows were excluded.
 
 - 04 — Give relevance and validation disjoint writers.
 - 05 — Enforce the story invariant in the validation loop.
+- [Build the initial Relevance Filter Evaluation Gold Set](../../../initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
+  — for the remaining trainer criterion only.
+
+## Comments
+
+### 2026-08-04 — Trainer criterion reopened; the holdout mechanism was the wrong one
+
+Found during a review of this branch. Two of the criteria above were checked but
+the trainer cannot in fact be fitted, and the two are the reason why: as written
+they cannot both hold.
+
+`get_training_rows` filters to `relevance_label_source = 'LLM'`, satisfying
+"human-labeled articles are excluded from training input". The actual contents of
+`document_store.db`:
+
+| Relevance Status | Label source | Rows | With embeddings |
+| --- | --- | --- | --- |
+| `RELEVANT` | `HUMAN` | 79 | 44 |
+| `IRRELEVANT` | `HUMAN` | 13 | 3 |
+| `RELEVANT` | `LLM` | 1 | 1 |
+
+Every irrelevant article is human-labeled. Excluding human labels therefore
+removes the whole negative class, and the query matches one row of one class. No
+backfill fixes this: the backfill adds headlines, descriptions, and embeddings,
+never a label source.
+
+The premise that made these compatible was this issue's own statement that "the
+three surviving human labels are held out as an independent evaluation set" —
+true when written, when three human labels existed and label source was the only
+holdout available. There are now 92, and the evaluation subsystem exists.
+`EvaluationSplit` (`src/knowledge_map/evaluation/definitions.py:352`) carries
+`training` / `calibration` / `held-out`, and `revise_evaluation_gold_set`
+guarantees no revision walks a case out of `held-out`, so leakage is prevented
+structurally rather than by a `WHERE` clause the trainer has to get right.
+
+Gold Set issue 03 already decides the policy this issue was approximating: the
+`training` split is for "Logistic-regression fitting only. May contain human
+labels; never contains held-out groups." So human labels belong in training, and
+the exclusion should key on gold-set membership and split, not on
+`relevance_label_source`. The second criterion is withdrawn rather than reopened
+because it asks for the wrong thing.
+
+The same correction applies to `get_gold_standard_examples`, which draws the
+Relevance Agent's few-shot examples from human-labeled rows with no split
+awareness and can therefore pull a held-out case into a prompt. That is covered
+by issue 03's final acceptance criterion and is recorded there.
+
+Nothing was changed in the trainer. A prerequisite is unresolved: no relevance
+Evaluation Task Contract exists yet, and nothing maps an Evaluation Case back to
+an article URL, so "exclude anything in a gold case" has no join key today.
+Establishing it is part of the Gold Set work, not of this issue.
