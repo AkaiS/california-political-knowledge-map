@@ -2,6 +2,7 @@ import sqlite3
 import pytest
 import logging
 from knowledge_map.adapters.sqlite_db import init_db
+from knowledge_map.schemas.stories import Story
 
 def test_db_schema_initialization(tmp_path):
     db_file = tmp_path / "test_discovery.db"
@@ -89,11 +90,11 @@ def test_database_helpers(tmp_path):
     
     # 5. Check in stories
     assert not is_url_known(url_2, db_path=db_path)
-    story = {
-        "title": "Story 2",
-        "url": url_2,
-        "content": "This is content"
-    }
+    story = Story(
+        title="Story 2",
+        url=url_2,
+        content="This is content"
+    )
     save_story(story, db_path=db_path)
     assert is_url_known(url_2, db_path=db_path)
 
@@ -194,11 +195,11 @@ async def test_listing_page_discovery_service(tmp_path):
     
     # Register an already scraped story to test skip-existing logic
     already_scraped_url = "https://test.com/politics/already-scraped"
-    save_story({
-        "title": "Already Scraped Story",
-        "url": already_scraped_url,
-        "content": "some content"
-    }, db_path=db_path)
+    save_story(Story(
+        title="Already Scraped Story",
+        url=already_scraped_url,
+        content="some content"
+    ), db_path=db_path)
     
     # 2. Mock CrawlResult for listing page
     mock_listing_result = MagicMock()

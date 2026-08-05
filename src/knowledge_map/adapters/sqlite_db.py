@@ -1,9 +1,31 @@
 import sqlite3
 import os
 import json
-from typing import List, Dict, Any, NamedTuple, Optional
+from typing import List, Dict, Any, NamedTuple, Optional, Tuple
+
+from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.relevance import (
+    LabelSource,
+    RelevanceStatus,
+    ValidationStatus,
+    sql_check_values,
+)
+from knowledge_map.schemas.stories import Story, StoryLink
 
 DEFAULT_DB_PATH = "document_store.db"
+
+# Rendered from the domain enums so the table constraints cannot drift from the
+# vocabularies the pipeline writes.
+STORY_STATUS_CHECK = sql_check_values(ArticleStatus)
+VALIDATION_CHECK = sql_check_values(ValidationStatus)
+RELEVANCE_STATUS_CHECK = sql_check_values(RelevanceStatus)
+LABEL_SOURCE_CHECK = sql_check_values(LabelSource)
+
+# Every relevance status except PENDING: an article some classifier has ruled on,
+# whichever way it ruled.
+DECIDED_RELEVANCE_STATUSES = ", ".join(
+    f"'{status.value}'" for status in RelevanceStatus if status is not RelevanceStatus.PENDING
+)
 
 # Fetch statuses meaning the URL is permanently gone, so it is never fetched
 # again. Blocking statuses (403, 429, 503) are deliberately absent: they say we
@@ -12,9 +34,31 @@ TERMINAL_FETCH_STATUSES = (404, 410)
 
 
 class RelevanceUpdateResult(NamedTuple):
-    status: str
-    label_source: Optional[str]
+    status: RelevanceStatus
+    label_source: Optional[LabelSource]
     applied: bool
+
+
+class ArticleMetadataUpdateResult(NamedTuple):
+    headline: Optional[str]
+    description: Optional[str]
+    embedding: Optional[list[float]]
+    applied: bool
+
+
+def legacy_column_reader(columns: List[str]):
+    """
+    Builds the reader a table migration uses to select from its pre-migration
+    table, given that table's actual `columns`.
+
+    The returned function yields SQL for reading `column`, or the literal
+    `fallback` when the pre-migration table predates that column.
+    """
+    def legacy_value(column: str, fallback: str = "NULL") -> str:
+        return column if column in columns else fallback
+
+    return legacy_value
+
 
 def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     """
@@ -23,7 +67,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS stories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -33,7 +77,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
-                status TEXT DEFAULT 'UNPROCESSED',
+                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
                 completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -83,7 +127,14 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
             column_info = {row[1]: row for row in cursor.fetchall()}
             relevance_default = column_info.get("relevance_status", (None,) * 5)[4]
 
-            # Check if we need the new migration
+            # Check if we need the new migration.
+            #
+            # Status strings inside migration code are frozen literals, never
+            # rendered from the domain enums. A migration describes the shape a
+            # database had at a point in history — including retired values like
+            # `PENDING_RELEVANCE` that no enum carries any more — so it must not
+            # move when the current vocabulary does. Runtime queries are the
+            # opposite: those bind to the enums.
             needs_new_migration = (
                 "relevance_label_source" not in columns
                 or "fetch_status" not in columns
@@ -99,31 +150,26 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     
                 cursor.execute("ALTER TABLE scraped_html_cache RENAME TO scraped_html_cache_old")
                 
-                cursor.execute("""
+                cursor.execute(f"""
                     CREATE TABLE scraped_html_cache (
                         url TEXT PRIMARY KEY,
                         publication_id TEXT NOT NULL,
                         raw_html TEXT,
-                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
+                        validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING}',
                         validation_date DATETIME,
                         scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         headline TEXT,
                         description TEXT,
                         embedding BLOB,
-                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
-                        relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                        relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING}',
+                        relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD}',
                         fetch_status INTEGER,
                         raw_metadata_json TEXT,
                         FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                     )
                 """)
 
-                def legacy_value(name: str, fallback: str = "NULL") -> str:
-                    """
-                    SQL for reading `name` out of the pre-migration table, or the
-                    literal `fallback` when that table predates the column.
-                    """
-                    return name if name in columns else fallback
+                legacy_value = legacy_column_reader(columns)
 
                 relevance_source = legacy_value("relevance_label_source", "'KEYWORD'")
                 raw_metadata = legacy_value("raw_metadata_json")
@@ -186,44 +232,118 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     cursor.execute("DROP TABLE rejected_articles")
         else:
             # Create scraped_html_cache table with new schema
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS scraped_html_cache (
                     url TEXT PRIMARY KEY,
                     publication_id TEXT NOT NULL,
                     raw_html TEXT,
-                    validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',
+                    validation TEXT CHECK(validation IN ({VALIDATION_CHECK})) DEFAULT '{ValidationStatus.PENDING}',
                     validation_date DATETIME,
                     scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     headline TEXT,
                     description TEXT,
                     embedding BLOB,
-                    relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',
-                    relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',
+                    relevance_status TEXT CHECK(relevance_status IN ({RELEVANCE_STATUS_CHECK})) DEFAULT '{RelevanceStatus.PENDING}',
+                    relevance_label_source TEXT CHECK(relevance_label_source IN ({LABEL_SOURCE_CHECK})) DEFAULT '{LabelSource.KEYWORD}',
                     fetch_status INTEGER,
                     raw_metadata_json TEXT,
                     FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE
                 )
             """)
-        # Safe migration: add column 'content' if it's missing in an existing database
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN content TEXT")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
-            
-        # Safe migration: add column 'status' if it's missing in an existing database
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN status TEXT DEFAULT 'UNPROCESSED'")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
+        cursor.execute("PRAGMA table_info(stories)")
+        story_columns = [row[1] for row in cursor.fetchall()]
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='stories'")
+        stories_sql = cursor.fetchone()[0]
+        # Deliberately a frozen literal, not `STORY_STATUS_CHECK`: this is the
+        # schema shape that migration 0003 produced, and it stays fixed at that
+        # historical text. Deriving it from `ArticleStatus` would make any future
+        # member silently rebuild the table and back up every existing database
+        # as a side effect of editing an enum. A new member needs a new,
+        # hand-written migration step here instead.
+        story_status_constraint = (
+            "CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', "
+            "'FAILED_DLQ', 'SYSTEM_ERROR'))"
+        )
+        needs_story_migration = (
+            "content" not in story_columns
+            or "status" not in story_columns
+            or "completed_at" not in story_columns
+            or story_status_constraint not in stories_sql
+        )
 
-        # Safe migration: add column 'completed_at' if it's missing in stories table
-        try:
-            cursor.execute("ALTER TABLE stories ADD COLUMN completed_at DATETIME")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
+        if needs_story_migration:
+            if os.path.exists(db_path):
+                import shutil
+                shutil.copy2(db_path, db_path + ".backup")
+
+            legacy_story_value = legacy_column_reader(story_columns)
+
+            legacy_status = legacy_story_value("status", "'UNPROCESSED'")
+
+            cursor.execute(f"""
+                CREATE TABLE stories_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL UNIQUE,
+                    category TEXT,
+                    author TEXT,
+                    published_date TEXT,
+                    summary TEXT,
+                    content TEXT,
+                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
+                    completed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute(f"""
+                INSERT INTO stories_new (
+                    id, title, url, category, author, published_date, summary,
+                    content, status, completed_at, created_at
+                )
+                SELECT
+                    id,
+                    title,
+                    url,
+                    {legacy_story_value('category')},
+                    {legacy_story_value('author')},
+                    {legacy_story_value('published_date')},
+                    {legacy_story_value('summary')},
+                    {legacy_story_value('content')},
+                    COALESCE({legacy_status}, 'UNPROCESSED'),
+                    {legacy_story_value('completed_at')},
+                    {legacy_story_value('created_at', 'CURRENT_TIMESTAMP')}
+                FROM stories
+                WHERE COALESCE({legacy_status}, 'UNPROCESSED') != 'IRRELEVANT'
+            """)
+            existing_tables = {
+                row[0]
+                for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            }
+            if "story_links" in existing_tables:
+                cursor.execute(f"""
+                    DELETE FROM story_links
+                    WHERE story_id IN (
+                        SELECT id
+                        FROM stories
+                        WHERE COALESCE({legacy_status}, 'UNPROCESSED') = 'IRRELEVANT'
+                    )
+                """)
+            cursor.execute("DROP TABLE stories")
+            cursor.execute("ALTER TABLE stories_new RENAME TO stories")
+            cursor.execute("""
+                UPDATE scraped_html_cache
+                SET validation = CASE
+                        WHEN EXISTS (
+                            SELECT 1 FROM stories WHERE stories.url = scraped_html_cache.url
+                        ) THEN 'VALIDATED'
+                        ELSE NULL
+                    END,
+                    validation_date = CURRENT_TIMESTAMP
+                WHERE validation = 'VALIDATED'
+                   OR EXISTS (
+                        SELECT 1 FROM stories WHERE stories.url = scraped_html_cache.url
+                   )
+            """)
             
         # Safe migration: add column 'tripping_article_url' if it's missing in publications table
         try:
@@ -274,7 +394,29 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
     finally:
         conn.close()
 
-def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
+def _story_columns(story: Story) -> Tuple[Any, ...]:
+    """The stories-table column values for a Story, in table order."""
+    return (
+        story.title,
+        story.url,
+        story.category,
+        story.author,
+        story.published_date,
+        story.summary,
+        story.content,
+        story.status.value,
+    )
+
+
+def _save_story_links(cursor: sqlite3.Cursor, story_id: int, links: List[StoryLink]) -> None:
+    for link in links:
+        cursor.execute("""
+            INSERT OR IGNORE INTO story_links (story_id, text, url)
+            VALUES (?, ?, ?)
+        """, (story_id, link.text, link.url))
+
+
+def save_story(story: Story, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
     Saves a single story to the database.
     Uses INSERT OR IGNORE to handle the UNIQUE constraint on url.
@@ -286,32 +428,69 @@ def save_story(story: Dict[str, Any], db_path: str = DEFAULT_DB_PATH) -> bool:
         cursor.execute("""
             INSERT OR IGNORE INTO stories (title, url, category, author, published_date, summary, content, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            story.get("title"),
-            story.get("url"),
-            story.get("category"),
-            story.get("author"),
-            story.get("published_date"),
-            story.get("summary"),
-            story.get("content"),
-            story.get("status", "UNPROCESSED")
-        ))
+        """, _story_columns(story))
         inserted = cursor.rowcount > 0
-        
+
         # Get the ID of the story to associate the links
-        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.get("url"),))
+        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.url,))
         row = cursor.fetchone()
         if row:
-            story_id = row[0]
-            if "links" in story:
-                for link in story["links"]:
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO story_links (story_id, text, url)
-                        VALUES (?, ?, ?)
-                    """, (story_id, link.get("text"), link.get("url")))
-                    
+            _save_story_links(cursor, row[0], story.links)
+
         conn.commit()
         return inserted
+    finally:
+        conn.close()
+
+
+def replace_story(story: Story, db_path: str = DEFAULT_DB_PATH) -> None:
+    """Replace extracted Story fields and links for a URL."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO stories (title, url, category, author, published_date, summary, content, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                category = excluded.category,
+                author = excluded.author,
+                published_date = excluded.published_date,
+                summary = excluded.summary,
+                content = excluded.content,
+                status = excluded.status,
+                completed_at = NULL
+        """, _story_columns(story))
+
+        cursor.execute("SELECT id FROM stories WHERE url = ?", (story.url,))
+        story_id = cursor.fetchone()[0]
+        cursor.execute("DELETE FROM story_links WHERE story_id = ?", (story_id,))
+        _save_story_links(cursor, story_id, story.links)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_uningested_story(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
+    """Delete a Story unless ingestion has completed, returning whether it was removed."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            DELETE FROM story_links
+            WHERE story_id = (
+                SELECT id
+                FROM stories
+                WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
+            )
+        """, (url,))
+        cursor.execute(f"""
+            DELETE FROM stories
+            WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
+        """, (url,))
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        return deleted
     finally:
         conn.close()
 
@@ -795,9 +974,15 @@ def get_cached_html(url: str, db_path: str = DEFAULT_DB_PATH) -> Optional[Dict[s
         conn.close()
 
 
-def update_cached_html_status(url: str, validation: str, db_path: str = DEFAULT_DB_PATH) -> None:
+def update_cached_html_status(
+    url: str,
+    validation: Optional[ValidationStatus],
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
     """
     Updates the validation status and sets validation_date to CURRENT_TIMESTAMP.
+
+    A null `validation` clears the article out of the validation stage entirely.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -839,6 +1024,82 @@ def record_failed_fetch(
         conn.close()
 
 
+def get_articles_needing_html_refetch(
+    db_path: str = DEFAULT_DB_PATH,
+) -> List[Dict[str, Any]]:
+    """Return unmaterialized articles whose HTML can be retried.
+
+    Two populations qualify. Articles already known to be relevant are always
+    worth restoring. Articles that failed validation are worth restoring only
+    once a newer selector version exists, because that is the moment the
+    validation loop will pick them up again; the predicate mirrors the one in
+    `ArticleValidator.validate_pending_cache`. A failed article that has been
+    purged and has no new selectors to try is left alone rather than refetched
+    on the retention clock with no consumer waiting.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        placeholders = ", ".join("?" for _ in TERMINAL_FETCH_STATUSES)
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            WITH latest_selector AS (
+                SELECT publication_id, MAX(created_at) AS max_created_at
+                FROM publication_selectors
+                GROUP BY publication_id
+            )
+            SELECT
+                c.url,
+                c.publication_id,
+                p.crawl_delay,
+                p.max_concurrency,
+                p.use_robots_txt
+            FROM scraped_html_cache c
+            JOIN publications p ON p.id = c.publication_id
+            LEFT JOIN stories s ON s.url = c.url
+            LEFT JOIN latest_selector ls ON ls.publication_id = c.publication_id
+            WHERE (
+                    c.relevance_status = '{RelevanceStatus.RELEVANT}'
+                    OR (
+                        c.validation = '{ValidationStatus.VALIDATION_FAILED}'
+                        AND c.validation_date < COALESCE(ls.max_created_at, '1970-01-01 00:00:00')
+                    )
+                  )
+              AND c.raw_html IS NULL
+              AND s.id IS NULL
+              AND (c.fetch_status IS NULL OR c.fetch_status NOT IN ({placeholders}))
+            ORDER BY c.scraped_at ASC
+        """, TERMINAL_FETCH_STATUSES)
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def store_refetched_html(
+    url: str,
+    raw_html: Optional[str],
+    fetch_status: Optional[int],
+    db_path: str = DEFAULT_DB_PATH,
+) -> None:
+    """Record a refetch attempt without changing downstream stage state."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        recorded_fetch_status = 200 if raw_html is not None and fetch_status is None else fetch_status
+        cursor.execute("""
+            UPDATE scraped_html_cache
+            SET raw_html = ?,
+                scraped_at = CURRENT_TIMESTAMP,
+                fetch_status = ?
+            WHERE url = ?
+        """, (raw_html, recorded_fetch_status, url))
+        if cursor.rowcount == 0:
+            raise ValueError(f"Cached article not found: {url}")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
     Checks whether discovery has already dealt with a URL and should skip it.
@@ -864,7 +1125,7 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
             WHERE url = ?
               AND NOT (
                 raw_html IS NULL
-                AND relevance_status = 'PENDING'
+                AND relevance_status = '{RelevanceStatus.PENDING}'
                 AND (fetch_status IS NULL OR fetch_status NOT IN ({placeholders}))
               )
         """, (url, *TERMINAL_FETCH_STATUSES))
@@ -877,34 +1138,57 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
 
 def get_gold_standard_examples(db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
-    Retrieves balanced human-labeled examples (max 3 per class) by joining cache and stories.
+    Retrieve balanced human-labeled examples (max 3 per class) from the cache.
     """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         cursor = conn.cursor()
-        
-        # Get up to 3 relevant human-labeled stories
-        cursor.execute("""
-            SELECT s.title, s.content, c.relevance_status
-            FROM scraped_html_cache c
-            JOIN stories s ON c.url = s.url
-            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'RELEVANT'
+
+        cursor.execute(f"""
+            SELECT headline AS title, description AS content, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_label_source = '{LabelSource.HUMAN}'
+              AND relevance_status = '{RelevanceStatus.RELEVANT}'
+              AND headline IS NOT NULL
+              AND description IS NOT NULL
             LIMIT 3
         """)
         relevant = [dict(row) for row in cursor.fetchall()]
-        
-        # Get up to 3 irrelevant human-labeled stories
-        cursor.execute("""
-            SELECT s.title, s.content, c.relevance_status
-            FROM scraped_html_cache c
-            JOIN stories s ON c.url = s.url
-            WHERE c.relevance_label_source = 'HUMAN' AND c.relevance_status = 'IRRELEVANT'
+
+        cursor.execute(f"""
+            SELECT headline AS title, description AS content, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_label_source = '{LabelSource.HUMAN}'
+              AND relevance_status = '{RelevanceStatus.IRRELEVANT}'
+              AND headline IS NOT NULL
+              AND description IS NOT NULL
             LIMIT 3
         """)
         irrelevant = [dict(row) for row in cursor.fetchall()]
-        
+
         return relevant + irrelevant
+    finally:
+        conn.close()
+
+
+def get_articles_for_metadata_backfill(db_path: str = DEFAULT_DB_PATH) -> List[str]:
+    """Return decided articles whose cached metadata is incomplete."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT url
+            FROM scraped_html_cache
+            WHERE relevance_status IN ({DECIDED_RELEVANCE_STATUSES})
+              AND (
+                  headline IS NULL OR TRIM(headline) = ''
+                  OR description IS NULL OR TRIM(description) = ''
+                  OR embedding IS NULL
+              )
+            ORDER BY url
+        """)
+        return [row[0] for row in cursor.fetchall()]
     finally:
         conn.close()
 
@@ -925,17 +1209,17 @@ def get_articles_for_human_labeling(
     try:
         cursor = conn.cursor()
         if include_all:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT url, headline, description, embedding
                 FROM scraped_html_cache
-                WHERE relevance_label_source IS NOT 'HUMAN'
+                WHERE relevance_label_source IS NOT '{LabelSource.HUMAN}'
             """)
         else:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT url, headline, description, embedding
                 FROM scraped_html_cache
-                WHERE relevance_status = 'INCONCLUSIVE'
-                  AND relevance_label_source IS NOT 'HUMAN'
+                WHERE relevance_status = '{RelevanceStatus.INCONCLUSIVE}'
+                  AND relevance_label_source IS NOT '{LabelSource.HUMAN}'
             """)
         return cursor.fetchall()
     finally:
@@ -954,11 +1238,14 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT url, headline, description, embedding, relevance_status
             FROM scraped_html_cache
-            WHERE relevance_status IN ('INCONCLUSIVE', 'IRRELEVANT')
-              AND relevance_label_source IS NOT 'HUMAN'
+            WHERE relevance_status IN (
+                    '{RelevanceStatus.INCONCLUSIVE}',
+                    '{RelevanceStatus.IRRELEVANT}'
+                  )
+              AND relevance_label_source IS NOT '{LabelSource.HUMAN}'
         """)
         return cursor.fetchall()
     finally:
@@ -967,12 +1254,8 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
 
 def update_relevance_status(
     url: str,
-    status: str,
-    validation: Optional[str],
-    relevance_label_source: Optional[str] = None,
-    headline: Optional[str] = None,
-    description: Optional[str] = None,
-    embedding: Optional[list[float]] = None,
+    status: RelevanceStatus,
+    relevance_label_source: LabelSource,
     db_path: str = DEFAULT_DB_PATH
 ) -> RelevanceUpdateResult:
     """
@@ -981,43 +1264,28 @@ def update_relevance_status(
     Returns the effective persisted relevance status and source together with
     whether this write was applied.
     """
-    import json
-    from knowledge_map.core.relevance import serialize_embedding
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        
-        updates = ["relevance_status = ?", "validation = ?"]
-        params = [status, validation]
-        
-        if relevance_label_source is not None:
-            updates.append("relevance_label_source = ?")
-            params.append(relevance_label_source)
-            
-        if headline is not None:
-            updates.append("headline = ?")
-            params.append(headline)
-            
-        if description is not None:
-            updates.append("description = ?")
-            params.append(description)
-            
-        if embedding is not None:
-            updates.append("embedding = ?")
-            params.append(serialize_embedding(embedding))
-            
-        params.extend((url, relevance_label_source))
+
         # `IS NOT` rather than `!=` so a row with no recorded source counts as
         # non-human instead of failing the comparison against NULL. Only another
         # human write may replace a human label.
         query = f"""
             UPDATE scraped_html_cache
-            SET {", ".join(updates)}
+            SET relevance_status = ?, relevance_label_source = ?
             WHERE url = ?
-              AND (relevance_label_source IS NOT 'HUMAN' OR ? = 'HUMAN')
+              AND (
+                relevance_label_source IS NOT '{LabelSource.HUMAN}'
+                OR ? = '{LabelSource.HUMAN}'
+              )
             RETURNING relevance_status, relevance_label_source
         """
-        cursor.execute(query, tuple(params))
+        source_value = LabelSource(relevance_label_source).value
+        cursor.execute(
+            query,
+            (RelevanceStatus(status).value, source_value, url, source_value),
+        )
         row = cursor.fetchone()
         applied = row is not None
 
@@ -1034,8 +1302,86 @@ def update_relevance_status(
 
         conn.commit()
         return RelevanceUpdateResult(
-            status=row[0],
-            label_source=row[1],
+            status=RelevanceStatus(row[0]),
+            label_source=LabelSource(row[1]) if row[1] else None,
+            applied=applied,
+        )
+    finally:
+        conn.close()
+
+
+def update_article_metadata(
+    url: str,
+    headline: Optional[str],
+    description: Optional[str],
+    embedding: Optional[list[float]],
+    db_path: str = DEFAULT_DB_PATH,
+) -> ArticleMetadataUpdateResult:
+    """Populate missing article metadata without replacing stored values."""
+    from knowledge_map.core.relevance import deserialize_embedding, serialize_embedding
+
+    normalized_headline = headline.strip() if headline and headline.strip() else None
+    normalized_description = description.strip() if description and description.strip() else None
+    serialized_embedding = serialize_embedding(embedding) if embedding is not None else None
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE scraped_html_cache
+            SET headline = CASE
+                    WHEN headline IS NULL OR TRIM(headline) = '' THEN ?
+                    ELSE headline
+                END,
+                description = CASE
+                    WHEN description IS NULL OR TRIM(description) = '' THEN ?
+                    ELSE description
+                END,
+                embedding = CASE
+                    WHEN embedding IS NULL THEN ?
+                    ELSE embedding
+                END
+            WHERE url = ?
+              AND (
+                  ((headline IS NULL OR TRIM(headline) = '') AND ? IS NOT NULL)
+                  OR ((description IS NULL OR TRIM(description) = '') AND ? IS NOT NULL)
+                  OR (embedding IS NULL AND ? IS NOT NULL)
+              )
+            RETURNING headline, description, embedding
+            """,
+            (
+                normalized_headline,
+                normalized_description,
+                serialized_embedding,
+                url,
+                normalized_headline,
+                normalized_description,
+                serialized_embedding,
+            ),
+        )
+        row = cursor.fetchone()
+        applied = row is not None
+
+        if row is None:
+            cursor.execute(
+                """
+                SELECT headline, description, embedding
+                FROM scraped_html_cache
+                WHERE url = ?
+                """,
+                (url,),
+            )
+            row = cursor.fetchone()
+
+        if row is None:
+            raise ValueError(f"Cached article not found: {url}")
+
+        conn.commit()
+        return ArticleMetadataUpdateResult(
+            headline=row[0],
+            description=row[1],
+            embedding=deserialize_embedding(row[2]) if row[2] is not None else None,
             applied=applied,
         )
     finally:
@@ -1318,44 +1664,20 @@ def get_latest_selector_proposal(
 
 def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
     """
-    Applies the Raw HTML Store retention policy to purge raw HTML from the cache.
+    Purge raw HTML scraped more than thirty days ago while retaining cache metadata.
     """
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        
-        # 1. Purge VALIDATED rows older than 30 days based on their completed story status
         cursor.execute("""
             UPDATE scraped_html_cache
             SET raw_html = NULL
-            WHERE validation = 'VALIDATED'
-              AND url IN (
-                  SELECT url FROM stories
-                  WHERE status = 'COMPLETED'
-                    AND completed_at < datetime('now', '-30 days')
-              )
+            WHERE scraped_at < datetime('now', '-30 days')
               AND raw_html IS NOT NULL
         """)
-        validated_count = cursor.rowcount
-        
-        # 2. Purge UNVALIDATABLE rows older than 30 days
-        cursor.execute("""
-            UPDATE scraped_html_cache
-            SET raw_html = NULL
-            WHERE validation = 'UNVALIDATABLE'
-              AND validation_date < datetime('now', '-30 days')
-              AND raw_html IS NOT NULL
-        """)
-        unvalidatable_count = cursor.rowcount
-        
+        purged_count = cursor.rowcount
+
         conn.commit()
-        return {
-            "validated": validated_count,
-            "unvalidatable": unvalidatable_count,
-            "total": validated_count + unvalidatable_count
-        }
+        return {"total": purged_count}
     finally:
         conn.close()
-
-
-

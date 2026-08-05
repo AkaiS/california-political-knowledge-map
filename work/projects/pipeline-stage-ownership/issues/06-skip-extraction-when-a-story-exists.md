@@ -1,6 +1,6 @@
 # Skip extraction when a Story already exists
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -25,12 +25,12 @@ publication re-extracts rather than serving it.
 
 ## Acceptance criteria
 
-- [ ] An article with an existing Story row is marked `'VALIDATED'` without extraction being performed.
-- [ ] An article with an existing Story row whose publication has a Selector Version created after the article's validation date is re-extracted.
-- [ ] Re-extraction after a heal replaces the Story's content rather than silently leaving the prior content in place.
-- [ ] The skip does not bypass the relevance condition: an article with an existing Story and `'PENDING'` relevance is still classified.
-- [ ] The invariant still holds on both paths.
-- [ ] The full deterministic test suite passes.
+- [x] An article with an existing Story row is marked `'VALIDATED'` without extraction being performed.
+- [x] An article with an existing Story row whose publication has a Selector Version created after the article's validation date is re-extracted.
+- [x] Re-extraction after a heal replaces the Story's content rather than silently leaving the prior content in place.
+- [x] The skip does not bypass the relevance condition: an article with an existing Story and `'PENDING'` relevance is still classified.
+- [x] The invariant still holds on both paths.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

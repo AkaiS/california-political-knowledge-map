@@ -104,44 +104,29 @@ async def test_classify_article_dynamic_examples(tmp_path):
         db_path=db_path
     )
     
-    # Populate the database with gold-standard stories
-    # Insert 1 positive HUMAN story
+    # Populate the cache with gold-standard examples and no Story rows.
     cache_scraped_html(
         url="https://test.com/pos1",
         publication_id="testpub",
         raw_html="<html>html</html>",
         validation="VALIDATED",
+        headline="Db Pos Title",
+        description="Db Pos Body",
         relevance_status="RELEVANT",
         relevance_label_source="HUMAN",
         db_path=db_path
     )
-    # Insert story record to satisfy JOIN on url
-    with sqlite3_connect(db_path) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO stories (title, url, content) VALUES (?, ?, ?)",
-            ("Db Pos Title", "https://test.com/pos1", "Db Pos Body")
-        )
-        conn.commit()
-    
-    # Insert 1 negative HUMAN story
     cache_scraped_html(
         url="https://test.com/neg1",
         publication_id="testpub",
         raw_html="<html>html</html>",
         validation=None,
+        headline="Db Neg Title",
+        description="Db Neg Body",
         relevance_status="IRRELEVANT",
         relevance_label_source="HUMAN",
         db_path=db_path
     )
-    with sqlite3_connect(db_path) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO stories (title, url, content) VALUES (?, ?, ?)",
-            ("Db Neg Title", "https://test.com/neg1", "Db Neg Body")
-        )
-        conn.commit()
-
     mock_result = AsyncMock()
     mock_result.output = RelevanceClassification(classification="IRRELEVANT")
 
@@ -165,8 +150,3 @@ async def test_classify_article_dynamic_examples(tmp_path):
         assert "Db Neg Body" in called_prompt
         
         # No static examples exist anymore, so we only need to verify DB examples are present
-
-
-def sqlite3_connect(db_path):
-    import sqlite3
-    return sqlite3.connect(db_path)

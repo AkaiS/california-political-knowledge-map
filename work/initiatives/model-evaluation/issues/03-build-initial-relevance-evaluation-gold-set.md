@@ -156,3 +156,41 @@ human-labeled examples are authoritative: two independent reviewers and one
 adjudicator must execute the documented binary-review procedure. Once the
 manifested cases are authored, this issue can move to completed and unblock the
 Relevance Filter evaluation suite.
+
+### 2026-08-04 — Seed population is no longer the blocker; two consumers await the splits
+
+The "Current execution state" section above is stale. It reports 43 cached
+records "from the pre-relevance-label schema", with "no relevance
+label/provenance columns, and no human labels". The migration it names as
+prerequisite work has since run. `document_store.db` now holds:
+
+| Relevance Status | Label source | Rows | With embeddings |
+| --- | --- | --- | --- |
+| `RELEVANT` | `HUMAN` | 79 | 44 |
+| `IRRELEVANT` | `HUMAN` | 13 | 3 |
+| `RELEVANT` | `LLM` | 1 | 1 |
+
+That is 92 human-adjudicated labels against a v0.1 target of 200, both classes
+present. The remaining blockers are reviewer recruitment and the double-labeling
+and adjudication procedure, not schema or seed data. Note these 92 labels were
+not produced under the annotation guide this issue specifies, so they are
+candidate material for the labeling round rather than promotable labels — the
+existing prohibition on promoting an unreviewed label to an authoritative Gold
+Set label covers them.
+
+Two code paths are waiting on the split assignments and should be rewired to
+read them rather than approximating them from `relevance_label_source`:
+
+- `get_training_rows` in `classifier/src/classifier/trainer.py` currently filters
+  to `relevance_label_source = 'LLM'`, which excludes every human label. Against
+  the table above that matches one row of one class, so the classifier cannot be
+  fitted at all. The `training` split's access rule — "Logistic-regression
+  fitting only. May contain human labels" — is what this query should express.
+- `get_gold_standard_examples` in `src/knowledge_map/adapters/sqlite_db.py`
+  selects three human-labeled rows per class for the Relevance Agent's few-shot
+  prompt, with no split awareness. Under the final acceptance criterion here,
+  few-shot material must come from `calibration` (or `training`), never from
+  `held-out`; as written it can draw a held-out case into the prompt.
+
+Recorded from a review of the Pipeline Stage Ownership branch. See that
+project's issue 10 for the reopened acceptance criterion this supersedes.

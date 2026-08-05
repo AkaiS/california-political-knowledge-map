@@ -84,6 +84,10 @@ _Avoid_: Proposal file, selector draft, candidate report
 A persistent database store (the `scraped_html_cache` table) holding the raw HTML content of scraped articles to support asynchronous self-healing, offline re-scraping, and validation recovery before being purged after 30 days.
 _Avoid_: Page cache, web archive, HTML file cache
 
+**Raw HTML Refetch**:
+The stage that fetches an article's raw HTML again on demand, for articles that are `RELEVANT` but hold no content in the Raw HTML Store because it was deleted on Story creation or expired at 30 days. It makes retention recoverable rather than lossy: it rewrites only the raw HTML, Fetch Status, and scraped_at, never Relevance Status or Validation Status, and it succeeds only while the URL is still reachable.
+_Avoid_: Restore, HTML restore, re-fetch, re-scrape, recovery
+
 **Relevance Filter**:
 A multi-stage pipeline component that filters discovered URLs using a path blocklist and evaluates extracted metadata (headlines and descriptions) against target keywords to determine California political relevance.
 _Avoid_: Topic classifier, page filter
@@ -111,6 +115,10 @@ _Avoid_: Breaker, validator pause
 **Recovery Check**:
 An automatic validation check run on the specific article that triggered a Selector Healing Pipeline execution, triggered when a new selector version is approved/promoted, which resets the failure points to 0 and resumes active validation if successful.
 _Avoid_: Cache retry, selector sweep
+
+**Story**:
+A strongly-typed domain model holding the content extracted from one validated article — title, author, published date, body, and the hyperlinks found in that body — persisted in the SQLite database (the `stories` table). A Story row exists exactly when the article's Validation Status is `VALIDATED`, and only the validation stage writes it. It is the record of what was extracted; the Source Article is the ingestion input built from it.
+_Avoid_: Article, extracted article, document, story dict
 
 **Source Article**:
 A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.

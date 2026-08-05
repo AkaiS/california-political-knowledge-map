@@ -1,6 +1,6 @@
 # Replace per-state retention with a uniform thirty-day timer
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -28,12 +28,12 @@ than before it. ADR 0003 already records the amended policy.
 
 ## Acceptance criteria
 
-- [ ] Raw HTML is absent immediately after a Story is written for an article, without waiting for a purge run.
-- [ ] Raw HTML for an article that failed validation within the last thirty days is still present after a purge run.
-- [ ] Raw HTML older than thirty days is removed regardless of validation state, including `VALIDATION_FAILED`, `UNVALIDATABLE`, and null.
-- [ ] Purging removes only the raw HTML; the cache record and its relevance, provenance, and fetch columns remain.
-- [ ] No retention rule keyed to a specific validation state remains in the purge path.
-- [ ] The full deterministic test suite passes.
+- [x] Raw HTML is absent immediately after a Story is written for an article, without waiting for a purge run.
+- [x] Raw HTML for an article that failed validation within the last thirty days is still present after a purge run.
+- [x] Raw HTML older than thirty days is removed regardless of validation state, including `VALIDATION_FAILED`, `UNVALIDATABLE`, and null.
+- [x] Purging removes only the raw HTML; the cache record and its relevance, provenance, and fetch columns remain.
+- [x] No retention rule keyed to a specific validation state remains in the purge path.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

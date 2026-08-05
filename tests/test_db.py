@@ -2,6 +2,7 @@ import os
 import sqlite3
 import pytest
 from knowledge_map.adapters.sqlite_db import init_db, save_story, get_all_stories
+from knowledge_map.schemas.stories import Story, StoryLink
 
 def test_get_all_stories(tmp_path):
     db_file = tmp_path / "test_stories.db"
@@ -11,35 +12,35 @@ def test_get_all_stories(tmp_path):
     init_db(db_path)
     
     # Setup test stories
-    story_with_content = {
-        "title": "Story with content",
-        "url": "http://example.com/1",
-        "category": "Politics",
-        "author": "Author A",
-        "published_date": "2026-06-24",
-        "summary": "Summary A",
-        "content": "This is actual news content."
-    }
+    story_with_content = Story(
+        title="Story with content",
+        url="http://example.com/1",
+        category="Politics",
+        author="Author A",
+        published_date="2026-06-24",
+        summary="Summary A",
+        content="This is actual news content."
+    )
     
-    story_without_content = {
-        "title": "Story without content",
-        "url": "http://example.com/2",
-        "category": "Politics",
-        "author": "Author B",
-        "published_date": "2026-06-24",
-        "summary": "Summary B",
-        "content": ""  # empty content
-    }
+    story_without_content = Story(
+        title="Story without content",
+        url="http://example.com/2",
+        category="Politics",
+        author="Author B",
+        published_date="2026-06-24",
+        summary="Summary B",
+        content=""  # empty content
+    )
     
-    story_none_content = {
-        "title": "Story with None content",
-        "url": "http://example.com/3",
-        "category": "Politics",
-        "author": "Author C",
-        "published_date": "2026-06-24",
-        "summary": "Summary C",
-        "content": None  # None content
-    }
+    story_none_content = Story(
+        title="Story with None content",
+        url="http://example.com/3",
+        category="Politics",
+        author="Author C",
+        published_date="2026-06-24",
+        summary="Summary C",
+        content=None  # None content
+    )
     
     save_story(story_with_content, db_path=db_path)
     save_story(story_without_content, db_path=db_path)
@@ -86,19 +87,19 @@ def test_save_story_with_links(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Story with links",
-        "url": "http://example.com/story-1",
-        "category": "Politics",
-        "author": "Author A",
-        "published_date": "2026-06-24",
-        "summary": "Summary",
-        "content": "Content here.",
-        "links": [
-            {"text": "Link Text 1", "url": "http://example.com/target-1"},
-            {"text": "Link Text 2", "url": "http://example.com/target-2"}
+    story = Story(
+        title="Story with links",
+        url="http://example.com/story-1",
+        category="Politics",
+        author="Author A",
+        published_date="2026-06-24",
+        summary="Summary",
+        content="Content here.",
+        links=[
+            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
+            StoryLink(text="Link Text 2", url="http://example.com/target-2")
         ]
-    }
+    )
     
     assert save_story(story, db_path=db_path) is True
     
@@ -125,17 +126,17 @@ def test_save_story_links_uniqueness(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Story with duplicate links",
-        "url": "http://example.com/story-1",
-        "category": "Politics",
-        "content": "Content here.",
-        "links": [
-            {"text": "Link Text 1", "url": "http://example.com/target-1"},
-            {"text": "Duplicate Link Text 1", "url": "http://example.com/target-1"},  # same URL
-            {"text": "Link Text 2", "url": "http://example.com/target-2"}
+    story = Story(
+        title="Story with duplicate links",
+        url="http://example.com/story-1",
+        category="Politics",
+        content="Content here.",
+        links=[
+            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
+            StoryLink(text="Duplicate Link Text 1", url="http://example.com/target-1"),  # same URL
+            StoryLink(text="Link Text 2", url="http://example.com/target-2")
         ]
-    }
+    )
     
     save_story(story, db_path=db_path)
     stories = get_all_stories(db_path=db_path)
@@ -154,12 +155,12 @@ def test_sqlite_status_column(tmp_path):
     init_db(db_path)
     
     # Save a story
-    story = {
-        "title": "Test Status Default",
-        "url": "http://example.com/status-test",
-        "category": "Politics",
-        "content": "Some content."
-    }
+    story = Story(
+        title="Test Status Default",
+        url="http://example.com/status-test",
+        category="Politics",
+        content="Some content."
+    )
     save_story(story, db_path=db_path)
     
     # Check default status is 'UNPROCESSED'
@@ -167,10 +168,25 @@ def test_sqlite_status_column(tmp_path):
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         row = cursor.fetchone()
         assert row is not None
         assert row[0] == "UNPROCESSED"
+    finally:
+        conn.close()
+
+
+def test_story_status_rejects_irrelevant(tmp_path):
+    db_path = str(tmp_path / "test_story_status_constraint.db")
+    init_db(db_path)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO stories (title, url, content, status) VALUES (?, ?, ?, ?)",
+                ("Irrelevant Story", "http://example.com/irrelevant-story", "Content", "IRRELEVANT"),
+            )
     finally:
         conn.close()
 
@@ -227,26 +243,26 @@ def test_update_story_status(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Test Story Status",
-        "url": "http://example.com/update-test",
-        "content": "Content"
-    }
+    story = Story(
+        title="Test Story Status",
+        url="http://example.com/update-test",
+        content="Content"
+    )
     save_story(story, db_path=db_path)
     
     # Update status to PROCESSING
-    update_story_status(story["url"], "PROCESSING", db_path=db_path)
+    update_story_status(story.url, "PROCESSING", db_path=db_path)
     
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "PROCESSING"
         
         # Update to COMPLETED
-        update_story_status(story["url"], "COMPLETED", db_path=db_path)
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        update_story_status(story.url, "COMPLETED", db_path=db_path)
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "COMPLETED"
     finally:
         conn.close()
@@ -258,21 +274,21 @@ def test_sqlite_status_tracker(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    story = {
-        "title": "Test Tracker Story",
-        "url": "http://example.com/tracker-test",
-        "content": "Content"
-    }
+    story = Story(
+        title="Test Tracker Story",
+        url="http://example.com/tracker-test",
+        content="Content"
+    )
     save_story(story, db_path=db_path)
     
     tracker = SQLiteStatusTracker(db_path=db_path)
-    tracker.update_status(story["url"], "PROCESSING")
+    tracker.update_status(story.url, "PROCESSING")
     
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM stories WHERE url = ?", (story["url"],))
+        cursor.execute("SELECT status FROM stories WHERE url = ?", (story.url,))
         assert cursor.fetchone()[0] == "PROCESSING"
     finally:
         conn.close()
@@ -402,45 +418,44 @@ def test_get_gold_standard_examples(tmp_path):
     db_path = str(db_file)
     init_db(db_path)
     
-    # Let's insert some publications, stories, and cache entries
+    # Insert cache-only examples; no Story rows are required.
     import sqlite3
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO publications (id, name, base_url) VALUES ('pub1', 'Pub 1', 'http://example.com')")
         
-        # 1. Insert 4 RELEVANT human-labeled examples (should limit to 3)
+        # Insert 4 examples per class; each class should be limited to 3.
         for i in range(1, 5):
             url = f"http://example.com/rel{i}"
             cursor.execute("""
-                INSERT INTO stories (title, url, content, status)
-                VALUES (?, ?, ?, 'UNPROCESSED')
-            """, (f"Relevant Title {i}", url, f"Relevant Content {i}"))
-            cursor.execute("""
-                INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-                VALUES (?, 'pub1', 'RELEVANT', 'HUMAN')
-            """, (url,))
+                INSERT INTO scraped_html_cache (
+                    url, publication_id, headline, description,
+                    relevance_status, relevance_label_source
+                )
+                VALUES (?, 'pub1', ?, ?, 'RELEVANT', 'HUMAN')
+            """, (url, f"Relevant Title {i}", f"Relevant Content {i}"))
             
-        # 2. Insert 4 IRRELEVANT human-labeled examples (should limit to 3)
         for i in range(1, 5):
             url = f"http://example.com/irrel{i}"
             cursor.execute("""
-                INSERT INTO stories (title, url, content, status)
-                VALUES (?, ?, ?, 'IRRELEVANT')
-            """, (f"Irrelevant Title {i}", url, f"Irrelevant Content {i}"))
-            cursor.execute("""
-                INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-                VALUES (?, 'pub1', 'IRRELEVANT', 'HUMAN')
-            """, (url,))
+                INSERT INTO scraped_html_cache (
+                    url, publication_id, headline, description,
+                    relevance_status, relevance_label_source
+                )
+                VALUES (?, 'pub1', ?, ?, 'IRRELEVANT', 'HUMAN')
+            """, (url, f"Irrelevant Title {i}", f"Irrelevant Content {i}"))
             
         # 3. Insert some non-HUMAN labeled examples (should be ignored)
         cursor.execute("""
-            INSERT INTO stories (title, url, content, status)
-            VALUES ('Model Title', 'http://example.com/model1', 'Model Content', 'UNPROCESSED')
-        """)
-        cursor.execute("""
-            INSERT INTO scraped_html_cache (url, publication_id, relevance_status, relevance_label_source)
-            VALUES ('http://example.com/model1', 'pub1', 'RELEVANT', 'MODEL')
+            INSERT INTO scraped_html_cache (
+                url, publication_id, headline, description,
+                relevance_status, relevance_label_source
+            )
+            VALUES (
+                'http://example.com/model1', 'pub1', 'Model Title',
+                'Model Content', 'RELEVANT', 'MODEL'
+            )
         """)
         
         conn.commit()
@@ -450,7 +465,6 @@ def test_get_gold_standard_examples(tmp_path):
     # Retrieve gold standard examples
     examples = get_gold_standard_examples(db_path)
     
-    # We should have exactly 6 examples: 3 RELEVANT, 3 IRRELEVANT
     assert len(examples) == 6
     
     relevant = [ex for ex in examples if ex["relevance_status"] == "RELEVANT"]
@@ -492,14 +506,13 @@ def test_relevance_label_source_updates(tmp_path):
     update_relevance_status(
         url="http://example.com/art1",
         status="IRRELEVANT",
-        validation="VALIDATION_FAILED",
         relevance_label_source="HUMAN",
         db_path=db_path
     )
     cached = get_cached_html("http://example.com/art1", db_path=db_path)
     assert cached is not None
     assert cached["relevance_status"] == "IRRELEVANT"
-    assert cached["validation"] == "VALIDATION_FAILED"
+    assert cached["validation"] == "VALIDATED"
     assert cached.get("relevance_label_source") == "HUMAN"
     
     # 3. Test cache_scraped_html with a different relevance_label_source
@@ -542,9 +555,7 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     human_label = update_relevance_status(
         url,
         "RELEVANT",
-        "PENDING",
-        relevance_label_source="HUMAN",
-        headline="Human headline",
+        "HUMAN",
         db_path=db_path,
     )
 
@@ -553,9 +564,7 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     rejected = update_relevance_status(
         url,
         "IRRELEVANT",
-        None,
-        relevance_label_source="MODEL",
-        headline="Automated headline",
+        "MODEL",
         db_path=db_path,
     )
 
@@ -566,13 +575,12 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     assert cached["relevance_status"] == "RELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
     assert cached["validation"] == "PENDING"
-    assert cached["headline"] == "Human headline"
+    assert cached["headline"] == "Automated headline"
 
     applied = update_relevance_status(
         url,
         "IRRELEVANT",
-        None,
-        relevance_label_source="HUMAN",
+        "HUMAN",
         db_path=db_path,
     )
 
@@ -582,6 +590,84 @@ def test_update_relevance_status_protects_human_labels(tmp_path):
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"
     assert cached["relevance_label_source"] == "HUMAN"
+
+
+def test_populate_article_metadata_is_idempotent_for_human_labeled_article(tmp_path):
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, get_cached_html, init_db
+    from knowledge_map.core.relevance_classification import populate_article_metadata
+
+    db_path = str(tmp_path / "article-metadata.db")
+    url = "https://example.com/human-metadata"
+    embedding = [0.25] * 768
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        """
+        <html><head>
+          <meta property="og:title" content="Human reviewed headline">
+          <meta name="description" content="Human reviewed description">
+        </head></html>
+        """,
+        relevance_status="RELEVANT",
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        return_value=embedding,
+    ) as embed_text:
+        first = populate_article_metadata(url, db_path=db_path)
+        second = populate_article_metadata(url, db_path=db_path)
+
+    assert first.applied is True
+    assert second.applied is False
+    assert embed_text.call_count == 1
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Human reviewed headline"
+    assert cached["description"] == "Human reviewed description"
+    assert cached["embedding"] == pytest.approx(embedding, rel=1e-5)
+    assert cached["relevance_status"] == "RELEVANT"
+    assert cached["relevance_label_source"] == "HUMAN"
+
+
+def test_populate_article_metadata_uses_stored_metadata_without_html(tmp_path):
+    from unittest.mock import patch
+
+    from knowledge_map.adapters.sqlite_db import cache_scraped_html, get_cached_html, init_db
+    from knowledge_map.core.relevance_classification import populate_article_metadata
+
+    db_path = str(tmp_path / "stored-article-metadata.db")
+    url = "https://example.com/stored-metadata"
+    embedding = [0.5] * 768
+    init_db(db_path)
+    cache_scraped_html(
+        url,
+        "pub1",
+        None,
+        raw_metadata_json={
+            "article": {
+                "title": "Stored headline",
+                "summary": "Stored description",
+            }
+        },
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        return_value=embedding,
+    ):
+        result = populate_article_metadata(url, db_path=db_path)
+
+    assert result.applied is True
+    cached = get_cached_html(url, db_path=db_path)
+    assert cached["headline"] == "Stored headline"
+    assert cached["description"] == "Stored description"
+    assert cached["embedding"] == pytest.approx(embedding, rel=1e-5)
 
 
 def test_record_failed_fetch_preserves_an_existing_row(tmp_path):

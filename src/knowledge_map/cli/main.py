@@ -20,6 +20,7 @@ from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
+from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus, ValidationStatus
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
@@ -35,12 +36,14 @@ CLI_COMMAND_HELP = {
     "update-publication": "Update an existing Publication in the database",
     "update-sources": "Run incremental scraping/discovery for registered publications",
     "scrape-archive": "Run archive crawl using DomainMapper",
+    "refetch-html": "Refetch raw HTML for relevant articles that need extraction",
     "validate-articles": "Run validation on pending articles in raw HTML cache",
     "review-selectors": "Review unresolved selector proposals and promote/reject them",
     "heal-selectors": "Manually trigger or retry selector self-healing for a publication",
     "purge-cache": "Purge eligible raw HTML cache rows according to retention policy",
     "classifier": "Run relevance classifier commands",
     "classifier label": "Run active learning labeling feedback loop",
+    "classifier backfill": "Backfill cached relevance metadata and embeddings",
     "classifier train": "Train the classifier using scikit-learn LogisticRegression",
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
 }
@@ -194,6 +197,9 @@ def main(args=None):
     archive_parser = subparsers.add_parser("scrape-archive", help=CLI_COMMAND_HELP["scrape-archive"])
     archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
 
+    # Refetch-html subcommand
+    subparsers.add_parser("refetch-html", help=CLI_COMMAND_HELP["refetch-html"])
+
     # Validate-articles subcommand
     subparsers.add_parser("validate-articles", help=CLI_COMMAND_HELP["validate-articles"])
 
@@ -214,7 +220,8 @@ def main(args=None):
     classifier_parser = subparsers.add_parser("classifier", help=CLI_COMMAND_HELP["classifier"])
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
     label_parser = classifier_sub.add_parser("label", help=CLI_COMMAND_HELP["classifier label"])
-    label_parser.add_argument("--review-all", action="store_true", help="Query all cached articles with relevance_label_source != 'HUMAN'")
+    label_parser.add_argument("--review-all", action="store_true", help=f"Query all cached articles with relevance_label_source != '{LabelSource.HUMAN}'")
+    classifier_sub.add_parser("backfill", help=CLI_COMMAND_HELP["classifier backfill"])
     classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
     classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
 
@@ -598,12 +605,30 @@ def main(args=None):
         print(f"Validation complete: {validated_count} articles validated successfully.")
         sys.exit(0)
 
+    elif parsed_args.action == "refetch-html":
+        db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+        from knowledge_map.adapters.sqlite_db import init_db
+        init_db(db_path)
+
+        from knowledge_map.core.html_refetch import HtmlRefetchService
+        service = HtmlRefetchService(db_path=db_path)
+        print("Refetching raw HTML for relevant articles...")
+        refetched_urls = asyncio.run(service.refetch_relevant_articles())
+        print(f"Refetch complete: {len(refetched_urls)} articles refetched.")
+        sys.exit(0)
+
     elif parsed_args.action == "validate-articles":
         db_path = os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
         # Ensure database is initialized
         from knowledge_map.adapters.sqlite_db import init_db
         init_db(db_path)
         
+        from knowledge_map.core.html_refetch import HtmlRefetchService
+        refetch_service = HtmlRefetchService(db_path=db_path)
+        print("Refetching raw HTML for relevant articles...")
+        refetched_urls = asyncio.run(refetch_service.refetch_relevant_articles())
+        print(f"Refetch complete: {len(refetched_urls)} articles refetched.")
+
         from knowledge_map.core.validation import ArticleValidatorService
         service = ArticleValidatorService(db_path=db_path)
         print("Running validation on pending articles...")
@@ -832,8 +857,6 @@ def main(args=None):
         
         print("Purging raw HTML cache...")
         counts = purge_html_cache(db_path=db_path)
-        print(f"Purged {counts['validated']} validated rows.")
-        print(f"Purged {counts['unvalidatable']} unvalidatable rows.")
         print(f"Total rows purged: {counts['total']}.")
         sys.exit(0)
 
@@ -842,22 +865,34 @@ def main(args=None):
         from knowledge_map.adapters.sqlite_db import init_db
         init_db(db_path)
 
-        if parsed_args.classifier_action == "label":
-            from knowledge_map.adapters.sqlite_db import get_articles_for_human_labeling
-            from knowledge_map.core.relevance import deserialize_embedding
-            from knowledge_map.core.relevance_classification import (
-                get_metadata_embedding,
-                persist_relevance_label,
+        if parsed_args.classifier_action == "backfill":
+            from knowledge_map.core.relevance_classification import backfill_article_metadata
+
+            result = backfill_article_metadata(db_path=db_path)
+            print(
+                f"Backfilled {result.updated} of {result.candidates} cached articles."
             )
+            sys.exit(0)
+
+        elif parsed_args.classifier_action == "label":
+            from knowledge_map.adapters.sqlite_db import (
+                delete_uningested_story,
+                get_articles_for_human_labeling,
+                update_article_metadata,
+                update_cached_html_status,
+                update_relevance_status,
+            )
+            from knowledge_map.core.relevance import deserialize_embedding
+            from knowledge_map.core.relevance_classification import get_metadata_embedding
 
             review_all = getattr(parsed_args, "review_all", False)
             rows = get_articles_for_human_labeling(include_all=review_all, db_path=db_path)
 
             if not rows:
                 if review_all:
-                    print("No articles with relevance_label_source != 'HUMAN' found to label.")
+                    print(f"No articles with relevance_label_source != '{LabelSource.HUMAN}' found to label.")
                 else:
-                    print("No non-human INCONCLUSIVE articles found to label.")
+                    print(f"No non-human {RelevanceStatus.INCONCLUSIVE} articles found to label.")
                 sys.exit(0)
                 
             print(f"Found {len(rows)} articles requiring relevance labeling.")
@@ -877,22 +912,29 @@ def main(args=None):
                         print("\nExiting labeling tool.")
                         sys.exit(0)
                     if choice in ('y', 'n'):
-                        status = "RELEVANT" if choice == 'y' else "IRRELEVANT"
-                        validation = "PENDING" if choice == 'y' else None
+                        status = RelevanceStatus.RELEVANT if choice == 'y' else RelevanceStatus.IRRELEVANT
+                        validation = ValidationStatus.PENDING if status == RelevanceStatus.RELEVANT else None
                         
                         embedding = deserialize_embedding(emb_blob) if emb_blob else None
                         embedding = get_metadata_embedding(headline, description, embedding)
+                        update_article_metadata(
+                            url,
+                            headline,
+                            description,
+                            embedding,
+                            db_path=db_path,
+                        )
 
-                        relevance_update = persist_relevance_label(
+                        relevance_update = update_relevance_status(
                             url,
                             status,
-                            validation,
-                            "HUMAN",
-                            headline=headline,
-                            description=description,
-                            embedding=embedding,
+                            LabelSource.HUMAN,
                             db_path=db_path
                         )
+                        if relevance_update.applied:
+                            update_cached_html_status(url, validation, db_path=db_path)
+                            if status == RelevanceStatus.IRRELEVANT:
+                                delete_uningested_story(url, db_path=db_path)
                         print(
                             f"Labeled: {relevance_update.status} "
                             f"({relevance_update.label_source}) -> validation: {validation}"
@@ -921,6 +963,7 @@ def main(args=None):
         elif parsed_args.classifier_action == "reevaluate":
             from knowledge_map.adapters.sqlite_db import (
                 get_machine_labeled_for_reevaluation,
+                update_cached_html_status,
                 update_relevance_status,
             )
             from knowledge_map.core.relevance import deserialize_embedding, classify_article
@@ -937,21 +980,21 @@ def main(args=None):
                 if not embedding:
                     continue
                     
-                new_status = classify_article(headline, description, embedding)
-                if new_status != old_status:
-                    if new_status == "RELEVANT":
-                        new_validation = "PENDING"
+                new_status = RelevanceStatus(classify_article(headline, description, embedding))
+                if new_status != RelevanceStatus(old_status):
+                    if new_status == RelevanceStatus.RELEVANT:
+                        new_validation = ValidationStatus.PENDING
                     else:
                         new_validation = None
                         
                     relevance_update = update_relevance_status(
                         url,
                         new_status,
-                        new_validation,
-                        relevance_label_source="MODEL",
+                        LabelSource.MODEL,
                         db_path=db_path,
                     )
                     if relevance_update.applied:
+                        update_cached_html_status(url, new_validation, db_path=db_path)
                         print(
                             f"URL: {url} transitioned: {old_status} -> "
                             f"{relevance_update.status} (validation: {new_validation})"

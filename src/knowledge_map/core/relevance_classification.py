@@ -1,16 +1,24 @@
 """Shared operations for metadata-based relevance classification."""
 
 import logging
-from typing import Optional
+from typing import Any, NamedTuple, Optional
 
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.sqlite_db import (
     DEFAULT_DB_PATH,
-    RelevanceUpdateResult,
-    update_relevance_status,
+    ArticleMetadataUpdateResult,
+    get_articles_for_metadata_backfill,
+    get_cached_html,
+    update_article_metadata,
 )
+from knowledge_map.core.relevance import extract_metadata
 
 logger = logging.getLogger(__name__)
+
+
+class MetadataBackfillResult(NamedTuple):
+    candidates: int
+    updated: int
 
 
 def get_metadata_embedding(
@@ -33,24 +41,69 @@ def get_metadata_embedding(
         return None
 
 
-def persist_relevance_label(
+def _find_metadata_value(data: Any, *keys: str) -> Optional[str]:
+    if isinstance(data, dict):
+        for key in keys:
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for value in data.values():
+            result = _find_metadata_value(value, *keys)
+            if result:
+                return result
+    elif isinstance(data, list):
+        for value in data:
+            result = _find_metadata_value(value, *keys)
+            if result:
+                return result
+    return None
+
+
+def populate_article_metadata(
     url: str,
-    relevance_status: str,
-    validation: Optional[str],
-    label_source: str,
-    headline: Optional[str],
-    description: Optional[str],
-    embedding: Optional[list[float]],
     db_path: str = DEFAULT_DB_PATH,
-) -> RelevanceUpdateResult:
-    """Persist a relevance decision with its reusable metadata representation."""
-    return update_relevance_status(
+) -> ArticleMetadataUpdateResult:
+    """Populate missing metadata from cached HTML or stored discovery metadata."""
+    cached = get_cached_html(url, db_path=db_path)
+    if cached is None:
+        raise ValueError(f"Cached article not found: {url}")
+
+    raw_html = cached.get("raw_html")
+    html_metadata = extract_metadata(raw_html) if raw_html else {}
+    stored_metadata = cached.get("raw_metadata_json") or {}
+
+    headline = (
+        cached.get("headline")
+        or _find_metadata_value(stored_metadata, "headline", "title")
+        or html_metadata.get("headline")
+    )
+    description = (
+        cached.get("description")
+        or _find_metadata_value(stored_metadata, "description", "summary")
+        or html_metadata.get("description")
+    )
+    embedding = get_metadata_embedding(
+        headline,
+        description,
+        cached.get("embedding"),
+    )
+
+    return update_article_metadata(
         url,
-        relevance_status,
-        validation,
-        relevance_label_source=label_source,
-        headline=headline,
-        description=description,
-        embedding=embedding,
+        headline,
+        description,
+        embedding,
         db_path=db_path,
     )
+
+
+def backfill_article_metadata(
+    db_path: str = DEFAULT_DB_PATH,
+) -> MetadataBackfillResult:
+    """Populate cached metadata and embeddings without fetching article URLs."""
+    urls = get_articles_for_metadata_backfill(db_path=db_path)
+    updated = 0
+    for url in urls:
+        result = populate_article_metadata(url, db_path=db_path)
+        updated += int(result.applied)
+    return MetadataBackfillResult(candidates=len(urls), updated=updated)

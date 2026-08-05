@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from knowledge_map.core.relevance import deserialize_embedding
+from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus
 
 DEFAULT_DB_PATH = "document_store.db"
 WEIGHTS_PATH = os.path.join(
@@ -16,6 +17,27 @@ WEIGHTS_PATH = os.path.join(
     "classifier_weights.json"
 )
 
+
+def get_training_rows(db_path: str = DEFAULT_DB_PATH) -> list[tuple[bytes, str]]:
+    """Return LLM-labeled embedded examples used to train the classifier."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT embedding, relevance_status
+            FROM scraped_html_cache
+            WHERE relevance_status IN (
+                    '{RelevanceStatus.RELEVANT}',
+                    '{RelevanceStatus.IRRELEVANT}'
+                  )
+              AND embedding IS NOT NULL
+              AND relevance_label_source = '{LabelSource.LLM}'
+        """)
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
 def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
     """
     Pulls labeled articles with embeddings from the SQLite database,
@@ -25,19 +47,7 @@ def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
         print(f"Database file not found: {db_path}")
         return
 
-    conn = sqlite3.connect(db_path)
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT embedding, relevance_status
-            FROM scraped_html_cache
-            WHERE relevance_status IN ('RELEVANT', 'IRRELEVANT')
-              AND embedding IS NOT NULL
-              AND relevance_label_source IN ('HUMAN', 'LLM')
-        """)
-        rows = cursor.fetchall()
-    finally:
-        conn.close()
+    rows = get_training_rows(db_path)
 
     if not rows:
         print("No labeled articles with embeddings found in the database. Cannot train.")
@@ -49,7 +59,7 @@ def train_classifier(db_path: str = DEFAULT_DB_PATH) -> None:
         emb = deserialize_embedding(emb_blob)
         if emb:
             X.append(emb)
-            y.append(1 if status == 'RELEVANT' else 0)
+            y.append(1 if status == RelevanceStatus.RELEVANT else 0)
 
     X = np.array(X)
     y = np.array(y)

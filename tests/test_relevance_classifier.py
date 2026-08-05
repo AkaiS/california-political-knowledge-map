@@ -11,13 +11,14 @@ from knowledge_map.adapters.sqlite_db import (
     clear_cached_html,
     is_url_known
 )
+from knowledge_map.core.relevance_classification import backfill_article_metadata
 from knowledge_map.core.relevance import (
     serialize_embedding,
     deserialize_embedding,
     classify_article,
     WEIGHTS_PATH
 )
-from classifier.trainer import train_classifier
+from classifier.trainer import get_training_rows, train_classifier
 
 def test_blob_conversions():
     """Verify that binary BLOB conversions preserve float array precision."""
@@ -223,10 +224,10 @@ def test_sqlite_cache_helpers(tmp_path):
     assert len(c3_cleared["embedding"]) == 768 # kept embedding
 
     # Verify update_relevance_status
-    update_relevance_status("https://example.com/3", "IRRELEVANT", None, db_path=db_path)
+    update_relevance_status("https://example.com/3", "IRRELEVANT", "MODEL", db_path=db_path)
     c3_updated = get_cached_html("https://example.com/3", db_path=db_path)
     assert c3_updated["relevance_status"] == "IRRELEVANT"
-    assert c3_updated["validation"] is None
+    assert c3_updated["validation"] == "PENDING"
 
 
 def test_model_training(tmp_path):
@@ -241,14 +242,14 @@ def test_model_training(tmp_path):
             f"https://example.com/rel/{i}", "pub1", None,
             validation="PENDING", headline="R", description="D",
             embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
-            relevance_label_source="HUMAN",
+            relevance_label_source="LLM",
             db_path=db_path
         )
         cache_scraped_html(
             f"https://example.com/irrel/{i}", "pub1", None,
             validation=None, headline="I", description="D",
             embedding=[-1.0, -1.0, 0.0], relevance_status="IRRELEVANT",
-            relevance_label_source="HUMAN",
+            relevance_label_source="LLM",
             db_path=db_path
         )
 
@@ -265,18 +266,18 @@ def test_model_training(tmp_path):
 
 
 def test_model_training_filters_source(tmp_path):
-    """Verify that only HUMAN and LLM labeled articles are trained on, and KEYWORD/MODEL are ignored."""
+    """Verify that only LLM labels train the model and HUMAN labels are held out."""
     db_file = tmp_path / "test_filtering.db"
     db_path = str(db_file)
     init_db(db_path)
 
-    # Insert 3 HUMAN relevant, 3 LLM irrelevant
+    # Insert 3 LLM relevant and irrelevant examples.
     for i in range(3):
         cache_scraped_html(
-            f"https://example.com/human-rel/{i}", "pub1", None,
+            f"https://example.com/llm-rel/{i}", "pub1", None,
             validation="PENDING", headline="R", description="D",
             embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
-            relevance_label_source="HUMAN", db_path=db_path
+            relevance_label_source="LLM", db_path=db_path
         )
         cache_scraped_html(
             f"https://example.com/llm-irrel/{i}", "pub1", None,
@@ -285,8 +286,14 @@ def test_model_training_filters_source(tmp_path):
             relevance_label_source="LLM", db_path=db_path
         )
 
-    # Insert 3 KEYWORD relevant, 3 MODEL irrelevant (should be ignored)
+    # Insert HUMAN, KEYWORD, and MODEL examples that must be ignored.
     for i in range(3):
+        cache_scraped_html(
+            f"https://example.com/human-rel/{i}", "pub1", None,
+            validation="PENDING", headline="R", description="D",
+            embedding=[1.0, 1.0, 0.0], relevance_status="RELEVANT",
+            relevance_label_source="HUMAN", db_path=db_path
+        )
         cache_scraped_html(
             f"https://example.com/kw-rel/{i}", "pub1", None,
             validation="PENDING", headline="R", description="D",
@@ -307,5 +314,83 @@ def test_model_training_filters_source(tmp_path):
         assert os.path.exists(weights_test_path)
         with open(weights_test_path, "r") as f:
             weights = json.load(f)
-        # Should only train on the 6 HUMAN/LLM samples, ignoring the 6 KEYWORD/MODEL samples
+        # Only the six LLM examples are training input.
         assert weights["n_samples"] == 6
+
+
+def test_backfill_populates_training_data_offline_and_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "backfill.db")
+    init_db(db_path)
+    cache_scraped_html(
+        "https://example.com/irrelevant",
+        "pub1",
+        "<html><title>HTML headline</title><meta name='description' content='HTML description'></html>",
+        relevance_status="IRRELEVANT",
+        relevance_label_source="LLM",
+        raw_metadata_json={
+            "article": {
+                "title": "Stored headline",
+                "summary": "Stored description",
+            }
+        },
+        db_path=db_path,
+    )
+    cache_scraped_html(
+        "https://example.com/inconclusive",
+        "pub1",
+        "<html><title>HTML fallback</title><meta name='description' content='Fallback description'></html>",
+        relevance_status="INCONCLUSIVE",
+        relevance_label_source="LLM",
+        db_path=db_path,
+    )
+    cache_scraped_html(
+        "https://example.com/relevant",
+        "pub1",
+        None,
+        headline="Relevant headline",
+        description="Relevant description",
+        embedding=[1.0, 0.0],
+        relevance_status="RELEVANT",
+        relevance_label_source="LLM",
+        db_path=db_path,
+    )
+    cache_scraped_html(
+        "https://example.com/human",
+        "pub1",
+        None,
+        headline="Human headline",
+        description="Human description",
+        embedding=[0.5, 0.5],
+        relevance_status="RELEVANT",
+        relevance_label_source="HUMAN",
+        db_path=db_path,
+    )
+
+    with patch(
+        "knowledge_map.adapters.embedding.PydanticAIEmbeddingAdapter.embed_text",
+        side_effect=[[0.25, 0.75], [0.0, 1.0]],
+    ) as embed_text, patch("httpx.get") as network_get:
+        first = backfill_article_metadata(db_path=db_path)
+        second = backfill_article_metadata(db_path=db_path)
+
+    assert first.candidates == 2
+    assert first.updated == 2
+    assert second.candidates == 0
+    assert second.updated == 0
+    assert embed_text.call_count == 2
+    network_get.assert_not_called()
+
+    irrelevant = get_cached_html("https://example.com/irrelevant", db_path=db_path)
+    assert irrelevant["headline"] == "Stored headline"
+    assert irrelevant["description"] == "Stored description"
+    assert irrelevant["embedding"] == pytest.approx([0.0, 1.0])
+
+    inconclusive = get_cached_html("https://example.com/inconclusive", db_path=db_path)
+    assert inconclusive["headline"] == "HTML fallback"
+    assert inconclusive["description"] == "Fallback description"
+    assert inconclusive["embedding"] == pytest.approx([0.25, 0.75])
+
+    training_rows = get_training_rows(db_path)
+    training_statuses = {status for _, status in training_rows}
+    assert len(training_rows) == 2
+    assert training_statuses == {"RELEVANT", "IRRELEVANT"}

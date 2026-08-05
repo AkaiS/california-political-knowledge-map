@@ -1,10 +1,10 @@
 from typing import Optional, List
-from enum import Enum
+from enum import StrEnum
 from pydantic import BaseModel, Field
 from .chunking import ArticleChunk
 from .extraction import ExtractionResult
 
-class ArticleStatus(str, Enum):
+class ArticleStatus(StrEnum):
     UNPROCESSED = "UNPROCESSED"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"

@@ -1,6 +1,6 @@
 # Apply reversal semantics to manual review
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -31,14 +31,14 @@ suspended, and it is bounded to already-ingested articles.
 
 ## Acceptance criteria
 
-- [ ] `--review-all` presents only articles whose label source is not `'HUMAN'`.
-- [ ] A human answer records `relevance_status` and `relevance_label_source = 'HUMAN'`, and writes nothing else through the relevance writer.
-- [ ] Marking an article relevant leaves it at `validation = 'PENDING'`, and a subsequent validation run produces a Story for it.
-- [ ] Marking an article relevant when a Story already exists promotes it to `'VALIDATED'` without re-extraction.
-- [ ] Marking an un-ingested article irrelevant removes its Story row and clears its validation state.
-- [ ] Marking an already-ingested article irrelevant records the label and leaves the Story row in place.
-- [ ] No manual review path writes the validation column through the relevance writer.
-- [ ] The full deterministic test suite passes.
+- [x] `--review-all` presents only articles whose label source is not `'HUMAN'`.
+- [x] A human answer records `relevance_status` and `relevance_label_source = 'HUMAN'`, and writes nothing else through the relevance writer.
+- [x] Marking an article relevant leaves it at `validation = 'PENDING'`, and a subsequent validation run produces a Story for it.
+- [x] Marking an article relevant when a Story already exists promotes it to `'VALIDATED'` without re-extraction.
+- [x] Marking an un-ingested article irrelevant removes its Story row and clears its validation state.
+- [x] Marking an already-ingested article irrelevant records the label and leaves the Story row in place.
+- [x] No manual review path writes the validation column through the relevance writer.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 

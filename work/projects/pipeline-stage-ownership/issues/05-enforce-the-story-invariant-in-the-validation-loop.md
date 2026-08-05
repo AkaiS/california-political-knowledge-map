@@ -1,6 +1,6 @@
 # Enforce the story invariant in the validation loop
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -38,17 +38,17 @@ silent, permanent retry that this selection change ends.
 
 ## Acceptance criteria
 
-- [ ] Relevance classification is not invoked at all — not the weight loader, the embedding adapter, or the LLM agent — for an article whose `relevance_status` is not `'PENDING'`.
-- [ ] An article whose relevance is `'PENDING'` is classified and the decision persisted through the guarded relevance writer.
-- [ ] A relevant article ends at `'VALIDATED'` with a Story row and its links, and with no raw HTML remaining.
-- [ ] An irrelevant article ends with null validation, no Story row, and its classification recorded.
-- [ ] An inconclusive article ends with null validation and no Story row.
-- [ ] The invariant holds after every branch: a Story row exists exactly when validation is `'VALIDATED'`.
-- [ ] Extraction failure still yields `VALIDATION_FAILED` and accrues failure points as today, and absent JSON-LD ground truth still yields `UNVALIDATABLE`.
-- [ ] An article with no cached raw HTML is not selected by the validation loop.
-- [ ] `'IRRELEVANT'` is rejected by the Story status constraint and no code path attempts to write it.
-- [ ] Headline, description, and embedding are populated after successful extraction even when classification was skipped.
-- [ ] The full deterministic test suite passes.
+- [x] Relevance classification is not invoked at all — not the weight loader, the embedding adapter, or the LLM agent — for an article whose `relevance_status` is not `'PENDING'`.
+- [x] An article whose relevance is `'PENDING'` is classified and the decision persisted through the guarded relevance writer.
+- [x] A relevant article ends at `'VALIDATED'` with a Story row and its links, and with no raw HTML remaining.
+- [x] An irrelevant article ends with null validation, no Story row, and its classification recorded.
+- [x] An inconclusive article ends with null validation and no Story row.
+- [x] The invariant holds after every branch: a Story row exists exactly when validation is `'VALIDATED'`.
+- [x] Extraction failure still yields `VALIDATION_FAILED` and accrues failure points as today, and absent JSON-LD ground truth still yields `UNVALIDATABLE`.
+- [x] An article with no cached raw HTML is not selected by the validation loop.
+- [x] `'IRRELEVANT'` is rejected by the Story status constraint and no code path attempts to write it.
+- [x] Headline, description, and embedding are populated after successful extraction even when classification was skipped.
+- [x] The full deterministic test suite passes.
 
 ## Blocked by
 
