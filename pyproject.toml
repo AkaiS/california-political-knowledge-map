@@ -27,6 +27,7 @@ ca-map = "knowledge_map.cli.main:main"
 dev = [
     "ca-political-classifier",
     "pytest>=9.1.1",
+    "ruff>=0.16.1",
 ]
 
 [tool.pytest.ini_options]
