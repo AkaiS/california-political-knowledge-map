@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## What to build
 
@@ -14,12 +14,19 @@ Specifically, the ingestion pipeline must:
 
 ## Acceptance criteria
 
-- [ ] Neo4j ingestion inserts `(:Article)` and `(:Chunk)` nodes and links them with `[:BELONGS_TO]`.
-- [ ] Extracted entities are linked to their source chunk using `[:MENTIONED_IN]`.
-- [ ] Relationship edges between extracted entities contain the correct `source_chunk_id` property.
-- [ ] The Neo4j Vector Index is successfully created and verified on connection.
-- [ ] Mocked Neo4j transactions in unit tests assert that all necessary Cypher statements are generated correctly.
+- [x] Neo4j ingestion inserts `(:Article)` and `(:Chunk)` nodes and links them with `[:BELONGS_TO]`.
+- [x] Extracted entities are linked to their source chunk using `[:MENTIONED_IN]`.
+- [x] Relationship edges between extracted entities contain the correct `source_chunk_id` property.
+- [x] The Neo4j Vector Index is successfully created and verified on connection.
+- [x] Mocked Neo4j transactions in unit tests assert that all necessary Cypher statements are generated correctly.
 
 ## Blocked by
 
-- [.scratch/article-chunking-coreference/issues/01-recursive-chunking.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/work/projects/article-chunking-coreference/issues/01-recursive-chunking.md)
+- [work/projects/article-chunking-coreference/issues/01-recursive-chunking.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/work/projects/article-chunking-coreference/issues/01-recursive-chunking.md) (completed)
+
+## Comments
+
+2026-08-05: Verified already implemented on `main` in
+`src/knowledge_map/adapters/neo4j_db.py` (`_ensure_vector_index`,
+`ingest_article`, `ingest_chunk`, `ingest_chunk_extraction`), covered by
+`tests/test_graph_db.py` (23 passing). Relabeled `completed`.

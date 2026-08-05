@@ -1,6 +1,6 @@
 # Product Requirements: Article Chunking and Coreference Resolution
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
