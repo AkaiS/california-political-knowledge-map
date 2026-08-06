@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-from pydantic_ai import ModelResponse, TextPart, ToolCallPart, UnexpectedModelBehavior
+from pydantic_ai import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from knowledge_map.adapters.extraction import (
@@ -73,19 +73,17 @@ def test_extraction_result_valid():
     assert len(res.nodes) == 2
     assert len(res.relationships) == 1
 
-def test_extraction_result_invalid_relationship_source():
+def test_extraction_result_allows_dangling_relationship_source_for_adapter_conformance():
     node1 = Node(name="Democratic Party", label="Organization")
     rel = Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER_OF")
-    with pytest.raises(ValidationError) as exc_info:
-        ExtractionResult(nodes=[node1], relationships=[rel])
-    assert "Relationship source 'Gavin Newsom' not found in defined nodes" in str(exc_info.value)
+    result = ExtractionResult(nodes=[node1], relationships=[rel])
+    assert result.relationships == [rel]
 
-def test_extraction_result_invalid_relationship_target():
+def test_extraction_result_allows_dangling_relationship_target_for_adapter_conformance():
     node1 = Node(name="Gavin Newsom", label="PoliticalActor")
     rel = Relationship(source="Gavin Newsom", target="Democratic Party", relationship_type="MEMBER_OF")
-    with pytest.raises(ValidationError) as exc_info:
-        ExtractionResult(nodes=[node1], relationships=[rel])
-    assert "Relationship target 'Democratic Party' not found in defined nodes" in str(exc_info.value)
+    result = ExtractionResult(nodes=[node1], relationships=[rel])
+    assert result.relationships == [rel]
 
 
 def test_load_instructions(tmp_path):
@@ -133,7 +131,7 @@ def test_extract_entities_success():
         assert len(result.relationships) == 1
         assert result.relationships[0].source == "Gavin Newsom"
 
-def test_extract_entities_validation_failure():
+def test_extract_entities_preserves_untrusted_dangling_relationship_for_adapter():
     def mock_invalid_model(messages, info):
         tool_name = info.output_tools[0].name
         return ModelResponse(parts=[
@@ -153,8 +151,8 @@ def test_extract_entities_validation_failure():
     
     agent = get_extraction_agent(defer_check=True)
     with agent.override(model=FunctionModel(mock_invalid_model)):
-        with pytest.raises(UnexpectedModelBehavior):
-            extract_entities("Some text", agent=agent)
+        result = extract_entities("Some text", agent=agent)
+        assert result.relationships[0].target == "Democratic Party"
 
 def test_pydantic_ai_entity_extraction_adapter_success():
     received_prompt = {}
@@ -167,7 +165,7 @@ def test_pydantic_ai_entity_extraction_adapter_success():
                 tool_name=tool_name,
                 args={
                     "nodes": [
-                        {"name": "Gavin Newsom", "label": "PoliticalActor"}
+                        {"name": "Gavin Newsom", "label": "Politician"}
                     ],
                     "relationships": []
                 },
@@ -186,6 +184,65 @@ def test_pydantic_ai_entity_extraction_adapter_success():
             assert f"`{label}`" in received_prompt["messages"]
         assert "`aging-and-long-term-care`: Aging & Long-Term Care" in received_prompt["messages"]
 
+
+def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog):
+    responses = [
+        {
+            "nodes": [
+                {"name": "Alex Lee", "label": "Politician", "properties": {"first_name": "Alex", "nickname": "Al"}},
+                {"name": "AB 1", "label": "Bill", "properties": {"number": "AB 1"}},
+                {"name": "Vote on AB 1", "label": "LegislativeEvent"},
+                {"name": "Good Vote", "label": "LegislativeEvent", "sub_labels": ["Vote"]},
+                {"name": "Coalition", "label": "Organization"},
+                {"name": "Bad Org", "label": "Organization", "sub_labels": ["Club"]},
+                {"name": "Race", "label": "Campaign"},
+                {"name": "Mystery", "label": "PoliticalActor"},
+            ],
+            "relationships": [
+                {"source": "Good Vote", "target": "AB 1", "relationship_type": "ACTION_ON"},
+                {"source": "AB 1", "target": "Alex Lee", "relationship_type": "ACTION_ON"},
+                {"source": "Alex Lee", "target": "Mystery", "relationship_type": "KNOWS"},
+                {"source": "Alex Lee", "target": "Vote on AB 1", "relationship_type": "VOTED_AYE"},
+            ],
+        },
+        {
+            "nodes": [
+                {"name": "Jamie", "label": "Politician", "properties": {"nickname": "J"}},
+                {"name": "Race 2", "label": "Campaign"},
+            ],
+            "relationships": [],
+        },
+    ]
+
+    def scripted_model(messages, info):
+        return ModelResponse(parts=[ToolCallPart(
+            tool_name=info.output_tools[0].name,
+            args=responses.pop(0),
+            tool_call_id="scripted",
+        )])
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(scripted_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        first = adapter.extract("chunk one")
+        adapter.extract("chunk two")
+
+    assert [(node.name, node.sub_labels) for node in first.nodes] == [
+        ("Alex Lee", []), ("AB 1", []), ("Good Vote", ["Vote"]), ("Coalition", [])
+    ]
+    assert first.nodes[0].properties == {"first_name": "Alex"}
+    assert [relationship.relationship_type for relationship in first.relationships] == ["ACTION_ON"]
+    report = adapter.adherence_report
+    assert report["rejected_labels"]["Campaign"]["count"] == 2
+    assert report["rejected_labels"]["PoliticalActor"]["count"] == 1
+    assert report["rejected_labels"]["Club"]["count"] == 1
+    assert report["rejected_relationship_types"]["ACTION_ON"]["count"] == 1
+    assert report["rejected_relationship_types"]["KNOWS"]["count"] == 1
+    assert report["rejected_relationship_types"]["VOTED_AYE"]["count"] == 1
+    assert report["rejected_property_names"]["nickname"]["count"] == 2
+    assert report["rejected_property_names"]["nickname"]["example_chunk_id"].startswith("sha256:")
+    assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 10
+
 def test_pydantic_ai_entity_extraction_adapter_health_check_success():
     def mock_model(messages, info):
         return ModelResponse(parts=[TextPart(content="ok")])
@@ -203,7 +260,6 @@ def test_pydantic_ai_entity_extraction_adapter_health_check_failure():
     with agent.override(model=FunctionModel(mock_model)):
         adapter = PydanticAIEntityExtractionAdapter(agent=agent)
         assert adapter.health_check() is False
-
 
 
 

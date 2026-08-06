@@ -1,14 +1,18 @@
+import datetime
+import json
 import logging
 import os
-import json
-import datetime
-from typing import Optional
 
-from knowledge_map.config import Settings, BatchIngestionSettings, settings as global_settings
 from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
-from knowledge_map.schemas import SourceArticle, ArticleStatus
+from knowledge_map.config import BatchIngestionSettings
+from knowledge_map.config import settings as global_settings
+from knowledge_map.core.exceptions import (
+    PipelineLockError,
+    PipelineRateLimitError,
+    classify_exception,
+)
 from knowledge_map.core.pipeline import StoryPipeline
-from knowledge_map.core.exceptions import classify_exception, PipelineRateLimitError, PipelineLockError
+from knowledge_map.schemas import ArticleStatus, SourceArticle
 from knowledge_map.utils.console import ConsoleNotifier
 
 logger = logging.getLogger(__name__)
@@ -17,13 +21,26 @@ class BatchIngestionService:
     def __init__(
         self,
         pipeline: StoryPipeline,
-        settings: Optional[BatchIngestionSettings] = None
+        settings: BatchIngestionSettings | None = None
     ) -> None:
         self.pipeline = pipeline
         # Use settings module if none provided
         self.settings = settings or global_settings.batch_ingestion
         self.consecutive_failures = 0
         self.consecutive_rate_limit_failures = 0
+
+    def _write_adherence_report(self) -> None:
+        adapter = getattr(self.pipeline, "extraction_adapter", None)
+        report = getattr(adapter, "adherence_report", None)
+        if not isinstance(report, dict):
+            return
+        report_path = self.settings.adherence_report_path
+        directory = os.path.dirname(report_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(report_path, "w", encoding="utf-8") as report_file:
+            json.dump(report, report_file, indent=2, sort_keys=True)
+            report_file.write("\n")
 
     def run(self) -> None:
         """
@@ -34,6 +51,17 @@ class BatchIngestionService:
             logger.error(f"Pipeline lock file found at {self.settings.lock_file_path}. Aborting startup.")
             raise PipelineLockError(f"Pipeline is locked. Lock file exists at {self.settings.lock_file_path}")
 
+        extraction_adapter = getattr(self.pipeline, "extraction_adapter", None)
+        reset_report = getattr(extraction_adapter, "reset_adherence_report", None)
+        if callable(reset_report):
+            reset_report()
+
+        try:
+            self._run_stories()
+        finally:
+            self._write_adherence_report()
+
+    def _run_stories(self) -> None:
         logger.info(f"Starting batch ingestion. Database path: {self.settings.db_path}")
         unprocessed = get_unprocessed_stories(self.settings.db_path)
         if not unprocessed:
@@ -71,7 +99,7 @@ class BatchIngestionService:
                     logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
                 if self.consecutive_rate_limit_failures >= 3:
                     lock_data = {
-                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
                         "component": e.component,
                         "error_message": str(e)
                     }
@@ -112,4 +140,3 @@ class BatchIngestionService:
                         raise e
 
         logger.info("Batch ingestion run completed successfully.")
-

@@ -252,7 +252,7 @@ def test_pipeline_with_concrete_adapters():
                 tool_name=tool_name,
                 args={
                     "nodes": [
-                        {"name": "Gavin Newsom", "label": "PoliticalActor"}
+                        {"name": "Gavin Newsom", "label": "Politician"}
                     ],
                     "relationships": []
                 },
@@ -697,7 +697,6 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
-
 
 
 

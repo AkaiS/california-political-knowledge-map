@@ -177,6 +177,26 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     assert called_article_2.content == "Content of Story B"
 
 
+def test_batch_ingestion_writes_and_resets_adherence_report(tmp_path):
+    db_path = str(tmp_path / "empty.db")
+    init_db(db_path)
+    report_path = tmp_path / "reports" / "adherence.json"
+    extraction_adapter = MagicMock()
+    extraction_adapter.adherence_report = {
+        "rejected_labels": {"Unknown": {"count": 1, "example_chunk_id": "sha256:abc"}},
+        "rejected_relationship_types": {},
+        "rejected_property_names": {},
+    }
+    pipeline = MagicMock()
+    pipeline.extraction_adapter = extraction_adapter
+    settings = BatchIngestionSettings(db_path=db_path, adherence_report_path=str(report_path))
+
+    BatchIngestionService(pipeline=pipeline, settings=settings).run()
+
+    extraction_adapter.reset_adherence_report.assert_called_once_with()
+    assert json.loads(report_path.read_text()) == extraction_adapter.adherence_report
+
+
 def test_cli_ingest_command():
     
     with patch("knowledge_map.cli.main.BatchIngestionService") as MockService, \
@@ -769,7 +789,6 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
     assert "locked" in str(exc_info.value).lower()
     # Verify no pipeline execution occurred
     assert mock_pipeline.run.call_count == 0
-
 
 
 

@@ -1,11 +1,14 @@
 import re
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator
+
 
 class Node(BaseModel):
     name: str = Field(..., description="Canonical name of the entity")
     label: str = Field(..., description="Entity label")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Metadata properties")
+    sub_labels: list[str] = Field(default_factory=list, description="Ontology sub-labels")
+    properties: dict[str, Any] = Field(default_factory=dict, description="Metadata properties")
 
     @field_validator("name", "label", mode="before")
     @classmethod
@@ -28,7 +31,7 @@ class Relationship(BaseModel):
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
     target: str = Field(..., description="Target node name. Do NOT name this key 'target_name', it must be 'target'.")
     relationship_type: str = Field(..., description="Relationship type")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
+    properties: dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
 
     @field_validator("source", "target", mode="before")
     @classmethod
@@ -58,15 +61,5 @@ class Relationship(BaseModel):
         return v
 
 class ExtractionResult(BaseModel):
-    nodes: List[Node] = Field(default_factory=list, description="Extracted entities")
-    relationships: List[Relationship] = Field(default_factory=list, description="Extracted relationships")
-
-    @model_validator(mode="after")
-    def validate_relationships(self) -> 'ExtractionResult':
-        node_names = {node.name for node in self.nodes}
-        for rel in self.relationships:
-            if rel.source not in node_names:
-                raise ValueError(f"Relationship source '{rel.source}' not found in defined nodes.")
-            if rel.target not in node_names:
-                raise ValueError(f"Relationship target '{rel.target}' not found in defined nodes.")
-        return self
+    nodes: list[Node] = Field(default_factory=list, description="Extracted entities")
+    relationships: list[Relationship] = Field(default_factory=list, description="Extracted relationships")

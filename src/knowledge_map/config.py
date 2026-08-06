@@ -1,5 +1,7 @@
 import os
+
 from pydantic import BaseModel, Field
+
 
 class ChunkingSettings(BaseModel):
     size: int = Field(default=512, description="Default chunk size (characters/tokens)")
@@ -33,6 +35,12 @@ class BatchIngestionSettings(BaseModel):
         default_factory=lambda: os.environ.get("SQLITE_DB_PATH", "document_store.db"),
         description="Path to SQLite database"
     )
+    adherence_report_path: str = Field(
+        default_factory=lambda: os.environ.get(
+            "EXTRACTION_ADHERENCE_REPORT_PATH", ".scratch/extraction-adherence-report.json"
+        ),
+        description="Per-run extraction adherence report path",
+    )
     url_path_blocklist: list[str] = Field(
         default=["/sports/", "/recipes/", "/obituaries/", "/author/", "/category/", "/tag/", "/search/"],
         description="Global fallback URL path blocklist"
@@ -64,5 +72,4 @@ SECONDARY_RELEVANCE_KEYWORDS = [
     "traffic", "transit", "resident", "neighborhood", "county", "district",
     "city", "regional"
 ]
-
 

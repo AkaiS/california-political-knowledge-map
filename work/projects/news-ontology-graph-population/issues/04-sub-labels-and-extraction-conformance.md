@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -43,20 +43,20 @@ the [Model Evaluation map](../../../initiatives/model-evaluation/MAP.md).
 
 ## Acceptance criteria
 
-- [ ] The extraction node schema carries `sub_labels`, and values survive to the
+- [x] The extraction node schema carries `sub_labels`, and values survive to the
       adapter's returned result.
-- [ ] Off-ontology labels, relationship types, endpoint pairings and property
+- [x] Off-ontology labels, relationship types, endpoint pairings and property
       names are dropped, and conforming entities in the same model response
       survive.
-- [ ] A relationship is dropped when either endpoint label violates the News
+- [x] A relationship is dropped when either endpoint label violates the News
       Ontology relationship table, or when a dropped node leaves it dangling.
-- [ ] A missing sub-label drops a `LegislativeEvent` or `Campaign` node; an absent
+- [x] A missing sub-label drops a `LegislativeEvent` or `Campaign` node; an absent
       `Organization` sub-label does not.
-- [ ] Nothing in the conformance pass raises; every drop is logged.
-- [ ] The adherence report accumulates the expected counts with one example chunk
+- [x] Nothing in the conformance pass raises; every drop is logged.
+- [x] The adherence report accumulates the expected counts with one example chunk
       per entry, and the batch ingestion service writes it to `.scratch/` as JSON
       at the end of a run.
-- [ ] Covered at the adapter seam with a scripted model, with no live model call.
+- [x] Covered at the adapter seam with a scripted model, with no live model call.
 
 ## Blocked by
 
