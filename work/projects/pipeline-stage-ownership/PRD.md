@@ -1,6 +1,6 @@
 # Pipeline Stage Ownership: Validation, Relevance, and Raw HTML Lifecycle
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 

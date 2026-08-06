@@ -14,27 +14,10 @@ have not yet been shaped into executable work.
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
 - [Review Relevance Filter evaluations](projects/scraping-pipeline/issues/13-relevance-evals.md)
 - [Review Selector Healing evaluations](projects/scraping-pipeline/issues/14-healer-evals.md)
-- [Review the runner-only evaluation execution seam](projects/unified-evaluation-execution/issues/09-make-the-runner-the-only-execution-seam.md)
 
 ### Ready for agent
 
-- [Bound transient finalization-renewal contention by confirmed authority](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
-- [Guard human relevance labels against automated overwrites](projects/pipeline-stage-ownership/issues/01-guard-human-relevance-labels.md)
-- [Remove the retired rejected-article helpers](projects/pipeline-stage-ownership/issues/02-remove-retired-rejected-article-helpers.md)
-- [Default relevance to PENDING and record fetch status](projects/pipeline-stage-ownership/issues/03-default-relevance-to-pending-and-record-fetch-status.md)
-- [Define Evaluation Split in the glossary and describe the construction flow](projects/gold-set-construction-factory/issues/04-define-evaluation-split-in-the-glossary.md)
-
-The [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md) issues
-04–10 are `ready-for-agent` but gated; each declares its blockers. Issue 01 is
-the urgent one: one surviving human relevance label sits at
-`validation = 'PENDING'` and the next validation run destroys it under present
-behavior. Take a database backup before issue 03 migrates the schema.
-
-The [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md)
-issues 01–03 are `ready-for-agent` but gated. Issue 01, the validating factory,
-is blocked by the Unified Evaluation Execution Path's shared compatibility
-predicate, and issues 02 and 03 are blocked by 01. Its glossary issue 04 is
-listed above because it has no blockers.
+- [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md)
 
 ### Useful Graph Retrieval frontier
 
@@ -64,9 +47,9 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md) |
+| `ready-for-agent` | none |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 
 The completed [ReportCase Evidence Contract](projects/report-case-evidence-contract/)
 contains two issue records but no parent PRD.
@@ -96,6 +79,26 @@ runner-only execution seam:
   `489`) are dated observations of the suite at those moments. They are a
   before-and-after record, not invariants: each is left as measured, and an
   unexplained movement between them is the signal to investigate.
+
+On 2026-08-05, the `ready-for-agent` queue was reconciled against the issue
+files and the code:
+
+- The four issues listed under "Ready for agent" were already labeled
+  `completed` in their own files; the README listing was stale, as were both
+  "gated" paragraphs — Pipeline Stage Ownership 04–10 and Gold Set Construction
+  01–03 are all `completed`.
+- [Bound transient renewal contention](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
+  was implemented but never relabeled. The heartbeat compares the ledger clock
+  against the last confirmed expiry with strict inequality, before and after the
+  ownership query, and
+  `test_transient_renewal_and_ownership_contention_stop_at_confirmed_expiry`
+  covers the contended-through-expiry case. Relabeled `completed`, and the
+  parent PRD with it.
+- Pipeline Stage Ownership and Evaluation Gold Set Construction were relabeled
+  `completed`; every child of both is complete. No project is `ready-for-agent`.
+- The only remaining agent-takeable ticket is the Useful Graph Retrieval survey,
+  which has produced no `research/` output yet.
+- The full deterministic suite passed: `544 passed`.
 
 ## Information model
 

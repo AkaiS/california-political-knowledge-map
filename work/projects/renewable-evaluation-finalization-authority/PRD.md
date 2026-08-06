@@ -1,6 +1,6 @@
 # Renewable and Fenced Evaluation Finalization Authority
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
