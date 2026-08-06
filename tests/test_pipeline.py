@@ -345,7 +345,7 @@ def test_pipeline_with_neo4j_adapter():
     assert isinstance(result, PipelineResult)
     assert mock_tx.run.call_count >= 2
     queries = [call[0][0] for call in mock_tx.run.call_args_list]
-    assert any("MERGE (a:Article {url: $url})" in q for q in queries)
+    assert any("MERGE (a:NewsArticle {url: $url})" in q for q in queries)
     assert any("MERGE (c:Chunk {id: $chunk_id})" in q for q in queries)
 
 
@@ -697,7 +697,6 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
-
 
 
 

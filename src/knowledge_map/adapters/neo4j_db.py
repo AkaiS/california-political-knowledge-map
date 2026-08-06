@@ -108,7 +108,7 @@ class Neo4jAdapter:
             with driver.session() as session:
                 def _tx(tx):
                     query = """
-                    MERGE (a:Article {url: $url})
+                    MERGE (a:NewsArticle {url: $url})
                     SET a.title = $title, a.author = $author, a.published_date = $published_date
                     """
                     tx.run(
@@ -134,10 +134,10 @@ class Neo4jAdapter:
             with driver.session() as session:
                 def _tx(tx):
                     query = """
-                    MATCH (a:Article {url: $url})
+                    MATCH (a:NewsArticle {url: $url})
                     MERGE (c:Chunk {id: $chunk_id})
                     SET c.text = $text, c.chunk_index = $chunk_index, c.embedding = $embedding
-                    MERGE (c)-[:BELONGS_TO]->(a)
+                    MERGE (a)-[:HAS_CHUNK]->(c)
                     """
                     tx.run(
                         query,
@@ -252,4 +252,3 @@ class Neo4jAdapter:
                 return val == 1
         except Exception:
             return False
-

@@ -360,7 +360,7 @@ def test_ingest_article():
     query = mock_tx.run.call_args[0][0]
     kwargs = mock_tx.run.call_args[1]
     
-    assert "MERGE (a:Article {url: $url})" in query
+    assert "MERGE (a:NewsArticle {url: $url})" in query
     assert "SET a.title = $title" in query
     assert "a.author = $author" in query
     assert "a.published_date = $published_date" in query
@@ -411,7 +411,8 @@ def test_ingest_chunk():
     assert "SET c.text = $text" in query
     assert "c.chunk_index = $chunk_index" in query
     assert "c.embedding = $embedding" in query
-    assert "MERGE (c)-[:BELONGS_TO]->(a)" in query
+    assert "MATCH (a:NewsArticle {url: $url})" in query
+    assert "MERGE (a)-[:HAS_CHUNK]->(c)" in query
     assert kwargs["url"] == "http://example.com/1"
     assert kwargs["chunk_id"] == "http://example.com/1#chunk_0"
     assert kwargs["text"] == "Gavin Newsom did something."
@@ -539,4 +540,3 @@ def test_neo4j_adapter_health_check_failure():
         driver=mock_driver
     )
     assert manager.health_check() is False
-

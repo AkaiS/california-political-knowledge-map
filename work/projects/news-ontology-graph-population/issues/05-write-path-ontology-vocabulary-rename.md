@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -24,13 +24,13 @@ Neo4j integration tests are added beyond these renames.
 
 ## Acceptance criteria
 
-- [ ] Article nodes are written as `:NewsArticle`.
-- [ ] The article-to-chunk edge is `(NewsArticle)-[:HAS_CHUNK]->(Chunk)`, in that
+- [x] Article nodes are written as `:NewsArticle`.
+- [x] The article-to-chunk edge is `(NewsArticle)-[:HAS_CHUNK]->(Chunk)`, in that
       direction; `BELONGS_TO` is gone from the write path.
-- [ ] `MENTIONED_IN` still runs from the core entity to the chunk.
-- [ ] `NewsArticle` and `Chunk` keep the article URL and article-URL-plus-index
+- [x] `MENTIONED_IN` still runs from the core entity to the chunk.
+- [x] `NewsArticle` and `Chunk` keep the article URL and article-URL-plus-index
       keys.
-- [ ] The graph adapter and pipeline tests asserting the old vocabulary are
+- [x] The graph adapter and pipeline tests asserting the old vocabulary are
       updated in place and the suite is green.
 
 ## Blocked by
