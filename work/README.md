@@ -17,17 +17,17 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md)
+- none
 
 ### Useful Graph Retrieval frontier
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
-charted on 2026-07-29 and holds ten tickets. Three are takeable now; the rest
+charted on 2026-07-29 and holds ten tickets. Two are takeable now; the rest
 declare their blockers.
 
 - [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-human`. Every other retrieval decision waits on it.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
-- [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `ready-for-agent`.
+- [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
 
 ### Blocked initiative chain
 
