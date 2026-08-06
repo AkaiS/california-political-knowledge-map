@@ -1,17 +1,19 @@
+from unittest.mock import patch
+
 import pytest
 from pydantic import ValidationError
-from unittest.mock import patch
-from knowledge_map.schemas import Node, Relationship, ExtractionResult
-from pydantic_ai import TextPart
-
-from pydantic_ai import ModelResponse, ToolCallPart, UnexpectedModelBehavior
+from pydantic_ai import ModelResponse, TextPart, ToolCallPart, UnexpectedModelBehavior
 from pydantic_ai.models.function import FunctionModel
+
 from knowledge_map.adapters.extraction import (
-    extract_entities,
     PydanticAIEntityExtractionAdapter,
-    load_instructions,
+    extract_entities,
     get_extraction_agent,
+    load_instructions,
 )
+from knowledge_map.ontology import news
+from knowledge_map.schemas import ExtractionResult, Node, Relationship
+
 
 def test_node_validation_valid():
     node = Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"})
@@ -88,12 +90,14 @@ def test_extraction_result_invalid_relationship_target():
 
 def test_load_instructions(tmp_path):
     prompt_file = tmp_path / "extraction_prompt.txt"
-    prompt_content = "Please extract entities and relationships carefully."
+    prompt_content = "Please extract carefully.\n\n{{NEWS_ONTOLOGY}}"
     prompt_file.write_text(prompt_content)
     
     with patch("knowledge_map.adapters.extraction.PROMPT_PATH", str(prompt_file)):
         instructions = load_instructions()
-        assert instructions == prompt_content
+        assert "Please extract carefully." in instructions
+        assert "{{NEWS_ONTOLOGY}}" not in instructions
+        assert "`Politician`" in instructions
 
 def test_get_extraction_agent():
     with patch("knowledge_map.adapters.extraction.load_instructions", return_value="Custom test prompt"):
@@ -153,7 +157,10 @@ def test_extract_entities_validation_failure():
             extract_entities("Some text", agent=agent)
 
 def test_pydantic_ai_entity_extraction_adapter_success():
+    received_prompt = {}
+
     def mock_model(messages, info):
+        received_prompt["messages"] = str(messages)
         tool_name = info.output_tools[0].name
         return ModelResponse(parts=[
             ToolCallPart(
@@ -175,6 +182,9 @@ def test_pydantic_ai_entity_extraction_adapter_success():
         assert len(result.nodes) == 1
         assert result.nodes[0].name == "Gavin Newsom"
         assert len(result.relationships) == 0
+        for label in news.LABELS - {"NewsArticle", "Chunk"}:
+            assert f"`{label}`" in received_prompt["messages"]
+        assert "`aging-and-long-term-care`: Aging & Long-Term Care" in received_prompt["messages"]
 
 def test_pydantic_ai_entity_extraction_adapter_health_check_success():
     def mock_model(messages, info):
@@ -193,8 +203,6 @@ def test_pydantic_ai_entity_extraction_adapter_health_check_failure():
     with agent.override(model=FunctionModel(mock_model)):
         adapter = PydanticAIEntityExtractionAdapter(agent=agent)
         assert adapter.health_check() is False
-
-
 
 
 

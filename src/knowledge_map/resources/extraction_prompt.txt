@@ -18,7 +18,7 @@ Each entity must have:
 
 ```json
 {
-  "label": "Politician",
+  "label": "ExampleLabel",
   "name": "Example Name",
   "properties": {}
 }
@@ -27,51 +27,10 @@ Each entity must have:
 `properties` must contain the canonical `name` when the entity has a name, plus only
 values supported by the text.
 
-## Closed ontology
+{{NEWS_ONTOLOGY}}
 
-Use exactly one of these base labels—never invent another:
-
-- `NewsArticle`: article metadata only when supplied as input metadata.
-- `Chunk`: the supplied text block only when chunk metadata is supplied.
-- `PolicyArea`: a named policy topic explicitly discussed.
-- `Politician`: an identifiable elected or appointed politician.
-- `LegislativeTenure`: a specific politician's chamber and time period.
-- `District`: a named or numbered legislative district tied to a cycle.
-- `RedistrictingCycle`: a specifically identified redistricting cycle.
-- `Committee`: a legislative committee.
-- `Bill`: a legislative bill.
-- `LegislativeEvent`: a specific vote, amendment, or hearing; add exactly one of
-  `Vote`, `Amendment`, or `Hearing` to `sub_labels`.
-- `Prop`: a ballot proposition.
-- `Campaign`: a political committee campaign; add exactly one of
-  `CandidateCampaign` or `BallotMeasureCampaign` to `sub_labels`.
-- `Organization`: an organization; add one or more applicable structural
-  sub-labels: `PAC`, `IE_Committee`, `Corporation`, `LaborUnion`,
-  `TradeAssociation`, `NonProfit`, `AdvocacyGroup`, `GrassrootsMovement`,
-  `TribalNation`, `GovernmentAgency`, or `MediaOrganization`.
-
-Do not collapse ontology labels into generic people, organizations, or policy
-measures. In particular, use `Bill` for a bill and `Prop` for a proposition. Use
-`Politician` only when the person is identifiable; do not create a separate node
-for an unidentifiable spokesperson, voter, or unnamed official.
-
-Use the property names defined by `ontology.md` where applicable: for example,
-`first_name`, `last_name`, `current_party`, `chamber`, `start_year`, `end_year`,
-`number`, `session`, `current_status`, `type`, `date`, `description`,
-`official_title`, `election_date`, `industry_sector`, `fppc_id`, and `name`.
-Use ISO dates (`YYYY-MM-DD`) and integers for years. Omit unknown properties;
-never guess them.
-
-## Allowed relationships
-
-Emit only these relationship types, with `source` and `target` referring exactly to
-the corresponding canonical node names in the same response:
-
-`HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`, `EVOLVED_INTO`,
-`SERVES_ON`, `CHAIRS`, `VICE_CHAIRS`, `VOTED_AYE`, `VOTED_NO`, `ABSTAINED`,
-`ACTION_ON`, `ABOUT_TOPIC`, `CAMPAIGN_FOR`, `FUNDED`, `LOBBIED_FOR`,
-`LOBBIED_AGAINST`, `ENDORSED`, `DENOUNCED`, `DECLARED_STANCE`, `HAS_CHUNK`,
-`MENTIONS`, and `DISCUSSES_TOPIC`.
+Relationships use `source` and `target` names that refer exactly to corresponding
+canonical node names in the same response.
 
 Each relationship has this shape:
 
@@ -84,12 +43,8 @@ Each relationship has this shape:
 }
 ```
 
-Respect the source and target types in `ontology.md`. Add only relationship
-properties supported by the text, such as `amount`, `date`, `transaction_id`,
-`sequence_number`, or `alignment` (which must be `POSITIVE`, `NEGATIVE`, or
-`NEUTRAL`). Do not use a vague or inferred relationship when the article does not
-state the connection. `MENTIONS` is from `Chunk` to a core entity; `HAS_CHUNK` is
-from `NewsArticle` to `Chunk`.
+Add only relationship properties supported by the text. Do not use a vague or
+inferred relationship when the article does not state the connection.
 
 ## Extraction rules
 
@@ -97,8 +52,6 @@ from `NewsArticle` to `Chunk`.
 - Resolve pronouns and abbreviated references to a canonical name only when the
   antecedent is unambiguous in the text.
 - Deduplicate repeated mentions within this response.
-- Preserve distinctions between a person's current party and a tenure's
-  `party_affiliation`.
 - Do not infer endorsement from mere quotation, coverage, sponsorship, employment,
-  funding, or mention. Use `DECLARED_STANCE` for nuanced stated positions.
+  funding, or mention.
 - If no supported entities or relationships exist, return empty arrays.

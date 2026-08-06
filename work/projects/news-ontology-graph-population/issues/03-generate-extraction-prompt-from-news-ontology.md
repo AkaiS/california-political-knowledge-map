@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -32,15 +32,15 @@ shown, which makes both instructions inert.
 
 ## Acceptance criteria
 
-- [ ] The loaded prompt contains the label set, sub-label rules, per-label
+- [x] The loaded prompt contains the label set, sub-label rules, per-label
       property names, relationship list with endpoint types, and Policy Area
       vocabulary, all derived from the News Ontology.
-- [ ] No ontology fact appears in the prompt file's own prose.
-- [ ] The hand-tuned prose survives and is still editable as text.
-- [ ] `NewsArticle`, `Chunk`, `HAS_CHUNK`, the entity-to-chunk edge, the excluded
+- [x] No ontology fact appears in the prompt file's own prose.
+- [x] The hand-tuned prose survives and is still editable as text.
+- [x] `NewsArticle`, `Chunk`, `HAS_CHUNK`, the entity-to-chunk edge, the excluded
       tenure/district/redistricting vocabulary, `party_affiliation`, and both
       `ontology.md` references are gone from the prompt.
-- [ ] Verified at the Entity Extraction Adapter seam with a scripted model — the
+- [x] Verified at the Entity Extraction Adapter seam with a scripted model — the
       prompt the agent receives carries the injected label set and Policy Area
       vocabulary — rather than by asserting on an intermediate prompt string.
 

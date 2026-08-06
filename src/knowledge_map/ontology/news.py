@@ -43,6 +43,8 @@ SUB_LABELS = {
     ),
 }
 
+REQUIRED_SUB_LABELS = frozenset({"LegislativeEvent", "Campaign"})
+
 PROPERTIES = {label: PRIMARY_PROPERTIES[label] for label in LABELS}
 
 POLICY_AREAS = (

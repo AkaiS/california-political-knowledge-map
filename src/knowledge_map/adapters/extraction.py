@@ -1,16 +1,16 @@
-from typing import Dict, Any, List
 import json
-import os
 import logging
+import os
+from typing import Any
+
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.messages import ModelResponse
-from pydantic_ai.models import ModelRequestContext
-from knowledge_map.utils.models import get_ollama_model
 from pydantic_ai.capabilities import Hooks
 from pydantic_ai.models.openai import OpenAIChatModel
 
-from knowledge_map.schemas import ExtractionResult
 from knowledge_map.adapters.coreference import get_agent_metadata
+from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
+from knowledge_map.schemas import ExtractionResult
+from knowledge_map.utils.models import get_ollama_model
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ PROMPT_PATH = os.path.join(
     "resources",
     "extraction_prompt.txt"
 )
+ONTOLOGY_PLACEHOLDER = "{{NEWS_ONTOLOGY}}"
 
 hooks = Hooks()
 
@@ -48,7 +49,12 @@ def log_model_retries(ctx: RunContext, /, *, output_context: Any, output: Any, e
 def load_instructions() -> str:
     if os.path.exists(PROMPT_PATH):
         with open(PROMPT_PATH, "r", encoding="utf-8") as f:
-            return f.read()
+            prompt = f.read()
+        if prompt.count(ONTOLOGY_PLACEHOLDER) != 1:
+            raise ValueError(
+                f"Extraction prompt must contain exactly one {ONTOLOGY_PLACEHOLDER} placeholder"
+            )
+        return prompt.replace(ONTOLOGY_PLACEHOLDER, render_extraction_ontology())
     else:
         return "Extract entities and relationships from California politics stories."
 
@@ -139,7 +145,6 @@ class PydanticAIEntityExtractionAdapter:
             return bool(result and result.output)
         except Exception:
             return False
-
 
 
 
