@@ -3,7 +3,7 @@ import json
 import logging
 import os
 
-from knowledge_map.adapters.sqlite_db import get_unprocessed_stories
+from knowledge_map.adapters.sqlite_db import get_story_links, get_unprocessed_stories
 from knowledge_map.config import BatchIngestionSettings
 from knowledge_map.config import settings as global_settings
 from knowledge_map.core.exceptions import (
@@ -12,7 +12,7 @@ from knowledge_map.core.exceptions import (
     classify_exception,
 )
 from knowledge_map.core.pipeline import StoryPipeline
-from knowledge_map.schemas import ArticleStatus, SourceArticle
+from knowledge_map.schemas import ArticleStatus, SourceArticle, StoryLink
 from knowledge_map.utils.console import ConsoleNotifier
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,11 @@ class BatchIngestionService:
                     title=story_dict.get("title"),
                     author=story_dict.get("author"),
                     published_date=story_dict.get("published_date"),
-                    content=story_dict.get("content") or ""
+                    content=story_dict.get("content") or "",
+                    links=[
+                        StoryLink(url=link["url"], text=link.get("text"))
+                        for link in get_story_links(story_dict["id"], self.settings.db_path)
+                    ],
                 )
 
                 self.pipeline.run(article)

@@ -1,6 +1,6 @@
 import pytest
 import logging
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node
+from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node, StoryLink
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.core.pipeline import (
     StoryPipeline,
@@ -38,9 +38,10 @@ class MockDatabaseAdapter:
     def ingest_chunk_extraction(
         self,
         chunk_id: str,
-        extraction: ExtractionResult
+        extraction: ExtractionResult,
+        bill_sessions: dict[str, dict[str, object]],
     ) -> None:
-        self.extractions.append((chunk_id, extraction))
+        self.extractions.append((chunk_id, extraction, bill_sessions))
 
 class MockEmbeddingAdapter:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
@@ -140,9 +141,59 @@ def test_pipeline_persistence():
     assert stored_emb == [0.1, 0.2, 0.3]
 
     assert len(db.extractions) == 1
-    chunk_id, stored_extraction = db.extractions[0]
+    chunk_id, stored_extraction, _bill_sessions = db.extractions[0]
     assert chunk_id == "http://test.com/persist#chunk_0"
     assert stored_extraction.nodes[0].name == "Test Actor"
+
+
+def test_pipeline_resolves_bill_sessions_once_per_article():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    extraction.extract = lambda _text: ExtractionResult(nodes=[
+        Node(name="AB 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="SB 54", label="Bill", properties={"number": "SB 54"}),
+        Node(name="AB 99", label="Bill", properties={"number": "AB 99"}),
+        Node(name="AB 1", label="Bill", properties={"number": "AB 1"}),
+    ])
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="https://example.com/story",
+        title="Bills",
+        published_date="2026-04-10T12:00:00Z",
+        content="first chunk second chunk",
+        links=[
+            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200AB218"),
+            StoryLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
+            StoryLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
+            StoryLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
+        ],
+    )
+    chunks = [
+        ArticleChunk(text="first", start_index=0, end_index=5, index=0),
+        ArticleChunk(text="second", start_index=6, end_index=12, index=1),
+    ]
+
+    with patch("knowledge_map.core.pipeline.chunk_article", return_value=chunks), \
+         patch("knowledge_map.core.bill_sessions.parse_bill_url", wraps=__import__(
+             "knowledge_map.core.bill_sessions", fromlist=["parse_bill_url"]
+         ).parse_bill_url) as parser:
+        pipeline.run(article)
+
+    assert parser.call_count == len(article.links)
+    first_map = db.extractions[0][2]
+    assert db.extractions[1][2] is first_map
+    assert first_map == {
+        "AB 218": {"session": "2019-2020", "session_verified": True, "session_inferred": False, "needs_review": False},
+        "SB 54": {"session": "2017-2018", "session_verified": True, "session_inferred": False, "needs_review": False},
+        "AB 99": {"session": "2025-2026", "session_verified": False, "session_inferred": True, "needs_review": False},
+        "AB 1": {"session": None, "session_verified": False, "session_inferred": False, "needs_review": True},
+    }
 
 def test_pipeline_logging(caplog):
     caplog.set_level(logging.INFO)
@@ -697,5 +748,3 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
-
-

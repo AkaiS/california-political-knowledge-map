@@ -6,6 +6,7 @@ from neo4j import GraphDatabase
 from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
+from knowledge_map.core.bill_sessions import normalize_bill_number
 
 NEWS_PROVENANCE = "news-derived"
 SHORTCUT_SKIPS = {
@@ -190,17 +191,34 @@ class Neo4jAdapter:
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest Chunk to Neo4j: {e}")
 
-    def ingest_chunk_extraction(self, chunk_id: str, extraction: ExtractionResult) -> None:
+    def ingest_chunk_extraction(
+        self,
+        chunk_id: str,
+        extraction: ExtractionResult,
+        bill_sessions: dict[str, dict[str, object]] | None = None,
+    ) -> None:
+        bill_sessions = bill_sessions or {}
         driver = self.connect()
         try:
             with driver.session() as session:
                 def _tx(tx):
                     node_labels = {}
+                    node_ids = {}
                     for node in extraction.nodes:
                         label = node.label
                         node_labels[node.name] = label
                         labels = _validated_labels(label, node.sub_labels)
-                        node_id = _node_id(label, node.name)
+                        properties = dict(node.properties)
+                        if label == "Bill":
+                            number = normalize_bill_number(properties.get("number") or node.name)
+                            resolution = bill_sessions.get(number or "", {})
+                            properties.update(resolution)
+                            if number:
+                                properties["number"] = number
+                            node_id = f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or node.name)}"
+                        else:
+                            node_id = _node_id(label, node.name)
+                        node_ids[node.name] = node_id
 
                         # Merge node
                         query = (
@@ -209,7 +227,7 @@ class Neo4jAdapter:
                             "n.provenance = $provenance"
                         )
                         tx.run(query, node_id=node_id, name=node.name,
-                               properties=node.properties, provenance=NEWS_PROVENANCE)
+                               properties=properties, provenance=NEWS_PROVENANCE)
                         
                         # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
                         mention_query = f"""
@@ -242,8 +260,17 @@ class Neo4jAdapter:
                             f"MERGE (src)-[r:{rel_type}]->(tgt) "
                             f"SET r += $properties"
                         )
-                        tx.run(query, src_id=_node_id(src_label, rel.source),
-                               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties)
+                        def resolved_id(label: str, name: str) -> str:
+                            if name in node_ids:
+                                return node_ids[name]
+                            if label != "Bill":
+                                return _node_id(label, name)
+                            number = normalize_bill_number(name)
+                            resolution = bill_sessions.get(number or "", {})
+                            return f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or name)}"
+
+                        tx.run(query, src_id=resolved_id(src_label, rel.source),
+                               tgt_id=resolved_id(tgt_label, rel.target), properties=rel_properties)
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")

@@ -30,6 +30,7 @@ from knowledge_map.core.exceptions import (
 )
 from knowledge_map.cli.main import main
 from knowledge_map.schemas.stories import Story
+from knowledge_map.schemas import StoryLink
 from test_pipeline import (
     MockDatabaseAdapter,
     MockEmbeddingAdapter,
@@ -141,7 +142,8 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     story1 = Story(
         title="Story A",
         url="http://example.com/a",
-        content="Content of Story A"
+        content="Content of Story A",
+        links=[StoryLink(text="a bill", url="https://example.com/bill")],
     )
     story2 = Story(
         title="Story B",
@@ -169,6 +171,7 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     assert isinstance(called_article_1, SourceArticle)
     assert called_article_1.url == "http://example.com/a"
     assert called_article_1.content == "Content of Story A"
+    assert called_article_1.links == [StoryLink(text="a bill", url="https://example.com/bill")]
 
     # Second call
     called_article_2 = calls[1][0][0]
@@ -253,7 +256,7 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     class LocalMockDatabaseAdapter:
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
-        def ingest_chunk_extraction(self, chunk_id, extraction): pass
+        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions): pass
         
     class LocalMockEmbeddingAdapter:
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)
@@ -789,9 +792,6 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
     assert "locked" in str(exc_info.value).lower()
     # Verify no pipeline execution occurred
     assert mock_pipeline.run.call_count == 0
-
-
-
 
 
 

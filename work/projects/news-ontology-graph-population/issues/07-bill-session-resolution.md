@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -57,19 +57,19 @@ report URLs it never sees.
 
 ## Acceptance criteria
 
-- [ ] `SourceArticle` carries the article's links, populated by the batch
+- [x] `SourceArticle` carries the article's links, populated by the batch
       ingestion service.
-- [ ] Both bill URL schemes parse to session, chamber and number.
-- [ ] Matching is on the parsed number; anchor text is not consulted.
-- [ ] Tier 1 produces a session-verified `Bill`; tier 2 a session-inferred one
+- [x] Both bill URL schemes parse to session, chamber and number.
+- [x] Matching is on the parsed number; anchor text is not consulted.
+- [x] Tier 1 produces a session-verified `Bill`; tier 2 a session-inferred one
       from the publication date; tier 3 leaves the session unset and flags the
       node for review.
-- [ ] The session participates in the `Bill` primary key, so same-numbered bills
+- [x] The session participates in the `Bill` primary key, so same-numbered bills
       from different sessions are distinct nodes.
-- [ ] Resolution runs once per Source Article, observably not once per chunk.
-- [ ] The resolved session map reaches the database adapter as plain data, and the
+- [x] Resolution runs once per Source Article, observably not once per chunk.
+- [x] The resolved session map reaches the database adapter as plain data, and the
       Graph Database Adapter acquires no dependency on the document store.
-- [ ] Covered through the Story Pipeline with mock adapters — no dedicated unit
+- [x] Covered through the Story Pipeline with mock adapters — no dedicated unit
       test for the parser is required, since all of the above is observable there.
 
 ## Blocked by

@@ -493,6 +493,38 @@ def test_ingest_chunk_extraction_rejects_unvalidated_sub_label():
         manager.ingest_chunk_extraction("article#chunk_0", extraction)
     mock_tx.run.assert_not_called()
 
+
+def test_bill_session_participates_in_node_primary_key():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+    ])
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        {"AB 218": {"session": "2019-2020", "session_verified": True,
+                    "session_inferred": False, "needs_review": False}},
+    )
+    manager.ingest_chunk_extraction(
+        "article#chunk_1",
+        extraction,
+        {"AB 218": {"session": "2025-2026", "session_verified": True,
+                    "session_inferred": False, "needs_review": False}},
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert [call[1]["node_id"] for call in node_calls] == [
+        "Bill:2019-2020:ab-218",
+        "Bill:2025-2026:ab-218",
+    ]
+    assert node_calls[0][1]["properties"]["session_verified"] is True
+
 def test_context_manager_lifecycle():
     mock_driver = MagicMock()
     mock_driver.verify_connectivity.return_value = None
