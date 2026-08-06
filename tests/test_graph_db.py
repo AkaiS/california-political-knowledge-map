@@ -86,8 +86,8 @@ def test_ingest_extraction_result_nodes():
     mock_tx = MagicMock()
     extraction = ExtractionResult(
         nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"}),
-            Node(name="Democratic Party", label="Organization")
+            Node(name="Gavin Newsom", label="Politician", properties={"current_party": "Democratic"}),
+            Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"])
         ],
         relationships=[]
     )
@@ -101,20 +101,23 @@ def test_ingest_extraction_result_nodes():
     first_query = first_call_args[0][0]
     first_kwargs = first_call_args[1]
     
-    assert "MERGE (n:PoliticalActor {name: $name})" in first_query
-    assert "SET n.source_url = $source_url" in first_query
+    assert "MERGE (n:Politician {id: $node_id})" in first_query
+    assert "n.source_url = $source_url" in first_query
     assert "n += $properties" in first_query
+    assert first_kwargs["node_id"] == "Politician:gavin-newsom"
     assert first_kwargs["name"] == "Gavin Newsom"
     assert first_kwargs["source_url"] == "http://example.com/story"
-    assert first_kwargs["properties"] == {"role": "Governor"}
+    assert first_kwargs["properties"] == {"current_party": "Democratic"}
+    assert first_kwargs["provenance"] == "news-derived"
     
     # Check second call (Democratic Party)
     second_call_args = mock_tx.run.call_args_list[1]
     second_query = second_call_args[0][0]
     second_kwargs = second_call_args[1]
     
-    assert "MERGE (n:Organization {name: $name})" in second_query
-    assert second_kwargs["name"] == "Democratic Party"
+    assert "MERGE (n:Organization:LaborUnion {id: $node_id})" in second_query
+    assert second_kwargs["node_id"] == "Organization:california-teachers-association"
+    assert second_kwargs["name"] == "California Teachers Association"
     assert second_kwargs["source_url"] == "http://example.com/story"
     assert second_kwargs["properties"] == {}
 
@@ -122,14 +125,14 @@ def test_ingest_extraction_result_relationships():
     mock_tx = MagicMock()
     extraction = ExtractionResult(
         nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor"),
-            Node(name="Democratic Party", label="Organization")
+            Node(name="Gavin Newsom", label="Politician"),
+            Node(name="Education Committee", label="Committee")
         ],
         relationships=[
             Relationship(
                 source="Gavin Newsom",
-                target="Democratic Party",
-                relationship_type="MEMBER_OF",
+                target="Education Committee",
+                relationship_type="SERVES_ON",
                 properties={"status": "Active"}
             )
         ]
@@ -145,14 +148,15 @@ def test_ingest_extraction_result_relationships():
     rel_query = rel_call_args[0][0]
     rel_kwargs = rel_call_args[1]
     
-    assert "MATCH (src:PoliticalActor {name: $src_name})" in rel_query
-    assert "MATCH (src:PoliticalActor {name: $src_name}), (tgt:Organization {name: $tgt_name})" in rel_query or "MATCH (src:PoliticalActor {name: $src_name}),(tgt:Organization {name: $tgt_name})" in rel_query
-    assert "MERGE (src)-[r:MEMBER_OF]->(tgt)" in rel_query
+    assert "MATCH (src:Politician {id: $src_id}), (tgt:Committee {id: $tgt_id})" in rel_query
+    assert "MERGE (src)-[r:SERVES_ON]->(tgt)" in rel_query
     assert "SET r += $properties" in rel_query
     
-    assert rel_kwargs["src_name"] == "Gavin Newsom"
-    assert rel_kwargs["tgt_name"] == "Democratic Party"
-    assert rel_kwargs["properties"] == {"status": "Active"}
+    assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
+    assert rel_kwargs["tgt_id"] == "Committee:education-committee"
+    assert rel_kwargs["properties"] == {
+        "status": "Active", "provenance": "news-derived", "skips": "LegislativeTenure"
+    }
 
 def test_ingest_extraction_result_invalid_identifiers():
     from pydantic import ValidationError
@@ -436,14 +440,15 @@ def test_ingest_chunk_extraction():
     
     extraction = ExtractionResult(
         nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"}),
-            Node(name="Democratic Party", label="Organization")
+            Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"]),
+            Node(name="Yes on Schools", label="Campaign", sub_labels=["BallotMeasureCampaign"]),
+            Node(name="Education (K–12)", label="PolicyArea")
         ],
         relationships=[
             Relationship(
-                source="Gavin Newsom",
-                target="Democratic Party",
-                relationship_type="MEMBER_OF",
+                source="California Teachers Association",
+                target="Yes on Schools",
+                relationship_type="FUNDED",
                 properties={"status": "active"}
             )
         ]
@@ -454,25 +459,39 @@ def test_ingest_chunk_extraction():
         extraction=extraction
     )
     
-    # Expected: 2 node merges, 2 mentions, 1 relationship merge = 5 tx runs
-    assert mock_tx.run.call_count == 5
+    # Three node merges and mentions, one topic edge, and one extracted relationship.
+    assert mock_tx.run.call_count == 8
     
     # Inspect calls
     calls = [call[0][0] for call in mock_tx.run.call_args_list]
-    assert any("MERGE (n:PoliticalActor" in q for q in calls)
-    assert any("MERGE (n:Organization" in q for q in calls)
+    assert any("MERGE (n:Organization:LaborUnion {id: $node_id})" in q for q in calls)
+    assert any("MERGE (n:Campaign:BallotMeasureCampaign {id: $node_id})" in q for q in calls)
     assert any("[:MENTIONED_IN]" in q for q in calls)
-    assert any("MERGE (src)-[r:MEMBER_OF]->(tgt)" in q for q in calls)
-    assert any("r.source_chunk_id = $chunk_id" in q for q in calls)
-    
-    # Check that relationship query actually uses the chunk_id parameter
-    found_rel_kwargs = False
-    for call in mock_tx.run.call_args_list:
-        kwargs = call[1]
-        if "chunk_id" in kwargs and kwargs.get("chunk_id") == "http://example.com/1#chunk_0" and "src_name" in kwargs:
-            found_rel_kwargs = True
-            break
-    assert found_rel_kwargs
+    assert any("MERGE (c)-[:DISCUSSES_TOPIC]->(n)" in q for q in calls)
+    assert not any("NewsArticle" in q and "DISCUSSES_TOPIC" in q for q in calls)
+    assert any("MERGE (src)-[r:FUNDED]->(tgt)" in q for q in calls)
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:" in call[0][0]]
+    assert {call[1]["provenance"] for call in node_calls} == {"news-derived"}
+    rel_call = next(call for call in mock_tx.run.call_args_list if "[r:FUNDED]" in call[0][0])
+    assert rel_call[1]["properties"] == {"status": "active", "provenance": "news-derived"}
+
+
+def test_ingest_chunk_extraction_rejects_unvalidated_sub_label():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(nodes=[
+        Node(name="Some Club", label="Organization", sub_labels=["Club"]),
+    ])
+
+    with pytest.raises(Neo4jConnectionError, match="Invalid sub-label for Organization: Club"):
+        manager.ingest_chunk_extraction("article#chunk_0", extraction)
+    mock_tx.run.assert_not_called()
 
 def test_context_manager_lifecycle():
     mock_driver = MagicMock()

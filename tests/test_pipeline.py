@@ -53,7 +53,7 @@ class MockCoreferenceAdapter:
 class MockEntityExtractionAdapter:
     def extract(self, chunk_text: str) -> ExtractionResult:
         return ExtractionResult(
-            nodes=[Node(name="Test Actor", label="PoliticalActor")],
+            nodes=[Node(name="Test Actor", label="Politician")],
             relationships=[]
         )
 
@@ -697,6 +697,5 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
-
 
 

@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -42,18 +42,18 @@ intermediate node later ingestion must insert and the edge it must re-anchor.
 
 ## Acceptance criteria
 
-- [ ] Non-article nodes merge on `label:slug(name)` with `name` kept as a
+- [x] Non-article nodes merge on `label:slug(name)` with `name` kept as a
       property, and re-ingesting the same extraction twice creates no duplicates.
-- [ ] Sub-labels are written as additional Neo4j labels, after whitelist
+- [x] Sub-labels are written as additional Neo4j labels, after whitelist
       validation.
-- [ ] `MENTIONED_IN` is created automatically for every extracted entity.
-- [ ] `DISCUSSES_TOPIC` is created automatically from the chunk to each
+- [x] `MENTIONED_IN` is created automatically for every extracted entity.
+- [x] `DISCUSSES_TOPIC` is created automatically from the chunk to each
       `PolicyArea` in that chunk's extraction, with no properties; no
       article-level topic edge is written.
-- [ ] Every extractor-produced node and relationship carries the news-derived
+- [x] Every extractor-produced node and relationship carries the news-derived
       provenance property.
-- [ ] Shortcut relationships carry `skips` naming the bypassed node.
-- [ ] Covered at the graph adapter seam by inspecting the Cypher and parameters
+- [x] Shortcut relationships carry `skips` naming the bypassed node.
+- [x] Covered at the graph adapter seam by inspecting the Cypher and parameters
       issued to a captured driver.
 
 ## Blocked by

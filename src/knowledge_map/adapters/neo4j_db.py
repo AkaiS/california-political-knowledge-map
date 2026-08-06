@@ -1,7 +1,35 @@
 import re
+import unicodedata
+
 from neo4j import GraphDatabase
-from knowledge_map.schemas import ExtractionResult, SourceArticle, ArticleChunk
+
 from knowledge_map.config import settings
+from knowledge_map.ontology import news
+from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
+
+NEWS_PROVENANCE = "news-derived"
+SHORTCUT_SKIPS = {
+    shortcut.relationship_type: shortcut.skips for shortcut in news.SHORTCUTS
+}
+
+
+def _slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
+
+
+def _node_id(label: str, name: str) -> str:
+    return f"{label}:{_slug(name)}"
+
+
+def _validated_labels(label: str, sub_labels: list[str]) -> str:
+    if label not in news.LABELS - {"NewsArticle", "Chunk"}:
+        raise ValueError(f"Invalid extracted node label: {label}")
+    allowed = news.SUB_LABELS.get(label, frozenset())
+    invalid = set(sub_labels) - allowed
+    if invalid:
+        raise ValueError(f"Invalid sub-label for {label}: {min(invalid)}")
+    return ":".join((label, *sub_labels))
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -15,8 +43,15 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
     for node in extraction.nodes:
         label = node.label
         node_labels[node.name] = label
-        query = f"MERGE (n:{label} {{name: $name}}) SET n.source_url = $source_url, n += $properties"
-        tx.run(query, name=node.name, source_url=source_url, properties=node.properties)
+        labels = _validated_labels(label, node.sub_labels)
+        node_id = _node_id(label, node.name)
+        query = (
+            f"MERGE (n:{labels} {{id: $node_id}}) "
+            "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url, "
+            "n.provenance = $provenance"
+        )
+        tx.run(query, node_id=node_id, name=node.name, source_url=source_url,
+               properties=node.properties, provenance=NEWS_PROVENANCE)
 
     for rel in extraction.relationships:
         rel_type = rel.relationship_type
@@ -27,12 +62,16 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
         src_clause = f":{src_label}" if src_label else ""
         tgt_clause = f":{tgt_label}" if tgt_label else ""
         
+        rel_properties = {**rel.properties, "provenance": NEWS_PROVENANCE}
+        if rel_type in SHORTCUT_SKIPS:
+            rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
         query = (
-            f"MATCH (src{src_clause} {{name: $src_name}}), (tgt{tgt_clause} {{name: $tgt_name}}) "
+            f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
             f"MERGE (src)-[r:{rel_type}]->(tgt) "
             f"SET r += $properties"
         )
-        tx.run(query, src_name=rel.source, tgt_name=rel.target, properties=rel.properties)
+        tx.run(query, src_id=_node_id(src_label, rel.source),
+               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties)
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -160,17 +199,31 @@ class Neo4jAdapter:
                     for node in extraction.nodes:
                         label = node.label
                         node_labels[node.name] = label
-                        
+                        labels = _validated_labels(label, node.sub_labels)
+                        node_id = _node_id(label, node.name)
+
                         # Merge node
-                        query = f"MERGE (n:{label} {{name: $name}}) SET n += $properties"
-                        tx.run(query, name=node.name, properties=node.properties)
+                        query = (
+                            f"MERGE (n:{labels} {{id: $node_id}}) "
+                            "SET n += $properties, n.id = $node_id, n.name = $name, "
+                            "n.provenance = $provenance"
+                        )
+                        tx.run(query, node_id=node_id, name=node.name,
+                               properties=node.properties, provenance=NEWS_PROVENANCE)
                         
                         # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
                         mention_query = f"""
-                        MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{name: $name}})
+                        MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{id: $node_id}})
                         MERGE (n)-[:MENTIONED_IN]->(c)
                         """
-                        tx.run(mention_query, chunk_id=chunk_id, name=node.name)
+                        tx.run(mention_query, chunk_id=chunk_id, node_id=node_id)
+
+                        if label == "PolicyArea":
+                            topic_query = """
+                            MATCH (c:Chunk {id: $chunk_id}), (n:PolicyArea {id: $node_id})
+                            MERGE (c)-[:DISCUSSES_TOPIC]->(n)
+                            """
+                            tx.run(topic_query, chunk_id=chunk_id, node_id=node_id)
 
                     for rel in extraction.relationships:
                         rel_type = rel.relationship_type
@@ -181,12 +234,16 @@ class Neo4jAdapter:
                         src_clause = f":{src_label}" if src_label else ""
                         tgt_clause = f":{tgt_label}" if tgt_label else ""
                         
+                        rel_properties = {**rel.properties, "provenance": NEWS_PROVENANCE}
+                        if rel_type in SHORTCUT_SKIPS:
+                            rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
                         query = (
-                            f"MATCH (src{src_clause} {{name: $src_name}}), (tgt{tgt_clause} {{name: $tgt_name}}) "
+                            f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
                             f"MERGE (src)-[r:{rel_type}]->(tgt) "
-                            f"SET r.source_chunk_id = $chunk_id, r += $properties"
+                            f"SET r += $properties"
                         )
-                        tx.run(query, src_name=rel.source, tgt_name=rel.target, chunk_id=chunk_id, properties=rel.properties)
+                        tx.run(query, src_id=_node_id(src_label, rel.source),
+                               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties)
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")
