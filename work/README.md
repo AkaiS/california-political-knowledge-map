@@ -17,7 +17,21 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- none
+- [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### News Ontology and Graph Population frontier
+
+Two issues are takeable now; the rest declare their blockers. All are
+`ready-for-agent`.
+
+- [01 Author and review the Policy Area vocabulary](projects/news-ontology-graph-population/issues/01-author-policy-area-vocabulary.md), takeable. Gates the ontology package. Its list is drafted by an agent and reviewed by a human before commit.
+- [05 Write-path ontology vocabulary rename](projects/news-ontology-graph-population/issues/05-write-path-ontology-vocabulary-rename.md), takeable. A mechanical prefactor: `:Article` becomes `:NewsArticle` and `BELONGS_TO` becomes `HAS_CHUNK`.
+- [02 Ontology package and conformance check](projects/news-ontology-graph-population/issues/02-ontology-package-and-conformance-check.md), blocked by 01. Everything else in the project reads the News Ontology it introduces.
+- [03 Extraction Prompt generated from the News Ontology](projects/news-ontology-graph-population/issues/03-generate-extraction-prompt-from-news-ontology.md), blocked by 02.
+- [04 Sub-labels and extraction conformance](projects/news-ontology-graph-population/issues/04-sub-labels-and-extraction-conformance.md), blocked by 02.
+- [06 Node identity, provenance, and topic edges](projects/news-ontology-graph-population/issues/06-node-identity-provenance-and-topic-edges.md), blocked by 02, 04, and 05.
+- [07 Bill session resolution](projects/news-ontology-graph-population/issues/07-bill-session-resolution.md), blocked by 06.
+- [08 Rebuild the graph and record the label inventory](projects/news-ontology-graph-population/issues/08-rebuild-graph-and-record-label-inventory.md), blocked by 03, 04, 06, and 07. Produces the label and relationship counts the Useful Graph Retrieval map waits on.
 
 ### Useful Graph Retrieval frontier
 
@@ -25,7 +39,7 @@ The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
 charted on 2026-07-29 and holds ten tickets. Two are takeable now; the rest
 declare their blockers.
 
-- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-human`. Every other retrieval decision waits on it.
+- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Every other retrieval decision waits on it.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
 - [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
 
@@ -47,7 +61,7 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | none |
+| `ready-for-agent` | [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 
