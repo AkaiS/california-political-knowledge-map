@@ -1,8 +1,13 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
 [News Ontology and Graph Population](../PRD.md)
+
+## Deliverable
+
+[The Policy Area vocabulary](../policy-area-vocabulary.md) — 27 topic slugs,
+reviewed and accepted on 2026-08-06. Ticket 02 consumes it.
 
 ## What to build
 
@@ -29,14 +34,14 @@ created by this ticket.
 
 ## Acceptance criteria
 
-- [ ] Every entry is a topic slug, not a committee name, and names the standing
+- [x] Every entry is a topic slug, not a committee name, and names the standing
       committee or committees it was derived from.
-- [ ] Topics common to both chambers appear exactly once.
-- [ ] Appropriations, Rules, Budget, Elections and other process committees are
+- [x] Topics common to both chambers appear exactly once.
+- [x] Appropriations, Rules, Budget, Elections and other process committees are
       absent, and the exclusion rule applied is written down.
-- [ ] Judgement calls — committees with no cross-chamber counterpart, splits, and
+- [x] Judgement calls — committees with no cross-chamber counterpart, splits, and
       merges — are recorded alongside the list.
-- [ ] A human has reviewed the list before it is committed.
+- [x] A human has reviewed the list before it is committed.
 
 ## Blocked by
 

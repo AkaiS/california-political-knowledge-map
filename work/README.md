@@ -21,12 +21,12 @@ have not yet been shaped into executable work.
 
 ### News Ontology and Graph Population frontier
 
-Two issues are takeable now; the rest declare their blockers. All are
-`ready-for-agent`.
+Issue 01 is complete. Two issues are takeable now; the rest declare their
+blockers.
 
-- [01 Author and review the Policy Area vocabulary](projects/news-ontology-graph-population/issues/01-author-policy-area-vocabulary.md), takeable. Gates the ontology package. Its list is drafted by an agent and reviewed by a human before commit.
+- [01 Author and review the Policy Area vocabulary](projects/news-ontology-graph-population/issues/01-author-policy-area-vocabulary.md), `completed` on 2026-08-06. Its deliverable is [the Policy Area vocabulary](projects/news-ontology-graph-population/policy-area-vocabulary.md): 27 topic slugs derived from the Assembly and Senate subject-matter standing committees, reviewed and accepted.
 - [05 Write-path ontology vocabulary rename](projects/news-ontology-graph-population/issues/05-write-path-ontology-vocabulary-rename.md), takeable. A mechanical prefactor: `:Article` becomes `:NewsArticle` and `BELONGS_TO` becomes `HAS_CHUNK`.
-- [02 Ontology package and conformance check](projects/news-ontology-graph-population/issues/02-ontology-package-and-conformance-check.md), blocked by 01. Everything else in the project reads the News Ontology it introduces.
+- [02 Ontology package and conformance check](projects/news-ontology-graph-population/issues/02-ontology-package-and-conformance-check.md), takeable — unblocked by 01. Everything else in the project reads the News Ontology it introduces.
 - [03 Extraction Prompt generated from the News Ontology](projects/news-ontology-graph-population/issues/03-generate-extraction-prompt-from-news-ontology.md), blocked by 02.
 - [04 Sub-labels and extraction conformance](projects/news-ontology-graph-population/issues/04-sub-labels-and-extraction-conformance.md), blocked by 02.
 - [06 Node identity, provenance, and topic edges](projects/news-ontology-graph-population/issues/06-node-identity-provenance-and-topic-edges.md), blocked by 02, 04, and 05.
