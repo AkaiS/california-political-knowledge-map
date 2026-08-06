@@ -1,4 +1,4 @@
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -56,22 +56,22 @@ ticket's question about where the Extraction Prompt and the ontology disagreed.
 
 ## Acceptance criteria
 
-- [ ] The primary ontology module carries the label set, sub-label map, per-label
+- [x] The primary ontology module carries the label set, sub-label map, per-label
       property names, and the relationship table with permitted endpoint labels,
       mirroring `ontology.md`.
-- [ ] `ontology.md` is unmodified.
-- [ ] The News Ontology declares its labels, relationships, per-label property
+- [x] `ontology.md` is unmodified.
+- [x] The News Ontology declares its labels, relationships, per-label property
       names, the ticket 01 Policy Area vocabulary, and the six shortcut rules.
-- [ ] The excluded labels and relationships listed above are absent from the News
+- [x] The excluded labels and relationships listed above are absent from the News
       Ontology.
-- [ ] The conformance check asserts every News Ontology label exists in the
+- [x] The conformance check asserts every News Ontology label exists in the
       primary ontology, and every News Ontology relationship either appears in the
       primary relationship table with matching endpoints or is produced by a
       declared shortcut whose collapsed path exists in the primary ontology.
-- [ ] The conformance check runs in the test suite and fails loudly when either
+- [x] The conformance check runs in the test suite and fails loudly when either
       ontology is edited out of agreement — this is a test over two data
       structures, not a seam, and is the one non-seam test this project adds.
-- [ ] `news-ontology.md` is generated from the module, and regenerating it
+- [x] `news-ontology.md` is generated from the module, and regenerating it
       produces no diff.
 
 ## Blocked by
