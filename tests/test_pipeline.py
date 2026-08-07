@@ -39,7 +39,7 @@ class MockDatabaseAdapter:
         self,
         chunk_id: str,
         extraction: ExtractionResult,
-        bill_sessions: dict[str, dict[str, object]],
+        bill_sessions: dict[str, dict[str, object]] | None = None,
     ) -> None:
         self.extractions.append((chunk_id, extraction, bill_sessions))
 
@@ -51,12 +51,29 @@ class MockCoreferenceAdapter:
     def resolve(self, content: str) -> str:
         return content
 
+EMPTY_ADHERENCE_REPORT = {
+    "rejected_labels": {},
+    "rejected_relationship_types": {},
+    "rejected_property_names": {},
+}
+
+
 class MockEntityExtractionAdapter:
+    def __init__(self):
+        self.reset_calls = 0
+
     def extract(self, chunk_text: str) -> ExtractionResult:
         return ExtractionResult(
             nodes=[Node(name="Test Actor", label="Politician")],
             relationships=[]
         )
+
+    @property
+    def adherence_report(self) -> dict:
+        return dict(EMPTY_ADHERENCE_REPORT)
+
+    def reset_adherence_report(self) -> None:
+        self.reset_calls += 1
 
 class MockStatusTracker:
     def __init__(self):
@@ -396,7 +413,7 @@ def test_pipeline_with_neo4j_adapter():
     assert isinstance(result, PipelineResult)
     assert mock_tx.run.call_count >= 2
     queries = [call[0][0] for call in mock_tx.run.call_args_list]
-    assert any("MERGE (a:NewsArticle {url: $url})" in q for q in queries)
+    assert any("MERGE (a:NewsArticle {id: $url})" in q for q in queries)
     assert any("MERGE (c:Chunk {id: $chunk_id})" in q for q in queries)
 
 

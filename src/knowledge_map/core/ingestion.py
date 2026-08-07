@@ -30,10 +30,7 @@ class BatchIngestionService:
         self.consecutive_rate_limit_failures = 0
 
     def _write_adherence_report(self) -> None:
-        adapter = getattr(self.pipeline, "extraction_adapter", None)
-        report = getattr(adapter, "adherence_report", None)
-        if not isinstance(report, dict):
-            return
+        report = self.pipeline.extraction_adapter.adherence_report
         report_path = self.settings.adherence_report_path
         directory = os.path.dirname(report_path)
         if directory:
@@ -51,10 +48,7 @@ class BatchIngestionService:
             logger.error(f"Pipeline lock file found at {self.settings.lock_file_path}. Aborting startup.")
             raise PipelineLockError(f"Pipeline is locked. Lock file exists at {self.settings.lock_file_path}")
 
-        extraction_adapter = getattr(self.pipeline, "extraction_adapter", None)
-        reset_report = getattr(extraction_adapter, "reset_adherence_report", None)
-        if callable(reset_report):
-            reset_report()
+        self.pipeline.extraction_adapter.reset_adherence_report()
 
         try:
             self._run_stories()

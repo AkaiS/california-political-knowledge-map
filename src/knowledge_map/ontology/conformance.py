@@ -1,6 +1,7 @@
 """Assertions relating the News Ontology to the primary ontology."""
 
 from . import news, primary
+from .divergence import assert_divergences_are_unresolved_gaps
 
 
 def assert_news_ontology_conforms() -> None:
@@ -56,3 +57,40 @@ def assert_news_ontology_conforms() -> None:
 
     unused_shortcuts = shortcuts.keys() - news.RELATIONSHIPS.keys()
     assert not unused_shortcuts, f"Shortcuts produce undeclared relationships: {sorted(unused_shortcuts)}"
+
+    assert shortcuts == news.SHORTCUTS_BY_TYPE, "SHORTCUTS_BY_TYPE must index every shortcut"
+
+    assert_divergences_are_unresolved_gaps(
+        news.NODE_DIVERGENCES, news.LABELS, primary.PROPERTIES
+    )
+    assert_divergences_are_unresolved_gaps(
+        news.RELATIONSHIP_DIVERGENCES, frozenset(news.RELATIONSHIPS)
+    )
+
+    _assert_identifying_properties_are_declared()
+
+    declared = {divergence.property_name for divergence in news.DIVERGENCES}
+    assert "skips" not in declared, (
+        "`skips` is derivable from SHORTCUTS, which holds the path it flattened. "
+        "It is a recorded collapse, not an unresolved gap — do not declare it here."
+    )
+
+
+def _assert_identifying_properties_are_declared() -> None:
+    """A property can only key an edge if the primary ontology gives it a shape.
+
+    Keying on an undeclared property means keying on whatever string the model
+    happened to emit, which fragments the graph instead of aligning it.
+    """
+
+    for relationship_type, identifying in news.IDENTIFYING_PROPERTIES.items():
+        assert relationship_type in news.RELATIONSHIPS, (
+            f"{relationship_type} has identifying properties but is not a news relationship"
+        )
+        shape = primary.RELATIONSHIPS[relationship_type]
+        undeclared = identifying - shape.property_names
+        assert not undeclared, (
+            f"{relationship_type} is keyed on properties the primary ontology does not "
+            f"declare: {sorted(undeclared)}. Add them to its RelationshipShape first."
+        )
+        assert identifying, f"{relationship_type} declares an empty identifying set"

@@ -1,13 +1,54 @@
 """Render the model-extractable portion of the News Ontology for the prompt."""
 
-from knowledge_map.ontology import news
+from knowledge_map.ontology import news, primary
 
-WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
+
+def _relationship_property_lines(relationships: dict) -> list[str]:
+    """Fix the form of declared properties, without asking for any of them.
+
+    The prompt says how to write a value, never that one is owed. Which properties a
+    claim needs to be comparable is ``news.IDENTIFYING_PROPERTIES``, and the write
+    path settles that itself: a claim that arrives without them is flagged. Asking
+    the model to supply one it did not find only invites an invented value, which
+    keys a confident-looking edge instead of an honestly incomplete one.
+    """
+
+    described = {
+        relationship_type: primary.RELATIONSHIPS[relationship_type].properties
+        for relationship_type in sorted(relationships)
+        if primary.RELATIONSHIPS[relationship_type].properties
+    }
+    if not described:
+        return []
+
+    lines = [
+        "",
+        "### Relationship properties",
+        "",
+        "Attach any property the text supports. None are required. The properties below "
+        "have a fixed form: when you do supply one, write it exactly this way, so the "
+        "same value reported by two articles is recognisably the same value.",
+        "",
+    ]
+    for relationship_type, specs in described.items():
+        lines.append(f"- `{relationship_type}`:")
+        for spec in specs:
+            lines.append(f"  - `{spec.name}`: {spec.form}. Example: `{spec.example}`.")
+
+    lines.extend(
+        [
+            "",
+            "Write a value only where the article states one. Never estimate, round, "
+            "convert, or carry a value over from elsewhere in the text. An omitted value "
+            "is recorded as unknown; an invented one is recorded as fact.",
+        ]
+    )
+    return lines
 
 
 def render_extraction_ontology() -> str:
     """Render ontology facts that the extraction model is responsible for."""
-    labels = news.LABELS - WRITE_PATH_LABELS
+    labels = news.EXTRACTED_LABELS
     relationships = {
         relationship_type: shape
         for relationship_type, shape in news.RELATIONSHIPS.items()
@@ -49,6 +90,8 @@ def render_extraction_ontology() -> str:
         sources = " or ".join(f"`{item}`" for item in sorted(shape.source_labels))
         targets = " or ".join(f"`{item}`" for item in sorted(shape.target_labels))
         lines.append(f"- `{relationship_type}`: {sources} -> {targets}")
+
+    lines.extend(_relationship_property_lines(relationships))
 
     lines.extend(
         [

@@ -1,4 +1,6 @@
 from knowledge_map.ontology import assert_news_ontology_conforms, news, primary
+from knowledge_map.ontology.divergence import Divergence
+from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.ontology.primary import RelationshipShape
 from knowledge_map.ontology.render import GENERATED_PATH, render_news_ontology
 
@@ -19,6 +21,165 @@ def test_news_ontology_declares_six_tenure_shortcuts():
         "VOTED_AYE", "VOTED_NO", "ABSTAINED", "SERVES_ON", "CHAIRS", "VICE_CHAIRS"
     }
     assert {shortcut.skips for shortcut in news.SHORTCUTS} == {"LegislativeTenure"}
+
+
+def test_divergences_cover_every_property_the_write_path_stamps():
+    assert news.node_divergence_properties("Bill") == {
+        "name", "source_url", "session_verified", "session_inferred", "needs_review",
+    }
+    assert news.node_divergence_properties("Committee") == {"source_url"}
+    assert news.node_divergence_properties("NewsArticle") == set()
+
+
+def test_only_an_incomplete_claim_key_diverges_on_an_edge():
+    # An edge's evidence (`chunks`) and its collapse (`skips`) are not gaps — one is
+    # recorded structurally, the other in SHORTCUTS. An unusable key is a real gap.
+    assert {divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES} == {
+        "needs_review"
+    }
+    assert news.relationship_divergence_properties("FUNDED") == {"needs_review"}
+    assert news.relationship_divergence_properties("ENDORSED") == set()
+
+
+def test_a_claim_is_identified_only_by_properties_the_ontology_shapes():
+    assert news.IDENTIFYING_PROPERTIES["FUNDED"] == {"amount", "date"}
+    assert news.IDENTIFYING_PROPERTIES["DECLARED_STANCE"] == {"alignment"}
+
+    for relationship_type, identifying in news.IDENTIFYING_PROPERTIES.items():
+        assert identifying <= primary.RELATIONSHIPS[relationship_type].property_names
+
+    # Endorsement is binary: the edge's existence is the whole claim.
+    assert "ENDORSED" not in news.IDENTIFYING_PROPERTIES
+
+
+def test_conformance_rejects_a_claim_key_the_ontology_does_not_shape(monkeypatch):
+    monkeypatch.setattr(
+        news, "IDENTIFYING_PROPERTIES", {**news.IDENTIFYING_PROPERTIES, "ENDORSED": frozenset({"weight"})}
+    )
+
+    try:
+        assert_news_ontology_conforms()
+    except AssertionError as error:
+        assert "weight" in str(error)
+    else:
+        raise AssertionError("Conformance unexpectedly accepted an unshaped claim key")
+
+
+def test_a_shortcut_edge_is_reversible_from_its_type_alone():
+    shortcut = news.SHORTCUTS_BY_TYPE["VOTED_AYE"]
+
+    assert shortcut.path == (
+        ("Politician", "HELD_TENURE", "LegislativeTenure"),
+        ("LegislativeTenure", "VOTED_AYE", "LegislativeEvent"),
+    )
+    assert shortcut.skips == "LegislativeTenure"
+    # The flattened path is the whole reversal: nothing else need be recorded.
+    assert "skips" not in news.relationship_divergence_properties("VOTED_AYE")
+
+
+def test_divergent_properties_are_never_model_extractable():
+    for label in news.LABELS:
+        assert not news.node_divergence_properties(label) & news.PROPERTIES[label], (
+            f"{label} declares a property the pipeline also stamps"
+        )
+
+
+def test_every_divergence_states_a_reason_and_applies_somewhere():
+    for divergence in news.DIVERGENCES:
+        assert divergence.reason.strip()
+        assert divergence.applies_to
+
+
+def test_conformance_rejects_a_recorded_collapse_declared_as_a_divergence(monkeypatch):
+    as_divergence = news.RELATIONSHIP_DIVERGENCES + (
+        Divergence(
+            property_name="skips",
+            applies_to=frozenset(news.SHORTCUTS_BY_TYPE),
+            reason="derivable from SHORTCUTS",
+        ),
+    )
+    monkeypatch.setattr(news, "RELATIONSHIP_DIVERGENCES", as_divergence)
+    monkeypatch.setattr(news, "DIVERGENCES", news.NODE_DIVERGENCES + as_divergence)
+
+    try:
+        assert_news_ontology_conforms()
+    except AssertionError as error:
+        assert "skips" in str(error)
+    else:
+        raise AssertionError("Conformance unexpectedly accepted a recorded collapse")
+
+
+def test_conformance_rejects_a_divergence_the_primary_ontology_declares(monkeypatch):
+    redundant = news.NODE_DIVERGENCES + (
+        Divergence(
+            property_name="current_status",
+            applies_to=frozenset({"Bill"}),
+            reason="already declared",
+        ),
+    )
+    monkeypatch.setattr(news, "NODE_DIVERGENCES", redundant)
+
+    try:
+        assert_news_ontology_conforms()
+    except AssertionError as error:
+        assert "current_status" in str(error)
+    else:
+        raise AssertionError("Conformance unexpectedly accepted a redundant divergence")
+
+
+def test_the_prompt_asks_for_a_form_the_write_path_actually_accepts():
+    """Every example the prompt shows must survive its own normalizer.
+
+    This is the join between the two halves: the prompt tells the model how to write
+    a value, and the write path decides whether it is legible. If they drift, the
+    model complies perfectly and every claim still lands flagged.
+    """
+
+    for relationship_type, shape in primary.RELATIONSHIPS.items():
+        for spec in shape.properties:
+            assert spec.normalize(spec.example) is not None, (
+                f"{relationship_type}.{spec.name} advertises `{spec.example}` in the "
+                "extraction prompt, but its own normalizer rejects it"
+            )
+
+
+def test_the_prompt_fixes_the_form_of_a_property_without_demanding_one():
+    section = render_extraction_ontology()
+
+    assert "`alignment`: exactly one of `POSITIVE`, `NEGATIVE`, `NEUTRAL`" in section
+    assert "`amount`: a dollar figure" in section
+    assert "None are required." in section
+
+
+def test_the_prompt_never_ranks_a_relationship_property_as_required():
+    """Asking for a value the article withheld is an invitation to invent one.
+
+    An absent amount is already handled deterministically — the write path flags the
+    edge. A fabricated amount is not: it keys a confident, wrong edge. So the model is
+    told how to write a value, never that it owes one.
+    """
+
+    section = render_extraction_ontology()
+
+    assert "(required)" not in section
+    assert "(optional)" not in section
+    assert "Write a value only where the article states one." in section
+
+
+def test_an_identifying_property_is_a_write_path_concern_not_a_prompt_one():
+    # The requirement lives here, where a missing value becomes a flag rather than
+    # a demand the model can fail.
+    assert news.IDENTIFYING_PROPERTIES["FUNDED"] == {"amount", "date"}
+    assert "needs_review" in news.relationship_divergence_properties("FUNDED")
+
+
+def test_the_stance_enum_cannot_drift_from_what_the_prompt_advertises():
+    spec = primary.RELATIONSHIPS["DECLARED_STANCE"].spec("alignment")
+
+    for value in ("POSITIVE", "NEGATIVE", "NEUTRAL"):
+        assert f"`{value}`" in spec.form
+        assert spec.normalize(value) == value
+    assert spec.normalize("SUPPORTIVE") is None
 
 
 def test_generated_news_ontology_is_current():

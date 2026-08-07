@@ -12,7 +12,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from knowledge_map.adapters.coreference import get_agent_metadata
 from knowledge_map.ontology import news
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
-from knowledge_map.schemas import ExtractionResult, Node, Relationship
+from knowledge_map.schemas import AdherenceReport, ExtractionResult, Node, Relationship
 from knowledge_map.utils.models import get_ollama_model
 
 logger = logging.getLogger(__name__)
@@ -108,14 +108,14 @@ class PydanticAIEntityExtractionAdapter:
         self.reset_adherence_report()
 
     def reset_adherence_report(self) -> None:
-        self._adherence_report: dict[str, dict[str, dict[str, str | int]]] = {
+        self._adherence_report: AdherenceReport = {
             "rejected_labels": {},
             "rejected_relationship_types": {},
             "rejected_property_names": {},
         }
 
     @property
-    def adherence_report(self) -> dict[str, dict[str, dict[str, str | int]]]:
+    def adherence_report(self) -> AdherenceReport:
         return deepcopy(self._adherence_report)
 
     def _record_drop(self, category: str, value: str, chunk_id: str, reason: str) -> None:

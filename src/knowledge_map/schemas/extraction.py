@@ -63,3 +63,8 @@ class Relationship(BaseModel):
 class ExtractionResult(BaseModel):
     nodes: list[Node] = Field(default_factory=list, description="Extracted entities")
     relationships: list[Relationship] = Field(default_factory=list, description="Extracted relationships")
+
+
+#: Ontology items an extraction adapter dropped from model output, as
+#: ``category -> dropped value -> {"count", "example_chunk_id"}``.
+AdherenceReport = dict[str, dict[str, dict[str, str | int]]]

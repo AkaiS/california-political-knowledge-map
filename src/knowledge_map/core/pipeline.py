@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Protocol, List, Optional
 from knowledge_map.config import settings as global_settings
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
+from knowledge_map.schemas import AdherenceReport, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
 from knowledge_map.utils.chunking import chunk_article
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 
@@ -24,7 +24,7 @@ class DatabaseAdapter(Protocol):
         self,
         chunk_id: str,
         extraction: ExtractionResult,
-        bill_sessions: dict[str, dict[str, object]],
+        bill_sessions: dict[str, dict[str, object]] | None = None,
     ) -> None:
         ...
 
@@ -47,6 +47,14 @@ class CoreferenceAdapter(Protocol):
 
 class EntityExtractionAdapter(Protocol):
     def extract(self, chunk_text: str) -> ExtractionResult:
+        ...
+
+    @property
+    def adherence_report(self) -> AdherenceReport:
+        """Ontology items dropped from model output since the last reset."""
+        ...
+
+    def reset_adherence_report(self) -> None:
         ...
 
     def health_check(self) -> bool:

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from .divergence import Divergence, properties_for
 from .primary import PROPERTIES as PRIMARY_PROPERTIES
 from .primary import RelationshipShape
 
@@ -45,6 +46,15 @@ SUB_LABELS = {
 
 REQUIRED_SUB_LABELS = frozenset({"LegislativeEvent", "Campaign"})
 
+#: Labels the pipeline writes from the article itself, never from model output.
+WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
+
+#: Labels the extraction model is responsible for producing.
+EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS
+
+#: Property names the model may supply, per label. Divergences are excluded on
+#: purpose: they are stamped by the pipeline, so a model that emits one is
+#: guessing and gets dropped.
 PROPERTIES = {label: PRIMARY_PROPERTIES[label] for label in LABELS}
 
 POLICY_AREAS = (
@@ -100,6 +110,11 @@ SHORTCUTS = tuple(
     for relationship_type, target_label in _SHORTCUT_TARGETS.items()
 )
 
+#: Shortcuts by the edge they produce. A shortcut edge is reversible from this
+#: alone: the rule holds the path it flattened, so expanding one back out needs
+#: no further record on the edge beyond the type it already carries.
+SHORTCUTS_BY_TYPE = {shortcut.relationship_type: shortcut for shortcut in SHORTCUTS}
+
 RELATIONSHIPS = {
     "SERVES_ON": RelationshipShape(frozenset({"Politician"}), frozenset({"Committee"})),
     "CHAIRS": RelationshipShape(frozenset({"Politician"}), frozenset({"Committee"})),
@@ -123,3 +138,91 @@ RELATIONSHIPS = {
     ),
     "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle", "Chunk"}), frozenset({"PolicyArea"})),
 }
+
+NODE_DIVERGENCES = (
+    Divergence(
+        property_name="name",
+        applies_to=frozenset(
+            label for label in EXTRACTED_LABELS if "name" not in PRIMARY_PROPERTIES[label]
+        ),
+        reason=(
+            "The extractor identifies an entity by the surface string the article used, "
+            "but these labels declare structured fields instead of a `name`. Only entity "
+            "resolution against an authoritative record can populate them."
+        ),
+    ),
+    Divergence(
+        property_name="source_url",
+        applies_to=EXTRACTED_LABELS,
+        reason=(
+            "The legacy whole-article write path has no `Chunk` to hang a mention off, "
+            "so it records the originating article on the node instead. The chunked path "
+            "reaches the article through `MENTIONED_IN` and `HAS_CHUNK` and omits it."
+        ),
+    ),
+    Divergence(
+        property_name="session_verified",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "A `Bill` id is only stable per legislative session, and news prose rarely "
+            "names one. Tier 1 resolves it from a linked authoritative bill page, so the "
+            "session is as good as the source and the key is final."
+        ),
+    ),
+    Divergence(
+        property_name="session_inferred",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "Tier 2 guesses the session from the article's publication date, which is "
+            "wrong for a bill discussed outside the session that introduced it. The key "
+            "is provisional: only the authoritative session can confirm or re-key it."
+        ),
+    ),
+    Divergence(
+        property_name="needs_review",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "No session could be resolved or inferred, so the key is a placeholder that "
+            "nothing we hold can settle."
+        ),
+    ),
+)
+
+#: Properties whose value *is* the claim, so two edges of the same type between the
+#: same pair are the same edge only if these agree. A `FUNDED` edge means something
+#: different at six million than at four; two articles naming different figures are
+#: making different assertions, and the graph should hold both rather than let the
+#: last one ingested overwrite the first.
+#:
+#: Nothing requires an extractor to produce these. The prompt never asks for one, and
+#: an edge that arrives without them is written and flagged rather than dropped —
+#: a missing value is recoverable, an invented one is not. This table says only what
+#: makes two edges comparable once the values are in hand.
+IDENTIFYING_PROPERTIES = {
+    "FUNDED": frozenset({"amount", "date"}),
+    "DECLARED_STANCE": frozenset({"alignment"}),
+}
+
+RELATIONSHIP_DIVERGENCES = (
+    Divergence(
+        property_name="needs_review",
+        applies_to=frozenset(IDENTIFYING_PROPERTIES),
+        reason=(
+            "The article asserted the relationship without a value the claim depends on, "
+            "or named one in a form nothing else will match. The edge is real but its key "
+            "is incomplete, so it cannot yet be compared against another article's."
+        ),
+    ),
+)
+
+DIVERGENCES = NODE_DIVERGENCES + RELATIONSHIP_DIVERGENCES
+
+
+def node_divergence_properties(label: str) -> frozenset[str]:
+    """Property names the write path stamps on nodes carrying ``label``."""
+    return properties_for(NODE_DIVERGENCES, label)
+
+
+def relationship_divergence_properties(relationship_type: str) -> frozenset[str]:
+    """Property names the write path stamps on ``relationship_type`` edges."""
+    return properties_for(RELATIONSHIP_DIVERGENCES, relationship_type)

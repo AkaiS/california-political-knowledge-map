@@ -4,14 +4,67 @@ import unicodedata
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
-from knowledge_map.ontology import news
+from knowledge_map.ontology import news, primary
 from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
 from knowledge_map.core.bill_sessions import normalize_bill_number
 
-NEWS_PROVENANCE = "news-derived"
 SHORTCUT_SKIPS = {
-    shortcut.relationship_type: shortcut.skips for shortcut in news.SHORTCUTS
+    relationship_type: shortcut.skips
+    for relationship_type, shortcut in news.SHORTCUTS_BY_TYPE.items()
 }
+
+
+def _normalized_properties(relationship_type: str, properties: dict) -> dict:
+    """Canonicalize declared properties; pass everything else through untouched.
+
+    A declared property whose value will not normalize is dropped rather than
+    stored: keeping ``"a lot"`` alongside ``6000000.0`` in the same field is what
+    makes two articles look like they disagree when only one of them was legible.
+    """
+
+    shape = primary.RELATIONSHIPS.get(relationship_type)
+    if shape is None:
+        return dict(properties)
+
+    normalized = {}
+    for name, value in properties.items():
+        spec = shape.spec(name)
+        if spec is None:
+            normalized[name] = value
+            continue
+        canonical = spec.normalize(value)
+        if canonical is not None:
+            normalized[name] = canonical
+    return normalized
+
+
+def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
+    """The identifying values that pin this claim, and whether any are missing.
+
+    Two edges of the same type between the same pair are the same edge only when
+    their claim keys match. An incomplete key is not padded with nulls — Neo4j
+    stores no nulls and would never match one — so the edge merges on what it has
+    and carries `needs_review` to say the comparison is not yet possible.
+    """
+
+    identifying = news.IDENTIFYING_PROPERTIES.get(relationship_type, frozenset())
+    key = {name: properties[name] for name in sorted(identifying) if name in properties}
+    return key, len(key) < len(identifying)
+
+
+def _relationship_query(
+    relationship_type: str, src_clause: str, tgt_clause: str, key: dict
+) -> str:
+    """A MERGE keyed on the claim. Key names come from the ontology, never from input."""
+
+    key_pattern = ""
+    if key:
+        key_pattern = " {" + ", ".join(f"{name}: $key_{name}" for name in sorted(key)) + "}"
+    return (
+        f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
+        f"MERGE (src)-[r:{relationship_type}{key_pattern}]->(tgt) "
+        f"SET r += $properties"
+    )
 
 
 def _slug(value: str) -> str:
@@ -24,7 +77,7 @@ def _node_id(label: str, name: str) -> str:
 
 
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
-    if label not in news.LABELS - {"NewsArticle", "Chunk"}:
+    if label not in news.EXTRACTED_LABELS:
         raise ValueError(f"Invalid extracted node label: {label}")
     allowed = news.SUB_LABELS.get(label, frozenset())
     invalid = set(sub_labels) - allowed
@@ -48,11 +101,10 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
         node_id = _node_id(label, node.name)
         query = (
             f"MERGE (n:{labels} {{id: $node_id}}) "
-            "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url, "
-            "n.provenance = $provenance"
+            "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url"
         )
         tx.run(query, node_id=node_id, name=node.name, source_url=source_url,
-               properties=node.properties, provenance=NEWS_PROVENANCE)
+               properties=node.properties)
 
     for rel in extraction.relationships:
         rel_type = rel.relationship_type
@@ -63,16 +115,16 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
         src_clause = f":{src_label}" if src_label else ""
         tgt_clause = f":{tgt_label}" if tgt_label else ""
         
-        rel_properties = {**rel.properties, "provenance": NEWS_PROVENANCE}
+        rel_properties = _normalized_properties(rel_type, rel.properties)
         if rel_type in SHORTCUT_SKIPS:
             rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
-        query = (
-            f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
-            f"MERGE (src)-[r:{rel_type}]->(tgt) "
-            f"SET r += $properties"
-        )
+        key, incomplete = _claim_key(rel_type, rel_properties)
+        if incomplete:
+            rel_properties["needs_review"] = True
+        query = _relationship_query(rel_type, src_clause, tgt_clause, key)
         tx.run(query, src_id=_node_id(src_label, rel.source),
-               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties)
+               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties,
+               **{f"key_{name}": value for name, value in key.items()})
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -147,8 +199,9 @@ class Neo4jAdapter:
         try:
             with driver.session() as session:
                 def _tx(tx):
+                    # The article URL is the NewsArticle primary key; see ontology.md.
                     query = """
-                    MERGE (a:NewsArticle {url: $url})
+                    MERGE (a:NewsArticle {id: $url})
                     SET a.title = $title, a.author = $author, a.published_date = $published_date
                     """
                     tx.run(
@@ -174,9 +227,9 @@ class Neo4jAdapter:
             with driver.session() as session:
                 def _tx(tx):
                     query = """
-                    MATCH (a:NewsArticle {url: $url})
+                    MATCH (a:NewsArticle {id: $url})
                     MERGE (c:Chunk {id: $chunk_id})
-                    SET c.text = $text, c.chunk_index = $chunk_index, c.embedding = $embedding
+                    SET c.text = $text, c.index = $index, c.embedding = $embedding
                     MERGE (a)-[:HAS_CHUNK]->(c)
                     """
                     tx.run(
@@ -184,8 +237,8 @@ class Neo4jAdapter:
                         url=article.url,
                         chunk_id=chunk_id,
                         text=chunk.text,
-                        chunk_index=chunk.index,
-                        embedding=embedding
+                        index=chunk.index,
+                        embedding=embedding,
                     )
                 session.execute_write(_tx)
         except Exception as e:
@@ -223,12 +276,10 @@ class Neo4jAdapter:
                         # Merge node
                         query = (
                             f"MERGE (n:{labels} {{id: $node_id}}) "
-                            "SET n += $properties, n.id = $node_id, n.name = $name, "
-                            "n.provenance = $provenance"
+                            "SET n += $properties, n.id = $node_id, n.name = $name"
                         )
-                        tx.run(query, node_id=node_id, name=node.name,
-                               properties=properties, provenance=NEWS_PROVENANCE)
-                        
+                        tx.run(query, node_id=node_id, name=node.name, properties=properties)
+
                         # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
                         mention_query = f"""
                         MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{id: $node_id}})
@@ -252,14 +303,19 @@ class Neo4jAdapter:
                         src_clause = f":{src_label}" if src_label else ""
                         tgt_clause = f":{tgt_label}" if tgt_label else ""
                         
-                        rel_properties = {**rel.properties, "provenance": NEWS_PROVENANCE}
+                        rel_properties = _normalized_properties(rel_type, rel.properties)
                         if rel_type in SHORTCUT_SKIPS:
                             rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
-                        query = (
-                            f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
-                            f"MERGE (src)-[r:{rel_type}]->(tgt) "
-                            f"SET r += $properties"
+                        key, incomplete = _claim_key(rel_type, rel_properties)
+                        if incomplete:
+                            rel_properties["needs_review"] = True
+                        # The chunks that assert *this* claim. Keyed edges keep the list
+                        # tight; the append dedupes so re-ingesting an article is a no-op.
+                        query = _relationship_query(rel_type, src_clause, tgt_clause, key) + (
+                            " SET r.chunks = CASE WHEN $chunk_id IN coalesce(r.chunks, []) "
+                            "THEN r.chunks ELSE coalesce(r.chunks, []) + $chunk_id END"
                         )
+
                         def resolved_id(label: str, name: str) -> str:
                             if name in node_ids:
                                 return node_ids[name]
@@ -270,7 +326,9 @@ class Neo4jAdapter:
                             return f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or name)}"
 
                         tx.run(query, src_id=resolved_id(src_label, rel.source),
-                               tgt_id=resolved_id(tgt_label, rel.target), properties=rel_properties)
+                               tgt_id=resolved_id(tgt_label, rel.target),
+                               properties=rel_properties, chunk_id=chunk_id,
+                               **{f"key_{name}": value for name, value in key.items()})
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")

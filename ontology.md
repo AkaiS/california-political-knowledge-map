@@ -4,20 +4,22 @@
 
 #### `:NewsArticle`
 
-- `id`: `STRING` _(Primary Key: URL or deterministic hash of source + publication date)_
+- `id`: `STRING` _(Primary Key: the article's canonical URL)_
     
 - `title`: `STRING`
     
+- `author`: `STRING` _(Byline as published; absent when the article carries none)_
+    
 - `publisher`: `STRING` _(e.g., "Los Angeles Times", "CalMatters")_
     
-- `publish_date`: `DATE`
+- `published_date`: `DATE`
     
 - `summary`: `STRING` _(LLM-generated high-level tl;dr)_
     
 
 #### `:Chunk`
 
-- `id`: `STRING` _(Primary Key: `article_id` + "_" + `chunk_index`)_
+- `id`: `STRING` _(Primary Key: `article_id` + "#chunk_" + `index`)_
     
 - `text`: `STRING` _(The raw markdown text block passed to the LLM at query time)_
     

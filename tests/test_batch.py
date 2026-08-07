@@ -32,6 +32,7 @@ from knowledge_map.cli.main import main
 from knowledge_map.schemas.stories import Story
 from knowledge_map.schemas import StoryLink
 from test_pipeline import (
+    EMPTY_ADHERENCE_REPORT,
     MockDatabaseAdapter,
     MockEmbeddingAdapter,
     MockCoreferenceAdapter,
@@ -39,6 +40,13 @@ from test_pipeline import (
     MockStatusTracker,
     MockDeadLetterQueueAdapter
 )
+
+
+def make_mock_pipeline() -> MagicMock:
+    """A mock pipeline whose extraction adapter honours the adherence-report protocol."""
+    pipeline = MagicMock()
+    pipeline.extraction_adapter.adherence_report = dict(EMPTY_ADHERENCE_REPORT)
+    return pipeline
 
 def test_batch_ingestion_settings_defaults():
     # Verify default values
@@ -154,7 +162,7 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     save_story(story2, db_path=db_path)
 
     # Mock StoryPipeline
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     # Instantiate service
     settings = BatchIngestionSettings(db_path=db_path)
@@ -256,17 +264,22 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     class LocalMockDatabaseAdapter:
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
-        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions): pass
-        
+        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None): pass
+
     class LocalMockEmbeddingAdapter:
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)
-        
+
     class LocalMockCoreferenceAdapter:
         def resolve(self, content): return content
-        
+
     class LocalMockEntityExtractionAdapter:
         def extract(self, chunk_text):
             return ExtractionResult(nodes=[Node(name="Test Actor", label="PoliticalActor")], relationships=[])
+
+        @property
+        def adherence_report(self): return dict(EMPTY_ADHERENCE_REPORT)
+
+        def reset_adherence_report(self): pass
     
     db_file = tmp_path / "test_transitions.db"
     db_path = str(db_file)
@@ -353,7 +366,7 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     coref_err = CoreferenceResolutionError(
         original_text="Content 1",
@@ -389,7 +402,7 @@ def test_batch_ingestion_resilience_extraction_error(tmp_path):
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     extract_err = ExtractionError(
         original_text="Content 1",
@@ -427,7 +440,7 @@ def test_batch_ingestion_consecutive_system_errors(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
         
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
     
@@ -464,7 +477,7 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
         
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
     
@@ -695,7 +708,7 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
 
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
 
@@ -773,7 +786,7 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
 
 def test_batch_ingestion_startup_lock_check(tmp_path):
 
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     lock_file = tmp_path / "pipeline.lock"
     lock_file.write_text("locked content")
     lock_file_path = str(lock_file)

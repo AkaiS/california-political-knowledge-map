@@ -21,13 +21,36 @@ def render_news_ontology() -> str:
         sub_labels = ", ".join(f"`{item}`" for item in sorted(news.SUB_LABELS.get(label, ()))) or "—"
         lines.append(f"| `{label}` | {properties} | {sub_labels} |")
 
-    lines.extend(["", "## Relationships", "", "| Type | Sources | Targets |", "| --- | --- | --- |"])
+    lines.extend(
+        [
+            "", "## Relationships", "",
+            "Relationship properties are open: an extractor may attach anything an article",
+            "asserts, and it is kept. Properties under *Identifies the claim* are normalized",
+            "and form the edge's key, because the relationship means something different at",
+            "a different value — two articles naming different amounts assert different",
+            "things and get separate edges. They are not required of the extractor: an edge",
+            "that arrives without them is written and carries `needs_review`.", "",
+            "| Type | Sources | Targets | Identifies the claim |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
     for relationship_type, shape in sorted(news.RELATIONSHIPS.items()):
         sources = " / ".join(f"`{item}`" for item in sorted(shape.source_labels))
         targets = " / ".join(f"`{item}`" for item in sorted(shape.target_labels))
-        lines.append(f"| `{relationship_type}` | {sources} | {targets} |")
+        identifying = " / ".join(
+            f"`{item}`" for item in sorted(news.IDENTIFYING_PROPERTIES.get(relationship_type, ()))
+        ) or "—"
+        lines.append(f"| `{relationship_type}` | {sources} | {targets} | {identifying} |")
 
-    lines.extend(["", "## Shortcuts", ""])
+    lines.extend(
+        [
+            "", "## Shortcuts", "",
+            "Paths the news write path flattens into one edge, because prose names the",
+            "endpoints but not what sits between them. Each rule holds the path it",
+            "replaced, so a shortcut edge can be expanded back out from its type alone.",
+            "The edge also carries `skips` naming the label to reinsert.", "",
+        ]
+    )
     for shortcut in news.SHORTCUTS:
         path = " → ".join(
             f"`{source}` -`{relationship}`→ `{target}`"
@@ -36,6 +59,26 @@ def render_news_ontology() -> str:
         lines.append(
             f"- {path} ⇒ `{shortcut.source_label}` -`{shortcut.relationship_type}`→ "
             f"`{shortcut.target_label}` (`skips`: `{shortcut.skips}`)"
+        )
+
+    lines.extend(
+        [
+            "", "## Divergences from the primary ontology", "",
+            "Properties the write path stamps that the primary ontology does not declare,",
+            "each marking something news could not supply and nothing we hold can settle.",
+            "Unlike a shortcut, a divergence is not reversible from our own record: closing",
+            "one needs an authoritative source.", "",
+            "An edge's evidence is not a divergence: the `Chunk` it was read from is",
+            "recorded in `chunks`, which the primary ontology has no need of because a",
+            "record does not cite a passage. Nor is its collapse, which the shortcut holds.", "",
+            "| Property | Applies to | Why news needs it |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for divergence in news.DIVERGENCES:
+        applies_to = " / ".join(f"`{item}`" for item in sorted(divergence.applies_to))
+        lines.append(
+            f"| `{divergence.property_name}` | {applies_to} | {divergence.reason} |"
         )
 
     shortcut_types = {shortcut.relationship_type for shortcut in news.SHORTCUTS}

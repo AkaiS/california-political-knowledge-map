@@ -13,7 +13,7 @@ of the primary ontology plus the declared shortcuts below.
 | `Chunk` | `embedding`, `id`, `index`, `text` | — |
 | `Committee` | `chamber`, `id`, `name` | — |
 | `LegislativeEvent` | `date`, `description`, `id`, `type` | `Amendment`, `Hearing`, `Vote` |
-| `NewsArticle` | `id`, `publish_date`, `publisher`, `summary`, `title` | — |
+| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | — |
 | `Organization` | `fppc_id`, `id`, `industry_sector`, `name` | `AdvocacyGroup`, `Corporation`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |
 | `PolicyArea` | `embedding`, `id`, `name` | — |
 | `Politician` | `birth_date`, `current_party`, `first_name`, `id`, `last_name` | — |
@@ -21,28 +21,40 @@ of the primary ontology plus the declared shortcuts below.
 
 ## Relationships
 
-| Type | Sources | Targets |
-| --- | --- | --- |
-| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` |
-| `ABSTAINED` | `Politician` | `LegislativeEvent` |
-| `ACTION_ON` | `LegislativeEvent` | `Bill` |
-| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` |
-| `CHAIRS` | `Politician` | `Committee` |
-| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` |
-| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` |
-| `DISCUSSES_TOPIC` | `Chunk` / `NewsArticle` | `PolicyArea` |
-| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` |
-| `FUNDED` | `Organization` | `Campaign` |
-| `HAS_CHUNK` | `NewsArticle` | `Chunk` |
-| `LOBBIED_AGAINST` | `Organization` | `Bill` |
-| `LOBBIED_FOR` | `Organization` | `Bill` |
-| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` |
-| `SERVES_ON` | `Politician` | `Committee` |
-| `VICE_CHAIRS` | `Politician` | `Committee` |
-| `VOTED_AYE` | `Politician` | `LegislativeEvent` |
-| `VOTED_NO` | `Politician` | `LegislativeEvent` |
+Relationship properties are open: an extractor may attach anything an article
+asserts, and it is kept. Properties under *Identifies the claim* are normalized
+and form the edge's key, because the relationship means something different at
+a different value — two articles naming different amounts assert different
+things and get separate edges. They are not required of the extractor: an edge
+that arrives without them is written and carries `needs_review`.
+
+| Type | Sources | Targets | Identifies the claim |
+| --- | --- | --- | --- |
+| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | — |
+| `ABSTAINED` | `Politician` | `LegislativeEvent` | — |
+| `ACTION_ON` | `LegislativeEvent` | `Bill` | — |
+| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | — |
+| `CHAIRS` | `Politician` | `Committee` | — |
+| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |
+| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
+| `DISCUSSES_TOPIC` | `Chunk` / `NewsArticle` | `PolicyArea` | — |
+| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
+| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
+| `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
+| `LOBBIED_AGAINST` | `Organization` | `Bill` | — |
+| `LOBBIED_FOR` | `Organization` | `Bill` | — |
+| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | — |
+| `SERVES_ON` | `Politician` | `Committee` | — |
+| `VICE_CHAIRS` | `Politician` | `Committee` | — |
+| `VOTED_AYE` | `Politician` | `LegislativeEvent` | — |
+| `VOTED_NO` | `Politician` | `LegislativeEvent` | — |
 
 ## Shortcuts
+
+Paths the news write path flattens into one edge, because prose names the
+endpoints but not what sits between them. Each rule holds the path it
+replaced, so a shortcut edge can be expanded back out from its type alone.
+The edge also carries `skips` naming the label to reinsert.
 
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_AYE`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_AYE`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_NO`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_NO`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)
@@ -50,6 +62,26 @@ of the primary ontology plus the declared shortcuts below.
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`SERVES_ON`→ `Committee` ⇒ `Politician` -`SERVES_ON`→ `Committee` (`skips`: `LegislativeTenure`)
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`CHAIRS`→ `Committee` ⇒ `Politician` -`CHAIRS`→ `Committee` (`skips`: `LegislativeTenure`)
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VICE_CHAIRS`→ `Committee` ⇒ `Politician` -`VICE_CHAIRS`→ `Committee` (`skips`: `LegislativeTenure`)
+
+## Divergences from the primary ontology
+
+Properties the write path stamps that the primary ontology does not declare,
+each marking something news could not supply and nothing we hold can settle.
+Unlike a shortcut, a divergence is not reversible from our own record: closing
+one needs an authoritative source.
+
+An edge's evidence is not a divergence: the `Chunk` it was read from is
+recorded in `chunks`, which the primary ontology has no need of because a
+record does not cite a passage. Nor is its collapse, which the shortcut holds.
+
+| Property | Applies to | Why news needs it |
+| --- | --- | --- |
+| `name` | `Bill` / `LegislativeEvent` / `Politician` / `Prop` | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
+| `source_url` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `PolicyArea` / `Politician` / `Prop` | The legacy whole-article write path has no `Chunk` to hang a mention off, so it records the originating article on the node instead. The chunked path reaches the article through `MENTIONED_IN` and `HAS_CHUNK` and omits it. |
+| `session_verified` | `Bill` | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
+| `session_inferred` | `Bill` | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |
+| `needs_review` | `Bill` | No session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. |
+| `needs_review` | `DECLARED_STANCE` / `FUNDED` | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |
 
 ## Primary ontology concepts outside news scope
 
