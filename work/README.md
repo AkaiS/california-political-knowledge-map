@@ -31,7 +31,8 @@ blockers.
 - [04 Sub-labels and extraction conformance](projects/news-ontology-graph-population/issues/04-sub-labels-and-extraction-conformance.md), blocked by 02.
 - [06 Node identity, provenance, and topic edges](projects/news-ontology-graph-population/issues/06-node-identity-provenance-and-topic-edges.md), blocked by 02, 04, and 05.
 - [07 Bill session resolution](projects/news-ontology-graph-population/issues/07-bill-session-resolution.md), blocked by 06.
-- [08 Rebuild the graph and record the label inventory](projects/news-ontology-graph-population/issues/08-rebuild-graph-and-record-label-inventory.md), blocked by 03, 04, 06, and 07. Produces the label and relationship counts the Useful Graph Retrieval map waits on.
+- [Code review of issues 02–07](projects/news-ontology-graph-population/code-review/README.md), `ready-for-agent` as of 2026-08-07. Eighteen findings from a standards-and-spec review of the six completed issues. Three would corrupt the graph 08 builds, and two acceptance criteria are ticked for work that was not done. Broken into [fourteen tickets](projects/news-ontology-graph-population/code-review/issues/) on 2026-08-08; tickets 01, 03, 04, 05, and 07 are takeable now and the rest declare their blockers.
+- [08 Rebuild the graph and record the label inventory](projects/news-ontology-graph-population/issues/08-rebuild-graph-and-record-label-inventory.md), blocked by 03, 04, 06, 07, and the code review. Produces the label and relationship counts the Useful Graph Retrieval map waits on.
 
 ### Useful Graph Retrieval frontier
 
@@ -122,6 +123,7 @@ files and the code:
 | Initiative | A large uncertain area that needs investigation | `initiatives/<slug>/` |
 | Project | A bounded deliverable described by a PRD | `projects/<slug>/` |
 | Issue | An independently completable change or investigation | A project's `issues/` directory or `issues/` |
+| Code review | Whether a project's build matched its PRD | `projects/<slug>/code-review/` |
 | Inbox | Unshaped ideas, defects, questions, and observations | `inbox.md` |
 | Archive | Superseded plans and immutable imported source notes | `archive/` |
 
