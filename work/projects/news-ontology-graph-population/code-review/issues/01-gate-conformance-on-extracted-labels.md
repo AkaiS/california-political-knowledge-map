@@ -29,16 +29,16 @@ testable without constructing an adapter or a model.
 
 ## Acceptance criteria
 
-- [ ] Conformance rejects a node label outside the extracted-label subset,
+- [x] Conformance rejects a node label outside the extracted-label subset,
       including `NewsArticle` and `Chunk`.
-- [ ] A response mixing one such node with conforming entities yields the
+- [x] A response mixing one such node with conforming entities yields the
       conforming entities and a recorded drop, and raises nothing.
-- [ ] Conformance is an importable pure function in the ontology package,
+- [x] Conformance is an importable pure function in the ontology package,
       returning the conformed result and its drops.
-- [ ] The Entity Extraction Adapter calls that function and is the only place
+- [x] The Entity Extraction Adapter calls that function and is the only place
       that touches the Adherence Report.
-- [ ] The Graph Database Adapter's label check is unchanged in behavior.
-- [ ] The suite is green.
+- [x] The Graph Database Adapter's label check is unchanged in behavior.
+- [x] The suite is green.
 
 ## Blocked by
 

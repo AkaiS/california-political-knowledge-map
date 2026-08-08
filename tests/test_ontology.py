@@ -1,8 +1,14 @@
-from knowledge_map.ontology import assert_news_ontology_conforms, news, primary
+from knowledge_map.ontology import (
+    assert_news_ontology_conforms,
+    conform_extraction_result,
+    news,
+    primary,
+)
 from knowledge_map.ontology.divergence import Divergence
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.ontology.primary import RelationshipShape
 from knowledge_map.ontology.render import GENERATED_PATH, render_news_ontology
+from knowledge_map.schemas import ExtractionResult, Node, Relationship
 
 
 def test_news_ontology_conforms_to_primary_ontology():
@@ -227,3 +233,60 @@ def test_conformance_fails_loudly_when_primary_endpoints_drift(monkeypatch):
         assert "ACTION_ON" in str(error)
     else:
         raise AssertionError("Conformance unexpectedly accepted primary-ontology drift")
+
+
+def test_extraction_conformance_rejects_write_path_labels():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="A California Story", label="NewsArticle"),
+            Node(name="A California Story #1", label="Chunk"),
+            Node(name="Mystery", label="PoliticalActor"),
+            Node(name="Alex Lee", label="Politician"),
+        ],
+        relationships=[],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [node.name for node in outcome.result.nodes] == ["Alex Lee"]
+    assert [(drop.category, drop.value, drop.chunk_id) for drop in outcome.drops] == [
+        ("rejected_labels", "NewsArticle", "sha256:abc"),
+        ("rejected_labels", "Chunk", "sha256:abc"),
+        ("rejected_labels", "PoliticalActor", "sha256:abc"),
+    ]
+
+
+def test_extraction_conformance_keeps_conforming_entities_beside_a_bad_one():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="A California Story", label="NewsArticle"),
+            Node(name="AB 1", label="Bill", properties={"number": "AB 1"}),
+            Node(name="Good Vote", label="LegislativeEvent", sub_labels=["Vote"]),
+        ],
+        relationships=[
+            Relationship(source="Good Vote", target="AB 1", relationship_type="ACTION_ON"),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [node.name for node in outcome.result.nodes] == ["AB 1", "Good Vote"]
+    assert [rel.relationship_type for rel in outcome.result.relationships] == ["ACTION_ON"]
+    assert len(outcome.drops) == 1
+
+
+def test_extraction_conformance_leaves_its_input_untouched():
+    result = ExtractionResult(
+        nodes=[Node(name="Alex Lee", label="Politician", properties={"nickname": "Al"})],
+        relationships=[],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert result.nodes[0].properties == {"nickname": "Al"}
+    assert outcome.result.nodes[0].properties == {}
+
+
+def test_write_path_labels_are_excluded_from_the_extracted_subset():
+    assert news.WRITE_PATH_LABELS == {"NewsArticle", "Chunk"}
+    assert news.EXTRACTED_LABELS == news.LABELS - news.WRITE_PATH_LABELS

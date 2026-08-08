@@ -10,9 +10,12 @@ from pydantic_ai.capabilities import Hooks
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from knowledge_map.adapters.coreference import get_agent_metadata
-from knowledge_map.ontology import news
+from knowledge_map.ontology.extraction_conformance import (
+    ConformanceDrop,
+    conform_extraction_result,
+)
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
-from knowledge_map.schemas import AdherenceReport, ExtractionResult, Node, Relationship
+from knowledge_map.schemas import AdherenceReport, ExtractionResult
 from knowledge_map.utils.models import get_ollama_model
 
 logger = logging.getLogger(__name__)
@@ -118,77 +121,24 @@ class PydanticAIEntityExtractionAdapter:
     def adherence_report(self) -> AdherenceReport:
         return deepcopy(self._adherence_report)
 
-    def _record_drop(self, category: str, value: str, chunk_id: str, reason: str) -> None:
-        entries = self._adherence_report[category]
-        entry = entries.setdefault(value, {"count": 0, "example_chunk_id": chunk_id})
+    def _record_drop(self, drop: ConformanceDrop) -> None:
+        entries = self._adherence_report[drop.category]
+        entry = entries.setdefault(drop.value, {"count": 0, "example_chunk_id": drop.chunk_id})
         entry["count"] += 1
         logger.warning(
             "Dropped extraction item (%s=%s, chunk=%s): %s",
-            category,
-            value,
-            chunk_id,
-            reason,
+            drop.category,
+            drop.value,
+            drop.chunk_id,
+            drop.reason,
         )
 
     def _conform(self, result: ExtractionResult, chunk_text: str) -> ExtractionResult:
         chunk_id = f"sha256:{hashlib.sha256(chunk_text.encode('utf-8')).hexdigest()}"
-        nodes: list[Node] = []
-
-        for node in result.nodes:
-            if node.label not in news.LABELS:
-                self._record_drop("rejected_labels", node.label, chunk_id, "unknown label")
-                continue
-
-            allowed_sub_labels = news.SUB_LABELS.get(node.label, frozenset())
-            invalid_sub_labels = [item for item in node.sub_labels if item not in allowed_sub_labels]
-            if invalid_sub_labels:
-                for sub_label in invalid_sub_labels:
-                    self._record_drop(
-                        "rejected_labels", sub_label, chunk_id, f"unknown sub-label for {node.label}"
-                    )
-                continue
-            if node.label in news.REQUIRED_SUB_LABELS and not node.sub_labels:
-                self._record_drop(
-                    "rejected_labels", node.label, chunk_id, "required sub-label is missing"
-                )
-                continue
-
-            properties = {}
-            for name, value in node.properties.items():
-                if name not in news.PROPERTIES[node.label]:
-                    self._record_drop(
-                        "rejected_property_names", name, chunk_id, f"unknown property for {node.label}"
-                    )
-                else:
-                    properties[name] = value
-            nodes.append(node.model_copy(update={"properties": properties}))
-
-        nodes_by_name = {node.name: node for node in nodes}
-        relationships: list[Relationship] = []
-        for relationship in result.relationships:
-            relationship_type = relationship.relationship_type
-            shape = news.RELATIONSHIPS.get(relationship_type)
-            if shape is None:
-                self._record_drop(
-                    "rejected_relationship_types", relationship_type, chunk_id, "unknown relationship type"
-                )
-                continue
-
-            source = nodes_by_name.get(relationship.source)
-            target = nodes_by_name.get(relationship.target)
-            if source is None or target is None:
-                self._record_drop(
-                    "rejected_relationship_types", relationship_type, chunk_id, "dangling endpoint"
-                )
-                continue
-            if source.label not in shape.source_labels or target.label not in shape.target_labels:
-                self._record_drop(
-                    "rejected_relationship_types", relationship_type, chunk_id, "endpoint labels violate ontology"
-                )
-                continue
-            relationships.append(relationship)
-
-        return ExtractionResult(nodes=nodes, relationships=relationships)
+        outcome = conform_extraction_result(result, chunk_id)
+        for drop in outcome.drops:
+            self._record_drop(drop)
+        return outcome.result
 
     def extract(self, chunk_text: str) -> ExtractionResult:
         try:

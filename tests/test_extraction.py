@@ -263,3 +263,37 @@ def test_pydantic_ai_entity_extraction_adapter_health_check_failure():
 
 
 
+
+
+def test_adapter_drops_a_model_emitted_article_node_without_dead_lettering_the_chunk():
+    response = {
+        "nodes": [
+            {"name": "A California Story", "label": "NewsArticle"},
+            {"name": "A California Story #1", "label": "Chunk"},
+            {"name": "Alex Lee", "label": "Politician"},
+            {"name": "AB 1", "label": "Bill", "properties": {"number": "AB 1"}},
+            {"name": "Good Vote", "label": "LegislativeEvent", "sub_labels": ["Vote"]},
+        ],
+        "relationships": [
+            {"source": "Good Vote", "target": "AB 1", "relationship_type": "ACTION_ON"},
+        ],
+    }
+
+    def scripted_model(messages, info):
+        return ModelResponse(parts=[ToolCallPart(
+            tool_name=info.output_tools[0].name,
+            args=response,
+            tool_call_id="scripted",
+        )])
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(scripted_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        result = adapter.extract("chunk one")
+
+    assert [node.name for node in result.nodes] == ["Alex Lee", "AB 1", "Good Vote"]
+    assert [rel.relationship_type for rel in result.relationships] == ["ACTION_ON"]
+    report = adapter.adherence_report
+    assert report["rejected_labels"]["NewsArticle"]["count"] == 1
+    assert report["rejected_labels"]["Chunk"]["count"] == 1
+    assert report["rejected_labels"]["NewsArticle"]["example_chunk_id"].startswith("sha256:")

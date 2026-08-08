@@ -77,6 +77,13 @@ def _node_id(label: str, name: str) -> str:
 
 
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
+    """Assert the write path's own invariant on labels reaching the graph.
+
+    Extraction conformance already gates model output on the same
+    extracted-label subset, so this cannot fire on a conformed result. It stays
+    as an internal invariant: an ingester that skipped conformance fails here
+    rather than writing an off-ontology node.
+    """
     if label not in news.EXTRACTED_LABELS:
         raise ValueError(f"Invalid extracted node label: {label}")
     allowed = news.SUB_LABELS.get(label, frozenset())
