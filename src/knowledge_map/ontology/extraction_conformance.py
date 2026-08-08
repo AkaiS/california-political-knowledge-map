@@ -12,6 +12,12 @@ not on the full News Ontology label set. ``NewsArticle`` and ``Chunk`` are
 written from the article itself, so a model that emits one is guessing: the node
 is dropped like any other off-ontology output and the conforming entities beside
 it survive.
+
+The drop-and-log rule holds on both sides of an edge. A relationship property the
+relationship's shape does not declare is dropped exactly as an undeclared node
+property is, under its own Adherence Report category; the relationship survives
+its own property drops, because an edge whose detail was refused still asserts
+that the claim exists.
 """
 
 from dataclasses import dataclass
@@ -24,6 +30,7 @@ from . import news
 REJECTED_LABELS = "rejected_labels"
 REJECTED_RELATIONSHIP_TYPES = "rejected_relationship_types"
 REJECTED_PROPERTY_NAMES = "rejected_property_names"
+REJECTED_RELATIONSHIP_PROPERTY_NAMES = "rejected_relationship_property_names"
 
 
 @dataclass(frozen=True)
@@ -98,7 +105,23 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
         if source.label not in shape.source_labels or target.label not in shape.target_labels:
             drop(REJECTED_RELATIONSHIP_TYPES, relationship_type, "endpoint labels violate ontology")
             continue
-        relationships.append(relationship)
+
+        # Relationship properties are write-path-owned: an undeclared one is dropped
+        # like an undeclared node property, but recorded under its own category so a
+        # model attaching payload to edges is visible separately from one inventing
+        # node fields. The relationship itself survives — losing every property it
+        # carried costs the edge its detail, never its existence.
+        properties = {}
+        for name, value in relationship.properties.items():
+            if name not in shape.property_names:
+                drop(
+                    REJECTED_RELATIONSHIP_PROPERTY_NAMES,
+                    name,
+                    f"unknown property for {relationship_type}",
+                )
+            else:
+                properties[name] = value
+        relationships.append(relationship.model_copy(update={"properties": properties}))
 
     return ConformanceOutcome(
         result=ExtractionResult(nodes=nodes, relationships=relationships),

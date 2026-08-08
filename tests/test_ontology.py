@@ -321,6 +321,93 @@ def test_extraction_conformance_leaves_its_input_untouched():
     assert outcome.result.nodes[0].properties == {}
 
 
+def test_extraction_conformance_drops_undeclared_relationship_properties():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Big PAC", label="Organization", sub_labels=["PAC"]),
+            Node(name="Yes on 12", label="Campaign", sub_labels=["BallotMeasureCampaign"]),
+        ],
+        relationships=[
+            Relationship(
+                source="Big PAC",
+                target="Yes on 12",
+                relationship_type="FUNDED",
+                properties={"amount": "$6 million", "mood": "enthusiastic"},
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    # The declared property is untouched; the invented one never reaches the edge.
+    assert [rel.properties for rel in outcome.result.relationships] == [{"amount": "$6 million"}]
+    assert [(drop.category, drop.value, drop.chunk_id) for drop in outcome.drops] == [
+        ("rejected_relationship_property_names", "mood", "sha256:abc"),
+    ]
+    assert result.relationships[0].properties == {"amount": "$6 million", "mood": "enthusiastic"}
+
+
+def test_a_relationship_survives_losing_every_property_it_carried():
+    # Losing an edge's detail costs it its nuance, never its existence: the claim
+    # was still asserted, and the Article Chunk still holds what the article said.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Alex Lee", label="Politician"),
+            Node(name="Budget Committee", label="Committee"),
+        ],
+        relationships=[
+            Relationship(
+                source="Alex Lee",
+                target="Budget Committee",
+                relationship_type="SERVES_ON",
+                properties={"since": "2000", "role": "member"},
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [rel.relationship_type for rel in outcome.result.relationships] == ["SERVES_ON"]
+    assert outcome.result.relationships[0].properties == {}
+    assert {drop.value for drop in outcome.drops} == {"since", "role"}
+
+
+def test_a_dropped_relationship_property_is_recorded_apart_from_a_node_property():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Alex Lee", label="Politician", properties={"nickname": "Al"}),
+            Node(name="Budget Committee", label="Committee"),
+        ],
+        relationships=[
+            Relationship(
+                source="Alex Lee",
+                target="Budget Committee",
+                relationship_type="SERVES_ON",
+                properties={"nickname": "Al"},
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    # Same property name on both sides of the edge, two different categories: a model
+    # inventing node fields is a different defect from one attaching payload to edges.
+    assert [(drop.category, drop.value) for drop in outcome.drops] == [
+        ("rejected_property_names", "nickname"),
+        ("rejected_relationship_property_names", "nickname"),
+    ]
+
+
+def test_a_news_relationship_declares_the_properties_the_prompt_asks_for():
+    # Conformance and the extraction prompt read one table, so the prompt can never
+    # ask for a property conformance would then drop.
+    for relationship_type, shape in news.RELATIONSHIPS.items():
+        assert shape.properties == primary.RELATIONSHIPS[relationship_type].properties
+
+    assert news.RELATIONSHIPS["FUNDED"].property_names == {"amount", "date", "transaction_id"}
+    assert news.RELATIONSHIPS["ENDORSED"].property_names == frozenset()
+
+
 def test_write_path_labels_are_excluded_from_the_extracted_subset():
     assert news.WRITE_PATH_LABELS == {"NewsArticle", "Chunk"}
     assert news.EXTRACTED_LABELS == news.LABELS - news.WRITE_PATH_LABELS

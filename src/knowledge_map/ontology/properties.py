@@ -1,9 +1,10 @@
 """Normalized shapes for relationship properties.
 
-Relationship properties are open: an extractor may attach anything it believes an
-article asserted, and the write path keeps it. What this module declares is the
-shape of the few properties whose *value* carries the claim — the ones two articles
-must agree on before their edges can be called the same edge.
+Relationship properties are closed: an extractor may attach only what the
+relationship declares, and conformance drops the rest before the write path sees
+them. What this module declares is the shape those properties take — including the
+few whose *value* carries the claim, the ones two articles must agree on before
+their edges can be called the same edge.
 
 Declaring a shape does not make a property required. It says: if you find one, it
 looks like this. ``news.IDENTIFYING_PROPERTIES`` is where a property becomes

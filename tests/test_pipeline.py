@@ -55,6 +55,7 @@ EMPTY_ADHERENCE_REPORT = {
     "rejected_labels": {},
     "rejected_relationship_types": {},
     "rejected_property_names": {},
+    "rejected_relationship_property_names": {},
 }
 
 

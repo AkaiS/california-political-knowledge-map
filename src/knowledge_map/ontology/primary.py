@@ -12,9 +12,10 @@ class RelationshipShape:
     """Permitted endpoint labels for one primary-ontology relationship.
 
     ``properties`` declares the canonical form of the properties ``ontology.md``
-    names for this relationship. It is not a whitelist: an extractor may attach
-    properties nobody anticipated, and those pass through untouched. Declaring one
-    only fixes its shape so two articles asserting it can be compared.
+    names for this relationship, and it is the whitelist conformance reads: a
+    property nobody declared is dropped rather than written, so the only values
+    reaching an edge are ones the system put there deliberately. Declaring one also
+    fixes its shape, so two articles asserting it can be compared.
     """
 
     source_labels: frozenset[str]

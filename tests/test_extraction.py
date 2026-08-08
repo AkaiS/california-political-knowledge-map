@@ -185,6 +185,41 @@ def test_pydantic_ai_entity_extraction_adapter_success():
         assert "`aging-and-long-term-care`: Aging & Long-Term Care" in received_prompt["messages"]
 
 
+def test_adapter_drops_undeclared_relationship_properties_into_their_own_category():
+    response = {
+        "nodes": [
+            {"name": "Big PAC", "label": "Organization", "sub_labels": ["PAC"]},
+            {"name": "Yes on 12", "label": "Campaign", "sub_labels": ["BallotMeasureCampaign"]},
+        ],
+        "relationships": [
+            {
+                "source": "Big PAC",
+                "target": "Yes on 12",
+                "relationship_type": "FUNDED",
+                "properties": {"amount": "$6 million", "mood": "enthusiastic"},
+            },
+        ],
+    }
+
+    def scripted_model(messages, info):
+        return ModelResponse(parts=[ToolCallPart(
+            tool_name=info.output_tools[0].name,
+            args=response,
+            tool_call_id="scripted",
+        )])
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(scripted_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        result = adapter.extract("chunk one")
+
+    assert [rel.properties for rel in result.relationships] == [{"amount": "$6 million"}]
+    report = adapter.adherence_report
+    assert report["rejected_relationship_property_names"]["mood"]["count"] == 1
+    assert report["rejected_relationship_property_names"]["mood"]["example_chunk_id"].startswith("sha256:")
+    assert report["rejected_property_names"] == {}
+
+
 def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog):
     responses = [
         {

@@ -17,14 +17,14 @@ reach an edge are ones the system put there deliberately.
 
 ## Acceptance criteria
 
-- [ ] A relationship property not declared by the relationship's shape is
+- [x] A relationship property not declared by the relationship's shape is
       dropped during conformance and recorded with its chunk.
-- [ ] Declared relationship properties are untouched.
-- [ ] A relationship whose properties are entirely undeclared still produces the
+- [x] Declared relationship properties are untouched.
+- [x] A relationship whose properties are entirely undeclared still produces the
       relationship; only the properties are lost.
-- [ ] The drop is recorded under its own Adherence Report category, distinct
+- [x] The drop is recorded under its own Adherence Report category, distinct
       from node property drops.
-- [ ] The suite is green.
+- [x] The suite is green.
 
 ## Blocked by
 

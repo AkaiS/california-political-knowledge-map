@@ -197,6 +197,7 @@ def test_batch_ingestion_writes_and_resets_adherence_report(tmp_path):
         "rejected_labels": {"Unknown": {"count": 1, "example_chunk_id": "sha256:abc"}},
         "rejected_relationship_types": {},
         "rejected_property_names": {},
+        "rejected_relationship_property_names": {},
     }
     pipeline = MagicMock()
     pipeline.extraction_adapter = extraction_adapter

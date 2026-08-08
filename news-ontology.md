@@ -21,8 +21,9 @@ of the primary ontology plus the declared shortcuts below.
 
 ## Relationships
 
-Relationship properties are open: an extractor may attach anything an article
-asserts, and it is kept. Properties under *Identifies the claim* are normalized
+Relationship properties are closed: an extractor may attach only the properties
+the relationship declares, and anything else it supplies is dropped and recorded
+in the Adherence Report. Properties under *Identifies the claim* are normalized
 and form the edge's key, because the relationship means something different at
 a different value — two articles naming different amounts assert different
 things and get separate edges. They are not required of the extractor: an edge

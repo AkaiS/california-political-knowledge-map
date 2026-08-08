@@ -1,9 +1,10 @@
 """The closed ontology of structures the news pipeline can produce."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .divergence import Divergence, properties_for
 from .primary import PROPERTIES as PRIMARY_PROPERTIES
+from .primary import RELATIONSHIPS as PRIMARY_RELATIONSHIPS
 from .primary import RelationshipShape
 
 
@@ -124,7 +125,7 @@ SHORTCUTS = tuple(
 #: no further record on the edge beyond the type it already carries.
 SHORTCUTS_BY_TYPE = {shortcut.relationship_type: shortcut for shortcut in SHORTCUTS}
 
-RELATIONSHIPS = {
+_RELATIONSHIP_ENDPOINTS = {
     "SERVES_ON": RelationshipShape(frozenset({"Politician"}), frozenset({"Committee"})),
     "CHAIRS": RelationshipShape(frozenset({"Politician"}), frozenset({"Committee"})),
     "VICE_CHAIRS": RelationshipShape(frozenset({"Politician"}), frozenset({"Committee"})),
@@ -146,6 +147,20 @@ RELATIONSHIPS = {
         frozenset({"Chunk"}),
     ),
     "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle", "Chunk"}), frozenset({"PolicyArea"})),
+}
+
+#: News relationships, endpoints as declared above and properties inherited from the
+#: primary ontology. Inheriting rather than restating is what keeps the two tables from
+#: disagreeing: the extraction prompt asks for exactly the primary ontology's declared
+#: properties, so those and only those are the ones a model may attach to an edge.
+#: Anything else it supplies is dropped during conformance — a relationship property is
+#: write-path-owned, so the only values reaching an edge are ones the system put there
+#: deliberately.
+RELATIONSHIPS = {
+    relationship_type: replace(
+        shape, properties=PRIMARY_RELATIONSHIPS[relationship_type].properties
+    )
+    for relationship_type, shape in _RELATIONSHIP_ENDPOINTS.items()
 }
 
 NODE_DIVERGENCES = (
