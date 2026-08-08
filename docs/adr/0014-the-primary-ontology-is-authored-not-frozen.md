@@ -1,0 +1,21 @@
+# The primary ontology is authored, not frozen
+
+`ontology.md` is the authored source of the primary ontology, and the primary ontology module is its mirror. Correcting the document is permitted, but it is a last resort rather than a first move: the default response to a disagreement between the document and the code is to work around the document, and a test asserting the module against the parsed document is what keeps the mirror honest either way.
+
+Correction requires a fundamental flaw in what the document says — a property declared on the wrong entity, or a key that cannot identify the thing it keys. A naming preference, a clearer phrasing, an inconvenient shape, or a property the current pipeline happens not to populate are none of these, and none of them justify an edit. The News Ontology exists precisely so that what news cannot supply is declared as a Divergence rather than removed from the primary ontology, and a Shortcut Rule exists so that a path news flattens is recorded rather than redrawn. Those are the workarounds; reaching past them to the document is what this decision governs.
+
+A permitted correction is deliberate and recorded: the reason it clears the bar is written down where the change is made, and the acceptance criterion of any issue that claimed the file was untouched is corrected to match the history.
+
+## Considered options
+
+Freezing `ontology.md` outright, as the News Ontology and Graph Population PRD asked for in requiring the primary ontology be left untouched, leaves a document that is wrong in ways the code must then permanently accommodate, and leaves the record contradicting a history that shows the file was edited anyway. Treating the document as freely editable makes it a description of the current implementation rather than an authored model, and the model stops constraining anything. Forking a second corrected copy is worse than either: two ontologies that drift is the exact failure the ontology package was built to prevent.
+
+## Consequences
+
+Two corrections have been made under this bar, and they are the worked examples of it.
+
+**The article property alignment, made during [issue 02](../../work/projects/news-ontology-graph-population/issues/02-ontology-package-and-conformance-check.md).** `:NewsArticle`'s primary key was declared as an alternation — a URL *or* a deterministic hash of source and publication date — and `:Chunk`'s as a differently punctuated composite than the one written. A key expressed as a choice between two derivations is not one identity: two ingesters reading it can mint different keys for the same article, which is the failure the shared minting contract in [ADR 0013](0013-a-news-derived-relationship-asserts-existence-and-identity-not-payload.md) exists to prevent. That is what cleared the bar. The `publish_date`-to-`published_date` rename and the added `author` property rode along with it; on their own they are naming and would not have cleared it.
+
+**`sequence_number` on the vote relationships, corrected by [code-review issue 05](../../work/projects/news-ontology-graph-population/code-review/issues/05-move-sequence-number-onto-legislative-event.md).** The property was declared on `VOTED_AYE`, `VOTED_NO`, and `ABSTAINED`, but its value is identical for every voter at one event: it describes the event's position in the bill's lifecycle, not one legislator's claim. That is a property on the wrong entity, and under ADR 0013 it was also a declared property that did not identify the claim it sat on. It moved onto `LegislativeEvent` beside the event's `type` and `date`, in both `ontology.md` and the primary ontology module.
+
+Neither example is a precedent for the next edit. The bar is restated, not lowered, by having been met twice.

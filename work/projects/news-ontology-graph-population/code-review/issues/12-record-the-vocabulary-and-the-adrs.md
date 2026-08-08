@@ -30,12 +30,12 @@ event.
 
 ## Acceptance criteria
 
-- [ ] Seven glossary terms are defined in the domain glossary.
-- [ ] The relationship-meaning ADR exists, naming the minting contract and the
+- [x] Seven glossary terms are defined in the domain glossary.
+- [x] The relationship-meaning ADR exists, naming the minting contract and the
       `LegislativeEvent` key as consequences.
-- [ ] The authored-not-frozen ADR exists, stating the bar for correction and
+- [x] The authored-not-frozen ADR exists, stating the bar for correction and
       citing both worked examples.
-- [ ] Both ADRs follow the existing `docs/adr/` numbering and format.
+- [x] Both ADRs follow the existing `docs/adr/` numbering and format.
 
 ## Blocked by
 
