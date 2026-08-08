@@ -3,7 +3,7 @@ import re
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
-from knowledge_map.ontology import news, primary
+from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
 from knowledge_map.core.bill_sessions import normalize_bill_number
@@ -14,56 +14,63 @@ SHORTCUT_SKIPS = {
 }
 
 
-def _normalized_properties(relationship_type: str, properties: dict) -> dict:
-    """Canonicalize declared properties; pass everything else through untouched.
-
-    A declared property whose value will not normalize is dropped rather than
-    stored: keeping ``"a lot"`` alongside ``6000000.0`` in the same field is what
-    makes two articles look like they disagree when only one of them was legible.
-    """
-
-    shape = primary.RELATIONSHIPS.get(relationship_type)
-    if shape is None:
-        return dict(properties)
-
-    normalized = {}
-    for name, value in properties.items():
-        spec = shape.spec(name)
-        if spec is None:
-            normalized[name] = value
-            continue
-        canonical = spec.normalize(value)
-        if canonical is not None:
-            normalized[name] = canonical
-    return normalized
-
-
 def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
-    """The identifying values that pin this claim, and whether any are missing.
+    """The values that identify this claim, canonicalized, and whether any are missing.
 
-    Two edges of the same type between the same pair are the same edge only when
-    their claim keys match. An incomplete key is not padded with nulls — Neo4j
-    stores no nulls and would never match one — so the edge merges on what it has
-    and carries `needs_review` to say the comparison is not yet possible.
+    A relationship's *declared* properties are its Claim Key — there is no second
+    table. The rule that fixes the declaration is the rule that fixes identity: if
+    two different values mean two different claims, the property is declared and
+    therefore identifying; if they do not, the property does not belong on the edge
+    at all, and what the article said about it stays in the Article Chunk the edge
+    points back to.
+
+    Normalization runs here and nowhere else, on Claim Key properties only. Making
+    two articles' claims comparable is its whole job. A declared value that will not
+    normalize is dropped rather than stored: keeping ``"a lot"`` alongside
+    ``6000000.0`` in the same field is what makes two articles look like they
+    disagree when only one of them was legible.
+
+    An incomplete key is not padded with nulls — Neo4j stores no nulls and would
+    never match one — so the edge merges on what it has and carries ``needs_review``
+    to say the comparison is not yet possible.
     """
 
-    identifying = news.IDENTIFYING_PROPERTIES.get(relationship_type, frozenset())
-    key = {name: properties[name] for name in sorted(identifying) if name in properties}
-    return key, len(key) < len(identifying)
+    shape = news.RELATIONSHIPS.get(relationship_type)
+    if shape is None:
+        return {}, False
+
+    key = {}
+    for spec in shape.properties:
+        if spec.name not in properties:
+            continue
+        canonical = spec.normalize(properties[spec.name])
+        if canonical is not None:
+            key[spec.name] = canonical
+    return key, len(key) < len(shape.properties)
 
 
 def _relationship_query(
     relationship_type: str, src_clause: str, tgt_clause: str, key: dict
 ) -> str:
-    """A MERGE keyed on the claim. Key names come from the ontology, never from input."""
+    """A MERGE keyed on the claim.
+
+    Key names come from the ontology: they are the relationship's declared property
+    names, never a name an extractor invented. The relationship type is not
+    ontology-derived in the same sense — it is interpolated from conformed model
+    output, which conformance has already checked against the News Ontology's
+    relationship table and the schema has already checked for identifier characters.
+
+    There is no trailing property assignment. An edge carries its Claim Key, the
+    chunks that assert it, and the two write-path stamps — there is no free payload
+    left to write.
+    """
 
     key_pattern = ""
     if key:
         key_pattern = " {" + ", ".join(f"{name}: $key_{name}" for name in sorted(key)) + "}"
     return (
         f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
-        f"MERGE (src)-[r:{relationship_type}{key_pattern}]->(tgt) "
-        f"SET r += $properties"
+        f"MERGE (src)-[r:{relationship_type}{key_pattern}]->(tgt)"
     )
 
 
@@ -81,6 +88,12 @@ def _write_relationship(
     label and a name to the node's primary key, which is the only thing the two
     entry points do differently. When ``chunk_id`` is given the edge also
     accumulates the chunks that assert this claim.
+
+    An edge carries exactly four things: its Claim Key, in the MERGE pattern; the
+    chunk list; ``skips`` where it is a shortcut; and ``needs_review`` where an
+    article asserted the claim without a value the key depends on. Everything else
+    the article said stays in the Article Chunk, where it remains retrievable — an
+    edge with no free payload has nothing a later ingestion can silently overwrite.
     """
 
     rel_type = rel.relationship_type
@@ -91,20 +104,23 @@ def _write_relationship(
     src_clause = f":{src_label}" if src_label else ""
     tgt_clause = f":{tgt_label}" if tgt_label else ""
 
-    rel_properties = _normalized_properties(rel_type, rel.properties)
+    key, incomplete = _claim_key(rel_type, rel.properties)
+
+    stamps = {}
     if rel_type in SHORTCUT_SKIPS:
-        rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
-    key, incomplete = _claim_key(rel_type, rel_properties)
+        stamps["skips"] = SHORTCUT_SKIPS[rel_type]
     if incomplete:
-        rel_properties["needs_review"] = True
+        stamps["needs_review"] = True
 
     query = _relationship_query(rel_type, src_clause, tgt_clause, key)
     parameters = {
         "src_id": resolve_id(src_label, rel.source),
         "tgt_id": resolve_id(tgt_label, rel.target),
-        "properties": rel_properties,
         **{f"key_{name}": value for name, value in key.items()},
     }
+    if stamps:
+        query += " SET r += $stamps"
+        parameters["stamps"] = stamps
     if chunk_id is not None:
         # The chunks that assert *this* claim. Keyed edges keep the list
         # tight; the append dedupes so re-ingesting an article is a no-op.

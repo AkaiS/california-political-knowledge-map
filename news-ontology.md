@@ -21,15 +21,16 @@ of the primary ontology plus the declared shortcuts below.
 
 ## Relationships
 
-Relationship properties are closed: an extractor may attach only the properties
-the relationship declares, and anything else it supplies is dropped and recorded
-in the Adherence Report. Properties under *Identifies the claim* are normalized
-and form the edge's key, because the relationship means something different at
-a different value — two articles naming different amounts assert different
-things and get separate edges. They are not required of the extractor: an edge
-that arrives without them is written and carries `needs_review`.
+A relationship asserts that a claim exists and what identifies it — nothing
+more. The properties it declares, and only those, are its **Claim Key**: they
+are normalized and form the edge's merge key, because the relationship means
+something different at a different value — two articles naming different
+amounts assert different things and get separate edges. Anything else an
+article said about the relationship stays in the `Chunk` the edge points back
+to. A Claim Key property is not required of the extractor: an edge that
+arrives without one is written and carries `needs_review`.
 
-| Type | Sources | Targets | Identifies the claim |
+| Type | Sources | Targets | Claim Key |
 | --- | --- | --- | --- |
 | `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | — |
 | `ABSTAINED` | `Politician` | `LegislativeEvent` | — |
@@ -40,7 +41,7 @@ that arrives without them is written and carries `needs_review`.
 | `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
 | `DISCUSSES_TOPIC` | `Chunk` / `NewsArticle` | `PolicyArea` | — |
 | `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
-| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
+| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` / `transaction_id` |
 | `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
 | `LOBBIED_AGAINST` | `Organization` | `Bill` | — |
 | `LOBBIED_FOR` | `Organization` | `Bill` | — |

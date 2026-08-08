@@ -37,18 +37,18 @@ output, so the claim that input never reaches the query is false as written.
 
 ## Acceptance criteria
 
-- [ ] Two extractions asserting one relationship at equal Claim Key values
+- [x] Two extractions asserting one relationship at equal Claim Key values
       produce one edge accumulating both chunks.
-- [ ] Two extractions asserting one relationship at differing Claim Key values
+- [x] Two extractions asserting one relationship at differing Claim Key values
       produce two edges.
-- [ ] No property outside the Claim Key, the chunk list, `skips`, and
+- [x] No property outside the Claim Key, the chunk list, `skips`, and
       `needs_review` reaches an edge.
-- [ ] The identifying-property table is gone; the declared property set is the
+- [x] The identifying-property table is gone; the declared property set is the
       only source of edge identity.
-- [ ] The unconditional property assignment is gone from the relationship query.
-- [ ] Property normalization runs on Claim Key properties.
-- [ ] The relationship-query docstring states what is and is not ontology-derived.
-- [ ] The suite is green.
+- [x] The unconditional property assignment is gone from the relationship query.
+- [x] Property normalization runs on Claim Key properties.
+- [x] The relationship-query docstring states what is and is not ontology-derived.
+- [x] The suite is green.
 
 ## Blocked by
 

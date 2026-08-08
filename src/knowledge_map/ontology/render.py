@@ -24,24 +24,25 @@ def render_news_ontology() -> str:
     lines.extend(
         [
             "", "## Relationships", "",
-            "Relationship properties are closed: an extractor may attach only the properties",
-            "the relationship declares, and anything else it supplies is dropped and recorded",
-            "in the Adherence Report. Properties under *Identifies the claim* are normalized",
-            "and form the edge's key, because the relationship means something different at",
-            "a different value — two articles naming different amounts assert different",
-            "things and get separate edges. They are not required of the extractor: an edge",
-            "that arrives without them is written and carries `needs_review`.", "",
-            "| Type | Sources | Targets | Identifies the claim |",
+            "A relationship asserts that a claim exists and what identifies it — nothing",
+            "more. The properties it declares, and only those, are its **Claim Key**: they",
+            "are normalized and form the edge's merge key, because the relationship means",
+            "something different at a different value — two articles naming different",
+            "amounts assert different things and get separate edges. Anything else an",
+            "article said about the relationship stays in the `Chunk` the edge points back",
+            "to. A Claim Key property is not required of the extractor: an edge that",
+            "arrives without one is written and carries `needs_review`.", "",
+            "| Type | Sources | Targets | Claim Key |",
             "| --- | --- | --- | --- |",
         ]
     )
     for relationship_type, shape in sorted(news.RELATIONSHIPS.items()):
         sources = " / ".join(f"`{item}`" for item in sorted(shape.source_labels))
         targets = " / ".join(f"`{item}`" for item in sorted(shape.target_labels))
-        identifying = " / ".join(
-            f"`{item}`" for item in sorted(news.IDENTIFYING_PROPERTIES.get(relationship_type, ()))
+        claim_key = " / ".join(
+            f"`{item}`" for item in sorted(news.claim_key_properties(relationship_type))
         ) or "—"
-        lines.append(f"| `{relationship_type}` | {sources} | {targets} | {identifying} |")
+        lines.append(f"| `{relationship_type}` | {sources} | {targets} | {claim_key} |")
 
     lines.extend(
         [

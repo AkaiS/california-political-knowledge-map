@@ -67,7 +67,7 @@ def assert_news_ontology_conforms() -> None:
         news.RELATIONSHIP_DIVERGENCES, frozenset(news.RELATIONSHIPS)
     )
 
-    _assert_identifying_properties_are_declared()
+    _assert_every_claim_key_property_has_a_shape()
 
     declared = {divergence.property_name for divergence in news.DIVERGENCES}
     assert "skips" not in declared, (
@@ -76,21 +76,20 @@ def assert_news_ontology_conforms() -> None:
     )
 
 
-def _assert_identifying_properties_are_declared() -> None:
-    """A property can only key an edge if the primary ontology gives it a shape.
+def _assert_every_claim_key_property_has_a_shape() -> None:
+    """A relationship's declared properties are its Claim Key, so each needs a shape.
 
-    Keying on an undeclared property means keying on whatever string the model
-    happened to emit, which fragments the graph instead of aligning it.
+    Keying on a property the primary ontology does not shape means keying on
+    whatever string the model happened to emit, which fragments the graph instead of
+    aligning it. The News Ontology inherits its relationship properties from the
+    primary ontology precisely so this cannot drift; the assertion is what makes
+    inheriting rather than restating enforceable.
     """
 
-    for relationship_type, identifying in news.IDENTIFYING_PROPERTIES.items():
-        assert relationship_type in news.RELATIONSHIPS, (
-            f"{relationship_type} has identifying properties but is not a news relationship"
-        )
-        shape = primary.RELATIONSHIPS[relationship_type]
-        undeclared = identifying - shape.property_names
-        assert not undeclared, (
+    for relationship_type, news_shape in news.RELATIONSHIPS.items():
+        primary_shape = primary.RELATIONSHIPS[relationship_type]
+        assert news_shape.properties == primary_shape.properties, (
             f"{relationship_type} is keyed on properties the primary ontology does not "
-            f"declare: {sorted(undeclared)}. Add them to its RelationshipShape first."
+            f"shape: {sorted(news_shape.property_names - primary_shape.property_names)}. "
+            "Declare them on its primary RelationshipShape first."
         )
-        assert identifying, f"{relationship_type} declares an empty identifying set"

@@ -61,7 +61,9 @@ def test_a_vote_event_carries_the_sequence_number_not_the_vote_edge():
         assert primary.RELATIONSHIPS[relationship_type].properties == ()
         assert not primary.RELATIONSHIPS[relationship_type].property_names
         assert not news.RELATIONSHIPS[relationship_type].property_names
-        assert relationship_type not in news.IDENTIFYING_PROPERTIES
+        # No declared properties means an empty Claim Key, so a news-derived vote
+        # edge and a later legislative-derived one merge rather than duplicate.
+        assert news.claim_key_properties(relationship_type) == frozenset()
 
 
 def test_news_supplies_neither_a_roll_call_position_nor_event_discrimination():
@@ -81,21 +83,31 @@ def test_news_supplies_neither_a_roll_call_position_nor_event_discrimination():
     assert "Vote" in news.SUB_LABELS["LegislativeEvent"]
 
 
-def test_a_claim_is_identified_only_by_properties_the_ontology_shapes():
-    assert news.IDENTIFYING_PROPERTIES["FUNDED"] == {"amount", "date"}
-    assert news.IDENTIFYING_PROPERTIES["DECLARED_STANCE"] == {"alignment"}
+def test_a_relationships_declared_properties_are_its_claim_key():
+    # One table decides edge identity. There is no second, identifying-property
+    # table that could disagree with what the relationship declares.
+    assert not hasattr(news, "IDENTIFYING_PROPERTIES")
 
-    for relationship_type, identifying in news.IDENTIFYING_PROPERTIES.items():
-        assert identifying <= primary.RELATIONSHIPS[relationship_type].property_names
+    for relationship_type, shape in news.RELATIONSHIPS.items():
+        assert news.claim_key_properties(relationship_type) == shape.property_names
+        assert shape.property_names <= primary.RELATIONSHIPS[relationship_type].property_names
 
+    assert news.claim_key_properties("FUNDED") == {"amount", "date", "transaction_id"}
+    assert news.claim_key_properties("DECLARED_STANCE") == {"alignment"}
     # Endorsement is binary: the edge's existence is the whole claim.
-    assert "ENDORSED" not in news.IDENTIFYING_PROPERTIES
+    assert news.claim_key_properties("ENDORSED") == frozenset()
 
 
 def test_conformance_rejects_a_claim_key_the_ontology_does_not_shape(monkeypatch):
-    monkeypatch.setattr(
-        news, "IDENTIFYING_PROPERTIES", {**news.IDENTIFYING_PROPERTIES, "ENDORSED": frozenset({"weight"})}
+    from knowledge_map.ontology.properties import PropertySpec, normalize_text
+
+    unshaped = dict(news.RELATIONSHIPS)
+    unshaped["ENDORSED"] = RelationshipShape(
+        source_labels=news.RELATIONSHIPS["ENDORSED"].source_labels,
+        target_labels=news.RELATIONSHIPS["ENDORSED"].target_labels,
+        properties=(PropertySpec("weight", normalize_text, form="text", example="heavy"),),
     )
+    monkeypatch.setattr(news, "RELATIONSHIPS", unshaped)
 
     try:
         assert_news_ontology_conforms()
@@ -209,7 +221,7 @@ def test_the_prompt_never_ranks_a_relationship_property_as_required():
 def test_an_identifying_property_is_a_write_path_concern_not_a_prompt_one():
     # The requirement lives here, where a missing value becomes a flag rather than
     # a demand the model can fail.
-    assert news.IDENTIFYING_PROPERTIES["FUNDED"] == {"amount", "date"}
+    assert news.claim_key_properties("FUNDED") == {"amount", "date", "transaction_id"}
     assert "needs_review" in news.relationship_divergence_properties("FUNDED")
 
 

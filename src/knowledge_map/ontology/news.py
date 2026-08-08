@@ -212,20 +212,37 @@ NODE_DIVERGENCES = (
     ),
 )
 
-#: Properties whose value *is* the claim, so two edges of the same type between the
-#: same pair are the same edge only if these agree. A `FUNDED` edge means something
-#: different at six million than at four; two articles naming different figures are
-#: making different assertions, and the graph should hold both rather than let the
-#: last one ingested overwrite the first.
-#:
-#: Nothing requires an extractor to produce these. The prompt never asks for one, and
-#: an edge that arrives without them is written and flagged rather than dropped —
-#: a missing value is recoverable, an invented one is not. This table says only what
-#: makes two edges comparable once the values are in hand.
-IDENTIFYING_PROPERTIES = {
-    "FUNDED": frozenset({"amount", "date"}),
-    "DECLARED_STANCE": frozenset({"alignment"}),
-}
+def claim_key_properties(relationship_type: str) -> frozenset[str]:
+    """The Claim Key of ``relationship_type``: its declared property names.
+
+    A relationship asserts that a claim exists and what identifies it — nothing
+    more. Its declared properties, and only those, are what two edges of the same
+    type between the same pair must agree on to be the same edge. A `FUNDED` edge
+    means something different at six million than at four; two articles naming
+    different figures are making different assertions, and the graph holds both
+    rather than letting the last one ingested overwrite the first.
+
+    There is no separate identifying-property table to disagree with this one. The
+    rule that decides what a relationship declares is the rule that decides edge
+    identity: if two different values mean two different claims, the property is
+    declared and therefore identifying; if they do not, the property does not belong
+    on the edge, and what the article said stays in the Article Chunk it points to.
+
+    Nothing requires an extractor to produce these. The prompt never asks for one,
+    and an edge that arrives without them is written and flagged rather than dropped
+    — a missing value is recoverable, an invented one is not.
+    """
+
+    shape = RELATIONSHIPS.get(relationship_type)
+    return shape.property_names if shape is not None else frozenset()
+
+
+#: Relationships whose Claim Key can be incomplete, because they have one at all.
+KEYED_RELATIONSHIPS = frozenset(
+    relationship_type
+    for relationship_type, shape in RELATIONSHIPS.items()
+    if shape.properties
+)
 
 #: The three vote relationships, which declare no properties at all: a
 #: news-derived vote edge and a later legislative-derived one share an empty
@@ -247,7 +264,7 @@ RELATIONSHIP_DIVERGENCES = (
     ),
     Divergence(
         property_name="needs_review",
-        applies_to=frozenset(IDENTIFYING_PROPERTIES),
+        applies_to=KEYED_RELATIONSHIPS,
         reason=(
             "The article asserted the relationship without a value the claim depends on, "
             "or named one in a form nothing else will match. The edge is real but its key "

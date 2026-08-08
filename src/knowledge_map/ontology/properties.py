@@ -1,14 +1,14 @@
 """Normalized shapes for relationship properties.
 
-Relationship properties are closed: an extractor may attach only what the
-relationship declares, and conformance drops the rest before the write path sees
-them. What this module declares is the shape those properties take — including the
-few whose *value* carries the claim, the ones two articles must agree on before
-their edges can be called the same edge.
+Relationship properties are closed, and declaring one is the whole of edge
+identity: a relationship's declared properties are its Claim Key, the values two
+articles must agree on before their edges can be called the same edge. What this
+module declares is the shape those values take, which is what makes the comparison
+possible at all — normalization exists for that one job and no other.
 
 Declaring a shape does not make a property required. It says: if you find one, it
-looks like this. ``news.IDENTIFYING_PROPERTIES`` is where a property becomes
-required, because there the value is what makes the relationship comparable at all.
+looks like this. A claim that arrives without a value the key depends on is written
+and flagged, never dropped and never demanded of the extractor.
 
 A normalizer returns ``None`` when it cannot produce a canonical value. The write
 path treats that exactly like an absent value: the claim is incomplete, so it is

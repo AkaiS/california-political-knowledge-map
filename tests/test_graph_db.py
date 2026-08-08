@@ -150,11 +150,14 @@ def test_ingest_extraction_result_relationships():
     
     assert "MATCH (src:Politician {id: $src_id}), (tgt:Committee {id: $tgt_id})" in rel_query
     assert "MERGE (src)-[r:SERVES_ON]->(tgt)" in rel_query
-    assert "SET r += $properties" in rel_query
-    
+    assert "SET r += $stamps" in rel_query
+
     assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
     assert rel_kwargs["tgt_id"] == "Committee:education-committee"
-    assert rel_kwargs["properties"] == {"status": "Active", "skips": "LegislativeTenure"}
+    # `SERVES_ON` declares nothing, so its Claim Key is empty and `status` — which the
+    # ontology never declared — stays in the Article Chunk rather than on the edge.
+    assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
+    assert "properties" not in rel_kwargs
 
 def test_ingest_extraction_result_invalid_identifiers():
     from pydantic import ValidationError
@@ -453,40 +456,55 @@ def _funding_call(properties: dict):
     return next(call for call in mock_tx.run.call_args_list if "[r:FUNDED" in call[0][0])
 
 
-def test_a_funding_claim_is_keyed_on_its_normalized_amount_and_date():
-    call = _funding_call({"amount": "$6 million", "date": "January 15, 2024"})
+_WHOLE_FUNDING_CLAIM = {
+    "amount": "$6 million", "date": "January 15, 2024", "transaction_id": "FPPC-2024-0198",
+}
+
+
+def test_a_funding_claim_is_keyed_on_every_property_it_declares():
+    call = _funding_call(_WHOLE_FUNDING_CLAIM)
     query, kwargs = call[0][0], call[1]
 
-    # The key is in the MERGE pattern, so a different figure merges to a different edge.
-    assert "MERGE (src)-[r:FUNDED {amount: $key_amount, date: $key_date}]->(tgt)" in query
+    # The key is in the MERGE pattern, so a different figure merges to a different
+    # edge. It is the declared property set, not a second table beside it.
+    assert (
+        "MERGE (src)-[r:FUNDED {amount: $key_amount, date: $key_date, "
+        "transaction_id: $key_transaction_id}]->(tgt)" in query
+    )
     assert kwargs["key_amount"] == 6_000_000.0
     assert kwargs["key_date"] == "2024-01-15"
-    assert kwargs["properties"]["amount"] == 6_000_000.0
-    assert "needs_review" not in kwargs["properties"]
+    assert kwargs["key_transaction_id"] == "FPPC-2024-0198"
+    # A whole key needs no flag, and there is no payload assignment to carry one.
+    assert "stamps" not in kwargs
+    assert "SET r +=" not in query
 
 
 def test_two_articles_naming_the_same_figure_differently_reach_one_edge():
-    spelled_out = _funding_call({"amount": "6,000,000", "date": "2024-01-15"})[1]
-    abbreviated = _funding_call({"amount": "6M", "date": "January 15, 2024"})[1]
+    spelled_out = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "6,000,000", "date": "2024-01-15"})
+    abbreviated = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "6M"})
 
-    assert spelled_out["key_amount"] == abbreviated["key_amount"] == 6_000_000.0
-    assert spelled_out["key_date"] == abbreviated["key_date"] == "2024-01-15"
+    # Same MERGE pattern and same key values: the second ingestion finds the first
+    # edge and appends its chunk rather than creating a second edge beside it.
+    assert spelled_out[0][0] == abbreviated[0][0]
+    assert spelled_out[1]["key_amount"] == abbreviated[1]["key_amount"] == 6_000_000.0
+    assert spelled_out[1]["key_date"] == abbreviated[1]["key_date"] == "2024-01-15"
 
 
 def test_a_conflicting_figure_produces_a_different_key():
-    six = _funding_call({"amount": "$6 million", "date": "2024-01-15"})[1]
-    four = _funding_call({"amount": "$4 million", "date": "2024-01-15"})[1]
+    six = _funding_call(_WHOLE_FUNDING_CLAIM)[1]
+    four = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "$4 million"})[1]
 
     assert six["key_amount"] != four["key_amount"]
 
 
 def test_an_unreadable_value_is_dropped_rather_than_keyed_on():
-    kwargs = _funding_call({"amount": "a lot of money", "date": "2024-01-15"})[1]
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "a lot of money"})
+    query, kwargs = call[0][0], call[1]
 
     # Storing the raw string would make this edge unmatchable by anything, forever.
-    assert "amount" not in kwargs["properties"]
     assert "key_amount" not in kwargs
-    assert kwargs["properties"]["needs_review"] is True
+    assert "amount" not in query
+    assert kwargs["stamps"] == {"needs_review": True}
 
 
 def test_an_incomplete_claim_is_written_and_flagged_not_dropped():
@@ -494,7 +512,18 @@ def test_an_incomplete_claim_is_written_and_flagged_not_dropped():
     query, kwargs = call[0][0], call[1]
 
     assert "MERGE (src)-[r:FUNDED]->(tgt)" in query
-    assert kwargs["properties"] == {"needs_review": True}
+    assert kwargs["stamps"] == {"needs_review": True}
+
+
+def test_no_property_outside_the_claim_key_reaches_an_edge():
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "mood": "triumphant", "recipient": "Yes on Schools"})
+    query, kwargs = call[0][0], call[1]
+
+    # Whatever else the article said stays in the Article Chunk the edge points to.
+    assert "mood" not in query and "recipient" not in query
+    assert set(kwargs) == {
+        "src_id", "tgt_id", "chunk_id", "key_amount", "key_date", "key_transaction_id",
+    }
 
 
 def _stance_call(properties: dict):
@@ -525,24 +554,38 @@ def _stance_call(properties: dict):
 
 
 def test_a_stance_outside_the_declared_enum_does_not_key_the_edge():
-    kwargs = _stance_call({"alignment": "supportive", "tone": "measured"})[1]
+    call = _stance_call({"alignment": "supportive", "tone": "measured"})
+    query, kwargs = call[0][0], call[1]
 
     # "supportive" is not one of POSITIVE/NEGATIVE/NEUTRAL, so it cannot key the edge.
-    assert "alignment" not in kwargs["properties"]
-    assert kwargs["properties"]["needs_review"] is True
-    # An undeclared property nobody anticipated is still kept.
-    assert kwargs["properties"]["tone"] == "measured"
+    assert "key_alignment" not in kwargs
+    assert kwargs["stamps"] == {"needs_review": True}
+    # An undeclared property nobody anticipated is not free payload: it is not part
+    # of the claim, so it never reaches the edge.
+    assert "tone" not in query
 
 
 def test_a_lowercase_stance_normalizes_into_the_enum():
-    kwargs = _stance_call({"alignment": "positive"})[1]
+    call = _stance_call({"alignment": "positive"})
+    query, kwargs = call[0][0], call[1]
 
     assert kwargs["key_alignment"] == "POSITIVE"
-    assert "needs_review" not in kwargs["properties"]
+    assert "stamps" not in kwargs
+    assert "SET r +=" not in query
+
+
+def test_two_articles_stating_opposite_stances_produce_two_edges():
+    positive = _stance_call({"alignment": "POSITIVE"})[1]
+    negative = _stance_call({"alignment": "NEGATIVE"})[1]
+
+    # A disagreement between sources is visible in the graph rather than resolved by
+    # whichever article happened to be ingested last.
+    assert positive["key_alignment"] == "POSITIVE"
+    assert negative["key_alignment"] == "NEGATIVE"
 
 
 def test_an_edge_accumulates_the_chunks_that_assert_it_without_duplicating():
-    call = _funding_call({"amount": "$6 million", "date": "2024-01-15"})
+    call = _funding_call(_WHOLE_FUNDING_CLAIM)
     query = call[0][0]
 
     assert "$chunk_id IN coalesce(r.chunks, [])" in query
@@ -603,9 +646,11 @@ def test_ingest_chunk_extraction():
     assert not any("provenance" in q for q in calls)
     assert not any("provenance" in call[1] for call in mock_tx.run.call_args_list)
     rel_call = next(call for call in mock_tx.run.call_args_list if "[r:FUNDED]" in call[0][0])
-    # `status` is undeclared and survives untouched; the article named no amount or
-    # date, so the claim cannot be compared yet and the edge says so.
-    assert rel_call[1]["properties"] == {"status": "active", "needs_review": True}
+    # `status` is undeclared, so it is not part of the claim and never reaches the
+    # edge; the article named no Claim Key value at all, so the claim cannot be
+    # compared yet and the edge says so.
+    assert "status" not in rel_call[0][0]
+    assert rel_call[1]["stamps"] == {"needs_review": True}
     assert rel_call[1]["chunk_id"] == "http://example.com/1#chunk_0"
 
 
