@@ -12,7 +12,14 @@ from knowledge_map.adapters.extraction import (
     load_instructions,
 )
 from knowledge_map.ontology import news
-from knowledge_map.schemas import ExtractionResult, Node, Relationship
+from knowledge_map.schemas import (
+    AdherenceReport,
+    DropCategory,
+    DroppedItem,
+    ExtractionResult,
+    Node,
+    Relationship,
+)
 
 
 def test_node_validation_valid():
@@ -215,8 +222,8 @@ def test_adapter_drops_undeclared_relationship_properties_into_their_own_categor
 
     assert [rel.properties for rel in result.relationships] == [{"amount": "$6 million"}]
     report = adapter.adherence_report
-    assert report["rejected_relationship_property_names"]["mood"]["count"] == 1
-    assert report["rejected_relationship_property_names"]["mood"]["example_chunk_id"].startswith("sha256:")
+    assert report["rejected_relationship_property_names"]["mood"].count == 1
+    assert report["rejected_relationship_property_names"]["mood"].example_chunk_id.startswith("sha256:")
     assert report["rejected_property_names"] == {}
 
 
@@ -268,14 +275,14 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
     assert first.nodes[0].properties == {"first_name": "Alex"}
     assert [relationship.relationship_type for relationship in first.relationships] == ["ACTION_ON"]
     report = adapter.adherence_report
-    assert report["rejected_labels"]["Campaign"]["count"] == 2
-    assert report["rejected_labels"]["PoliticalActor"]["count"] == 1
-    assert report["rejected_labels"]["Club"]["count"] == 1
-    assert report["rejected_relationship_types"]["ACTION_ON"]["count"] == 1
-    assert report["rejected_relationship_types"]["KNOWS"]["count"] == 1
-    assert report["rejected_relationship_types"]["VOTED_AYE"]["count"] == 1
-    assert report["rejected_property_names"]["nickname"]["count"] == 2
-    assert report["rejected_property_names"]["nickname"]["example_chunk_id"].startswith("sha256:")
+    assert report["rejected_labels"]["Campaign"].count == 2
+    assert report["rejected_labels"]["PoliticalActor"].count == 1
+    assert report["rejected_labels"]["Club"].count == 1
+    assert report["rejected_relationship_types"]["ACTION_ON"].count == 1
+    assert report["rejected_relationship_types"]["KNOWS"].count == 1
+    assert report["rejected_relationship_types"]["VOTED_AYE"].count == 1
+    assert report["rejected_property_names"]["nickname"].count == 2
+    assert report["rejected_property_names"]["nickname"].example_chunk_id.startswith("sha256:")
     assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 10
 
 def test_pydantic_ai_entity_extraction_adapter_health_check_success():
@@ -329,9 +336,9 @@ def test_adapter_drops_a_model_emitted_article_node_without_dead_lettering_the_c
     assert [node.name for node in result.nodes] == ["Alex Lee", "AB 1", "Good Vote"]
     assert [rel.relationship_type for rel in result.relationships] == ["ACTION_ON"]
     report = adapter.adherence_report
-    assert report["rejected_labels"]["NewsArticle"]["count"] == 1
-    assert report["rejected_labels"]["Chunk"]["count"] == 1
-    assert report["rejected_labels"]["NewsArticle"]["example_chunk_id"].startswith("sha256:")
+    assert report["rejected_labels"]["NewsArticle"].count == 1
+    assert report["rejected_labels"]["Chunk"].count == 1
+    assert report["rejected_labels"]["NewsArticle"].example_chunk_id.startswith("sha256:")
 
 
 def test_the_output_contract_gives_a_required_sub_label_somewhere_to_go():
@@ -375,3 +382,43 @@ def test_entities_requiring_a_sub_label_survive_conformance_when_they_carry_one(
         ("Campaign", ["BallotMeasureCampaign"]),
     ]
     assert adapter.adherence_report["rejected_labels"] == {}
+
+
+def test_the_adherence_report_leaves_the_adapter_as_a_typed_model():
+    adapter = PydanticAIEntityExtractionAdapter(agent=get_extraction_agent(defer_check=True))
+
+    report = adapter.adherence_report
+
+    assert isinstance(report, AdherenceReport)
+    # Every declared category exists from the start, so a reader never has to tell
+    # "nothing was dropped" apart from "that bucket was never created".
+    assert set(report.root) == set(DropCategory)
+    assert all(entries == {} for entries in report.root.values())
+    # The report the caller holds is its own: recording later cannot mutate it.
+    adapter._adherence_report.record(DropCategory.REJECTED_LABELS, "Club", "sha256:abc")
+    assert report[DropCategory.REJECTED_LABELS] == {}
+
+
+def test_an_unrecognized_adherence_category_is_an_error_not_a_new_bucket():
+    report = AdherenceReport()
+
+    with pytest.raises(ValueError):
+        report.record("rejected_vibes", "Club", "sha256:abc")
+    with pytest.raises(ValidationError):
+        AdherenceReport.model_validate({"rejected_vibes": {}})
+
+    assert set(report.root) == set(DropCategory)
+
+
+def test_the_adherence_report_counts_repeats_and_keeps_the_first_chunk():
+    report = AdherenceReport()
+
+    report.record(DropCategory.REJECTED_LABELS, "Club", "sha256:first")
+    report.record(DropCategory.REJECTED_LABELS, "Club", "sha256:second")
+
+    assert report[DropCategory.REJECTED_LABELS]["Club"] == DroppedItem(
+        count=2, example_chunk_id="sha256:first"
+    )
+    assert report.as_json_dict()["rejected_labels"]["Club"] == {
+        "count": 2, "example_chunk_id": "sha256:first"
+    }

@@ -22,13 +22,13 @@ Behavior at the boundary is otherwise unchanged from what issue 07 built.
 
 ## Acceptance criteria
 
-- [ ] Bill Session Resolution is a Pydantic model at the adapter boundary.
-- [ ] The Adherence Report is a Pydantic model.
-- [ ] Drop categories are a closed enumeration; no drop site indexes by string
+- [x] Bill Session Resolution is a Pydantic model at the adapter boundary.
+- [x] The Adherence Report is a Pydantic model.
+- [x] Drop categories are a closed enumeration; no drop site indexes by string
       literal.
-- [ ] An unrecognized category is a type error, not a new bucket.
-- [ ] Bill session resolution behavior through the Story Pipeline is unchanged.
-- [ ] The suite is green.
+- [x] An unrecognized category is a type error, not a new bucket.
+- [x] Bill session resolution behavior through the Story Pipeline is unchanged.
+- [x] The suite is green.
 
 ## Blocked by
 

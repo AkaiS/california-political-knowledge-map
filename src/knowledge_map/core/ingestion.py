@@ -36,7 +36,7 @@ class BatchIngestionService:
         if directory:
             os.makedirs(directory, exist_ok=True)
         with open(report_path, "w", encoding="utf-8") as report_file:
-            json.dump(report, report_file, indent=2, sort_keys=True)
+            json.dump(report.as_json_dict(), report_file, indent=2, sort_keys=True)
             report_file.write("\n")
 
     def run(self) -> None:

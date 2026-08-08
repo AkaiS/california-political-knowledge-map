@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from knowledge_map.adapters import neo4j_db
 from knowledge_map.ontology import (
     assert_news_ontology_conforms,
@@ -9,10 +12,11 @@ from knowledge_map.ontology import (
     primary,
 )
 from knowledge_map.ontology.divergence import Divergence
+from knowledge_map.ontology.extraction_conformance import ConformanceDrop
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.ontology.primary import RelationshipShape
 from knowledge_map.ontology.render import GENERATED_PATH, render_news_ontology
-from knowledge_map.schemas import ExtractionResult, Node, Relationship
+from knowledge_map.schemas import DropCategory, ExtractionResult, Node, Relationship
 
 
 def test_news_ontology_conforms_to_primary_ontology():
@@ -449,3 +453,32 @@ def test_the_write_path_mints_its_keys_through_the_shared_contract():
     assert "from knowledge_map.ontology.keys import bill_key, derived_key" in source
     assert source.count("bill_key(") == 2
     assert '"Bill:' not in source and "'Bill:" not in source
+
+
+def test_a_drop_cannot_invent_an_adherence_report_category():
+    # The categories are closed: a drop recorded under a name nobody reads is a
+    # construction-time failure, not a fifth bucket.
+    with pytest.raises(ValidationError):
+        ConformanceDrop(
+            category="rejected_vibes", value="Club", chunk_id="sha256:abc", reason="typo"
+        )
+
+
+def test_every_conformance_drop_lands_in_a_declared_category():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="A California Story", label="NewsArticle"),
+            Node(name="Alex Lee", label="Politician", properties={"nickname": "Al"}),
+            Node(name="Budget Committee", label="Committee"),
+        ],
+        relationships=[
+            Relationship(source="Alex Lee", target="Budget Committee",
+                         relationship_type="SERVES_ON", properties={"nickname": "Al"}),
+            Relationship(source="Alex Lee", target="Budget Committee",
+                         relationship_type="KNOWS"),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert {drop.category for drop in outcome.drops} == set(DropCategory)

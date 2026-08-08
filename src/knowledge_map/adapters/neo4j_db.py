@@ -7,7 +7,12 @@ from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.ontology.properties import normalize_date
-from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
+from knowledge_map.schemas import (
+    ArticleChunk,
+    BillSessionResolutions,
+    ExtractionResult,
+    SourceArticle,
+)
 from knowledge_map.core.bill_sessions import normalize_bill_number
 
 SHORTCUT_SKIPS = {
@@ -355,10 +360,10 @@ class Neo4jAdapter:
         self,
         chunk_id: str,
         extraction: ExtractionResult,
-        bill_sessions: dict[str, dict[str, object]] | None = None,
+        bill_sessions: BillSessionResolutions | None = None,
         published_date: str | None = None,
     ) -> None:
-        bill_sessions = bill_sessions or {}
+        bill_sessions = bill_sessions or BillSessionResolutions()
         driver = self.connect()
         try:
             with driver.session() as session:
@@ -372,11 +377,13 @@ class Neo4jAdapter:
                         properties = dict(node.properties)
                         if label == "Bill":
                             number = normalize_bill_number(properties.get("number") or node.name)
-                            resolution = bill_sessions.get(number or "", {})
-                            properties.update(resolution)
+                            resolution = bill_sessions.get(number)
+                            if resolution is not None:
+                                properties.update(resolution.graph_properties())
                             if number:
                                 properties["number"] = number
-                            node_id = bill_key(resolution.get("session"), number, node.name)
+                            session = resolution.session if resolution else None
+                            node_id = bill_key(session, number, node.name)
                         else:
                             if label == "LegislativeEvent":
                                 properties.update(
@@ -416,8 +423,9 @@ class Neo4jAdapter:
                         if label != "Bill":
                             return derived_key(label, name)
                         number = normalize_bill_number(name)
-                        resolution = bill_sessions.get(number or "", {})
-                        return bill_key(resolution.get("session"), number, name)
+                        resolution = bill_sessions.get(number)
+                        session = resolution.session if resolution else None
+                        return bill_key(session, number, name)
 
                     for rel in extraction.relationships:
                         _write_relationship(

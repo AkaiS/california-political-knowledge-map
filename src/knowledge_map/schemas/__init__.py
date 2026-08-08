@@ -1,4 +1,12 @@
-from .extraction import AdherenceReport, Node, Relationship, ExtractionResult
+from .extraction import (
+    AdherenceReport,
+    DropCategory,
+    DroppedItem,
+    ExtractionResult,
+    Node,
+    Relationship,
+)
+from .bill_sessions import BillSessionResolution, BillSessionResolutions
 from .chunking import ArticleChunk
 from .coreference import CriticValidation
 from .pipeline import SourceArticle, PipelineResult, ArticleStatus, StoryLink

@@ -1,7 +1,8 @@
 import re
+from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, RootModel, field_validator
 
 
 class Node(BaseModel):
@@ -65,6 +66,51 @@ class ExtractionResult(BaseModel):
     relationships: list[Relationship] = Field(default_factory=list, description="Extracted relationships")
 
 
-#: Ontology items an extraction adapter dropped from model output, as
-#: ``category -> dropped value -> {"count", "example_chunk_id"}``.
-AdherenceReport = dict[str, dict[str, dict[str, str | int]]]
+class DropCategory(StrEnum):
+    """The closed set of buckets an Adherence Report drop can fall into.
+
+    A category is not a free-form string: a mistyped one has to fail loudly at
+    the drop site rather than quietly open a fifth bucket that no reader of the
+    report ever looks in.
+    """
+
+    REJECTED_LABELS = "rejected_labels"
+    REJECTED_RELATIONSHIP_TYPES = "rejected_relationship_types"
+    REJECTED_PROPERTY_NAMES = "rejected_property_names"
+    REJECTED_RELATIONSHIP_PROPERTY_NAMES = "rejected_relationship_property_names"
+
+
+class DroppedItem(BaseModel):
+    """How often one ontology item was dropped, and where it was first seen."""
+
+    count: int = 0
+    example_chunk_id: str
+
+
+class AdherenceReport(RootModel[dict[DropCategory, dict[str, DroppedItem]]]):
+    """Ontology items an extraction adapter dropped from model output.
+
+    Shaped ``category -> dropped value -> {"count", "example_chunk_id"}``, with
+    every category present from the start so a reader never has to distinguish
+    "nothing was dropped" from "that bucket does not exist".
+    """
+
+    root: dict[DropCategory, dict[str, DroppedItem]] = Field(
+        default_factory=lambda: {category: {} for category in DropCategory}
+    )
+
+    def __getitem__(self, category: DropCategory | str) -> dict[str, DroppedItem]:
+        return self.root[DropCategory(category)]
+
+    def record(self, category: DropCategory, value: str, chunk_id: str) -> None:
+        """Count one more drop of ``value`` under ``category``."""
+        entries = self.root[DropCategory(category)]
+        entry = entries.get(value)
+        if entry is None:
+            entries[value] = DroppedItem(count=1, example_chunk_id=chunk_id)
+        else:
+            entry.count += 1
+
+    def as_json_dict(self) -> dict[str, dict[str, dict[str, str | int]]]:
+        """The report as plain JSON-serialisable data."""
+        return self.model_dump(mode="json")

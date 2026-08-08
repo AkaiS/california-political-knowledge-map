@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Protocol, List, Optional
 from knowledge_map.config import settings as global_settings
-from knowledge_map.schemas import AdherenceReport, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
+from knowledge_map.schemas import AdherenceReport, BillSessionResolutions, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
 from knowledge_map.utils.chunking import chunk_article
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 
@@ -24,7 +24,7 @@ class DatabaseAdapter(Protocol):
         self,
         chunk_id: str,
         extraction: ExtractionResult,
-        bill_sessions: dict[str, dict[str, object]] | None = None,
+        bill_sessions: BillSessionResolutions | None = None,
         published_date: str | None = None,
     ) -> None:
         ...

@@ -1,6 +1,16 @@
 import pytest
 import logging
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node, StoryLink
+from knowledge_map.schemas import (
+    AdherenceReport,
+    ArticleChunk,
+    BillSessionResolution,
+    BillSessionResolutions,
+    ExtractionResult,
+    Node,
+    PipelineResult,
+    SourceArticle,
+    StoryLink,
+)
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.core.pipeline import (
     StoryPipeline,
@@ -39,7 +49,7 @@ class MockDatabaseAdapter:
         self,
         chunk_id: str,
         extraction: ExtractionResult,
-        bill_sessions: dict[str, dict[str, object]] | None = None,
+        bill_sessions: BillSessionResolutions | None = None,
         published_date: str | None = None,
     ) -> None:
         self.extractions.append((chunk_id, extraction, bill_sessions, published_date))
@@ -52,12 +62,7 @@ class MockCoreferenceAdapter:
     def resolve(self, content: str) -> str:
         return content
 
-EMPTY_ADHERENCE_REPORT = {
-    "rejected_labels": {},
-    "rejected_relationship_types": {},
-    "rejected_property_names": {},
-    "rejected_relationship_property_names": {},
-}
+EMPTY_ADHERENCE_REPORT = AdherenceReport()
 
 
 class MockEntityExtractionAdapter:
@@ -71,8 +76,8 @@ class MockEntityExtractionAdapter:
         )
 
     @property
-    def adherence_report(self) -> dict:
-        return dict(EMPTY_ADHERENCE_REPORT)
+    def adherence_report(self) -> AdherenceReport:
+        return EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
 
     def reset_adherence_report(self) -> None:
         self.reset_calls += 1
@@ -207,12 +212,13 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     assert parser.call_count == len(article.links)
     first_map = db.extractions[0][2]
     assert db.extractions[1][2] is first_map
-    assert first_map == {
-        "AB 218": {"session": "2019-2020", "session_verified": True, "session_inferred": False, "needs_review": False},
-        "SB 54": {"session": "2017-2018", "session_verified": True, "session_inferred": False, "needs_review": False},
-        "AB 99": {"session": "2025-2026", "session_verified": False, "session_inferred": True, "needs_review": False},
-        "AB 1": {"session": None, "session_verified": False, "session_inferred": False, "needs_review": True},
-    }
+    assert isinstance(first_map, BillSessionResolutions)
+    assert first_map == BillSessionResolutions(by_number={
+        "AB 218": BillSessionResolution(session="2019-2020", session_verified=True),
+        "SB 54": BillSessionResolution(session="2017-2018", session_verified=True),
+        "AB 99": BillSessionResolution(session="2025-2026", session_inferred=True),
+        "AB 1": BillSessionResolution(needs_review=True),
+    })
 
 def test_pipeline_logging(caplog):
     caplog.set_level(logging.INFO)

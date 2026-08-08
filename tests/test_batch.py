@@ -17,7 +17,15 @@ from knowledge_map.adapters.sqlite_db import (
 )
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, Node
+from knowledge_map.schemas import (
+    AdherenceReport,
+    ArticleChunk,
+    DropCategory,
+    DroppedItem,
+    ExtractionResult,
+    Node,
+    SourceArticle,
+)
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.core.exceptions import (
@@ -45,7 +53,7 @@ from test_pipeline import (
 def make_mock_pipeline() -> MagicMock:
     """A mock pipeline whose extraction adapter honours the adherence-report protocol."""
     pipeline = MagicMock()
-    pipeline.extraction_adapter.adherence_report = dict(EMPTY_ADHERENCE_REPORT)
+    pipeline.extraction_adapter.adherence_report = EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
     return pipeline
 
 def test_batch_ingestion_settings_defaults():
@@ -193,12 +201,11 @@ def test_batch_ingestion_writes_and_resets_adherence_report(tmp_path):
     init_db(db_path)
     report_path = tmp_path / "reports" / "adherence.json"
     extraction_adapter = MagicMock()
-    extraction_adapter.adherence_report = {
-        "rejected_labels": {"Unknown": {"count": 1, "example_chunk_id": "sha256:abc"}},
-        "rejected_relationship_types": {},
-        "rejected_property_names": {},
-        "rejected_relationship_property_names": {},
-    }
+    report = AdherenceReport()
+    report[DropCategory.REJECTED_LABELS]["Unknown"] = DroppedItem(
+        count=1, example_chunk_id="sha256:abc"
+    )
+    extraction_adapter.adherence_report = report
     pipeline = MagicMock()
     pipeline.extraction_adapter = extraction_adapter
     settings = BatchIngestionSettings(db_path=db_path, adherence_report_path=str(report_path))
@@ -206,7 +213,7 @@ def test_batch_ingestion_writes_and_resets_adherence_report(tmp_path):
     BatchIngestionService(pipeline=pipeline, settings=settings).run()
 
     extraction_adapter.reset_adherence_report.assert_called_once_with()
-    assert json.loads(report_path.read_text()) == extraction_adapter.adherence_report
+    assert json.loads(report_path.read_text()) == report.as_json_dict()
 
 
 def test_cli_ingest_command():
@@ -278,7 +285,7 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
             return ExtractionResult(nodes=[Node(name="Test Actor", label="PoliticalActor")], relationships=[])
 
         @property
-        def adherence_report(self): return dict(EMPTY_ADHERENCE_REPORT)
+        def adherence_report(self): return EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
 
         def reset_adherence_report(self): pass
     

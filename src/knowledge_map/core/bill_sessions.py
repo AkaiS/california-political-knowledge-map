@@ -4,7 +4,12 @@ import re
 from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
-from knowledge_map.schemas import ExtractionResult, SourceArticle
+from knowledge_map.schemas import (
+    BillSessionResolution,
+    BillSessionResolutions,
+    ExtractionResult,
+    SourceArticle,
+)
 
 _PATH_BILL = re.compile(r"/bills/ca_(\d{4})(\d{4})0([a-z]{2,3})(\d+)", re.IGNORECASE)
 _QUERY_BILL = re.compile(r"^(\d{4})(\d{4})0([a-z]{2,3})(\d+)$", re.IGNORECASE)
@@ -48,7 +53,7 @@ def _publication_session(published_date: str | None) -> str | None:
 def resolve_bill_sessions(
     article: SourceArticle,
     extractions: list[ExtractionResult],
-) -> dict[str, dict[str, object]]:
+) -> BillSessionResolutions:
     """Resolve every extracted bill number once for an entire Source Article."""
     linked_sessions: dict[str, set[str]] = {}
     for link in article.links:
@@ -65,17 +70,19 @@ def resolve_bill_sessions(
         if (number := normalize_bill_number(node.properties.get("number") or node.name))
     }
     inferred_session = _publication_session(article.published_date)
-    resolved: dict[str, dict[str, object]] = {}
+    resolved: dict[str, BillSessionResolution] = {}
     for number in bill_numbers:
         sessions = linked_sessions.get(number, set())
         if len(sessions) == 1:
-            resolved[number] = {"session": next(iter(sessions)), "session_verified": True,
-                                "session_inferred": False, "needs_review": False}
+            resolved[number] = BillSessionResolution(
+                session=next(iter(sessions)), session_verified=True
+            )
         elif len(sessions) > 1:
-            resolved[number] = {"session": None, "session_verified": False,
-                                "session_inferred": False, "needs_review": True}
+            resolved[number] = BillSessionResolution(needs_review=True)
         else:
-            resolved[number] = {"session": inferred_session, "session_verified": False,
-                                "session_inferred": inferred_session is not None,
-                                "needs_review": inferred_session is None}
-    return resolved
+            resolved[number] = BillSessionResolution(
+                session=inferred_session,
+                session_inferred=inferred_session is not None,
+                needs_review=inferred_session is None,
+            )
+    return BillSessionResolutions(by_number=resolved)

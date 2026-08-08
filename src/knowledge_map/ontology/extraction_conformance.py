@@ -20,32 +20,33 @@ its own property drops, because an edge whose detail was refused still asserts
 that the claim exists.
 """
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
-from knowledge_map.schemas import ExtractionResult, Node, Relationship
+from knowledge_map.schemas import DropCategory, ExtractionResult, Node, Relationship
 
 from . import news
 
-#: Adherence Report categories a drop can fall into.
-REJECTED_LABELS = "rejected_labels"
-REJECTED_RELATIONSHIP_TYPES = "rejected_relationship_types"
-REJECTED_PROPERTY_NAMES = "rejected_property_names"
-REJECTED_RELATIONSHIP_PROPERTY_NAMES = "rejected_relationship_property_names"
 
+class ConformanceDrop(BaseModel):
+    """One item conformance refused, and why.
 
-@dataclass(frozen=True)
-class ConformanceDrop:
-    """One item conformance refused, and why."""
+    The category is drawn from the closed :class:`DropCategory` enumeration, so a
+    drop recorded under a name the Adherence Report does not know is a
+    construction-time error rather than a bucket nobody reads.
+    """
 
-    category: str
+    model_config = ConfigDict(frozen=True)
+
+    category: DropCategory
     value: str
     chunk_id: str
     reason: str
 
 
-@dataclass(frozen=True)
-class ConformanceOutcome:
+class ConformanceOutcome(BaseModel):
     """The conformed result together with the drops that produced it."""
+
+    model_config = ConfigDict(frozen=True)
 
     result: ExtractionResult
     drops: tuple[ConformanceDrop, ...]
@@ -56,7 +57,7 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
 
     drops: list[ConformanceDrop] = []
 
-    def drop(category: str, value: str, reason: str) -> None:
+    def drop(category: DropCategory, value: str, reason: str) -> None:
         drops.append(ConformanceDrop(category=category, value=value, chunk_id=chunk_id, reason=reason))
 
     nodes: list[Node] = []
@@ -67,23 +68,23 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
                 if node.label in news.WRITE_PATH_LABELS
                 else "unknown label"
             )
-            drop(REJECTED_LABELS, node.label, reason)
+            drop(DropCategory.REJECTED_LABELS, node.label, reason)
             continue
 
         allowed_sub_labels = news.SUB_LABELS.get(node.label, frozenset())
         invalid_sub_labels = [item for item in node.sub_labels if item not in allowed_sub_labels]
         if invalid_sub_labels:
             for sub_label in invalid_sub_labels:
-                drop(REJECTED_LABELS, sub_label, f"unknown sub-label for {node.label}")
+                drop(DropCategory.REJECTED_LABELS, sub_label, f"unknown sub-label for {node.label}")
             continue
         if node.label in news.REQUIRED_SUB_LABELS and not node.sub_labels:
-            drop(REJECTED_LABELS, node.label, "required sub-label is missing")
+            drop(DropCategory.REJECTED_LABELS, node.label, "required sub-label is missing")
             continue
 
         properties = {}
         for name, value in node.properties.items():
             if name not in news.PROPERTIES[node.label]:
-                drop(REJECTED_PROPERTY_NAMES, name, f"unknown property for {node.label}")
+                drop(DropCategory.REJECTED_PROPERTY_NAMES, name, f"unknown property for {node.label}")
             else:
                 properties[name] = value
         nodes.append(node.model_copy(update={"properties": properties}))
@@ -94,16 +95,16 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
         relationship_type = relationship.relationship_type
         shape = news.RELATIONSHIPS.get(relationship_type)
         if shape is None:
-            drop(REJECTED_RELATIONSHIP_TYPES, relationship_type, "unknown relationship type")
+            drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "unknown relationship type")
             continue
 
         source = nodes_by_name.get(relationship.source)
         target = nodes_by_name.get(relationship.target)
         if source is None or target is None:
-            drop(REJECTED_RELATIONSHIP_TYPES, relationship_type, "dangling endpoint")
+            drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "dangling endpoint")
             continue
         if source.label not in shape.source_labels or target.label not in shape.target_labels:
-            drop(REJECTED_RELATIONSHIP_TYPES, relationship_type, "endpoint labels violate ontology")
+            drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "endpoint labels violate ontology")
             continue
 
         # Relationship properties are write-path-owned: an undeclared one is dropped
@@ -115,7 +116,7 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
         for name, value in relationship.properties.items():
             if name not in shape.property_names:
                 drop(
-                    REJECTED_RELATIONSHIP_PROPERTY_NAMES,
+                    DropCategory.REJECTED_RELATIONSHIP_PROPERTY_NAMES,
                     name,
                     f"unknown property for {relationship_type}",
                 )

@@ -1,7 +1,15 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
-from knowledge_map.schemas import ExtractionResult, Node, Relationship, SourceArticle, ArticleChunk
+from knowledge_map.schemas import (
+    ArticleChunk,
+    BillSessionResolution,
+    BillSessionResolutions,
+    ExtractionResult,
+    Node,
+    Relationship,
+    SourceArticle,
+)
 
 @pytest.fixture(autouse=True)
 def mock_ensure_vector_index(request):
@@ -685,14 +693,16 @@ def test_bill_session_participates_in_node_primary_key():
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        {"AB 218": {"session": "2019-2020", "session_verified": True,
-                    "session_inferred": False, "needs_review": False}},
+        BillSessionResolutions(by_number={
+            "AB 218": BillSessionResolution(session="2019-2020", session_verified=True)
+        }),
     )
     manager.ingest_chunk_extraction(
         "article#chunk_1",
         extraction,
-        {"AB 218": {"session": "2025-2026", "session_verified": True,
-                    "session_inferred": False, "needs_review": False}},
+        BillSessionResolutions(by_number={
+            "AB 218": BillSessionResolution(session="2025-2026", session_verified=True)
+        }),
     )
 
     node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
@@ -701,6 +711,32 @@ def test_bill_session_participates_in_node_primary_key():
         "Bill:2025-2026:ab-218",
     ]
     assert node_calls[0][1]["properties"]["session_verified"] is True
+
+
+def test_a_bill_without_a_resolution_gets_no_session_properties():
+    # An unresolved number is not a resolution to nothing: the adapter writes no
+    # session flags at all rather than stamping the Bill as unreviewed.
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+    ])
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        BillSessionResolutions(by_number={
+            "SB 54": BillSessionResolution(session="2017-2018", session_verified=True)
+        }),
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert node_calls[0][1]["properties"] == {"number": "AB 218"}
+    assert node_calls[0][1]["node_id"] == "Bill:unresolved:ab-218"
 
 
 def _event_call(event_properties: dict, published_date: str | None):

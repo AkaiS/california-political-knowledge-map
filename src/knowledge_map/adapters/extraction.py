@@ -2,7 +2,6 @@ import hashlib
 import json
 import logging
 import os
-from copy import deepcopy
 from typing import Any
 
 from pydantic_ai import Agent, RunContext
@@ -111,21 +110,14 @@ class PydanticAIEntityExtractionAdapter:
         self.reset_adherence_report()
 
     def reset_adherence_report(self) -> None:
-        self._adherence_report: AdherenceReport = {
-            "rejected_labels": {},
-            "rejected_relationship_types": {},
-            "rejected_property_names": {},
-            "rejected_relationship_property_names": {},
-        }
+        self._adherence_report = AdherenceReport()
 
     @property
     def adherence_report(self) -> AdherenceReport:
-        return deepcopy(self._adherence_report)
+        return self._adherence_report.model_copy(deep=True)
 
     def _record_drop(self, drop: ConformanceDrop) -> None:
-        entries = self._adherence_report[drop.category]
-        entry = entries.setdefault(drop.value, {"count": 0, "example_chunk_id": drop.chunk_id})
-        entry["count"] += 1
+        self._adherence_report.record(drop.category, drop.value, drop.chunk_id)
         logger.warning(
             "Dropped extraction item (%s=%s, chunk=%s): %s",
             drop.category,
