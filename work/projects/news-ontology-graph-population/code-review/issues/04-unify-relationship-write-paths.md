@@ -16,10 +16,10 @@ place and is readable as a semantic change rather than a diff repeated twice.
 
 ## Acceptance criteria
 
-- [ ] Both ingestion entry points call the same relationship-writing routine.
-- [ ] The duplicated write is gone.
-- [ ] The graph produced is byte-identical to before: no test assertion changes.
-- [ ] The suite is green.
+- [x] Both ingestion entry points call the same relationship-writing routine.
+- [x] The duplicated write is gone.
+- [x] The graph produced is byte-identical to before: no test assertion changes.
+- [x] The suite is green.
 
 ## Blocked by
 

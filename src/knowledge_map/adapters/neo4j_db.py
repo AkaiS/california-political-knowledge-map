@@ -67,6 +67,56 @@ def _relationship_query(
     )
 
 
+def _write_relationship(
+    tx,
+    rel,
+    node_labels: dict,
+    resolve_id,
+    chunk_id: str | None = None,
+) -> None:
+    """The one place an extractor-produced relationship reaches the graph.
+
+    Both ingestion entry points route through here, so a change to edge
+    semantics cannot land in one path and miss the other. ``resolve_id`` maps a
+    label and a name to the node's primary key, which is the only thing the two
+    entry points do differently. When ``chunk_id`` is given the edge also
+    accumulates the chunks that assert this claim.
+    """
+
+    rel_type = rel.relationship_type
+
+    src_label = node_labels.get(rel.source, "")
+    tgt_label = node_labels.get(rel.target, "")
+
+    src_clause = f":{src_label}" if src_label else ""
+    tgt_clause = f":{tgt_label}" if tgt_label else ""
+
+    rel_properties = _normalized_properties(rel_type, rel.properties)
+    if rel_type in SHORTCUT_SKIPS:
+        rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
+    key, incomplete = _claim_key(rel_type, rel_properties)
+    if incomplete:
+        rel_properties["needs_review"] = True
+
+    query = _relationship_query(rel_type, src_clause, tgt_clause, key)
+    parameters = {
+        "src_id": resolve_id(src_label, rel.source),
+        "tgt_id": resolve_id(tgt_label, rel.target),
+        "properties": rel_properties,
+        **{f"key_{name}": value for name, value in key.items()},
+    }
+    if chunk_id is not None:
+        # The chunks that assert *this* claim. Keyed edges keep the list
+        # tight; the append dedupes so re-ingesting an article is a no-op.
+        query += (
+            " SET r.chunks = CASE WHEN $chunk_id IN coalesce(r.chunks, []) "
+            "THEN r.chunks ELSE coalesce(r.chunks, []) + $chunk_id END"
+        )
+        parameters["chunk_id"] = chunk_id
+
+    tx.run(query, **parameters)
+
+
 def _slug(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
@@ -114,24 +164,7 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
                properties=node.properties)
 
     for rel in extraction.relationships:
-        rel_type = rel.relationship_type
-        
-        src_label = node_labels.get(rel.source, "")
-        tgt_label = node_labels.get(rel.target, "")
-        
-        src_clause = f":{src_label}" if src_label else ""
-        tgt_clause = f":{tgt_label}" if tgt_label else ""
-        
-        rel_properties = _normalized_properties(rel_type, rel.properties)
-        if rel_type in SHORTCUT_SKIPS:
-            rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
-        key, incomplete = _claim_key(rel_type, rel_properties)
-        if incomplete:
-            rel_properties["needs_review"] = True
-        query = _relationship_query(rel_type, src_clause, tgt_clause, key)
-        tx.run(query, src_id=_node_id(src_label, rel.source),
-               tgt_id=_node_id(tgt_label, rel.target), properties=rel_properties,
-               **{f"key_{name}": value for name, value in key.items()})
+        _write_relationship(tx, rel, node_labels, _node_id)
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -301,41 +334,19 @@ class Neo4jAdapter:
                             """
                             tx.run(topic_query, chunk_id=chunk_id, node_id=node_id)
 
+                    def resolved_id(label: str, name: str) -> str:
+                        if name in node_ids:
+                            return node_ids[name]
+                        if label != "Bill":
+                            return _node_id(label, name)
+                        number = normalize_bill_number(name)
+                        resolution = bill_sessions.get(number or "", {})
+                        return f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or name)}"
+
                     for rel in extraction.relationships:
-                        rel_type = rel.relationship_type
-                        
-                        src_label = node_labels.get(rel.source, "")
-                        tgt_label = node_labels.get(rel.target, "")
-                        
-                        src_clause = f":{src_label}" if src_label else ""
-                        tgt_clause = f":{tgt_label}" if tgt_label else ""
-                        
-                        rel_properties = _normalized_properties(rel_type, rel.properties)
-                        if rel_type in SHORTCUT_SKIPS:
-                            rel_properties["skips"] = SHORTCUT_SKIPS[rel_type]
-                        key, incomplete = _claim_key(rel_type, rel_properties)
-                        if incomplete:
-                            rel_properties["needs_review"] = True
-                        # The chunks that assert *this* claim. Keyed edges keep the list
-                        # tight; the append dedupes so re-ingesting an article is a no-op.
-                        query = _relationship_query(rel_type, src_clause, tgt_clause, key) + (
-                            " SET r.chunks = CASE WHEN $chunk_id IN coalesce(r.chunks, []) "
-                            "THEN r.chunks ELSE coalesce(r.chunks, []) + $chunk_id END"
+                        _write_relationship(
+                            tx, rel, node_labels, resolved_id, chunk_id=chunk_id
                         )
-
-                        def resolved_id(label: str, name: str) -> str:
-                            if name in node_ids:
-                                return node_ids[name]
-                            if label != "Bill":
-                                return _node_id(label, name)
-                            number = normalize_bill_number(name)
-                            resolution = bill_sessions.get(number or "", {})
-                            return f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or name)}"
-
-                        tx.run(query, src_id=resolved_id(src_label, rel.source),
-                               tgt_id=resolved_id(tgt_label, rel.target),
-                               properties=rel_properties, chunk_id=chunk_id,
-                               **{f"key_{name}": value for name, value in key.items()})
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")
