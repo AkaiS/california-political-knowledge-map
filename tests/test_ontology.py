@@ -1,6 +1,10 @@
+from pathlib import Path
+
+from knowledge_map.adapters import neo4j_db
 from knowledge_map.ontology import (
     assert_news_ontology_conforms,
     conform_extraction_result,
+    keys,
     news,
     primary,
 )
@@ -320,3 +324,29 @@ def test_extraction_conformance_leaves_its_input_untouched():
 def test_write_path_labels_are_excluded_from_the_extracted_subset():
     assert news.WRITE_PATH_LABELS == {"NewsArticle", "Chunk"}
     assert news.EXTRACTED_LABELS == news.LABELS - news.WRITE_PATH_LABELS
+
+
+def test_the_general_key_is_the_label_and_the_slugged_name():
+    assert keys.derived_key("Politician", "Alex Lee") == "Politician:alex-lee"
+    assert keys.derived_key("PolicyArea", "Housing & Land Use") == "PolicyArea:housing-land-use"
+    assert keys.derived_key("Organization", "Café Móvil") == "Organization:cafe-movil"
+
+
+def test_a_bill_key_is_qualified_by_its_session():
+    assert keys.bill_key("2025-2026", "AB 218", "Assembly Bill 218") == "Bill:2025-2026:ab-218"
+    assert keys.bill_key("2019-2020", "AB 218", "Assembly Bill 218") == "Bill:2019-2020:ab-218"
+
+
+def test_an_unresolved_session_still_mints_a_stable_bill_key():
+    assert keys.bill_key(None, "AB 218", "Assembly Bill 218") == "Bill:unresolved:ab-218"
+    assert keys.bill_key(None, None, "the housing bill") == "Bill:unresolved:the-housing-bill"
+
+
+def test_the_write_path_mints_its_keys_through_the_shared_contract():
+    """Both Bill key call sites are the imported function, not a re-derivation."""
+
+    source = Path(neo4j_db.__file__).read_text()
+
+    assert "from knowledge_map.ontology.keys import bill_key, derived_key" in source
+    assert source.count("bill_key(") == 2
+    assert '"Bill:' not in source and "'Bill:" not in source

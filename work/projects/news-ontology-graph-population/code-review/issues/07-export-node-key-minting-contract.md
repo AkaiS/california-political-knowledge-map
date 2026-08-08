@@ -21,11 +21,11 @@ Both existing Bill key call sites import the shared function.
 
 ## Acceptance criteria
 
-- [ ] An importable module in the ontology package exports the general derived
+- [x] An importable module in the ontology package exports the general derived
       key and the Bill key.
-- [ ] Both existing Bill key call sites import it; the expression appears once.
-- [ ] Keys written to the graph are unchanged from before.
-- [ ] The suite is green.
+- [x] Both existing Bill key call sites import it; the expression appears once.
+- [x] Keys written to the graph are unchanged from before.
+- [x] The suite is green.
 
 ## Blocked by
 

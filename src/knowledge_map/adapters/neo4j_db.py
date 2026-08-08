@@ -1,10 +1,10 @@
 import re
-import unicodedata
 
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
 from knowledge_map.ontology import news, primary
+from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
 from knowledge_map.core.bill_sessions import normalize_bill_number
 
@@ -117,15 +117,6 @@ def _write_relationship(
     tx.run(query, **parameters)
 
 
-def _slug(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
-
-
-def _node_id(label: str, name: str) -> str:
-    return f"{label}:{_slug(name)}"
-
-
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
     """Assert the write path's own invariant on labels reaching the graph.
 
@@ -155,7 +146,7 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
         label = node.label
         node_labels[node.name] = label
         labels = _validated_labels(label, node.sub_labels)
-        node_id = _node_id(label, node.name)
+        node_id = derived_key(label, node.name)
         query = (
             f"MERGE (n:{labels} {{id: $node_id}}) "
             "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url"
@@ -164,7 +155,7 @@ def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str |
                properties=node.properties)
 
     for rel in extraction.relationships:
-        _write_relationship(tx, rel, node_labels, _node_id)
+        _write_relationship(tx, rel, node_labels, derived_key)
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -308,9 +299,9 @@ class Neo4jAdapter:
                             properties.update(resolution)
                             if number:
                                 properties["number"] = number
-                            node_id = f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or node.name)}"
+                            node_id = bill_key(resolution.get("session"), number, node.name)
                         else:
-                            node_id = _node_id(label, node.name)
+                            node_id = derived_key(label, node.name)
                         node_ids[node.name] = node_id
 
                         # Merge node
@@ -338,10 +329,10 @@ class Neo4jAdapter:
                         if name in node_ids:
                             return node_ids[name]
                         if label != "Bill":
-                            return _node_id(label, name)
+                            return derived_key(label, name)
                         number = normalize_bill_number(name)
                         resolution = bill_sessions.get(number or "", {})
-                        return f"Bill:{resolution.get('session') or 'unresolved'}:{_slug(number or name)}"
+                        return bill_key(resolution.get("session"), number, name)
 
                     for rel in extraction.relationships:
                         _write_relationship(

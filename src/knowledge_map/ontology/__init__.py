@@ -6,10 +6,13 @@ from .extraction_conformance import (
     ConformanceOutcome,
     conform_extraction_result,
 )
+from .keys import bill_key, derived_key
 
 __all__ = [
     "assert_news_ontology_conforms",
+    "bill_key",
     "ConformanceDrop",
     "ConformanceOutcome",
     "conform_extraction_result",
+    "derived_key",
 ]
