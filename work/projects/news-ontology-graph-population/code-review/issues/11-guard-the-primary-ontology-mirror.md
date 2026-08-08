@@ -20,12 +20,12 @@ Editing either artifact alone now fails loudly.
 
 ## Acceptance criteria
 
-- [ ] A test parses `ontology.md` rather than restating its contents.
-- [ ] Labels match between document and module.
-- [ ] Per-label property names match.
-- [ ] The relationship table matches, including source and target labels.
-- [ ] Editing one artifact without the other fails the test.
-- [ ] The suite is green.
+- [x] A test parses `ontology.md` rather than restating its contents.
+- [x] Labels match between document and module.
+- [x] Per-label property names match.
+- [x] The relationship table matches, including source and target labels.
+- [x] Editing one artifact without the other fails the test.
+- [x] The suite is green.
 
 ## Blocked by
 

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -486,3 +487,141 @@ def test_every_conformance_drop_lands_in_a_declared_category():
     outcome = conform_extraction_result(result, "sha256:abc")
 
     assert {drop.category for drop in outcome.drops} == set(DropCategory)
+
+
+# --- The primary ontology is authored in `ontology.md`; `primary.py` mirrors it. ---
+#
+# The mirror is hand-copied, so nothing but a parse of the document can tell us the
+# two still agree. These helpers read the document's structure — headings, property
+# bullets, table rows — and never restate what it says, so editing either artifact
+# alone fails loudly.
+
+PRIMARY_ONTOLOGY_PATH = Path(__file__).resolve().parents[1] / "ontology.md"
+
+_LABEL_HEADING = re.compile(r"^#{2,6}\s+`:(\w+)`\s*$")
+_SECTION_HEADING = re.compile(r"^##\s+\S")
+_PROPERTY_BULLET = re.compile(r"^\s*-\s+`(\w+)`:\s+`")
+_SUB_LABEL_BULLET = re.compile(r"^\s*-\s+`:")
+_LABEL_TOKEN = re.compile(r"`:(\w+)`")
+_PROPERTY_TOKEN = re.compile(r"`(\w+):\s*[\w<>]+`")
+_NONE_CELL = re.compile(r"^[_*\s]*None[_*\s]*$")
+_ANY_CORE_ENTITY = re.compile(r"any\s+(?:resolvable\s+)?core\s+entity", re.IGNORECASE)
+_TABLE_DIVIDER = re.compile(r"^[\s:|-]+$")
+
+
+def _document_lines() -> list[str]:
+    return PRIMARY_ONTOLOGY_PATH.read_text().splitlines()
+
+
+def _parse_document_nodes() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """Return each documented label's property names and its sub-labels."""
+
+    properties: dict[str, set[str]] = {}
+    sub_labels: dict[str, set[str]] = {}
+    label: str | None = None
+
+    for line in _document_lines():
+        heading = _LABEL_HEADING.match(line)
+        if heading:
+            label = heading.group(1)
+            properties[label] = set()
+            continue
+        if label is None:
+            continue
+        if _SECTION_HEADING.match(line):
+            label = None
+            continue
+
+        bullet = _PROPERTY_BULLET.match(line)
+        if bullet:
+            properties[label].add(bullet.group(1))
+        elif _SUB_LABEL_BULLET.match(line):
+            sub_labels.setdefault(label, set()).update(_LABEL_TOKEN.findall(line))
+
+    return properties, sub_labels
+
+
+def _parse_endpoint_cell(cell: str, core_entity_labels: frozenset[str]) -> set[str]:
+    labels = set(_LABEL_TOKEN.findall(cell))
+    if labels:
+        return labels
+    if _ANY_CORE_ENTITY.search(cell):
+        return set(core_entity_labels)
+    raise AssertionError(f"Unparsed endpoint cell in ontology.md: {cell!r}")
+
+
+def _parse_property_cell(cell: str) -> set[str]:
+    names = set(_PROPERTY_TOKEN.findall(cell))
+    if names:
+        return names
+    if _NONE_CELL.match(cell):
+        return set()
+    raise AssertionError(f"Unparsed property cell in ontology.md: {cell!r}")
+
+
+def _parse_document_relationships(
+    core_entity_labels: frozenset[str],
+) -> dict[str, tuple[set[str], set[str], set[str]]]:
+    """Return each documented relationship type's sources, targets and properties.
+
+    A type documented on several rows — one per source label — is the union of them.
+    """
+
+    relationships: dict[str, tuple[set[str], set[str], set[str]]] = {}
+
+    for line in _document_lines():
+        row = line.strip()
+        if not row.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", row.strip("|"))]
+        if len(cells) < 5 or _TABLE_DIVIDER.match(row) or cells[1].startswith("**"):
+            continue
+
+        relationship_type = cells[1].strip("`")
+        sources = _parse_endpoint_cell(cells[0], core_entity_labels)
+        targets = _parse_endpoint_cell(cells[2], core_entity_labels)
+        properties = _parse_property_cell(cells[3])
+
+        if relationship_type in relationships:
+            known_sources, known_targets, known_properties = relationships[relationship_type]
+            assert known_properties == properties, (
+                f"{relationship_type} is documented twice with different properties"
+            )
+            relationships[relationship_type] = (
+                known_sources | sources, known_targets | targets, known_properties
+            )
+        else:
+            relationships[relationship_type] = (sources, targets, properties)
+
+    return relationships
+
+
+def test_the_primary_ontology_module_mirrors_the_documents_labels_and_properties():
+    documented_properties, _ = _parse_document_nodes()
+
+    assert documented_properties, "Parsed no labels out of ontology.md"
+    assert set(documented_properties) == set(primary.LABELS)
+    assert documented_properties == {
+        label: set(names) for label, names in primary.PROPERTIES.items()
+    }
+
+
+def test_the_primary_ontology_module_mirrors_the_documents_sub_labels():
+    _, documented_sub_labels = _parse_document_nodes()
+
+    assert documented_sub_labels == {
+        label: set(names) for label, names in primary.SUB_LABELS.items()
+    }
+
+
+def test_the_primary_ontology_module_mirrors_the_documents_relationship_table():
+    documented = _parse_document_relationships(primary.CORE_ENTITY_LABELS)
+
+    assert documented, "Parsed no relationships out of ontology.md"
+    assert set(documented) == set(primary.RELATIONSHIPS)
+
+    for relationship_type, (sources, targets, properties) in documented.items():
+        shape = primary.RELATIONSHIPS[relationship_type]
+        assert sources == set(shape.source_labels), relationship_type
+        assert targets == set(shape.target_labels), relationship_type
+        assert properties == set(shape.property_names), relationship_type
