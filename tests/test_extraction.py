@@ -297,3 +297,46 @@ def test_adapter_drops_a_model_emitted_article_node_without_dead_lettering_the_c
     assert report["rejected_labels"]["NewsArticle"]["count"] == 1
     assert report["rejected_labels"]["Chunk"]["count"] == 1
     assert report["rejected_labels"]["NewsArticle"]["example_chunk_id"].startswith("sha256:")
+
+
+def test_the_output_contract_gives_a_required_sub_label_somewhere_to_go():
+    """The ontology section demands a sub-label; the contract must hold one.
+
+    `LegislativeEvent` and `Campaign` require exactly one sub-label, so a contract
+    whose entity object has no `sub_labels` field asks the model for a value with
+    nowhere to put it — and every such entity is then dropped by conformance.
+    """
+
+    instructions = load_instructions()
+    contract, separator, _ = instructions.partition("## Closed ontology")
+
+    assert separator, "the generated ontology section is missing from the prompt"
+    assert '"sub_labels"' in contract
+
+
+def test_entities_requiring_a_sub_label_survive_conformance_when_they_carry_one():
+    response = {
+        "nodes": [
+            {"name": "Vote on AB 1", "label": "LegislativeEvent", "sub_labels": ["Vote"]},
+            {"name": "Yes on Schools", "label": "Campaign", "sub_labels": ["BallotMeasureCampaign"]},
+        ],
+        "relationships": [],
+    }
+
+    def scripted_model(messages, info):
+        return ModelResponse(parts=[ToolCallPart(
+            tool_name=info.output_tools[0].name,
+            args=response,
+            tool_call_id="scripted",
+        )])
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(scripted_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        result = adapter.extract("chunk one")
+
+    assert [(node.label, node.sub_labels) for node in result.nodes] == [
+        ("LegislativeEvent", ["Vote"]),
+        ("Campaign", ["BallotMeasureCampaign"]),
+    ]
+    assert adapter.adherence_report["rejected_labels"] == {}

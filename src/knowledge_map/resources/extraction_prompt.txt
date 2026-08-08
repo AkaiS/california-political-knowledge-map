@@ -19,6 +19,7 @@ Each entity must have:
 ```json
 {
   "label": "ExampleLabel",
+  "sub_labels": ["ExampleSubLabel"],
   "name": "Example Name",
   "properties": {}
 }

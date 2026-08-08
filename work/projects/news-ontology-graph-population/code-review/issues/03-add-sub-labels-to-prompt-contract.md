@@ -19,12 +19,12 @@ the hand-tuned prose changes; the generated section is already correct.
 
 ## Acceptance criteria
 
-- [ ] The Extraction Prompt's hand-written output contract shows `sub_labels` on
+- [x] The Extraction Prompt's hand-written output contract shows `sub_labels` on
       the entity object.
-- [ ] A `LegislativeEvent` emitted with a sub-label survives conformance.
-- [ ] A `Campaign` emitted with a sub-label survives conformance.
-- [ ] No other change to the hand-written prose.
-- [ ] The suite is green.
+- [x] A `LegislativeEvent` emitted with a sub-label survives conformance.
+- [x] A `Campaign` emitted with a sub-label survives conformance.
+- [x] No other change to the hand-written prose.
+- [x] The suite is green.
 
 ## Blocked by
 
