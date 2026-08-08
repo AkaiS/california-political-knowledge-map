@@ -37,14 +37,6 @@ def test_news_ontology_declares_six_tenure_shortcuts():
     assert {shortcut.skips for shortcut in news.SHORTCUTS} == {"LegislativeTenure"}
 
 
-def test_divergences_cover_every_property_the_write_path_stamps():
-    assert news.node_divergence_properties("Bill") == {
-        "name", "source_url", "session_verified", "session_inferred", "needs_review",
-    }
-    assert news.node_divergence_properties("Committee") == {"source_url"}
-    assert news.node_divergence_properties("NewsArticle") == set()
-
-
 def test_only_an_incomplete_claim_key_diverges_on_an_edge():
     # An edge's evidence (`chunks`) and its collapse (`skips`) are not gaps — one is
     # recorded structurally, the other in SHORTCUTS. An unusable key is a real gap,
@@ -52,8 +44,13 @@ def test_only_an_incomplete_claim_key_diverges_on_an_edge():
     assert {divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES} == {
         "needs_review", "sequence_number",
     }
-    assert news.relationship_divergence_properties("FUNDED") == {"needs_review"}
-    assert news.relationship_divergence_properties("ENDORSED") == set()
+    needs_review = next(
+        item
+        for item in news.RELATIONSHIP_DIVERGENCES
+        if item.property_name == "needs_review"
+    )
+    assert "FUNDED" in needs_review.applies_to
+    assert "ENDORSED" not in needs_review.applies_to
 
 
 def test_a_vote_event_carries_the_sequence_number_not_the_vote_edge():
@@ -130,14 +127,17 @@ def test_a_shortcut_edge_is_reversible_from_its_type_alone():
     )
     assert shortcut.skips == "LegislativeTenure"
     # The flattened path is the whole reversal: nothing else need be recorded.
-    assert "skips" not in news.relationship_divergence_properties("VOTED_AYE")
+    assert "skips" not in {
+        divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES
+    }
 
 
 def test_divergent_properties_are_never_model_extractable():
-    for label in news.LABELS:
-        assert not news.node_divergence_properties(label) & news.PROPERTIES[label], (
-            f"{label} declares a property the pipeline also stamps"
-        )
+    for divergence in news.NODE_DIVERGENCES:
+        for label in divergence.applies_to:
+            assert divergence.property_name not in news.PROPERTIES[label], (
+                f"{label} declares a property the pipeline also stamps"
+            )
 
 
 def test_every_divergence_states_a_reason_and_applies_somewhere():
@@ -226,7 +226,11 @@ def test_an_identifying_property_is_a_write_path_concern_not_a_prompt_one():
     # The requirement lives here, where a missing value becomes a flag rather than
     # a demand the model can fail.
     assert news.claim_key_properties("FUNDED") == {"amount", "date", "transaction_id"}
-    assert "needs_review" in news.relationship_divergence_properties("FUNDED")
+    assert "FUNDED" in next(
+        item
+        for item in news.RELATIONSHIP_DIVERGENCES
+        if item.property_name == "needs_review"
+    ).applies_to
 
 
 def test_the_stance_enum_cannot_drift_from_what_the_prompt_advertises():

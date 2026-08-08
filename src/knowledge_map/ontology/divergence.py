@@ -1,11 +1,11 @@
-"""Declaring where a source-specific ontology departs from the primary ontology.
+"""Declaring where the news ontology departs from the primary ontology.
 
-Every extraction source gets its own closed ontology — the structures that source
-can actually produce. None of them will match the primary ontology exactly, because
-each source carries less than the primary ontology expects. This module names that
-gap so it can be declared, rendered, and checked the same way for every source.
+The news ontology is closed: it holds the structures a news article can actually
+produce. It does not match the primary ontology, because prose carries less than the
+primary ontology expects. This module names that gap so it can be declared in
+``news.py``, rendered into ``news-ontology.md``, and checked by conformance.
 
-A ``Divergence`` is an *unresolved* gap: the source could not supply what the primary
+A ``Divergence`` is an *unresolved* gap: news could not supply what the primary
 ontology declares, and no record we hold can settle it. Closing one needs an
 authoritative source, so the declaration says only what is provisional and why — it
 does not describe the fix.
@@ -30,15 +30,6 @@ class Divergence:
     property_name: str
     applies_to: frozenset[str]
     reason: str
-
-
-def properties_for(divergences: tuple[Divergence, ...], item: str) -> frozenset[str]:
-    """Property names stamped on ``item``, a label or a relationship type."""
-    return frozenset(
-        divergence.property_name
-        for divergence in divergences
-        if item in divergence.applies_to
-    )
 
 
 def assert_divergences_are_unresolved_gaps(

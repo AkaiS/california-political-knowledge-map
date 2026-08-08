@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, replace
 
-from .divergence import Divergence, properties_for
+from .divergence import Divergence
 from .primary import PROPERTIES as PRIMARY_PROPERTIES
 from .primary import RELATIONSHIPS as PRIMARY_RELATIONSHIPS
 from .primary import RelationshipShape
@@ -294,13 +294,3 @@ RELATIONSHIP_DIVERGENCES = (
 )
 
 DIVERGENCES = NODE_DIVERGENCES + RELATIONSHIP_DIVERGENCES
-
-
-def node_divergence_properties(label: str) -> frozenset[str]:
-    """Property names the write path stamps on nodes carrying ``label``."""
-    return properties_for(NODE_DIVERGENCES, label)
-
-
-def relationship_divergence_properties(relationship_type: str) -> frozenset[str]:
-    """Property names on which ``relationship_type`` edges diverge from primary."""
-    return properties_for(RELATIONSHIP_DIVERGENCES, relationship_type)

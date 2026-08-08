@@ -20,13 +20,13 @@ than the thing it describes.
 
 ## Acceptance criteria
 
-- [ ] The `Divergence` declaration and the two call sites that read it are
+- [x] The `Divergence` declaration and the two call sites that read it are
       unchanged.
-- [ ] The three uncalled helpers are deleted.
-- [ ] The unused resolvable-label alias is deleted.
-- [ ] The module docstring describes news-derived divergence, not extraction
+- [x] The three uncalled helpers are deleted.
+- [x] The unused resolvable-label alias is deleted.
+- [x] The module docstring describes news-derived divergence, not extraction
       sources in general.
-- [ ] The suite is green.
+- [x] The suite is green.
 
 ## Blocked by
 

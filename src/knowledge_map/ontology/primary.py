@@ -92,7 +92,6 @@ PROPERTIES = {
 CORE_ENTITY_LABELS = frozenset(
     LABELS - {"NewsArticle", "Chunk", "PolicyArea", "ExternalIdentifier"}
 )
-RESOLVABLE_CORE_ENTITY_LABELS = CORE_ENTITY_LABELS
 
 
 def _shape(
@@ -130,5 +129,5 @@ RELATIONSHIPS = {
     "HAS_CHUNK": _shape("NewsArticle", "Chunk"),
     "MENTIONED_IN": _shape(CORE_ENTITY_LABELS, "Chunk"),
     "DISCUSSES_TOPIC": _shape(frozenset({"NewsArticle", "Chunk"}), "PolicyArea"),
-    "HAS_IDENTIFIER": _shape(RESOLVABLE_CORE_ENTITY_LABELS, "ExternalIdentifier"),
+    "HAS_IDENTIFIER": _shape(CORE_ENTITY_LABELS, "ExternalIdentifier"),
 }
