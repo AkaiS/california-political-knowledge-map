@@ -25,6 +25,7 @@ class DatabaseAdapter(Protocol):
         chunk_id: str,
         extraction: ExtractionResult,
         bill_sessions: dict[str, dict[str, object]] | None = None,
+        published_date: str | None = None,
     ) -> None:
         ...
 
@@ -222,7 +223,12 @@ class StoryPipeline:
                     chunk_id = f"{article.url}#chunk_{idx}"
                     embedding = embeddings[idx] if idx < len(embeddings) else []
                     self.db_adapter.ingest_chunk(article, chunk, embedding)
-                    self.db_adapter.ingest_chunk_extraction(chunk_id, extractions[idx], bill_sessions)
+                    # The publication date is the Legislative Event date of last
+                    # resort: an event the article dated no other way is stamped
+                    # with it and flagged inferred.
+                    self.db_adapter.ingest_chunk_extraction(
+                        chunk_id, extractions[idx], bill_sessions, article.published_date
+                    )
 
                 # 6. Update status to COMPLETED
                 self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)

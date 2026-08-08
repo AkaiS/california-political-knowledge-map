@@ -1,10 +1,12 @@
 import re
+from datetime import datetime
 
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
+from knowledge_map.ontology.properties import normalize_date
 from knowledge_map.schemas import ArticleChunk, ExtractionResult, SourceArticle
 from knowledge_map.core.bill_sessions import normalize_bill_number
 
@@ -133,6 +135,52 @@ def _write_relationship(
     tx.run(query, **parameters)
 
 
+def _published_date(published_date: str | None) -> str | None:
+    """The article's publication day, as a calendar date."""
+
+    if not published_date:
+        return None
+    calendar_date = normalize_date(published_date)
+    if calendar_date is not None:
+        return calendar_date
+    try:
+        return datetime.fromisoformat(published_date.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return None
+
+
+def legislative_event_date(
+    stated_date: object, published_date: str | None
+) -> dict[str, object]:
+    """When a Legislative Event happened, and how well we know it.
+
+    A later reconciliation against an authoritative legislative record joins on
+    date and bill, so the event has to carry a date even when the article never
+    stated one. Where the article states one, that is the date and it is
+    *verified*; otherwise the article's publication day stands in and is flagged
+    *inferred*, because a story usually reports an event within a day or two of
+    it happening and a near date is what makes the join possible at all.
+
+    The flags follow Bill Session Resolution's convention — a value, a verified
+    flag, an inferred flag, and ``needs_review`` when nothing we hold settles it.
+    They are properties and nothing more: **the date is never part of the key.**
+    A wrong date in the key would conflate two distinct events, which nothing
+    downstream can undo, whereas a name-derived key at worst fragments one event
+    into two nodes that a later join on date and bill can merge back. Nor is the
+    date keyed only when verified: that would give Legislative Events two
+    identity shapes, and a later correct-date ingest can only find every node it
+    must fix if there is one shape to look for.
+    """
+
+    verified = normalize_date(stated_date)
+    if verified is not None:
+        return {"date": verified, "date_verified": True,
+                "date_inferred": False, "needs_review": False}
+    inferred = _published_date(published_date)
+    return {"date": inferred, "date_verified": False,
+            "date_inferred": inferred is not None, "needs_review": inferred is None}
+
+
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
     """Assert the write path's own invariant on labels reaching the graph.
 
@@ -156,19 +204,31 @@ class Neo4jConfigError(ValueError):
 class Neo4jConnectionError(Exception):
     """Raised when there is an error connecting to or interacting with Neo4j."""
     pass
-def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str | None = None):
+def ingest_extraction_result(
+    tx,
+    extraction: ExtractionResult,
+    source_url: str | None = None,
+    published_date: str | None = None,
+):
     node_labels = {}
     for node in extraction.nodes:
         label = node.label
         node_labels[node.name] = label
         labels = _validated_labels(label, node.sub_labels)
+        properties = dict(node.properties)
+        if label == "LegislativeEvent":
+            properties.update(
+                legislative_event_date(properties.get("date"), published_date)
+            )
+        # The key is name-derived for every label here, including
+        # `LegislativeEvent`: its date is a property, never an identity.
         node_id = derived_key(label, node.name)
         query = (
             f"MERGE (n:{labels} {{id: $node_id}}) "
             "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url"
         )
         tx.run(query, node_id=node_id, name=node.name, source_url=source_url,
-               properties=node.properties)
+               properties=properties)
 
     for rel in extraction.relationships:
         _write_relationship(tx, rel, node_labels, derived_key)
@@ -296,6 +356,7 @@ class Neo4jAdapter:
         chunk_id: str,
         extraction: ExtractionResult,
         bill_sessions: dict[str, dict[str, object]] | None = None,
+        published_date: str | None = None,
     ) -> None:
         bill_sessions = bill_sessions or {}
         driver = self.connect()
@@ -317,6 +378,14 @@ class Neo4jAdapter:
                                 properties["number"] = number
                             node_id = bill_key(resolution.get("session"), number, node.name)
                         else:
+                            if label == "LegislativeEvent":
+                                properties.update(
+                                    legislative_event_date(
+                                        properties.get("date"), published_date
+                                    )
+                                )
+                            # Name-derived, with the date deliberately outside it:
+                            # one identity shape for every Legislative Event.
                             node_id = derived_key(label, node.name)
                         node_ids[node.name] = node_id
 

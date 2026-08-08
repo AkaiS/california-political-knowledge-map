@@ -203,11 +203,31 @@ NODE_DIVERGENCES = (
         ),
     ),
     Divergence(
-        property_name="needs_review",
-        applies_to=frozenset({"Bill"}),
+        property_name="date_verified",
+        applies_to=frozenset({"LegislativeEvent"}),
         reason=(
-            "No session could be resolved or inferred, so the key is a placeholder that "
-            "nothing we hold can settle."
+            "The article stated the date of the event, so the `date` is as good as the "
+            "source. It is still not part of the key: the date identifies nothing here, "
+            "it is the fact a later reconciliation joins on."
+        ),
+    ),
+    Divergence(
+        property_name="date_inferred",
+        applies_to=frozenset({"LegislativeEvent"}),
+        reason=(
+            "The article dated the event no other way, so its publication date stands in. "
+            "News usually reports an event within a day or two of it happening, which "
+            "makes the stand-in near enough to join on and far too soft to key on."
+        ),
+    ),
+    Divergence(
+        property_name="needs_review",
+        applies_to=frozenset({"Bill", "LegislativeEvent"}),
+        reason=(
+            "For a `Bill`, no session could be resolved or inferred, so the key is a "
+            "placeholder that nothing we hold can settle. For a `LegislativeEvent`, "
+            "neither the article nor its metadata yielded a date, so the event carries "
+            "none and a later reconciliation has nothing to join on."
         ),
     ),
 )

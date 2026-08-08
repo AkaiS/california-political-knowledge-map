@@ -26,13 +26,13 @@ The key stays name-derived, from the shared minting contract.
 
 ## Acceptance criteria
 
-- [ ] A `LegislativeEvent` carries a `date` and a flag naming its source.
-- [ ] The date is the event's stated date when the article supplies one.
-- [ ] The date falls back to the article's published date otherwise, flagged as
+- [x] A `LegislativeEvent` carries a `date` and a flag naming its source.
+- [x] The date is the event's stated date when the article supplies one.
+- [x] The date falls back to the article's published date otherwise, flagged as
       inferred.
-- [ ] The event's primary key does not contain the date, verified or inferred.
-- [ ] Every `LegislativeEvent` has the same identity shape.
-- [ ] The suite is green.
+- [x] The event's primary key does not contain the date, verified or inferred.
+- [x] Every `LegislativeEvent` has the same identity shape.
+- [x] The suite is green.
 
 ## Blocked by
 

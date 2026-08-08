@@ -702,6 +702,73 @@ def test_bill_session_participates_in_node_primary_key():
     ]
     assert node_calls[0][1]["properties"]["session_verified"] is True
 
+
+def _event_call(event_properties: dict, published_date: str | None):
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=ExtractionResult(nodes=[
+            Node(name="Assembly floor vote on AB 218", label="LegislativeEvent",
+                 sub_labels=["Vote"], properties=event_properties),
+        ]),
+        published_date=published_date,
+    )
+    return next(
+        call for call in mock_tx.run.call_args_list
+        if "MERGE (n:LegislativeEvent" in call[0][0]
+    )
+
+
+def test_a_stated_event_date_is_recorded_and_flagged_verified():
+    call = _event_call({"date": "January 15, 2024", "type": "Vote"}, "2024-01-17T09:00:00Z")
+
+    assert call[1]["properties"]["date"] == "2024-01-15"
+    assert call[1]["properties"]["date_verified"] is True
+    assert call[1]["properties"]["date_inferred"] is False
+    assert call[1]["properties"]["needs_review"] is False
+
+
+def test_an_undated_event_falls_back_to_the_publication_date_as_inferred():
+    call = _event_call({"type": "Vote"}, "2024-01-17T09:00:00Z")
+
+    # A story reports an event within a day or two, so the publication date is
+    # near enough for a later join and never good enough for the key.
+    assert call[1]["properties"]["date"] == "2024-01-17"
+    assert call[1]["properties"]["date_verified"] is False
+    assert call[1]["properties"]["date_inferred"] is True
+    assert call[1]["properties"]["needs_review"] is False
+
+
+def test_an_event_with_no_date_anywhere_is_flagged_for_review():
+    call = _event_call({"type": "Vote"}, None)
+
+    assert call[1]["properties"]["date"] is None
+    assert call[1]["properties"]["date_verified"] is False
+    assert call[1]["properties"]["date_inferred"] is False
+    assert call[1]["properties"]["needs_review"] is True
+
+
+def test_a_legislative_event_key_never_contains_its_date():
+    stated = _event_call({"date": "January 15, 2024"}, "2024-01-17T09:00:00Z")
+    inferred = _event_call({}, "2024-01-17T09:00:00Z")
+    undated = _event_call({}, None)
+
+    # One identity shape, whatever the date turned out to be: a later
+    # correct-date ingest can only fix every node if there is one shape to look
+    # for, and a guessed date in the key would conflate two events irrecoverably
+    # rather than fragment one recoverably.
+    key = "LegislativeEvent:assembly-floor-vote-on-ab-218"
+    assert stated[1]["node_id"] == inferred[1]["node_id"] == undated[1]["node_id"] == key
+    for call in (stated, inferred, undated):
+        assert "date" not in call[0][0]
+        for value in (call[1]["properties"].get("date"), "2024-01-15", "2024-01-17"):
+            assert not value or value not in call[1]["node_id"]
+
 def test_context_manager_lifecycle():
     mock_driver = MagicMock()
     mock_driver.verify_connectivity.return_value = None
