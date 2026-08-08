@@ -33,13 +33,13 @@ and points at the authored-not-frozen ADR.
 
 ## Acceptance criteria
 
-- [ ] The PRD's provenance paragraph states structural traceability and names the
+- [x] The PRD's provenance paragraph states structural traceability and names the
       chunk list on relationships as load-bearing.
-- [ ] The PRD's `LegislativeEvent` retention justification names the date.
-- [ ] Issue 06's provenance criterion states what was decided, not what was
+- [x] The PRD's `LegislativeEvent` retention justification names the date.
+- [x] Issue 06's provenance criterion states what was decided, not what was
       claimed.
-- [ ] Issue 02's `ontology.md` criterion matches the history.
-- [ ] Each rewritten criterion points at the amendment or ADR superseding it.
+- [x] Issue 02's `ontology.md` criterion matches the history.
+- [x] Each rewritten criterion points at the amendment or ADR superseding it.
 
 ## Blocked by
 

@@ -50,8 +50,15 @@ intermediate node later ingestion must insert and the edge it must re-anchor.
 - [x] `DISCUSSES_TOPIC` is created automatically from the chunk to each
       `PolicyArea` in that chunk's extraction, with no properties; no
       article-level topic edge is written.
-- [x] Every extractor-produced node and relationship carries the news-derived
-      provenance property.
+- [x] Every extractor-produced node and relationship is traceable to the Article
+      Chunk it came from *without* a provenance property: every extracted entity
+      carries `MENTIONED_IN` to its Article Chunk, and every extractor-produced
+      relationship carries the list of chunks that asserted it. That chunk list
+      is load-bearing and must not be removed. This supersedes the original
+      criterion — "every extractor-produced node and relationship carries the
+      news-derived provenance property" — and the body paragraph above it; see the
+      amended provenance paragraph under "Write path and the Graph Database
+      Adapter" in the [PRD's Implementation Decisions](../PRD.md).
 - [x] Shortcut relationships carry `skips` naming the bypassed node.
 - [x] Covered at the graph adapter seam by inspecting the Cypher and parameters
       issued to a captured driver.

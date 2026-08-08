@@ -59,7 +59,16 @@ ticket's question about where the Extraction Prompt and the ontology disagreed.
 - [x] The primary ontology module carries the label set, sub-label map, per-label
       property names, and the relationship table with permitted endpoint labels,
       mirroring `ontology.md`.
-- [x] `ontology.md` is unmodified.
+- [x] Any correction to `ontology.md` is a deliberate, recorded last resort rather
+      than a convenience. This supersedes the original criterion — "`ontology.md`
+      is unmodified" — and the statement to the same effect in the body above:
+      the file was in fact corrected twice, once here to align the article
+      properties, and once by
+      [issue 05 of the code review](../code-review/issues/05-move-sequence-number-onto-legislative-event.md)
+      moving `sequence_number` onto `LegislativeEvent`. Both are the worked
+      examples in
+      [ADR 0014 — The primary ontology is authored, not frozen](../../../../docs/adr/0014-the-primary-ontology-is-authored-not-frozen.md),
+      which governs when such a correction is permitted.
 - [x] The News Ontology declares its labels, relationships, per-label property
       names, the ticket 01 Policy Area vocabulary, and the six shortcut rules.
 - [x] The excluded labels and relationships listed above are absent from the News

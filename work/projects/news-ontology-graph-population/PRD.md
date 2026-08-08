@@ -301,11 +301,20 @@ is dropped and the gathered Source Articles re-ingested.
   nuance — the topic's presence in the chunk is the entire edge — so a dedicated
   output field would buy nothing over the node already being present.
   Article-level `DISCUSSES_TOPIC` is not materialized.
-- Every node and relationship the extractor produces is stamped with a provenance
-  property identifying it as news-derived. Shortcut relationships additionally
-  carry `skips` naming the primary-ontology node they bypass. Relying instead on
-  reachability from a chunk would fail the moment entity resolution merges a
-  news-derived node with one from an authoritative source.
+- **Provenance is structural, not a stamped property** *(amended — this paragraph
+  originally required a provenance property on every node and relationship, and
+  rejected reachability from a chunk; the decision was taken the other way)*. No
+  provenance property is written on news-derived structure. Traceability is
+  carried by the graph's own shape and is already complete: every extracted
+  entity carries `MENTIONED_IN` to the Article Chunk it was found in, and every
+  extractor-produced relationship carries the list of chunks that asserted it.
+  That chunk list is **load-bearing**, not an unspecified addition — it is the
+  only traceability an extractor-produced edge has, so removing it strips the
+  edge of its provenance outright. Shortcut relationships additionally carry
+  `skips` naming the primary-ontology node they bypass. What an edge may carry
+  beyond this is settled by
+  [ADR 0013 — A news-derived relationship asserts existence and identity, not
+  payload](../../../docs/adr/0013-a-news-derived-relationship-asserts-existence-and-identity-not-payload.md).
 
 ### Bill session resolution
 
