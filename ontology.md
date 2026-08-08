@@ -117,6 +117,8 @@
     
 - `date`: `DATE`
     
+- `sequence_number`: `INTEGER` _(The event's position in the bill's lifecycle, e.g., 3)_
+    
 - `description`: `STRING` _(Brief summary of the action taken)_
     
 
@@ -192,9 +194,9 @@
 | `:LegislativeTenure`             | `SERVES_ON`           | `:Committee`             | _None_                                                                                  | Standard legislative committee assignment.                     |
 | `:LegislativeTenure`             | `CHAIRS`              | `:Committee`             | _None_                                                                                  | Identifies the committee chair for high-influence routing.     |
 | `:LegislativeTenure`             | `VICE_CHAIRS`         | `:Committee`             | _None_                                                                                  | Identifies the committee vice chair.                           |
-| `:LegislativeTenure`             | `VOTED_AYE`           | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to an affirmative vote event.                   |
-| `:LegislativeTenure`             | `VOTED_NO`            | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to a negative vote event.                       |
-| `:LegislativeTenure`             | `ABSTAINED`           | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to an abstention or unrecorded vote.            |
+| `:LegislativeTenure`             | `VOTED_AYE`           | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to an affirmative vote event.                   |
+| `:LegislativeTenure`             | `VOTED_NO`            | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to a negative vote event.                       |
+| `:LegislativeTenure`             | `ABSTAINED`           | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to an abstention or unrecorded vote.            |
 | `:LegislativeEvent`              | `ACTION_ON`           | `:Bill`                  | _None_                                                                                  | Connects the distinct timeline events back to the parent bill. |
 | `:Bill`                          | `ABOUT_TOPIC`         | `:PolicyArea`            | _None_                                                                                  | Maps a bill to its thematic category hub.                      |
 | `:Prop`                          | `ABOUT_TOPIC`         | `:PolicyArea`            | _None_                                                                                  | Maps a proposition to its thematic category hub.               |

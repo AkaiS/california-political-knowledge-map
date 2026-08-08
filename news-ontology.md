@@ -65,8 +65,9 @@ The edge also carries `skips` naming the label to reinsert.
 
 ## Divergences from the primary ontology
 
-Properties the write path stamps that the primary ontology does not declare,
-each marking something news could not supply and nothing we hold can settle.
+Where the two ontologies part: a property the write path stamps that the
+primary ontology does not declare, or one the primary ontology declares that
+news cannot supply. Either way it marks something nothing we hold can settle.
 Unlike a shortcut, a divergence is not reversible from our own record: closing
 one needs an authoritative source.
 
@@ -74,13 +75,14 @@ An edge's evidence is not a divergence: the `Chunk` it was read from is
 recorded in `chunks`, which the primary ontology has no need of because a
 record does not cite a passage. Nor is its collapse, which the shortcut holds.
 
-| Property | Applies to | Why news needs it |
+| Property | Applies to | Why it diverges |
 | --- | --- | --- |
 | `name` | `Bill` / `LegislativeEvent` / `Politician` / `Prop` | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
 | `source_url` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `PolicyArea` / `Politician` / `Prop` | The legacy whole-article write path has no `Chunk` to hang a mention off, so it records the originating article on the node instead. The chunked path reaches the article through `MENTIONED_IN` and `HAS_CHUNK` and omits it. |
 | `session_verified` | `Bill` | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
 | `session_inferred` | `Bill` | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |
 | `needs_review` | `Bill` | No session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. |
+| `sequence_number` | `ABSTAINED` / `VOTED_AYE` / `VOTED_NO` | A news-derived vote edge carries no roll-call position and no event discrimination. `sequence_number` belongs to the `LegislativeEvent` — it is identical for every voter at one event — and only an authoritative legislative record supplies it; prose reports that a legislator voted, not where in the bill's lifecycle the event sat. Which kind of event it was stays on the `LegislativeEvent` sub-label, not on the edge. |
 | `needs_review` | `DECLARED_STANCE` / `FUNDED` | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |
 
 ## Primary ontology concepts outside news scope

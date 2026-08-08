@@ -52,10 +52,19 @@ WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
 #: Labels the extraction model is responsible for producing.
 EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS
 
+#: Properties the primary ontology declares that news cannot supply, so the News
+#: Ontology does not declare them either. A `LegislativeEvent`'s
+#: `sequence_number` is its position in the bill's lifecycle, which only a
+#: legislative record holds; prose reports the event, never its ordinal.
+UNSUPPLIED_PROPERTIES = {"LegislativeEvent": frozenset({"sequence_number"})}
+
 #: Property names the model may supply, per label. Divergences are excluded on
 #: purpose: they are stamped by the pipeline, so a model that emits one is
 #: guessing and gets dropped.
-PROPERTIES = {label: PRIMARY_PROPERTIES[label] for label in LABELS}
+PROPERTIES = {
+    label: PRIMARY_PROPERTIES[label] - UNSUPPLIED_PROPERTIES.get(label, frozenset())
+    for label in LABELS
+}
 
 POLICY_AREAS = (
     PolicyArea("aging-and-long-term-care", "Aging & Long-Term Care"),
@@ -203,7 +212,24 @@ IDENTIFYING_PROPERTIES = {
     "DECLARED_STANCE": frozenset({"alignment"}),
 }
 
+#: The three vote relationships, which declare no properties at all: a
+#: news-derived vote edge and a later legislative-derived one share an empty
+#: Claim Key and merge rather than duplicate.
+VOTE_RELATIONSHIPS = frozenset({"VOTED_AYE", "VOTED_NO", "ABSTAINED"})
+
 RELATIONSHIP_DIVERGENCES = (
+    Divergence(
+        property_name="sequence_number",
+        applies_to=VOTE_RELATIONSHIPS,
+        reason=(
+            "A news-derived vote edge carries no roll-call position and no event "
+            "discrimination. `sequence_number` belongs to the `LegislativeEvent` — it is "
+            "identical for every voter at one event — and only an authoritative "
+            "legislative record supplies it; prose reports that a legislator voted, not "
+            "where in the bill's lifecycle the event sat. Which kind of event it was "
+            "stays on the `LegislativeEvent` sub-label, not on the edge."
+        ),
+    ),
     Divergence(
         property_name="needs_review",
         applies_to=frozenset(IDENTIFYING_PROPERTIES),
@@ -224,5 +250,5 @@ def node_divergence_properties(label: str) -> frozenset[str]:
 
 
 def relationship_divergence_properties(relationship_type: str) -> frozenset[str]:
-    """Property names the write path stamps on ``relationship_type`` edges."""
+    """Property names on which ``relationship_type`` edges diverge from primary."""
     return properties_for(RELATIONSHIP_DIVERGENCES, relationship_type)

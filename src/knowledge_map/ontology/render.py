@@ -64,14 +64,15 @@ def render_news_ontology() -> str:
     lines.extend(
         [
             "", "## Divergences from the primary ontology", "",
-            "Properties the write path stamps that the primary ontology does not declare,",
-            "each marking something news could not supply and nothing we hold can settle.",
+            "Where the two ontologies part: a property the write path stamps that the",
+            "primary ontology does not declare, or one the primary ontology declares that",
+            "news cannot supply. Either way it marks something nothing we hold can settle.",
             "Unlike a shortcut, a divergence is not reversible from our own record: closing",
             "one needs an authoritative source.", "",
             "An edge's evidence is not a divergence: the `Chunk` it was read from is",
             "recorded in `chunks`, which the primary ontology has no need of because a",
             "record does not cite a passage. Nor is its collapse, which the shortcut holds.", "",
-            "| Property | Applies to | Why news needs it |",
+            "| Property | Applies to | Why it diverges |",
             "| --- | --- | --- |",
         ]
     )

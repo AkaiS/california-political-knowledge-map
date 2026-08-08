@@ -39,12 +39,42 @@ def test_divergences_cover_every_property_the_write_path_stamps():
 
 def test_only_an_incomplete_claim_key_diverges_on_an_edge():
     # An edge's evidence (`chunks`) and its collapse (`skips`) are not gaps — one is
-    # recorded structurally, the other in SHORTCUTS. An unusable key is a real gap.
+    # recorded structurally, the other in SHORTCUTS. An unusable key is a real gap,
+    # and so is a roll-call position news never reports.
     assert {divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES} == {
-        "needs_review"
+        "needs_review", "sequence_number",
     }
     assert news.relationship_divergence_properties("FUNDED") == {"needs_review"}
     assert news.relationship_divergence_properties("ENDORSED") == set()
+
+
+def test_a_vote_event_carries_the_sequence_number_not_the_vote_edge():
+    # The value is identical for every voter at one event, so it describes the
+    # event's position in the bill's lifecycle, not one legislator's claim.
+    assert "sequence_number" in primary.PROPERTIES["LegislativeEvent"]
+
+    for relationship_type in ("VOTED_AYE", "VOTED_NO", "ABSTAINED"):
+        assert primary.RELATIONSHIPS[relationship_type].properties == ()
+        assert not primary.RELATIONSHIPS[relationship_type].property_names
+        assert not news.RELATIONSHIPS[relationship_type].property_names
+        assert relationship_type not in news.IDENTIFYING_PROPERTIES
+
+
+def test_news_supplies_neither_a_roll_call_position_nor_event_discrimination():
+    # News declares no `sequence_number` anywhere: not on the event it belongs to,
+    # and not on the vote edges that used to carry it.
+    assert "sequence_number" not in news.PROPERTIES["LegislativeEvent"]
+
+    divergence = next(
+        item
+        for item in news.RELATIONSHIP_DIVERGENCES
+        if item.property_name == "sequence_number"
+    )
+    assert divergence.applies_to == {"VOTED_AYE", "VOTED_NO", "ABSTAINED"}
+    assert "no roll-call position and no event discrimination" in divergence.reason
+    # Event discrimination stays on the sub-label; no claim is made about which
+    # events news reports.
+    assert "Vote" in news.SUB_LABELS["LegislativeEvent"]
 
 
 def test_a_claim_is_identified_only_by_properties_the_ontology_shapes():

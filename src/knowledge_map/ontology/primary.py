@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from .properties import (
-    PropertySpec, enum_spec, normalize_amount, normalize_date, normalize_integer, normalize_text
+    PropertySpec, enum_spec, normalize_amount, normalize_date, normalize_text
 )
 
 
@@ -30,12 +30,6 @@ class RelationshipShape:
 
 
 #: Declared in the relationship table of ``ontology.md``.
-_VOTE_PROPERTIES = (
-    PropertySpec(
-        "sequence_number", normalize_integer,
-        form="a whole number, digits only", example="3",
-    ),
-)
 _FUNDED_PROPERTIES = (
     PropertySpec(
         "amount", normalize_amount,
@@ -87,7 +81,7 @@ PROPERTIES = {
     "RedistrictingCycle": frozenset({"id", "year", "mid_cycle"}),
     "Committee": frozenset({"id", "name", "chamber"}),
     "Bill": frozenset({"id", "number", "session", "current_status"}),
-    "LegislativeEvent": frozenset({"id", "type", "date", "description"}),
+    "LegislativeEvent": frozenset({"id", "type", "date", "sequence_number", "description"}),
     "Prop": frozenset({"id", "number", "election_date", "official_title", "summary"}),
     "Campaign": frozenset({"id", "name", "election_cycle", "status"}),
     "Organization": frozenset({"id", "name", "industry_sector", "fppc_id"}),
@@ -118,9 +112,9 @@ RELATIONSHIPS = {
     "SERVES_ON": _shape("LegislativeTenure", "Committee"),
     "CHAIRS": _shape("LegislativeTenure", "Committee"),
     "VICE_CHAIRS": _shape("LegislativeTenure", "Committee"),
-    "VOTED_AYE": _shape("LegislativeTenure", "LegislativeEvent", _VOTE_PROPERTIES),
-    "VOTED_NO": _shape("LegislativeTenure", "LegislativeEvent", _VOTE_PROPERTIES),
-    "ABSTAINED": _shape("LegislativeTenure", "LegislativeEvent", _VOTE_PROPERTIES),
+    "VOTED_AYE": _shape("LegislativeTenure", "LegislativeEvent"),
+    "VOTED_NO": _shape("LegislativeTenure", "LegislativeEvent"),
+    "ABSTAINED": _shape("LegislativeTenure", "LegislativeEvent"),
     "ACTION_ON": _shape("LegislativeEvent", "Bill"),
     "ABOUT_TOPIC": _shape(frozenset({"Bill", "Prop"}), "PolicyArea"),
     "CAMPAIGN_FOR": _shape("Campaign", frozenset({"Prop", "Politician"})),

@@ -30,16 +30,16 @@ discrimination stays on the `LegislativeEvent` sub-label.
 
 ## Acceptance criteria
 
-- [ ] `ontology.md` puts `sequence_number` on `LegislativeEvent` and off the
+- [x] `ontology.md` puts `sequence_number` on `LegislativeEvent` and off the
       three vote relationships.
-- [ ] The primary ontology module matches that document exactly.
-- [ ] `VOTED_AYE`, `VOTED_NO`, and `ABSTAINED` declare no properties.
-- [ ] The News Ontology declares no `sequence_number` on events and no vote
+- [x] The primary ontology module matches that document exactly.
+- [x] `VOTED_AYE`, `VOTED_NO`, and `ABSTAINED` declare no properties.
+- [x] The News Ontology declares no `sequence_number` on events and no vote
       relationship property.
-- [ ] A Divergence is declared for the vote relationships stating that
+- [x] A Divergence is declared for the vote relationships stating that
       news-derived vote edges carry no roll-call position and no event
       discrimination.
-- [ ] The suite is green.
+- [x] The suite is green.
 
 ## Blocked by
 

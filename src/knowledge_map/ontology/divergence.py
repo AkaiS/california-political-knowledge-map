@@ -20,7 +20,12 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Divergence:
-    """A property a source's write path stamps that the primary ontology lacks."""
+    """A property on which a source ontology parts from the primary ontology.
+
+    Either the source's write path stamps one the primary ontology does not declare,
+    or the primary ontology declares one the source cannot supply. Both are gaps only
+    an authoritative record can close.
+    """
 
     property_name: str
     applies_to: frozenset[str]
