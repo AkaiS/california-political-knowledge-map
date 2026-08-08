@@ -16,10 +16,10 @@ This is the last step, taken after all three land.
 
 ## Acceptance criteria
 
-- [ ] `news-ontology.md` is regenerated from the current ontology.
-- [ ] The vote Divergence appears in the rendered divergence record.
-- [ ] No stale relationship property or identifying-property content remains.
-- [ ] The file is regenerated, not hand-edited.
+- [x] `news-ontology.md` is regenerated from the current ontology.
+- [x] The vote Divergence appears in the rendered divergence record.
+- [x] No stale relationship property or identifying-property content remains.
+- [x] The file is regenerated, not hand-edited.
 
 ## Blocked by
 
