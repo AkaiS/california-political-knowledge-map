@@ -209,34 +209,7 @@ class Neo4jConfigError(ValueError):
 class Neo4jConnectionError(Exception):
     """Raised when there is an error connecting to or interacting with Neo4j."""
     pass
-def ingest_extraction_result(
-    tx,
-    extraction: ExtractionResult,
-    source_url: str | None = None,
-    published_date: str | None = None,
-):
-    node_labels = {}
-    for node in extraction.nodes:
-        label = node.label
-        node_labels[node.name] = label
-        labels = _validated_labels(label, node.sub_labels)
-        properties = dict(node.properties)
-        if label == "LegislativeEvent":
-            properties.update(
-                legislative_event_date(properties.get("date"), published_date)
-            )
-        # The key is name-derived for every label here, including
-        # `LegislativeEvent`: its date is a property, never an identity.
-        node_id = derived_key(label, node.name)
-        query = (
-            f"MERGE (n:{labels} {{id: $node_id}}) "
-            "SET n += $properties, n.id = $node_id, n.name = $name, n.source_url = $source_url"
-        )
-        tx.run(query, node_id=node_id, name=node.name, source_url=source_url,
-               properties=properties)
 
-    for rel in extraction.relationships:
-        _write_relationship(tx, rel, node_labels, derived_key)
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -444,16 +417,6 @@ class Neo4jAdapter:
                 session.execute_write(_clear_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to clear Neo4j database: {e}")
-
-    def ingest_extraction(self, extraction: ExtractionResult, source_url: str | None = None):
-        driver = self.connect()
-        try:
-            with driver.session() as session:
-                def _ingest_tx(tx):
-                    ingest_extraction_result(tx, extraction, source_url)
-                session.execute_write(_ingest_tx)
-        except Exception as e:
-            raise Neo4jConnectionError(f"Failed to ingest extraction result to Neo4j: {e}")
 
     def get_distinct_labels(self):
         driver = self.connect()

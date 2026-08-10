@@ -176,15 +176,6 @@ NODE_DIVERGENCES = (
         ),
     ),
     Divergence(
-        property_name="source_url",
-        applies_to=EXTRACTED_LABELS,
-        reason=(
-            "The legacy whole-article write path has no `Chunk` to hang a mention off, "
-            "so it records the originating article on the node instead. The chunked path "
-            "reaches the article through `MENTIONED_IN` and `HAS_CHUNK` and omits it."
-        ),
-    ),
-    Divergence(
         property_name="session_verified",
         applies_to=frozenset({"Bill"}),
         reason=(

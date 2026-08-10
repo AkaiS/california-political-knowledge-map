@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
+from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.schemas import (
     ArticleChunk,
     BillSessionResolution,
@@ -90,84 +90,53 @@ def test_query_execution_error_raises_custom_exception():
         manager.clear_database()
     assert "Failed to clear Neo4j database" in str(exc_info.value)
 
-def test_ingest_extraction_result_nodes():
+def test_shortcut_edge_records_the_label_it_flattened():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
     mock_tx = MagicMock()
-    extraction = ExtractionResult(
-        nodes=[
-            Node(name="Gavin Newsom", label="Politician", properties={"current_party": "Democratic"}),
-            Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"])
-        ],
-        relationships=[]
-    )
-    
-    ingest_extraction_result(mock_tx, extraction, source_url="http://example.com/story")
-    
-    assert mock_tx.run.call_count == 2
-    
-    # Check first call (Gavin Newsom)
-    first_call_args = mock_tx.run.call_args_list[0]
-    first_query = first_call_args[0][0]
-    first_kwargs = first_call_args[1]
-    
-    assert "MERGE (n:Politician {id: $node_id})" in first_query
-    assert "n.source_url = $source_url" in first_query
-    assert "n += $properties" in first_query
-    assert first_kwargs["node_id"] == "Politician:gavin-newsom"
-    assert first_kwargs["name"] == "Gavin Newsom"
-    assert first_kwargs["source_url"] == "http://example.com/story"
-    assert first_kwargs["properties"] == {"current_party": "Democratic"}
-    assert "provenance" not in first_kwargs
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
 
-    # Check second call (Democratic Party)
-    second_call_args = mock_tx.run.call_args_list[1]
-    second_query = second_call_args[0][0]
-    second_kwargs = second_call_args[1]
-    
-    assert "MERGE (n:Organization:LaborUnion {id: $node_id})" in second_query
-    assert second_kwargs["node_id"] == "Organization:california-teachers-association"
-    assert second_kwargs["name"] == "California Teachers Association"
-    assert second_kwargs["source_url"] == "http://example.com/story"
-    assert second_kwargs["properties"] == {}
-
-def test_ingest_extraction_result_relationships():
-    mock_tx = MagicMock()
     extraction = ExtractionResult(
         nodes=[
             Node(name="Gavin Newsom", label="Politician"),
-            Node(name="Education Committee", label="Committee")
+            Node(name="Education Committee", label="Committee"),
         ],
         relationships=[
             Relationship(
                 source="Gavin Newsom",
                 target="Education Committee",
                 relationship_type="SERVES_ON",
-                properties={"status": "Active"}
+                properties={"status": "Active"},
             )
-        ]
+        ],
     )
-    
-    ingest_extraction_result(mock_tx, extraction, source_url="http://example.com/story")
-    
-    # Expected call count: 2 (nodes) + 1 (relationship) = 3
-    assert mock_tx.run.call_count == 3
-    
-    # Third call is the relationship insertion
-    rel_call_args = mock_tx.run.call_args_list[2]
-    rel_query = rel_call_args[0][0]
-    rel_kwargs = rel_call_args[1]
-    
+
+    manager.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+    )
+
+    rel_call = next(
+        call for call in mock_tx.run.call_args_list if "[r:SERVES_ON]" in call[0][0]
+    )
+    rel_query = rel_call[0][0]
+    rel_kwargs = rel_call[1]
+
     assert "MATCH (src:Politician {id: $src_id}), (tgt:Committee {id: $tgt_id})" in rel_query
     assert "MERGE (src)-[r:SERVES_ON]->(tgt)" in rel_query
     assert "SET r += $stamps" in rel_query
 
     assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
     assert rel_kwargs["tgt_id"] == "Committee:education-committee"
-    # `SERVES_ON` declares nothing, so its Claim Key is empty and `status` — which the
+    # `SERVES_ON` is a shortcut, so the edge carries the label it flattened. It
+    # declares no properties, so its Claim Key is empty and `status` — which the
     # ontology never declared — stays in the Article Chunk rather than on the edge.
     assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
     assert "properties" not in rel_kwargs
 
-def test_ingest_extraction_result_invalid_identifiers():
+def test_extraction_rejects_invalid_identifiers():
     from pydantic import ValidationError
 
     # 1. Invalid node label raises ValidationError
