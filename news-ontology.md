@@ -77,17 +77,20 @@ An edge's evidence is not a divergence: the `Chunk` it was read from is
 recorded in `chunks`, which the primary ontology has no need of because a
 record does not cite a passage. Nor is its collapse, which the shortcut holds.
 
-| Property | Applies to | Why it diverges |
-| --- | --- | --- |
-| `name` | `Bill` / `LegislativeEvent` / `Politician` / `Prop` | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
-| `source_url` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `PolicyArea` / `Politician` / `Prop` | The legacy whole-article write path has no `Chunk` to hang a mention off, so it records the originating article on the node instead. The chunked path reaches the article through `MENTIONED_IN` and `HAS_CHUNK` and omits it. |
-| `session_verified` | `Bill` | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
-| `session_inferred` | `Bill` | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |
-| `date_verified` | `LegislativeEvent` | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |
-| `date_inferred` | `LegislativeEvent` | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |
-| `needs_review` | `Bill` / `LegislativeEvent` | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |
-| `sequence_number` | `ABSTAINED` / `VOTED_AYE` / `VOTED_NO` | A news-derived vote edge carries no roll-call position and no event discrimination. `sequence_number` belongs to the `LegislativeEvent` — it is identical for every voter at one event — and only an authoritative legislative record supplies it; prose reports that a legislator voted, not where in the bill's lifecycle the event sat. Which kind of event it was stays on the `LegislativeEvent` sub-label, not on the edge. |
-| `needs_review` | `DECLARED_STANCE` / `FUNDED` | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |
+The gap column is derived, not declared: a property the primary ontology
+declares is one news drops, and one it does not declare is one the write
+path stamps. Nothing records the direction twice.
+
+| Property | Applies to | Gap | Why it diverges |
+| --- | --- | --- | --- |
+| `name` | `Bill` / `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
+| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
+| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |
+| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |
+| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |
+| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |
+| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |
+| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |
 
 ## Primary ontology concepts outside news scope
 

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from . import news, primary
+from .divergence import gap_directions
 
 GENERATED_PATH = Path(__file__).resolve().parents[3] / "news-ontology.md"
 
@@ -74,15 +75,28 @@ def render_news_ontology() -> str:
             "An edge's evidence is not a divergence: the `Chunk` it was read from is",
             "recorded in `chunks`, which the primary ontology has no need of because a",
             "record does not cite a passage. Nor is its collapse, which the shortcut holds.", "",
-            "| Property | Applies to | Why it diverges |",
-            "| --- | --- | --- |",
+            "The gap column is derived, not declared: a property the primary ontology",
+            "declares is one news drops, and one it does not declare is one the write",
+            "path stamps. Nothing records the direction twice.", "",
+            "| Property | Applies to | Gap | Why it diverges |",
+            "| --- | --- | --- | --- |",
         ]
     )
-    for divergence in news.DIVERGENCES:
-        applies_to = " / ".join(f"`{item}`" for item in sorted(divergence.applies_to))
-        lines.append(
-            f"| `{divergence.property_name}` | {applies_to} | {divergence.reason} |"
-        )
+    relationship_properties = {
+        relationship_type: shape.property_names
+        for relationship_type, shape in primary.RELATIONSHIPS.items()
+    }
+    for divergences, primary_properties in (
+        (news.NODE_DIVERGENCES, primary.PROPERTIES),
+        (news.RELATIONSHIP_DIVERGENCES, relationship_properties),
+    ):
+        for divergence in divergences:
+            applies_to = " / ".join(f"`{item}`" for item in sorted(divergence.applies_to))
+            gap = ", ".join(gap_directions(divergence, primary_properties))
+            lines.append(
+                f"| `{divergence.property_name}` | {applies_to} | {gap} | "
+                f"{divergence.reason} |"
+            )
 
     shortcut_types = {shortcut.relationship_type for shortcut in news.SHORTCUTS}
     excluded_relationships = sorted(

@@ -53,17 +53,89 @@ WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
 #: Labels the extraction model is responsible for producing.
 EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS
 
-#: Properties the primary ontology declares that news cannot supply, so the News
-#: Ontology does not declare them either. A `LegislativeEvent`'s
-#: `sequence_number` is its position in the bill's lifecycle, which only a
-#: legislative record holds; prose reports the event, never its ordinal.
-UNSUPPLIED_PROPERTIES = {"LegislativeEvent": frozenset({"sequence_number"})}
+NODE_DIVERGENCES = (
+    Divergence(
+        property_name="name",
+        applies_to=frozenset(
+            label for label in EXTRACTED_LABELS if "name" not in PRIMARY_PROPERTIES[label]
+        ),
+        reason=(
+            "The extractor identifies an entity by the surface string the article used, "
+            "but these labels declare structured fields instead of a `name`. Only entity "
+            "resolution against an authoritative record can populate them."
+        ),
+    ),
+    Divergence(
+        property_name="session_verified",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "A `Bill` id is only stable per legislative session, and news prose rarely "
+            "names one. Tier 1 resolves it from a linked authoritative bill page, so the "
+            "session is as good as the source and the key is final."
+        ),
+    ),
+    Divergence(
+        property_name="session_inferred",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "Tier 2 guesses the session from the article's publication date, which is "
+            "wrong for a bill discussed outside the session that introduced it. The key "
+            "is provisional: only the authoritative session can confirm or re-key it."
+        ),
+    ),
+    Divergence(
+        property_name="date_verified",
+        applies_to=frozenset({"LegislativeEvent"}),
+        reason=(
+            "The article stated the date of the event, so the `date` is as good as the "
+            "source. It is still not part of the key: the date identifies nothing here, "
+            "it is the fact a later reconciliation joins on."
+        ),
+    ),
+    Divergence(
+        property_name="date_inferred",
+        applies_to=frozenset({"LegislativeEvent"}),
+        reason=(
+            "The article dated the event no other way, so its publication date stands in. "
+            "News usually reports an event within a day or two of it happening, which "
+            "makes the stand-in near enough to join on and far too soft to key on."
+        ),
+    ),
+    Divergence(
+        property_name="sequence_number",
+        applies_to=frozenset({"LegislativeEvent"}),
+        reason=(
+            "An article reports that a hearing or a vote happened, never where it sat "
+            "among the events before it. A single article sees one event, so nothing we "
+            "hold can order it against another article's, and only an authoritative "
+            "legislative record supplies the position."
+        ),
+    ),
+    Divergence(
+        property_name="needs_review",
+        applies_to=frozenset({"Bill", "LegislativeEvent"}),
+        reason=(
+            "For a `Bill`, no session could be resolved or inferred, so the key is a "
+            "placeholder that nothing we hold can settle. For a `LegislativeEvent`, "
+            "neither the article nor its metadata yielded a date, so the event carries "
+            "none and a later reconciliation has nothing to join on."
+        ),
+    ),
+)
 
-#: Property names the model may supply, per label. Divergences are excluded on
-#: purpose: they are stamped by the pipeline, so a model that emits one is
-#: guessing and gets dropped.
+#: Property names the model may supply, per label: what the primary ontology
+#: declares, less every divergence. One subtraction covers both directions. A
+#: property news cannot supply drops out here, which is what makes it absent from
+#: the ontology; a property the write path stamps was never in the primary
+#: ontology to begin with, so the subtraction is a no-op and the property stays
+#: absent. Either way a model that emits one is guessing, and it gets dropped.
 PROPERTIES = {
-    label: PRIMARY_PROPERTIES[label] - UNSUPPLIED_PROPERTIES.get(label, frozenset())
+    label: PRIMARY_PROPERTIES[label]
+    - frozenset(
+        divergence.property_name
+        for divergence in NODE_DIVERGENCES
+        if label in divergence.applies_to
+    )
     for label in LABELS
 }
 
@@ -163,66 +235,6 @@ RELATIONSHIPS = {
     for relationship_type, shape in _RELATIONSHIP_ENDPOINTS.items()
 }
 
-NODE_DIVERGENCES = (
-    Divergence(
-        property_name="name",
-        applies_to=frozenset(
-            label for label in EXTRACTED_LABELS if "name" not in PRIMARY_PROPERTIES[label]
-        ),
-        reason=(
-            "The extractor identifies an entity by the surface string the article used, "
-            "but these labels declare structured fields instead of a `name`. Only entity "
-            "resolution against an authoritative record can populate them."
-        ),
-    ),
-    Divergence(
-        property_name="session_verified",
-        applies_to=frozenset({"Bill"}),
-        reason=(
-            "A `Bill` id is only stable per legislative session, and news prose rarely "
-            "names one. Tier 1 resolves it from a linked authoritative bill page, so the "
-            "session is as good as the source and the key is final."
-        ),
-    ),
-    Divergence(
-        property_name="session_inferred",
-        applies_to=frozenset({"Bill"}),
-        reason=(
-            "Tier 2 guesses the session from the article's publication date, which is "
-            "wrong for a bill discussed outside the session that introduced it. The key "
-            "is provisional: only the authoritative session can confirm or re-key it."
-        ),
-    ),
-    Divergence(
-        property_name="date_verified",
-        applies_to=frozenset({"LegislativeEvent"}),
-        reason=(
-            "The article stated the date of the event, so the `date` is as good as the "
-            "source. It is still not part of the key: the date identifies nothing here, "
-            "it is the fact a later reconciliation joins on."
-        ),
-    ),
-    Divergence(
-        property_name="date_inferred",
-        applies_to=frozenset({"LegislativeEvent"}),
-        reason=(
-            "The article dated the event no other way, so its publication date stands in. "
-            "News usually reports an event within a day or two of it happening, which "
-            "makes the stand-in near enough to join on and far too soft to key on."
-        ),
-    ),
-    Divergence(
-        property_name="needs_review",
-        applies_to=frozenset({"Bill", "LegislativeEvent"}),
-        reason=(
-            "For a `Bill`, no session could be resolved or inferred, so the key is a "
-            "placeholder that nothing we hold can settle. For a `LegislativeEvent`, "
-            "neither the article nor its metadata yielded a date, so the event carries "
-            "none and a later reconciliation has nothing to join on."
-        ),
-    ),
-)
-
 def claim_key_properties(relationship_type: str) -> frozenset[str]:
     """The Claim Key of ``relationship_type``: its declared property names.
 
@@ -255,24 +267,7 @@ KEYED_RELATIONSHIPS = frozenset(
     if shape.properties
 )
 
-#: The three vote relationships, which declare no properties at all: a
-#: news-derived vote edge and a later legislative-derived one share an empty
-#: Claim Key and merge rather than duplicate.
-VOTE_RELATIONSHIPS = frozenset({"VOTED_AYE", "VOTED_NO", "ABSTAINED"})
-
 RELATIONSHIP_DIVERGENCES = (
-    Divergence(
-        property_name="sequence_number",
-        applies_to=VOTE_RELATIONSHIPS,
-        reason=(
-            "A news-derived vote edge carries no roll-call position and no event "
-            "discrimination. `sequence_number` belongs to the `LegislativeEvent` — it is "
-            "identical for every voter at one event — and only an authoritative "
-            "legislative record supplies it; prose reports that a legislator voted, not "
-            "where in the bill's lifecycle the event sat. Which kind of event it was "
-            "stays on the `LegislativeEvent` sub-label, not on the edge."
-        ),
-    ),
     Divergence(
         property_name="needs_review",
         applies_to=KEYED_RELATIONSHIPS,

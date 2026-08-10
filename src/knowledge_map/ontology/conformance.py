@@ -60,12 +60,19 @@ def assert_news_ontology_conforms() -> None:
 
     assert shortcuts == news.SHORTCUTS_BY_TYPE, "SHORTCUTS_BY_TYPE must index every shortcut"
 
-    assert_divergences_are_unresolved_gaps(
-        news.NODE_DIVERGENCES, news.LABELS, primary.PROPERTIES
-    )
+    assert_divergences_are_unresolved_gaps(news.NODE_DIVERGENCES, news.LABELS)
     assert_divergences_are_unresolved_gaps(
         news.RELATIONSHIP_DIVERGENCES, frozenset(news.RELATIONSHIPS)
     )
+
+    for divergence in news.NODE_DIVERGENCES:
+        for label in divergence.applies_to:
+            assert divergence.property_name not in news.PROPERTIES[label], (
+                f"{label}.{divergence.property_name} is declared a gap and also "
+                "declared as a property news supplies. `PROPERTIES` subtracts every "
+                "divergence, so this means the label's properties were hand-written "
+                "instead of derived."
+            )
 
     _assert_every_claim_key_property_has_a_shape()
 

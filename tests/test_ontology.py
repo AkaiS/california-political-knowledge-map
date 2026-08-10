@@ -12,7 +12,12 @@ from knowledge_map.ontology import (
     news,
     primary,
 )
-from knowledge_map.ontology.divergence import Divergence
+from knowledge_map.ontology.divergence import (
+    NOT_SUPPLIED,
+    STAMPED,
+    Divergence,
+    gap_directions,
+)
 from knowledge_map.ontology.extraction_conformance import ConformanceDrop
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.ontology.primary import RelationshipShape
@@ -40,10 +45,11 @@ def test_news_ontology_declares_six_tenure_shortcuts():
 
 def test_only_an_incomplete_claim_key_diverges_on_an_edge():
     # An edge's evidence (`chunks`) and its collapse (`skips`) are not gaps — one is
-    # recorded structurally, the other in SHORTCUTS. An unusable key is a real gap,
-    # and so is a roll-call position news never reports.
+    # recorded structurally, the other in SHORTCUTS. An unusable key is the only real
+    # gap left on an edge: `sequence_number` diverges on the `LegislativeEvent` that
+    # declares it, not on the vote edges that no longer carry it.
     assert {divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES} == {
-        "needs_review", "sequence_number",
+        "needs_review",
     }
     needs_review = next(
         item
@@ -70,16 +76,24 @@ def test_a_vote_event_carries_the_sequence_number_not_the_vote_edge():
 
 def test_news_supplies_neither_a_roll_call_position_nor_event_discrimination():
     # News declares no `sequence_number` anywhere: not on the event it belongs to,
-    # and not on the vote edges that used to carry it.
+    # and not on the vote edges, which declare nothing at all.
     assert "sequence_number" not in news.PROPERTIES["LegislativeEvent"]
+    for relationship_type in ("VOTED_AYE", "VOTED_NO", "ABSTAINED"):
+        assert not news.RELATIONSHIPS[relationship_type].property_names
 
+    # The gap is declared once, against the label the primary ontology declares the
+    # property on. Declaring it against the vote edges too would be a second row
+    # about the same absence, and it would go stale the moment the edges changed.
     divergence = next(
-        item
-        for item in news.RELATIONSHIP_DIVERGENCES
-        if item.property_name == "sequence_number"
+        item for item in news.NODE_DIVERGENCES if item.property_name == "sequence_number"
     )
-    assert divergence.applies_to == {"VOTED_AYE", "VOTED_NO", "ABSTAINED"}
-    assert "no roll-call position and no event discrimination" in divergence.reason
+    assert divergence.applies_to == {"LegislativeEvent"}
+    # The reason says why news cannot supply the value, not why the property sits on
+    # the event — that belongs to the primary ontology, not to the gap.
+    assert "only an authoritative legislative record supplies" in divergence.reason
+    assert "sequence_number" not in {
+        item.property_name for item in news.RELATIONSHIP_DIVERGENCES
+    }
     # Event discrimination stays on the sub-label; no claim is made about which
     # events news reports.
     assert "Vote" in news.SUB_LABELS["LegislativeEvent"]
@@ -166,22 +180,86 @@ def test_conformance_rejects_a_recorded_collapse_declared_as_a_divergence(monkey
         raise AssertionError("Conformance unexpectedly accepted a recorded collapse")
 
 
-def test_conformance_rejects_a_divergence_the_primary_ontology_declares(monkeypatch):
-    redundant = news.NODE_DIVERGENCES + (
+def test_a_dropped_property_is_declared_as_a_divergence_not_a_second_table():
+    # `sequence_number` runs the other way from the rest: the primary ontology
+    # declares it and news cannot supply it. It is declared in the one divergence
+    # table, and `PROPERTIES` subtracts it from there — there is no separate table
+    # of unsupplied properties that could disagree about which is which.
+    assert not hasattr(news, "UNSUPPLIED_PROPERTIES")
+
+    divergence = next(
+        item for item in news.NODE_DIVERGENCES if item.property_name == "sequence_number"
+    )
+    assert divergence.applies_to == {"LegislativeEvent"}
+    assert "sequence_number" in primary.PROPERTIES["LegislativeEvent"]
+    assert "sequence_number" not in news.PROPERTIES["LegislativeEvent"]
+
+
+def test_the_direction_of_a_gap_is_read_off_the_primary_ontology():
+    # Nothing on a Divergence says which way it parts, because the primary ontology
+    # already answers it: declared there means news drops it, absent means the write
+    # path stamps it.
+    dropped = next(
+        item for item in news.NODE_DIVERGENCES if item.property_name == "sequence_number"
+    )
+    stamped = next(
+        item for item in news.NODE_DIVERGENCES if item.property_name == "session_verified"
+    )
+
+    assert gap_directions(dropped, primary.PROPERTIES) == (NOT_SUPPLIED,)
+    assert gap_directions(stamped, primary.PROPERTIES) == (STAMPED,)
+    assert not any(
+        hasattr(item, "direction") for item in news.DIVERGENCES
+    ), "Direction is derived; storing it would be a second copy that can disagree"
+
+
+def test_a_divergence_reports_both_directions_when_its_items_differ():
+    # `applies_to` is a set, and nothing makes its items agree on direction. A
+    # single stored field would have to pick one and be wrong for the rest.
+    mixed = Divergence(
+        property_name="current_status",
+        applies_to=frozenset({"Bill", "LegislativeEvent"}),
+        reason="declared for one label, stamped for the other",
+    )
+
+    assert "current_status" in primary.PROPERTIES["Bill"]
+    assert "current_status" not in primary.PROPERTIES["LegislativeEvent"]
+    assert gap_directions(mixed, primary.PROPERTIES) == tuple(
+        sorted({NOT_SUPPLIED, STAMPED})
+    )
+
+
+def test_conformance_rejects_a_divergence_applying_outside_the_news_ontology(monkeypatch):
+    off_ontology = news.NODE_DIVERGENCES + (
         Divergence(
-            property_name="current_status",
-            applies_to=frozenset({"Bill"}),
-            reason="already declared",
+            property_name="district_number",
+            applies_to=frozenset({"District"}),
+            reason="news does not declare this label at all",
         ),
     )
-    monkeypatch.setattr(news, "NODE_DIVERGENCES", redundant)
+    monkeypatch.setattr(news, "NODE_DIVERGENCES", off_ontology)
 
     try:
         assert_news_ontology_conforms()
     except AssertionError as error:
-        assert "current_status" in str(error)
+        assert "District" in str(error)
     else:
-        raise AssertionError("Conformance unexpectedly accepted a redundant divergence")
+        raise AssertionError("Conformance unexpectedly accepted an off-ontology divergence")
+
+
+def test_conformance_rejects_properties_that_were_hand_written_past_a_divergence(monkeypatch):
+    # The subtraction in `PROPERTIES` is what makes a declared gap real. Restore the
+    # property by hand and the ontology claims news both supplies it and cannot.
+    hand_written = dict(news.PROPERTIES)
+    hand_written["LegislativeEvent"] = primary.PROPERTIES["LegislativeEvent"]
+    monkeypatch.setattr(news, "PROPERTIES", hand_written)
+
+    try:
+        assert_news_ontology_conforms()
+    except AssertionError as error:
+        assert "sequence_number" in str(error)
+    else:
+        raise AssertionError("Conformance unexpectedly accepted a hand-written property set")
 
 
 def test_the_prompt_asks_for_a_form_the_write_path_actually_accepts():
