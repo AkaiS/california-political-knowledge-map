@@ -1,7 +1,162 @@
 import re
+
 from neo4j import GraphDatabase
-from knowledge_map.schemas import ExtractionResult, SourceArticle, ArticleChunk
+
 from knowledge_map.config import settings
+from knowledge_map.ontology import news
+from knowledge_map.ontology.keys import bill_key, derived_key
+from knowledge_map.schemas import (
+    ArticleChunk,
+    BillSessionResolutions,
+    ExtractionResult,
+    LegislativeEventDates,
+    SourceArticle,
+)
+from knowledge_map.core.bill_sessions import normalize_bill_number
+
+SHORTCUT_SKIPS = {
+    relationship_type: shortcut.skips
+    for relationship_type, shortcut in news.SHORTCUTS_BY_TYPE.items()
+}
+
+
+def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
+    """The values that identify this claim, canonicalized, and whether any are missing.
+
+    A relationship's *declared* properties are its Claim Key — there is no second
+    table. The rule that fixes the declaration is the rule that fixes identity: if
+    two different values mean two different claims, the property is declared and
+    therefore identifying; if they do not, the property does not belong on the edge
+    at all, and what the article said about it stays in the Article Chunk the edge
+    points back to.
+
+    Normalization runs here and nowhere else, on Claim Key properties only. Making
+    two articles' claims comparable is its whole job. A declared value that will not
+    normalize is dropped rather than stored: keeping ``"a lot"`` alongside
+    ``6000000.0`` in the same field is what makes two articles look like they
+    disagree when only one of them was legible.
+
+    An incomplete key is not padded with nulls — Neo4j stores no nulls and would
+    never match one — so the edge merges on what it has and carries ``needs_review``
+    to say the comparison is not yet possible.
+    """
+
+    shape = news.RELATIONSHIPS.get(relationship_type)
+    if shape is None:
+        return {}, False
+
+    key = {}
+    for spec in shape.properties:
+        if spec.name not in properties:
+            continue
+        canonical = spec.normalize(properties[spec.name])
+        if canonical is not None:
+            key[spec.name] = canonical
+    return key, len(key) < len(shape.properties)
+
+
+def _relationship_query(
+    relationship_type: str, src_clause: str, tgt_clause: str, key: dict
+) -> str:
+    """A MERGE keyed on the claim.
+
+    Key names come from the ontology: they are the relationship's declared property
+    names, never a name an extractor invented. The relationship type is not
+    ontology-derived in the same sense — it is interpolated from conformed model
+    output, which conformance has already checked against the News Ontology's
+    relationship table and the schema has already checked for identifier characters.
+
+    There is no trailing property assignment. An edge carries its Claim Key, the
+    chunks that assert it, and the two write-path stamps — there is no free payload
+    left to write.
+    """
+
+    key_pattern = ""
+    if key:
+        key_pattern = " {" + ", ".join(f"{name}: $key_{name}" for name in sorted(key)) + "}"
+    return (
+        f"MATCH (src{src_clause} {{id: $src_id}}), (tgt{tgt_clause} {{id: $tgt_id}}) "
+        f"MERGE (src)-[r:{relationship_type}{key_pattern}]->(tgt)"
+    )
+
+
+def _write_relationship(
+    tx,
+    rel,
+    node_labels: dict,
+    resolve_id,
+    chunk_id: str | None = None,
+) -> None:
+    """The one place an extractor-produced relationship reaches the graph.
+
+    Both ingestion entry points route through here, so a change to edge
+    semantics cannot land in one path and miss the other. ``resolve_id`` maps a
+    label and a name to the node's primary key, which is the only thing the two
+    entry points do differently. When ``chunk_id`` is given the edge also
+    accumulates the chunks that assert this claim.
+
+    An edge carries exactly four things: its Claim Key, in the MERGE pattern; the
+    chunk list; ``skips`` where it is a shortcut; and ``needs_review`` where an
+    article asserted the claim without a value the key depends on. Everything else
+    the article said stays in the Article Chunk, where it remains retrievable — an
+    edge with no free payload has nothing a later ingestion can silently overwrite.
+    """
+
+    rel_type = rel.relationship_type
+
+    # Conformance already resolved which node each name meant. Falling back to the
+    # name map is for relationships that never passed through it; there a shared
+    # name has nothing left to disambiguate it.
+    src_label = rel.source_label or node_labels.get(rel.source, "")
+    tgt_label = rel.target_label or node_labels.get(rel.target, "")
+
+    src_clause = f":{src_label}" if src_label else ""
+    tgt_clause = f":{tgt_label}" if tgt_label else ""
+
+    key, incomplete = _claim_key(rel_type, rel.properties)
+
+    stamps = {}
+    if rel_type in SHORTCUT_SKIPS:
+        stamps["skips"] = SHORTCUT_SKIPS[rel_type]
+    if incomplete:
+        stamps["needs_review"] = True
+
+    query = _relationship_query(rel_type, src_clause, tgt_clause, key)
+    parameters = {
+        "src_id": resolve_id(src_label, rel.source),
+        "tgt_id": resolve_id(tgt_label, rel.target),
+        **{f"key_{name}": value for name, value in key.items()},
+    }
+    if stamps:
+        query += " SET r += $stamps"
+        parameters["stamps"] = stamps
+    if chunk_id is not None:
+        # The chunks that assert *this* claim. Keyed edges keep the list
+        # tight; the append dedupes so re-ingesting an article is a no-op.
+        query += (
+            " SET r.chunks = CASE WHEN $chunk_id IN coalesce(r.chunks, []) "
+            "THEN r.chunks ELSE coalesce(r.chunks, []) + $chunk_id END"
+        )
+        parameters["chunk_id"] = chunk_id
+
+    tx.run(query, **parameters)
+
+
+def _validated_labels(label: str, sub_labels: list[str]) -> str:
+    """Assert the write path's own invariant on labels reaching the graph.
+
+    Extraction conformance already gates model output on the same
+    extracted-label subset, so this cannot fire on a conformed result. It stays
+    as an internal invariant: an ingester that skipped conformance fails here
+    rather than writing an off-ontology node.
+    """
+    if label not in news.EXTRACTED_LABELS:
+        raise ValueError(f"Invalid extracted node label: {label}")
+    allowed = news.SUB_LABELS.get(label, frozenset())
+    invalid = set(sub_labels) - allowed
+    if invalid:
+        raise ValueError(f"Invalid sub-label for {label}: {min(invalid)}")
+    return ":".join((label, *sub_labels))
 
 class Neo4jConfigError(ValueError):
     """Raised when Neo4j configuration is missing or invalid."""
@@ -10,29 +165,7 @@ class Neo4jConfigError(ValueError):
 class Neo4jConnectionError(Exception):
     """Raised when there is an error connecting to or interacting with Neo4j."""
     pass
-def ingest_extraction_result(tx, extraction: ExtractionResult, source_url: str | None = None):
-    node_labels = {}
-    for node in extraction.nodes:
-        label = node.label
-        node_labels[node.name] = label
-        query = f"MERGE (n:{label} {{name: $name}}) SET n.source_url = $source_url, n += $properties"
-        tx.run(query, name=node.name, source_url=source_url, properties=node.properties)
 
-    for rel in extraction.relationships:
-        rel_type = rel.relationship_type
-        
-        src_label = node_labels.get(rel.source, "")
-        tgt_label = node_labels.get(rel.target, "")
-        
-        src_clause = f":{src_label}" if src_label else ""
-        tgt_clause = f":{tgt_label}" if tgt_label else ""
-        
-        query = (
-            f"MATCH (src{src_clause} {{name: $src_name}}), (tgt{tgt_clause} {{name: $tgt_name}}) "
-            f"MERGE (src)-[r:{rel_type}]->(tgt) "
-            f"SET r += $properties"
-        )
-        tx.run(query, src_name=rel.source, tgt_name=rel.target, properties=rel.properties)
 
 class Neo4jAdapter:
     def __init__(self, uri: str | None, username: str | None, password: str | None, driver=None):
@@ -107,8 +240,9 @@ class Neo4jAdapter:
         try:
             with driver.session() as session:
                 def _tx(tx):
+                    # The article URL is the NewsArticle primary key; see ontology.md.
                     query = """
-                    MERGE (a:Article {url: $url})
+                    MERGE (a:NewsArticle {id: $url})
                     SET a.title = $title, a.author = $author, a.published_date = $published_date
                     """
                     tx.run(
@@ -134,59 +268,102 @@ class Neo4jAdapter:
             with driver.session() as session:
                 def _tx(tx):
                     query = """
-                    MATCH (a:Article {url: $url})
+                    MATCH (a:NewsArticle {id: $url})
                     MERGE (c:Chunk {id: $chunk_id})
-                    SET c.text = $text, c.chunk_index = $chunk_index, c.embedding = $embedding
-                    MERGE (c)-[:BELONGS_TO]->(a)
+                    SET c.text = $text, c.index = $index, c.embedding = $embedding
+                    MERGE (a)-[:HAS_CHUNK]->(c)
                     """
                     tx.run(
                         query,
                         url=article.url,
                         chunk_id=chunk_id,
                         text=chunk.text,
-                        chunk_index=chunk.index,
-                        embedding=embedding
+                        index=chunk.index,
+                        embedding=embedding,
                     )
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest Chunk to Neo4j: {e}")
 
-    def ingest_chunk_extraction(self, chunk_id: str, extraction: ExtractionResult) -> None:
+    def ingest_chunk_extraction(
+        self,
+        chunk_id: str,
+        extraction: ExtractionResult,
+        bill_sessions: BillSessionResolutions | None = None,
+        event_dates: LegislativeEventDates | None = None,
+    ) -> None:
+        bill_sessions = bill_sessions or BillSessionResolutions()
+        event_dates = event_dates or LegislativeEventDates()
         driver = self.connect()
         try:
             with driver.session() as session:
                 def _tx(tx):
-                    node_labels = {}
+                    # Node identity is (name, label) — two entities can share a
+                    # canonical name, and they are already written as two nodes with
+                    # two ids. The name-only map is the fallback for a relationship
+                    # that carries no resolved label, and keeps the last node seen.
+                    node_labels: dict[str, str] = {}
+                    node_ids: dict[tuple[str, str], str] = {}
                     for node in extraction.nodes:
                         label = node.label
                         node_labels[node.name] = label
-                        
+                        labels = _validated_labels(label, node.sub_labels)
+                        properties = dict(node.properties)
+                        if label == "Bill":
+                            number = normalize_bill_number(properties.get("number") or node.name)
+                            resolution = bill_sessions.get(number)
+                            if resolution is not None:
+                                properties.update(resolution.graph_properties())
+                            if number:
+                                properties["number"] = number
+                            session = resolution.session if resolution else None
+                            node_id = bill_key(session, number, node.name)
+                        else:
+                            if label == "LegislativeEvent":
+                                event_date = event_dates.get(node.name)
+                                if event_date is not None:
+                                    properties.update(event_date.graph_properties())
+                            # Name-derived, with the date deliberately outside it:
+                            # one identity shape for every Legislative Event.
+                            node_id = derived_key(label, node.name)
+                        node_ids[(node.name, label)] = node_id
+
                         # Merge node
-                        query = f"MERGE (n:{label} {{name: $name}}) SET n += $properties"
-                        tx.run(query, name=node.name, properties=node.properties)
-                        
+                        query = (
+                            f"MERGE (n:{labels} {{id: $node_id}}) "
+                            "SET n += $properties, n.id = $node_id, n.name = $name"
+                        )
+                        tx.run(query, node_id=node_id, name=node.name, properties=properties)
+
                         # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
                         mention_query = f"""
-                        MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{name: $name}})
+                        MATCH (c:Chunk {{id: $chunk_id}}), (n:{label} {{id: $node_id}})
                         MERGE (n)-[:MENTIONED_IN]->(c)
                         """
-                        tx.run(mention_query, chunk_id=chunk_id, name=node.name)
+                        tx.run(mention_query, chunk_id=chunk_id, node_id=node_id)
+
+                        if label == "PolicyArea":
+                            topic_query = """
+                            MATCH (c:Chunk {id: $chunk_id}), (n:PolicyArea {id: $node_id})
+                            MERGE (c)-[:DISCUSSES_TOPIC]->(n)
+                            """
+                            tx.run(topic_query, chunk_id=chunk_id, node_id=node_id)
+
+                    def resolved_id(label: str, name: str) -> str:
+                        node_id = node_ids.get((name, label))
+                        if node_id is not None:
+                            return node_id
+                        if label != "Bill":
+                            return derived_key(label, name)
+                        number = normalize_bill_number(name)
+                        resolution = bill_sessions.get(number)
+                        session = resolution.session if resolution else None
+                        return bill_key(session, number, name)
 
                     for rel in extraction.relationships:
-                        rel_type = rel.relationship_type
-                        
-                        src_label = node_labels.get(rel.source, "")
-                        tgt_label = node_labels.get(rel.target, "")
-                        
-                        src_clause = f":{src_label}" if src_label else ""
-                        tgt_clause = f":{tgt_label}" if tgt_label else ""
-                        
-                        query = (
-                            f"MATCH (src{src_clause} {{name: $src_name}}), (tgt{tgt_clause} {{name: $tgt_name}}) "
-                            f"MERGE (src)-[r:{rel_type}]->(tgt) "
-                            f"SET r.source_chunk_id = $chunk_id, r += $properties"
+                        _write_relationship(
+                            tx, rel, node_labels, resolved_id, chunk_id=chunk_id
                         )
-                        tx.run(query, src_name=rel.source, tgt_name=rel.target, chunk_id=chunk_id, properties=rel.properties)
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")
@@ -200,16 +377,6 @@ class Neo4jAdapter:
                 session.execute_write(_clear_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to clear Neo4j database: {e}")
-
-    def ingest_extraction(self, extraction: ExtractionResult, source_url: str | None = None):
-        driver = self.connect()
-        try:
-            with driver.session() as session:
-                def _ingest_tx(tx):
-                    ingest_extraction_result(tx, extraction, source_url)
-                session.execute_write(_ingest_tx)
-        except Exception as e:
-            raise Neo4jConnectionError(f"Failed to ingest extraction result to Neo4j: {e}")
 
     def get_distinct_labels(self):
         driver = self.connect()
@@ -252,4 +419,3 @@ class Neo4jAdapter:
                 return val == 1
         except Exception:
             return False
-

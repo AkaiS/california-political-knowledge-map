@@ -1,0 +1,106 @@
+"""Render the model-extractable portion of the News Ontology for the prompt."""
+
+from knowledge_map.ontology import news, primary
+
+
+def _relationship_property_lines(relationships: dict) -> list[str]:
+    """Fix the form of declared properties, without asking for any of them.
+
+    The prompt says how to write a value, never that one is owed. The properties a
+    claim needs to be comparable are the ones declared here — that declaration is its
+    Claim Key — and the write path settles a gap itself: a claim that arrives without
+    one of them is written and flagged rather than dropped or demanded. Asking
+    the model to supply one it did not find only invites an invented value, which
+    keys a confident-looking edge instead of an honestly incomplete one.
+    """
+
+    described = {
+        relationship_type: primary.RELATIONSHIPS[relationship_type].properties
+        for relationship_type in sorted(relationships)
+        if primary.RELATIONSHIPS[relationship_type].properties
+    }
+    if not described:
+        return []
+
+    lines = [
+        "",
+        "### Relationship properties",
+        "",
+        "Attach any property the text supports. None are required. The properties below "
+        "have a fixed form: when you do supply one, write it exactly this way, so the "
+        "same value reported by two articles is recognisably the same value.",
+        "",
+    ]
+    for relationship_type, specs in described.items():
+        lines.append(f"- `{relationship_type}`:")
+        for spec in specs:
+            lines.append(f"  - `{spec.name}`: {spec.form}. Example: `{spec.example}`.")
+
+    lines.extend(
+        [
+            "",
+            "Write a value only where the article states one. Never estimate, round, "
+            "convert, or carry a value over from elsewhere in the text. An omitted value "
+            "is recorded as unknown; an invented one is recorded as fact.",
+        ]
+    )
+    return lines
+
+
+def render_extraction_ontology() -> str:
+    """Render ontology facts that the extraction model is responsible for."""
+    labels = news.EXTRACTED_LABELS
+    relationships = {
+        relationship_type: shape
+        for relationship_type, shape in news.RELATIONSHIPS.items()
+        if shape.source_labels <= labels and shape.target_labels <= labels
+    }
+
+    lines = [
+        "## Closed ontology",
+        "",
+        "Use exactly one of these base labels for each entity; never invent another:",
+    ]
+    lines.extend(f"- `{label}`" for label in sorted(labels))
+
+    lines.extend(["", "### Sub-label rules", ""])
+    for label in sorted(news.SUB_LABELS.keys() & labels):
+        allowed = ", ".join(f"`{item}`" for item in sorted(news.SUB_LABELS[label]))
+        requirement = "exactly one is required" if label in news.REQUIRED_SUB_LABELS else "optional; use one or more when supported"
+        lines.append(f"- `{label}`: {requirement}. Allowed sub-labels: {allowed}.")
+
+    lines.extend(["", "### Properties by label", ""])
+    for label in sorted(labels):
+        properties = ", ".join(f"`{item}`" for item in sorted(news.PROPERTIES[label])) or "none"
+        lines.append(f"- `{label}`: {properties}.")
+
+    lines.extend(
+        [
+            "",
+            (
+                "Use only the property names listed for that label. Use ISO dates "
+                "(`YYYY-MM-DD`) and integers for years. Omit unknown properties; never guess them."
+            ),
+            "",
+            "## Allowed relationships",
+            "",
+            "Emit only these relationship types and endpoint label combinations:",
+        ]
+    )
+    for relationship_type, shape in sorted(relationships.items()):
+        sources = " or ".join(f"`{item}`" for item in sorted(shape.source_labels))
+        targets = " or ".join(f"`{item}`" for item in sorted(shape.target_labels))
+        lines.append(f"- `{relationship_type}`: {sources} -> {targets}")
+
+    lines.extend(_relationship_property_lines(relationships))
+
+    lines.extend(
+        [
+            "",
+            "### Policy Area vocabulary",
+            "",
+            "A `PolicyArea` must use one of these IDs and its corresponding canonical name:",
+        ]
+    )
+    lines.extend(f"- `{area.id}`: {area.name}" for area in news.POLICY_AREAS)
+    return "\n".join(lines)

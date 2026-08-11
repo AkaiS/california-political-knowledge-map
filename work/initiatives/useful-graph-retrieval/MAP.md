@@ -48,6 +48,8 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
 
+- Graph retrieval patterns and tooling surveyed as facts, not a recommendation: the local Neo4j 2026.05.0 Community server has only a chunk vector index — no full-text index, no APOC, no GDS; `neo4j-graphrag` 1.18.0 is compatible but ships no reranking, community detection, or Cypher repair loop; text2cypher execution accuracy peaks near 60% with temporal and same-name-entity failures; community detection requires a GDS install; Pydantic AI 2.0.0 supplies per-step tool routing, `ModelRetry` repair, and typed output. See [03-survey-graph-retrieval-patterns.md](issues/03-survey-graph-retrieval-patterns.md) and [the findings](research/03-graph-retrieval-patterns-findings.md).
+
 ## Not yet specified
 
 - The concrete representation of the external-identifier store and the indexes

@@ -183,6 +183,38 @@ _Avoid_: Resolver wrapper, coref helper
 The adapter protocol and its concrete implementation that extracts entities and relationships from Article Chunks.
 _Avoid_: Extractor model, agent helper
 
+**News Ontology**:
+The closed ontology of the structures a Source Article can actually produce — the labels, sub-labels, per-label properties, relationships, and Policy Area vocabulary that news prose supports. It is a subset of the primary ontology (`ontology.md`), which remains the authored whole, and it is the only thing extraction output is checked against.
+_Avoid_: Schema, extraction schema, LLM schema, ontology subset
+
+**Shortcut Rule**:
+A declaration that one News Ontology relationship collapses a path the primary ontology routes through an intermediate node, recording both the path it flattened and the node it skips. It is a transformation we performed ourselves, so it is reversible from the declaration alone and is not a Divergence.
+_Avoid_: Denormalized edge, direct edge, inferred relationship
+
+**Divergence**:
+A declared, unresolved gap between the News Ontology and the primary ontology: either a property the primary ontology declares that news cannot supply, or one a news write path stamps that the primary ontology does not declare. The declaration says only what is provisional and why, never how to fix it, because only an authoritative source can close it.
+_Avoid_: Mismatch, schema drift, missing field, known issue
+
+**Bill Session Resolution**:
+The legislative session one bill number in a Source Article resolved to, together with how it was reached: named outright by a bill link (verified), implied by the article's publication date (inferred), or settled by neither and therefore needing review. A Bill's identity is qualified by it.
+_Avoid_: Session lookup, bill year, session guess
+
+**Legislative Event Date**:
+The date one Legislative Event in a Source Article resolved to, together with how it was reached: stated outright by the article (verified), stood in for by the article's publication day (inferred), or settled by neither and therefore needing review. It resolves once per Source Article, never per Article Chunk, since an event named in several chunks is one node; chunks stating different dates for it contradict each other and need review rather than resolving by order. It qualifies a Legislative Event without ever entering its identity — a wrong date in the key would conflate two events irrecoverably, whereas a name-derived key at worst fragments one event into two that a later join on date and bill can merge back.
+_Avoid_: Event timestamp, occurred-on, event date guess
+
+**Adherence Report**:
+The tally of ontology items an extraction dropped from model output, bucketed by a closed set of drop categories and counted per dropped value with an example Article Chunk. It measures how closely a model followed the News Ontology; it is not an error log, because a drop is the expected handling of off-ontology output.
+_Avoid_: Error log, validation errors, drop log, conformance failures
+
+**Claim Key**:
+The values that identify one relationship claim: a relationship's declared properties, and only those. Two articles asserting the same relationship at equal Claim Key values assert one claim and produce one edge; at differing values they assert two claims and produce two edges. Everything else an article said about the relationship stays in the Article Chunk the edge points back to.
+_Avoid_: Edge properties, relationship payload, identifying properties, edge attributes
+
+**Policy Area**:
+A thematic policy category serving as a hub node that Bills, Props, Article Chunks, and Source Articles attach to. Its vocabulary is fixed and declared by the ontology rather than invented per article, so that two articles covering the same subject reach the same hub.
+_Avoid_: Topic, tag, category, subject, theme
+
 **Evaluation Gold Set**:
 A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. Every member implements that contract's input and metadata schemas, and its expected-output schema where the member declares an expected output. It is constructed by declaring its identity, description, one exact Evaluation Task Contract, and tags; populating it with validated Evaluation Cases and declared Evaluation Artifacts; and locking the result into an immutable revision. Members are validated against the contract by the construction factory, which is the supported way to build one — direct construction is reserved for deserializing a stored Gold Set and for tests that deliberately build an invalid one. Revision N+1 is derived from revision N by adding or removing cases while preserving the split of every surviving case revision; adding a case whose business identity already survives supersedes that membership and keeps its split. The Evaluation Task Contract is fixed for the life of the Gold Set identity, so changing it requires a new business identity.
 _Avoid_: Test fixtures, benchmark data, model labels

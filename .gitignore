@@ -5,7 +5,7 @@ __pycache__/*
 .agents/*
 manual_checks/*
 */generate_report.py
-.scratch/dlq/*
+.scratch/*
 .scratch/pipeline.log
 */ralph-queue.txt
 .logfire/*

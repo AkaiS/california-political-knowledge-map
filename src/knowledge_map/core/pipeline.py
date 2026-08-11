@@ -2,8 +2,10 @@ import logging
 import time
 from typing import Protocol, List, Optional
 from knowledge_map.config import settings as global_settings
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
+from knowledge_map.schemas import AdherenceReport, BillSessionResolutions, LegislativeEventDates, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
 from knowledge_map.utils.chunking import chunk_article
+from knowledge_map.core.bill_sessions import resolve_bill_sessions
+from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,9 @@ class DatabaseAdapter(Protocol):
     def ingest_chunk_extraction(
         self,
         chunk_id: str,
-        extraction: ExtractionResult
+        extraction: ExtractionResult,
+        bill_sessions: BillSessionResolutions | None = None,
+        event_dates: LegislativeEventDates | None = None,
     ) -> None:
         ...
 
@@ -45,6 +49,14 @@ class CoreferenceAdapter(Protocol):
 
 class EntityExtractionAdapter(Protocol):
     def extract(self, chunk_text: str) -> ExtractionResult:
+        ...
+
+    @property
+    def adherence_report(self) -> AdherenceReport:
+        """Ontology items dropped from model output since the last reset."""
+        ...
+
+    def reset_adherence_report(self) -> None:
         ...
 
     def health_check(self) -> bool:
@@ -202,6 +214,11 @@ class StoryPipeline:
                 extraction = self._execute_with_retry("extraction", self.extraction_adapter.extract, chunk.text)
                 extractions.append(extraction)
 
+            bill_sessions = resolve_bill_sessions(article, extractions)
+            event_dates = resolve_legislative_event_dates(
+                extractions, article.published_date
+            )
+
             # 5. DB Persistence (skip if dry_run)
             if not dry_run:
                 logger.info("Ingesting article and chunks into DB...")
@@ -210,7 +227,9 @@ class StoryPipeline:
                     chunk_id = f"{article.url}#chunk_{idx}"
                     embedding = embeddings[idx] if idx < len(embeddings) else []
                     self.db_adapter.ingest_chunk(article, chunk, embedding)
-                    self.db_adapter.ingest_chunk_extraction(chunk_id, extractions[idx])
+                    self.db_adapter.ingest_chunk_extraction(
+                        chunk_id, extractions[idx], bill_sessions, event_dates
+                    )
 
                 # 6. Update status to COMPLETED
                 self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)

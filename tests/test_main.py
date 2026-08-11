@@ -12,6 +12,7 @@ from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.adapters.sqlite_db import init_db, save_story
 from knowledge_map.config import BatchIngestionSettings
 from knowledge_map.schemas.stories import Story
+from test_batch import make_mock_pipeline
 
 def test_console_notifier_warning_banner(caplog):
     with caplog.at_level(logging.CRITICAL):
@@ -32,7 +33,7 @@ def test_batch_ingestion_rate_limit_lock_notifier(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
         
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
     rate_err = PipelineRateLimitError("Rate limit hit", component="embedding", original_exception=ValueError("429"))

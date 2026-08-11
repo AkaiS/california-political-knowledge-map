@@ -1,7 +1,16 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError, ingest_extraction_result
-from knowledge_map.schemas import ExtractionResult, Node, Relationship, SourceArticle, ArticleChunk
+from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.core.legislative_events import resolve_legislative_event_dates
+from knowledge_map.schemas import (
+    ArticleChunk,
+    BillSessionResolution,
+    BillSessionResolutions,
+    ExtractionResult,
+    Node,
+    Relationship,
+    SourceArticle,
+)
 
 @pytest.fixture(autouse=True)
 def mock_ensure_vector_index(request):
@@ -82,79 +91,99 @@ def test_query_execution_error_raises_custom_exception():
         manager.clear_database()
     assert "Failed to clear Neo4j database" in str(exc_info.value)
 
-def test_ingest_extraction_result_nodes():
+def test_shortcut_edge_records_the_label_it_flattened():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
     mock_tx = MagicMock()
-    extraction = ExtractionResult(
-        nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"}),
-            Node(name="Democratic Party", label="Organization")
-        ],
-        relationships=[]
-    )
-    
-    ingest_extraction_result(mock_tx, extraction, source_url="http://example.com/story")
-    
-    assert mock_tx.run.call_count == 2
-    
-    # Check first call (Gavin Newsom)
-    first_call_args = mock_tx.run.call_args_list[0]
-    first_query = first_call_args[0][0]
-    first_kwargs = first_call_args[1]
-    
-    assert "MERGE (n:PoliticalActor {name: $name})" in first_query
-    assert "SET n.source_url = $source_url" in first_query
-    assert "n += $properties" in first_query
-    assert first_kwargs["name"] == "Gavin Newsom"
-    assert first_kwargs["source_url"] == "http://example.com/story"
-    assert first_kwargs["properties"] == {"role": "Governor"}
-    
-    # Check second call (Democratic Party)
-    second_call_args = mock_tx.run.call_args_list[1]
-    second_query = second_call_args[0][0]
-    second_kwargs = second_call_args[1]
-    
-    assert "MERGE (n:Organization {name: $name})" in second_query
-    assert second_kwargs["name"] == "Democratic Party"
-    assert second_kwargs["source_url"] == "http://example.com/story"
-    assert second_kwargs["properties"] == {}
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
 
-def test_ingest_extraction_result_relationships():
-    mock_tx = MagicMock()
     extraction = ExtractionResult(
         nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor"),
-            Node(name="Democratic Party", label="Organization")
+            Node(name="Gavin Newsom", label="Politician"),
+            Node(name="Education Committee", label="Committee"),
         ],
         relationships=[
             Relationship(
                 source="Gavin Newsom",
-                target="Democratic Party",
-                relationship_type="MEMBER_OF",
-                properties={"status": "Active"}
+                target="Education Committee",
+                relationship_type="SERVES_ON",
+                properties={"status": "Active"},
             )
-        ]
+        ],
     )
-    
-    ingest_extraction_result(mock_tx, extraction, source_url="http://example.com/story")
-    
-    # Expected call count: 2 (nodes) + 1 (relationship) = 3
-    assert mock_tx.run.call_count == 3
-    
-    # Third call is the relationship insertion
-    rel_call_args = mock_tx.run.call_args_list[2]
-    rel_query = rel_call_args[0][0]
-    rel_kwargs = rel_call_args[1]
-    
-    assert "MATCH (src:PoliticalActor {name: $src_name})" in rel_query
-    assert "MATCH (src:PoliticalActor {name: $src_name}), (tgt:Organization {name: $tgt_name})" in rel_query or "MATCH (src:PoliticalActor {name: $src_name}),(tgt:Organization {name: $tgt_name})" in rel_query
-    assert "MERGE (src)-[r:MEMBER_OF]->(tgt)" in rel_query
-    assert "SET r += $properties" in rel_query
-    
-    assert rel_kwargs["src_name"] == "Gavin Newsom"
-    assert rel_kwargs["tgt_name"] == "Democratic Party"
-    assert rel_kwargs["properties"] == {"status": "Active"}
 
-def test_ingest_extraction_result_invalid_identifiers():
+    manager.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+    )
+
+    rel_call = next(
+        call for call in mock_tx.run.call_args_list if "[r:SERVES_ON]" in call[0][0]
+    )
+    rel_query = rel_call[0][0]
+    rel_kwargs = rel_call[1]
+
+    assert "MATCH (src:Politician {id: $src_id}), (tgt:Committee {id: $tgt_id})" in rel_query
+    assert "MERGE (src)-[r:SERVES_ON]->(tgt)" in rel_query
+    assert "SET r += $stamps" in rel_query
+
+    assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
+    assert rel_kwargs["tgt_id"] == "Committee:education-committee"
+    # `SERVES_ON` is a shortcut, so the edge carries the label it flattened. It
+    # declares no properties, so its Claim Key is empty and `status` — which the
+    # ontology never declared — stays in the Article Chunk rather than on the edge.
+    assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
+    assert "properties" not in rel_kwargs
+
+def test_an_edge_reaches_the_node_conformance_resolved_not_the_last_of_that_name():
+    # Both "Water Alliance" nodes are written, with distinct ids. The edge carries
+    # the label conformance settled on, so it lands on the Committee even though the
+    # Organization is the last node of that name the write path saw.
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(
+        nodes=[
+            Node(name="Gavin Newsom", label="Politician"),
+            Node(name="Water Alliance", label="Committee"),
+            Node(name="Water Alliance", label="Organization"),
+        ],
+        relationships=[
+            Relationship(
+                source="Gavin Newsom",
+                target="Water Alliance",
+                relationship_type="SERVES_ON",
+                source_label="Politician",
+                target_label="Committee",
+            )
+        ],
+    )
+
+    manager.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+    )
+
+    node_ids = {
+        call[1]["node_id"] for call in mock_tx.run.call_args_list if "node_id" in call[1]
+    }
+    assert "Committee:water-alliance" in node_ids
+    assert "Organization:water-alliance" in node_ids
+
+    rel_call = next(
+        call for call in mock_tx.run.call_args_list if "[r:SERVES_ON]" in call[0][0]
+    )
+    assert "(tgt:Committee {id: $tgt_id})" in rel_call[0][0]
+    assert rel_call[1]["tgt_id"] == "Committee:water-alliance"
+
+
+def test_extraction_rejects_invalid_identifiers():
     from pydantic import ValidationError
 
     # 1. Invalid node label raises ValidationError
@@ -360,7 +389,7 @@ def test_ingest_article():
     query = mock_tx.run.call_args[0][0]
     kwargs = mock_tx.run.call_args[1]
     
-    assert "MERGE (a:Article {url: $url})" in query
+    assert "MERGE (a:NewsArticle {id: $url})" in query
     assert "SET a.title = $title" in query
     assert "a.author = $author" in query
     assert "a.published_date = $published_date" in query
@@ -409,14 +438,188 @@ def test_ingest_chunk():
     
     assert "MERGE (c:Chunk {id: $chunk_id})" in query
     assert "SET c.text = $text" in query
-    assert "c.chunk_index = $chunk_index" in query
+    assert "c.index = $index" in query
     assert "c.embedding = $embedding" in query
-    assert "MERGE (c)-[:BELONGS_TO]->(a)" in query
+    assert "MATCH (a:NewsArticle {id: $url})" in query
+    assert "MERGE (a)-[:HAS_CHUNK]->(c)" in query
+    assert "provenance" not in query
     assert kwargs["url"] == "http://example.com/1"
     assert kwargs["chunk_id"] == "http://example.com/1#chunk_0"
     assert kwargs["text"] == "Gavin Newsom did something."
-    assert kwargs["chunk_index"] == 0
+    assert kwargs["index"] == 0
     assert kwargs["embedding"] == [0.1, 0.2, 0.3]
+
+def _funding_extraction(properties: dict) -> ExtractionResult:
+    return ExtractionResult(
+        nodes=[
+            Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"]),
+            Node(name="Yes on Schools", label="Campaign", sub_labels=["BallotMeasureCampaign"]),
+        ],
+        relationships=[
+            Relationship(
+                source="California Teachers Association",
+                target="Yes on Schools",
+                relationship_type="FUNDED",
+                properties=properties,
+            )
+        ],
+    )
+
+
+def _funding_call(properties: dict):
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=_funding_extraction(properties),
+    )
+    return next(call for call in mock_tx.run.call_args_list if "[r:FUNDED" in call[0][0])
+
+
+_WHOLE_FUNDING_CLAIM = {"amount": "$6 million", "date": "January 15, 2024"}
+
+
+def test_a_funding_claim_is_keyed_on_every_property_it_declares():
+    call = _funding_call(_WHOLE_FUNDING_CLAIM)
+    query, kwargs = call[0][0], call[1]
+
+    # The key is in the MERGE pattern, so a different figure merges to a different
+    # edge. It is the declared property set, not a second table beside it.
+    assert "MERGE (src)-[r:FUNDED {amount: $key_amount, date: $key_date}]->(tgt)" in query
+    assert kwargs["key_amount"] == 6_000_000.0
+    assert kwargs["key_date"] == "2024-01-15"
+    # A whole key needs no flag, and there is no payload assignment to carry one.
+    assert "stamps" not in kwargs
+    assert "SET r +=" not in query
+
+
+def test_two_articles_naming_the_same_figure_differently_reach_one_edge():
+    spelled_out = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "6,000,000", "date": "2024-01-15"})
+    abbreviated = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "6M"})
+
+    # Same MERGE pattern and same key values: the second ingestion finds the first
+    # edge and appends its chunk rather than creating a second edge beside it.
+    assert spelled_out[0][0] == abbreviated[0][0]
+    assert spelled_out[1]["key_amount"] == abbreviated[1]["key_amount"] == 6_000_000.0
+    assert spelled_out[1]["key_date"] == abbreviated[1]["key_date"] == "2024-01-15"
+
+
+def test_a_conflicting_figure_produces_a_different_key():
+    six = _funding_call(_WHOLE_FUNDING_CLAIM)[1]
+    four = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "$4 million"})[1]
+
+    assert six["key_amount"] != four["key_amount"]
+
+
+def test_an_unreadable_value_is_dropped_rather_than_keyed_on():
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "amount": "a lot of money"})
+    query, kwargs = call[0][0], call[1]
+
+    # Storing the raw string would make this edge unmatchable by anything, forever.
+    assert "key_amount" not in kwargs
+    assert "amount" not in query
+    assert kwargs["stamps"] == {"needs_review": True}
+
+
+def test_an_incomplete_claim_is_written_and_flagged_not_dropped():
+    call = _funding_call({})
+    query, kwargs = call[0][0], call[1]
+
+    assert "MERGE (src)-[r:FUNDED]->(tgt)" in query
+    assert kwargs["stamps"] == {"needs_review": True}
+
+
+def test_no_property_outside_the_claim_key_reaches_an_edge():
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "mood": "triumphant", "recipient": "Yes on Schools"})
+    query, kwargs = call[0][0], call[1]
+
+    # Whatever else the article said stays in the Article Chunk the edge points to.
+    assert "mood" not in query and "recipient" not in query
+    assert set(kwargs) == {"src_id", "tgt_id", "chunk_id", "key_amount", "key_date"}
+
+
+def test_a_diverged_property_is_not_keyed_on_even_when_an_article_supplies_one():
+    # `transaction_id` is declared a gap, so it is outside the Claim Key however it
+    # got here. Keying on it would stamp every news funding edge for review.
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "transaction_id": "FPPC-2024-0198"})
+    query, kwargs = call[0][0], call[1]
+
+    assert "transaction_id" not in query
+    assert "key_transaction_id" not in kwargs
+    # And the key is whole without it, so nothing is flagged.
+    assert "stamps" not in kwargs
+
+
+def _stance_call(properties: dict):
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=ExtractionResult(
+            nodes=[
+                Node(name="Gavin Newsom", label="Politician"),
+                Node(name="Proposition 12", label="Prop"),
+            ],
+            relationships=[
+                Relationship(
+                    source="Gavin Newsom", target="Proposition 12",
+                    relationship_type="DECLARED_STANCE", properties=properties,
+                )
+            ],
+        ),
+    )
+    return next(
+        call for call in mock_tx.run.call_args_list if "[r:DECLARED_STANCE" in call[0][0]
+    )
+
+
+def test_a_stance_outside_the_declared_enum_does_not_key_the_edge():
+    call = _stance_call({"alignment": "supportive", "tone": "measured"})
+    query, kwargs = call[0][0], call[1]
+
+    # "supportive" is not one of POSITIVE/NEGATIVE/NEUTRAL, so it cannot key the edge.
+    assert "key_alignment" not in kwargs
+    assert kwargs["stamps"] == {"needs_review": True}
+    # An undeclared property nobody anticipated is not free payload: it is not part
+    # of the claim, so it never reaches the edge.
+    assert "tone" not in query
+
+
+def test_a_lowercase_stance_normalizes_into_the_enum():
+    call = _stance_call({"alignment": "positive"})
+    query, kwargs = call[0][0], call[1]
+
+    assert kwargs["key_alignment"] == "POSITIVE"
+    assert "stamps" not in kwargs
+    assert "SET r +=" not in query
+
+
+def test_two_articles_stating_opposite_stances_produce_two_edges():
+    positive = _stance_call({"alignment": "POSITIVE"})[1]
+    negative = _stance_call({"alignment": "NEGATIVE"})[1]
+
+    # A disagreement between sources is visible in the graph rather than resolved by
+    # whichever article happened to be ingested last.
+    assert positive["key_alignment"] == "POSITIVE"
+    assert negative["key_alignment"] == "NEGATIVE"
+
+
+def test_an_edge_accumulates_the_chunks_that_assert_it_without_duplicating():
+    call = _funding_call(_WHOLE_FUNDING_CLAIM)
+    query = call[0][0]
+
+    assert "$chunk_id IN coalesce(r.chunks, [])" in query
+    assert "coalesce(r.chunks, []) + $chunk_id" in query
+    assert call[1]["chunk_id"] == "http://example.com/1#chunk_0"
+
 
 def test_ingest_chunk_extraction():
     mock_driver = MagicMock()
@@ -435,14 +638,15 @@ def test_ingest_chunk_extraction():
     
     extraction = ExtractionResult(
         nodes=[
-            Node(name="Gavin Newsom", label="PoliticalActor", properties={"role": "Governor"}),
-            Node(name="Democratic Party", label="Organization")
+            Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"]),
+            Node(name="Yes on Schools", label="Campaign", sub_labels=["BallotMeasureCampaign"]),
+            Node(name="Education (K–12)", label="PolicyArea")
         ],
         relationships=[
             Relationship(
-                source="Gavin Newsom",
-                target="Democratic Party",
-                relationship_type="MEMBER_OF",
+                source="California Teachers Association",
+                target="Yes on Schools",
+                relationship_type="FUNDED",
                 properties={"status": "active"}
             )
         ]
@@ -453,25 +657,182 @@ def test_ingest_chunk_extraction():
         extraction=extraction
     )
     
-    # Expected: 2 node merges, 2 mentions, 1 relationship merge = 5 tx runs
-    assert mock_tx.run.call_count == 5
+    # Three node merges and mentions, one topic edge, and one extracted relationship.
+    assert mock_tx.run.call_count == 8
     
     # Inspect calls
     calls = [call[0][0] for call in mock_tx.run.call_args_list]
-    assert any("MERGE (n:PoliticalActor" in q for q in calls)
-    assert any("MERGE (n:Organization" in q for q in calls)
-    assert any("[:MENTIONED_IN]" in q for q in calls)
-    assert any("MERGE (src)-[r:MEMBER_OF]->(tgt)" in q for q in calls)
-    assert any("r.source_chunk_id = $chunk_id" in q for q in calls)
-    
-    # Check that relationship query actually uses the chunk_id parameter
-    found_rel_kwargs = False
-    for call in mock_tx.run.call_args_list:
-        kwargs = call[1]
-        if "chunk_id" in kwargs and kwargs.get("chunk_id") == "http://example.com/1#chunk_0" and "src_name" in kwargs:
-            found_rel_kwargs = True
-            break
-    assert found_rel_kwargs
+    assert any("MERGE (n:Organization:LaborUnion {id: $node_id})" in q for q in calls)
+    assert any("MERGE (n:Campaign:BallotMeasureCampaign {id: $node_id})" in q for q in calls)
+    assert any("MERGE (n)-[:MENTIONED_IN]->(c)" in q for q in calls)
+    assert any("MERGE (c)-[:DISCUSSES_TOPIC]->(n)" in q for q in calls)
+    assert not any("NewsArticle" in q and "DISCUSSES_TOPIC" in q for q in calls)
+    assert any("MERGE (src)-[r:FUNDED]->(tgt)" in q for q in calls)
+
+    # Nothing is stamped with a source: the `Chunk` an edge hangs off already says
+    # where it came from, and it says so per mention rather than once per node.
+    assert not any("provenance" in q for q in calls)
+    assert not any("provenance" in call[1] for call in mock_tx.run.call_args_list)
+    rel_call = next(call for call in mock_tx.run.call_args_list if "[r:FUNDED]" in call[0][0])
+    # `status` is undeclared, so it is not part of the claim and never reaches the
+    # edge; the article named no Claim Key value at all, so the claim cannot be
+    # compared yet and the edge says so.
+    assert "status" not in rel_call[0][0]
+    assert rel_call[1]["stamps"] == {"needs_review": True}
+    assert rel_call[1]["chunk_id"] == "http://example.com/1#chunk_0"
+
+
+def test_ingest_chunk_extraction_rejects_unvalidated_sub_label():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(nodes=[
+        Node(name="Some Club", label="Organization", sub_labels=["Club"]),
+    ])
+
+    with pytest.raises(Neo4jConnectionError, match="Invalid sub-label for Organization: Club"):
+        manager.ingest_chunk_extraction("article#chunk_0", extraction)
+    mock_tx.run.assert_not_called()
+
+
+def test_bill_session_participates_in_node_primary_key():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+    ])
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        BillSessionResolutions(by_number={
+            "AB 218": BillSessionResolution(session="2019-2020", session_verified=True)
+        }),
+    )
+    manager.ingest_chunk_extraction(
+        "article#chunk_1",
+        extraction,
+        BillSessionResolutions(by_number={
+            "AB 218": BillSessionResolution(session="2025-2026", session_verified=True)
+        }),
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert [call[1]["node_id"] for call in node_calls] == [
+        "Bill:2019-2020:ab-218",
+        "Bill:2025-2026:ab-218",
+    ]
+    assert node_calls[0][1]["properties"]["session_verified"] is True
+
+
+def test_a_bill_without_a_resolution_gets_no_session_properties():
+    # An unresolved number is not a resolution to nothing: the adapter writes no
+    # session flags at all rather than stamping the Bill as unreviewed.
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+    ])
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        BillSessionResolutions(by_number={
+            "SB 54": BillSessionResolution(session="2017-2018", session_verified=True)
+        }),
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert node_calls[0][1]["properties"] == {"number": "AB 218"}
+    assert node_calls[0][1]["node_id"] == "Bill:unresolved:ab-218"
+
+
+def _event_call(event_properties: dict, published_date: str | None):
+    """Write one Legislative Event the way the pipeline does: dates resolved in
+    the core, handed to the adapter as a domain model."""
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly floor vote on AB 218", label="LegislativeEvent",
+             sub_labels=["Vote"], properties=event_properties),
+    ])
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+        event_dates=resolve_legislative_event_dates([extraction], published_date),
+    )
+    return next(
+        call for call in mock_tx.run.call_args_list
+        if "MERGE (n:LegislativeEvent" in call[0][0]
+    )
+
+
+def test_a_resolved_event_date_is_written_onto_the_event():
+    call = _event_call({"date": "January 15, 2024", "type": "Vote"}, "2024-01-17T09:00:00Z")
+
+    # What the flags *mean* is settled in the core; the adapter's job is only to
+    # write the resolution it was handed.
+    assert call[1]["properties"]["date"] == "2024-01-15"
+    assert call[1]["properties"]["date_verified"] is True
+    assert call[1]["properties"]["date_inferred"] is False
+    assert call[1]["properties"]["needs_review"] is False
+
+
+def test_an_event_without_a_resolved_date_gets_no_date_properties():
+    # An event absent from the map is not an event resolved to nothing: the
+    # adapter writes no date flags at all rather than stamping it unreviewed.
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=ExtractionResult(nodes=[
+            Node(name="Assembly floor vote on AB 218", label="LegislativeEvent",
+                 sub_labels=["Vote"], properties={"type": "Vote"}),
+        ]),
+    )
+
+    call = next(
+        call for call in mock_tx.run.call_args_list
+        if "MERGE (n:LegislativeEvent" in call[0][0]
+    )
+    assert call[1]["properties"] == {"type": "Vote"}
+
+
+def test_a_legislative_event_key_never_contains_its_date():
+    stated = _event_call({"date": "January 15, 2024"}, "2024-01-17T09:00:00Z")
+    inferred = _event_call({}, "2024-01-17T09:00:00Z")
+    undated = _event_call({}, None)
+
+    # One identity shape, whatever the date turned out to be: a later
+    # correct-date ingest can only fix every node if there is one shape to look
+    # for, and a guessed date in the key would conflate two events irrecoverably
+    # rather than fragment one recoverably.
+    key = "LegislativeEvent:assembly-floor-vote-on-ab-218"
+    assert stated[1]["node_id"] == inferred[1]["node_id"] == undated[1]["node_id"] == key
+    for call in (stated, inferred, undated):
+        assert "date" not in call[0][0]
+        for value in (call[1]["properties"].get("date"), "2024-01-15", "2024-01-17"):
+            assert not value or value not in call[1]["node_id"]
 
 def test_context_manager_lifecycle():
     mock_driver = MagicMock()
@@ -539,4 +900,3 @@ def test_neo4j_adapter_health_check_failure():
         driver=mock_driver
     )
     assert manager.health_check() is False
-

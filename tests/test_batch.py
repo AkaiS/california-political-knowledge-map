@@ -17,7 +17,15 @@ from knowledge_map.adapters.sqlite_db import (
 )
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, Node
+from knowledge_map.schemas import (
+    AdherenceReport,
+    ArticleChunk,
+    DropCategory,
+    DroppedItem,
+    ExtractionResult,
+    Node,
+    SourceArticle,
+)
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.core.exceptions import (
@@ -30,7 +38,9 @@ from knowledge_map.core.exceptions import (
 )
 from knowledge_map.cli.main import main
 from knowledge_map.schemas.stories import Story
+from knowledge_map.schemas import StoryLink
 from test_pipeline import (
+    EMPTY_ADHERENCE_REPORT,
     MockDatabaseAdapter,
     MockEmbeddingAdapter,
     MockCoreferenceAdapter,
@@ -38,6 +48,13 @@ from test_pipeline import (
     MockStatusTracker,
     MockDeadLetterQueueAdapter
 )
+
+
+def make_mock_pipeline() -> MagicMock:
+    """A mock pipeline whose extraction adapter honours the adherence-report protocol."""
+    pipeline = MagicMock()
+    pipeline.extraction_adapter.adherence_report = EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
+    return pipeline
 
 def test_batch_ingestion_settings_defaults():
     # Verify default values
@@ -141,7 +158,8 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     story1 = Story(
         title="Story A",
         url="http://example.com/a",
-        content="Content of Story A"
+        content="Content of Story A",
+        links=[StoryLink(text="a bill", url="https://example.com/bill")],
     )
     story2 = Story(
         title="Story B",
@@ -152,7 +170,7 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     save_story(story2, db_path=db_path)
 
     # Mock StoryPipeline
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     # Instantiate service
     settings = BatchIngestionSettings(db_path=db_path)
@@ -169,12 +187,33 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     assert isinstance(called_article_1, SourceArticle)
     assert called_article_1.url == "http://example.com/a"
     assert called_article_1.content == "Content of Story A"
+    assert called_article_1.links == [StoryLink(text="a bill", url="https://example.com/bill")]
 
     # Second call
     called_article_2 = calls[1][0][0]
     assert isinstance(called_article_2, SourceArticle)
     assert called_article_2.url == "http://example.com/b"
     assert called_article_2.content == "Content of Story B"
+
+
+def test_batch_ingestion_writes_and_resets_adherence_report(tmp_path):
+    db_path = str(tmp_path / "empty.db")
+    init_db(db_path)
+    report_path = tmp_path / "reports" / "adherence.json"
+    extraction_adapter = MagicMock()
+    report = AdherenceReport()
+    report[DropCategory.REJECTED_LABELS]["Unknown"] = DroppedItem(
+        count=1, example_chunk_id="sha256:abc"
+    )
+    extraction_adapter.adherence_report = report
+    pipeline = MagicMock()
+    pipeline.extraction_adapter = extraction_adapter
+    settings = BatchIngestionSettings(db_path=db_path, adherence_report_path=str(report_path))
+
+    BatchIngestionService(pipeline=pipeline, settings=settings).run()
+
+    extraction_adapter.reset_adherence_report.assert_called_once_with()
+    assert json.loads(report_path.read_text()) == report.as_json_dict()
 
 
 def test_cli_ingest_command():
@@ -233,17 +272,22 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     class LocalMockDatabaseAdapter:
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
-        def ingest_chunk_extraction(self, chunk_id, extraction): pass
-        
+        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, event_dates=None): pass
+
     class LocalMockEmbeddingAdapter:
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)
-        
+
     class LocalMockCoreferenceAdapter:
         def resolve(self, content): return content
-        
+
     class LocalMockEntityExtractionAdapter:
         def extract(self, chunk_text):
             return ExtractionResult(nodes=[Node(name="Test Actor", label="PoliticalActor")], relationships=[])
+
+        @property
+        def adherence_report(self): return EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
+
+        def reset_adherence_report(self): pass
     
     db_file = tmp_path / "test_transitions.db"
     db_path = str(db_file)
@@ -330,7 +374,7 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     coref_err = CoreferenceResolutionError(
         original_text="Content 1",
@@ -366,7 +410,7 @@ def test_batch_ingestion_resilience_extraction_error(tmp_path):
     save_story(story1, db_path=db_path)
     save_story(story2, db_path=db_path)
     
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     
     extract_err = ExtractionError(
         original_text="Content 1",
@@ -404,7 +448,7 @@ def test_batch_ingestion_consecutive_system_errors(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
         
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
     
@@ -441,7 +485,7 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
         
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
     
@@ -672,7 +716,7 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
             content=f"Content {i}",
         ), db_path=db_path)
 
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     mock_status_tracker = MagicMock()
     mock_pipeline.status_tracker = mock_status_tracker
 
@@ -750,7 +794,7 @@ def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
 
 def test_batch_ingestion_startup_lock_check(tmp_path):
 
-    mock_pipeline = MagicMock()
+    mock_pipeline = make_mock_pipeline()
     lock_file = tmp_path / "pipeline.lock"
     lock_file.write_text("locked content")
     lock_file_path = str(lock_file)
@@ -769,10 +813,6 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
     assert "locked" in str(exc_info.value).lower()
     # Verify no pipeline execution occurred
     assert mock_pipeline.run.call_count == 0
-
-
-
-
 
 
 

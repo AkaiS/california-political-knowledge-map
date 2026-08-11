@@ -4,20 +4,22 @@
 
 #### `:NewsArticle`
 
-- `id`: `STRING` _(Primary Key: URL or deterministic hash of source + publication date)_
+- `id`: `STRING` _(Primary Key: the article's canonical URL)_
     
 - `title`: `STRING`
     
+- `author`: `STRING` _(Byline as published; absent when the article carries none)_
+    
 - `publisher`: `STRING` _(e.g., "Los Angeles Times", "CalMatters")_
     
-- `publish_date`: `DATE`
+- `published_date`: `DATE`
     
 - `summary`: `STRING` _(LLM-generated high-level tl;dr)_
     
 
 #### `:Chunk`
 
-- `id`: `STRING` _(Primary Key: `article_id` + "_" + `chunk_index`)_
+- `id`: `STRING` _(Primary Key: `article_id` + "#chunk_" + `index`)_
     
 - `text`: `STRING` _(The raw markdown text block passed to the LLM at query time)_
     
@@ -115,6 +117,8 @@
     
 - `date`: `DATE`
     
+- `sequence_number`: `INTEGER` _(The event's position in the bill's lifecycle, e.g., 3)_
+    
 - `description`: `STRING` _(Brief summary of the action taken)_
     
 
@@ -190,9 +194,9 @@
 | `:LegislativeTenure`             | `SERVES_ON`           | `:Committee`             | _None_                                                                                  | Standard legislative committee assignment.                     |
 | `:LegislativeTenure`             | `CHAIRS`              | `:Committee`             | _None_                                                                                  | Identifies the committee chair for high-influence routing.     |
 | `:LegislativeTenure`             | `VICE_CHAIRS`         | `:Committee`             | _None_                                                                                  | Identifies the committee vice chair.                           |
-| `:LegislativeTenure`             | `VOTED_AYE`           | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to an affirmative vote event.                   |
-| `:LegislativeTenure`             | `VOTED_NO`            | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to a negative vote event.                       |
-| `:LegislativeTenure`             | `ABSTAINED`           | `:LegislativeEvent`      | `sequence_number: INT`                                                                  | Links a tenure to an abstention or unrecorded vote.            |
+| `:LegislativeTenure`             | `VOTED_AYE`           | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to an affirmative vote event.                   |
+| `:LegislativeTenure`             | `VOTED_NO`            | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to a negative vote event.                       |
+| `:LegislativeTenure`             | `ABSTAINED`           | `:LegislativeEvent`      | _None_                                                                                  | Links a tenure to an abstention or unrecorded vote.            |
 | `:LegislativeEvent`              | `ACTION_ON`           | `:Bill`                  | _None_                                                                                  | Connects the distinct timeline events back to the parent bill. |
 | `:Bill`                          | `ABOUT_TOPIC`         | `:PolicyArea`            | _None_                                                                                  | Maps a bill to its thematic category hub.                      |
 | `:Prop`                          | `ABOUT_TOPIC`         | `:PolicyArea`            | _None_                                                                                  | Maps a proposition to its thematic category hub.               |
@@ -204,6 +208,6 @@
 | `:Politician` \| `:Organization` | `DENOUNCED`           | `:Prop` \| `:Campaign`   | _None_                                                                                  | Captures official public condemnation.                         |
 | `:Politician` \| `:Organization` | `DECLARED_STANCE`     | `:Prop` \| `:Bill`       | `alignment: STRING`<br><br>  <br><br>_(Values: "POSITIVE", "NEGATIVE", "NEUTRAL")_      | Used for nuanced public comments caught in news articles.      |
 | `:NewsArticle`                   | `HAS_CHUNK`           | `:Chunk`                 | _None_                                                                                  | Parent-to-child composition for RAG slicing.                   |
-| `:Chunk`                         | `MENTIONS`            | _Any Core Entity_        | _None_                                                                                  | Hard edge created when an entity is extracted from that chunk. |
+| _Any Core Entity_                | `MENTIONED_IN`        | `:Chunk`                 | _None_                                                                                  | Hard edge created when an entity is extracted from that chunk. |
 | `:NewsArticle` \| `:Chunk`       | `DISCUSSES_TOPIC`     | `:PolicyArea`            | _None_                                                                                  | Direct thematic edge for generalized policy news articles.     |
 | _Any resolvable core entity_     | `HAS_IDENTIFIER`      | `:ExternalIdentifier`    | _None_                                                                                  | Connects an internal entity to an identifier assigned by an external authority. |

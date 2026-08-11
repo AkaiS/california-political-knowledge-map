@@ -1,24 +1,6 @@
 from typing import Any, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from .pipeline import ArticleStatus
-
-
-class StoryLink(BaseModel):
-    """A hyperlink extracted from a Story's body."""
-    model_config = ConfigDict(extra="forbid")
-
-    url: str = Field(..., description="The resolved absolute URL the link points to")
-    text: Optional[str] = Field(None, description="The anchor text of the link")
-
-    @field_validator("url", mode="before")
-    @classmethod
-    def clean_url(cls, v: Any) -> str:
-        if not isinstance(v, str):
-            raise ValueError("Must be a string")
-        cleaned = v.strip()
-        if not cleaned:
-            raise ValueError("Must be a non-empty string")
-        return cleaned
+from .pipeline import ArticleStatus, StoryLink
 
 
 class Story(BaseModel):

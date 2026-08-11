@@ -1,6 +1,17 @@
 import pytest
 import logging
-from knowledge_map.schemas import SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, Node
+from knowledge_map.schemas import (
+    AdherenceReport,
+    ArticleChunk,
+    BillSessionResolution,
+    BillSessionResolutions,
+    ExtractionResult,
+    LegislativeEventDates,
+    Node,
+    PipelineResult,
+    SourceArticle,
+    StoryLink,
+)
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.core.pipeline import (
     StoryPipeline,
@@ -38,9 +49,11 @@ class MockDatabaseAdapter:
     def ingest_chunk_extraction(
         self,
         chunk_id: str,
-        extraction: ExtractionResult
+        extraction: ExtractionResult,
+        bill_sessions: BillSessionResolutions | None = None,
+        event_dates: LegislativeEventDates | None = None,
     ) -> None:
-        self.extractions.append((chunk_id, extraction))
+        self.extractions.append((chunk_id, extraction, bill_sessions, event_dates))
 
 class MockEmbeddingAdapter:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
@@ -50,12 +63,25 @@ class MockCoreferenceAdapter:
     def resolve(self, content: str) -> str:
         return content
 
+EMPTY_ADHERENCE_REPORT = AdherenceReport()
+
+
 class MockEntityExtractionAdapter:
+    def __init__(self):
+        self.reset_calls = 0
+
     def extract(self, chunk_text: str) -> ExtractionResult:
         return ExtractionResult(
-            nodes=[Node(name="Test Actor", label="PoliticalActor")],
+            nodes=[Node(name="Test Actor", label="Politician")],
             relationships=[]
         )
+
+    @property
+    def adherence_report(self) -> AdherenceReport:
+        return EMPTY_ADHERENCE_REPORT.model_copy(deep=True)
+
+    def reset_adherence_report(self) -> None:
+        self.reset_calls += 1
 
 class MockStatusTracker:
     def __init__(self):
@@ -140,9 +166,60 @@ def test_pipeline_persistence():
     assert stored_emb == [0.1, 0.2, 0.3]
 
     assert len(db.extractions) == 1
-    chunk_id, stored_extraction = db.extractions[0]
+    chunk_id, stored_extraction, _bill_sessions, _event_dates = db.extractions[0]
     assert chunk_id == "http://test.com/persist#chunk_0"
     assert stored_extraction.nodes[0].name == "Test Actor"
+
+
+def test_pipeline_resolves_bill_sessions_once_per_article():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    extraction.extract = lambda _text: ExtractionResult(nodes=[
+        Node(name="AB 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="SB 54", label="Bill", properties={"number": "SB 54"}),
+        Node(name="AB 99", label="Bill", properties={"number": "AB 99"}),
+        Node(name="AB 1", label="Bill", properties={"number": "AB 1"}),
+    ])
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="https://example.com/story",
+        title="Bills",
+        published_date="2026-04-10T12:00:00Z",
+        content="first chunk second chunk",
+        links=[
+            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200AB218"),
+            StoryLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
+            StoryLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
+            StoryLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
+        ],
+    )
+    chunks = [
+        ArticleChunk(text="first", start_index=0, end_index=5, index=0),
+        ArticleChunk(text="second", start_index=6, end_index=12, index=1),
+    ]
+
+    with patch("knowledge_map.core.pipeline.chunk_article", return_value=chunks), \
+         patch("knowledge_map.core.bill_sessions.parse_bill_url", wraps=__import__(
+             "knowledge_map.core.bill_sessions", fromlist=["parse_bill_url"]
+         ).parse_bill_url) as parser:
+        pipeline.run(article)
+
+    assert parser.call_count == len(article.links)
+    first_map = db.extractions[0][2]
+    assert db.extractions[1][2] is first_map
+    assert isinstance(first_map, BillSessionResolutions)
+    assert first_map == BillSessionResolutions(by_number={
+        "AB 218": BillSessionResolution(session="2019-2020", session_verified=True),
+        "SB 54": BillSessionResolution(session="2017-2018", session_verified=True),
+        "AB 99": BillSessionResolution(session="2025-2026", session_inferred=True),
+        "AB 1": BillSessionResolution(needs_review=True),
+    })
 
 def test_pipeline_logging(caplog):
     caplog.set_level(logging.INFO)
@@ -252,7 +329,7 @@ def test_pipeline_with_concrete_adapters():
                 tool_name=tool_name,
                 args={
                     "nodes": [
-                        {"name": "Gavin Newsom", "label": "PoliticalActor"}
+                        {"name": "Gavin Newsom", "label": "Politician"}
                     ],
                     "relationships": []
                 },
@@ -345,7 +422,7 @@ def test_pipeline_with_neo4j_adapter():
     assert isinstance(result, PipelineResult)
     assert mock_tx.run.call_count >= 2
     queries = [call[0][0] for call in mock_tx.run.call_args_list]
-    assert any("MERGE (a:Article {url: $url})" in q for q in queries)
+    assert any("MERGE (a:NewsArticle {id: $url})" in q for q in queries)
     assert any("MERGE (c:Chunk {id: $chunk_id})" in q for q in queries)
 
 
@@ -697,8 +774,3 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
-
-
-
-
-

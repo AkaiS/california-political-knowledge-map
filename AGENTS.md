@@ -12,11 +12,6 @@
 ## Operational Constraints
 - Always use `uv`. Never install packages globally.
 
-## Agent Behaviors
-- When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
-
-## Agent skills
-
 ### Issue tracker
 
 Issues and PRDs live as local Markdown under `work/`; `work/README.md` is the

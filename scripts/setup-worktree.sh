@@ -113,6 +113,7 @@ if [[ "$source_root" != "$target_root" ]]; then
   # Deliberately allowlisted: do not copy .venv, caches, logs, or DLQ data.
   copy_if_missing ".env"
   copy_if_missing ".agents"
+  copy_if_missing ".claude"
   copy_if_missing ".logfire/logfire_credentials.json"
   link_if_missing "document_store.db"
 else
