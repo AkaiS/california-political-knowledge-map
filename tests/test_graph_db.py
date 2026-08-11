@@ -137,6 +137,52 @@ def test_shortcut_edge_records_the_label_it_flattened():
     assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
     assert "properties" not in rel_kwargs
 
+def test_an_edge_reaches_the_node_conformance_resolved_not_the_last_of_that_name():
+    # Both "Water Alliance" nodes are written, with distinct ids. The edge carries
+    # the label conformance settled on, so it lands on the Committee even though the
+    # Organization is the last node of that name the write path saw.
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(
+        nodes=[
+            Node(name="Gavin Newsom", label="Politician"),
+            Node(name="Water Alliance", label="Committee"),
+            Node(name="Water Alliance", label="Organization"),
+        ],
+        relationships=[
+            Relationship(
+                source="Gavin Newsom",
+                target="Water Alliance",
+                relationship_type="SERVES_ON",
+                source_label="Politician",
+                target_label="Committee",
+            )
+        ],
+    )
+
+    manager.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+    )
+
+    node_ids = {
+        call[1]["node_id"] for call in mock_tx.run.call_args_list if "node_id" in call[1]
+    }
+    assert "Committee:water-alliance" in node_ids
+    assert "Organization:water-alliance" in node_ids
+
+    rel_call = next(
+        call for call in mock_tx.run.call_args_list if "[r:SERVES_ON]" in call[0][0]
+    )
+    assert "(tgt:Committee {id: $tgt_id})" in rel_call[0][0]
+    assert rel_call[1]["tgt_id"] == "Committee:water-alliance"
+
+
 def test_extraction_rejects_invalid_identifiers():
     from pydantic import ValidationError
 

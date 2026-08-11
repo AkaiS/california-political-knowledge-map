@@ -52,6 +52,26 @@ class ConformanceOutcome(BaseModel):
     drops: tuple[ConformanceDrop, ...]
 
 
+def _resolve_endpoint(admitted: set[str], claimed: str | None) -> str | None:
+    """The one label an endpoint means, or ``None`` where nothing can say.
+
+    ``admitted`` is every label carried by a node of the endpoint's name that the
+    relationship's shape allows. One is the answer, whatever the extractor claimed:
+    where the ontology leaves no choice there is nothing for a model's label to add,
+    and a wrong claim must not cost a fact the ontology already resolved.
+
+    More than one is a genuine choice the shape cannot make — ``ENDORSED`` admits
+    both a Politician and an Organization, so a name that is both says nothing about
+    who endorsed. Only there does the extractor's label decide, and only by picking
+    from the labels already admitted. A claim naming none of them decides nothing,
+    and the endpoint stays unresolved rather than resolving to a coin flip.
+    """
+
+    if len(admitted) == 1:
+        return next(iter(admitted))
+    return claimed if claimed in admitted else None
+
+
 def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> ConformanceOutcome:
     """Return ``result`` reduced to what the News Ontology admits, plus its drops."""
 
@@ -89,7 +109,15 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
                 properties[name] = value
         nodes.append(node.model_copy(update={"properties": properties}))
 
-    nodes_by_name = {node.name: node for node in nodes}
+    # A name is not a key. Two conforming nodes can share a canonical name under
+    # different labels ("Newsom" the Politician and "Newsom" the Organization), so
+    # an endpoint resolves to every node that carries the name and the ontology
+    # picks among them. Keeping only the last one would silently validate the edge
+    # against the wrong label — discarding a true claim, or admitting a false one.
+    nodes_by_name: dict[str, list[Node]] = {}
+    for node in nodes:
+        nodes_by_name.setdefault(node.name, []).append(node)
+
     relationships: list[Relationship] = []
     for relationship in result.relationships:
         relationship_type = relationship.relationship_type
@@ -98,13 +126,22 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
             drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "unknown relationship type")
             continue
 
-        source = nodes_by_name.get(relationship.source)
-        target = nodes_by_name.get(relationship.target)
-        if source is None or target is None:
+        sources = nodes_by_name.get(relationship.source, [])
+        targets = nodes_by_name.get(relationship.target, [])
+        if not sources or not targets:
             drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "dangling endpoint")
             continue
-        if source.label not in shape.source_labels or target.label not in shape.target_labels:
+
+        source_labels = {node.label for node in sources if node.label in shape.source_labels}
+        target_labels = {node.label for node in targets if node.label in shape.target_labels}
+        if not source_labels or not target_labels:
             drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "endpoint labels violate ontology")
+            continue
+
+        source_label = _resolve_endpoint(source_labels, relationship.source_label)
+        target_label = _resolve_endpoint(target_labels, relationship.target_label)
+        if source_label is None or target_label is None:
+            drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "ambiguous endpoint")
             continue
 
         # Relationship properties are write-path-owned: an undeclared one is dropped
@@ -122,7 +159,19 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
                 )
             else:
                 properties[name] = value
-        relationships.append(relationship.model_copy(update={"properties": properties}))
+        # The resolution rides along with the edge. Conformance is the only place
+        # that knows which of the nodes sharing a name this claim is about, and
+        # persistence would otherwise have to re-derive it from the name alone —
+        # the same collapse, one layer down.
+        relationships.append(
+            relationship.model_copy(
+                update={
+                    "properties": properties,
+                    "source_label": source_label,
+                    "target_label": target_label,
+                }
+            )
+        )
 
     return ConformanceOutcome(
         result=ExtractionResult(nodes=nodes, relationships=relationships),

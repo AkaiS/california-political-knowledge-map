@@ -31,15 +31,21 @@ values supported by the text.
 {{NEWS_ONTOLOGY}}
 
 Relationships use `source` and `target` names that refer exactly to corresponding
-canonical node names in the same response.
+canonical node names in the same response. `source_label` and `target_label` are the
+`label` of those two nodes, copied exactly from the entity you named. Two entities in
+one article can share a name — a committee and the organization behind it, a
+politician and a campaign — and the label is what says which of them the claim is
+about.
 
 Each relationship has this shape:
 
 ```json
 {
   "source": "Example Source",
+  "source_label": "ExampleSourceLabel",
   "relationship_type": "ENDORSED",
   "target": "Example Target",
+  "target_label": "ExampleTargetLabel",
   "properties": {}
 }
 ```
@@ -53,6 +59,8 @@ inferred relationship when the article does not state the connection.
 - Resolve pronouns and abbreviated references to a canonical name only when the
   antecedent is unambiguous in the text.
 - Deduplicate repeated mentions within this response.
+- Every relationship endpoint must name an entity in this same response, and must
+  carry that entity's label.
 - Do not infer endorsement from mere quotation, coverage, sponsorship, employment,
   funding, or mention.
 - If no supported entities or relationships exist, return empty arrays.

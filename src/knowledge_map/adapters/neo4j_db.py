@@ -104,8 +104,11 @@ def _write_relationship(
 
     rel_type = rel.relationship_type
 
-    src_label = node_labels.get(rel.source, "")
-    tgt_label = node_labels.get(rel.target, "")
+    # Conformance already resolved which node each name meant. Falling back to the
+    # name map is for relationships that never passed through it; there a shared
+    # name has nothing left to disambiguate it.
+    src_label = rel.source_label or node_labels.get(rel.source, "")
+    tgt_label = rel.target_label or node_labels.get(rel.target, "")
 
     src_clause = f":{src_label}" if src_label else ""
     tgt_clause = f":{tgt_label}" if tgt_label else ""
@@ -295,8 +298,12 @@ class Neo4jAdapter:
         try:
             with driver.session() as session:
                 def _tx(tx):
-                    node_labels = {}
-                    node_ids = {}
+                    # Node identity is (name, label) — two entities can share a
+                    # canonical name, and they are already written as two nodes with
+                    # two ids. The name-only map is the fallback for a relationship
+                    # that carries no resolved label, and keeps the last node seen.
+                    node_labels: dict[str, str] = {}
+                    node_ids: dict[tuple[str, str], str] = {}
                     for node in extraction.nodes:
                         label = node.label
                         node_labels[node.name] = label
@@ -319,7 +326,7 @@ class Neo4jAdapter:
                             # Name-derived, with the date deliberately outside it:
                             # one identity shape for every Legislative Event.
                             node_id = derived_key(label, node.name)
-                        node_ids[node.name] = node_id
+                        node_ids[(node.name, label)] = node_id
 
                         # Merge node
                         query = (
@@ -343,8 +350,9 @@ class Neo4jAdapter:
                             tx.run(topic_query, chunk_id=chunk_id, node_id=node_id)
 
                     def resolved_id(label: str, name: str) -> str:
-                        if name in node_ids:
-                            return node_ids[name]
+                        node_id = node_ids.get((name, label))
+                        if node_id is not None:
+                            return node_id
                         if label != "Bill":
                             return derived_key(label, name)
                         number = normalize_bill_number(name)

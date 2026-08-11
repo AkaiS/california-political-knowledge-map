@@ -435,6 +435,157 @@ def test_extraction_conformance_keeps_conforming_entities_beside_a_bad_one():
     assert len(outcome.drops) == 1
 
 
+def test_a_shared_name_under_two_labels_resolves_by_the_relationship_shape():
+    # "Water Alliance" is both a Committee and an Organization in this chunk. The
+    # shape of SERVES_ON admits only the Committee, so the claim survives instead of
+    # being validated against whichever node happened to be extracted last.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Alex Lee", label="Politician"),
+            Node(name="Water Alliance", label="Committee"),
+            Node(name="Water Alliance", label="Organization"),
+        ],
+        relationships=[
+            Relationship(source="Alex Lee", target="Water Alliance", relationship_type="SERVES_ON"),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [rel.relationship_type for rel in outcome.result.relationships] == ["SERVES_ON"]
+    assert outcome.drops == ()
+    # The resolution rides forward: persistence reaches the node conformance
+    # validated instead of re-deriving it from the name.
+    assert outcome.result.relationships[0].source_label == "Politician"
+    assert outcome.result.relationships[0].target_label == "Committee"
+
+
+def test_a_mislabelled_endpoint_does_not_cost_a_claim_the_ontology_can_resolve():
+    # SERVES_ON leaves the extractor no choice to make: one Politician, one
+    # Committee. A label it got wrong is not a second opinion worth losing a true
+    # claim over, so the ontology's answer stands and the wrong one is replaced.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Alex Lee", label="Politician"),
+            Node(name="Budget Committee", label="Committee"),
+        ],
+        relationships=[
+            Relationship(
+                source="Alex Lee",
+                target="Budget Committee",
+                relationship_type="SERVES_ON",
+                source_label="Organization",
+                target_label="Bill",
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [rel.relationship_type for rel in outcome.result.relationships] == ["SERVES_ON"]
+    assert outcome.result.relationships[0].source_label == "Politician"
+    assert outcome.result.relationships[0].target_label == "Committee"
+
+
+def test_an_extractor_label_settles_a_choice_the_ontology_cannot_make():
+    # ENDORSED admits a Politician and an Organization alike, so a name that is both
+    # leaves the shape nothing to narrow. Here — and only here — the extractor's
+    # label decides, because it is the only thing that saw which one acted.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Sierra Club", label="Politician"),
+            Node(name="Sierra Club", label="Organization"),
+            Node(name="Prop 12", label="Prop"),
+        ],
+        relationships=[
+            Relationship(
+                source="Sierra Club",
+                target="Prop 12",
+                relationship_type="ENDORSED",
+                source_label="Organization",
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [rel.relationship_type for rel in outcome.result.relationships] == ["ENDORSED"]
+    assert outcome.result.relationships[0].source_label == "Organization"
+    assert outcome.drops == ()
+
+
+def test_an_extractor_label_naming_no_admitted_endpoint_settles_nothing():
+    # The shape admits Politician and Organization; the label names neither. It
+    # cannot break the tie it was consulted for, and the claim is refused rather
+    # than resolved by whichever node came last.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Sierra Club", label="Politician"),
+            Node(name="Sierra Club", label="Organization"),
+            Node(name="Prop 12", label="Prop"),
+        ],
+        relationships=[
+            Relationship(
+                source="Sierra Club",
+                target="Prop 12",
+                relationship_type="ENDORSED",
+                source_label="Committee",
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert outcome.result.relationships == []
+    assert [(drop.category, drop.reason) for drop in outcome.drops] == [
+        ("rejected_relationship_types", "ambiguous endpoint"),
+    ]
+
+
+def test_a_shared_name_no_label_of_which_fits_the_shape_is_still_refused():
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Alex Lee", label="Politician"),
+            Node(name="Water Alliance", label="Organization"),
+            Node(name="Water Alliance", label="Bill", properties={"number": "AB 1"}),
+        ],
+        relationships=[
+            Relationship(source="Alex Lee", target="Water Alliance", relationship_type="SERVES_ON"),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert outcome.result.relationships == []
+    assert [(drop.category, drop.reason) for drop in outcome.drops] == [
+        ("rejected_relationship_types", "endpoint labels violate ontology"),
+    ]
+
+
+def test_a_shared_name_two_labels_of_which_fit_the_shape_and_no_label_to_choose():
+    # ENDORSED admits both a Politician and an Organization as its source, so a name
+    # carrying both says nothing about who did the endorsing. With no extractor label
+    # to settle it either, nothing can recover the answer — and a coin-flip edge is
+    # worse than no edge.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Sierra Club", label="Politician"),
+            Node(name="Sierra Club", label="Organization"),
+            Node(name="Prop 12", label="Prop"),
+        ],
+        relationships=[
+            Relationship(source="Sierra Club", target="Prop 12", relationship_type="ENDORSED"),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert outcome.result.relationships == []
+    assert [(drop.category, drop.reason) for drop in outcome.drops] == [
+        ("rejected_relationship_types", "ambiguous endpoint"),
+    ]
+
+
 def test_extraction_conformance_leaves_its_input_untouched():
     result = ExtractionResult(
         nodes=[Node(name="Alex Lee", label="Politician", properties={"nickname": "Al"})],

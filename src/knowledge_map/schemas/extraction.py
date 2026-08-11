@@ -29,10 +29,32 @@ class Node(BaseModel):
         return v
 
 class Relationship(BaseModel):
+    """A claim between two named entities.
+
+    An endpoint is a name plus the label of the node that name refers to. The label
+    is what a bare name cannot supply: two entities in one chunk can share a
+    canonical name, and the name alone then picks between them arbitrarily. It is a
+    sibling field rather than a nested endpoint object because it has to stay
+    optional — a relationship built by hand, or read back from an extraction stored
+    before labels were asked for, names its endpoints and nothing more.
+
+    Conformance decides what these mean. It resolves each endpoint against the nodes
+    beside it and the ontology's shape for the relationship type, and stamps the
+    label it settled on; a model's label is consulted only where the ontology leaves
+    a genuine choice. What persistence reads back is therefore always the resolved
+    label, never the extractor's unexamined claim.
+    """
+
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
     target: str = Field(..., description="Target node name. Do NOT name this key 'target_name', it must be 'target'.")
     relationship_type: str = Field(..., description="Relationship type")
     properties: dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
+    source_label: str | None = Field(
+        default=None, description="Label of the source node, exactly as that node declares it."
+    )
+    target_label: str | None = Field(
+        default=None, description="Label of the target node, exactly as that node declares it."
+    )
 
     @field_validator("source", "target", mode="before")
     @classmethod
