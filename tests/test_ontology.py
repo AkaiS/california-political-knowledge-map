@@ -271,6 +271,48 @@ def test_conformance_rejects_a_claim_key_the_ontology_does_not_shape(monkeypatch
     assert "weight" in _conformance_error("an unshaped claim key")
 
 
+def test_a_relationship_property_news_cannot_supply_leaves_the_claim_key():
+    # `transaction_id` is an FPPC filing id. Prose never carries one, so keying on it
+    # would put a value in every funding edge's key that no article can fill.
+    assert "transaction_id" in primary.RELATIONSHIPS["FUNDED"].property_names
+    assert "transaction_id" not in news.RELATIONSHIPS["FUNDED"].property_names
+    assert news.claim_key_properties("FUNDED") == frozenset({"amount", "date"})
+
+
+def test_a_diverged_relationship_property_still_leaves_the_relationship_keyed():
+    # Subtracting one property is not the same as declaring the edge unkeyed: two
+    # articles naming different amounts still assert different claims.
+    assert "FUNDED" in news.KEYED_RELATIONSHIPS
+
+
+def test_conformance_rejects_a_claim_key_narrowed_without_a_declared_gap(monkeypatch):
+    # A property leaves the Claim Key by being declared a gap, never by being quietly
+    # dropped — otherwise the reason it left goes unrecorded.
+    narrowed = dict(news.RELATIONSHIPS)
+    narrowed["DECLARED_STANCE"] = RelationshipShape(
+        source_labels=news.RELATIONSHIPS["DECLARED_STANCE"].source_labels,
+        target_labels=news.RELATIONSHIPS["DECLARED_STANCE"].target_labels,
+        properties=(),
+    )
+    monkeypatch.setattr(news, "RELATIONSHIPS", narrowed)
+
+    assert "alignment" in _conformance_error("a silently narrowed claim key")
+
+
+def test_conformance_rejects_a_claim_key_hand_written_past_a_relationship_divergence(monkeypatch):
+    # The mirror of the node check: restoring a diverged property by hand makes the
+    # ontology claim news both supplies it and cannot.
+    hand_written = dict(news.RELATIONSHIPS)
+    hand_written["FUNDED"] = RelationshipShape(
+        source_labels=news.RELATIONSHIPS["FUNDED"].source_labels,
+        target_labels=news.RELATIONSHIPS["FUNDED"].target_labels,
+        properties=primary.RELATIONSHIPS["FUNDED"].properties,
+    )
+    monkeypatch.setattr(news, "RELATIONSHIPS", hand_written)
+
+    assert "transaction_id" in _conformance_error("a hand-written claim key")
+
+
 # --- The extraction prompt ----------------------------------------------------------
 
 

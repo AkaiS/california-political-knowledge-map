@@ -434,9 +434,7 @@ def _funding_call(properties: dict):
     return next(call for call in mock_tx.run.call_args_list if "[r:FUNDED" in call[0][0])
 
 
-_WHOLE_FUNDING_CLAIM = {
-    "amount": "$6 million", "date": "January 15, 2024", "transaction_id": "FPPC-2024-0198",
-}
+_WHOLE_FUNDING_CLAIM = {"amount": "$6 million", "date": "January 15, 2024"}
 
 
 def test_a_funding_claim_is_keyed_on_every_property_it_declares():
@@ -445,13 +443,9 @@ def test_a_funding_claim_is_keyed_on_every_property_it_declares():
 
     # The key is in the MERGE pattern, so a different figure merges to a different
     # edge. It is the declared property set, not a second table beside it.
-    assert (
-        "MERGE (src)-[r:FUNDED {amount: $key_amount, date: $key_date, "
-        "transaction_id: $key_transaction_id}]->(tgt)" in query
-    )
+    assert "MERGE (src)-[r:FUNDED {amount: $key_amount, date: $key_date}]->(tgt)" in query
     assert kwargs["key_amount"] == 6_000_000.0
     assert kwargs["key_date"] == "2024-01-15"
-    assert kwargs["key_transaction_id"] == "FPPC-2024-0198"
     # A whole key needs no flag, and there is no payload assignment to carry one.
     assert "stamps" not in kwargs
     assert "SET r +=" not in query
@@ -499,9 +493,19 @@ def test_no_property_outside_the_claim_key_reaches_an_edge():
 
     # Whatever else the article said stays in the Article Chunk the edge points to.
     assert "mood" not in query and "recipient" not in query
-    assert set(kwargs) == {
-        "src_id", "tgt_id", "chunk_id", "key_amount", "key_date", "key_transaction_id",
-    }
+    assert set(kwargs) == {"src_id", "tgt_id", "chunk_id", "key_amount", "key_date"}
+
+
+def test_a_diverged_property_is_not_keyed_on_even_when_an_article_supplies_one():
+    # `transaction_id` is declared a gap, so it is outside the Claim Key however it
+    # got here. Keying on it would stamp every news funding edge for review.
+    call = _funding_call({**_WHOLE_FUNDING_CLAIM, "transaction_id": "FPPC-2024-0198"})
+    query, kwargs = call[0][0], call[1]
+
+    assert "transaction_id" not in query
+    assert "key_transaction_id" not in kwargs
+    # And the key is whole without it, so nothing is flagged.
+    assert "stamps" not in kwargs
 
 
 def _stance_call(properties: dict):

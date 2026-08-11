@@ -41,7 +41,7 @@ arrives without one is written and carries `needs_review`.
 | `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
 | `DISCUSSES_TOPIC` | `Chunk` / `NewsArticle` | `PolicyArea` | — |
 | `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
-| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` / `transaction_id` |
+| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
 | `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
 | `LOBBIED_AGAINST` | `Organization` | `Bill` | — |
 | `LOBBIED_FOR` | `Organization` | `Bill` | — |
@@ -90,6 +90,7 @@ path stamps. Nothing records the direction twice.
 | `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |
 | `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |
 | `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |
+| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |
 | `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |
 
 ## Primary ontology concepts outside news scope

@@ -99,6 +99,19 @@ def assert_news_ontology_conforms() -> None:
                 "instead of derived."
             )
 
+    for divergence in news.RELATIONSHIP_DIVERGENCES:
+        for relationship_type in divergence.applies_to:
+            assert divergence.property_name not in news.RELATIONSHIPS[
+                relationship_type
+            ].property_names, (
+                f"{relationship_type}.{divergence.property_name} is declared a gap and "
+                "also sits in the Claim Key. A relationship's declared properties are "
+                "its Claim Key, so a property news cannot supply would key every edge "
+                "on a value no article fills; `RELATIONSHIPS` subtracts every "
+                "divergence, so this means the properties were hand-written instead of "
+                "derived."
+            )
+
     _assert_every_claim_key_property_has_a_shape()
 
     declared = {divergence.property_name for divergence in news.DIVERGENCES}
@@ -120,8 +133,28 @@ def _assert_every_claim_key_property_has_a_shape() -> None:
 
     for relationship_type, news_shape in news.RELATIONSHIPS.items():
         primary_shape = primary.RELATIONSHIPS[relationship_type]
-        assert news_shape.properties == primary_shape.properties, (
+        unshaped = news_shape.property_names - primary_shape.property_names
+        assert not unshaped, (
             f"{relationship_type} is keyed on properties the primary ontology does not "
-            f"shape: {sorted(news_shape.property_names - primary_shape.property_names)}. "
-            "Declare them on its primary RelationshipShape first."
+            f"shape: {sorted(unshaped)}. Declare them on its primary RelationshipShape "
+            "first."
+        )
+        dropped = primary_shape.property_names - news_shape.property_names
+        undeclared = dropped - {
+            divergence.property_name
+            for divergence in news.RELATIONSHIP_DIVERGENCES
+            if relationship_type in divergence.applies_to
+        }
+        assert not undeclared, (
+            f"{relationship_type} drops primary properties nothing declares a gap for: "
+            f"{sorted(undeclared)}. News relationship properties are inherited, so a "
+            "property leaves the Claim Key only by being declared a divergence — "
+            "silently narrowing it here would drop the reason along with the property."
+        )
+        assert news_shape.properties == tuple(
+            spec for spec in primary_shape.properties if spec.name in news_shape.property_names
+        ), (
+            f"{relationship_type} restates its property shapes instead of inheriting "
+            "them. The shapes must be the primary ontology's own, or two articles' "
+            "claims stop being comparable in the way the Claim Key assumes."
         )

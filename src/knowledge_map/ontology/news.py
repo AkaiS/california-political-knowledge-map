@@ -221,16 +221,59 @@ _RELATIONSHIP_ENDPOINTS = {
     "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle", "Chunk"}), frozenset({"PolicyArea"})),
 }
 
+RELATIONSHIP_DIVERGENCES = (
+    Divergence(
+        property_name="transaction_id",
+        applies_to=frozenset({"FUNDED"}),
+        reason=(
+            "An article reports that money moved, never the FPPC filing that recorded "
+            "it. Nothing an article carries identifies the transaction, and only the "
+            "disclosure record itself supplies the id."
+        ),
+    ),
+    Divergence(
+        property_name="needs_review",
+        applies_to=frozenset(
+            relationship_type
+            for relationship_type in _RELATIONSHIP_ENDPOINTS
+            if PRIMARY_RELATIONSHIPS[relationship_type].properties
+        ),
+        reason=(
+            "The article asserted the relationship without a value the claim depends on, "
+            "or named one in a form nothing else will match. The edge is real but its key "
+            "is incomplete, so it cannot yet be compared against another article's."
+        ),
+    ),
+)
+
 #: News relationships, endpoints as declared above and properties inherited from the
-#: primary ontology. Inheriting rather than restating is what keeps the two tables from
-#: disagreeing: the extraction prompt asks for exactly the primary ontology's declared
-#: properties, so those and only those are the ones a model may attach to an edge.
-#: Anything else it supplies is dropped during conformance — a relationship property is
-#: write-path-owned, so the only values reaching an edge are ones the system put there
-#: deliberately.
+#: primary ontology, less every divergence. Inheriting rather than restating is what
+#: keeps the two tables from disagreeing: the extraction prompt asks for exactly the
+#: primary ontology's declared properties, so those and only those are the ones a model
+#: may attach to an edge. Anything else it supplies is dropped during conformance — a
+#: relationship property is write-path-owned, so the only values reaching an edge are
+#: ones the system put there deliberately.
+#:
+#: One subtraction covers both directions, exactly as it does for labels. A property
+#: news cannot supply drops out of the Claim Key here, which is what makes it absent
+#: from the ontology; a property the write path stamps was never in the primary
+#: ontology to begin with, so the subtraction is a no-op and it stays absent. The
+#: subtraction is also what stops inheritance from over-reaching: a property the
+#: primary ontology declares because an authoritative record supplies it is not
+#: thereby one an article can assert, and inheriting it regardless would key every
+#: edge on a value no article will ever fill.
 RELATIONSHIPS = {
     relationship_type: replace(
-        shape, properties=PRIMARY_RELATIONSHIPS[relationship_type].properties
+        shape,
+        properties=tuple(
+            spec
+            for spec in PRIMARY_RELATIONSHIPS[relationship_type].properties
+            if spec.name not in {
+                divergence.property_name
+                for divergence in RELATIONSHIP_DIVERGENCES
+                if relationship_type in divergence.applies_to
+            }
+        ),
     )
     for relationship_type, shape in _RELATIONSHIP_ENDPOINTS.items()
 }
@@ -265,18 +308,6 @@ KEYED_RELATIONSHIPS = frozenset(
     relationship_type
     for relationship_type, shape in RELATIONSHIPS.items()
     if shape.properties
-)
-
-RELATIONSHIP_DIVERGENCES = (
-    Divergence(
-        property_name="needs_review",
-        applies_to=KEYED_RELATIONSHIPS,
-        reason=(
-            "The article asserted the relationship without a value the claim depends on, "
-            "or named one in a form nothing else will match. The edge is real but its key "
-            "is incomplete, so it cannot yet be compared against another article's."
-        ),
-    ),
 )
 
 DIVERGENCES = NODE_DIVERGENCES + RELATIONSHIP_DIVERGENCES
