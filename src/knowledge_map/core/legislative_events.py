@@ -1,4 +1,17 @@
-"""Resolve Legislative Event dates from Source Article metadata."""
+"""Resolve Legislative Event dates from Source Article metadata.
+
+Ingestion collapses: nodes onto a shared key, edges onto a Claim Key. So a value
+that bears on identity is resolved once per Source Article, before anything is
+persisted, and every Article Chunk is handed the same answer — resolved per chunk
+it would be written repeatedly onto one node, and the last chunk in would win.
+
+A Legislative Event's date is one such value. It stays out of the node key, which
+is the name alone, but it is what a later reconciliation against an authoritative
+legislative record joins on, so the event carries a date even where the article
+stated none: the publication day stands in, flagged inferred rather than verified.
+Contradiction is not resolved here — two chunks stating different dates for one
+event go to review, since preferring either would restore the order-dependence.
+"""
 
 from datetime import datetime
 
@@ -27,21 +40,21 @@ def _publication_day(published_date: str | None) -> str | None:
 
 
 def resolve_event_date(
-    stated_date: object, published_date: str | None
+    stated_dates: object, published_date: str | None
 ) -> LegislativeEventDate:
-    """When a Legislative Event happened, and how well we know it.
+    """Settle one event's date from every date the article stated for it."""
 
-    A later reconciliation against an authoritative legislative record joins on
-    date and bill, so the event has to carry a date even when the article never
-    stated one. Where the article states one, that is the date and it is
-    *verified*; otherwise the article's publication day stands in and is flagged
-    *inferred*, because a story usually reports an event within a day or two of
-    it happening and a near date is what makes the join possible at all.
-    """
-
-    verified = normalize_date(stated_date)
-    if verified is not None:
-        return LegislativeEventDate(date=verified, date_verified=True)
+    if not isinstance(stated_dates, (list, tuple, set)):
+        stated_dates = [stated_dates]
+    verified = {
+        normalized
+        for stated in stated_dates
+        if (normalized := normalize_date(stated)) is not None
+    }
+    if len(verified) == 1:
+        return LegislativeEventDate(date=next(iter(verified)), date_verified=True)
+    if len(verified) > 1:
+        return LegislativeEventDate(needs_review=True)
     inferred = _publication_day(published_date)
     return LegislativeEventDate(
         date=inferred,
@@ -51,16 +64,18 @@ def resolve_event_date(
 
 
 def resolve_legislative_event_dates(
-    extraction: ExtractionResult, published_date: str | None
+    extractions: list[ExtractionResult], published_date: str | None
 ) -> LegislativeEventDates:
-    """Date every Legislative Event in one extraction, keyed by event name.
+    """Date every Legislative Event across an article's extractions, by name."""
 
-    The name is what the adapter has to hand when it writes the node, and it is
-    what the event's key is derived from, so it is what the map is keyed by.
-    """
-
+    stated_by_name: dict[str, list[object]] = {}
+    for extraction in extractions:
+        for node in extraction.nodes:
+            if node.label == EVENT_LABEL:
+                stated_by_name.setdefault(node.name, []).append(
+                    node.properties.get("date")
+                )
     return LegislativeEventDates(by_name={
-        node.name: resolve_event_date(node.properties.get("date"), published_date)
-        for node in extraction.nodes
-        if node.label == EVENT_LABEL
+        name: resolve_event_date(stated, published_date)
+        for name, stated in stated_by_name.items()
     })

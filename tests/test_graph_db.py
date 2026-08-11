@@ -729,7 +729,7 @@ def _event_call(event_properties: dict, published_date: str | None):
     adapter.ingest_chunk_extraction(
         chunk_id="http://example.com/1#chunk_0",
         extraction=extraction,
-        event_dates=resolve_legislative_event_dates(extraction, published_date),
+        event_dates=resolve_legislative_event_dates([extraction], published_date),
     )
     return next(
         call for call in mock_tx.run.call_args_list

@@ -200,7 +200,7 @@ The legislative session one bill number in a Source Article resolved to, togethe
 _Avoid_: Session lookup, bill year, session guess
 
 **Legislative Event Date**:
-The date one Legislative Event in a Source Article resolved to, together with how it was reached: stated outright by the article (verified), stood in for by the article's publication day (inferred), or settled by neither and therefore needing review. It qualifies a Legislative Event without ever entering its identity — a wrong date in the key would conflate two events irrecoverably, whereas a name-derived key at worst fragments one event into two that a later join on date and bill can merge back.
+The date one Legislative Event in a Source Article resolved to, together with how it was reached: stated outright by the article (verified), stood in for by the article's publication day (inferred), or settled by neither and therefore needing review. It resolves once per Source Article, never per Article Chunk, since an event named in several chunks is one node; chunks stating different dates for it contradict each other and need review rather than resolving by order. It qualifies a Legislative Event without ever entering its identity — a wrong date in the key would conflate two events irrecoverably, whereas a name-derived key at worst fragments one event into two that a later join on date and bill can merge back.
 _Avoid_: Event timestamp, occurred-on, event date guess
 
 **Adherence Report**:

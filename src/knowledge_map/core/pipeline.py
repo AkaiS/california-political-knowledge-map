@@ -215,6 +215,9 @@ class StoryPipeline:
                 extractions.append(extraction)
 
             bill_sessions = resolve_bill_sessions(article, extractions)
+            event_dates = resolve_legislative_event_dates(
+                extractions, article.published_date
+            )
 
             # 5. DB Persistence (skip if dry_run)
             if not dry_run:
@@ -224,14 +227,6 @@ class StoryPipeline:
                     chunk_id = f"{article.url}#chunk_{idx}"
                     embedding = embeddings[idx] if idx < len(embeddings) else []
                     self.db_adapter.ingest_chunk(article, chunk, embedding)
-                    # The publication date is the Legislative Event date of last
-                    # resort: an event the article dated no other way is stamped
-                    # with it and flagged inferred. The resolution happens here,
-                    # not in the adapter — the adapter is handed dates, not a
-                    # raw article date to interpret.
-                    event_dates = resolve_legislative_event_dates(
-                        extractions[idx], article.published_date
-                    )
                     self.db_adapter.ingest_chunk_extraction(
                         chunk_id, extractions[idx], bill_sessions, event_dates
                     )

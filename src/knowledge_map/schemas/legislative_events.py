@@ -1,15 +1,11 @@
 """Legislative Event dates as they cross the Graph Database Adapter boundary.
 
-Per ADR 0002 the adapters accept domain models, not raw structures. When a
-Legislative Event happened — and how well we know it — is resolved in the core
-and handed to the adapter as :class:`LegislativeEventDates`, so the adapter
-never sees the article's raw publication date and never decides what a date
-means. It looks the event up by name and writes the properties it is given.
+Per ADR 0002 the adapters accept domain models, not raw structures: the date is
+resolved in ``core.legislative_events`` and the adapter writes what it is given.
 
-An event absent from the map is not the same as an event resolved to nothing.
-The former means no Legislative Event by that name was extracted, and the
-adapter writes no date properties at all; the latter is a resolution that failed
-and carries its own flags saying so.
+An event absent from the map is not an event resolved to nothing — the first means
+none was extracted and no date properties are written, the second is a failed
+resolution carrying flags that say so.
 """
 
 from pydantic import BaseModel, Field
@@ -18,16 +14,8 @@ from pydantic import BaseModel, Field
 class LegislativeEventDate(BaseModel):
     """The date a single Legislative Event resolved to, and how it was reached.
 
-    The flags follow Bill Session Resolution's convention: a value, a verified
-    flag, an inferred flag, and ``needs_review`` when nothing we hold settles it.
-
-    These are properties and nothing more: **the date is never part of the key.**
-    A wrong date in the key would conflate two distinct events, which nothing
-    downstream can undo, whereas a name-derived key at worst fragments one event
-    into two nodes that a later join on date and bill can merge back. Nor is the
-    date keyed only when verified: that would give Legislative Events two
-    identity shapes, and a later correct-date ingest can only find every node it
-    must fix if there is one shape to look for.
+    Flags follow Bill Session Resolution's convention. These are properties and
+    nothing more — **the date never enters the key**, deliberately; see CONTEXT.md.
     """
 
     date: str | None = None
@@ -44,7 +32,7 @@ class LegislativeEventDate(BaseModel):
 
 
 class LegislativeEventDates(BaseModel):
-    """Every Legislative Event dated for one extraction, keyed by event name."""
+    """Every Legislative Event dated for one Source Article, keyed by event name."""
 
     by_name: dict[str, LegislativeEventDate] = Field(default_factory=dict)
 
