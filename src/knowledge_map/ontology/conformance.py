@@ -32,9 +32,24 @@ def assert_news_ontology_conforms() -> None:
             f"News relationship {relationship_type} does not match its primary endpoints "
             "and has no shortcut"
         )
-        assert news_shape.source_labels == {shortcut.source_label}
-        assert news_shape.target_labels == {shortcut.target_label}
-        assert shortcut.skips in primary.LABELS
+        assert news_shape.source_labels == {shortcut.source_label}, (
+            f"Shortcut {relationship_type} starts at {sorted(news_shape.source_labels)}, "
+            f"but the edge it produces starts at {shortcut.source_label}"
+        )
+        assert news_shape.target_labels == {shortcut.target_label}, (
+            f"Shortcut {relationship_type} ends at {sorted(news_shape.target_labels)}, "
+            f"but the edge it produces ends at {shortcut.target_label}"
+        )
+        assert shortcut.skips in primary.LABELS, (
+            f"Shortcut {relationship_type} skips {shortcut.skips}, which the primary "
+            "ontology does not declare"
+        )
+        assert shortcut.skips not in news.LABELS, (
+            f"Shortcut {relationship_type} skips {shortcut.skips}, which the News "
+            "Ontology also declares. A shortcut exists because news cannot produce "
+            "the node it collapses; declaring the label leaves two ways to say the "
+            "same thing, and only one of them is reachable."
+        )
 
         previous_target: str | None = None
         for source, path_relationship, target in shortcut.path:
@@ -51,9 +66,19 @@ def assert_news_ontology_conforms() -> None:
             )
             previous_target = target
 
-        assert shortcut.path[0][0] == shortcut.source_label
-        assert shortcut.path[-1][2] == shortcut.target_label
-        assert shortcut.skips in {step[2] for step in shortcut.path[:-1]}
+        assert shortcut.path[0][0] == shortcut.source_label, (
+            f"Shortcut {relationship_type} produces an edge from {shortcut.source_label}, "
+            f"but its path starts at {shortcut.path[0][0]}"
+        )
+        assert shortcut.path[-1][2] == shortcut.target_label, (
+            f"Shortcut {relationship_type} produces an edge to {shortcut.target_label}, "
+            f"but its path ends at {shortcut.path[-1][2]}"
+        )
+        assert shortcut.skips in {step[2] for step in shortcut.path[:-1]}, (
+            f"Shortcut {relationship_type} says it skips {shortcut.skips}, which its own "
+            "path never passes through. The path is the whole record of the collapse, so "
+            "an edge claiming to skip a node absent from it cannot be expanded back out."
+        )
 
     unused_shortcuts = shortcuts.keys() - news.RELATIONSHIPS.keys()
     assert not unused_shortcuts, f"Shortcuts produce undeclared relationships: {sorted(unused_shortcuts)}"

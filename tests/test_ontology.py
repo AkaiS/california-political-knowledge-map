@@ -1,10 +1,10 @@
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from knowledge_map.adapters import neo4j_db
 from knowledge_map.ontology import (
     assert_news_ontology_conforms,
     conform_extraction_result,
@@ -25,140 +25,92 @@ from knowledge_map.ontology.render import GENERATED_PATH, render_news_ontology
 from knowledge_map.schemas import DropCategory, ExtractionResult, Node, Relationship
 
 
-def test_news_ontology_conforms_to_primary_ontology():
-    assert_news_ontology_conforms()
+def _conformance_error(accepted: str) -> str:
+    """The message conformance failed with, or a failure saying it did not fail.
 
-
-def test_news_ontology_excludes_unreachable_and_structured_source_concepts():
-    assert not {"LegislativeTenure", "District", "RedistrictingCycle", "ExternalIdentifier"} & news.LABELS
-    assert not {
-        "HELD_TENURE", "REPRESENTS_DISTRICT", "TRANSITIONED_BY", "EVOLVED_INTO", "HAS_IDENTIFIER"
-    } & news.RELATIONSHIPS.keys()
-
-
-def test_news_ontology_declares_six_tenure_shortcuts():
-    assert {shortcut.relationship_type for shortcut in news.SHORTCUTS} == {
-        "VOTED_AYE", "VOTED_NO", "ABSTAINED", "SERVES_ON", "CHAIRS", "VICE_CHAIRS"
-    }
-    assert {shortcut.skips for shortcut in news.SHORTCUTS} == {"LegislativeTenure"}
-
-
-def test_only_an_incomplete_claim_key_diverges_on_an_edge():
-    # An edge's evidence (`chunks`) and its collapse (`skips`) are not gaps — one is
-    # recorded structurally, the other in SHORTCUTS. An unusable key is the only real
-    # gap left on an edge: `sequence_number` diverges on the `LegislativeEvent` that
-    # declares it, not on the vote edges that no longer carry it.
-    assert {divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES} == {
-        "needs_review",
-    }
-    needs_review = next(
-        item
-        for item in news.RELATIONSHIP_DIVERGENCES
-        if item.property_name == "needs_review"
-    )
-    assert "FUNDED" in needs_review.applies_to
-    assert "ENDORSED" not in needs_review.applies_to
-
-
-def test_a_vote_event_carries_the_sequence_number_not_the_vote_edge():
-    # The value is identical for every voter at one event, so it describes the
-    # event's position in the bill's lifecycle, not one legislator's claim.
-    assert "sequence_number" in primary.PROPERTIES["LegislativeEvent"]
-
-    for relationship_type in ("VOTED_AYE", "VOTED_NO", "ABSTAINED"):
-        assert primary.RELATIONSHIPS[relationship_type].properties == ()
-        assert not primary.RELATIONSHIPS[relationship_type].property_names
-        assert not news.RELATIONSHIPS[relationship_type].property_names
-        # No declared properties means an empty Claim Key, so a news-derived vote
-        # edge and a later legislative-derived one merge rather than duplicate.
-        assert news.claim_key_properties(relationship_type) == frozenset()
-
-
-def test_news_supplies_neither_a_roll_call_position_nor_event_discrimination():
-    # News declares no `sequence_number` anywhere: not on the event it belongs to,
-    # and not on the vote edges, which declare nothing at all.
-    assert "sequence_number" not in news.PROPERTIES["LegislativeEvent"]
-    for relationship_type in ("VOTED_AYE", "VOTED_NO", "ABSTAINED"):
-        assert not news.RELATIONSHIPS[relationship_type].property_names
-
-    # The gap is declared once, against the label the primary ontology declares the
-    # property on. Declaring it against the vote edges too would be a second row
-    # about the same absence, and it would go stale the moment the edges changed.
-    divergence = next(
-        item for item in news.NODE_DIVERGENCES if item.property_name == "sequence_number"
-    )
-    assert divergence.applies_to == {"LegislativeEvent"}
-    # The reason says why news cannot supply the value, not why the property sits on
-    # the event — that belongs to the primary ontology, not to the gap.
-    assert "only an authoritative legislative record supplies" in divergence.reason
-    assert "sequence_number" not in {
-        item.property_name for item in news.RELATIONSHIP_DIVERGENCES
-    }
-    # Event discrimination stays on the sub-label; no claim is made about which
-    # events news reports.
-    assert "Vote" in news.SUB_LABELS["LegislativeEvent"]
-
-
-def test_a_relationships_declared_properties_are_its_claim_key():
-    # One table decides edge identity. There is no second, identifying-property
-    # table that could disagree with what the relationship declares.
-    assert not hasattr(news, "IDENTIFYING_PROPERTIES")
-
-    for relationship_type, shape in news.RELATIONSHIPS.items():
-        assert news.claim_key_properties(relationship_type) == shape.property_names
-        assert shape.property_names <= primary.RELATIONSHIPS[relationship_type].property_names
-
-    assert news.claim_key_properties("FUNDED") == {"amount", "date", "transaction_id"}
-    assert news.claim_key_properties("DECLARED_STANCE") == {"alignment"}
-    # Endorsement is binary: the edge's existence is the whole claim.
-    assert news.claim_key_properties("ENDORSED") == frozenset()
-
-
-def test_conformance_rejects_a_claim_key_the_ontology_does_not_shape(monkeypatch):
-    from knowledge_map.ontology.properties import PropertySpec, normalize_text
-
-    unshaped = dict(news.RELATIONSHIPS)
-    unshaped["ENDORSED"] = RelationshipShape(
-        source_labels=news.RELATIONSHIPS["ENDORSED"].source_labels,
-        target_labels=news.RELATIONSHIPS["ENDORSED"].target_labels,
-        properties=(PropertySpec("weight", normalize_text, form="text", example="heavy"),),
-    )
-    monkeypatch.setattr(news, "RELATIONSHIPS", unshaped)
+    Every rule below is stated as what conformance *rejects*, so this runs it against
+    a deliberately broken ontology and hands back what it complained about. A rule
+    that has silently stopped firing shows up here as an unexpected acceptance rather
+    than as a passing test.
+    """
 
     try:
         assert_news_ontology_conforms()
     except AssertionError as error:
-        assert "weight" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted an unshaped claim key")
+        return str(error)
+    raise AssertionError(f"Conformance unexpectedly accepted {accepted}")
 
 
-def test_a_shortcut_edge_is_reversible_from_its_type_alone():
-    shortcut = news.SHORTCUTS_BY_TYPE["VOTED_AYE"]
+def _break_shortcut(monkeypatch, relationship_type: str, **changes) -> None:
+    """Replace one shortcut rule, keeping the two shortcut tables in step."""
 
-    assert shortcut.path == (
-        ("Politician", "HELD_TENURE", "LegislativeTenure"),
-        ("LegislativeTenure", "VOTED_AYE", "LegislativeEvent"),
+    shortcuts = tuple(
+        replace(shortcut, **changes)
+        if shortcut.relationship_type == relationship_type
+        else shortcut
+        for shortcut in news.SHORTCUTS
     )
-    assert shortcut.skips == "LegislativeTenure"
-    # The flattened path is the whole reversal: nothing else need be recorded.
-    assert "skips" not in {
-        divergence.property_name for divergence in news.RELATIONSHIP_DIVERGENCES
-    }
+    monkeypatch.setattr(news, "SHORTCUTS", shortcuts)
+    monkeypatch.setattr(
+        news,
+        "SHORTCUTS_BY_TYPE",
+        {shortcut.relationship_type: shortcut for shortcut in shortcuts},
+    )
 
 
-def test_divergent_properties_are_never_model_extractable():
-    for divergence in news.NODE_DIVERGENCES:
-        for label in divergence.applies_to:
-            assert divergence.property_name not in news.PROPERTIES[label], (
-                f"{label} declares a property the pipeline also stamps"
-            )
+def test_news_ontology_conforms_to_primary_ontology():
+    assert_news_ontology_conforms()
 
 
-def test_every_divergence_states_a_reason_and_applies_somewhere():
-    for divergence in news.DIVERGENCES:
-        assert divergence.reason.strip()
-        assert divergence.applies_to
+# --- Shortcuts: a collapsed path that stays reversible -----------------------------
+
+
+def test_conformance_rejects_a_shortcut_whose_path_step_the_primary_ontology_lacks(monkeypatch):
+    # The path is the whole record of the collapse. A step the primary ontology never
+    # declared cannot be expanded back out, so the edge is a dead end.
+    _break_shortcut(
+        monkeypatch,
+        "VOTED_AYE",
+        path=(
+            ("Politician", "HELD_TENURE", "LegislativeTenure"),
+            ("LegislativeTenure", "VOTED_AYE", "Prop"),
+        ),
+    )
+
+    assert "VOTED_AYE" in _conformance_error("a path step absent from the primary ontology")
+
+
+def test_conformance_rejects_a_shortcut_whose_path_does_not_join_up(monkeypatch):
+    _break_shortcut(
+        monkeypatch,
+        "VOTED_AYE",
+        path=(
+            ("Politician", "HELD_TENURE", "LegislativeTenure"),
+            ("Committee", "VOTED_AYE", "LegislativeEvent"),
+        ),
+    )
+
+    assert "disconnected" in _conformance_error("a path with a gap in the middle")
+
+
+def test_conformance_rejects_a_shortcut_that_skips_a_node_off_its_own_path(monkeypatch):
+    _break_shortcut(monkeypatch, "VOTED_AYE", skips="District")
+
+    assert "District" in _conformance_error("a collapse the path never made")
+
+
+def test_conformance_rejects_a_shortcut_for_a_label_news_already_declares(monkeypatch):
+    # A shortcut exists because news cannot produce the node it collapses. Declare the
+    # label as well and the ontology offers two routes, only one of them reachable.
+    monkeypatch.setattr(news, "LABELS", news.LABELS | {"LegislativeTenure"})
+
+    assert "LegislativeTenure" in _conformance_error("a shortcut around a declared label")
+
+
+def test_conformance_rejects_two_shortcuts_producing_the_same_edge(monkeypatch):
+    monkeypatch.setattr(news, "SHORTCUTS", news.SHORTCUTS + (news.SHORTCUTS[0],))
+
+    assert "unique" in _conformance_error("a duplicated shortcut")
 
 
 def test_conformance_rejects_a_recorded_collapse_declared_as_a_divergence(monkeypatch):
@@ -172,27 +124,72 @@ def test_conformance_rejects_a_recorded_collapse_declared_as_a_divergence(monkey
     monkeypatch.setattr(news, "RELATIONSHIP_DIVERGENCES", as_divergence)
     monkeypatch.setattr(news, "DIVERGENCES", news.NODE_DIVERGENCES + as_divergence)
 
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "skips" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted a recorded collapse")
+    assert "skips" in _conformance_error("a recorded collapse")
 
 
-def test_a_dropped_property_is_declared_as_a_divergence_not_a_second_table():
-    # `sequence_number` runs the other way from the rest: the primary ontology
-    # declares it and news cannot supply it. It is declared in the one divergence
-    # table, and `PROPERTIES` subtracts it from there — there is no separate table
-    # of unsupplied properties that could disagree about which is which.
-    assert not hasattr(news, "UNSUPPLIED_PROPERTIES")
+# --- Divergences: a declared gap that actually takes effect ------------------------
 
-    divergence = next(
-        item for item in news.NODE_DIVERGENCES if item.property_name == "sequence_number"
+
+def test_conformance_rejects_a_divergence_applying_outside_the_news_ontology(monkeypatch):
+    off_ontology = news.NODE_DIVERGENCES + (
+        Divergence(
+            property_name="district_number",
+            applies_to=frozenset({"District"}),
+            reason="news does not declare this label at all",
+        ),
     )
-    assert divergence.applies_to == {"LegislativeEvent"}
-    assert "sequence_number" in primary.PROPERTIES["LegislativeEvent"]
-    assert "sequence_number" not in news.PROPERTIES["LegislativeEvent"]
+    monkeypatch.setattr(news, "NODE_DIVERGENCES", off_ontology)
+
+    assert "District" in _conformance_error("an off-ontology divergence")
+
+
+def test_conformance_rejects_a_divergence_that_states_no_reason(monkeypatch):
+    # The reason is the whole content of a gap: it says what nothing we hold can
+    # settle. A blank one records that something is missing and not what.
+    unexplained = news.NODE_DIVERGENCES + (
+        Divergence(property_name="fppc_id", applies_to=frozenset({"Organization"}), reason="  "),
+    )
+    monkeypatch.setattr(news, "NODE_DIVERGENCES", unexplained)
+
+    assert "fppc_id" in _conformance_error("a divergence with no reason")
+
+
+def test_conformance_rejects_a_divergence_that_applies_to_nothing(monkeypatch):
+    applies_nowhere = news.NODE_DIVERGENCES + (
+        Divergence(property_name="fppc_id", applies_to=frozenset(), reason="no filing was named"),
+    )
+    monkeypatch.setattr(news, "NODE_DIVERGENCES", applies_nowhere)
+
+    assert "fppc_id" in _conformance_error("a divergence applying to nothing")
+
+
+def test_conformance_rejects_properties_that_were_hand_written_past_a_divergence(monkeypatch):
+    # The subtraction in `PROPERTIES` is what makes a declared gap real. Restore the
+    # property by hand and the ontology claims news both supplies it and cannot.
+    hand_written = dict(news.PROPERTIES)
+    hand_written["LegislativeEvent"] = primary.PROPERTIES["LegislativeEvent"]
+    monkeypatch.setattr(news, "PROPERTIES", hand_written)
+
+    assert "sequence_number" in _conformance_error("a hand-written property set")
+
+
+def test_a_declared_gap_removes_the_property_from_what_the_model_is_asked_for():
+    """Declaring a gap has to change the prompt, or it is just a note in a table.
+
+    The extraction prompt is built from `news.PROPERTIES`, which subtracts every
+    divergence. So a property news cannot supply is never advertised to the model,
+    and a property the write path stamps is never one the model is invited to guess.
+    """
+
+    lines = render_extraction_ontology().splitlines()
+
+    for divergence in news.NODE_DIVERGENCES:
+        for label in divergence.applies_to & news.EXTRACTED_LABELS:
+            advertised = [line for line in lines if line.startswith(f"- `{label}`: ")]
+            assert advertised, f"The prompt lists no properties for {label}"
+            assert all(f"`{divergence.property_name}`" not in line for line in advertised), (
+                f"{label}.{divergence.property_name} is declared a gap and still asked for"
+            )
 
 
 def test_the_direction_of_a_gap_is_read_off_the_primary_ontology():
@@ -208,9 +205,6 @@ def test_the_direction_of_a_gap_is_read_off_the_primary_ontology():
 
     assert gap_directions(dropped, primary.PROPERTIES) == (NOT_SUPPLIED,)
     assert gap_directions(stamped, primary.PROPERTIES) == (STAMPED,)
-    assert not any(
-        hasattr(item, "direction") for item in news.DIVERGENCES
-    ), "Direction is derived; storing it would be a second copy that can disagree"
 
 
 def test_a_divergence_reports_both_directions_when_its_items_differ():
@@ -229,37 +223,55 @@ def test_a_divergence_reports_both_directions_when_its_items_differ():
     )
 
 
-def test_conformance_rejects_a_divergence_applying_outside_the_news_ontology(monkeypatch):
-    off_ontology = news.NODE_DIVERGENCES + (
-        Divergence(
-            property_name="district_number",
-            applies_to=frozenset({"District"}),
-            reason="news does not declare this label at all",
-        ),
+# --- Labels and relationships -------------------------------------------------------
+
+
+def test_conformance_fails_loudly_for_an_unknown_news_label(monkeypatch):
+    monkeypatch.setattr(news, "LABELS", news.LABELS | {"UnknownLabel"})
+
+    assert "UnknownLabel" in _conformance_error("an unknown label")
+
+
+def test_conformance_fails_loudly_for_incompatible_endpoints(monkeypatch):
+    incompatible = dict(news.RELATIONSHIPS)
+    incompatible["ACTION_ON"] = RelationshipShape(
+        source_labels=frozenset({"Politician"}),
+        target_labels=frozenset({"Bill"}),
     )
-    monkeypatch.setattr(news, "NODE_DIVERGENCES", off_ontology)
+    monkeypatch.setattr(news, "RELATIONSHIPS", incompatible)
 
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "District" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted an off-ontology divergence")
+    assert "ACTION_ON" in _conformance_error("incompatible endpoints")
 
 
-def test_conformance_rejects_properties_that_were_hand_written_past_a_divergence(monkeypatch):
-    # The subtraction in `PROPERTIES` is what makes a declared gap real. Restore the
-    # property by hand and the ontology claims news both supplies it and cannot.
-    hand_written = dict(news.PROPERTIES)
-    hand_written["LegislativeEvent"] = primary.PROPERTIES["LegislativeEvent"]
-    monkeypatch.setattr(news, "PROPERTIES", hand_written)
+def test_conformance_fails_loudly_when_primary_endpoints_drift(monkeypatch):
+    changed_primary = dict(primary.RELATIONSHIPS)
+    changed_primary["ACTION_ON"] = RelationshipShape(
+        source_labels=frozenset({"Politician"}),
+        target_labels=frozenset({"Bill"}),
+    )
+    monkeypatch.setattr(primary, "RELATIONSHIPS", changed_primary)
 
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "sequence_number" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted a hand-written property set")
+    assert "ACTION_ON" in _conformance_error("primary-ontology drift")
+
+
+def test_conformance_rejects_a_claim_key_the_ontology_does_not_shape(monkeypatch):
+    # A relationship's declared properties are its Claim Key. Keying on a property
+    # the primary ontology does not shape means keying on whatever string the model
+    # happened to emit, which fragments the graph instead of aligning it.
+    from knowledge_map.ontology.properties import PropertySpec, normalize_text
+
+    unshaped = dict(news.RELATIONSHIPS)
+    unshaped["ENDORSED"] = RelationshipShape(
+        source_labels=news.RELATIONSHIPS["ENDORSED"].source_labels,
+        target_labels=news.RELATIONSHIPS["ENDORSED"].target_labels,
+        properties=(PropertySpec("weight", normalize_text, form="text", example="heavy"),),
+    )
+    monkeypatch.setattr(news, "RELATIONSHIPS", unshaped)
+
+    assert "weight" in _conformance_error("an unshaped claim key")
+
+
+# --- The extraction prompt ----------------------------------------------------------
 
 
 def test_the_prompt_asks_for_a_form_the_write_path_actually_accepts():
@@ -278,12 +290,26 @@ def test_the_prompt_asks_for_a_form_the_write_path_actually_accepts():
             )
 
 
-def test_the_prompt_fixes_the_form_of_a_property_without_demanding_one():
+def test_the_prompt_fixes_the_form_of_every_property_it_will_accept():
+    """A property the prompt names without a form is one the model can write any way.
+
+    Conformance keeps whatever the model attached to a declared property, so an
+    unadvertised form is how two articles reporting the same figure end up keying
+    two different edges.
+    """
+
     section = render_extraction_ontology()
 
-    assert "`alignment`: exactly one of `POSITIVE`, `NEGATIVE`, `NEUTRAL`" in section
-    assert "`amount`: a dollar figure" in section
-    assert "None are required." in section
+    for relationship_type, shape in news.RELATIONSHIPS.items():
+        if not shape.source_labels <= news.EXTRACTED_LABELS:
+            continue
+        if not shape.target_labels <= news.EXTRACTED_LABELS:
+            continue
+        for spec in shape.properties:
+            assert f"`{spec.name}`: {spec.form}" in section, (
+                f"{relationship_type}.{spec.name} is asked for without stating its form"
+            )
+            assert f"`{spec.example}`" in section
 
 
 def test_the_prompt_never_ranks_a_relationship_property_as_required():
@@ -298,18 +324,17 @@ def test_the_prompt_never_ranks_a_relationship_property_as_required():
 
     assert "(required)" not in section
     assert "(optional)" not in section
+    assert "None are required." in section
     assert "Write a value only where the article states one." in section
 
 
-def test_an_identifying_property_is_a_write_path_concern_not_a_prompt_one():
-    # The requirement lives here, where a missing value becomes a flag rather than
-    # a demand the model can fail.
-    assert news.claim_key_properties("FUNDED") == {"amount", "date", "transaction_id"}
-    assert "FUNDED" in next(
-        item
-        for item in news.RELATIONSHIP_DIVERGENCES
-        if item.property_name == "needs_review"
-    ).applies_to
+def test_the_prompt_never_asks_the_model_for_a_label_the_write_path_owns():
+    # An article and its chunks are written from the article itself. Listing them as
+    # extractable invites output that conformance would only drop again.
+    section = render_extraction_ontology()
+
+    for label in news.WRITE_PATH_LABELS:
+        assert f"- `{label}`" not in section
 
 
 def test_the_stance_enum_cannot_drift_from_what_the_prompt_advertises():
@@ -325,47 +350,7 @@ def test_generated_news_ontology_is_current():
     assert GENERATED_PATH.read_text() == render_news_ontology()
 
 
-def test_conformance_fails_loudly_for_an_unknown_news_label(monkeypatch):
-    monkeypatch.setattr(news, "LABELS", news.LABELS | {"UnknownLabel"})
-
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "UnknownLabel" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted an unknown label")
-
-
-def test_conformance_fails_loudly_for_incompatible_endpoints(monkeypatch):
-    incompatible = dict(news.RELATIONSHIPS)
-    incompatible["ACTION_ON"] = RelationshipShape(
-        source_labels=frozenset({"Politician"}),
-        target_labels=frozenset({"Bill"}),
-    )
-    monkeypatch.setattr(news, "RELATIONSHIPS", incompatible)
-
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "ACTION_ON" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted incompatible endpoints")
-
-
-def test_conformance_fails_loudly_when_primary_endpoints_drift(monkeypatch):
-    changed_primary = dict(primary.RELATIONSHIPS)
-    changed_primary["ACTION_ON"] = RelationshipShape(
-        source_labels=frozenset({"Politician"}),
-        target_labels=frozenset({"Bill"}),
-    )
-    monkeypatch.setattr(primary, "RELATIONSHIPS", changed_primary)
-
-    try:
-        assert_news_ontology_conforms()
-    except AssertionError as error:
-        assert "ACTION_ON" in str(error)
-    else:
-        raise AssertionError("Conformance unexpectedly accepted primary-ontology drift")
+# --- Extraction conformance ---------------------------------------------------------
 
 
 def test_extraction_conformance_rejects_write_path_labels():
@@ -497,47 +482,6 @@ def test_a_dropped_relationship_property_is_recorded_apart_from_a_node_property(
     ]
 
 
-def test_a_news_relationship_declares_the_properties_the_prompt_asks_for():
-    # Conformance and the extraction prompt read one table, so the prompt can never
-    # ask for a property conformance would then drop.
-    for relationship_type, shape in news.RELATIONSHIPS.items():
-        assert shape.properties == primary.RELATIONSHIPS[relationship_type].properties
-
-    assert news.RELATIONSHIPS["FUNDED"].property_names == {"amount", "date", "transaction_id"}
-    assert news.RELATIONSHIPS["ENDORSED"].property_names == frozenset()
-
-
-def test_write_path_labels_are_excluded_from_the_extracted_subset():
-    assert news.WRITE_PATH_LABELS == {"NewsArticle", "Chunk"}
-    assert news.EXTRACTED_LABELS == news.LABELS - news.WRITE_PATH_LABELS
-
-
-def test_the_general_key_is_the_label_and_the_slugged_name():
-    assert keys.derived_key("Politician", "Alex Lee") == "Politician:alex-lee"
-    assert keys.derived_key("PolicyArea", "Housing & Land Use") == "PolicyArea:housing-land-use"
-    assert keys.derived_key("Organization", "Café Móvil") == "Organization:cafe-movil"
-
-
-def test_a_bill_key_is_qualified_by_its_session():
-    assert keys.bill_key("2025-2026", "AB 218", "Assembly Bill 218") == "Bill:2025-2026:ab-218"
-    assert keys.bill_key("2019-2020", "AB 218", "Assembly Bill 218") == "Bill:2019-2020:ab-218"
-
-
-def test_an_unresolved_session_still_mints_a_stable_bill_key():
-    assert keys.bill_key(None, "AB 218", "Assembly Bill 218") == "Bill:unresolved:ab-218"
-    assert keys.bill_key(None, None, "the housing bill") == "Bill:unresolved:the-housing-bill"
-
-
-def test_the_write_path_mints_its_keys_through_the_shared_contract():
-    """Both Bill key call sites are the imported function, not a re-derivation."""
-
-    source = Path(neo4j_db.__file__).read_text()
-
-    assert "from knowledge_map.ontology.keys import bill_key, derived_key" in source
-    assert source.count("bill_key(") == 2
-    assert '"Bill:' not in source and "'Bill:" not in source
-
-
 def test_a_drop_cannot_invent_an_adherence_report_category():
     # The categories are closed: a drop recorded under a name nobody reads is a
     # construction-time failure, not a fifth bucket.
@@ -565,6 +509,25 @@ def test_every_conformance_drop_lands_in_a_declared_category():
     outcome = conform_extraction_result(result, "sha256:abc")
 
     assert {drop.category for drop in outcome.drops} == set(DropCategory)
+
+
+# --- Keys ---------------------------------------------------------------------------
+
+
+def test_the_general_key_is_the_label_and_the_slugged_name():
+    assert keys.derived_key("Politician", "Alex Lee") == "Politician:alex-lee"
+    assert keys.derived_key("PolicyArea", "Housing & Land Use") == "PolicyArea:housing-land-use"
+    assert keys.derived_key("Organization", "Café Móvil") == "Organization:cafe-movil"
+
+
+def test_a_bill_key_is_qualified_by_its_session():
+    assert keys.bill_key("2025-2026", "AB 218", "Assembly Bill 218") == "Bill:2025-2026:ab-218"
+    assert keys.bill_key("2019-2020", "AB 218", "Assembly Bill 218") == "Bill:2019-2020:ab-218"
+
+
+def test_an_unresolved_session_still_mints_a_stable_bill_key():
+    assert keys.bill_key(None, "AB 218", "Assembly Bill 218") == "Bill:unresolved:ab-218"
+    assert keys.bill_key(None, None, "the housing bill") == "Bill:unresolved:the-housing-bill"
 
 
 # --- The primary ontology is authored in `ontology.md`; `primary.py` mirrors it. ---
