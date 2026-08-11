@@ -1,16 +1,15 @@
 import re
-from datetime import datetime
 
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
-from knowledge_map.ontology.properties import normalize_date
 from knowledge_map.schemas import (
     ArticleChunk,
     BillSessionResolutions,
     ExtractionResult,
+    LegislativeEventDates,
     SourceArticle,
 )
 from knowledge_map.core.bill_sessions import normalize_bill_number
@@ -138,52 +137,6 @@ def _write_relationship(
         parameters["chunk_id"] = chunk_id
 
     tx.run(query, **parameters)
-
-
-def _published_date(published_date: str | None) -> str | None:
-    """The article's publication day, as a calendar date."""
-
-    if not published_date:
-        return None
-    calendar_date = normalize_date(published_date)
-    if calendar_date is not None:
-        return calendar_date
-    try:
-        return datetime.fromisoformat(published_date.replace("Z", "+00:00")).date().isoformat()
-    except ValueError:
-        return None
-
-
-def legislative_event_date(
-    stated_date: object, published_date: str | None
-) -> dict[str, object]:
-    """When a Legislative Event happened, and how well we know it.
-
-    A later reconciliation against an authoritative legislative record joins on
-    date and bill, so the event has to carry a date even when the article never
-    stated one. Where the article states one, that is the date and it is
-    *verified*; otherwise the article's publication day stands in and is flagged
-    *inferred*, because a story usually reports an event within a day or two of
-    it happening and a near date is what makes the join possible at all.
-
-    The flags follow Bill Session Resolution's convention — a value, a verified
-    flag, an inferred flag, and ``needs_review`` when nothing we hold settles it.
-    They are properties and nothing more: **the date is never part of the key.**
-    A wrong date in the key would conflate two distinct events, which nothing
-    downstream can undo, whereas a name-derived key at worst fragments one event
-    into two nodes that a later join on date and bill can merge back. Nor is the
-    date keyed only when verified: that would give Legislative Events two
-    identity shapes, and a later correct-date ingest can only find every node it
-    must fix if there is one shape to look for.
-    """
-
-    verified = normalize_date(stated_date)
-    if verified is not None:
-        return {"date": verified, "date_verified": True,
-                "date_inferred": False, "needs_review": False}
-    inferred = _published_date(published_date)
-    return {"date": inferred, "date_verified": False,
-            "date_inferred": inferred is not None, "needs_review": inferred is None}
 
 
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
@@ -334,9 +287,10 @@ class Neo4jAdapter:
         chunk_id: str,
         extraction: ExtractionResult,
         bill_sessions: BillSessionResolutions | None = None,
-        published_date: str | None = None,
+        event_dates: LegislativeEventDates | None = None,
     ) -> None:
         bill_sessions = bill_sessions or BillSessionResolutions()
+        event_dates = event_dates or LegislativeEventDates()
         driver = self.connect()
         try:
             with driver.session() as session:
@@ -359,11 +313,9 @@ class Neo4jAdapter:
                             node_id = bill_key(session, number, node.name)
                         else:
                             if label == "LegislativeEvent":
-                                properties.update(
-                                    legislative_event_date(
-                                        properties.get("date"), published_date
-                                    )
-                                )
+                                event_date = event_dates.get(node.name)
+                                if event_date is not None:
+                                    properties.update(event_date.graph_properties())
                             # Name-derived, with the date deliberately outside it:
                             # one identity shape for every Legislative Event.
                             node_id = derived_key(label, node.name)

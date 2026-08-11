@@ -272,7 +272,7 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
     class LocalMockDatabaseAdapter:
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
-        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, published_date=None): pass
+        def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, event_dates=None): pass
 
     class LocalMockEmbeddingAdapter:
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)

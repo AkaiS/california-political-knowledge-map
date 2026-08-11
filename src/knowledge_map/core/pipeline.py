@@ -2,9 +2,10 @@ import logging
 import time
 from typing import Protocol, List, Optional
 from knowledge_map.config import settings as global_settings
-from knowledge_map.schemas import AdherenceReport, BillSessionResolutions, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
+from knowledge_map.schemas import AdherenceReport, BillSessionResolutions, LegislativeEventDates, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
 from knowledge_map.utils.chunking import chunk_article
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
+from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class DatabaseAdapter(Protocol):
         chunk_id: str,
         extraction: ExtractionResult,
         bill_sessions: BillSessionResolutions | None = None,
-        published_date: str | None = None,
+        event_dates: LegislativeEventDates | None = None,
     ) -> None:
         ...
 
@@ -225,9 +226,14 @@ class StoryPipeline:
                     self.db_adapter.ingest_chunk(article, chunk, embedding)
                     # The publication date is the Legislative Event date of last
                     # resort: an event the article dated no other way is stamped
-                    # with it and flagged inferred.
+                    # with it and flagged inferred. The resolution happens here,
+                    # not in the adapter — the adapter is handed dates, not a
+                    # raw article date to interpret.
+                    event_dates = resolve_legislative_event_dates(
+                        extractions[idx], article.published_date
+                    )
                     self.db_adapter.ingest_chunk_extraction(
-                        chunk_id, extractions[idx], bill_sessions, article.published_date
+                        chunk_id, extractions[idx], bill_sessions, event_dates
                     )
 
                 # 6. Update status to COMPLETED

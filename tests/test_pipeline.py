@@ -6,6 +6,7 @@ from knowledge_map.schemas import (
     BillSessionResolution,
     BillSessionResolutions,
     ExtractionResult,
+    LegislativeEventDates,
     Node,
     PipelineResult,
     SourceArticle,
@@ -50,9 +51,9 @@ class MockDatabaseAdapter:
         chunk_id: str,
         extraction: ExtractionResult,
         bill_sessions: BillSessionResolutions | None = None,
-        published_date: str | None = None,
+        event_dates: LegislativeEventDates | None = None,
     ) -> None:
-        self.extractions.append((chunk_id, extraction, bill_sessions, published_date))
+        self.extractions.append((chunk_id, extraction, bill_sessions, event_dates))
 
 class MockEmbeddingAdapter:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
@@ -165,7 +166,7 @@ def test_pipeline_persistence():
     assert stored_emb == [0.1, 0.2, 0.3]
 
     assert len(db.extractions) == 1
-    chunk_id, stored_extraction, _bill_sessions, _published_date = db.extractions[0]
+    chunk_id, stored_extraction, _bill_sessions, _event_dates = db.extractions[0]
     assert chunk_id == "http://test.com/persist#chunk_0"
     assert stored_extraction.nodes[0].name == "Test Actor"
 

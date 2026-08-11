@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 from knowledge_map.schemas import (
     ArticleChunk,
     BillSessionResolution,
@@ -709,6 +710,43 @@ def test_a_bill_without_a_resolution_gets_no_session_properties():
 
 
 def _event_call(event_properties: dict, published_date: str | None):
+    """Write one Legislative Event the way the pipeline does: dates resolved in
+    the core, handed to the adapter as a domain model."""
+    mock_driver, mock_tx = MagicMock(), MagicMock()
+    mock_session = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(nodes=[
+        Node(name="Assembly floor vote on AB 218", label="LegislativeEvent",
+             sub_labels=["Vote"], properties=event_properties),
+    ])
+    adapter.ingest_chunk_extraction(
+        chunk_id="http://example.com/1#chunk_0",
+        extraction=extraction,
+        event_dates=resolve_legislative_event_dates(extraction, published_date),
+    )
+    return next(
+        call for call in mock_tx.run.call_args_list
+        if "MERGE (n:LegislativeEvent" in call[0][0]
+    )
+
+
+def test_a_resolved_event_date_is_written_onto_the_event():
+    call = _event_call({"date": "January 15, 2024", "type": "Vote"}, "2024-01-17T09:00:00Z")
+
+    # What the flags *mean* is settled in the core; the adapter's job is only to
+    # write the resolution it was handed.
+    assert call[1]["properties"]["date"] == "2024-01-15"
+    assert call[1]["properties"]["date_verified"] is True
+    assert call[1]["properties"]["date_inferred"] is False
+    assert call[1]["properties"]["needs_review"] is False
+
+
+def test_an_event_without_a_resolved_date_gets_no_date_properties():
+    # An event absent from the map is not an event resolved to nothing: the
+    # adapter writes no date flags at all rather than stamping it unreviewed.
     mock_driver, mock_tx = MagicMock(), MagicMock()
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
@@ -719,43 +757,15 @@ def _event_call(event_properties: dict, published_date: str | None):
         chunk_id="http://example.com/1#chunk_0",
         extraction=ExtractionResult(nodes=[
             Node(name="Assembly floor vote on AB 218", label="LegislativeEvent",
-                 sub_labels=["Vote"], properties=event_properties),
+                 sub_labels=["Vote"], properties={"type": "Vote"}),
         ]),
-        published_date=published_date,
     )
-    return next(
+
+    call = next(
         call for call in mock_tx.run.call_args_list
         if "MERGE (n:LegislativeEvent" in call[0][0]
     )
-
-
-def test_a_stated_event_date_is_recorded_and_flagged_verified():
-    call = _event_call({"date": "January 15, 2024", "type": "Vote"}, "2024-01-17T09:00:00Z")
-
-    assert call[1]["properties"]["date"] == "2024-01-15"
-    assert call[1]["properties"]["date_verified"] is True
-    assert call[1]["properties"]["date_inferred"] is False
-    assert call[1]["properties"]["needs_review"] is False
-
-
-def test_an_undated_event_falls_back_to_the_publication_date_as_inferred():
-    call = _event_call({"type": "Vote"}, "2024-01-17T09:00:00Z")
-
-    # A story reports an event within a day or two, so the publication date is
-    # near enough for a later join and never good enough for the key.
-    assert call[1]["properties"]["date"] == "2024-01-17"
-    assert call[1]["properties"]["date_verified"] is False
-    assert call[1]["properties"]["date_inferred"] is True
-    assert call[1]["properties"]["needs_review"] is False
-
-
-def test_an_event_with_no_date_anywhere_is_flagged_for_review():
-    call = _event_call({"type": "Vote"}, None)
-
-    assert call[1]["properties"]["date"] is None
-    assert call[1]["properties"]["date_verified"] is False
-    assert call[1]["properties"]["date_inferred"] is False
-    assert call[1]["properties"]["needs_review"] is True
+    assert call[1]["properties"] == {"type": "Vote"}
 
 
 def test_a_legislative_event_key_never_contains_its_date():

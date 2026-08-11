@@ -7,6 +7,7 @@ from .extraction import (
     Relationship,
 )
 from .bill_sessions import BillSessionResolution, BillSessionResolutions
+from .legislative_events import LegislativeEventDate, LegislativeEventDates
 from .chunking import ArticleChunk
 from .coreference import CriticValidation
 from .pipeline import SourceArticle, PipelineResult, ArticleStatus, StoryLink

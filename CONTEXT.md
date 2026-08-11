@@ -199,6 +199,10 @@ _Avoid_: Mismatch, schema drift, missing field, known issue
 The legislative session one bill number in a Source Article resolved to, together with how it was reached: named outright by a bill link (verified), implied by the article's publication date (inferred), or settled by neither and therefore needing review. A Bill's identity is qualified by it.
 _Avoid_: Session lookup, bill year, session guess
 
+**Legislative Event Date**:
+The date one Legislative Event in a Source Article resolved to, together with how it was reached: stated outright by the article (verified), stood in for by the article's publication day (inferred), or settled by neither and therefore needing review. It qualifies a Legislative Event without ever entering its identity — a wrong date in the key would conflate two events irrecoverably, whereas a name-derived key at worst fragments one event into two that a later join on date and bill can merge back.
+_Avoid_: Event timestamp, occurred-on, event date guess
+
 **Adherence Report**:
 The tally of ontology items an extraction dropped from model output, bucketed by a closed set of drop categories and counted per dropped value with an example Article Chunk. It measures how closely a model followed the News Ontology; it is not an error log, because a drop is the expected handling of off-ontology output.
 _Avoid_: Error log, validation errors, drop log, conformance failures
