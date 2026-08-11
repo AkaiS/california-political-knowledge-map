@@ -1,8 +1,5 @@
 """Legislative Event dates as they cross the Graph Database Adapter boundary.
 
-Per ADR 0002 the adapters accept domain models, not raw structures: the date is
-resolved in ``core.legislative_events`` and the adapter writes what it is given.
-
 An event absent from the map is not an event resolved to nothing — the first means
 none was extracted and no date properties are written, the second is a failed
 resolution carrying flags that say so.
@@ -14,8 +11,8 @@ from pydantic import BaseModel, Field
 class LegislativeEventDate(BaseModel):
     """The date a single Legislative Event resolved to, and how it was reached.
 
-    Flags follow Bill Session Resolution's convention. These are properties and
-    nothing more — **the date never enters the key**, deliberately; see CONTEXT.md.
+    Flags follow Bill Session Resolution's convention. These are properties only;
+    the date never enters the key.
     """
 
     date: str | None = None

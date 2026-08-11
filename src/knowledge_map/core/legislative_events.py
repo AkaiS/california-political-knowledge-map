@@ -1,17 +1,4 @@
-"""Resolve Legislative Event dates from Source Article metadata.
-
-Ingestion collapses: nodes onto a shared key, edges onto a Claim Key. So a value
-that bears on identity is resolved once per Source Article, before anything is
-persisted, and every Article Chunk is handed the same answer — resolved per chunk
-it would be written repeatedly onto one node, and the last chunk in would win.
-
-A Legislative Event's date is one such value. It stays out of the node key, which
-is the name alone, but it is what a later reconciliation against an authoritative
-legislative record joins on, so the event carries a date even where the article
-stated none: the publication day stands in, flagged inferred rather than verified.
-Contradiction is not resolved here — two chunks stating different dates for one
-event go to review, since preferring either would restore the order-dependence.
-"""
+"""Resolve Legislative Event dates from Source Article metadata."""
 
 from datetime import datetime
 
