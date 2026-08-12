@@ -1,6 +1,6 @@
 .env
 __pycache__/*
-*.db
+*.db*
 *.pyc
 .agents/*
 manual_checks/*
