@@ -163,19 +163,12 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
         # that knows which of the nodes sharing a name this claim is about, and
         # persistence would otherwise have to re-derive it from the name alone —
         # the same collapse, one layer down.
-        #
-        # ``skips`` rides along for the narrower reason that it is knowable here:
-        # a shortcut is a property of the relationship type, so the answer is
-        # settled once the type is, and an extractor's claim about it is
-        # overwritten rather than consulted.
-        shortcut = news.SHORTCUTS_BY_TYPE.get(relationship_type)
         relationships.append(
             relationship.model_copy(
                 update={
                     "properties": properties,
                     "source_label": source_label,
                     "target_label": target_label,
-                    "skips": shortcut.skips if shortcut else None,
                 }
             )
         )

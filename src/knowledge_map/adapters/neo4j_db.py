@@ -89,17 +89,17 @@ def _write_relationship(
     entry points do differently. When ``chunk_id`` is given the edge also
     accumulates the chunks that assert this claim.
 
-    An edge carries exactly four things: its Claim Key, in the MERGE pattern; the
-    chunk list; ``skips`` where it is a shortcut; and ``needs_review`` where an
-    article asserted the claim without a value the key depends on. Everything else
-    the article said stays in the Article Chunk, where it remains retrievable — an
-    edge with no free payload has nothing a later ingestion can silently overwrite.
+    An edge carries exactly three things: its Claim Key, in the MERGE pattern; the
+    chunks that assert it; and ``needs_review`` where an article asserted the claim
+    without a value the key depends on. Everything else the article said stays in the
+    Article Chunk, where it remains retrievable — an edge with no free payload has
+    nothing a later ingestion can silently overwrite.
 
-    Of those four, only ``needs_review`` is decided here, because only it depends on
-    what this particular article supplied. ``skips`` arrives already resolved: which
-    relationship types collapse which node is an ontology question, and answering it
-    at write time would pin the shape of the graph to the module that talks to the
-    driver.
+    All three vary with what this particular article supplied, which is what earns
+    them a place on the edge. A fact that is constant for every edge of a type — that
+    the type flattens a Shortcut Rule's path, say — is not written here: the edge
+    carries its type, the ontology holds the rule, and a copy on each edge would only
+    go stale when the rule changed.
     """
 
     rel_type = rel.relationship_type
@@ -116,8 +116,6 @@ def _write_relationship(
     key, incomplete = _claim_key(rel_type, rel.properties)
 
     stamps = {}
-    if rel.skips:
-        stamps["skips"] = rel.skips
     if incomplete:
         stamps["needs_review"] = True
 

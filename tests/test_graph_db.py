@@ -91,7 +91,7 @@ def test_query_execution_error_raises_custom_exception():
         manager.clear_database()
     assert "Failed to clear Neo4j database" in str(exc_info.value)
 
-def test_shortcut_edge_records_the_label_it_flattened():
+def test_a_shortcut_edge_carries_no_copy_of_the_rule_that_flattened_it():
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_tx = MagicMock()
@@ -110,7 +110,6 @@ def test_shortcut_edge_records_the_label_it_flattened():
                 target="Education Committee",
                 relationship_type="SERVES_ON",
                 properties={"status": "Active"},
-                skips="LegislativeTenure",
             )
         ],
     )
@@ -128,15 +127,16 @@ def test_shortcut_edge_records_the_label_it_flattened():
 
     assert "MATCH (src:Politician {id: $src_id}), (tgt:Committee {id: $tgt_id})" in rel_query
     assert "MERGE (src)-[r:SERVES_ON]->(tgt)" in rel_query
-    assert "SET r += $stamps" in rel_query
 
     assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
     assert rel_kwargs["tgt_id"] == "Committee:education-committee"
-    # The edge carries the label conformance said it flattened; the write path
-    # writes that through without deciding for itself which types are shortcuts.
-    # `SERVES_ON` declares no properties, so its Claim Key is empty and `status` —
+    # `SERVES_ON` flattens a path through LegislativeTenure, but the edge records
+    # nothing about that: the type it carries and the ontology's rule already say
+    # so, and a copy here would be one more thing to go stale if the rule changed.
+    assert "LegislativeTenure" not in rel_query
+    assert "stamps" not in rel_kwargs
+    # It declares no properties either, so its Claim Key is empty and `status` —
     # which the ontology never declared — stays in the Article Chunk.
-    assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
     assert "properties" not in rel_kwargs
 
 def test_an_edge_reaches_the_node_conformance_resolved_not_the_last_of_that_name():

@@ -56,7 +56,8 @@ arrives without one is written and carries `needs_review`.
 Paths the news write path flattens into one edge, because prose names the
 endpoints but not what sits between them. Each rule holds the path it
 replaced, so a shortcut edge can be expanded back out from its type alone.
-The edge also carries `skips` naming the label to reinsert.
+The edge itself records nothing about the collapse: the rule below names the
+label to reinsert, and a copy on every edge would only go stale.
 
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_AYE`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_AYE`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_NO`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_NO`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)

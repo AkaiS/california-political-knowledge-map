@@ -460,50 +460,6 @@ def test_a_shared_name_under_two_labels_resolves_by_the_relationship_shape():
     assert outcome.result.relationships[0].target_label == "Committee"
 
 
-def test_a_shortcut_edge_leaves_conformance_carrying_the_label_it_flattened():
-    # Whether a claim collapses a path is settled by its relationship type alone, so
-    # it is answered here — not in the module that writes to the database.
-    result = ExtractionResult(
-        nodes=[
-            Node(name="Alex Lee", label="Politician"),
-            Node(name="Water Alliance", label="Committee"),
-            Node(name="Prop 12", label="Prop"),
-        ],
-        relationships=[
-            Relationship(source="Alex Lee", target="Water Alliance", relationship_type="SERVES_ON"),
-            Relationship(source="Alex Lee", target="Prop 12", relationship_type="ENDORSED"),
-        ],
-    )
-
-    outcome = conform_extraction_result(result, "sha256:abc")
-
-    skips = {rel.relationship_type: rel.skips for rel in outcome.result.relationships}
-    assert skips == {"SERVES_ON": "LegislativeTenure", "ENDORSED": None}
-
-
-def test_an_extractor_cannot_claim_an_edge_flattened_a_path_it_did_not():
-    # `skips` is ontology-owned. A model that fills it in is overwritten, exactly as
-    # a model's endpoint label is where the ontology leaves no choice.
-    result = ExtractionResult(
-        nodes=[
-            Node(name="Alex Lee", label="Politician"),
-            Node(name="Prop 12", label="Prop"),
-        ],
-        relationships=[
-            Relationship(
-                source="Alex Lee",
-                target="Prop 12",
-                relationship_type="ENDORSED",
-                skips="LegislativeTenure",
-            ),
-        ],
-    )
-
-    outcome = conform_extraction_result(result, "sha256:abc")
-
-    assert outcome.result.relationships[0].skips is None
-
-
 def test_a_mislabelled_endpoint_does_not_cost_a_claim_the_ontology_can_resolve():
     # SERVES_ON leaves the extractor no choice to make: one Politician, one
     # Committee. A label it got wrong is not a second opinion worth losing a true
