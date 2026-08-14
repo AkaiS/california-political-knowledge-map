@@ -71,9 +71,18 @@ area. Its supporting projects include:
 
 ### 4. Useful graph retrieval
 
-Support entity-, edge-, neighborhood-, and community-oriented retrieval, then
-measure whether answers are relevant, well-supported, and appropriately
+Support entity-lookup, relationship-lookup, and multi-hop-traversal retrieval,
+then measure whether answers are relevant, well-supported, and appropriately
 restricted.
+
+This outcome originally named four orientations — entity, edge, neighborhood,
+and community. The
+[target question set](initiatives/useful-graph-retrieval/issues/02-target-question-set.md)
+cut them to three: "neighborhood" without community detection is bounded
+multi-hop from a seed set and needs no separate name, and community-oriented
+retrieval requires a Graph Data Science install the local stack does not have.
+Community detection remains a Later consideration below, not a retrieval
+orientation.
 
 Expected work includes:
 

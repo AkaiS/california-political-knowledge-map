@@ -38,8 +38,13 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
   where a decision is blocked without it, and `prototype` tickets build
   throwaway retrieval code against the real populated graph. Every other ticket
   resolves as a decision and hands implementation to a PRD.
-- Retrieval spans four orientations named by the roadmap: entity, edge,
-  neighborhood, and community.
+- Retrieval spans three orientations: **entity lookup**, **relationship
+  lookup**, and **multi-hop traversal**. The roadmap originally named four —
+  entity, edge, neighborhood, and community — and the
+  [target question set](issues/02-target-question-set.md) cut them to three.
+- **The corpus grounds the answer; the graph reaches it.** A query assembles a
+  subgraph and the Article Chunks hanging off it are what gets loaded into
+  context. See **Grounding Evidence** in `CONTEXT.md`.
 - The repository's established agent pattern is a Generator/Critic team loop
   (Selector Healing Pipeline, Coreference Critic). Retrieval either extends
   that pattern or departs from it deliberately.
@@ -48,6 +53,7 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
 
+- Target question set authored: ten families over three orientations — entity lookup, relationship lookup, multi-hop traversal — cutting the roadmap's four; the corpus grounds every answer and the graph only reaches it, so each question terminates in a `Chunk` hop and structure-derived answers ship with the Chunks behind each element counted; Declined (permanent stance) is split from Deferred (coverage state), and negation over a closed universe from absence over an open one; no expected answers are authored here. See [02-target-question-set.md](issues/02-target-question-set.md) and [the set](question-set.md).
 - Graph retrieval patterns and tooling surveyed as facts, not a recommendation: the local Neo4j 2026.05.0 Community server has only a chunk vector index — no full-text index, no APOC, no GDS; `neo4j-graphrag` 1.18.0 is compatible but ships no reranking, community detection, or Cypher repair loop; text2cypher execution accuracy peaks near 60% with temporal and same-name-entity failures; community detection requires a GDS install; Pydantic AI 2.0.0 supplies per-step tool routing, `ModelRetry` repair, and typed output. See [03-survey-graph-retrieval-patterns.md](issues/03-survey-graph-retrieval-patterns.md) and [the findings](research/03-graph-retrieval-patterns-findings.md).
 
 ## Not yet specified
@@ -57,8 +63,6 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
   arrays, prefixed scalar properties, or dedicated `:Identifier` nodes. The
   choice follows from whether retrieval must look a node up by its external
   key, which the modes and index inventory decides.
-- Community detection and influence ranking as a retrieval mode, including
-  whether communities are precomputed and materialized or derived per query.
 - Answer synthesis: model selection, prompt structure, and how the synthesizer
   is constrained to the retrieved evidence.
 - Temporal and multi-hop questions spanning redistricting cycles, where
@@ -69,6 +73,12 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 
 ## Out of scope
 
+- **Community-oriented retrieval, community detection, and influence ranking.**
+  Community detection requires a Graph Data Science install the local Neo4j
+  Community server does not have, and there is no in-database alternative — see
+  [the survey findings](research/03-graph-retrieval-patterns-findings.md). It is
+  therefore not one of this map's retrieval orientations and is not a mode
+  ticket 06 rules on. It remains a roadmap Later consideration.
 - Building the chat UI. The contract must make it possible; this map does not
   specify or build it.
 - Hosted Neo4j and deployment pipelines; a roadmap "Later consideration".

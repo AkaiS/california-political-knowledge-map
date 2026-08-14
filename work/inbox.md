@@ -276,8 +276,11 @@ concrete need.
 - **RP-02 · P2:** Define Cypher creation and validation boundaries.
 - **RP-03 · P4:** Explore an orchestration agent for graph queries.
 - **RP-04 · P3:** Evaluate graph retrieval and answer restriction.
-- **RP-05 · P4:** Compare entity-, edge-, neighborhood-, and
-  community-oriented retrieval.
+- **RP-05 · P4:** ~~Compare entity-, edge-, neighborhood-, and
+  community-oriented retrieval.~~ Superseded: the
+  [target question set](initiatives/useful-graph-retrieval/issues/02-target-question-set.md)
+  settles the taxonomy as entity lookup, relationship lookup, and multi-hop
+  traversal, and rules community-oriented retrieval out of scope.
 - **RP-06 · P4:** Explore cross-encoder, graph-aware, and embedding-fusion
   reranking.
 - **RP-07 · P3:** Review graph entities, relationships, ontology, and evaluation

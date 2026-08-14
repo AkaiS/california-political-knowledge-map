@@ -215,6 +215,10 @@ _Avoid_: Edge properties, relationship payload, identifying properties, edge att
 A thematic policy category serving as a hub node that Bills, Props, Article Chunks, and Source Articles attach to. Its vocabulary is fixed and declared by the ontology rather than invented per article, so that two articles covering the same subject reach the same hub.
 _Avoid_: Topic, tag, category, subject, theme
 
+**Grounding Evidence**:
+The Article Chunks loaded into context to support a retrieval answer. The graph is what reaches them — a query assembles a subgraph, and the Chunks attached to its nodes and edges are the evidence — rather than what supplies them: a relationship asserts existence and identity only, so the detail an answer needs lives in the Chunk the edge points back to. An answer derived from graph structure alone still carries the Chunks behind each element it counted.
+_Avoid_: Context, retrieved documents, source text, supporting chunks
+
 **Evaluation Gold Set**:
 A versioned, contract-homogeneous collection of human-labeled examples used as the authoritative expected outcomes for one component operation. Every member implements that contract's input and metadata schemas, and its expected-output schema where the member declares an expected output. It is constructed by declaring its identity, description, one exact Evaluation Task Contract, and tags; populating it with validated Evaluation Cases and declared Evaluation Artifacts; and locking the result into an immutable revision. Members are validated against the contract by the construction factory, which is the supported way to build one — direct construction is reserved for deserializing a stored Gold Set and for tests that deliberately build an invalid one. Revision N+1 is derived from revision N by adding or removing cases while preserving the split of every surviving case revision; adding a case whose business identity already survives supersedes that membership and keeps its split. The Evaluation Task Contract is fixed for the life of the Gold Set identity, so changing it requires a new business identity.
 _Avoid_: Test fixtures, benchmark data, model labels

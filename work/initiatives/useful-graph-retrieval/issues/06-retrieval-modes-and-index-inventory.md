@@ -15,7 +15,6 @@ Modes to rule in or out, each justified by questions from the target set:
 - Vector similarity. Only `chunk_vector_index` exists, while the ontology also
   gives `:PolicyArea` an embedding with no index behind it.
 - Structural traversal over typed relationships.
-- Community-oriented retrieval, which the map's fog currently holds.
 
 Then settle how results from multiple modes are fused into one ranked evidence
 set, and whether fusion is a mode of its own or a later reranking concern.
