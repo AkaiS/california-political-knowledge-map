@@ -272,16 +272,19 @@ or degrade to news evidence alone.
 | Campaign finance | Who were the largest donors to the 2026 governor's race? | CAL-ACCESS ingestion (outcome 5) |
 | District history | Who represented Assembly District 52 before and after the 2021 redistricting? | `District`, `RedistrictingCycle`, and `LegislativeTenure`, none of which the News Ontology produces |
 | Negation over a closed universe | Which Assembly members did not vote on AB 1165? | The roll-call layer. Every member is enumerable and every non-vote is recorded, so the complement is finite and meaningful — which is exactly what distinguishes this from absence above. |
-| Committee activity | Which bills did the Assembly Appropriations Committee hear? | **An ontology change.** See below. |
+### One structural gap, since closed
 
-### One structural gap worth flagging
+Committee activity — "which bills did the Assembly Appropriations Committee
+hear?" — was listed above as unanswerable, and it was not an ingestion gap:
+`ontology.md` declared no relationship from `:Committee` to `:Bill` or to
+`:LegislativeEvent`, so a Committee connected only to `:LegislativeTenure`
+through `SERVES_ON`, `CHAIRS`, and `VICE_CHAIRS` and no amount of outcome-5
+data supplied a path.
 
-The last row is not an ingestion gap. `ontology.md` declares no relationship
-from `:Committee` to `:Bill` or to `:LegislativeEvent` — a Committee connects
-only to `:LegislativeTenure` through `SERVES_ON`, `CHAIRS`, and `VICE_CHAIRS`.
-So "which bills did this committee hear" has no path, and no amount of
-outcome-5 data supplies one. The ontology is settled and this ticket does not
-reopen it; the fact is recorded here because
+The primary ontology has since been corrected under
+[ADR 0014](../../../docs/adr/0014-the-primary-ontology-is-authored-not-frozen.md)
+with `:LegislativeEvent` -`HELD_BY`→ `:Committee` and `:Bill` -`REFERRED_TO`→
+`:Committee`. The question now has a path, and news supplies both edges, so
 [ticket 04](issues/04-retrievable-subgraph-now.md) and
-[ticket 06](issues/06-retrieval-modes-and-index-inventory.md) will otherwise
-discover it as a surprise.
+[ticket 06](issues/06-retrieval-modes-and-index-inventory.md) should treat
+committee activity as in scope rather than as a declared gap.

@@ -43,9 +43,11 @@ arrives without one is written and carries `needs_review`.
 | `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
 | `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
 | `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
+| `HELD_BY` | `LegislativeEvent` | `Committee` | — |
 | `LOBBIED_AGAINST` | `Organization` | `Bill` | — |
 | `LOBBIED_FOR` | `Organization` | `Bill` | — |
 | `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | — |
+| `REFERRED_TO` | `Bill` | `Committee` | — |
 | `SERVES_ON` | `Politician` | `Committee` | — |
 | `VICE_CHAIRS` | `Politician` | `Committee` | — |
 | `VOTED_AYE` | `Politician` | `LegislativeEvent` | — |

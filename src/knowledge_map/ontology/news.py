@@ -205,6 +205,8 @@ _RELATIONSHIP_ENDPOINTS = {
     "VOTED_NO": RelationshipShape(frozenset({"Politician"}), frozenset({"LegislativeEvent"})),
     "ABSTAINED": RelationshipShape(frozenset({"Politician"}), frozenset({"LegislativeEvent"})),
     "ACTION_ON": RelationshipShape(frozenset({"LegislativeEvent"}), frozenset({"Bill"})),
+    "HELD_BY": RelationshipShape(frozenset({"LegislativeEvent"}), frozenset({"Committee"})),
+    "REFERRED_TO": RelationshipShape(frozenset({"Bill"}), frozenset({"Committee"})),
     "ABOUT_TOPIC": RelationshipShape(frozenset({"Bill", "Prop"}), frozenset({"PolicyArea"})),
     "CAMPAIGN_FOR": RelationshipShape(frozenset({"Campaign"}), frozenset({"Prop", "Politician"})),
     "FUNDED": RelationshipShape(frozenset({"Organization"}), frozenset({"Campaign"})),
