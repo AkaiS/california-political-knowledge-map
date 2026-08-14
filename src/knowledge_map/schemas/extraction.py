@@ -43,6 +43,13 @@ class Relationship(BaseModel):
     label it settled on; a model's label is consulted only where the ontology leaves
     a genuine choice. What persistence reads back is therefore always the resolved
     label, never the extractor's unexamined claim.
+
+    ``skips`` is resolved the same way and for the same reason: whether this claim
+    flattens a Shortcut Rule's path is a question about the ontology, answerable the
+    moment the relationship type is known and long before the edge reaches a
+    database. Conformance answers it once and the edge carries the answer, so
+    persistence writes what it is handed instead of holding its own table of which
+    relationship types collapse which node.
     """
 
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
@@ -54,6 +61,10 @@ class Relationship(BaseModel):
     )
     target_label: str | None = Field(
         default=None, description="Label of the target node, exactly as that node declares it."
+    )
+    skips: str | None = Field(
+        default=None,
+        description="Resolved by conformance from the ontology; never supplied by an extractor.",
     )
 
     @field_validator("source", "target", mode="before")

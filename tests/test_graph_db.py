@@ -110,6 +110,7 @@ def test_shortcut_edge_records_the_label_it_flattened():
                 target="Education Committee",
                 relationship_type="SERVES_ON",
                 properties={"status": "Active"},
+                skips="LegislativeTenure",
             )
         ],
     )
@@ -131,9 +132,10 @@ def test_shortcut_edge_records_the_label_it_flattened():
 
     assert rel_kwargs["src_id"] == "Politician:gavin-newsom"
     assert rel_kwargs["tgt_id"] == "Committee:education-committee"
-    # `SERVES_ON` is a shortcut, so the edge carries the label it flattened. It
-    # declares no properties, so its Claim Key is empty and `status` — which the
-    # ontology never declared — stays in the Article Chunk rather than on the edge.
+    # The edge carries the label conformance said it flattened; the write path
+    # writes that through without deciding for itself which types are shortcuts.
+    # `SERVES_ON` declares no properties, so its Claim Key is empty and `status` —
+    # which the ontology never declared — stays in the Article Chunk.
     assert rel_kwargs["stamps"] == {"skips": "LegislativeTenure"}
     assert "properties" not in rel_kwargs
 

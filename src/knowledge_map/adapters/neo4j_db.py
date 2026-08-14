@@ -14,12 +14,6 @@ from knowledge_map.schemas import (
 )
 from knowledge_map.core.bill_sessions import normalize_bill_number
 
-SHORTCUT_SKIPS = {
-    relationship_type: shortcut.skips
-    for relationship_type, shortcut in news.SHORTCUTS_BY_TYPE.items()
-}
-
-
 def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
     """The values that identify this claim, canonicalized, and whether any are missing.
 
@@ -100,6 +94,12 @@ def _write_relationship(
     article asserted the claim without a value the key depends on. Everything else
     the article said stays in the Article Chunk, where it remains retrievable — an
     edge with no free payload has nothing a later ingestion can silently overwrite.
+
+    Of those four, only ``needs_review`` is decided here, because only it depends on
+    what this particular article supplied. ``skips`` arrives already resolved: which
+    relationship types collapse which node is an ontology question, and answering it
+    at write time would pin the shape of the graph to the module that talks to the
+    driver.
     """
 
     rel_type = rel.relationship_type
@@ -116,8 +116,8 @@ def _write_relationship(
     key, incomplete = _claim_key(rel_type, rel.properties)
 
     stamps = {}
-    if rel_type in SHORTCUT_SKIPS:
-        stamps["skips"] = SHORTCUT_SKIPS[rel_type]
+    if rel.skips:
+        stamps["skips"] = rel.skips
     if incomplete:
         stamps["needs_review"] = True
 
