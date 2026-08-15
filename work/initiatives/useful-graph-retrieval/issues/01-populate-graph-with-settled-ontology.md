@@ -51,7 +51,9 @@ a retrievable graph rides on this ticket.
 Record on resolution: which ontology labels and relationship types actually
 materialized and at what counts, and which remained empty — distinguishing
 labels the News Ontology excludes outright from labels it includes that produced
-nothing across nine articles. Later tickets depend on these facts.
+nothing across the corpus. State the corpus size the run covered alongside the
+counts; it is 73 Source Articles as of 2026-08-14, not the nine an earlier draft
+of this ticket assumed. Later tickets depend on these facts.
 
 Two of this ticket's original questions are answered by construction rather than
 by a report:

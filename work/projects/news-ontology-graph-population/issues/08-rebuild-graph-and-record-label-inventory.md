@@ -19,10 +19,15 @@ The parent ticket then gets its answer, produced by hand-run Cypher and recorded
 once: which ontology labels and relationship types materialized and at what
 counts, and which stayed empty. **Empty labels must be split into two kinds** —
 those the News Ontology excludes outright, which are structurally unreachable
-from news, and those it includes that simply produced nothing. Nine Source
-Articles is a thin basis for conclusions about coverage: an included-but-empty
-label may mean news cannot reach it, or merely that nine articles did not happen
-to mention it, and the record should say so rather than imply the stronger claim.
+from news, and those it includes that simply produced nothing. The corpus is a
+thin basis for conclusions about coverage: an included-but-empty label may mean
+news cannot reach it, or merely that the gathered articles did not happen to
+mention it, and the record should say so rather than imply the stronger claim.
+
+Count the corpus at run time and record that number — do not carry a figure over
+from this ticket. The document store held 73 Source Articles as of 2026-08-14,
+all `UNPROCESSED`, and the ingestion path applies no relevance filter, so the
+run covers all of them.
 
 The adherence report from the run is read alongside the counts — a label the
 prompt keeps producing and conformance keeps dropping is a different finding from

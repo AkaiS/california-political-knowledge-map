@@ -1,6 +1,6 @@
 # Code Review: News Ontology and Graph Population, issues 02–07
 
-Labels: ready-for-agent
+Labels: completed
 
 Reviews: [02](../issues/02-ontology-package-and-conformance-check.md),
 [03](../issues/03-generate-extraction-prompt-from-news-ontology.md),
