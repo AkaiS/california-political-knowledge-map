@@ -5,6 +5,8 @@ import datetime
 import urllib.parse
 import hashlib
 
+from knowledge_map.schemas import CoreferenceResolutionRun
+
 logger = logging.getLogger(__name__)
 
 class LocalFileDLQAdapter:
@@ -21,7 +23,8 @@ class LocalFileDLQAdapter:
         failure_type: str,
         retry_count: int,
         metadata: dict,
-        error_category: str = "coreference"
+        error_category: str = "coreference",
+        resolution_run: CoreferenceResolutionRun | None = None,
     ) -> str:
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         
@@ -60,6 +63,25 @@ class LocalFileDLQAdapter:
             "retry_count": retry_count,
             "metadata": metadata
         }
+
+        if resolution_run is not None:
+            run_payload = resolution_run.model_dump(mode="json")
+            # Keep the run both as a coherent replayable record and as
+            # top-level fields for operators who inspect the existing DLQ
+            # documents without knowing the new nested shape.
+            payload.update(
+                {
+                    "resolution_run": run_payload,
+                    "sentences": run_payload["sentences"],
+                    "numbered_sentences": run_payload["sentences"],
+                    "mention_spans": run_payload["mention_spans"],
+                    "mention_span_outcomes": run_payload["outcomes"],
+                    "outcomes": run_payload["outcomes"],
+                    "discarded_proportion": run_payload[
+                        "discarded_proportion"
+                    ],
+                }
+            )
         
         try:
             # Ensure the directory exists

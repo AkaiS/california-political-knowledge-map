@@ -6,7 +6,14 @@ from typing import NamedTuple
 from pydantic import TypeAdapter
 from pydantic_ai import Agent
 
-from knowledge_map.schemas import CriticVerdict, MentionSpan, MentionSpanDiscard
+from knowledge_map.schemas import (
+    CoreferenceResolutionRun,
+    CriticVerdict,
+    MentionSpan,
+    MentionSpanDiscard,
+    MentionSpanOutcome,
+    NumberedSentenceRecord,
+)
 from knowledge_map.utils.models import get_ollama_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
@@ -311,18 +318,35 @@ class CoreferenceResolutionError(Exception):
     def __init__(
         self,
         original_text: str,
-        annotated_text: str,
-        validation_issues: list[str],
-        failure_type: str,
-        retry_count: int,
-        metadata: dict
+        annotated_text: str = "",
+        validation_issues: list[str] | None = None,
+        failure_type: str = "coreference_validation_failure",
+        retry_count: int = 0,
+        metadata: dict | None = None,
+        resolution_run: CoreferenceResolutionRun | None = None,
     ) -> None:
         self.original_text = original_text
         self.annotated_text = annotated_text
-        self.validation_issues = validation_issues
+        self.validation_issues = validation_issues or []
         self.failure_type = failure_type
         self.retry_count = retry_count
-        self.metadata = metadata
+        self.metadata = metadata or {}
+        self.resolution_run = resolution_run
+        # These aliases make the failure payload useful to callers without
+        # requiring them to know which wrapper owns the run record.
+        self.run = resolution_run
+        self.resolution = resolution_run
+        self.sentences = resolution_run.sentences if resolution_run else []
+        self.numbered_sentences = self.sentences
+        self.mention_spans = (
+            resolution_run.mention_spans if resolution_run else []
+        )
+        self.outcomes = resolution_run.outcomes if resolution_run else []
+        self.mention_span_outcomes = self.outcomes
+        self.discarded_proportion = (
+            resolution_run.discarded_proportion if resolution_run else None
+        )
+        self.discard_proportion = self.discarded_proportion
         super().__init__(f"Coreference resolution failed: {failure_type}")
 
 def get_agent_metadata(agent: Agent | None) -> dict:
@@ -374,8 +398,9 @@ def _validation_issues_from_error(error: Exception) -> list[str]:
 
 def _annotator_failure(
     content: str,
-    annotator_agent: Agent,
+    annotator_agent: Agent | None,
     error: Exception,
+    resolution_run: CoreferenceResolutionRun | None = None,
 ) -> CoreferenceResolutionError:
     """Build the existing adapter error for invalid structured output."""
 
@@ -391,6 +416,7 @@ def _annotator_failure(
         failure_type="coreference_validation_failure",
         retry_count=0,
         metadata=metadata,
+        resolution_run=resolution_run,
     )
 
 
@@ -479,32 +505,163 @@ def _apply_critic_verdicts(
             _mention_span_identity(located.mention_span)
         )
         if verdict is None:
-            # Fail closed when the Critic omits a Mention Span's verdict.
+            # Fail closed when the Critic omits a Mention Span's verdict, and
+            # retain the reason so the retry and DLQ can distinguish it from a
+            # validation discard.
+            rejected.append(
+                (
+                    located.mention_span,
+                    "Coreference Critic returned no verdict for this Mention Span",
+                )
+            )
             continue
         if verdict.accepted:
             accepted.append(located)
         else:
-            rejected.append((located.mention_span, verdict.reason))
+            rejected.append(
+                (
+                    located.mention_span,
+                    verdict.reason or "Coreference Critic rejected this Mention Span",
+                )
+            )
 
     return accepted, rejected
 
 
-def resolve_coreferences(
+def _sentence_records(
+    sentences: Sequence[NumberedSentence],
+) -> list[NumberedSentenceRecord]:
+    """Copy the annotator's sentence table into the durable run schema."""
+
+    return [
+        NumberedSentenceRecord(
+            label=sentence.label,
+            text=sentence.text,
+            start_index=sentence.start_index,
+            end_index=sentence.end_index,
+        )
+        for sentence in sentences
+    ]
+
+
+def _build_resolution_run(
+    text: str,
+    sentences: Sequence[NumberedSentence],
+    mention_spans: Sequence[MentionSpan],
+    outcomes: Sequence[MentionSpanOutcome],
+    retry_count: int,
+    *,
+    resolved_text: str | None = None,
+    failure_type: str | None = None,
+) -> CoreferenceResolutionRun:
+    """Build a serializable run record and calculate its discard metric."""
+
+    discarded_count = sum(not outcome.accepted for outcome in outcomes)
+    total_outcomes = len(outcomes)
+    return CoreferenceResolutionRun(
+        resolved_text=text if resolved_text is None else resolved_text,
+        sentences=_sentence_records(sentences),
+        mention_spans=list(mention_spans),
+        outcomes=list(outcomes),
+        discarded_proportion=(
+            discarded_count / total_outcomes if total_outcomes else 0.0
+        ),
+        retry_count=retry_count,
+        failure_type=failure_type,
+    )
+
+
+def _outcome_for_discard(discard: MentionSpanDiscard) -> MentionSpanOutcome:
+    """Convert deterministic validation output into a run outcome."""
+
+    return MentionSpanOutcome(
+        mention_span=discard.mention_span,
+        stage="validation",
+        outcome="discarded",
+        reason=discard.reason,
+    )
+
+
+def _outcome_for_critic(
+    mention_span: MentionSpan,
+    *,
+    accepted: bool,
+    reason: str | None = None,
+) -> MentionSpanOutcome:
+    """Convert a Critic decision into the audit shape."""
+
+    return MentionSpanOutcome(
+        mention_span=mention_span,
+        stage="critic",
+        outcome="accepted" if accepted else "rejected",
+        reason=reason,
+    )
+
+
+def _failure_issues(outcomes: Sequence[MentionSpanOutcome]) -> list[str]:
+    """Return readable outcome details for the legacy DLQ issue field."""
+
+    issues: list[str] = []
+    for outcome in outcomes:
+        if outcome.accepted:
+            continue
+        mention = outcome.mention_span
+        identity = (
+            f"sentence {mention.sentence_label!r}, "
+            f"mention {mention.mention_text!r}, "
+            f"occurrence {mention.occurrence}"
+        )
+        issues.append(f"{identity}: {outcome.reason}")
+    return issues
+
+
+def _zero_survivor_failure(
+    text: str,
+    run: CoreferenceResolutionRun,
+    failure_type: str,
+    annotator_agent: Agent | None,
+) -> CoreferenceResolutionError:
+    """Create the DLQ-worthy error for a run with no accepted spans."""
+
+    try:
+        metadata = get_agent_metadata(annotator_agent)
+    except Exception:
+        metadata = {}
+
+    issues = _failure_issues(run.outcomes)
+    if not issues and failure_type == "no_mentions_returned":
+        issues = ["The annotator returned no Mention Spans"]
+
+    return CoreferenceResolutionError(
+        original_text=text,
+        annotated_text="",
+        validation_issues=issues,
+        failure_type=failure_type,
+        retry_count=run.retry_count,
+        metadata=metadata,
+        resolution_run=run,
+    )
+
+
+def resolve_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
     critic_agent: Agent | None = None,
     max_retries: int = 3,
     raise_on_failure: bool = False
-) -> str:
-    """Resolve references through per-Mention-Span Critic verdicts."""
+) -> CoreferenceResolutionRun:
+    """Resolve references and retain every Mention Span outcome."""
 
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
     if critic_agent is None:
         critic_agent = get_critic_agent()
     # ``raise_on_failure`` remains part of the adapter compatibility surface;
-    # zero-survivor failure handling belongs to the following issue.
+    # zero-survivor failures are now always raised because silently passing the
+    # source text onward would make the annotator failure invisible.
     _ = raise_on_failure
+
+    current_run: CoreferenceResolutionRun | None = None
 
     try:
         sentences = split_into_numbered_sentences(text)
@@ -520,7 +677,44 @@ def resolve_coreferences(
             run_result.output
         )
 
+        all_mention_spans = list(mention_spans)
         validation = validate_mention_spans(text, sentences, mention_spans)
+        outcomes: list[MentionSpanOutcome] = [
+            _outcome_for_discard(discard) for discard in validation.discards
+        ]
+
+        if not mention_spans:
+            current_run = _build_resolution_run(
+                text,
+                sentences,
+                all_mention_spans,
+                outcomes,
+                retry_count=0,
+                failure_type="no_mentions_returned",
+            )
+            raise _zero_survivor_failure(
+                text,
+                current_run,
+                "no_mentions_returned",
+                annotator_agent,
+            )
+
+        if not validation.valid_spans:
+            current_run = _build_resolution_run(
+                text,
+                sentences,
+                all_mention_spans,
+                outcomes,
+                retry_count=0,
+                failure_type="all_mentions_discarded",
+            )
+            raise _zero_survivor_failure(
+                text,
+                current_run,
+                "all_mentions_discarded",
+                annotator_agent,
+            )
+
         pending_spans = validation.valid_spans
         accepted_spans: list[LocatedMentionSpan] = []
         retry_count = 0
@@ -538,6 +732,36 @@ def resolve_coreferences(
                 pending_spans,
                 verdicts,
             )
+
+            accepted_identities = {
+                _mention_span_identity(located.mention_span)
+                for located in newly_accepted
+            }
+            rejected_reasons = {
+                _mention_span_identity(mention_span): reason
+                for mention_span, reason in rejected_spans
+            }
+            for located in pending_spans:
+                identity = _mention_span_identity(located.mention_span)
+                if identity in accepted_identities:
+                    outcomes.append(
+                        _outcome_for_critic(
+                            located.mention_span,
+                            accepted=True,
+                        )
+                    )
+                else:
+                    outcomes.append(
+                        _outcome_for_critic(
+                            located.mention_span,
+                            accepted=False,
+                            reason=rejected_reasons.get(
+                                identity,
+                                "Coreference Critic returned no verdict for this Mention Span",
+                            ),
+                        )
+                    )
+
             accepted_spans.extend(newly_accepted)
 
             if not rejected_spans or retry_count >= max_retries:
@@ -550,28 +774,96 @@ def resolve_coreferences(
             retry_mentions = TypeAdapter(list[MentionSpan]).validate_python(
                 retry_result.output
             )
+            all_mention_spans.extend(retry_mentions)
             retry_targets = {
                 _mention_span_identity(mention_span)
                 for mention_span, _ in rejected_spans
             }
+            unrelated_retry_mentions = [
+                mention_span
+                for mention_span in retry_mentions
+                if _mention_span_identity(mention_span) not in retry_targets
+            ]
+            outcomes.extend(
+                MentionSpanOutcome(
+                    mention_span=mention_span,
+                    stage="validation",
+                    outcome="discarded",
+                    reason="retry response included an unrequested Mention Span",
+                )
+                for mention_span in unrelated_retry_mentions
+            )
             retry_mentions = [
                 mention_span
                 for mention_span in retry_mentions
                 if _mention_span_identity(mention_span) in retry_targets
             ]
-            pending_spans = validate_mention_spans(
+            retry_validation = validate_mention_spans(
                 text,
                 sentences,
                 retry_mentions,
-            ).valid_spans
+            )
+            outcomes.extend(
+                _outcome_for_discard(discard)
+                for discard in retry_validation.discards
+            )
+            pending_spans = retry_validation.valid_spans
 
-        return _substitute_located_mention_spans(text, accepted_spans)
+        resolved_text = _substitute_located_mention_spans(text, accepted_spans)
+        if not accepted_spans:
+            current_run = _build_resolution_run(
+                text,
+                sentences,
+                all_mention_spans,
+                outcomes,
+                retry_count=retry_count,
+                resolved_text=resolved_text,
+                failure_type="all_mentions_rejected",
+            )
+            raise _zero_survivor_failure(
+                text,
+                current_run,
+                "all_mentions_rejected",
+                annotator_agent,
+            )
+
+        return _build_resolution_run(
+            text,
+            sentences,
+            all_mention_spans,
+            outcomes,
+            retry_count=retry_count,
+            resolved_text=resolved_text,
+        )
     except CoreferenceResolutionError:
         raise
     except Exception as error:
         # Structured-output parsing and model failures are failures at this
         # seam.  In particular, never treat a text response as resolved text.
-        raise _annotator_failure(text, annotator_agent, error) from error
+        raise _annotator_failure(
+            text,
+            annotator_agent,
+            error,
+            resolution_run=current_run,
+        ) from error
+
+
+def resolve_coreferences(
+    text: str,
+    annotator_agent: Agent | None = None,
+    critic_agent: Agent | None = None,
+    max_retries: int = 3,
+    raise_on_failure: bool = False,
+) -> str:
+    """Resolve references while preserving the adapter's text-only contract."""
+
+    return resolve_coreferences_run(
+        text,
+        annotator_agent=annotator_agent,
+        critic_agent=critic_agent,
+        max_retries=max_retries,
+        raise_on_failure=raise_on_failure,
+    ).resolved_text
 
 
 class PydanticAICoreferenceAdapter:
@@ -586,22 +878,54 @@ class PydanticAICoreferenceAdapter:
         self.annotator_agent = annotator_agent
         self.critic_agent = critic_agent
         self.max_retries = max_retries
+        self._last_run: CoreferenceResolutionRun | None = None
+
+    @property
+    def last_run(self) -> CoreferenceResolutionRun | None:
+        """Return the most recent successful or zero-survivor run."""
+
+        return self._last_run
+
+    @property
+    def last_resolution_run(self) -> CoreferenceResolutionRun | None:
+        """Return the most recent run using an explicit descriptive name."""
+
+        return self._last_run
+
+    @property
+    def resolution_run(self) -> CoreferenceResolutionRun | None:
+        """Return the most recent run for callers inspecting adapter output."""
+
+        return self._last_run
+
+    @property
+    def last_resolution(self) -> CoreferenceResolutionRun | None:
+        """Return the most recent run using the concise compatibility name."""
+
+        return self._last_run
 
     def resolve(self, content: str) -> str:
+        self._last_run = None
+        annotator_agent: Agent | None = self.annotator_agent
         try:
-            return resolve_coreferences(
+            annotator_agent = annotator_agent or get_annotator_agent()
+            critic_agent = self.critic_agent or get_critic_agent()
+            run = resolve_coreferences_run(
                 content,
-                annotator_agent=self.annotator_agent,
-                critic_agent=self.critic_agent,
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
                 max_retries=self.max_retries,
-                raise_on_failure=True
+                raise_on_failure=True,
             )
-        except CoreferenceResolutionError:
+            self._last_run = run
+            return run.resolved_text
+        except CoreferenceResolutionError as error:
+            self._last_run = error.resolution_run
             raise
         except Exception as error:
             raise _annotator_failure(
                 content,
-                self.annotator_agent or get_annotator_agent(),
+                annotator_agent,
                 error,
             ) from error
 

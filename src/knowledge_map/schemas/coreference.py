@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
@@ -74,6 +76,122 @@ class MentionSpanDiscard(BaseModel):
 
     mention_span: MentionSpan
     reason: str = Field(..., min_length=1)
+
+
+class NumberedSentenceRecord(BaseModel):
+    """A numbered sentence retained as part of one resolution run."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    label: str = Field(..., min_length=1)
+    text: str
+    start_index: int = Field(..., ge=0)
+    end_index: int = Field(..., ge=0)
+
+    @property
+    def start(self) -> int:
+        """Return the inclusive start position."""
+
+        return self.start_index
+
+    @property
+    def end(self) -> int:
+        """Return the exclusive end position."""
+
+        return self.end_index
+
+
+class MentionSpanOutcome(BaseModel):
+    """The final observed outcome for one model-returned Mention Span."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mention_span: MentionSpan
+    stage: Literal["validation", "critic"]
+    outcome: Literal["accepted", "discarded", "rejected"]
+    reason: str | None = None
+
+    @model_validator(mode="after")
+    def require_reason_for_non_acceptance(self) -> "MentionSpanOutcome":
+        """Require an audit reason whenever a span does not survive."""
+
+        if self.outcome != "accepted" and (
+            self.reason is None or not self.reason.strip()
+        ):
+            raise ValueError("reason is required for a discarded or rejected span")
+        return self
+
+    @property
+    def status(self) -> str:
+        """Return the outcome using the status terminology used by callers."""
+
+        return self.outcome
+
+    @property
+    def accepted(self) -> bool:
+        """Whether this Mention Span survived resolution."""
+
+        return self.outcome == "accepted"
+
+
+class CoreferenceResolutionRun(BaseModel):
+    """Observable output and quality counters for one resolution attempt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    resolved_text: str
+    sentences: list[NumberedSentenceRecord] = Field(default_factory=list)
+    mention_spans: list[MentionSpan] = Field(default_factory=list)
+    outcomes: list[MentionSpanOutcome] = Field(default_factory=list)
+    discarded_proportion: float = Field(..., ge=0.0, le=1.0)
+    retry_count: int = Field(default=0, ge=0)
+    failure_type: str | None = None
+
+    @property
+    def numbered_sentences(self) -> list[NumberedSentenceRecord]:
+        """Return the sentence table shown to the annotator."""
+
+        return self.sentences
+
+    @property
+    def mention_span_outcomes(self) -> list[MentionSpanOutcome]:
+        """Return per-Mention-Span outcomes for evaluation and audit."""
+
+        return self.outcomes
+
+    @property
+    def mention_span_results(self) -> list[MentionSpanOutcome]:
+        """Return outcomes using the result-oriented compatibility name."""
+
+        return self.outcomes
+
+    @property
+    def discard_proportion(self) -> float:
+        """Return the discard metric using the shorter operational name."""
+
+        return self.discarded_proportion
+
+    @property
+    def discarded_ratio(self) -> float:
+        """Return the discard metric using the ratio-oriented name."""
+
+        return self.discarded_proportion
+
+    @property
+    def discarded_count(self) -> int:
+        """Return how many observed Mention Spans did not survive."""
+
+        return sum(not outcome.accepted for outcome in self.outcomes)
+
+    @property
+    def surviving_spans(self) -> list[MentionSpan]:
+        """Return the Mention Spans accepted by the Coreference Critic."""
+
+        return [
+            outcome.mention_span
+            for outcome in self.outcomes
+            if outcome.accepted
+        ]
 
 
 class CriticVerdict(BaseModel):

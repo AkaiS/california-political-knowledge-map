@@ -10,10 +10,13 @@ from .bill_sessions import BillSessionResolution, BillSessionResolutions
 from .legislative_events import LegislativeEventDate, LegislativeEventDates
 from .chunking import ArticleChunk
 from .coreference import (
+    CoreferenceResolutionRun,
     CriticVerdict,
     MentionSpan,
     MentionSpanDiscard,
+    MentionSpanOutcome,
     MentionSpanVerdict,
+    NumberedSentenceRecord,
 )
 from .pipeline import SourceArticle, PipelineResult, ArticleStatus, StoryLink
 from .stories import Story

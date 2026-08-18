@@ -25,15 +25,15 @@ distributions.
 
 **Blocked by:** 04 — Per-Mention-Span Critic verdicts and targeted retry.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] An annotator returning no Mention Spans fails the article with a failure type distinct from the other two.
-- [ ] An article whose Mention Spans are all discarded by validation fails with its own failure type.
-- [ ] An article whose Mention Spans are all rejected by the Coreference Critic fails with its own failure type.
-- [ ] Each of the three failures writes a Dead Letter Queue record and sets the Article Status to `FAILED_DLQ`.
-- [ ] The Dead Letter Queue record carries the numbered sentences the annotator was shown, the Mention Spans, and each Mention Span's outcome, in place of a failed annotated article.
-- [ ] An article with at least one surviving Mention Span completes, whatever proportion of its Mention Spans were discarded.
-- [ ] The proportion of discarded Mention Spans is recorded on every resolution run, including successful ones.
-- [ ] Per-Mention-Span outcomes are available from a resolution run, so a future evaluation can score references individually.
-- [ ] Existing Article Status transitions in the Story Pipeline are otherwise unchanged, and the Story Pipeline tests still pass without modification.
-- [ ] Parse failures and transport failures keep their existing handling.
+- [x] An annotator returning no Mention Spans fails the article with a failure type distinct from the other two.
+- [x] An article whose Mention Spans are all discarded by validation fails with its own failure type.
+- [x] An article whose Mention Spans are all rejected by the Coreference Critic fails with its own failure type.
+- [x] Each of the three failures writes a Dead Letter Queue record and sets the Article Status to `FAILED_DLQ`.
+- [x] The Dead Letter Queue record carries the numbered sentences the annotator was shown, the Mention Spans, and each Mention Span's outcome, in place of a failed annotated article.
+- [x] An article with at least one surviving Mention Span completes, whatever proportion of its Mention Spans were discarded.
+- [x] The proportion of discarded Mention Spans is recorded on every resolution run, including successful ones.
+- [x] Per-Mention-Span outcomes are available from a resolution run, so a future evaluation can score references individually.
+- [x] Existing Article Status transitions in the Story Pipeline are otherwise unchanged, and the Story Pipeline tests still pass without modification.
+- [x] Parse failures and transport failures keep their existing handling.

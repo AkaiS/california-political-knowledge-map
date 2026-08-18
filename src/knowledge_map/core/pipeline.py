@@ -2,7 +2,17 @@ import logging
 import time
 from typing import Protocol, List, Optional
 from knowledge_map.config import settings as global_settings
-from knowledge_map.schemas import AdherenceReport, BillSessionResolutions, LegislativeEventDates, SourceArticle, ArticleChunk, ExtractionResult, PipelineResult, ArticleStatus
+from knowledge_map.schemas import (
+    AdherenceReport,
+    BillSessionResolutions,
+    CoreferenceResolutionRun,
+    LegislativeEventDates,
+    SourceArticle,
+    ArticleChunk,
+    ExtractionResult,
+    PipelineResult,
+    ArticleStatus,
+)
 from knowledge_map.utils.chunking import chunk_article
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
@@ -73,7 +83,8 @@ class DeadLetterQueueAdapter(Protocol):
         failure_type: str,
         retry_count: int,
         metadata: dict,
-        error_category: str = "coreference"
+        error_category: str = "coreference",
+        resolution_run: CoreferenceResolutionRun | None = None,
     ) -> str:
         ...
 
@@ -238,7 +249,12 @@ class StoryPipeline:
                 resolved_text=resolved_text,
                 chunks=chunks,
                 embeddings=embeddings,
-                extractions=extractions
+                extractions=extractions,
+                resolution_run=getattr(
+                    self.coreference_adapter,
+                    "last_run",
+                    None,
+                ),
             )
         except Exception as e:
             self._handle_pipeline_failure(e, article, dry_run)
@@ -258,19 +274,25 @@ class StoryPipeline:
         if isinstance(e, (CoreferenceResolutionError, ExtractionError)):
             error_cat = "coreference" if isinstance(e, CoreferenceResolutionError) else "extraction"
             annotated = getattr(e, "annotated_text", "")
+            resolution_run = getattr(e, "resolution_run", None)
             dlq_id = "N/A"
             if self.dlq_adapter:
+                dlq_arguments = dict(
+                    url=article.url,
+                    title=article.title or "",
+                    original_text=e.original_text,
+                    annotated_text=annotated,
+                    validation_issues=e.validation_issues,
+                    failure_type=e.failure_type,
+                    retry_count=e.retry_count,
+                    metadata=e.metadata,
+                    error_category=error_cat,
+                )
+                if resolution_run is not None:
+                    dlq_arguments["resolution_run"] = resolution_run
                 try:
                     dlq_id = self.dlq_adapter.log_failure(
-                        url=article.url,
-                        title=article.title or "",
-                        original_text=e.original_text,
-                        annotated_text=annotated,
-                        validation_issues=e.validation_issues,
-                        failure_type=e.failure_type,
-                        retry_count=e.retry_count,
-                        metadata=e.metadata,
-                        error_category=error_cat
+                        **dlq_arguments
                     )
                 except Exception as dlq_err:
                     logger.error(f"Failed to log {error_cat} failure to DLQ: {dlq_err}")
