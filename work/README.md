@@ -17,8 +17,25 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
+  Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
+  for a bill number it cannot supply, normalization rejects every spelled-out
+  form, a parse failure is written as silence rather than as `needs_review`, and
+  a character-sliced chunk overlap cut `Senate Bill 623` into a second node named
+  `ll 623`. Broken into five issues on 2026-08-17; the frontier is below.
 - [Coreference Resolution via Mention Spans](projects/coreference-mention-spans/PRD.md), `ready-for-agent` as of 2026-08-17. Replaces whole-article `<ref>` tag rewriting with structured Mention Spans anchored to numbered sentences, and gives the Coreference Critic per-reference verdicts. Broken into seven issues on 2026-08-17; the frontier is below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### Bill Designation Recovery frontier
+
+Two issues are takeable now. The bill chain is linear; the chunking ticket is
+independent of it.
+
+- [01 Chunk text excludes the overlap](projects/bill-designation-recovery/issues/01-chunk-text-excludes-overlap.md), takeable. The chunk's text is its own body; the overlap travels as context, the embedder and chunk write consume both, extraction receives the text alone.
+- [02 Bill Designation parsing, four forms only](projects/bill-designation-recovery/issues/02-bill-designation-parsing.md), takeable. `SB`, `AB`, `Senate Bill`, `Assembly Bill` and nothing else; `number` leaves the News Ontology and is supplied by resolution.
+- [03 Every extracted Bill gets a resolution](projects/bill-designation-recovery/issues/03-resolution-covers-every-bill.md), blocked by 02. The map is keyed by name and covers unidentifiable bills; the adapter stops deciding.
+- [04 Recover a Bill Designation from the Source Article](projects/bill-designation-recovery/issues/04-recover-designation-from-article.md), blocked by 03. `ll 623` reaches `Senate Bill 623`'s node before any key is minted.
+- [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `CONTEXT.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
 
 ### Coreference Resolution via Mention Spans frontier
 
@@ -76,7 +93,7 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 
