@@ -299,7 +299,22 @@ def test_pipeline_with_concrete_adapters():
     critic_agent = get_critic_agent(defer_check=True)
     
     def mock_annotator(messages, info):
-        return ModelResponse(parts=[TextPart(content="Gavin Newsom signed a bill. <ref entity=\"Gavin Newsom\">He</ref> was happy.")])
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "response": [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "canonical_entity_name": "Gavin Newsom",
+                        }
+                    ]
+                },
+                tool_call_id="call_1",
+            )
+        ])
         
     def mock_critic(messages, info):
         tool_name = info.output_tools[0].name

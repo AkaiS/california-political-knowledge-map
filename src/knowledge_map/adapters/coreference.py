@@ -3,11 +3,15 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import NamedTuple
 
+from pydantic import TypeAdapter
 from pydantic_ai import Agent
 
 from knowledge_map.schemas import CriticValidation, MentionSpan, MentionSpanDiscard
 from knowledge_map.utils.models import get_ollama_model
-from knowledge_map.utils.sentences import NumberedSentence
+from knowledge_map.utils.sentences import (
+    NumberedSentence,
+    split_into_numbered_sentences,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,26 +222,36 @@ def check_structural_identity(original_text: str, annotated_text: str) -> bool:
 def _get_model():
     return get_ollama_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
 
+
+def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:
+    """Render the sentence table in the form shown to the annotator."""
+
+    return "\n".join(
+        f"[{sentence.label}] {sentence.text}" for sentence in sentences
+    )
+
+
 def get_annotator_agent(defer_check: bool = True) -> Agent:
     model = _get_model()
-    
+
     instructions = (
         "You are an expert Coreference Resolution annotator.\n"
-        "Your task is to identify ambiguous pronouns (like 'he', 'she', 'it', 'they', 'him', 'her', 'them', 'his', 'their', 'the governor', 'the company', 'the senator', etc.) and referring expressions in the text and wrap them in XML tags referencing their canonical entity name:\n"
-        "<ref entity=\"Canonical Entity Name\">pronoun</ref>\n\n"
-        "Guidelines:\n"
-        "1. ONLY wrap ambiguous references. Do NOT wrap nouns that are already clear and unambiguous in the local context.\n"
-        "2. The entity name in the `entity` attribute MUST be the canonical, fully expanded name of the person, organization, or object being referred to (e.g. 'Gavin Newsom', not just 'he' or 'Newsom').\n"
-        "3. Keep the original text structure exactly the same. Do not add, remove, or modify any other parts of the text.\n"
-        "4. Output the full text with the tags embedded in it. Do not wrap the output in markdown code blocks. Do not include any introductory or concluding conversational text.\n\n"
-        "Example:\n"
-        "Input: Newsom visited the school today. He gave a speech there.\n"
-        "Output: Newsom visited the school today. <ref entity=\"Gavin Newsom\">He</ref> gave a speech there."
+        "Identify ambiguous pronouns and referring expressions in the numbered "
+        "Source Article and map each one to its canonical entity name.\n\n"
+        "Return only a structured list of Mention Spans. For every Mention Span:\n"
+        "- copy `sentence_label` from the label at the start of the sentence line;\n"
+        "- copy `mention_text` verbatim, including its capitalization;\n"
+        "- use `occurrence` only when the same mention text appears more than "
+        "once in that sentence (it is one-based and defaults to 1); and\n"
+        "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
+        "Return only Mention Spans; never return the Source Article itself. "
+        "Return an empty list when there are no references to resolve."
     )
-    
+
     return Agent(
         model,
-        output_type=str,
+        name="coreference_annotator",
+        output_type=list[MentionSpan],
         instructions=instructions,
         defer_model_check=defer_check,
     )
@@ -259,6 +273,7 @@ def get_critic_agent(defer_check: bool = True) -> Agent:
     
     return Agent(
         model,
+        name="coreference_critic",
         output_type=CriticValidation,
         instructions=instructions,
         defer_model_check=defer_check,
@@ -323,6 +338,46 @@ def get_agent_metadata(agent: Agent | None) -> dict:
         "system_prompt": system_prompt
     }
 
+
+def _validation_issues_from_error(error: Exception) -> list[str]:
+    """Return useful, provider-neutral details for an annotator failure."""
+
+    issues: list[str] = []
+    errors = getattr(error, "errors", None)
+    if callable(errors):
+        try:
+            for detail in errors():
+                location = " -> ".join(str(item) for item in detail.get("loc", []))
+                message = detail.get("msg", "Validation error")
+                issues.append(f"{location}: {message}" if location else message)
+        except Exception:
+            issues = []
+
+    return issues or [str(error) or "Annotator output could not be parsed"]
+
+
+def _annotator_failure(
+    content: str,
+    annotator_agent: Agent,
+    error: Exception,
+) -> CoreferenceResolutionError:
+    """Build the existing adapter error for invalid structured output."""
+
+    try:
+        metadata = get_agent_metadata(annotator_agent)
+    except Exception:
+        metadata = {}
+
+    return CoreferenceResolutionError(
+        original_text=content,
+        annotated_text="",
+        validation_issues=_validation_issues_from_error(error),
+        failure_type="coreference_validation_failure",
+        retry_count=0,
+        metadata=metadata,
+    )
+
+
 def resolve_coreferences(
     text: str,
     annotator_agent: Agent | None = None,
@@ -330,72 +385,40 @@ def resolve_coreferences(
     max_retries: int = 3,
     raise_on_failure: bool = False
 ) -> str:
+    """Resolve references by locating structured Mention Spans in source text.
+
+    ``critic_agent`` and ``max_retries`` remain accepted for compatibility with
+    the adapter constructor.  Critic review belongs to the next stage of this
+    project and is deliberately not part of this path yet.
+    """
+
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
-    if critic_agent is None:
-        critic_agent = get_critic_agent()
-        
-    # Initial annotation pass
-    run_result = annotator_agent.run_sync(text)
-    annotated_text = clean_annotated_text(run_result.output)
-    
-    retry_count = 0
-    while True:
-        # Check structural identity immediately after annotator runs
-        if not check_structural_identity(text, annotated_text):
-            if retry_count < max_retries:
-                retry_count += 1
-                feedback = (
-                    "Structural mismatch detected: the annotated text structure must exactly match "
-                    "the original text structure (excluding <ref> tags). Do not add, remove, or modify "
-                    "any other words or punctuation. Please output the complete updated annotated text."
-                )
-                run_result = annotator_agent.run_sync(feedback, message_history=run_result.all_messages())
-                annotated_text = clean_annotated_text(run_result.output)
-                continue
-            else:
-                # Reached max retries, fall back or raise
-                if raise_on_failure:
-                    raise CoreferenceResolutionError(
-                        original_text=text,
-                        annotated_text=annotated_text,
-                        validation_issues=["Structural mismatch detected: annotated text structure must exactly match original text structure (excluding <ref> tags)."],
-                        failure_type="structural_mismatch",
-                        retry_count=retry_count,
-                        metadata=get_agent_metadata(annotator_agent)
-                    )
-                return text
+    # Keep these parameters in the helper signature until the critic stage is
+    # introduced; neither is used for the Mention Span-only pass.
+    _ = critic_agent, max_retries, raise_on_failure
 
-        # Critic validation pass (bypassed if structural check fails)
-        critic_input = f"Please review the annotated text against the original text.\n\nOriginal text:\n{text}\n\nAnnotated text:\n{annotated_text}"
-        critic_result = critic_agent.run_sync(critic_input)
-        validation = critic_result.output
-        
-        if validation.is_valid:
-            return annotated_text
-            
-        if retry_count < max_retries:
-            retry_count += 1
-            # Feed back issues to annotator
-            feedback = (
-                f"The Coreference Critic found the following issues in your previous annotation:\n"
-                + "\n".join(f"- {issue}" for issue in validation.issues)
-                + "\n\nPlease correct these issues and output the complete updated annotated text."
-            )
-            run_result = annotator_agent.run_sync(feedback, message_history=run_result.all_messages())
-            annotated_text = clean_annotated_text(run_result.output)
-        else:
-            # Reached max retries, fall back or raise
-            if raise_on_failure:
-                raise CoreferenceResolutionError(
-                    original_text=text,
-                    annotated_text=annotated_text,
-                    validation_issues=validation.issues,
-                    failure_type="critic_rejection",
-                    retry_count=retry_count,
-                    metadata=get_agent_metadata(annotator_agent)
-                )
-            return text
+    try:
+        sentences = split_into_numbered_sentences(text)
+        prompt = (
+            "Resolve the references in the following Source Article. The article "
+            "is shown as numbered sentences; copy a visible sentence label into "
+            "each Mention Span.\n\n"
+            "Numbered Source Article:\n"
+            f"{format_numbered_sentences(sentences)}"
+        )
+        run_result = annotator_agent.run_sync(prompt)
+        mention_spans = TypeAdapter(list[MentionSpan]).validate_python(
+            run_result.output
+        )
+        substitution = substitute_mention_spans(text, sentences, mention_spans)
+        return substitution.resolved_text
+    except CoreferenceResolutionError:
+        raise
+    except Exception as error:
+        # Structured-output parsing and model failures are failures at this
+        # seam.  In particular, never treat a text response as resolved text.
+        raise _annotator_failure(text, annotator_agent, error) from error
 
 
 class PydanticAICoreferenceAdapter:
@@ -413,43 +436,21 @@ class PydanticAICoreferenceAdapter:
 
     def resolve(self, content: str) -> str:
         try:
-            annotated_text = resolve_coreferences(
+            return resolve_coreferences(
                 content,
                 annotator_agent=self.annotator_agent,
                 critic_agent=self.critic_agent,
                 max_retries=self.max_retries,
                 raise_on_failure=True
             )
-            return replace_tags_with_entities(annotated_text)
         except CoreferenceResolutionError:
             raise
-        except Exception as e:
-            validation_issues = []
-            if hasattr(e, "errors") and callable(e.errors):
-                try:
-                    for err in e.errors():
-                        loc_str = " -> ".join(str(loc) for loc in err.get("loc", []))
-                        msg = err.get("msg", "Validation error")
-                        validation_issues.append(f"{loc_str}: {msg}")
-                except Exception:
-                    validation_issues = [str(e)]
-            if not validation_issues:
-                validation_issues = [str(e)]
-
-            metadata = {}
-            try:
-                metadata = get_agent_metadata(self.annotator_agent)
-            except Exception:
-                pass
-
-            raise CoreferenceResolutionError(
-                original_text=content,
-                annotated_text="",
-                validation_issues=validation_issues,
-                failure_type="coreference_validation_failure",
-                retry_count=self.max_retries,
-                metadata=metadata
-            )
+        except Exception as error:
+            raise _annotator_failure(
+                content,
+                self.annotator_agent or get_annotator_agent(),
+                error,
+            ) from error
 
     def health_check(self) -> bool:
         try:
@@ -462,4 +463,3 @@ class PydanticAICoreferenceAdapter:
             return bool(result and result.output)
         except Exception:
             return False
-

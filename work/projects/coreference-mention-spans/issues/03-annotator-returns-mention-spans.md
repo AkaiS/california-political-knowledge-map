@@ -21,14 +21,14 @@ untouched.
 
 **Blocked by:** 02 — Mention Span schema, validation, and substitution.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] The annotator prompt presents the Source Article as numbered sentences, one per line, each prefixed with the label the model is to copy back.
-- [ ] The annotator's output is a list of Mention Spans, not text; a response that does not parse as that list is a failure rather than a silently accepted string.
-- [ ] The Coreference Adapter's resolve takes a Source Article's content and returns resolved text, unchanged in signature and in health check behaviour.
-- [ ] Resolution runs splitter, annotator, validation, substitution, in that order, with no structural comparison anywhere in the path.
-- [ ] A Source Article with pronouns resolvable to canonical entities returns text with those pronouns replaced and every other character identical to the input.
-- [ ] A Mention Span discarded by validation does not prevent its neighbours in the same article from being applied.
-- [ ] The Story Pipeline tests pass without modification, confirming the adapter contract is intact.
-- [ ] The annotator no longer receives instructions to reproduce the article text, and its prompt no longer describes `<ref>` tags.
-- [ ] Tests drive this through the Coreference Adapter's resolve with the annotator agent overridden, following the existing pattern in the coreference tests.
+- [x] The annotator prompt presents the Source Article as numbered sentences, one per line, each prefixed with the label the model is to copy back.
+- [x] The annotator's output is a list of Mention Spans, not text; a response that does not parse as that list is a failure rather than a silently accepted string.
+- [x] The Coreference Adapter's resolve takes a Source Article's content and returns resolved text, unchanged in signature and in health check behaviour.
+- [x] Resolution runs splitter, annotator, validation, substitution, in that order, with no structural comparison anywhere in the path.
+- [x] A Source Article with pronouns resolvable to canonical entities returns text with those pronouns replaced and every other character identical to the input.
+- [x] A Mention Span discarded by validation does not prevent its neighbours in the same article from being applied.
+- [x] The Story Pipeline tests pass without modification, confirming the adapter contract is intact.
+- [x] The annotator no longer receives instructions to reproduce the article text, and its prompt no longer describes `<ref>` tags.
+- [x] Tests drive this through the Coreference Adapter's resolve with the annotator agent overridden, following the existing pattern in the coreference tests.
