@@ -1,9 +1,195 @@
-import os
 import re
-from typing import List
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import NamedTuple
+
 from pydantic_ai import Agent
+
+from knowledge_map.schemas import CriticValidation, MentionSpan, MentionSpanDiscard
 from knowledge_map.utils.models import get_ollama_model
-from knowledge_map.schemas import CriticValidation
+from knowledge_map.utils.sentences import NumberedSentence
+
+
+@dataclass(frozen=True, slots=True)
+class LocatedMentionSpan:
+    """A Mention Span with a character range derived from source content."""
+
+    mention_span: MentionSpan
+    start_index: int
+    end_index: int
+
+    @property
+    def start(self) -> int:
+        """Return the inclusive start position of the located mention."""
+
+        return self.start_index
+
+    @property
+    def end(self) -> int:
+        """Return the exclusive end position of the located mention."""
+
+        return self.end_index
+
+
+class MentionSpanValidationResult(NamedTuple):
+    """Validated Mention Spans and the ones rejected with their reasons."""
+
+    valid_spans: list[LocatedMentionSpan]
+    discards: list[MentionSpanDiscard]
+
+    @property
+    def surviving_spans(self) -> list[LocatedMentionSpan]:
+        """Return the spans that can safely be substituted."""
+
+        return self.valid_spans
+
+
+class MentionSpanSubstitutionResult(NamedTuple):
+    """Resolved content together with validation discards."""
+
+    resolved_text: str
+    discards: list[MentionSpanDiscard]
+
+    @property
+    def text(self) -> str:
+        """Return the resolved content using the short result name."""
+
+        return self.resolved_text
+
+
+def _mention_matches(sentence_text: str, mention_text: str) -> list[re.Match[str]]:
+    """Find exact mention-text matches whose outer edges are word boundaries."""
+
+    # ``(?<!\\w)`` and ``(?!\\w)`` express the useful part of ``\\b`` while
+    # also handling mentions ending in punctuation, such as ``U.S.``.
+    pattern = re.compile(rf"(?<!\w){re.escape(mention_text)}(?!\w)")
+    return list(pattern.finditer(sentence_text))
+
+
+def validate_mention_spans(
+    content: str,
+    sentences: Sequence[NumberedSentence],
+    mention_spans: Sequence[MentionSpan],
+) -> MentionSpanValidationResult:
+    """Locate usable Mention Spans and report every deterministic discard.
+
+    Sentence ranges are the only source of positional information.  For each
+    Mention Span this function searches the source slice identified by its
+    sentence label, selects its one-based occurrence, and offsets the match by
+    the sentence's recorded start.  The first span in input order wins when
+    two located ranges overlap; the later span is reported as discarded.
+    """
+
+    sentences_by_label = {sentence.label: sentence for sentence in sentences}
+    located: list[LocatedMentionSpan] = []
+    discards: list[MentionSpanDiscard] = []
+
+    for mention_span in mention_spans:
+        sentence = sentences_by_label.get(mention_span.sentence_label)
+        if sentence is None:
+            discards.append(
+                MentionSpanDiscard(
+                    mention_span=mention_span,
+                    reason=(
+                        f"unknown sentence label {mention_span.sentence_label!r}"
+                    ),
+                )
+            )
+            continue
+
+        sentence_text = content[sentence.start_index : sentence.end_index]
+        matches = _mention_matches(sentence_text, mention_span.mention_text)
+        if not matches:
+            discards.append(
+                MentionSpanDiscard(
+                    mention_span=mention_span,
+                    reason=(
+                        f"mention text {mention_span.mention_text!r} does not occur "
+                        f"in sentence {sentence.label!r}"
+                    ),
+                )
+            )
+            continue
+
+        occurrence_index = mention_span.occurrence - 1
+        if occurrence_index >= len(matches):
+            discards.append(
+                MentionSpanDiscard(
+                    mention_span=mention_span,
+                    reason=(
+                        f"occurrence {mention_span.occurrence} exceeds the "
+                        f"{len(matches)} match(es) available in sentence "
+                        f"{sentence.label!r}"
+                    ),
+                )
+            )
+            continue
+
+        match = matches[occurrence_index]
+        candidate = LocatedMentionSpan(
+            mention_span=mention_span,
+            start_index=sentence.start_index + match.start(),
+            end_index=sentence.start_index + match.end(),
+        )
+
+        if any(
+            candidate.start_index < existing.end_index
+            and existing.start_index < candidate.end_index
+            for existing in located
+        ):
+            discards.append(
+                MentionSpanDiscard(
+                    mention_span=mention_span,
+                    reason="character range overlaps an earlier Mention Span",
+                )
+            )
+            continue
+
+        located.append(candidate)
+
+    return MentionSpanValidationResult(valid_spans=located, discards=discards)
+
+
+def _substitute_located_mention_spans(
+    content: str,
+    located_spans: Sequence[LocatedMentionSpan],
+) -> str:
+    """Apply located spans from right to left so ranges stay source-relative."""
+
+    resolved = content
+    for located in sorted(
+        located_spans,
+        key=lambda span: span.start_index,
+        reverse=True,
+    ):
+        resolved = (
+            resolved[: located.start_index]
+            + located.mention_span.canonical_entity_name
+            + resolved[located.end_index :]
+        )
+    return resolved
+
+
+def substitute_mention_spans(
+    content: str,
+    sentences: Sequence[NumberedSentence],
+    mention_spans: Sequence[MentionSpan],
+) -> MentionSpanSubstitutionResult:
+    """Validate Mention Spans and substitute the survivors into ``content``."""
+
+    validation = validate_mention_spans(content, sentences, mention_spans)
+    return MentionSpanSubstitutionResult(
+        resolved_text=_substitute_located_mention_spans(
+            content,
+            validation.valid_spans,
+        ),
+        discards=validation.discards,
+    )
+
+
+# These names describe the same deterministic seam in caller-oriented terms.
+resolve_mention_spans = substitute_mention_spans
+apply_mention_spans = substitute_mention_spans
 
 def replace_tags_with_entities(annotated_text: str) -> str:
     # Pattern to match <ref entity="Canonical Name">pronoun</ref>
@@ -95,7 +281,7 @@ class CoreferenceResolutionError(Exception):
         self,
         original_text: str,
         annotated_text: str,
-        validation_issues: List[str],
+        validation_issues: list[str],
         failure_type: str,
         retry_count: int,
         metadata: dict
@@ -276,7 +462,4 @@ class PydanticAICoreferenceAdapter:
             return bool(result and result.output)
         except Exception:
             return False
-
-
-
 

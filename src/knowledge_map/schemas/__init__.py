@@ -9,7 +9,7 @@ from .extraction import (
 from .bill_sessions import BillSessionResolution, BillSessionResolutions
 from .legislative_events import LegislativeEventDate, LegislativeEventDates
 from .chunking import ArticleChunk
-from .coreference import CriticValidation
+from .coreference import CriticValidation, MentionSpan, MentionSpanDiscard
 from .pipeline import SourceArticle, PipelineResult, ArticleStatus, StoryLink
 from .stories import Story
 from .relevance import (

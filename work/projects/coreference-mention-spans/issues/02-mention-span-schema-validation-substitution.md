@@ -22,17 +22,17 @@ discards out.
 
 **Blocked by:** 01 — Numbered sentence splitter.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] A Mention Span requested from a model carries a sentence label, mention text, an occurrence number defaulting to the first, and a canonical entity name.
-- [ ] Given numbered sentences and a Mention Span, the derived character range locates the mention in the content and is not supplied by the model.
-- [ ] Mention text is matched on word boundaries, so a mention of "her" does not match inside "there".
-- [ ] A Mention Span naming a sentence label that does not exist is discarded with a recorded reason, and does not raise.
-- [ ] A Mention Span whose mention text does not occur in its named sentence is discarded with a recorded reason.
-- [ ] A Mention Span whose occurrence number exceeds the matches available in its sentence is discarded with a recorded reason.
-- [ ] Two Mention Spans resolving to overlapping character ranges are reduced to one before substitution, with the dropped one recorded as discarded.
-- [ ] A sentence containing the same pronoun twice, with two Mention Spans distinguished only by occurrence number, resolves each occurrence to its own canonical entity.
-- [ ] Substitution of an empty Mention Span list returns the content unchanged.
-- [ ] Substitution leaves every character outside the replaced ranges identical to the input content.
-- [ ] Adjacent ranges, a range at position zero, and a range ending at the last character of the content all substitute correctly.
-- [ ] Every discard is reported with the Mention Span it came from and the rule that rejected it.
+- [x] A Mention Span requested from a model carries a sentence label, mention text, an occurrence number defaulting to the first, and a canonical entity name.
+- [x] Given numbered sentences and a Mention Span, the derived character range locates the mention in the content and is not supplied by the model.
+- [x] Mention text is matched on word boundaries, so a mention of "her" does not match inside "there".
+- [x] A Mention Span naming a sentence label that does not exist is discarded with a recorded reason, and does not raise.
+- [x] A Mention Span whose mention text does not occur in its named sentence is discarded with a recorded reason.
+- [x] A Mention Span whose occurrence number exceeds the matches available in its sentence is discarded with a recorded reason.
+- [x] Two Mention Spans resolving to overlapping character ranges are reduced to one before substitution, with the dropped one recorded as discarded.
+- [x] A sentence containing the same pronoun twice, with two Mention Spans distinguished only by occurrence number, resolves each occurrence to its own canonical entity.
+- [x] Substitution of an empty Mention Span list returns the content unchanged.
+- [x] Substitution leaves every character outside the replaced ranges identical to the input content.
+- [x] Adjacent ranges, a range at position zero, and a range ending at the last character of the content all substitute correctly.
+- [x] Every discard is reported with the Mention Span it came from and the rule that rejected it.
