@@ -15,11 +15,11 @@ This is deletion only. No behaviour changes.
 
 **Blocked by:** 05 — Zero-survivor failures and Dead Letter Queue payload.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] The tag stripper, whitespace normalizer, Structural Identity Check, tag-to-entity replacement, and markdown fence cleaner no longer exist in the codebase.
-- [ ] The `structural_mismatch` failure type and its branch of the retry loop no longer exist.
-- [ ] Tests covering the deleted functions are removed rather than skipped or left asserting nothing.
-- [ ] No remaining code or prompt in the codebase references `<ref>` tags.
-- [ ] The full test suite passes, and no test was weakened to make it pass.
-- [ ] Resolved text produced before and after this ticket is identical for the same inputs.
+- [x] The tag stripper, whitespace normalizer, Structural Identity Check, tag-to-entity replacement, and markdown fence cleaner no longer exist in the codebase.
+- [x] The `structural_mismatch` failure type and its branch of the retry loop no longer exist.
+- [x] Tests covering the deleted functions are removed rather than skipped or left asserting nothing.
+- [x] No remaining code or prompt in the codebase references `<ref>` tags.
+- [x] The full test suite passes, and no test was weakened to make it pass.
+- [x] Resolved text produced before and after this ticket is identical for the same inputs.

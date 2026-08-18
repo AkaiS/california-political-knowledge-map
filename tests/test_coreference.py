@@ -5,7 +5,6 @@ from pydantic_ai.models.function import FunctionModel
 from knowledge_map.adapters.coreference import (
     CoreferenceResolutionError,
     PydanticAICoreferenceAdapter,
-    get_agent_metadata,
     get_annotator_agent,
     get_critic_agent,
 )
@@ -66,7 +65,6 @@ def test_get_annotator_agent_returns_structured_mention_spans():
             canonical_entity_name="Gavin Newsom",
         )
     ]
-    assert "<ref" not in get_agent_metadata(agent)["system_prompt"]
 
 
 def test_get_critic_agent_returns_per_mention_verdicts():

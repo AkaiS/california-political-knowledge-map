@@ -378,9 +378,9 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
     
     coref_err = CoreferenceResolutionError(
         original_text="Content 1",
-        annotated_text="mismatch",
+        annotated_text="",
         validation_issues=["mismatch"],
-        failure_type="structural_mismatch",
+        failure_type="all_mentions_rejected",
         retry_count=3,
         metadata={}
     )
@@ -813,7 +813,6 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
     assert "locked" in str(exc_info.value).lower()
     # Verify no pipeline execution occurred
     assert mock_pipeline.run.call_count == 0
-
 
 
 

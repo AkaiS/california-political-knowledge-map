@@ -11,9 +11,9 @@ def test_dlq_adapter_success(tmp_path):
     url = "https://www.sacbee.com/news/local/article234.html"
     title = "Sacramento Bee Local News"
     original_text = "Newsom signed AB-5. He was happy."
-    annotated_text = "Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy."
+    annotated_text = ""
     validation_issues = ["Critic issue"]
-    failure_type = "critic_rejection"
+    failure_type = "all_mentions_rejected"
     retry_count = 2
     metadata = {
         "model": "gemma",
@@ -112,7 +112,7 @@ def test_dlq_adapter_write_failure(tmp_path, caplog):
             original_text="Original",
             annotated_text="Annotated",
             validation_issues=[],
-            failure_type="structural_mismatch",
+            failure_type="all_mentions_rejected",
             retry_count=1,
             metadata={}
         )

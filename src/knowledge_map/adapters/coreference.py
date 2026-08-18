@@ -202,30 +202,6 @@ def substitute_mention_spans(
 resolve_mention_spans = substitute_mention_spans
 apply_mention_spans = substitute_mention_spans
 
-def replace_tags_with_entities(annotated_text: str) -> str:
-    # Pattern to match <ref entity="Canonical Name">pronoun</ref>
-    # Supports single or double quotes, and matches case-insensitively
-    pattern = r"<ref\s+entity=['\"](.*?)['\"]>(.*?)</ref>"
-    return re.sub(pattern, r"\1", annotated_text, flags=re.DOTALL | re.IGNORECASE)
-
-def strip_ref_tags(annotated_text: str) -> str:
-    # Pattern to match <ref entity="Canonical Name">pronoun</ref>
-    # Supports single/double quotes, spaces around '=' and attributes, case-insensitive
-    pattern = r"<ref\s+entity\s*=\s*['\"](.*?)['\"]\s*>(.*?)</ref>"
-    return re.sub(pattern, r"\2", annotated_text, flags=re.DOTALL | re.IGNORECASE)
-
-def normalize_whitespace(text: str) -> str:
-    # Collapses multiple consecutive whitespace/newline characters into single spaces
-    # and trims leading/trailing whitespace
-    return re.sub(r"\s+", " ", text).strip()
-
-def check_structural_identity(original_text: str, annotated_text: str) -> bool:
-    normalized_original = normalize_whitespace(original_text)
-    stripped_annotated = strip_ref_tags(annotated_text)
-    normalized_annotated = normalize_whitespace(stripped_annotated)
-    return normalized_original == normalized_annotated
-
-
 def _get_model():
     return get_ollama_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
 
@@ -301,18 +277,6 @@ def get_critic_agent(defer_check: bool = True) -> Agent:
         instructions=instructions,
         defer_model_check=defer_check,
     )
-
-def clean_annotated_text(text: str) -> str:
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        if len(lines) >= 2:
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines).strip()
-    return text
 
 class CoreferenceResolutionError(Exception):
     def __init__(

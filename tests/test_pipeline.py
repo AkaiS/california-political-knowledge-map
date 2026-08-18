@@ -383,7 +383,7 @@ def test_pipeline_with_concrete_adapters():
 
     # Assertions
     assert isinstance(result, PipelineResult)
-    # The resolved text should be fully resolved (with replaced tags)
+    # The resolved text should contain canonical entity names.
     assert result.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
     
     # Verify chunks are created
@@ -487,9 +487,9 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            annotated_text="",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )
@@ -520,9 +520,9 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     assert failure["url"] == "http://test.com/failure-dlq"
     assert failure["title"] == "Failed Article"
     assert failure["original_text"] == "Gavin Newsom went home."
-    assert failure["annotated_text"] == "mismatched text"
-    assert failure["validation_issues"] == ["Test structural issue"]
-    assert failure["failure_type"] == "structural_mismatch"
+    assert failure["annotated_text"] == ""
+    assert failure["validation_issues"] == ["Test coreference issue"]
+    assert failure["failure_type"] == "all_mentions_rejected"
     assert failure["retry_count"] == 3
     assert failure["metadata"] == {"model": "gemma"}
     assert failure["error_category"] == "coreference"
@@ -657,9 +657,9 @@ def test_pipeline_status_coref_failure():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            annotated_text="",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )
@@ -733,9 +733,9 @@ def test_pipeline_status_dlq_failure():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            annotated_text="",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )
