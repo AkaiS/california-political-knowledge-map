@@ -152,15 +152,15 @@ The process of identifying, measuring semantic similarity between, and merging n
 _Avoid_: Deduplication, merging, cleaning, string matching
 
 **Coreference Resolution**:
-The process of resolving pronouns and referring expressions in a Source Article's text to their canonical entity names before or during Entity Extraction to prevent information loss across Article Chunks.
+The process of identifying the canonical entities named by pronouns and referring expressions in a Source Article and applying accepted Mention Spans before Entity Extraction, so references remain meaningful across Article Chunks.
 _Avoid_: Pronoun matching, reference linking
 
-**Annotated Article**:
-A Source Article that has been pre-processed to explicitly tag pronouns and referring expressions with their canonical entity targets using markup (e.g. `<ref>` tags).
-_Avoid_: Tagged text, parsed story
+**Mention Span**:
+A structured coreference assertion identifying a pronoun or referring expression in a numbered sentence, its one-based occurrence within that sentence, and the canonical entity it denotes. It is the unit retained or discarded by Coreference Resolution and judged by the Coreference Critic.
+_Avoid_: Coreference tag, tagged reference, annotation
 
 **Coreference Critic**:
-An LLM agent that reviews and validates the annotated coreferences in an Annotated Article to ensure semantic accuracy and prevent incorrect reference mapping before chunking.
+An LLM agent that returns an accept-or-reject verdict for each Mention Span and a reason for rejected spans, so only semantically supported references are applied before chunking.
 _Avoid_: Critic agent, checker, validator
 
 **Story Pipeline**:
@@ -176,7 +176,7 @@ The adapter protocol and its concrete implementation that handles vector embeddi
 _Avoid_: Embedder helper, vector utility
 
 **Coreference Adapter**:
-The adapter protocol and its concrete implementation that handles pronoun resolution and entity tagging on a Source Article.
+The adapter protocol and its concrete implementation that resolves Mention Spans in a Source Article and returns the resulting text to the Story Pipeline.
 _Avoid_: Resolver wrapper, coref helper
 
 **Entity Extraction Adapter**:

@@ -2,6 +2,11 @@
 
 Labels: completed
 
+> The original whole-article coreference design recorded here is historical.
+> The coreference mechanism is superseded by [Coreference Resolution via
+> Mention Spans](../coreference-mention-spans/PRD.md), which is the current
+> contract; the chunking and Neo4j decisions below remain relevant.
+
 ## Problem Statement
 
 When performing entity and relationship extraction on long news articles (Source Articles), feeding the entire text to the language model causes two main issues:
@@ -15,9 +20,9 @@ However, splitting the text into smaller chunks directly introduces new problems
 ## Solution
 
 We will build a pipeline that:
-1. Preprocesses the **Source Article** text with a **Coreference Resolution** LLM agent to tag vague pronouns with `<ref entity='Entity Name'>pronoun</ref>` tags.
-2. Validates annotations using a **Coreference Critic** LLM agent with a self-correcting feedback loop.
-3. Resolves the tags to plain text (replacing pronouns with canonical entity names) before chunking.
+1. Preprocesses the **Source Article** text with a **Coreference Resolution** LLM agent that returns structured Mention Spans anchored to numbered sentences.
+2. Validates each Mention Span using a **Coreference Critic** LLM agent with a self-correcting feedback loop.
+3. Applies accepted Mention Spans to the original text, replacing references with canonical entity names before chunking.
 4. Splits the clean, resolved text into **Article Chunks** using Chonkie's `RecursiveChunker` and `OverlapRefinery` (character-based, with 10% overlap).
 5. Runs **Entity Extraction** independently on each chunk.
 6. Ingests the Article Chunks, Articles, and entities into Neo4j with structural relationships, vector embeddings, and a vector index.
@@ -29,7 +34,7 @@ We will build a pipeline that:
 1. As a developer running the playground, I want long articles to be processed in smaller chunks so that the entity extraction quality is significantly improved.
 2. As a data analyst querying the influence graph, I want to see explicit `(:Article)` and `(:Chunk)` nodes in Neo4j so that I can trace exactly which parts of an article supported a relationship.
 3. As a developer, I want coreferences in the article to be resolved using an LLM before chunking, so that pronouns in later chunks are correctly identified as the canonical entities.
-4. As a developer, I want a Critic LLM to validate the coreference tagging, so that incorrect reference mappings are caught and corrected before chunking.
+4. As a developer, I want a Critic LLM to validate each coreference Mention Span, so that incorrect reference mappings are caught and corrected before chunking.
 5. As a database administrator, I want chunk embeddings to be indexed in Neo4j, so that I can run high-performance similarity searches over specific article segments.
 6. As a developer, I want to configure the chunk size and overlap percentage via environment variables, so that I can tune the pipeline's behavior without modifying the code.
 
@@ -38,10 +43,10 @@ We will build a pipeline that:
 ## Implementation Decisions
 
 ### Coreference Resolution Module
-- **Annotator Agent**: A Pydantic AI agent that reads the text of a Source Article and returns an Annotated Article containing XML tags wrapping pronouns (e.g., `<ref entity='Gavin Newsom'>he</ref>`).
-- **Critic Agent**: A Pydantic AI agent that evaluates the Annotated Article. If it finds incorrect or hallucinated references, it returns specific error feedback.
-- **Correction Loop**: A Python wrapper that runs the Annotator, passes the result to the Critic, and if the Critic rejects, feeds the Critic's errors back to the Annotator for a corrected pass (up to 3 retries max before falling back to the original text).
-- **Tag Substitution**: A Python helper that processes the approved Annotated Article and replaces every `<ref entity="Entity Name">pronoun</ref>` tag with `Entity Name`, producing clean plain text for downstream chunking.
+- **Annotator Agent**: A Pydantic AI agent that reads numbered Source Article sentences and returns structured Mention Spans containing the sentence label, verbatim mention, occurrence, and canonical entity name.
+- **Critic Agent**: A Pydantic AI agent that evaluates each Mention Span independently and returns a verdict with specific feedback when it rejects one.
+- **Correction Loop**: A Python wrapper that runs the Annotator, passes the numbered sentences and validated Mention Spans to the Critic, and if the Critic rejects spans, asks the Annotator to correct only those spans.
+- **Mention Span Substitution**: A Python helper that derives each surviving span's character range from the original Source Article and replaces it with its canonical entity name, producing resolved plain text for downstream chunking.
 
 ### Chunking Module
 - **Chonkie-based Chunking**: Splits the resolved text recursively using `chonkie.RecursiveChunker` (hierarchical splitting with delimiters like paragraphs, sentences, and words) and `chonkie.OverlapRefinery` (for prefix overlap).

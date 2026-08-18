@@ -1,5 +1,10 @@
 Labels: completed
 
+> Historical record: the tag-stripping and Structural Identity Check described
+> here belonged to the retired whole-article markup flow. Current coreference
+> resolution uses the Mention Span contract in [Coreference Resolution via
+> Mention Spans](../../coreference-mention-spans/PRD.md).
+
 ## Parent
 
 [.scratch/coreference-reliability/PRD.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/work/projects/coreference-reliability/PRD.md)
