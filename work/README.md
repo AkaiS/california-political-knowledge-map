@@ -17,7 +17,21 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [Coreference Resolution via Mention Spans](projects/coreference-mention-spans/PRD.md), `ready-for-agent` as of 2026-08-17. Replaces whole-article `<ref>` tag rewriting with structured Mention Spans anchored to numbered sentences, and gives the Coreference Critic per-reference verdicts. Broken into seven issues on 2026-08-17; the frontier is below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### Coreference Resolution via Mention Spans frontier
+
+A linear chain. Only issue 01 is takeable now; each later issue is gated by the
+one before it.
+
+- [01 Numbered sentence splitter](projects/coreference-mention-spans/issues/01-numbered-sentence-splitter.md), takeable. Pure utility, no model: sentences with exact character ranges whose concatenation reproduces the article.
+- [02 Mention Span schema, validation, and substitution](projects/coreference-mention-spans/issues/02-mention-span-schema-validation-substitution.md), blocked by 01. The deterministic core — Python derives every character offset.
+- [03 Annotator returns Mention Spans, wired end to end](projects/coreference-mention-spans/issues/03-annotator-returns-mention-spans.md), blocked by 02. The Structural Identity Check leaves the resolution path. Resolution is unchecked until 04.
+- [04 Per-Mention-Span Critic verdicts and targeted retry](projects/coreference-mention-spans/issues/04-per-mention-critic-verdicts.md), blocked by 03. One misread pronoun stops costing its neighbours.
+- [05 Zero-survivor failures and Dead Letter Queue payload](projects/coreference-mention-spans/issues/05-zero-survivor-failures-and-dlq-payload.md), blocked by 04. Three failure types, and the discard proportion that a partial-discard threshold will later be set from.
+- [06 Delete the tag machinery](projects/coreference-mention-spans/issues/06-delete-tag-machinery.md), blocked by 05. The contract step; deletion only.
+- [07 Domain vocabulary and ADR](projects/coreference-mention-spans/issues/07-context-and-adr.md), blocked by 06. `CONTEXT.md` gains **Mention Span**; a new ADR supersedes ADR 0001's markup decision.
 
 ### News Ontology and Graph Population frontier
 
