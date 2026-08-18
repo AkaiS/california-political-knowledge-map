@@ -322,8 +322,13 @@ def test_pipeline_with_concrete_adapters():
             ToolCallPart(
                 tool_name=tool_name,
                 args={
-                    "is_valid": True,
-                    "issues": []
+                    "response": [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "accepted": True,
+                        }
+                    ]
                 },
                 tool_call_id="call_1"
             )

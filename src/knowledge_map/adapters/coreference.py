@@ -6,7 +6,7 @@ from typing import NamedTuple
 from pydantic import TypeAdapter
 from pydantic_ai import Agent
 
-from knowledge_map.schemas import CriticValidation, MentionSpan, MentionSpanDiscard
+from knowledge_map.schemas import CriticVerdict, MentionSpan, MentionSpanDiscard
 from knowledge_map.utils.models import get_ollama_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
@@ -231,6 +231,19 @@ def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:
     )
 
 
+def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
+    """Render Mention Spans as the compact input to the Coreference Critic."""
+
+    return "\n".join(
+        "- "
+        f"sentence_label={mention_span.sentence_label!r}, "
+        f"mention_text={mention_span.mention_text!r}, "
+        f"occurrence={mention_span.occurrence}, "
+        f"canonical_entity_name={mention_span.canonical_entity_name!r}"
+        for mention_span in mention_spans
+    )
+
+
 def get_annotator_agent(defer_check: bool = True) -> Agent:
     model = _get_model()
 
@@ -258,23 +271,26 @@ def get_annotator_agent(defer_check: bool = True) -> Agent:
 
 def get_critic_agent(defer_check: bool = True) -> Agent:
     model = _get_model()
-    
+
     instructions = (
         "You are a Coreference Critic.\n"
-        "Your task is to review an annotated article containing <ref entity=\"Entity Name\">pronoun</ref> tags and validate if the references are correct and accurate.\n\n"
+        "Review the numbered Source Article and the validated Mention Spans "
+        "listed below it. The Source Article appears exactly once. Judge each "
+        "listed Mention Span independently.\n\n"
         "You must:\n"
-        "1. Verify that the `entity` attribute in each <ref> tag is the correct canonical name of the entity being referred to by the pronoun/expression.\n"
-        "2. Check for any hallucinated, incorrect, or mismatched entity assignments (e.g., if a pronoun referring to a school is mapped to a person).\n"
-        "3. Check if any tag is improperly formatted or incomplete.\n\n"
-        "You must return a structured response:\n"
-        "- `is_valid` (boolean): True if all annotations are correct and valid, False otherwise.\n"
-        "- `issues` (list of strings): A list of specific issues or errors found in the annotations. If `is_valid` is True, this list must be empty."
+        "1. Return one verdict for every validated Mention Span;\n"
+        "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
+        "3. set `accepted` to true only when its canonical entity is correct; and\n"
+        "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
+        "Return only the structured list of per-Mention-Span verdicts. Do not "
+        "return an article-level pass/fail value, and do not invent verdicts "
+        "for Mention Spans that were not listed."
     )
-    
+
     return Agent(
         model,
         name="coreference_critic",
-        output_type=CriticValidation,
+        output_type=list[CriticVerdict],
         instructions=instructions,
         defer_model_check=defer_check,
     )
@@ -378,6 +394,101 @@ def _annotator_failure(
     )
 
 
+def _mention_span_identity(mention_span: MentionSpan) -> tuple[str, str, int]:
+    """Return the model-visible identity of a Mention Span."""
+
+    return (
+        mention_span.sentence_label,
+        mention_span.mention_text,
+        mention_span.occurrence,
+    )
+
+
+def _critic_prompt(
+    sentences: Sequence[NumberedSentence],
+    mention_spans: Sequence[MentionSpan],
+) -> str:
+    """Build the one-copy source plus compact Mention Span critic prompt."""
+
+    return (
+        "Review each validated Mention Span against the numbered Source Article. "
+        "The Source Article is included exactly once. Return one verdict per "
+        "listed Mention Span and copy its identity fields exactly.\n\n"
+        "Numbered Source Article:\n"
+        f"{format_numbered_sentences(sentences)}\n\n"
+        "Validated Mention Spans:\n"
+        f"{format_mention_spans(mention_spans)}"
+    )
+
+
+def _retry_prompt(
+    sentences: Sequence[NumberedSentence],
+    rejected_spans: Sequence[tuple[MentionSpan, str]],
+) -> str:
+    """Ask the annotator to replace only the spans rejected by the critic."""
+
+    rejected = "\n".join(
+        "- "
+        f"sentence_label={mention_span.sentence_label!r}, "
+        f"mention_text={mention_span.mention_text!r}, "
+        f"occurrence={mention_span.occurrence}, "
+        f"previous_canonical_entity_name={mention_span.canonical_entity_name!r}\n"
+        f"  Critic reason: {reason}"
+        for mention_span, reason in rejected_spans
+    )
+    return (
+        "Correct only the rejected Mention Spans listed below. Read the numbered "
+        "Source Article for context, return only replacement Mention Spans for "
+        "those targets, and do not return accepted or unrelated Mention Spans.\n\n"
+        "Numbered Source Article:\n"
+        f"{format_numbered_sentences(sentences)}\n\n"
+        "Rejected Mention Spans and Critic Reasons:\n"
+        f"{rejected}"
+    )
+
+
+def _matching_critic_verdicts(
+    mention_spans: Sequence[LocatedMentionSpan],
+    verdicts: Sequence[CriticVerdict],
+) -> dict[tuple[str, str, int], CriticVerdict]:
+    """Keep only verdicts whose identity was sent to the Coreference Critic."""
+
+    sent_identities = {
+        _mention_span_identity(located.mention_span) for located in mention_spans
+    }
+    matching: dict[tuple[str, str, int], CriticVerdict] = {}
+    for verdict in verdicts:
+        identity = _mention_span_identity(verdict)
+        if identity in sent_identities:
+            matching.setdefault(identity, verdict)
+    return matching
+
+
+def _apply_critic_verdicts(
+    located_spans: Sequence[LocatedMentionSpan],
+    verdicts: Sequence[CriticVerdict],
+) -> tuple[list[LocatedMentionSpan], list[tuple[MentionSpan, str]]]:
+    """Separate accepted spans from rejected spans with retry feedback."""
+
+    matching_verdicts = _matching_critic_verdicts(located_spans, verdicts)
+    accepted: list[LocatedMentionSpan] = []
+    rejected: list[tuple[MentionSpan, str]] = []
+
+    for located in located_spans:
+        verdict = matching_verdicts.get(
+            _mention_span_identity(located.mention_span)
+        )
+        if verdict is None:
+            # Fail closed when the Critic omits a Mention Span's verdict.
+            continue
+        if verdict.accepted:
+            accepted.append(located)
+        else:
+            rejected.append((located.mention_span, verdict.reason))
+
+    return accepted, rejected
+
+
 def resolve_coreferences(
     text: str,
     annotator_agent: Agent | None = None,
@@ -385,34 +496,76 @@ def resolve_coreferences(
     max_retries: int = 3,
     raise_on_failure: bool = False
 ) -> str:
-    """Resolve references by locating structured Mention Spans in source text.
-
-    ``critic_agent`` and ``max_retries`` remain accepted for compatibility with
-    the adapter constructor.  Critic review belongs to the next stage of this
-    project and is deliberately not part of this path yet.
-    """
+    """Resolve references through per-Mention-Span Critic verdicts."""
 
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
-    # Keep these parameters in the helper signature until the critic stage is
-    # introduced; neither is used for the Mention Span-only pass.
-    _ = critic_agent, max_retries, raise_on_failure
+    if critic_agent is None:
+        critic_agent = get_critic_agent()
+    # ``raise_on_failure`` remains part of the adapter compatibility surface;
+    # zero-survivor failure handling belongs to the following issue.
+    _ = raise_on_failure
 
     try:
         sentences = split_into_numbered_sentences(text)
-        prompt = (
+        annotation_prompt = (
             "Resolve the references in the following Source Article. The article "
             "is shown as numbered sentences; copy a visible sentence label into "
             "each Mention Span.\n\n"
             "Numbered Source Article:\n"
             f"{format_numbered_sentences(sentences)}"
         )
-        run_result = annotator_agent.run_sync(prompt)
+        run_result = annotator_agent.run_sync(annotation_prompt)
         mention_spans = TypeAdapter(list[MentionSpan]).validate_python(
             run_result.output
         )
-        substitution = substitute_mention_spans(text, sentences, mention_spans)
-        return substitution.resolved_text
+
+        validation = validate_mention_spans(text, sentences, mention_spans)
+        pending_spans = validation.valid_spans
+        accepted_spans: list[LocatedMentionSpan] = []
+        retry_count = 0
+
+        while pending_spans:
+            critic_prompt = _critic_prompt(
+                sentences,
+                [located.mention_span for located in pending_spans],
+            )
+            critic_result = critic_agent.run_sync(critic_prompt)
+            verdicts = TypeAdapter(list[CriticVerdict]).validate_python(
+                critic_result.output
+            )
+            newly_accepted, rejected_spans = _apply_critic_verdicts(
+                pending_spans,
+                verdicts,
+            )
+            accepted_spans.extend(newly_accepted)
+
+            if not rejected_spans or retry_count >= max_retries:
+                break
+
+            retry_count += 1
+            retry_result = annotator_agent.run_sync(
+                _retry_prompt(sentences, rejected_spans)
+            )
+            retry_mentions = TypeAdapter(list[MentionSpan]).validate_python(
+                retry_result.output
+            )
+            retry_targets = {
+                _mention_span_identity(mention_span)
+                for mention_span, _ in rejected_spans
+            }
+            retry_mentions = [
+                mention_span
+                for mention_span in retry_mentions
+                if _mention_span_identity(mention_span) in retry_targets
+            ]
+            pending_spans = validate_mention_spans(
+                text,
+                sentences,
+                retry_mentions,
+            ).valid_spans
+
+        return _substitute_located_mention_spans(text, accepted_spans)
     except CoreferenceResolutionError:
         raise
     except Exception as error:

@@ -1,4 +1,4 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
 class MentionSpan(BaseModel):
@@ -76,6 +76,65 @@ class MentionSpanDiscard(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-class CriticValidation(BaseModel):
-    is_valid: bool = Field(..., description="True if all reference tags are correct and there are no hallucinated or incorrect entities. False if there are issues.")
-    issues: list[str] = Field(default_factory=list, description="A list of specific errors or corrections required for incorrect annotations.")
+class CriticVerdict(BaseModel):
+    """The Coreference Critic's decision for one validated Mention Span."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sentence_label: str = Field(
+        ...,
+        min_length=1,
+        validation_alias=AliasChoices("sentence_label", "sentence"),
+        description="The label of the numbered sentence containing the mention.",
+    )
+    mention_text: str = Field(
+        ...,
+        min_length=1,
+        validation_alias=AliasChoices("mention_text", "mention"),
+        description="The verbatim mention text being judged.",
+    )
+    occurrence: int = Field(
+        default=1,
+        ge=1,
+        validation_alias=AliasChoices("occurrence", "occurrence_number"),
+        description="The one-based occurrence of the mention within its sentence.",
+    )
+    accepted: bool = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "accepted",
+            "is_accepted",
+            "accept",
+            "is_valid",
+        ),
+        description="Whether the Mention Span's canonical entity is correct.",
+    )
+    reason: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("reason", "rejection_reason"),
+        description="A short explanation required when the Mention Span is rejected.",
+    )
+
+    @model_validator(mode="after")
+    def require_rejection_reason(self) -> "CriticVerdict":
+        """Require an explanation whenever the critic rejects a span."""
+
+        if not self.accepted and (self.reason is None or not self.reason.strip()):
+            raise ValueError("reason is required when a Mention Span is rejected")
+        return self
+
+    @property
+    def is_accepted(self) -> bool:
+        """Return the decision using the explicit predicate spelling."""
+
+        return self.accepted
+
+    @property
+    def is_valid(self) -> bool:
+        """Return the decision using the critic's former predicate wording."""
+
+        return self.accepted
+
+
+# The domain name is useful to callers that want to emphasize the judged unit.
+MentionSpanVerdict = CriticVerdict

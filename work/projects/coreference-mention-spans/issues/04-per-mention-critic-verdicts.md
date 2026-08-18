@@ -20,14 +20,14 @@ narrower judgement than before.
 
 **Blocked by:** 03 — Annotator returns Mention Spans, wired end to end.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] The Coreference Critic receives the numbered sentences once and the validated Mention Spans, and does not receive a second copy of the article text.
-- [ ] The Critic returns one verdict per Mention Span, each identifying the Mention Span it judges, an accept or reject decision, and a reason when it rejects.
-- [ ] The article-level pass or fail response shape is removed rather than kept alongside the per-Mention-Span verdicts.
-- [ ] A rejected Mention Span is discarded while accepted Mention Spans in the same article are applied.
-- [ ] A verdict naming a Mention Span that was not sent to the Critic is ignored and cannot alter the resolved text.
-- [ ] A Mention Span that receives no verdict is discarded rather than applied.
-- [ ] A retry re-asks the annotator only for the rejected Mention Spans, supplying the Critic's reasons, and leaves accepted Mention Spans untouched.
-- [ ] Retries remain bounded by the existing retry budget.
-- [ ] A retry that corrects a rejected Mention Span produces resolved text containing both the corrected reference and the originally accepted ones.
+- [x] The Coreference Critic receives the numbered sentences once and the validated Mention Spans, and does not receive a second copy of the article text.
+- [x] The Critic returns one verdict per Mention Span, each identifying the Mention Span it judges, an accept or reject decision, and a reason when it rejects.
+- [x] The article-level pass or fail response shape is removed rather than kept alongside the per-Mention-Span verdicts.
+- [x] A rejected Mention Span is discarded while accepted Mention Spans in the same article are applied.
+- [x] A verdict naming a Mention Span that was not sent to the Critic is ignored and cannot alter the resolved text.
+- [x] A Mention Span that receives no verdict is discarded rather than applied.
+- [x] A retry re-asks the annotator only for the rejected Mention Spans, supplying the Critic's reasons, and leaves accepted Mention Spans untouched.
+- [x] Retries remain bounded by the existing retry budget.
+- [x] A retry that corrects a rejected Mention Span produces resolved text containing both the corrected reference and the originally accepted ones.
