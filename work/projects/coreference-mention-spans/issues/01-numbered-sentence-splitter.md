@@ -17,14 +17,14 @@ Nothing consumes this yet. It is a pure module, verifiable on its own.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+Labels: completed
 
-- [ ] Given a Source Article's content, the utility returns sentences in document order, each with a label, its text, and its start and end character positions in the content.
-- [ ] Concatenating every returned sentence's text reproduces the input content exactly, character for character. This is asserted in the code, not only in tests.
-- [ ] Each returned sentence's text equals the content sliced by that sentence's recorded range.
-- [ ] A whitespace-only fragment does not appear as its own sentence; its characters belong to the preceding sentence.
-- [ ] A fragment shorter than the configured minimum does not appear as its own sentence; its characters belong to the preceding sentence.
-- [ ] The first sentence starts at position zero and the last ends at the length of the content, with no gaps between consecutive sentences.
-- [ ] The concatenation invariant holds over content containing newlines, blank lines, abbreviations such as a title ending in a period, quotation marks, and parentheses.
-- [ ] Empty content returns an empty list rather than raising.
-- [ ] Content with no sentence delimiter at all returns exactly one sentence spanning the whole content.
+- [x] Given a Source Article's content, the utility returns sentences in document order, each with a label, its text, and its start and end character positions in the content.
+- [x] Concatenating every returned sentence's text reproduces the input content exactly, character for character. This is asserted in the code, not only in tests.
+- [x] Each returned sentence's text equals the content sliced by that sentence's recorded range.
+- [x] A whitespace-only fragment does not appear as its own sentence; its characters belong to the preceding sentence.
+- [x] A fragment shorter than the configured minimum does not appear as its own sentence; its characters belong to the preceding sentence.
+- [x] The first sentence starts at position zero and the last ends at the length of the content, with no gaps between consecutive sentences.
+- [x] The concatenation invariant holds over content containing newlines, blank lines, abbreviations such as a title ending in a period, quotation marks, and parentheses.
+- [x] Empty content returns an empty list rather than raising.
+- [x] Content with no sentence delimiter at all returns exactly one sentence spanning the whole content.
