@@ -51,7 +51,7 @@ class EmbeddingAdapter(Protocol):
         ...
 
 class CoreferenceAdapter(Protocol):
-    def resolve(self, content: str) -> str:
+    def resolve(self, content: str) -> CoreferenceResolutionRun:
         ...
 
     def health_check(self) -> bool:
@@ -78,7 +78,6 @@ class DeadLetterQueueAdapter(Protocol):
         url: str,
         title: str,
         original_text: str,
-        annotated_text: str,
         validation_issues: List[str],
         failure_type: str,
         retry_count: int,
@@ -207,7 +206,8 @@ class StoryPipeline:
         try:
             # 1. Resolve coreferences
             logger.info("Resolving coreferences...")
-            resolved_text = self._execute_with_retry("coreference", self.coreference_adapter.resolve, article.content)
+            resolution_run = self._execute_with_retry("coreference", self.coreference_adapter.resolve, article.content)
+            resolved_text = resolution_run.resolved_text
 
             # 2. Chunking
             logger.info("Chunking text...")
@@ -250,11 +250,6 @@ class StoryPipeline:
                 chunks=chunks,
                 embeddings=embeddings,
                 extractions=extractions,
-                resolution_run=getattr(
-                    self.coreference_adapter,
-                    "last_run",
-                    None,
-                ),
             )
         except Exception as e:
             self._handle_pipeline_failure(e, article, dry_run)
@@ -273,7 +268,6 @@ class StoryPipeline:
 
         if isinstance(e, (CoreferenceResolutionError, ExtractionError)):
             error_cat = "coreference" if isinstance(e, CoreferenceResolutionError) else "extraction"
-            annotated = getattr(e, "annotated_text", "")
             resolution_run = getattr(e, "resolution_run", None)
             dlq_id = "N/A"
             if self.dlq_adapter:
@@ -281,7 +275,6 @@ class StoryPipeline:
                     url=article.url,
                     title=article.title or "",
                     original_text=e.original_text,
-                    annotated_text=annotated,
                     validation_issues=e.validation_issues,
                     failure_type=e.failure_type,
                     retry_count=e.retry_count,

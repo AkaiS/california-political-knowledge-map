@@ -10,6 +10,16 @@ from chonkie import SentenceChunker
 DEFAULT_MIN_SENTENCE_CHARACTERS = 12
 
 
+class SentenceRangeInvariantError(ValueError):
+    """A sentence table failed the positional invariant it must uphold.
+
+    The sentence table is the only source of positional truth for Mention Span
+    substitution, so a broken invariant here would silently corrupt resolved
+    content.  These checks are load-bearing and must survive ``python -O``,
+    which is why they are raised rather than asserted.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class NumberedSentence:
     """A contiguous sentence range in Source Article content.
@@ -23,18 +33,6 @@ class NumberedSentence:
     text: str
     start_index: int
     end_index: int
-
-    @property
-    def start(self) -> int:
-        """Return the sentence's inclusive start position."""
-
-        return self.start_index
-
-    @property
-    def end(self) -> int:
-        """Return the sentence's exclusive end position."""
-
-        return self.end_index
 
 
 def split_into_numbered_sentences(
@@ -74,13 +72,17 @@ def split_into_numbered_sentences(
     else:
         raw_ranges = [(chunk.start_index, chunk.end_index) for chunk in raw_chunks]
 
-        assert "".join(
-            content[start:end] for start, end in raw_ranges
-        ) == content
-        assert all(
+        if "".join(content[start:end] for start, end in raw_ranges) != content:
+            raise SentenceRangeInvariantError(
+                "raw sentence ranges must concatenate back to the exact content"
+            )
+        if not all(
             chunk.text == content[chunk.start_index : chunk.end_index]
             for chunk in raw_chunks
-        )
+        ):
+            raise SentenceRangeInvariantError(
+                "each raw sentence's text must equal the content at its range"
+            )
 
     merged_ranges: list[tuple[int, int]] = []
     leading_fold_start: int | None = None
@@ -122,23 +124,33 @@ def split_into_numbered_sentences(
         for index, (start, end) in enumerate(merged_ranges, start=1)
     ]
 
-    # These are deliberate runtime assertions: the sentence table is the
-    # positional source of truth for later Mention Span substitution.
-    assert sentences[0].start_index == 0
-    assert sentences[-1].end_index == len(content)
-    assert all(
+    # These are deliberate runtime checks: the sentence table is the positional
+    # source of truth for later Mention Span substitution.
+    if sentences[0].start_index != 0:
+        raise SentenceRangeInvariantError(
+            "the first sentence must start at the beginning of the content"
+        )
+    if sentences[-1].end_index != len(content):
+        raise SentenceRangeInvariantError(
+            "the last sentence must end at the end of the content"
+        )
+    if not all(
         sentence.start_index == previous.end_index
         for previous, sentence in pairwise(sentences)
-    )
-    assert all(
+    ):
+        raise SentenceRangeInvariantError(
+            "sentence ranges must be contiguous with no gap or overlap"
+        )
+    if not all(
         sentence.text == content[sentence.start_index : sentence.end_index]
         for sentence in sentences
-    )
-    assert "".join(sentence.text for sentence in sentences) == content
+    ):
+        raise SentenceRangeInvariantError(
+            "each sentence's text must equal the content at its range"
+        )
+    if "".join(sentence.text for sentence in sentences) != content:
+        raise SentenceRangeInvariantError(
+            "sentence texts must concatenate back to the exact content"
+        )
 
     return sentences
-
-
-# Keep the shorter name available for callers that describe the operation as
-# "numbering" rather than "splitting".
-split_numbered_sentences = split_into_numbered_sentences

@@ -63,7 +63,7 @@ class _OverriddenAdapter(PydanticAICoreferenceAdapter):
         self._annotator_model = FunctionModel(mock_annotator)
         self._critic_model = FunctionModel(mock_critic)
 
-    def resolve(self, content: str) -> str:
+    def resolve(self, content: str):
         with (
             self.annotator_agent.override(model=self._annotator_model),
             self.critic_agent.override(model=self._critic_model),
@@ -79,7 +79,6 @@ def test_empty_annotator_output_is_a_distinct_zero_survivor_failure():
 
     error = exc_info.value
     assert error.failure_type == "no_mentions_returned"
-    assert adapter.last_run is error.resolution_run
     assert error.resolution_run.outcomes == []
     assert error.resolution_run.discarded_proportion == 0.0
     assert error.resolution_run.sentences[0].text == "Gavin Newsom signed a bill."
@@ -102,9 +101,10 @@ def test_validation_discard_of_every_span_has_its_own_failure_type():
 
     error = exc_info.value
     assert error.failure_type == "all_mentions_discarded"
-    assert [outcome.outcome for outcome in error.outcomes] == ["discarded"]
-    assert error.outcomes[0].stage == "validation"
-    assert error.discarded_proportion == 1.0
+    run = error.resolution_run
+    assert [outcome.outcome for outcome in run.outcomes] == ["discarded"]
+    assert run.outcomes[0].stage == "validation"
+    assert run.discarded_proportion == 1.0
 
 
 def test_critic_rejection_of_every_valid_span_has_its_own_failure_type():
@@ -131,10 +131,11 @@ def test_critic_rejection_of_every_valid_span_has_its_own_failure_type():
 
     error = exc_info.value
     assert error.failure_type == "all_mentions_rejected"
-    assert [outcome.outcome for outcome in error.outcomes] == ["rejected"]
-    assert error.outcomes[0].stage == "critic"
-    assert error.outcomes[0].reason == "The sentence refers to Gavin Newsom."
-    assert error.discarded_proportion == 1.0
+    run = error.resolution_run
+    assert [outcome.outcome for outcome in run.outcomes] == ["rejected"]
+    assert run.outcomes[0].stage == "critic"
+    assert run.outcomes[0].reason == "The sentence refers to Gavin Newsom."
+    assert run.discarded_proportion == 1.0
 
 
 def test_partial_discard_completes_and_records_outcomes_and_proportion():
@@ -161,16 +162,14 @@ def test_partial_discard_completes_and_records_outcomes_and_proportion():
         ],
     )
 
-    resolved = adapter.resolve("Gavin Newsom signed a bill. He thanked her.")
+    run = adapter.resolve("Gavin Newsom signed a bill. He thanked her.")
 
-    assert resolved == "Gavin Newsom signed a bill. Gavin Newsom thanked her."
-    assert adapter.last_run is not None
-    assert [outcome.outcome for outcome in adapter.last_run.outcomes] == [
+    assert run.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom thanked her."
+    assert [outcome.outcome for outcome in run.outcomes] == [
         "discarded",
         "accepted",
     ]
-    assert adapter.last_run.discarded_proportion == 0.5
-    assert adapter.last_run.mention_span_outcomes == adapter.last_run.outcomes
+    assert run.discarded_proportion == 0.5
 
 
 class _Database:
@@ -278,9 +277,23 @@ def test_zero_survivor_failures_reach_failed_dlq_with_replayable_payload(
     files = list((tmp_path / "dlq" / "coreference").glob("*.json"))
     assert len(files) == 1
     payload = json.loads(files[0].read_text(encoding="utf-8"))
-    assert payload["annotated_text"] == ""
+    assert "annotated_text" not in payload
     assert payload["failure_type"] == failure_type
-    assert payload["sentences"] == payload["resolution_run"]["sentences"]
-    assert payload["mention_spans"] == payload["resolution_run"]["mention_spans"]
-    assert payload["mention_span_outcomes"] == payload["resolution_run"]["outcomes"]
-    assert payload["discarded_proportion"] == payload["resolution_run"]["discarded_proportion"]
+    assert payload["original_text"] == article.content
+    assert payload["validation_issues"]
+    # The run is written once, as a single nested record.
+    assert set(payload) == {
+        "url",
+        "title",
+        "original_text",
+        "validation_issues",
+        "failure_type",
+        "timestamp",
+        "retry_count",
+        "metadata",
+        "resolution_run",
+    }
+    run_payload = payload["resolution_run"]
+    assert run_payload["failure_type"] == failure_type
+    assert run_payload["sentences"][0]["label"] == "1"
+    assert len(run_payload["mention_spans"]) == len(mentions)
