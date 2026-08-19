@@ -1,5 +1,7 @@
 # Bind Evaluation Gold Sets to one task contract
 
+Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+
 The membership portion of this decision is amended below: an expected output is optional, and compatibility is enforced at the construction factory rather than by the aggregate's own validators.
 
 An Evaluation Gold Set version binds one exact Evaluation Task Contract and contains only exact Evaluation Case revisions compatible with it. This keeps the full Gold Set coherent, executable, and aggregatable for one component operation; subset selection may vary splits, tags, and Evaluation Requirement coverage, but cannot conceal task-schema incompatibility. Cases for different component operations belong to distinct Gold Sets even when they share source artifacts or provenance, while legitimate shape variation is modeled explicitly inside the shared schemas.

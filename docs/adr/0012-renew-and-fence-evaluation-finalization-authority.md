@@ -1,5 +1,7 @@
 # Renew and fence Evaluation Finalization authority
 
+Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+
 This decision refines the execution-lease portion of ADR 0005. Each Evaluation Finalization Attempt must continuously hold one renewable, expiring authority claim. The Evaluation Ledger owns time and atomically permits renewal, report checkpointing, and completion only for the matching, still-live claim. Expiry irreversibly ends an attempt; it cannot reacquire authority, while a new attempt may replace the expired claim and resume from terminal evidence.
 
 A heartbeat preserves authority throughout report materialization, evaluator invocation, checkpointing, release-gate evaluation, and completion. Successful completion atomically clears the claim; early release is best-effort cleanup because expiry remains the recovery boundary. Recovery records a factual Evaluation Run lifecycle issue, while worker-local renewal failures remain operational telemetry.

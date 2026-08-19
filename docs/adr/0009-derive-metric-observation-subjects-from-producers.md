@@ -1,3 +1,5 @@
 # Derive Metric Observation subjects from their producers
 
+Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+
 Each Evaluation Metric Observation references only the evaluator execution that produced it, and its measured subject is derived through that producer: Case Metric Observation → Case Evaluator Execution → Evaluation Case Result, or Run Metric Observation → Report Evaluator Execution → Evaluation Run. Separate case- and run-observation tables preserve subject type, while indexed joins support subject and cross-run queries. We chose this normalized ownership over independently storing both subject and producer foreign keys because duplicated ownership permits impossible cross-case or cross-run attribution unless every write also satisfies a redundant composite constraint.
