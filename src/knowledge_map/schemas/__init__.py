@@ -15,7 +15,6 @@ from .coreference import (
     MentionSpan,
     MentionSpanDiscard,
     MentionSpanOutcome,
-    MentionSpanVerdict,
     NumberedSentenceRecord,
 )
 from .pipeline import SourceArticle, PipelineResult, ArticleStatus, StoryLink

@@ -18,7 +18,6 @@ class LocalFileDLQAdapter:
         url: str,
         title: str,
         original_text: str,
-        annotated_text: str,
         validation_issues: list[str],
         failure_type: str,
         retry_count: int,
@@ -56,7 +55,6 @@ class LocalFileDLQAdapter:
             "url": url,
             "title": title,
             "original_text": original_text,
-            "annotated_text": annotated_text,
             "validation_issues": validation_issues,
             "failure_type": failure_type,
             "timestamp": timestamp,
@@ -65,23 +63,9 @@ class LocalFileDLQAdapter:
         }
 
         if resolution_run is not None:
-            run_payload = resolution_run.model_dump(mode="json")
-            # Keep the run both as a coherent replayable record and as
-            # top-level fields for operators who inspect the existing DLQ
-            # documents without knowing the new nested shape.
-            payload.update(
-                {
-                    "resolution_run": run_payload,
-                    "sentences": run_payload["sentences"],
-                    "numbered_sentences": run_payload["sentences"],
-                    "mention_spans": run_payload["mention_spans"],
-                    "mention_span_outcomes": run_payload["outcomes"],
-                    "outcomes": run_payload["outcomes"],
-                    "discarded_proportion": run_payload[
-                        "discarded_proportion"
-                    ],
-                }
-            )
+            # One nested record: the run is replayable as a whole, so its parts
+            # are not also duplicated as top-level keys.
+            payload["resolution_run"] = resolution_run.model_dump(mode="json")
         
         try:
             # Ensure the directory exists

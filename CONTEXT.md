@@ -163,6 +163,10 @@ _Avoid_: Coreference tag, tagged reference, annotation
 An LLM agent that returns an accept-or-reject verdict for each Mention Span and a reason for rejected spans, so only semantically supported references are applied before chunking.
 _Avoid_: Critic agent, checker, validator
 
+**Coreference Resolution Run**:
+The outcome of resolving one Source Article: the resolved text, the numbered sentences shown to the annotator, every Mention Span the model returned, and each Mention Span's outcome. It is what the Coreference Adapter returns, what a coreference failure carries, and what the Dead Letter Queue records.
+_Avoid_: Resolution result, coref run, annotation run
+
 **Story Pipeline**:
 A synchronous pipeline coordinator that orchestrates the coreference resolution, chunking, embedding generation, entity extraction, and persistence steps for a Source Article.
 _Avoid_: Ingestion runner, story processor
@@ -176,7 +180,7 @@ The adapter protocol and its concrete implementation that handles vector embeddi
 _Avoid_: Embedder helper, vector utility
 
 **Coreference Adapter**:
-The adapter protocol and its concrete implementation that resolves Mention Spans in a Source Article and returns the resulting text to the Story Pipeline.
+The adapter protocol and its concrete implementation that resolves Mention Spans in a Source Article and returns the resolved text together with each Mention Span's outcome to the Story Pipeline.
 _Avoid_: Resolver wrapper, coref helper
 
 **Entity Extraction Adapter**:

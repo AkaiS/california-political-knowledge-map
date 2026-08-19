@@ -2,7 +2,6 @@ from typing import Optional, List
 from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .chunking import ArticleChunk
-from .coreference import CoreferenceResolutionRun, MentionSpanOutcome
 from .extraction import ExtractionResult
 
 class ArticleStatus(StrEnum):
@@ -41,33 +40,3 @@ class PipelineResult(BaseModel):
     chunks: List[ArticleChunk] = Field(..., description="The list of chunks generated from the resolved text")
     embeddings: List[List[float]] = Field(..., description="The vector embeddings corresponding to each chunk")
     extractions: List[ExtractionResult] = Field(..., description="The list of extracted entities and relationships per chunk")
-    resolution_run: Optional[CoreferenceResolutionRun] = Field(
-        default=None,
-        description="Per-Mention-Span outcomes and discard metrics for coreference resolution",
-    )
-
-    @property
-    def coreference_run(self) -> CoreferenceResolutionRun | None:
-        """Return the coreference run using the component-oriented name."""
-
-        return self.resolution_run
-
-    @property
-    def discarded_proportion(self) -> float | None:
-        """Return the coreference discard metric when one was recorded."""
-
-        return (
-            self.resolution_run.discarded_proportion
-            if self.resolution_run is not None
-            else None
-        )
-
-    @property
-    def mention_span_outcomes(self) -> list[MentionSpanOutcome]:
-        """Return per-Mention-Span outcomes from the resolution run."""
-
-        return (
-            self.resolution_run.outcomes
-            if self.resolution_run is not None
-            else []
-        )

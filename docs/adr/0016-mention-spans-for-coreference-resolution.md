@@ -22,5 +22,7 @@ portions of ADR 0001; its Article Chunking and Neo4j decisions remain in force.
 The model never re-emits the Source Article or calculates a position. Text
 outside accepted Mention Spans remains unchanged, and a rejected span can be
 discarded without costing its neighbours. Per-Mention-Span verdicts and
-outcomes are available for audit and future evaluation, while the adapter
-continues to return resolved text to the existing Story Pipeline contract.
+outcomes are available for audit and future evaluation. The adapter returns
+the resolved text together with each Mention Span's outcome rather than text
+alone, so the Story Pipeline and the Dead Letter Queue record what happened to
+every reference; nothing downstream of resolution changes.
