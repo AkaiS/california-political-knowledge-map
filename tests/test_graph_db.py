@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 from knowledge_map.schemas import (
     ArticleChunk,
@@ -784,17 +785,20 @@ def test_bill_names_with_the_same_resolution_share_one_primary_key():
         Node(name="Senate Bill 623", label="Bill"),
         Node(name="ll 623", label="Bill"),
     ])
-    resolution = BillSessionResolution(
-        number="SB 623", session="2019-2020", session_verified=True
+    resolution_map = resolve_bill_sessions(
+        SourceArticle(
+            url="https://example.com/uber-ballot-measures",
+            title="Uber Ballot Measures",
+            published_date="2020-04-10T12:00:00Z",
+            content="article content",
+        ),
+        [extraction],
     )
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        BillSessionResolutions(by_name={
-            "Senate Bill 623": resolution,
-            "ll 623": resolution,
-        }),
+        resolution_map,
     )
 
     node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
@@ -802,7 +806,11 @@ def test_bill_names_with_the_same_resolution_share_one_primary_key():
         "Bill:2019-2020:sb-623",
         "Bill:2019-2020:sb-623",
     ]
-    assert all(call[1]["properties"] == resolution.graph_properties() for call in node_calls)
+    assert all(
+        call[1]["properties"]
+        == resolution_map.get("Senate Bill 623").graph_properties()
+        for call in node_calls
+    )
 
 
 def _event_call(event_properties: dict, published_date: str | None):

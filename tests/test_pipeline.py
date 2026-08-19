@@ -21,7 +21,7 @@ from knowledge_map.core.pipeline import (
     CoreferenceAdapter,
     EntityExtractionAdapter,
 )
-from knowledge_map.core.bill_sessions import parse_bill_designation
+from knowledge_map.core.bill_sessions import parse_bill_designation, resolve_bill_sessions
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
@@ -236,6 +236,7 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     extraction = MockEntityExtractionAdapter()
     extraction.extract = lambda _text: ExtractionResult(nodes=[
         Node(name="Senate Bill 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
         Node(name="sb623", label="Bill"),
         Node(name="sb54", label="Bill"),
         Node(name="AB 99", label="Bill"),
@@ -282,6 +283,9 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         "Senate Bill 623": BillSessionResolution(
             number="SB 623", session="2019-2020", session_verified=True
         ),
+        "ll 623": BillSessionResolution(
+            number="SB 623", session="2019-2020", session_verified=True
+        ),
         "sb623": BillSessionResolution(
             number="SB 623", session="2019-2020", session_verified=True
         ),
@@ -297,6 +301,66 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         "AB 1": BillSessionResolution(number="AB 1", needs_review=True),
         "the bill": BillSessionResolution(needs_review=True),
         "Richardson's legislation": BillSessionResolution(needs_review=True),
+    })
+
+
+def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    extraction.extract = lambda _text: ExtractionResult(nodes=[
+        Node(name="SB 623", label="Bill"),
+        Node(name="AB 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
+    ])
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="https://example.com/ambiguous-bills",
+        title="Ambiguous Bills",
+        published_date="2026-04-10T12:00:00Z",
+        content="one chunk",
+    )
+
+    pipeline.run(article)
+
+    assert db.extractions[0][2] == BillSessionResolutions(by_name={
+        "AB 623": BillSessionResolution(
+            number="AB 623", session="2025-2026", session_inferred=True
+        ),
+        "SB 623": BillSessionResolution(
+            number="SB 623", session="2025-2026", session_inferred=True
+        ),
+        "ll 623": BillSessionResolution(needs_review=True),
+    })
+
+
+def test_bill_designation_recovery_is_independent_of_extraction_order():
+    article = SourceArticle(
+        url="https://example.com/order-independent",
+        title="Order Independent",
+        published_date="2026-04-10T12:00:00Z",
+        content="article content",
+    )
+    extractions = [
+        ExtractionResult(nodes=[Node(name="ll 623", label="Bill")]),
+        ExtractionResult(nodes=[Node(name="Senate Bill 623", label="Bill")]),
+    ]
+
+    forward = resolve_bill_sessions(article, extractions)
+    reverse = resolve_bill_sessions(article, list(reversed(extractions)))
+
+    assert forward == reverse == BillSessionResolutions(by_name={
+        "Senate Bill 623": BillSessionResolution(
+            number="SB 623", session="2025-2026", session_inferred=True
+        ),
+        "ll 623": BillSessionResolution(
+            number="SB 623", session="2025-2026", session_inferred=True
+        ),
     })
 
 

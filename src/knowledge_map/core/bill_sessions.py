@@ -18,6 +18,7 @@ _BILL_DESIGNATION = re.compile(
     r"\s*[- ]?\s*(?P<digits>\d+)\b",
     re.IGNORECASE,
 )
+_DIGITS = re.compile(r"\d+")
 
 
 def parse_bill_url(url: str) -> tuple[str, str, str] | None:
@@ -62,6 +63,24 @@ def _publication_session(published_date: str | None) -> str | None:
     return f"{start}-{start + 1}"
 
 
+def _recover_bill_designation(
+    name: str,
+    article_designations: set[str],
+) -> str | None:
+    """Recover one designation from the digits in an otherwise unparsed name."""
+    name_numbers = {
+        digits.lstrip("0") or "0" for digits in _DIGITS.findall(name)
+    }
+    matches = {
+        designation
+        for designation in article_designations
+        if designation.rsplit(" ", maxsplit=1)[1] in name_numbers
+    }
+    if len(matches) != 1:
+        return None
+    return next(iter(matches))
+
+
 def resolve_bill_sessions(
     article: SourceArticle,
     extractions: list[ExtractionResult],
@@ -80,10 +99,18 @@ def resolve_bill_sessions(
         for node in extraction.nodes
         if node.label == "Bill"
     }
+    parsed_designations = {
+        name: parse_bill_designation(name) for name in bill_names
+    }
+    article_designations = {
+        designation for designation in parsed_designations.values() if designation
+    }
     inferred_session = _publication_session(article.published_date)
     resolved: dict[str, BillSessionResolution] = {}
     for name in sorted(bill_names):
-        designation = parse_bill_designation(name)
+        designation = parsed_designations[name]
+        if designation is None:
+            designation = _recover_bill_designation(name, article_designations)
         if designation is None:
             resolved[name] = BillSessionResolution(needs_review=True)
             continue
