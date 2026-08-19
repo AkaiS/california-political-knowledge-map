@@ -1,6 +1,6 @@
 # 03 — Every extracted Bill gets a resolution
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -36,21 +36,21 @@ asks of an article-scope resolver.
 
 ## Acceptance criteria
 
-- [ ] Every `Bill` node in an article's extractions has an entry in the
+- [x] Every `Bill` node in an article's extractions has an entry in the
       resolution map, keyed by the node's extracted name.
-- [ ] A name yielding no Bill Designation resolves with no designation, no
+- [x] A name yielding no Bill Designation resolves with no designation, no
       session, and `needs_review` set, and the node is written with those flags.
-- [ ] `the bill` and `Richardson's legislation` are countable by a query on
+- [x] `the bill` and `Richardson's legislation` are countable by a query on
       `needs_review`, where today they carry a null.
-- [ ] The Graph Database Adapter performs no bill parsing and no test for a
+- [x] The Graph Database Adapter performs no bill parsing and no test for a
       missing resolution.
-- [ ] The resolution supplies every session-related property the `Bill` node is
+- [x] The resolution supplies every session-related property the `Bill` node is
       written with, including the Bill Designation.
-- [ ] Two names in one Source Article resolving to the same Bill Designation and
+- [x] Two names in one Source Article resolving to the same Bill Designation and
       session mint one key.
-- [ ] The adapter test asserting that a `Bill` without a resolution gets no
+- [x] The adapter test asserting that a `Bill` without a resolution gets no
       session properties is rewritten to the inverted contract, not deleted.
-- [ ] The resolution map is still built once per Source Article and shared
+- [x] The resolution map is still built once per Source Article and shared
       across every chunk, as issue 07 established.
 
 ## Blocked by

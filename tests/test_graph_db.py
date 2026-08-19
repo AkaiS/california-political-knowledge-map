@@ -716,8 +716,8 @@ def test_bill_session_participates_in_node_primary_key():
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(
+        BillSessionResolutions(by_name={
+            "Assembly Bill 218": BillSessionResolution(
                 number="AB 218", session="2019-2020", session_verified=True
             )
         }),
@@ -725,8 +725,8 @@ def test_bill_session_participates_in_node_primary_key():
     manager.ingest_chunk_extraction(
         "article#chunk_1",
         extraction,
-        BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(
+        BillSessionResolutions(by_name={
+            "Assembly Bill 218": BillSessionResolution(
                 number="AB 218", session="2025-2026", session_verified=True
             )
         }),
@@ -741,9 +741,9 @@ def test_bill_session_participates_in_node_primary_key():
     assert node_calls[0][1]["properties"]["number"] == "AB 218"
 
 
-def test_a_bill_without_a_resolution_gets_no_session_properties():
-    # An unresolved number is not a resolution to nothing: the adapter writes no
-    # session flags at all rather than stamping the Bill as unreviewed.
+def test_a_bill_without_a_designation_gets_the_resolution_properties():
+    # Resolution explicitly represents an unidentifiable Bill, so the adapter
+    # writes the review flag instead of treating it as absent from the map.
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_tx = MagicMock()
@@ -751,22 +751,58 @@ def test_a_bill_without_a_resolution_gets_no_session_properties():
     mock_session.execute_write.side_effect = lambda func: func(mock_tx)
     manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
     extraction = ExtractionResult(nodes=[
-        Node(name="Assembly Bill 218", label="Bill"),
+        Node(name="the bill", label="Bill"),
     ])
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        BillSessionResolutions(by_number={
-            "SB 54": BillSessionResolution(
-                number="SB 54", session="2017-2018", session_verified=True
-            )
+        BillSessionResolutions(by_name={
+            "the bill": BillSessionResolution(needs_review=True)
         }),
     )
 
     node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
-    assert node_calls[0][1]["properties"] == {}
-    assert node_calls[0][1]["node_id"] == "Bill:unresolved:ab-218"
+    assert node_calls[0][1]["properties"] == {
+        "number": None,
+        "session": None,
+        "session_verified": False,
+        "session_inferred": False,
+        "needs_review": True,
+    }
+    assert node_calls[0][1]["node_id"] == "Bill:unresolved:the-bill"
+
+
+def test_bill_names_with_the_same_resolution_share_one_primary_key():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Senate Bill 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
+    ])
+    resolution = BillSessionResolution(
+        number="SB 623", session="2019-2020", session_verified=True
+    )
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        BillSessionResolutions(by_name={
+            "Senate Bill 623": resolution,
+            "ll 623": resolution,
+        }),
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert [call[1]["node_id"] for call in node_calls] == [
+        "Bill:2019-2020:sb-623",
+        "Bill:2019-2020:sb-623",
+    ]
+    assert all(call[1]["properties"] == resolution.graph_properties() for call in node_calls)
 
 
 def _event_call(event_properties: dict, published_date: str | None):

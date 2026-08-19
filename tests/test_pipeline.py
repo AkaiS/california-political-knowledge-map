@@ -241,6 +241,8 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         Node(name="AB 99", label="Bill"),
         Node(name="Senate Bill 1", label="Bill"),
         Node(name="AB 1", label="Bill"),
+        Node(name="the bill", label="Bill"),
+        Node(name="Richardson's legislation", label="Bill"),
     ])
     pipeline = StoryPipeline(
         db_adapter=db,
@@ -276,20 +278,25 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     first_map = db.extractions[0][2]
     assert db.extractions[1][2] is first_map
     assert isinstance(first_map, BillSessionResolutions)
-    assert first_map == BillSessionResolutions(by_number={
-        "SB 623": BillSessionResolution(
+    assert first_map == BillSessionResolutions(by_name={
+        "Senate Bill 623": BillSessionResolution(
             number="SB 623", session="2019-2020", session_verified=True
         ),
-        "SB 54": BillSessionResolution(
+        "sb623": BillSessionResolution(
+            number="SB 623", session="2019-2020", session_verified=True
+        ),
+        "sb54": BillSessionResolution(
             number="SB 54", session="2017-2018", session_verified=True
         ),
         "AB 99": BillSessionResolution(
             number="AB 99", session="2025-2026", session_inferred=True
         ),
-        "SB 1": BillSessionResolution(
+        "Senate Bill 1": BillSessionResolution(
             number="SB 1", session="2025-2026", session_inferred=True
         ),
         "AB 1": BillSessionResolution(number="AB 1", needs_review=True),
+        "the bill": BillSessionResolution(needs_review=True),
+        "Richardson's legislation": BillSessionResolution(needs_review=True),
     })
 
 

@@ -66,7 +66,7 @@ def resolve_bill_sessions(
     article: SourceArticle,
     extractions: list[ExtractionResult],
 ) -> BillSessionResolutions:
-    """Resolve every extracted bill number once for an entire Source Article."""
+    """Resolve every extracted Bill once for an entire Source Article."""
     linked_sessions: dict[str, set[str]] = {}
     for link in article.links:
         parsed = parse_bill_url(link.url)
@@ -74,33 +74,37 @@ def resolve_bill_sessions(
             session, _chamber, number = parsed
             linked_sessions.setdefault(number, set()).add(session)
 
-    bill_designations = {
-        designation
+    bill_names = {
+        node.name
         for extraction in extractions
         for node in extraction.nodes
         if node.label == "Bill"
-        if (designation := parse_bill_designation(node.name))
     }
     inferred_session = _publication_session(article.published_date)
     resolved: dict[str, BillSessionResolution] = {}
-    for designation in bill_designations:
+    for name in sorted(bill_names):
+        designation = parse_bill_designation(name)
+        if designation is None:
+            resolved[name] = BillSessionResolution(needs_review=True)
+            continue
+
         sessions = linked_sessions.get(designation, set())
         if len(sessions) == 1:
-            resolved[designation] = BillSessionResolution(
+            resolved[name] = BillSessionResolution(
                 number=designation,
                 session=next(iter(sessions)),
                 session_verified=True,
             )
         elif len(sessions) > 1:
-            resolved[designation] = BillSessionResolution(
+            resolved[name] = BillSessionResolution(
                 number=designation,
                 needs_review=True,
             )
         else:
-            resolved[designation] = BillSessionResolution(
+            resolved[name] = BillSessionResolution(
                 number=designation,
                 session=inferred_session,
                 session_inferred=inferred_session is not None,
                 needs_review=inferred_session is None,
             )
-    return BillSessionResolutions(by_number=resolved)
+    return BillSessionResolutions(by_name=resolved)

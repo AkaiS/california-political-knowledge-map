@@ -6,10 +6,9 @@ adapter as :class:`BillSessionResolutions`: the properties themselves plus the
 flags that say how the session was arrived at, which the adapter writes onto the
 Bill and folds into its primary key.
 
-A number absent from the resolution map is not the same as a number resolved to
-nothing. The former means no Bill by that number was extracted, and the adapter
-writes no session properties at all; the latter is a resolution that failed and
-carries its own flags saying so.
+The map is keyed by the extracted Bill name. That lets resolution represent a
+Bill whose name did not yield a designation as explicitly as one that did: the
+failed resolution carries no designation or session and sets ``needs_review``.
 """
 
 from pydantic import BaseModel, Field
@@ -33,12 +32,12 @@ class BillSessionResolution(BaseModel):
 
 
 class BillSessionResolutions(BaseModel):
-    """Every Bill Designation resolved for one Source Article, keyed by designation."""
+    """Every extracted Bill resolved for one Source Article, keyed by its name."""
 
-    by_number: dict[str, BillSessionResolution] = Field(default_factory=dict)
+    by_name: dict[str, BillSessionResolution] = Field(default_factory=dict)
 
-    def get(self, number: str | None) -> BillSessionResolution | None:
-        """Return the resolution for ``number``, or ``None`` if it has none."""
-        if number is None:
+    def get(self, name: str | None) -> BillSessionResolution | None:
+        """Return the resolution for ``name``, or ``None`` if it has none."""
+        if name is None:
             return None
-        return self.by_number.get(number)
+        return self.by_name.get(name)
