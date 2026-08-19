@@ -199,8 +199,12 @@ _Avoid_: Denormalized edge, direct edge, inferred relationship
 A declared, unresolved gap between the News Ontology and the primary ontology: either a property the primary ontology declares that news cannot supply, or one a news write path stamps that the primary ontology does not declare. The declaration says only what is provisional and why, never how to fix it, because only an authoritative source can close it.
 _Avoid_: Mismatch, schema drift, missing field, known issue
 
+**Bill Designation**:
+The chamber and number of a California bill together, normalized to the initials form — `SB 623`, `AB 1751`. It is written to a `Bill` node's `number` property by Bill Session Resolution rather than supplied by Entity Extraction, and qualifies a Bill's identity alongside its Bill Session Resolution.
+_Avoid_: "bill number" used alone without a chamber
+
 **Bill Session Resolution**:
-The legislative session one bill number in a Source Article resolved to, together with how it was reached: named outright by a bill link (verified), implied by the article's publication date (inferred), or settled by neither and therefore needing review. A Bill's identity is qualified by it.
+The legislative session one Bill Designation in a Source Article resolved to, together with how it was reached: named outright by a bill link (verified), implied by the article's publication date (inferred), or settled by neither and therefore needing review. A Bill's identity is qualified by it.
 _Avoid_: Session lookup, bill year, session guess
 
 **Legislative Event Date**:

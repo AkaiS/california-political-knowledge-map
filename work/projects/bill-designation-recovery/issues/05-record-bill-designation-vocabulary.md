@@ -1,6 +1,6 @@
 # 05 — Record the Bill Designation vocabulary
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -27,13 +27,13 @@ decision into that resolution rather than changing where it lives.
 
 ## Acceptance criteria
 
-- [ ] `CONTEXT.md` defines Bill Designation, with an _Avoid_ line covering "bill
+- [x] `CONTEXT.md` defines Bill Designation, with an _Avoid_ line covering "bill
       number" used without a chamber.
-- [ ] The Bill Session Resolution entry in `CONTEXT.md` names the Bill
+- [x] The Bill Session Resolution entry in `CONTEXT.md` names the Bill
       Designation as the value it resolves against.
-- [ ] The primary ontology's `Bill` example and primary key use the same
+- [x] The primary ontology's `Bill` example and primary key use the same
       normalized Bill Designation form as the write path.
-- [ ] No ADR is added.
+- [x] No ADR is added.
 
 ## Blocked by
 

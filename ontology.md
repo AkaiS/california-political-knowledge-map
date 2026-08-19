@@ -92,9 +92,9 @@
 
 #### `:Bill`
 
-- `id`: `STRING` _(Primary Key: Session ID + Bill Number, e.g., "20252026_SB32")_
+- `id`: `STRING` _(Primary Key: `Bill:<session>:<slugged Bill Designation>`, e.g., "Bill:2025-2026:sb-32")_
     
-- `number`: `STRING` _(e.g., "SB-32")_
+- `number`: `STRING` _(Bill Designation, e.g., "SB 32")_
     
 - `session`: `STRING` _(e.g., "2025-2026")_
     
