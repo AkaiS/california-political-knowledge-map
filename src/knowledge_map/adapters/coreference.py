@@ -713,7 +713,6 @@ def resolve_coreferences_run(
                 )
             for mention_span, reason in rejected_spans:
                 identity = MentionSpanIdentity.of(mention_span)
-                accepted_spans.pop(identity, None)
                 outcomes[identity] = _outcome_for_critic(
                     mention_span,
                     accepted=False,
