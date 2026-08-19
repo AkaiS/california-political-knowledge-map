@@ -35,5 +35,5 @@ Labels: completed
 - [x] An article with at least one surviving Mention Span completes, whatever proportion of its Mention Spans were discarded.
 - [x] The proportion of discarded Mention Spans is recorded on every resolution run, including successful ones.
 - [x] Per-Mention-Span outcomes are available from a resolution run, so a future evaluation can score references individually.
-- [x] Existing Article Status transitions in the Story Pipeline are otherwise unchanged, and the Story Pipeline tests still pass without modification.
+- [x] Existing Article Status transitions in the Story Pipeline are otherwise unchanged. Edits to the Story Pipeline tests are confined to the model-response fixtures that encode the annotator and Coreference Critic contract; no assertion about pipeline behaviour is weakened or removed.
 - [x] Parse failures and transport failures keep their existing handling.

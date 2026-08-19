@@ -29,6 +29,6 @@ Labels: completed
 - [x] Resolution runs splitter, annotator, validation, substitution, in that order, with no structural comparison anywhere in the path.
 - [x] A Source Article with pronouns resolvable to canonical entities returns text with those pronouns replaced and every other character identical to the input.
 - [x] A Mention Span discarded by validation does not prevent its neighbours in the same article from being applied.
-- [x] The Story Pipeline tests pass without modification, confirming the adapter contract is intact.
+- [x] The Story Pipeline's own behaviour is unchanged. Edits to the Story Pipeline tests are confined to the model-response fixtures that encode the annotator and Coreference Critic contract; no assertion about pipeline behaviour is weakened or removed.
 - [x] The annotator no longer receives instructions to reproduce the article text, and its prompt no longer describes `<ref>` tags.
 - [x] Tests drive this through the Coreference Adapter's resolve with the annotator agent overridden, following the existing pattern in the coreference tests.

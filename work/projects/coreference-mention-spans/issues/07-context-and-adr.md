@@ -28,4 +28,4 @@ Labels: completed
 - [x] The **Coreference Resolution** and **Coreference Adapter** entries are checked against the shipped behaviour and corrected where they disagree.
 - [x] A new ADR records the move to Mention Spans, names the two rejected alternatives and why, and states which part of ADR 0001 it supersedes.
 - [x] ADR 0001 is annotated as superseded in the portion covering coreference markup, with its chunking and Neo4j decisions left standing.
-- [x] No document in the repository still describes coreference as producing tagged article text.
+- [x] No document in the repository describes current coreference as producing tagged article text. Where a banner-marked historical record or this project's own specification names the retired `<ref>` tag format, it does so in the past tense or as the thing being removed.

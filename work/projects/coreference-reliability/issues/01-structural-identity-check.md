@@ -1,9 +1,12 @@
 Labels: completed
 
 > Historical record: the tag-stripping and Structural Identity Check described
-> here belonged to the retired whole-article markup flow. Current coreference
-> resolution uses the Mention Span contract in [Coreference Resolution via
-> Mention Spans](../../coreference-mention-spans/PRD.md).
+> here belonged to the retired whole-article markup flow, whose subject matter
+> was the `<ref entity="...">...</ref>` tag format. That format no longer
+> exists anywhere in the codebase; every mention of it below is a record of
+> what this ticket built, not a description of current behaviour. Current
+> coreference resolution uses the Mention Span contract in [Coreference
+> Resolution via Mention Spans](../../coreference-mention-spans/PRD.md).
 
 ## Parent
 
@@ -13,7 +16,7 @@ Labels: completed
 
 Implement a programmatic Structural Identity Check in the coreference resolution process to ensure that the annotated text matches the structure of the original text, preventing downstream alignment errors.
 
-- Develop tag stripping logic to remove `<ref entity="...">...</ref>` tags and retrieve the inner text.
+- Developed tag stripping logic that removed the retired `<ref entity="...">...</ref>` tag format and retrieved the inner text.
 - Develop whitespace normalization logic to trim outer whitespace and collapse multiple consecutive whitespace/newline characters into single spaces.
 - Programmatically execute this check immediately after the annotator agent runs.
 - Integrate the check with the existing coreference retry loop: when a structural identity check fails, feed the error back to the annotator agent and decrement the retry budget. Bypass the Critic agent during structural retries to conserve tokens.
@@ -21,7 +24,7 @@ Implement a programmatic Structural Identity Check in the coreference resolution
 
 ## Acceptance criteria
 
-- [x] A helper function is implemented to strip `<ref entity="...">...</ref>` tags from annotated text and return the raw text.
+- [x] A helper function stripped the retired `<ref entity="...">...</ref>` tag format from the annotator output and returned the raw text.
 - [x] A helper function is implemented to normalize text by trimming leading/trailing whitespace and collapsing multiple spaces or newlines into a single space.
 - [x] Structural identity check validates that the normalized stripped annotated text is identical to the normalized original text.
 - [x] The retry loop in `resolve_coreferences` handles structural mismatch validation failures by passing feedback back to the annotator agent.
