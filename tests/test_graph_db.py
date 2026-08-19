@@ -710,21 +710,25 @@ def test_bill_session_participates_in_node_primary_key():
     mock_session.execute_write.side_effect = lambda func: func(mock_tx)
     manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
     extraction = ExtractionResult(nodes=[
-        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="Assembly Bill 218", label="Bill"),
     ])
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
         BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(session="2019-2020", session_verified=True)
+            "AB 218": BillSessionResolution(
+                number="AB 218", session="2019-2020", session_verified=True
+            )
         }),
     )
     manager.ingest_chunk_extraction(
         "article#chunk_1",
         extraction,
         BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(session="2025-2026", session_verified=True)
+            "AB 218": BillSessionResolution(
+                number="AB 218", session="2025-2026", session_verified=True
+            )
         }),
     )
 
@@ -734,6 +738,7 @@ def test_bill_session_participates_in_node_primary_key():
         "Bill:2025-2026:ab-218",
     ]
     assert node_calls[0][1]["properties"]["session_verified"] is True
+    assert node_calls[0][1]["properties"]["number"] == "AB 218"
 
 
 def test_a_bill_without_a_resolution_gets_no_session_properties():
@@ -746,19 +751,21 @@ def test_a_bill_without_a_resolution_gets_no_session_properties():
     mock_session.execute_write.side_effect = lambda func: func(mock_tx)
     manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
     extraction = ExtractionResult(nodes=[
-        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="Assembly Bill 218", label="Bill"),
     ])
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
         BillSessionResolutions(by_number={
-            "SB 54": BillSessionResolution(session="2017-2018", session_verified=True)
+            "SB 54": BillSessionResolution(
+                number="SB 54", session="2017-2018", session_verified=True
+            )
         }),
     )
 
     node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
-    assert node_calls[0][1]["properties"] == {"number": "AB 218"}
+    assert node_calls[0][1]["properties"] == {}
     assert node_calls[0][1]["node_id"] == "Bill:unresolved:ab-218"
 
 

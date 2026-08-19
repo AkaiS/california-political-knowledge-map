@@ -192,6 +192,17 @@ def test_a_declared_gap_removes_the_property_from_what_the_model_is_asked_for():
             )
 
 
+def test_bill_number_is_primary_only_and_resolution_owned():
+    assert "number" in primary.PROPERTIES["Bill"]
+    assert "number" not in news.PROPERTIES["Bill"]
+
+    bill_line = next(
+        line for line in render_extraction_ontology().splitlines()
+        if line.startswith("- `Bill`: ")
+    )
+    assert "`number`" not in bill_line
+
+
 def test_the_direction_of_a_gap_is_read_off_the_primary_ontology():
     # Nothing on a Divergence says which way it parts, because the primary ontology
     # already answers it: declared there means news drops it, absent means the write
@@ -432,7 +443,10 @@ def test_extraction_conformance_keeps_conforming_entities_beside_a_bad_one():
 
     assert [node.name for node in outcome.result.nodes] == ["AB 1", "Good Vote"]
     assert [rel.relationship_type for rel in outcome.result.relationships] == ["ACTION_ON"]
-    assert len(outcome.drops) == 1
+    assert [(drop.category, drop.value) for drop in outcome.drops] == [
+        ("rejected_labels", "NewsArticle"),
+        ("rejected_property_names", "number"),
+    ]
 
 
 def test_a_shared_name_under_two_labels_resolves_by_the_relationship_shape():
@@ -547,7 +561,7 @@ def test_a_shared_name_no_label_of_which_fits_the_shape_is_still_refused():
         nodes=[
             Node(name="Alex Lee", label="Politician"),
             Node(name="Water Alliance", label="Organization"),
-            Node(name="Water Alliance", label="Bill", properties={"number": "AB 1"}),
+            Node(name="Water Alliance", label="Bill"),
         ],
         relationships=[
             Relationship(source="Alex Lee", target="Water Alliance", relationship_type="SERVES_ON"),

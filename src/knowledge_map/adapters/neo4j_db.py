@@ -3,6 +3,7 @@ import re
 from neo4j import GraphDatabase
 
 from knowledge_map.config import settings
+from knowledge_map.core.bill_sessions import parse_bill_designation
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import (
@@ -12,7 +13,7 @@ from knowledge_map.schemas import (
     LegislativeEventDates,
     SourceArticle,
 )
-from knowledge_map.core.bill_sessions import normalize_bill_number
+
 
 def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
     """The values that identify this claim, canonicalized, and whether any are missing.
@@ -308,13 +309,12 @@ class Neo4jAdapter:
                         labels = _validated_labels(label, node.sub_labels)
                         properties = dict(node.properties)
                         if label == "Bill":
-                            number = normalize_bill_number(properties.get("number") or node.name)
-                            resolution = bill_sessions.get(number)
+                            designation = parse_bill_designation(node.name)
+                            resolution = bill_sessions.get(designation)
                             if resolution is not None:
                                 properties.update(resolution.graph_properties())
-                            if number:
-                                properties["number"] = number
                             session = resolution.session if resolution else None
+                            number = resolution.number if resolution else designation
                             node_id = bill_key(session, number, node.name)
                         else:
                             if label == "LegislativeEvent":
@@ -353,9 +353,10 @@ class Neo4jAdapter:
                             return node_id
                         if label != "Bill":
                             return derived_key(label, name)
-                        number = normalize_bill_number(name)
-                        resolution = bill_sessions.get(number)
+                        designation = parse_bill_designation(name)
+                        resolution = bill_sessions.get(designation)
                         session = resolution.session if resolution else None
+                        number = resolution.number if resolution else designation
                         return bill_key(session, number, name)
 
                     for rel in extraction.relationships:

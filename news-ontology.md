@@ -8,7 +8,7 @@ of the primary ontology plus the declared shortcuts below.
 
 | Label | Property names | Sub-labels |
 | --- | --- | --- |
-| `Bill` | `current_status`, `id`, `number`, `session` | — |
+| `Bill` | `current_status`, `id`, `session` | — |
 | `Campaign` | `election_cycle`, `id`, `name`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |
 | `Chunk` | `embedding`, `id`, `index`, `text` | — |
 | `Committee` | `chamber`, `id`, `name` | — |
@@ -88,6 +88,7 @@ path stamps. Nothing records the direction twice.
 | --- | --- | --- | --- |
 | `name` | `Bill` / `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
 | `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
+| `number` | `Bill` | news cannot supply it | A Bill Designation is parsed from the extracted name and supplied by Bill Session Resolution. The extraction model reports only the name the article used, so it must not guess or decompose the designation itself. |
 | `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |
 | `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |
 | `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |

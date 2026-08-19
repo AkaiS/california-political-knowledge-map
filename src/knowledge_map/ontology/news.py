@@ -75,6 +75,15 @@ NODE_DIVERGENCES = (
         ),
     ),
     Divergence(
+        property_name="number",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "A Bill Designation is parsed from the extracted name and supplied by Bill "
+            "Session Resolution. The extraction model reports only the name the article "
+            "used, so it must not guess or decompose the designation itself."
+        ),
+    ),
+    Divergence(
         property_name="session_inferred",
         applies_to=frozenset({"Bill"}),
         reason=(

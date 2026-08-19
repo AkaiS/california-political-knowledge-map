@@ -21,6 +21,7 @@ from knowledge_map.core.pipeline import (
     CoreferenceAdapter,
     EntityExtractionAdapter,
 )
+from knowledge_map.core.bill_sessions import parse_bill_designation
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
@@ -55,6 +56,28 @@ class MockDatabaseAdapter:
         event_dates: LegislativeEventDates | None = None,
     ) -> None:
         self.extractions.append((chunk_id, extraction, bill_sessions, event_dates))
+
+
+@pytest.mark.parametrize(
+    ("name", "designation"),
+    [
+        ("SB 623", "SB 623"),
+        ("sb623", "SB 623"),
+        ("Senate Bill 623", "SB 623"),
+        ("senate bill 623", "SB 623"),
+        ("AB-1751", "AB 1751"),
+        ("Assembly Bill 1751", "AB 1751"),
+        ("assembly bill1751", "AB 1751"),
+    ],
+)
+def test_bill_designation_parser_accepts_the_four_supported_forms(name, designation):
+    assert parse_bill_designation(name) == designation
+
+
+@pytest.mark.parametrize("name", ["ll 623", "to 5", "the bill"])
+def test_bill_designation_parser_rejects_non_designations(name):
+    assert parse_bill_designation(name) is None
+
 
 class MockEmbeddingAdapter:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
@@ -212,10 +235,12 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     db = MockDatabaseAdapter()
     extraction = MockEntityExtractionAdapter()
     extraction.extract = lambda _text: ExtractionResult(nodes=[
-        Node(name="AB 218", label="Bill", properties={"number": "AB 218"}),
-        Node(name="SB 54", label="Bill", properties={"number": "SB 54"}),
-        Node(name="AB 99", label="Bill", properties={"number": "AB 99"}),
-        Node(name="AB 1", label="Bill", properties={"number": "AB 1"}),
+        Node(name="Senate Bill 623", label="Bill"),
+        Node(name="sb623", label="Bill"),
+        Node(name="sb54", label="Bill"),
+        Node(name="AB 99", label="Bill"),
+        Node(name="Senate Bill 1", label="Bill"),
+        Node(name="AB 1", label="Bill"),
     ])
     pipeline = StoryPipeline(
         db_adapter=db,
@@ -230,7 +255,7 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         published_date="2026-04-10T12:00:00Z",
         content="first chunk second chunk",
         links=[
-            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200AB218"),
+            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200SB623"),
             StoryLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
             StoryLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
             StoryLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
@@ -252,11 +277,21 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     assert db.extractions[1][2] is first_map
     assert isinstance(first_map, BillSessionResolutions)
     assert first_map == BillSessionResolutions(by_number={
-        "AB 218": BillSessionResolution(session="2019-2020", session_verified=True),
-        "SB 54": BillSessionResolution(session="2017-2018", session_verified=True),
-        "AB 99": BillSessionResolution(session="2025-2026", session_inferred=True),
-        "AB 1": BillSessionResolution(needs_review=True),
+        "SB 623": BillSessionResolution(
+            number="SB 623", session="2019-2020", session_verified=True
+        ),
+        "SB 54": BillSessionResolution(
+            number="SB 54", session="2017-2018", session_verified=True
+        ),
+        "AB 99": BillSessionResolution(
+            number="AB 99", session="2025-2026", session_inferred=True
+        ),
+        "SB 1": BillSessionResolution(
+            number="SB 1", session="2025-2026", session_inferred=True
+        ),
+        "AB 1": BillSessionResolution(number="AB 1", needs_review=True),
     })
+
 
 def test_pipeline_logging(caplog):
     caplog.set_level(logging.INFO)

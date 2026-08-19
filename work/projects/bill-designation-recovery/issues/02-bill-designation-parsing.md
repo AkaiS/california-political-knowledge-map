@@ -1,6 +1,6 @@
 # 02 — Bill Designation parsing, four forms only
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -39,16 +39,16 @@ are unchanged. Only the value they are keyed on changes.
 
 ## Acceptance criteria
 
-- [ ] `SB 623`, `sb623`, `Senate Bill 623`, and `senate bill 623` all parse to
+- [x] `SB 623`, `sb623`, `Senate Bill 623`, and `senate bill 623` all parse to
       the Bill Designation `SB 623`; the Assembly forms parse to `AB`.
-- [ ] `ll 623`, `to 5`, and `the bill` parse to no Bill Designation.
-- [ ] `number` is absent from the News Ontology's `Bill` properties, and the
+- [x] `ll 623`, `to 5`, and `the bill` parse to no Bill Designation.
+- [x] `number` is absent from the News Ontology's `Bill` properties, and the
       regenerated ontology document and Extraction Prompt no longer list it.
-- [ ] `number` remains declared on `Bill` in the primary ontology.
-- [ ] The parsed Bill Designation is written to the `Bill` node's `number`
+- [x] `number` remains declared on `Bill` in the primary ontology.
+- [x] The parsed Bill Designation is written to the `Bill` node's `number`
       property by the resolution, not by the extraction.
-- [ ] No code outside the ontology reads an extracted `number` property.
-- [ ] A Source Article naming `Senate Bill 623` resolves it to a session under
+- [x] No code outside the ontology reads an extracted `number` property.
+- [x] A Source Article naming `Senate Bill 623` resolves it to a session under
       the same three tiers as one naming `SB 623`, observable through the Story
       Pipeline with mock adapters.
 

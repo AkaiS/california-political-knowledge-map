@@ -1,10 +1,10 @@
 """Bill Session Resolution as it crosses the Graph Database Adapter boundary.
 
 Per ADR 0002 the adapters accept domain models, not raw structures. A bill's
-session is resolved once per Source Article and handed to the adapter as
-:class:`BillSessionResolutions`: the session itself plus the flags that say how
-it was arrived at, which the adapter writes onto the Bill and folds into its
-primary key.
+designation and session are resolved once per Source Article and handed to the
+adapter as :class:`BillSessionResolutions`: the properties themselves plus the
+flags that say how the session was arrived at, which the adapter writes onto the
+Bill and folds into its primary key.
 
 A number absent from the resolution map is not the same as a number resolved to
 nothing. The former means no Bill by that number was extracted, and the adapter
@@ -16,8 +16,9 @@ from pydantic import BaseModel, Field
 
 
 class BillSessionResolution(BaseModel):
-    """The session a single bill number resolved to, and how it was reached."""
+    """The Bill Designation and session a bill resolved to, and how it was reached."""
 
+    number: str | None = None
     session: str | None = None
     #: A bill link in the article named this session outright.
     session_verified: bool = False
@@ -27,12 +28,12 @@ class BillSessionResolution(BaseModel):
     needs_review: bool = False
 
     def graph_properties(self) -> dict[str, object]:
-        """The session properties as they are written onto a Bill node."""
+        """The resolved properties as they are written onto a Bill node."""
         return self.model_dump()
 
 
 class BillSessionResolutions(BaseModel):
-    """Every bill number resolved for one Source Article, keyed by number."""
+    """Every Bill Designation resolved for one Source Article, keyed by designation."""
 
     by_number: dict[str, BillSessionResolution] = Field(default_factory=dict)
 
