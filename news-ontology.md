@@ -43,9 +43,11 @@ arrives without one is written and carries `needs_review`.
 | `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
 | `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
 | `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
+| `HELD_BY` | `LegislativeEvent` | `Committee` | — |
 | `LOBBIED_AGAINST` | `Organization` | `Bill` | — |
 | `LOBBIED_FOR` | `Organization` | `Bill` | — |
 | `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | — |
+| `REFERRED_TO` | `Bill` | `Committee` | — |
 | `SERVES_ON` | `Politician` | `Committee` | — |
 | `VICE_CHAIRS` | `Politician` | `Committee` | — |
 | `VOTED_AYE` | `Politician` | `LegislativeEvent` | — |
@@ -56,7 +58,8 @@ arrives without one is written and carries `needs_review`.
 Paths the news write path flattens into one edge, because prose names the
 endpoints but not what sits between them. Each rule holds the path it
 replaced, so a shortcut edge can be expanded back out from its type alone.
-The edge also carries `skips` naming the label to reinsert.
+The edge itself records nothing about the collapse: the rule below names the
+label to reinsert, and a copy on every edge would only go stale.
 
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_AYE`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_AYE`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)
 - `Politician` -`HELD_TENURE`→ `LegislativeTenure` → `LegislativeTenure` -`VOTED_NO`→ `LegislativeEvent` ⇒ `Politician` -`VOTED_NO`→ `LegislativeEvent` (`skips`: `LegislativeTenure`)

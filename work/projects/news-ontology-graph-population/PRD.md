@@ -440,13 +440,15 @@ integration tests are added beyond these renames.
 
 ## Further Notes
 
-- **Nine Source Articles is a thin basis for conclusions about label coverage.**
-  The parent ticket asks which ontology labels materialized and which stayed
-  empty. At this corpus size an empty label may mean the ontology is
-  news-unreachable, or merely that nine articles did not happen to mention one.
-  The record should distinguish structurally-empty labels — those the News
-  Ontology excludes outright — from labels that are in the News Ontology but
-  produced nothing.
+- **The corpus is a thin basis for conclusions about label coverage.** The parent
+  ticket asks which ontology labels materialized and which stayed empty. At this
+  corpus size an empty label may mean the ontology is news-unreachable, or merely
+  that the gathered articles did not happen to mention one. The record should
+  distinguish structurally-empty labels — those the News Ontology excludes
+  outright — from labels that are in the News Ontology but produced nothing, and
+  should state the corpus size the run actually covered rather than reasoning from
+  a number fixed here. The document store held 73 Source Articles as of
+  2026-08-14; earlier drafts of this PRD said nine, from when it did.
 - The shortcut rules are, in effect, the reconciliation specification for later
   authoritative ingestion written in advance: each one names the intermediate
   node that ingestion must insert and the edge it must re-anchor.

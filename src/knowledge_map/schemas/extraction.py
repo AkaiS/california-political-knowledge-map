@@ -43,6 +43,11 @@ class Relationship(BaseModel):
     label it settled on; a model's label is consulted only where the ontology leaves
     a genuine choice. What persistence reads back is therefore always the resolved
     label, never the extractor's unexamined claim.
+
+    The label earns a field because it varies per claim: the name alone cannot supply
+    it. What a relationship type fixes for every one of its claims — whether it
+    flattens a Shortcut Rule's path, for one — needs no field here and no copy on the
+    edge, because the type is already carried and the ontology already holds the rule.
     """
 
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")

@@ -3,6 +3,7 @@ import logging
 from knowledge_map.schemas import (
     AdherenceReport,
     ArticleChunk,
+    CoreferenceResolutionRun,
     BillSessionResolution,
     BillSessionResolutions,
     ExtractionResult,
@@ -60,8 +61,11 @@ class MockEmbeddingAdapter:
         return [[0.1, 0.2, 0.3]] * len(chunks)
 
 class MockCoreferenceAdapter:
-    def resolve(self, content: str) -> str:
-        return content
+    def resolve(self, content: str) -> CoreferenceResolutionRun:
+        return CoreferenceResolutionRun(
+            resolved_text=content,
+            discarded_proportion=0.0,
+        )
 
 EMPTY_ADHERENCE_REPORT = AdherenceReport()
 
@@ -299,7 +303,22 @@ def test_pipeline_with_concrete_adapters():
     critic_agent = get_critic_agent(defer_check=True)
     
     def mock_annotator(messages, info):
-        return ModelResponse(parts=[TextPart(content="Gavin Newsom signed a bill. <ref entity=\"Gavin Newsom\">He</ref> was happy.")])
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[
+            ToolCallPart(
+                tool_name=tool_name,
+                args={
+                    "response": [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "canonical_entity_name": "Gavin Newsom",
+                        }
+                    ]
+                },
+                tool_call_id="call_1",
+            )
+        ])
         
     def mock_critic(messages, info):
         tool_name = info.output_tools[0].name
@@ -307,8 +326,13 @@ def test_pipeline_with_concrete_adapters():
             ToolCallPart(
                 tool_name=tool_name,
                 args={
-                    "is_valid": True,
-                    "issues": []
+                    "response": [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "accepted": True,
+                        }
+                    ]
                 },
                 tool_call_id="call_1"
             )
@@ -363,7 +387,7 @@ def test_pipeline_with_concrete_adapters():
 
     # Assertions
     assert isinstance(result, PipelineResult)
-    # The resolved text should be fully resolved (with replaced tags)
+    # The resolved text should contain canonical entity names.
     assert result.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
     
     # Verify chunks are created
@@ -437,7 +461,6 @@ class MockDeadLetterQueueAdapter:
         url: str,
         title: str,
         original_text: str,
-        annotated_text: str,
         validation_issues: list[str],
         failure_type: str,
         retry_count: int,
@@ -448,7 +471,6 @@ class MockDeadLetterQueueAdapter:
             "url": url,
             "title": title,
             "original_text": original_text,
-            "annotated_text": annotated_text,
             "validation_issues": validation_issues,
             "failure_type": failure_type,
             "retry_count": retry_count,
@@ -467,9 +489,8 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )
@@ -500,9 +521,9 @@ def test_pipeline_coreference_failure_logs_to_dlq():
     assert failure["url"] == "http://test.com/failure-dlq"
     assert failure["title"] == "Failed Article"
     assert failure["original_text"] == "Gavin Newsom went home."
-    assert failure["annotated_text"] == "mismatched text"
-    assert failure["validation_issues"] == ["Test structural issue"]
-    assert failure["failure_type"] == "structural_mismatch"
+    assert "annotated_text" not in failure
+    assert failure["validation_issues"] == ["Test coreference issue"]
+    assert failure["failure_type"] == "all_mentions_rejected"
     assert failure["retry_count"] == 3
     assert failure["metadata"] == {"model": "gemma"}
     assert failure["error_category"] == "coreference"
@@ -551,7 +572,7 @@ def test_pipeline_extraction_failure_logs_to_dlq():
     assert failure["url"] == "http://test.com/failure-dlq-extract"
     assert failure["title"] == "Failed Article Extract"
     assert failure["original_text"] == "Gavin Newsom went home."
-    assert failure["annotated_text"] == ""
+    assert "annotated_text" not in failure
     assert failure["validation_issues"] == ["Test extraction schema issue"]
     assert failure["failure_type"] == "extraction_validation_failure"
     assert failure["retry_count"] == 3
@@ -637,9 +658,8 @@ def test_pipeline_status_coref_failure():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )
@@ -713,9 +733,8 @@ def test_pipeline_status_dlq_failure():
     def raise_coref_error(content):
         raise CoreferenceResolutionError(
             original_text=content,
-            annotated_text="mismatched text",
-            validation_issues=["Test structural issue"],
-            failure_type="structural_mismatch",
+            validation_issues=["Test coreference issue"],
+            failure_type="all_mentions_rejected",
             retry_count=3,
             metadata={"model": "gemma"}
         )

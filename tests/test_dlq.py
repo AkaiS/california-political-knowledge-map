@@ -11,9 +11,8 @@ def test_dlq_adapter_success(tmp_path):
     url = "https://www.sacbee.com/news/local/article234.html"
     title = "Sacramento Bee Local News"
     original_text = "Newsom signed AB-5. He was happy."
-    annotated_text = "Newsom signed AB-5. <ref entity=\"Gavin Newsom\">He</ref> was happy."
     validation_issues = ["Critic issue"]
-    failure_type = "critic_rejection"
+    failure_type = "all_mentions_rejected"
     retry_count = 2
     metadata = {
         "model": "gemma",
@@ -26,7 +25,6 @@ def test_dlq_adapter_success(tmp_path):
         url=url,
         title=title,
         original_text=original_text,
-        annotated_text=annotated_text,
         validation_issues=validation_issues,
         failure_type=failure_type,
         retry_count=retry_count,
@@ -64,7 +62,7 @@ def test_dlq_adapter_success(tmp_path):
     assert data["url"] == url
     assert data["title"] == title
     assert data["original_text"] == original_text
-    assert data["annotated_text"] == annotated_text
+    assert "annotated_text" not in data
     assert data["validation_issues"] == validation_issues
     assert data["failure_type"] == failure_type
     assert data["retry_count"] == retry_count
@@ -79,7 +77,6 @@ def test_dlq_adapter_custom_category(tmp_path):
         url="http://example.com/extraction-err",
         title="Extraction Failure",
         original_text="Some bad extraction text",
-        annotated_text="",
         validation_issues=["Missing field schema"],
         failure_type="schema_mismatch",
         retry_count=1,
@@ -110,9 +107,8 @@ def test_dlq_adapter_write_failure(tmp_path, caplog):
             url="http://example.com",
             title="Title",
             original_text="Original",
-            annotated_text="Annotated",
             validation_issues=[],
-            failure_type="structural_mismatch",
+            failure_type="all_mentions_rejected",
             retry_count=1,
             metadata={}
         )

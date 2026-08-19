@@ -17,7 +17,38 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
+  Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
+  for a bill number it cannot supply, normalization rejects every spelled-out
+  form, a parse failure is written as silence rather than as `needs_review`, and
+  a character-sliced chunk overlap cut `Senate Bill 623` into a second node named
+  `ll 623`. Broken into five issues on 2026-08-17; the frontier is below.
+- [Coreference Resolution via Mention Spans](projects/coreference-mention-spans/PRD.md), `ready-for-agent` as of 2026-08-17. Replaces whole-article `<ref>` tag rewriting with structured Mention Spans anchored to numbered sentences, and gives the Coreference Critic per-reference verdicts. Broken into seven issues on 2026-08-17; the frontier is below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### Bill Designation Recovery frontier
+
+Two issues are takeable now. The bill chain is linear; the chunking ticket is
+independent of it.
+
+- [01 Chunk text excludes the overlap](projects/bill-designation-recovery/issues/01-chunk-text-excludes-overlap.md), takeable. The chunk's text is its own body; the overlap travels as context, the embedder and chunk write consume both, extraction receives the text alone.
+- [02 Bill Designation parsing, four forms only](projects/bill-designation-recovery/issues/02-bill-designation-parsing.md), takeable. `SB`, `AB`, `Senate Bill`, `Assembly Bill` and nothing else; `number` leaves the News Ontology and is supplied by resolution.
+- [03 Every extracted Bill gets a resolution](projects/bill-designation-recovery/issues/03-resolution-covers-every-bill.md), blocked by 02. The map is keyed by name and covers unidentifiable bills; the adapter stops deciding.
+- [04 Recover a Bill Designation from the Source Article](projects/bill-designation-recovery/issues/04-recover-designation-from-article.md), blocked by 03. `ll 623` reaches `Senate Bill 623`'s node before any key is minted.
+- [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `CONTEXT.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
+
+### Coreference Resolution via Mention Spans frontier
+
+A linear chain. Only issue 01 is takeable now; each later issue is gated by the
+one before it.
+
+- [01 Numbered sentence splitter](projects/coreference-mention-spans/issues/01-numbered-sentence-splitter.md), takeable. Pure utility, no model: sentences with exact character ranges whose concatenation reproduces the article.
+- [02 Mention Span schema, validation, and substitution](projects/coreference-mention-spans/issues/02-mention-span-schema-validation-substitution.md), blocked by 01. The deterministic core — Python derives every character offset.
+- [03 Annotator returns Mention Spans, wired end to end](projects/coreference-mention-spans/issues/03-annotator-returns-mention-spans.md), blocked by 02. The Structural Identity Check leaves the resolution path. Resolution is unchecked until 04.
+- [04 Per-Mention-Span Critic verdicts and targeted retry](projects/coreference-mention-spans/issues/04-per-mention-critic-verdicts.md), blocked by 03. One misread pronoun stops costing its neighbours.
+- [05 Zero-survivor failures and Dead Letter Queue payload](projects/coreference-mention-spans/issues/05-zero-survivor-failures-and-dlq-payload.md), blocked by 04. Three failure types, and the discard proportion that a partial-discard threshold will later be set from.
+- [06 Delete the tag machinery](projects/coreference-mention-spans/issues/06-delete-tag-machinery.md), blocked by 05. The contract step; deletion only.
+- [07 Domain vocabulary and ADR](projects/coreference-mention-spans/issues/07-context-and-adr.md), blocked by 06. `CONTEXT.md` gains **Mention Span**; a new ADR supersedes ADR 0001's markup decision.
 
 ### News Ontology and Graph Population frontier
 
@@ -62,7 +93,7 @@ currently executable.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
 

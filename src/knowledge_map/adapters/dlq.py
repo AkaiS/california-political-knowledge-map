@@ -5,6 +5,8 @@ import datetime
 import urllib.parse
 import hashlib
 
+from knowledge_map.schemas import CoreferenceResolutionRun
+
 logger = logging.getLogger(__name__)
 
 class LocalFileDLQAdapter:
@@ -16,12 +18,12 @@ class LocalFileDLQAdapter:
         url: str,
         title: str,
         original_text: str,
-        annotated_text: str,
         validation_issues: list[str],
         failure_type: str,
         retry_count: int,
         metadata: dict,
-        error_category: str = "coreference"
+        error_category: str = "coreference",
+        resolution_run: CoreferenceResolutionRun | None = None,
     ) -> str:
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         
@@ -53,13 +55,17 @@ class LocalFileDLQAdapter:
             "url": url,
             "title": title,
             "original_text": original_text,
-            "annotated_text": annotated_text,
             "validation_issues": validation_issues,
             "failure_type": failure_type,
             "timestamp": timestamp,
             "retry_count": retry_count,
             "metadata": metadata
         }
+
+        if resolution_run is not None:
+            # One nested record: the run is replayable as a whole, so its parts
+            # are not also duplicated as top-level keys.
+            payload["resolution_run"] = resolution_run.model_dump(mode="json")
         
         try:
             # Ensure the directory exists

@@ -116,6 +116,8 @@ RELATIONSHIPS = {
     "VOTED_NO": _shape("LegislativeTenure", "LegislativeEvent"),
     "ABSTAINED": _shape("LegislativeTenure", "LegislativeEvent"),
     "ACTION_ON": _shape("LegislativeEvent", "Bill"),
+    "HELD_BY": _shape("LegislativeEvent", "Committee"),
+    "REFERRED_TO": _shape("Bill", "Committee"),
     "ABOUT_TOPIC": _shape(frozenset({"Bill", "Prop"}), "PolicyArea"),
     "CAMPAIGN_FOR": _shape("Campaign", frozenset({"Prop", "Politician"})),
     "FUNDED": _shape("Organization", "Campaign", _FUNDED_PROPERTIES),

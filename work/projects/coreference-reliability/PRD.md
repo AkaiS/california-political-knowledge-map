@@ -2,6 +2,14 @@
 
 Labels: completed
 
+> Historical record: this project improved the retired whole-article markup
+> implementation. Its Structural Identity Check and tag-specific retry
+> machinery were superseded by [Coreference Resolution via Mention
+> Spans](../coreference-mention-spans/PRD.md); the current flow derives and
+> validates Mention Spans against the original Source Article. The sections
+> below are preserved as written and describe what this project shipped, not
+> how Coreference Resolution works today.
+
 ## Problem Statement
 
 During coreference resolution, the LLM-based annotator agent can introduce structural modifications to the text (such as deleting words, adding punctuation, or changing sentence structures). When this happens, we lose character-level alignment with the original Source Article, causing downstream ingestion problems. 

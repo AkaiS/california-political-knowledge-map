@@ -20,6 +20,7 @@ from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.schemas import (
     AdherenceReport,
     ArticleChunk,
+    CoreferenceResolutionRun,
     DropCategory,
     DroppedItem,
     ExtractionResult,
@@ -278,7 +279,11 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)
 
     class LocalMockCoreferenceAdapter:
-        def resolve(self, content): return content
+        def resolve(self, content):
+            return CoreferenceResolutionRun(
+                resolved_text=content,
+                discarded_proportion=0.0,
+            )
 
     class LocalMockEntityExtractionAdapter:
         def extract(self, chunk_text):
@@ -334,7 +339,6 @@ def test_classify_exception():
     # 1. CoreferenceResolutionError should be classified as non-breaking
     coref_err = CoreferenceResolutionError(
         original_text="test",
-        annotated_text="test",
         validation_issues=[],
         failure_type="test",
         retry_count=0,
@@ -378,9 +382,8 @@ def test_batch_ingestion_resilience_non_breaking(tmp_path):
     
     coref_err = CoreferenceResolutionError(
         original_text="Content 1",
-        annotated_text="mismatch",
         validation_issues=["mismatch"],
-        failure_type="structural_mismatch",
+        failure_type="all_mentions_rejected",
         retry_count=3,
         metadata={}
     )
@@ -602,7 +605,10 @@ def test_rate_limit_retry_after_under_cap():
         if call_count == 1:
             resp = httpx.Response(429, headers={"Retry-After": "45"})
             raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
-        return "Gavin Newsom went home."
+        return CoreferenceResolutionRun(
+            resolved_text="Gavin Newsom went home.",
+            discarded_proportion=0.0,
+        )
 
     coref.resolve = resolve_side_effect
 
@@ -813,7 +819,6 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
     assert "locked" in str(exc_info.value).lower()
     # Verify no pipeline execution occurred
     assert mock_pipeline.run.call_count == 0
-
 
 
 

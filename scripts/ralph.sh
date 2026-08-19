@@ -69,8 +69,8 @@ for index in "${!issues[@]}"; do
 
   if result=$(sbx run --name "$sandbox_name" codex -- \
     exec \
-    --model "gpt-5.6-sol" \
-    -c 'model_reasoning_effort="low"' \
+    --model "gpt-5.6-luna" \
+    -c 'model_reasoning_effort="max"' \
     --dangerously-bypass-approvals-and-sandbox \
     --ephemeral \
     "Implement the issue at \"$issue\" in the current repository.
