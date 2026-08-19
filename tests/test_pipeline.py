@@ -73,8 +73,10 @@ EMPTY_ADHERENCE_REPORT = AdherenceReport()
 class MockEntityExtractionAdapter:
     def __init__(self):
         self.reset_calls = 0
+        self.calls = []
 
     def extract(self, chunk_text: str) -> ExtractionResult:
+        self.calls.append(chunk_text)
         return ExtractionResult(
             nodes=[Node(name="Test Actor", label="Politician")],
             relationships=[]
@@ -173,6 +175,37 @@ def test_pipeline_persistence():
     chunk_id, stored_extraction, _bill_sessions, _event_dates = db.extractions[0]
     assert chunk_id == "http://test.com/persist#chunk_0"
     assert stored_extraction.nodes[0].name == "Test Actor"
+
+
+def test_pipeline_extracts_owned_chunk_text_without_context():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    chunks = [
+        ArticleChunk(
+            text="owned chunk text",
+            start_index=10,
+            end_index=26,
+            index=0,
+            context="overlap context ",
+        )
+    ]
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="http://test.com/extraction-text",
+        title="Extraction Text",
+        content="article content",
+    )
+
+    with patch("knowledge_map.core.pipeline.chunk_article", return_value=chunks):
+        pipeline.run(article, dry_run=True)
+
+    assert extraction.calls == ["owned chunk text"]
 
 
 def test_pipeline_resolves_bill_sessions_once_per_article():

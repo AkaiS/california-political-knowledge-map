@@ -60,14 +60,22 @@ def test_pydantic_ai_embedding_adapter_success():
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
     chunks = [
         ArticleChunk(text="Chunk 1 text", start_index=0, end_index=12, index=0),
-        ArticleChunk(text="Chunk 2 text", start_index=13, end_index=25, index=1)
+        ArticleChunk(
+            text="Chunk 2 text",
+            start_index=13,
+            end_index=25,
+            index=1,
+            context="Overlap text ",
+        )
     ]
     
     result = adapter.process_chunks(chunks)
     assert len(result) == 2
     assert result[0] == [0.1] * 768
     assert result[1] == [0.1] * 768
-    mock_embedder.embed_documents.assert_called_once_with(["Chunk 1 text", "Chunk 2 text"])
+    mock_embedder.embed_documents.assert_called_once_with(
+        ["Chunk 1 text", "Overlap text Chunk 2 text"]
+    )
 
 def test_pydantic_ai_embedding_adapter_embed_text_success():
     mock_embedder = MagicMock()
@@ -140,5 +148,4 @@ def test_pydantic_ai_embedding_adapter_health_check_failure():
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
     assert adapter.health_check() is False
     mock_embedder.embed_documents.assert_called_once_with(["health_check"])
-
 

@@ -425,7 +425,8 @@ def test_ingest_chunk():
         text="Gavin Newsom did something.",
         start_index=0,
         end_index=27,
-        index=0
+        index=0,
+        context="Earlier context. ",
     )
     
     manager.ingest_chunk(
@@ -447,7 +448,7 @@ def test_ingest_chunk():
     assert "provenance" not in query
     assert kwargs["url"] == "http://example.com/1"
     assert kwargs["chunk_id"] == "http://example.com/1#chunk_0"
-    assert kwargs["text"] == "Gavin Newsom did something."
+    assert kwargs["text"] == "Earlier context. Gavin Newsom did something."
     assert kwargs["index"] == 0
     assert kwargs["embedding"] == [0.1, 0.2, 0.3]
 

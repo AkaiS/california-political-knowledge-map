@@ -1,8 +1,18 @@
-import os
 from typing import List, Optional
 from chonkie import RecursiveChunker, OverlapRefinery
 from knowledge_map.schemas import ArticleChunk
 from knowledge_map.config import settings
+
+
+def _snap_context_start_to_word_boundary(text: str, start_index: int) -> int:
+    """Move a context start left when it lands inside a whitespace-delimited word."""
+    if start_index <= 0 or start_index >= len(text) or text[start_index].isspace():
+        return start_index
+
+    while start_index > 0 and not text[start_index - 1].isspace():
+        start_index -= 1
+    return start_index
+
 
 def chunk_article(
     text: str,
@@ -38,20 +48,27 @@ def chunk_article(
             tokenizer="character",
             context_size=context_size,
             method="prefix",
-            mode="token"
+            mode="token",
+            merge=False,
         )
         chunks = refinery.refine(chunks)
         
     # Map to output schema
     article_chunks = []
     for idx, c in enumerate(chunks):
+        context = getattr(c, "context", None)
+        if context:
+            context_start = max(0, c.start_index - len(context))
+            context_start = _snap_context_start_to_word_boundary(text, context_start)
+            context = text[context_start:c.start_index]
+
         article_chunks.append(
             ArticleChunk(
                 text=c.text,
                 start_index=c.start_index,
                 end_index=c.end_index,
                 index=idx,
-                context=getattr(c, "context", None)
+                context=context
             )
         )
         

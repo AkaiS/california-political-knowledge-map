@@ -1,6 +1,6 @@
 # 01 — Chunk text excludes the overlap
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -39,18 +39,18 @@ extracting from the body alone.
 
 ## Acceptance criteria
 
-- [ ] An Article Chunk's text is the recursive chunker's output, unmodified; no
+- [x] An Article Chunk's text is the recursive chunker's output, unmodified; no
       chunk's text begins with characters belonging to the previous chunk.
-- [ ] The chunk's context holds the overlap and begins at a word boundary.
-- [ ] Concatenating a chunk's context with its text reproduces a contiguous span
+- [x] The chunk's context holds the overlap and begins at a word boundary.
+- [x] Concatenating a chunk's context with its text reproduces a contiguous span
       of the Source Article.
-- [ ] The Embedding Adapter embeds context concatenated with text.
-- [ ] The chunk write stores context concatenated with text, so stored Retrieval
+- [x] The Embedding Adapter embeds context concatenated with text.
+- [x] The chunk write stores context concatenated with text, so stored Retrieval
       Evidence is unchanged from today.
-- [ ] The Entity Extraction Adapter is called with the text alone.
-- [ ] Re-chunking the Uber ballot-measure article produces no chunk beginning
+- [x] The Entity Extraction Adapter is called with the text alone.
+- [x] Re-chunking the Uber ballot-measure article produces no chunk beginning
       `ll 623`, covered as a regression test written from the real article text.
-- [ ] The existing chunking tests asserting context length and its relationship
+- [x] The existing chunking tests asserting context length and its relationship
       to the previous chunk's text are updated to the new contract.
 
 ## Blocked by

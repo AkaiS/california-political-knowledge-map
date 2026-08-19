@@ -275,7 +275,7 @@ class Neo4jAdapter:
                         query,
                         url=article.url,
                         chunk_id=chunk_id,
-                        text=chunk.text,
+                        text=(chunk.context or "") + chunk.text,
                         index=chunk.index,
                         embedding=embedding,
                     )
