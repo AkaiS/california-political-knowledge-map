@@ -283,3 +283,26 @@ The proportion of discarded Mention Spans is the metric to watch after this
 lands, and it is what a partial-discard threshold should eventually be set
 from. If it is high, the next lever is a tool letting the annotator confirm a
 sentence's text before committing, which was deliberately deferred here.
+
+## Comments
+
+### Previously discussed — 2026-08-19 grilling session
+
+How this rework gets judged, given that evaluation work is deliberately paused:
+
+- **Ingestion rate is the first signal.** 59 of 73 stories in `document_store.db`
+  sat at `FAILED_DLQ` under the tag-reconstruction approach this project replaces.
+  Re-run the corpus and read the completion count.
+- **Ingestion rate is not sufficient.** It measures that the Structural Identity
+  Check passed, not that pronouns resolved to the right people. Wrong coreference
+  produces a graph that is confidently wrong rather than empty, which is worse for
+  a product whose promise is provenance. **Hand-check ten articles' resolved
+  mentions** before trusting a full run.
+- **Do not unpause the evaluation framework for this.** The Coreference
+  evaluation in the
+  [Model Evaluation initiative](../../initiatives/model-evaluation/MAP.md) stays
+  frozen; the hand-check is a one-time judgment, not an Evaluation Gold Set.
+- Related: the bracketed rendering of substitutions in retrieval answers doubles
+  as an ongoing visibility check on coreference quality, since a reader sees every
+  alteration. See
+  [08-retrieval-and-answer-contract.md](../../initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md).

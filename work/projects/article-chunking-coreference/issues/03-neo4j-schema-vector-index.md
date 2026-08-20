@@ -30,3 +30,25 @@ Specifically, the ingestion pipeline must:
 `src/knowledge_map/adapters/neo4j_db.py` (`_ensure_vector_index`,
 `ingest_article`, `ingest_chunk`, `ingest_chunk_extraction`), covered by
 `tests/test_graph_db.py` (23 passing). Relabeled `completed`.
+
+### Previously discussed — 2026-08-19 grilling session
+
+This issue is `completed`; the decision below changes what a `:Chunk` stores and
+needs its own issue. Recorded here because this issue owns the schema.
+
+[neo4j_db.py:271](../../../../src/knowledge_map/adapters/neo4j_db.py:271) writes
+`c.text = $text, c.index = $index, c.embedding = $embedding`. `context`,
+`start_index`, and `end_index` are computed in
+[chunking.py](../../../../src/knowledge_map/utils/chunking.py), carried on
+`ArticleChunk`, and then dropped at write time.
+
+Decision: **persist `text`, `context`, `start_index`, and `end_index` on the
+`:Chunk` node.** Retrieval returns whole Chunks with bracketed coreference
+substitutions, and both the bracket positions and the sentence alignment need the
+offsets. Nothing downstream should re-derive them.
+
+Note, unchanged and confirmed: edge-level provenance already exists. A
+relationship accumulates `r.chunks` at
+[neo4j_db.py:131](../../../../src/knowledge_map/adapters/neo4j_db.py:131), and
+entities link through `(n)-[:MENTIONED_IN]->(c)`. The graph already stores
+`(head, relation, tail, chunk_id)`.
