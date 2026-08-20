@@ -1,0 +1,993 @@
+task: relevance
+description: Hand-labeled cases for relevance, collected from the project's own data.
+cases:
+- id: https://calmatters.org/economy/2023/06/california-home-insurance/
+  description: Four things California can do as home insurers retreat
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2023/06/california-home-insurance/
+    headline: Four things California can do as home insurers retreat
+    description: Here’s the debate over what California could do after State Farm and Allstate said they
+      wouldn’t issue new home insurance policies.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+  description: Newsom signs law that lets Uber, attorneys avoid ballot measure fight
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+    headline: Newsom signs law that lets Uber, attorneys avoid ballot measure fight
+    description: New California law limits medical cost recoveries from ride-hailing crashes, imposes
+      new driver background check rules
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/
+  description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/
+    headline: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says
+    description: Law reduces Uber’s insurance liability, but a consumer advocacy group — and one lawmaker
+      — say the company didn't disclose it largely insures itself.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/2026/07/california-insurance-myths/
+  description: Four myths about insurance in California
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/07/california-insurance-myths/
+    headline: Four myths about insurance in California
+    description: There’s a lot of misinformation floating around out there about insurance in California.
+      Here’s what you should know ahead of November.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+  description: 'Public funding cuts, lost grants, stagnant wages: How economic woes are dimming a vibrant
+    art scene'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    headline: 'Public funding cuts, lost grants, stagnant wages: How economic woes are dimming a vibrant
+      art scene'
+    description: With world-renowned cultural campuses, San Diego is one of the country’s top 100 arts
+      communities, but can it hold its position amid shrinking arts investment and rising costs?
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+  description: Proposal would allow drivers to trade personal data for potentially lower insurance rates
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+    headline: Proposal would allow drivers to trade personal data for potentially lower insurance rates
+    description: AB 311 would change California insurance law by allowing drivers to be tracked through
+      telematics, which transmits data to insurers.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/technology/2026/04/california-dmv-shares-immigrant-driver-data/
+  description: ‘A betrayal:’ California to share data on immigrant drivers nationally
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/04/california-dmv-shares-immigrant-driver-data/
+    headline: ‘A betrayal:’ California to share data on immigrant drivers nationally
+    description: California's DMV is sharing data about 1 million unauthorized immigrants so its driver
+      licenses will still be accepted at airports.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/technology/2026/06/dmv-data-sharing-california-budget/
+  description: California Legislature in standoff with DMV over sharing driver license data with other
+    states
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/06/dmv-data-sharing-california-budget/
+    headline: California Legislature in standoff with DMV over sharing driver license data with other
+      states
+    description: Lawmakers are holding up money the Newsom administration requested for a nationwide driver
+      license database over concerns that it could lead to deportations.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/technology/2026/06/help-us-investigate-data-privacy-california/
+  description: Californians can protect their personal data with one click. Help us test if it works
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/06/help-us-investigate-data-privacy-california/
+    headline: Californians can protect their personal data with one click. Help us test if it works
+    description: A new state tool lets Californians tell data brokers to stop tracking you. Will they
+      comply? Help us investigate.
+  expected_output:
+    classification: IRRELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+  description: Kaiser nurses say technology is making their jobs — and patient care — worse
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    headline: Kaiser nurses say technology is making their jobs — and patient care — worse
+    description: Call center nurses at Kaiser Permanente said workplace surveillance tools and AI prioritize
+      speed and cost savings over quality and safety.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/05/asylum-seekers-california-college-university-tuition-financial-aid/
+  description: For asylum seekers, the path to a California education is costly
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/05/asylum-seekers-california-college-university-tuition-financial-aid/
+    headline: For asylum seekers, the path to a California education is costly
+    description: Asylum seekers pay much more in college tuition and are often excluded from financial
+      aid as their immigration cases last for years.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+  description: California gave every student in prison a laptop. How community colleges are using them
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+    headline: California gave every student in prison a laptop. How community colleges are using them
+    description: As community colleges offer more online classes in California prisons, some students
+      and teachers debate their effectiveness.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/06/los-angeles-unified-superintendent-resigns/
+  description: L.A. Unified superintendent resigns amid FBI probe into chatbot contract
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/los-angeles-unified-superintendent-resigns/
+    headline: L.A. Unified superintendent resigns amid FBI probe into chatbot contract
+    description: The superintendent of Los Angeles Unified School District resigned amid an FBI investigation
+      into a chatbot contract that he promoted
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/06/trans-athletes-california/
+  description: Transgender athletes still protected in California, Supreme Court rules
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/trans-athletes-california/
+    headline: Transgender athletes still protected in California, Supreme Court rules
+    description: The court’s decision allows – but doesn’t require – states to bar transgender student
+      athletes from playing on girls' and women’s teams.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+  description: Abortion pills could come to California community college health centers
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+    headline: Abortion pills could come to California community college health centers
+    description: A proposed law would require community colleges with health centers to provide medication
+      abortion for students.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-discrimination-lawsuit/
+  description: Cal State president at center of $12M discrimination suit is up for transition job
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-discrimination-lawsuit/
+    headline: Cal State president at center of $12M discrimination suit is up for transition job
+    description: After settling a discrimination lawsuit, trustees will discuss the outgoing CSU San Bernardino
+      president’s transition to a new role.
+  expected_output:
+    classification: IRRELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-lawsuit-transition-job/
+  description: Cal State gives $340K job to ex-president who stepped down after discrimination lawsuit
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-lawsuit-transition-job/
+    headline: Cal State gives $340K job to ex-president who stepped down after discrimination lawsuit
+    description: Cal State has given a consultant role to San Bernardino's ex-president, who stepped down
+      after he was sued for discrimination and harassment.
+  expected_output:
+    classification: IRRELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+  description: California colleges reveal their military weapons stockpile after CalMatters investigation
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+    headline: California colleges reveal their military weapons stockpile after CalMatters investigation
+    description: State law permits campus police to own military weapons as long as they report it to
+      the public. However, not every college follows the law.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/college-student-commute-los-angeles-public-transportation/
+  description: These Los Angeles college students use public transit to save money. See what it’s really
+    like
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/college-student-commute-los-angeles-public-transportation/
+    headline: These Los Angeles college students use public transit to save money. See what it’s really
+      like
+    description: College commuters who use Los Angeles public transportation experience delays and public
+      safety threats but save on gas and parking.
+  expected_output:
+    classification: IRRELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/2026/07/stem-phd-diversity/
+  description: Top science research jobs lack diversity. A California college program aims to curb that
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/stem-phd-diversity/
+    headline: Top science research jobs lack diversity. A California college program aims to curb that
+    description: A state-funded program is trying to diversify the sciences by providing mentors, relationship-building,
+      stipends and more.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2025/04/health-research/
+  description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2025/04/health-research/
+    headline: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more
+    description: The Trump administration has terminated at least 30 health research grants at UC campuses
+      as it targets diversity, equity and inclusion.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+  description: Cal State faculty push to prevent AI tools from replacing them as schools and staff experiment
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+    headline: Cal State faculty push to prevent AI tools from replacing them as schools and staff experiment
+    description: Cal State professors want assurances that the system won't replace them with artificial
+      intelligence tools. They're backing legislation and taking up labor disputes.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+  description: Newsom promised to help Californians build new careers. Now, the money is running out
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+    headline: Newsom promised to help Californians build new careers. Now, the money is running out
+    description: Gov Gavin Newsom made job training and a master plan for career education part of his
+      agenda. Now, key workforce initiatives may get no new funding.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+  description: 'Audit: State Bar missed warning signs before 2025 exam fiasco'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+    headline: 'Audit: State Bar missed warning signs before 2025 exam fiasco'
+    description: The problems with an online California State Bar exam were so profound that test-takers
+      at one point were able to see other people's answers.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/
+  description: A new law holds colleges accountable if their grads don’t earn more than $36,000 a year
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/
+    headline: A new law holds colleges accountable if their grads don’t earn more than $36,000 a year
+    description: All U.S. colleges must prove their graduates earn at least the median wage of someone
+      in their state with only a high school diploma.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+  description: Newsom’s final budget sends more than a billion dollars to University of California, Cal
+    State
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    headline: Newsom’s final budget sends more than a billion dollars to University of California, Cal
+      State
+    description: Since Gavin Newsom became governor eight years ago, state support for the University
+      of California and Cal State has grown by 50%.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/higher-education/2026/07/uc-sat-california/
+  description: A new review of the SAT at University of California is coming by June 2027
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2026/07/uc-sat-california/
+    headline: A new review of the SAT at University of California is coming by June 2027
+    description: Several University of California professors want the system to bring back the SAT for
+      admissions. UC eliminated the test in 2020.
+  expected_output:
+    classification: IRRELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/k-12-education/2025/02/deportation/
+  description: '&#8216;Afraid to go to school&#8217;: Immigrant families in the Salinas Valley are gripped
+    by fear'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/k-12-education/2025/02/deportation/
+    headline: '&#8216;Afraid to go to school&#8217;: Immigrant families in the Salinas Valley are gripped
+      by fear'
+    description: As Trump threatens mass deportation, schools try to offer security and resources to immigrant
+      families afraid they’ll be separated.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+  description: Trump wanted to cut the Department of Education into irrelevancy. A new report shows how
+    he did it
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+    headline: Trump wanted to cut the Department of Education into irrelevancy. A new report shows how
+      he did it
+    description: Due to education department cuts, the agency might not be able to administer federal
+      funding or oversee education law, a new report finds.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/
+  description: California school libraries blindsided by ‘catastrophic’ budget cut
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/
+    headline: California school libraries blindsided by ‘catastrophic’ budget cut
+    description: At the last minute, the California budget cut funding that pays for school libraries’
+      fees for online research materials.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+  description: Some California schools get three times more funding than others. Here’s why
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+    headline: Some California schools get three times more funding than others. Here’s why
+    description: School funding in California steers a lot to wealthy districts and to those with high-needs
+      students. Those in the middle get a lot less.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/education/k-12-education/2026/07/literacy-california/
+  description: California reading scores are up, thanks to literacy investments. Can the state do more?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/k-12-education/2026/07/literacy-california/
+    headline: California reading scores are up, thanks to literacy investments. Can the state do more?
+    description: California’s reading scores have slowly improved after the state invested in several
+      approaches, including literacy coaches for teachers.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+  description: This million-square-foot data center would be the biggest in the state. How local leaders
+    are challenging it
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+    headline: This million-square-foot data center would be the biggest in the state. How local leaders
+      are challenging it
+    description: A million-square-foot data center became a lighting rod in this rural county. Local leaders
+      are fighting back.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+  description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+    headline: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
+    description: Chevron charges more than any brand in California. As gas prices hit a four-year July
+      4 high, the state's fixes sit idle.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+  description: California pulled the plug on new school air conditioners, leaving $200 million unspent
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+    headline: California pulled the plug on new school air conditioners, leaving $200 million unspent
+    description: A $1 billion program to fix school heating and cooling systems ended early, leaving districts
+      without repair funds.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+  description: California restricts utility shutoffs as dangerous heat ripples across state
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+    headline: California restricts utility shutoffs as dangerous heat ripples across state
+    description: California regulators rejected utilities' proposal and expanded protections against power
+      shutoffs during extreme heat.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+  description: Fierce floods or wild waves? How San Diego is preparing for a winter of extreme weather
+    under El Niño.
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+    headline: Fierce floods or wild waves? How San Diego is preparing for a winter of extreme weather
+      under El Niño.
+    description: As a “super El Niño” season gains steam, San Diego County contends with aging stormwater
+      systems and century-old dams.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+  description: As kids grapple with a mid-summer heat wave, new state laws try to help
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+    headline: As kids grapple with a mid-summer heat wave, new state laws try to help
+    description: New California laws require heat illness education and outdoor activity rules in schools
+      statewide, but little funding exists to support it.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+  description: A California housing bill would raise wages to $28. Why do some unions hate it?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+    headline: A California housing bill would raise wages to $28. Why do some unions hate it?
+    description: The California trades unions and the carpenters union are at odds again over a minimum
+      wage provision in a housing bill.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+  description: A $28 minimum wage for California construction workers is dead — killed by construction
+    workers
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+    headline: A $28 minimum wage for California construction workers is dead — killed by construction
+      workers
+    description: A plan to set a $28 minimum wage for California homebuilders died when the influential
+      trades union protested that it could undermine prevailing wage pay rates.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+  description: Real estate tax-cut proposal pulled from ballot in last-minute deal
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+    headline: Real estate tax-cut proposal pulled from ballot in last-minute deal
+    description: The final deal puts a stripped-down tax-cut measure to voters in November but doesn't
+      touch real-estate transfer taxes.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+  description: Their town burned to the ground. Should they get a pass from California’s new housing laws?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    headline: Their town burned to the ground. Should they get a pass from California’s new housing laws?
+    description: A bill to shield Altadena from two density-boosting housing laws is meant to let the
+      town rebuild on its own terms.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+  description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    headline: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
+    description: The federal housing bill does a lot of little things. Supporters hope it will put a dent
+      in California and the nation's housing shortage.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+  description: Two cities burned in LA fires settle YIMBY lawsuit
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+    headline: Two cities burned in LA fires settle YIMBY lawsuit
+    description: Two California cities agreed to allow multiplex development in single-family neighborhoods
+      after a YIMBY nonprofit sued.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/
+  description: Trump renews push to shift homelessness funding. What’s at stake
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/
+    headline: Trump renews push to shift homelessness funding. What’s at stake
+    description: The Trump administration wants to shift more money to homeless shelters that require
+      sobriety, a change that would disrupt California's "housing-first" policies.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+  description: Trump administration blocks federal homelessness funds in Los Angeles
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+    headline: Trump administration blocks federal homelessness funds in Los Angeles
+    description: Fraud allegations by the Trump administration could cost the LA area hundreds of millions
+      of dollars in federal homelessness funding.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+  description: What is the California Legislature doing about homelessness this year? These are the bills
+    to watch
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+    headline: What is the California Legislature doing about homelessness this year? These are the bills
+      to watch
+    description: Bills moving through the California Legislature this year address state-funded sober
+      housing, parked RVs and homelessness prevention.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/homelessness/2026/07/street-therapy-homelessness/
+  description: 'Therapy in a tent: The healthcare many homeless Californians need but aren’t getting'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/homelessness/2026/07/street-therapy-homelessness/
+    headline: 'Therapy in a tent: The healthcare many homeless Californians need but aren’t getting'
+    description: Homeless Californians suffer from depression, anxiety and PTSD at high rates; street
+      therapy can be life changing, but access is limited.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+  description: Judge shoots down Trump’s homeless funding shift:  ‘The hallmark of unreasoned decision
+    making’
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+    headline: Judge shoots down Trump’s homeless funding shift:  ‘The hallmark of unreasoned decision
+      making’
+    description: In a legal win for California, a federal judge shot down Trump’s efforts to funnel money
+      away from permanent homeless housing.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/04/nick-shirley-bill-privacy-protections/
+  description: California Republicans call it the ‘Stop Nick Shirley Act’. Here’s who it’s supposed to
+    help
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/04/nick-shirley-bill-privacy-protections/
+    headline: California Republicans call it the ‘Stop Nick Shirley Act’. Here’s who it’s supposed to
+      help
+    description: California Republicans are invoking Nick Shirley as they fight a bill that would extend
+      privacy protections to people who work with immigrants.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+  description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+    headline: For the lone woman left in the California governor’s race, it’s all about ‘temperament’
+    description: Katie Porter's bid for California governor in the 2026 election stalled after viral outbursts.
+      Experts say female candidates face a higher bar
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+  description: 'Tech regulation gets personal: How Tom Steyer&#8217;s brother could shape California&#8217;s
+    AI future'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+    headline: 'Tech regulation gets personal: How Tom Steyer&#8217;s brother could shape California&#8217;s
+      AI future'
+    description: Tom Steyer's brother Jim runs Common Sense Media, a tech watchdog. If Tom wins California's
+      election in 2026, Big Tech fears stricter AI rules
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+  description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+    headline: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
+    description: Tech billionaires are proposing a California shipyard and new city in Solano County,
+      lobbying state leaders to bypass environmental reviews
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/06/california-housing-hoa-fees/
+  description: HOA fees skyrocketing? A California bill could cap them, but Democrats are divided
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/california-housing-hoa-fees/
+    headline: HOA fees skyrocketing? A California bill could cap them, but Democrats are divided
+    description: Democrats and Republicans have backed several bills to crack down on HOA fees and rules.
+      But one to cap annual fee increases has dissent.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/06/driver-license-sharing/
+  description: California to share driver license data despite fears it could expose unauthorized immigrants
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/driver-license-sharing/
+    headline: California to share driver license data despite fears it could expose unauthorized immigrants
+    description: The state budget that Gov. Gavin Newsom signed includes $55 million for the DMV to build
+      a data-sharing system to comply with the federal Real ID law.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+  description: California Democrats threaten to block Newsom priorities over imperiled climate deal
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+    headline: California Democrats threaten to block Newsom priorities over imperiled climate deal
+    description: Gov. Gavin Newsom’s new climate rules threaten funding for projects California lawmakers
+      fought for last year. Senate Democrats are angry.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+  description: Most California senators supported this ADA lawsuit bill. It died anyway
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+    headline: Most California senators supported this ADA lawsuit bill. It died anyway
+    description: A California ADA lawsuit bill won broad support in the Senate but died when the Assembly
+      chair declined to take it up for a hearing.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/
+  description: 'These California Republicans have one advantage in the race for Congress: Money'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/
+    headline: 'These California Republicans have one advantage in the race for Congress: Money'
+    description: A new U.S. Supreme Court ruling on campaign finance could empower Republican candidates
+      across the country, and in California
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+  description: California sues Trump over emergency funding rules that pressure states on elections
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+    headline: California sues Trump over emergency funding rules that pressure states on elections
+    description: California is suing the Trump administration over conditions on emergency grants that
+      tie funding to the president's priorities on elections and immigration.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
+  description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
+    headline: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
+    description: Steve Hilton has transformed from a green-minded Conservative adviser to a Trump-backed
+      Republican running for California governor
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+  description: They’re on our flag, but do long-gone grizzly bears belong in modern California?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+    headline: They’re on our flag, but do long-gone grizzly bears belong in modern California?
+    description: California Democrats want to study bringing back extinct grizzly bears. Rural residents,
+      ranchers and Republicans are opposed
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/
+  description: Most California lawmakers never buck their party. These few do
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/
+    headline: Most California lawmakers never buck their party. These few do
+    description: California lawmakers break party ranks less than 1% of the time. A few Democrats and
+      Republicans are willing to buck the norms
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+  description: Californians may get a new way to sue big companies. Some Democrats are nervous
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+    headline: Californians may get a new way to sue big companies. Some Democrats are nervous
+    description: California may expand state antitrust law to allow more lawsuits over alleged monopolies.
+      Some Democrats worry it may discourage business
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+  description: California pension ruling limits how many vacation hours workers can count for retirement
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+    headline: California pension ruling limits how many vacation hours workers can count for retirement
+    description: A new California Supreme Court ruling upholds limits on how many vacation hours government
+      workers can cash out and apply toward the pension formulas.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/calpers-investment-return/
+  description: CalPERS just had one of its best years in a decade. Why it matters to taxpayers
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/calpers-investment-return/
+    headline: CalPERS just had one of its best years in a decade. Why it matters to taxpayers
+    description: CalPERS recorded a double-digit investment return for a second consecutive year. The
+      California pension fund hit 14.8% in 2025-26.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+  description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+    headline: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?
+    description: Rep. David Valadao, a Central Valley dairyman, faces reelection as Trump's unpopularity
+      threatens his cross-party farming credentials
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+  description: Should coastal commission get more power over rebuilding after wildfire? Some lawmakers
+    say yes
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+    headline: Should coastal commission get more power over rebuilding after wildfire? Some lawmakers
+      say yes
+    description: A Los Angeles lawmaker wants to give the California Coastal Commission more control over
+      rebuilding homes destroyed by wildfires and other disasters.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+  description: Judge rejects California tribes&#8217; latest attempt to kill blackjack at cardrooms
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+    headline: Judge rejects California tribes&#8217; latest attempt to kill blackjack at cardrooms
+    description: A San Francisco judge ruled Rob Bonta lacked authority to ban blackjack at California
+      cardrooms, preserving the games and local tax revenue.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+  description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    headline: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one'
+    description: Gavin Newsom opposes California’s proposed billionaire tax. Instead, he backs a federal
+      wealth tax and help for workers displaced by AI
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+  description: Gavin Newsom’s return-to-office rules are stricter than many states, including Texas
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+    headline: Gavin Newsom’s return-to-office rules are stricter than many states, including Texas
+    description: California state workers must report to the office four days a week under an executive
+      order from Gov. Gavin Newsom. Other states allow more remote work.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+  description: As transgender troops leave the military, California seeks to help them start new lives
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+    headline: As transgender troops leave the military, California seeks to help them start new lives
+    description: A new bill proposes help for California’s transgender troops discharged under Trump's
+      military ban with housing, legal aid and discharge upgrades.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+  description: '‘Don’t Flock me’: California, U.S. lawmakers debate license plate reader technology'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+    headline: '‘Don’t Flock me’: California, U.S. lawmakers debate license plate reader technology'
+    description: Flock license plate readers help California police solve crimes but raise privacy concerns
+      as lawmakers consider new limits
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+  description: Keep an eye on these 5 deals as California lawmakers close out the legislative session
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    headline: Keep an eye on these 5 deals as California lawmakers close out the legislative session
+    description: California lawmakers face an Aug. 31 deadline to resolve major deals on climate funding,
+      antitrust law, wildfire liability and more
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN
+- id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+  description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    headline: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
+    description: Proposition 38 will award $4 billion to one unnamed research center. Under the very specific
+      criteria, only one center seemingly qualifies.
+  expected_output:
+    classification: RELEVANT
+  metadata:
+    publication_id: calmatters
+    label_source: HUMAN

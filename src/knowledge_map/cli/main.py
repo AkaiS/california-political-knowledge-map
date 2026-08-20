@@ -46,6 +46,7 @@ CLI_COMMAND_HELP = {
     "classifier backfill": "Backfill cached relevance metadata and embeddings",
     "classifier train": "Train the classifier using scikit-learn LogisticRegression",
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
+    "eval": "Collect and run an Evaluation Gold Set",
 }
 
 
@@ -224,6 +225,10 @@ def main(args=None):
     classifier_sub.add_parser("backfill", help=CLI_COMMAND_HELP["classifier backfill"])
     classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
     classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
+
+    # --- eval ---
+    from knowledge_map.cli import evaluate as evaluate_cli
+    evaluate_cli.add_parser(subparsers)
 
     parsed_args = parser.parse_args(args)
 
@@ -858,6 +863,12 @@ def main(args=None):
         print("Purging raw HTML cache...")
         counts = purge_html_cache(db_path=db_path)
         print(f"Total rows purged: {counts['total']}.")
+        sys.exit(0)
+
+    elif parsed_args.action == "eval":
+        from knowledge_map.cli import evaluate as evaluate_cli
+
+        evaluate_cli.dispatch(parsed_args)
         sys.exit(0)
 
     elif parsed_args.action == "classifier":

@@ -1,0 +1,3993 @@
+{
+  "commit": "cf12c89",
+  "dirty": false,
+  "gold_set": "evals/gold/relevance.yaml",
+  "model": "gemma4:26b",
+  "ran_at": "2026-08-20T00:26:19.650897+00:00",
+  "report": {
+    "analyses": [],
+    "cases": [
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Here\u2019s the debate over what California could do after State Farm and Allstate said they wouldn\u2019t issue new home insurance policies.",
+          "headline": "Four things California can do as home insurers retreat",
+          "url": "https://calmatters.org/economy/2023/06/california-home-insurance/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 328,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2023/06/california-home-insurance/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "6c8e690318553114",
+        "task_duration": 24.105851,
+        "total_duration": 24.10706,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "New California law limits medical cost recoveries from ride-hailing crashes, imposes new driver background check rules",
+          "headline": "Newsom signs law that lets Uber, attorneys avoid ballot measure fight",
+          "url": "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 234,
+          "output_tokens": 402,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "373a70b2dc0ece63",
+        "task_duration": 17.141676,
+        "total_duration": 17.14289,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Law reduces Uber\u2019s insurance liability, but a consumer advocacy group \u2014 and one lawmaker \u2014 say the company didn't disclose it largely insures itself.",
+          "headline": "Uber passed an insurance law in California. It did not disclose key info, a lawmaker says",
+          "url": "https://calmatters.org/economy/2026/06/uber-california-insurance-liability/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 250,
+          "output_tokens": 382,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2026/06/uber-california-insurance-liability/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "1290da45b22d28ba",
+        "task_duration": 8.688349,
+        "total_duration": 8.689985,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "There\u2019s a lot of misinformation floating around out there about insurance in California. Here\u2019s what you should know ahead of November.",
+          "headline": "Four myths about insurance in California",
+          "url": "https://calmatters.org/economy/2026/07/california-insurance-myths/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 235,
+          "output_tokens": 414,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2026/07/california-insurance-myths/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "a985e999620ee924",
+        "task_duration": 32.845961,
+        "total_duration": 32.847062,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "With world-renowned cultural campuses, San Diego is one of the country\u2019s top 100 arts communities, but can it hold its position amid shrinking arts investment and rising costs?",
+          "headline": "Public funding cuts, lost grants, stagnant wages: How economic woes are dimming a vibrant art scene",
+          "url": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 260,
+          "output_tokens": 450,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "d80c90e22b4e3a39",
+        "task_duration": 33.707996,
+        "total_duration": 33.709276,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "AB 311 would change California insurance law by allowing drivers to be tracked through telematics, which transmits data to insurers.",
+          "headline": "Proposal would allow drivers to trade personal data for potentially lower insurance rates",
+          "url": "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 370,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "ef7c644f5c83d4bd",
+        "task_duration": 33.49754,
+        "total_duration": 33.498669,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California's DMV is sharing data about 1 million unauthorized immigrants so its driver licenses will still be accepted at airports.",
+          "headline": "\u2018A betrayal:\u2019 California to share data on immigrant drivers nationally",
+          "url": "https://calmatters.org/economy/technology/2026/04/california-dmv-shares-immigrant-driver-data/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 239,
+          "output_tokens": 385,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/technology/2026/04/california-dmv-shares-immigrant-driver-data/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "884afca5d81a56c5",
+        "task_duration": 35.232975,
+        "total_duration": 35.234136,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Lawmakers are holding up money the Newsom administration requested for a nationwide driver license database over concerns that it could lead to deportations.",
+          "headline": "California Legislature in standoff with DMV over sharing driver license data with other states",
+          "url": "https://calmatters.org/economy/technology/2026/06/dmv-data-sharing-california-budget/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 394,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/technology/2026/06/dmv-data-sharing-california-budget/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "35770d128380bae2",
+        "task_duration": 35.171698,
+        "total_duration": 35.173113,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [
+          {
+            "error_message": "ValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.",
+            "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 78, in run_evaluator\n    results = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw_results)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic/type_adapter.py\", line 441, in validate_python\n    return self.validator.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        object,\n        ^^^^^^^\n    ...<6 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 6 validation errors for union[bool,int,float,str,EvaluationReason,dict[str,union[bool,int,float,str,EvaluationReason]]]\nbool\n  Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/bool_type\nint\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nfloat\n  Input should be a valid number [type=float_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/float_type\nstr\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nEvaluationReason\n  Input should be a dictionary or an instance of EvaluationReason [type=dataclass_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dataclass_type\ndict[str,union[bool,int,float,str,EvaluationReason]]\n  Input should be a valid dictionary [type=dict_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 80, in run_evaluator\n    raise ValueError(f'{evaluator!r}.evaluate returned a value of an invalid type: {raw_results!r}.') from e\nValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.\n",
+            "error_type": "ValueError",
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            }
+          }
+        ],
+        "expected_output": {
+          "classification": "IRRELEVANT"
+        },
+        "inputs": {
+          "description": "A new state tool lets Californians tell data brokers to stop tracking you. Will they comply? Help us investigate.",
+          "headline": "Californians can protect their personal data with one click. Help us test if it works",
+          "url": "https://calmatters.org/economy/technology/2026/06/help-us-investigate-data-privacy-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 240,
+          "output_tokens": 219,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/technology/2026/06/help-us-investigate-data-privacy-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "e933249d890945d3",
+        "task_duration": 30.406817,
+        "total_duration": 30.41073,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Call center nurses at Kaiser Permanente said workplace surveillance tools and AI prioritize speed and cost savings over quality and safety.",
+          "headline": "Kaiser nurses say technology is making their jobs \u2014 and patient care \u2014 worse",
+          "url": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 467,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "7c4a96f11004c16f",
+        "task_duration": 31.998235,
+        "total_duration": 31.99935,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Asylum seekers pay much more in college tuition and are often excluded from financial aid as their immigration cases last for years.",
+          "headline": "For asylum seekers, the path to a California education is costly",
+          "url": "https://calmatters.org/education/2026/05/asylum-seekers-california-college-university-tuition-financial-aid/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 237,
+          "output_tokens": 368,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/05/asylum-seekers-california-college-university-tuition-financial-aid/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "178de8ec00f0d392",
+        "task_duration": 31.204362,
+        "total_duration": 31.205783,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "As community colleges offer more online classes in California prisons, some students and teachers debate their effectiveness.",
+          "headline": "California gave every student in prison a laptop. How community colleges are using them",
+          "url": "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 236,
+          "output_tokens": 337,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "1a94c9175fa498e8",
+        "task_duration": 29.696768,
+        "total_duration": 29.697964,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The superintendent of Los Angeles Unified School District resigned amid an FBI investigation into a chatbot contract that he promoted",
+          "headline": "L.A. Unified superintendent resigns amid FBI probe into chatbot contract",
+          "url": "https://calmatters.org/education/2026/06/los-angeles-unified-superintendent-resigns/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 236,
+          "output_tokens": 420,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/06/los-angeles-unified-superintendent-resigns/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "2d8bca287ef91a1d",
+        "task_duration": 33.707498,
+        "total_duration": 33.70861,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The court\u2019s decision allows \u2013 but doesn\u2019t require \u2013 states to bar transgender student athletes from playing on girls' and women\u2019s teams.",
+          "headline": "Transgender athletes still protected in California, Supreme Court rules",
+          "url": "https://calmatters.org/education/2026/06/trans-athletes-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 243,
+          "output_tokens": 259,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/06/trans-athletes-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3f081e7bd2cf6966",
+        "task_duration": 29.444057,
+        "total_duration": 29.445242,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A proposed law would require community colleges with health centers to provide medication abortion for students.",
+          "headline": "Abortion pills could come to California community college health centers",
+          "url": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 229,
+          "output_tokens": 310,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3f2e8cdaf125119d",
+        "task_duration": 28.119694,
+        "total_duration": 28.120827,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [
+          {
+            "error_message": "ValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.",
+            "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 78, in run_evaluator\n    results = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw_results)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic/type_adapter.py\", line 441, in validate_python\n    return self.validator.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        object,\n        ^^^^^^^\n    ...<6 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 6 validation errors for union[bool,int,float,str,EvaluationReason,dict[str,union[bool,int,float,str,EvaluationReason]]]\nbool\n  Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/bool_type\nint\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nfloat\n  Input should be a valid number [type=float_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/float_type\nstr\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nEvaluationReason\n  Input should be a dictionary or an instance of EvaluationReason [type=dataclass_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dataclass_type\ndict[str,union[bool,int,float,str,EvaluationReason]]\n  Input should be a valid dictionary [type=dict_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 80, in run_evaluator\n    raise ValueError(f'{evaluator!r}.evaluate returned a value of an invalid type: {raw_results!r}.') from e\nValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.\n",
+            "error_type": "ValueError",
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            }
+          }
+        ],
+        "expected_output": {
+          "classification": "IRRELEVANT"
+        },
+        "inputs": {
+          "description": "After settling a discrimination lawsuit, trustees will discuss the outgoing CSU San Bernardino president\u2019s transition to a new role.",
+          "headline": "Cal State president at center of $12M discrimination suit is up for transition job",
+          "url": "https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-discrimination-lawsuit/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 383,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-discrimination-lawsuit/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "2fb43aed9f5243d1",
+        "task_duration": 29.021142,
+        "total_duration": 29.023078,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [
+          {
+            "error_message": "ValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.",
+            "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 78, in run_evaluator\n    results = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw_results)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic/type_adapter.py\", line 441, in validate_python\n    return self.validator.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        object,\n        ^^^^^^^\n    ...<6 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 6 validation errors for union[bool,int,float,str,EvaluationReason,dict[str,union[bool,int,float,str,EvaluationReason]]]\nbool\n  Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/bool_type\nint\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nfloat\n  Input should be a valid number [type=float_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/float_type\nstr\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nEvaluationReason\n  Input should be a dictionary or an instance of EvaluationReason [type=dataclass_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dataclass_type\ndict[str,union[bool,int,float,str,EvaluationReason]]\n  Input should be a valid dictionary [type=dict_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 80, in run_evaluator\n    raise ValueError(f'{evaluator!r}.evaluate returned a value of an invalid type: {raw_results!r}.') from e\nValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.\n",
+            "error_type": "ValueError",
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            }
+          }
+        ],
+        "expected_output": {
+          "classification": "IRRELEVANT"
+        },
+        "inputs": {
+          "description": "Cal State has given a consultant role to San Bernardino's ex-president, who stepped down after he was sued for discrimination and harassment.",
+          "headline": "Cal State gives $340K job to ex-president who stepped down after discrimination lawsuit",
+          "url": "https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-lawsuit-transition-job/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 385,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/cal-state-san-bernardino-president-lawsuit-transition-job/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3b03d0ea8e31cac3",
+        "task_duration": 28.347234,
+        "total_duration": 28.349213,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "State law permits campus police to own military weapons as long as they report it to the public. However, not every college follows the law.",
+          "headline": "California colleges reveal their military weapons stockpile after CalMatters investigation",
+          "url": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 281,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "ec022f794e4dae8e",
+        "task_duration": 28.788267,
+        "total_duration": 28.789276,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [
+          {
+            "error_message": "ValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.",
+            "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 78, in run_evaluator\n    results = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw_results)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic/type_adapter.py\", line 441, in validate_python\n    return self.validator.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        object,\n        ^^^^^^^\n    ...<6 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 6 validation errors for union[bool,int,float,str,EvaluationReason,dict[str,union[bool,int,float,str,EvaluationReason]]]\nbool\n  Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/bool_type\nint\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nfloat\n  Input should be a valid number [type=float_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/float_type\nstr\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nEvaluationReason\n  Input should be a dictionary or an instance of EvaluationReason [type=dataclass_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dataclass_type\ndict[str,union[bool,int,float,str,EvaluationReason]]\n  Input should be a valid dictionary [type=dict_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 80, in run_evaluator\n    raise ValueError(f'{evaluator!r}.evaluate returned a value of an invalid type: {raw_results!r}.') from e\nValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.\n",
+            "error_type": "ValueError",
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            }
+          }
+        ],
+        "expected_output": {
+          "classification": "IRRELEVANT"
+        },
+        "inputs": {
+          "description": "College commuters who use Los Angeles public transportation experience delays and public safety threats but save on gas and parking.",
+          "headline": "These Los Angeles college students use public transit to save money. See what it\u2019s really like",
+          "url": "https://calmatters.org/education/2026/07/college-student-commute-los-angeles-public-transportation/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 380,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/college-student-commute-los-angeles-public-transportation/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "17403cf9b254711b",
+        "task_duration": 30.213005,
+        "total_duration": 30.214895,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A state-funded program is trying to diversify the sciences by providing mentors, relationship-building, stipends and more.",
+          "headline": "Top science research jobs lack diversity. A California college program aims to curb that",
+          "url": "https://calmatters.org/education/2026/07/stem-phd-diversity/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 370,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/2026/07/stem-phd-diversity/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "2e8eb62fd5e1f9bb",
+        "task_duration": 29.941905,
+        "total_duration": 29.943045,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The Trump administration has terminated at least 30 health research grants at UC campuses as it targets diversity, equity and inclusion.",
+          "headline": "He spent decades researching dementia. Trump\u2019s DEI purge killed his grant, and dozens more",
+          "url": "https://calmatters.org/education/higher-education/2025/04/health-research/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 245,
+          "output_tokens": 454,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2025/04/health-research/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "d459a2d1d9d30ad6",
+        "task_duration": 31.314058,
+        "total_duration": 31.315185,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Cal State professors want assurances that the system won't replace them with artificial intelligence tools. They're backing legislation and taking up labor disputes.",
+          "headline": "Cal State faculty push to prevent AI tools from replacing them as schools and staff experiment",
+          "url": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 247,
+          "output_tokens": 398,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "fdf9ea0bfce98409",
+        "task_duration": 33.683903,
+        "total_duration": 33.68502,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Gov Gavin Newsom made job training and a master plan for career education part of his agenda. Now, key workforce initiatives may get no new funding.",
+          "headline": "Newsom promised to help Californians build new careers. Now, the money is running out",
+          "url": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 247,
+          "output_tokens": 347,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "8265a371250c42c8",
+        "task_duration": 33.018373,
+        "total_duration": 33.019593,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The problems with an online California State Bar exam were so profound that test-takers at one point were able to see other people's answers.",
+          "headline": "Audit: State Bar missed warning signs before 2025 exam fiasco",
+          "url": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 247,
+          "output_tokens": 418,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "9c0f8d7ec0984040",
+        "task_duration": 33.992947,
+        "total_duration": 33.994048,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "All U.S. colleges must prove their graduates earn at least the median wage of someone in their state with only a high school diploma.",
+          "headline": "A new law holds colleges accountable if their grads don\u2019t earn more than $36,000 a year",
+          "url": "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 254,
+          "output_tokens": 460,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "160dc22d11bbbf34",
+        "task_duration": 34.119492,
+        "total_duration": 34.120711,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Since Gavin Newsom became governor eight years ago, state support for the University of California and Cal State has grown by 50%.",
+          "headline": "Newsom\u2019s final budget sends more than a billion dollars to University of California, Cal State",
+          "url": "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 246,
+          "output_tokens": 247,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "d2252dffc1c135af",
+        "task_duration": 31.051809,
+        "total_duration": 31.052857,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [
+          {
+            "error_message": "ValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.",
+            "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 78, in run_evaluator\n    results = _EVALUATOR_OUTPUT_ADAPTER.validate_python(raw_results)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic/type_adapter.py\", line 441, in validate_python\n    return self.validator.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        object,\n        ^^^^^^^\n    ...<6 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 6 validation errors for union[bool,int,float,str,EvaluationReason,dict[str,union[bool,int,float,str,EvaluationReason]]]\nbool\n  Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/bool_type\nint\n  Input should be a valid integer [type=int_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nfloat\n  Input should be a valid number [type=float_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/float_type\nstr\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nEvaluationReason\n  Input should be a dictionary or an instance of EvaluationReason [type=dataclass_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dataclass_type\ndict[str,union[bool,int,float,str,EvaluationReason]]\n  Input should be a valid dictionary [type=dict_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/evaluators/_run_evaluator.py\", line 80, in run_evaluator\n    raise ValueError(f'{evaluator!r}.evaluate returned a value of an invalid type: {raw_results!r}.') from e\nValueError: RecalledARelevantArticle().evaluate returned a value of an invalid type: None.\n",
+            "error_type": "ValueError",
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            }
+          }
+        ],
+        "expected_output": {
+          "classification": "IRRELEVANT"
+        },
+        "inputs": {
+          "description": "Several University of California professors want the system to bring back the SAT for admissions. UC eliminated the test in 2020.",
+          "headline": "A new review of the SAT at University of California is coming by June 2027",
+          "url": "https://calmatters.org/education/higher-education/2026/07/uc-sat-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 248,
+          "output_tokens": 365,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/higher-education/2026/07/uc-sat-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "e5e20b01a3067c16",
+        "task_duration": 31.398335,
+        "total_duration": 31.400168,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "As Trump threatens mass deportation, schools try to offer security and resources to immigrant families afraid they\u2019ll be separated.",
+          "headline": "&#8216;Afraid to go to school&#8217;: Immigrant families in the Salinas Valley are gripped by fear",
+          "url": "https://calmatters.org/education/k-12-education/2025/02/deportation/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 254,
+          "output_tokens": 464,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/k-12-education/2025/02/deportation/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "f08063cbc9fa176a",
+        "task_duration": 32.327407,
+        "total_duration": 32.328529,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": false
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": false
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Due to education department cuts, the agency might not be able to administer federal funding or oversee education law, a new report finds.",
+          "headline": "Trump wanted to cut the Department of Education into irrelevancy. A new report shows how he did it",
+          "url": "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 473,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/",
+        "output": {
+          "classification": "IRRELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "df5d4305c447d55d",
+        "task_duration": 32.601619,
+        "total_duration": 32.602997,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "At the last minute, the California budget cut funding that pays for school libraries\u2019 fees for online research materials.",
+          "headline": "California school libraries blindsided by \u2018catastrophic\u2019 budget cut",
+          "url": "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 237,
+          "output_tokens": 228,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3694497caa30fa25",
+        "task_duration": 32.218752,
+        "total_duration": 32.219741,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "School funding in California steers a lot to wealthy districts and to those with high-needs students. Those in the middle get a lot less.",
+          "headline": "Some California schools get three times more funding than others. Here\u2019s why",
+          "url": "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 245,
+          "output_tokens": 292,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "5335c9aba5fec287",
+        "task_duration": 30.762072,
+        "total_duration": 30.763183,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California\u2019s reading scores have slowly improved after the state invested in several approaches, including literacy coaches for teachers.",
+          "headline": "California reading scores are up, thanks to literacy investments. Can the state do more?",
+          "url": "https://calmatters.org/education/k-12-education/2026/07/literacy-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 288,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/education/k-12-education/2026/07/literacy-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "a6574f5700a865f5",
+        "task_duration": 27.201708,
+        "total_duration": 27.202748,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A million-square-foot data center became a lighting rod in this rural county. Local leaders are fighting back.",
+          "headline": "This million-square-foot data center would be the biggest in the state. How local leaders are challenging it",
+          "url": "https://calmatters.org/environment/2026/06/imperial-county-data-center/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 247,
+          "output_tokens": 356,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/2026/06/imperial-county-data-center/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "db0fb0ff5f499e3b",
+        "task_duration": 24.820493,
+        "total_duration": 24.821603,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Chevron charges more than any brand in California. As gas prices hit a four-year July 4 high, the state's fixes sit idle.",
+          "headline": "Gas prices are high for July 4. California\u2019s price-gouging fixes are still on the shelf",
+          "url": "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 254,
+          "output_tokens": 409,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "b4e7522df526526c",
+        "task_duration": 28.496394,
+        "total_duration": 28.497616,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A $1 billion program to fix school heating and cooling systems ended early, leaving districts without repair funds.",
+          "headline": "California pulled the plug on new school air conditioners, leaving $200 million unspent",
+          "url": "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 407,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "8549e49b4660a3c6",
+        "task_duration": 30.826538,
+        "total_duration": 30.827648,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California regulators rejected utilities' proposal and expanded protections against power shutoffs during extreme heat.",
+          "headline": "California restricts utility shutoffs as dangerous heat ripples across state",
+          "url": "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 230,
+          "output_tokens": 250,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "b626df5b5b360943",
+        "task_duration": 30.056315,
+        "total_duration": 30.057406,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "As a \u201csuper El Ni\u00f1o\u201d season gains steam, San Diego County contends with aging stormwater systems and century-old dams.",
+          "headline": "Fierce floods or wild waves? How San Diego is preparing for a winter of extreme weather under El Ni\u00f1o.",
+          "url": "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 383,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "b63d6bacd96ac66c",
+        "task_duration": 30.595125,
+        "total_duration": 30.596274,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "New California laws require heat illness education and outdoor activity rules in schools statewide, but little funding exists to support it.",
+          "headline": "As kids grapple with a mid-summer heat wave, new state laws try to help",
+          "url": "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 344,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "0cf76c065a5ccbce",
+        "task_duration": 29.265851,
+        "total_duration": 29.266927,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The California trades unions and the carpenters union are at odds again over a minimum wage provision in a housing bill.",
+          "headline": "A California housing bill would raise wages to $28. Why do some unions hate it?",
+          "url": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 243,
+          "output_tokens": 256,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "fdf8deb20fa71294",
+        "task_duration": 26.198092,
+        "total_duration": 26.199253,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A plan to set a $28 minimum wage for California homebuilders died when the influential trades union protested that it could undermine prevailing wage pay rates.",
+          "headline": "A $28 minimum wage for California construction workers is dead \u2014 killed by construction workers",
+          "url": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 358,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "b168e02442131a6b",
+        "task_duration": 28.389836,
+        "total_duration": 28.390961,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The final deal puts a stripped-down tax-cut measure to voters in November but doesn't touch real-estate transfer taxes.",
+          "headline": "Real estate tax-cut proposal pulled from ballot in last-minute deal",
+          "url": "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 243,
+          "output_tokens": 289,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "dfa463c2d7524fd6",
+        "task_duration": 26.49236,
+        "total_duration": 26.493515,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A bill to shield Altadena from two density-boosting housing laws is meant to let the town rebuild on its own terms.",
+          "headline": "Their town burned to the ground. Should they get a pass from California\u2019s new housing laws?",
+          "url": "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 247,
+          "output_tokens": 363,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "87f7306b8b3aa4fa",
+        "task_duration": 26.909637,
+        "total_duration": 26.910714,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The federal housing bill does a lot of little things. Supporters hope it will put a dent in California and the nation's housing shortage.",
+          "headline": "Here\u2019s what the \u2018once-in-a-lifetime\u2019 federal housing bill means for California",
+          "url": "https://calmatters.org/housing/2026/07/road-housing-california-federal/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 250,
+          "output_tokens": 377,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "50316933a5395245",
+        "task_duration": 29.341755,
+        "total_duration": 29.342829,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Two California cities agreed to allow multiplex development in single-family neighborhoods after a YIMBY nonprofit sued.",
+          "headline": "Two cities burned in LA fires settle YIMBY lawsuit",
+          "url": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 234,
+          "output_tokens": 403,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "9519e7ffb9490033",
+        "task_duration": 30.250788,
+        "total_duration": 30.252,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The Trump administration wants to shift more money to homeless shelters that require sobriety, a change that would disrupt California's \"housing-first\" policies.",
+          "headline": "Trump renews push to shift homelessness funding. What\u2019s at stake",
+          "url": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 246,
+          "output_tokens": 319,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "92c1e16f0d4a65ef",
+        "task_duration": 30.866094,
+        "total_duration": 30.867248,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Fraud allegations by the Trump administration could cost the LA area hundreds of millions of dollars in federal homelessness funding.",
+          "headline": "Trump administration blocks federal homelessness funds in Los Angeles",
+          "url": "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 232,
+          "output_tokens": 422,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "fe9dd418d840ff42",
+        "task_duration": 32.029288,
+        "total_duration": 32.03032,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Bills moving through the California Legislature this year address state-funded sober housing, parked RVs and homelessness prevention.",
+          "headline": "What is the California Legislature doing about homelessness this year? These are the bills to watch",
+          "url": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 274,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "c98c5a44a467d45c",
+        "task_duration": 29.964698,
+        "total_duration": 29.965782,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Homeless Californians suffer from depression, anxiety and PTSD at high rates; street therapy can be life changing, but access is limited.",
+          "headline": "Therapy in a tent: The healthcare many homeless Californians need but aren\u2019t getting",
+          "url": "https://calmatters.org/housing/homelessness/2026/07/street-therapy-homelessness/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 243,
+          "output_tokens": 396,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/homelessness/2026/07/street-therapy-homelessness/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "f4b42b5e2cff8bfa",
+        "task_duration": 29.83477,
+        "total_duration": 29.83595,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "In a legal win for California, a federal judge shot down Trump\u2019s efforts to funnel money away from permanent homeless housing.",
+          "headline": "Judge shoots down Trump\u2019s homeless funding shift:\u00a0 \u2018The hallmark of unreasoned decision making\u2019",
+          "url": "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 387,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3fda94d8e968bc6a",
+        "task_duration": 31.222086,
+        "total_duration": 31.223201,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California Republicans are invoking Nick Shirley as they fight a bill that would extend privacy protections to people who work with immigrants.",
+          "headline": "California Republicans call it the \u2018Stop Nick Shirley Act\u2019. Here\u2019s who it\u2019s supposed to help",
+          "url": "https://calmatters.org/politics/2026/04/nick-shirley-bill-privacy-protections/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 246,
+          "output_tokens": 359,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/04/nick-shirley-bill-privacy-protections/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "1a0afc391fcba6f3",
+        "task_duration": 29.959346,
+        "total_duration": 29.960396,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Katie Porter's bid for California governor in the 2026 election stalled after viral outbursts. Experts say female candidates face a higher bar",
+          "headline": "For the lone woman left in the California governor\u2019s race, it\u2019s all about \u2018temperament\u2019",
+          "url": "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 253,
+          "output_tokens": 409,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "fb461ecb37610fa3",
+        "task_duration": 32.689623,
+        "total_duration": 32.690825,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Tom Steyer's brother Jim runs Common Sense Media, a tech watchdog. If Tom wins California's election in 2026, Big Tech fears stricter AI rules",
+          "headline": "Tech regulation gets personal: How Tom Steyer&#8217;s brother could shape California&#8217;s AI future",
+          "url": "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 267,
+          "output_tokens": 366,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "910872423a87205a",
+        "task_duration": 32.105757,
+        "total_duration": 32.106842,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Tech billionaires are proposing a California shipyard and new city in Solano County, lobbying state leaders to bypass environmental reviews",
+          "headline": "Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city",
+          "url": "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 239,
+          "output_tokens": 280,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "16b0ce9ad5ec3b33",
+        "task_duration": 29.933279,
+        "total_duration": 29.934678,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Democrats and Republicans have backed several bills to crack down on HOA fees and rules. But one to cap annual fee increases has dissent.",
+          "headline": "HOA fees skyrocketing? A California bill could cap them, but Democrats are divided",
+          "url": "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 243,
+          "output_tokens": 332,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "00e2bfdc040b4293",
+        "task_duration": 29.361211,
+        "total_duration": 29.362285,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "The state budget that Gov. Gavin Newsom signed includes $55 million for the DMV to build a data-sharing system to comply with the federal Real ID law.",
+          "headline": "California to share driver license data despite fears it could expose unauthorized immigrants",
+          "url": "https://calmatters.org/politics/2026/06/driver-license-sharing/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 248,
+          "output_tokens": 382,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/06/driver-license-sharing/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "cfc5fdf514104f84",
+        "task_duration": 28.834093,
+        "total_duration": 28.835407,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Gov. Gavin Newsom\u2019s new climate rules threaten funding for projects California lawmakers fought for last year. Senate Democrats are angry.",
+          "headline": "California Democrats threaten to block Newsom priorities over imperiled climate deal",
+          "url": "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 239,
+          "output_tokens": 333,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "8506947361c5992c",
+        "task_duration": 28.120837,
+        "total_duration": 28.121894,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A California ADA lawsuit bill won broad support in the Senate but died when the Assembly chair declined to take it up for a hearing.",
+          "headline": "Most California senators supported this ADA lawsuit bill. It died anyway",
+          "url": "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 240,
+          "output_tokens": 318,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "cd29ee0e5bec4ae1",
+        "task_duration": 28.89948,
+        "total_duration": 28.900634,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A new U.S. Supreme Court ruling on campaign finance could empower Republican candidates across the country, and in California",
+          "headline": "These California Republicans have one advantage in the race for Congress: Money",
+          "url": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 349,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "9a1ca172cc0d518b",
+        "task_duration": 29.260342,
+        "total_duration": 29.261444,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California is suing the Trump administration over conditions on emergency grants that tie funding to the president's priorities on elections and immigration.",
+          "headline": "California sues Trump over emergency funding rules that pressure states on elections",
+          "url": "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 240,
+          "output_tokens": 203,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "731f23954d1abb12",
+        "task_duration": 25.616736,
+        "total_duration": 25.617821,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Steve Hilton has transformed from a green-minded Conservative adviser to a Trump-backed Republican running for California governor",
+          "headline": "Who is Steve Hilton? Here\u2019s how he has rebranded himself multiple times",
+          "url": "https://calmatters.org/politics/2026/07/california-governor-hilton-profile/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 358,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-governor-hilton-profile/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "271e2ba2f5e487b6",
+        "task_duration": 26.132635,
+        "total_duration": 26.133733,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California Democrats want to study bringing back extinct grizzly bears. Rural residents, ranchers and Republicans are opposed",
+          "headline": "They\u2019re on our flag, but do long-gone grizzly bears belong in modern California?",
+          "url": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 240,
+          "output_tokens": 411,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "333209c1a0f9f3b9",
+        "task_duration": 27.987764,
+        "total_duration": 27.988861,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California lawmakers break party ranks less than 1% of the time. A few Democrats and Republicans are willing to buck the norms",
+          "headline": "Most California lawmakers never buck their party. These few do",
+          "url": "https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 301,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "9fc7a2ac5a2c3ecc",
+        "task_duration": 27.031081,
+        "total_duration": 27.032141,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California may expand state antitrust law to allow more lawsuits over alleged monopolies. Some Democrats worry it may discourage business",
+          "headline": "Californians may get a new way to sue big companies. Some Democrats are nervous",
+          "url": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 238,
+          "output_tokens": 341,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "a18873e56716f9e8",
+        "task_duration": 29.810776,
+        "total_duration": 29.811849,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A new California Supreme Court ruling upholds limits on how many vacation hours government workers can cash out and apply toward the pension formulas.",
+          "headline": "California pension ruling limits how many vacation hours workers can count for retirement",
+          "url": "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 241,
+          "output_tokens": 333,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "d55dc32610f57959",
+        "task_duration": 29.310974,
+        "total_duration": 29.312063,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "CalPERS recorded a double-digit investment return for a second consecutive year. The California pension fund hit 14.8% in 2025-26.",
+          "headline": "CalPERS just had one of its best years in a decade. Why it matters to taxpayers",
+          "url": "https://calmatters.org/politics/2026/07/calpers-investment-return/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 256,
+          "output_tokens": 262,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/calpers-investment-return/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "3bfefa1ba76ecaca",
+        "task_duration": 26.34063,
+        "total_duration": 26.341728,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Rep. David Valadao, a Central Valley dairyman, faces reelection as Trump's unpopularity threatens his cross-party farming credentials",
+          "headline": "David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?",
+          "url": "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 252,
+          "output_tokens": 402,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "06767c82b2de48fe",
+        "task_duration": 28.386237,
+        "total_duration": 28.387427,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A Los Angeles lawmaker wants to give the California Coastal Commission more control over rebuilding homes destroyed by wildfires and other disasters.",
+          "headline": "Should coastal commission get more power over rebuilding after wildfire? Some lawmakers say yes",
+          "url": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 240,
+          "output_tokens": 369,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "ed7375ccc9696cbf",
+        "task_duration": 28.960098,
+        "total_duration": 28.961199,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A San Francisco judge ruled Rob Bonta lacked authority to ban blackjack at California cardrooms, preserving the games and local tax revenue.",
+          "headline": "Judge rejects California tribes&#8217; latest attempt to kill blackjack at cardrooms",
+          "url": "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 246,
+          "output_tokens": 388,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "f8cae53bbb0ef163",
+        "task_duration": 30.077731,
+        "total_duration": 30.079032,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Gavin Newsom opposes California\u2019s proposed billionaire tax. Instead, he backs a federal wealth tax and help for workers displaced by AI",
+          "headline": "Newsom\u2019s populist act: Oppose state billionaire tax, embrace federal one",
+          "url": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 242,
+          "output_tokens": 328,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "10b035d1370f9c49",
+        "task_duration": 31.368378,
+        "total_duration": 31.36952,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California state workers must report to the office four days a week under an executive order from Gov. Gavin Newsom. Other states allow more remote work.",
+          "headline": "Gavin Newsom\u2019s return-to-office rules are stricter than many states, including Texas",
+          "url": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 249,
+          "output_tokens": 265,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "88ccd0cc4a1f9de2",
+        "task_duration": 28.584774,
+        "total_duration": 28.585927,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "A new bill proposes help for California\u2019s transgender troops discharged under Trump's military ban with housing, legal aid and discharge upgrades.",
+          "headline": "As transgender troops leave the military, California seeks to help them start new lives",
+          "url": "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 244,
+          "output_tokens": 368,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "d4e97eb4b4c3d047",
+        "task_duration": 28.560749,
+        "total_duration": 28.56197,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Flock license plate readers help California police solve crimes but raise privacy concerns as lawmakers consider new limits",
+          "headline": "\u2018Don\u2019t Flock me\u2019: California, U.S. lawmakers debate license plate reader technology",
+          "url": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 239,
+          "output_tokens": 218,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "cbeae1def7f89778",
+        "task_duration": 25.109922,
+        "total_duration": 25.11133,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      },
+      {
+        "assertions": {
+          "MatchesTheAuthorsLabel": {
+            "evaluator_version": null,
+            "name": "MatchesTheAuthorsLabel",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "MatchesTheAuthorsLabel"
+            },
+            "value": true
+          },
+          "RecalledARelevantArticle": {
+            "evaluator_version": null,
+            "name": "RecalledARelevantArticle",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RecalledARelevantArticle"
+            },
+            "value": true
+          }
+        },
+        "attributes": {},
+        "evaluator_failures": [],
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "Proposition 38 will award $4 billion to one unnamed research center. Under the very specific criteria, only one center seemingly qualifies.",
+          "headline": "This CA proposition will send $4 billion to a single nonprofit. Who\u2019s behind it?",
+          "url": "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        },
+        "labels": {},
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "metrics": {
+          "input_tokens": 248,
+          "output_tokens": 296,
+          "requests": 1
+        },
+        "name": "https://calmatters.org/politics/elections/2026/07/proposition-38-california/",
+        "output": {
+          "classification": "RELEVANT"
+        },
+        "scores": {},
+        "source_case_name": null,
+        "span_id": "f0089571da3337c5",
+        "task_duration": 31.201683,
+        "total_duration": 31.2027,
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      }
+    ],
+    "experiment_metadata": null,
+    "failures": [
+      {
+        "error_message": "ModelAPIError: Connection error.",
+        "error_stacktrace": "Traceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_base_client.py\", line 1648, in request\n    response = await self._send_request(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_client.py\", line 946, in _send_request\n    return await self._send_with_auth_retry(request, stream=stream, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_client.py\", line 924, in _send_with_auth_retry\n    response = await super()._send_request(request, stream=stream, **kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_base_client.py\", line 1571, in _send_request\n    return await self._client.send(request, stream=stream, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpx/_client.py\", line 1629, in send\n    response = await self._send_handling_auth(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<4 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpx/_client.py\", line 1657, in _send_handling_auth\n    response = await self._send_handling_redirects(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpx/_client.py\", line 1694, in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpx/_client.py\", line 1730, in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/instrumentation/httpx/__init__.py\", line 1444, in _handle_async_request_wrapper\n    raise exception.with_traceback(exception.__traceback__)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/instrumentation/httpx/__init__.py\", line 1399, in _handle_async_request_wrapper\n    response = await wrapped(*args, **kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpx/_transports/default.py\", line 394, in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_async/connection_pool.py\", line 256, in handle_async_request\n    raise exc from None\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_async/connection_pool.py\", line 229, in handle_async_request\n    await self._close_connections(closing)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_async/connection_pool.py\", line 345, in _close_connections\n    await connection.aclose()\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_async/connection.py\", line 173, in aclose\n    await self._connection.aclose()\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_async/http11.py\", line 258, in aclose\n    await self._network_stream.aclose()\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/httpcore/_backends/anyio.py\", line 53, in aclose\n    await self._stream.aclose()\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1374, in aclose\n    self._transport.close()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/selector_events.py\", line 1205, in close\n    super().close()\n    ~~~~~~~~~~~~~^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/selector_events.py\", line 865, in close\n    self._loop.call_soon(self._call_connection_lost, None)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py\", line 833, in call_soon\n    self._check_closed()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py\", line 556, in _check_closed\n    raise RuntimeError('Event loop is closed')\nRuntimeError: Event loop is closed\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/models/openai.py\", line 192, in _map_api_errors\n    yield\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/models/openai.py\", line 936, in _completions_create\n    return await self.client.chat.completions.create(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<30 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/resources/chat/completions/completions.py\", line 2814, in create\n    return await self._post(\n           ^^^^^^^^^^^^^^^^^\n    ...<54 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_base_client.py\", line 1931, in post\n    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/openai/_base_client.py\", line 1683, in request\n    raise APIConnectionError(request=request) from err\nopenai.APIConnectionError: Connection error.\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/dataset.py\", line 1126, in _run_task_and_evaluators\n    scoring_context = await _run_task(task, case, retry_task)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/dataset.py\", line 983, in _run_task\n    task_run, task_output, duration, span_tree = await _run_once()\n                                                 ^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_evals/dataset.py\", line 970, in _run_once\n    task_output_ = cast(OutputT, await to_thread.run_sync(task, case.inputs))\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 63, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2592, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1029, in run\n    result = context.run(func, *args)\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/src/knowledge_map/evaluation/engine.py\", line 81, in run\n    return asyncio.run(task(task_input))\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py\", line 195, in run\n    return runner.run(main)\n           ~~~~~~~~~~^^^^^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/src/knowledge_map/evaluation/tasks/relevance.py\", line 93, in classify\n    result = await agent.run(prompt)\n             ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/agent/abstract.py\", line 426, in run\n    node = await agent_run.next(node)  # pyright: ignore[reportArgumentType]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/run.py\", line 402, in next\n    return await self._run_node_with_hooks(node, self._advance_graph)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/run.py\", line 326, in _run_node_with_hooks\n    return await self._wrap_and_advance(run_context, node, step_fn)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/run.py\", line 296, in _wrap_and_advance\n    result = await cap.on_node_run_error(run_context, node=node, error=e)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 331, in on_node_run_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 328, in on_node_run_error\n    return await capability.on_node_run_error(cap_ctx, node=node, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 492, in on_node_run_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 328, in on_node_run_error\n    return await capability.on_node_run_error(cap_ctx, node=node, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 492, in on_node_run_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 328, in on_node_run_error\n    return await capability.on_node_run_error(cap_ctx, node=node, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 492, in on_node_run_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/run.py\", line 294, in _wrap_and_advance\n    result = await cap.wrap_node_run(run_context, node=node, handler=step_fn)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 314, in wrap_node_run\n    return await chain(node)\n           ^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 745, in wrapped\n    return await cap.wrap_node_run(_ctx_for_cap(cap, ctx), node=node, handler=inner)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 471, in wrap_node_run\n    return await handler(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 745, in wrapped\n    return await cap.wrap_node_run(_ctx_for_cap(cap, ctx), node=node, handler=inner)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 471, in wrap_node_run\n    return await handler(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 745, in wrapped\n    return await cap.wrap_node_run(_ctx_for_cap(cap, ctx), node=node, handler=inner)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 471, in wrap_node_run\n    return await handler(node)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/run.py\", line 272, in _advance_graph\n    task = await self._graph_run.next(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_graph/graph_builder.py\", line 582, in next\n    return await anext(self)\n           ^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_graph/graph_builder.py\", line 559, in __anext__\n    raise self._next.error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_graph/graph_builder.py\", line 869, in _run_tracked_task\n    result = await self._run_task(t_)\n             ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_graph/graph_builder.py\", line 911, in _run_task\n    output = await node.call(step_context)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_graph/step.py\", line 253, in _call_node\n    return await node.run(GraphRunContext(state=ctx.state, deps=ctx.deps))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/_agent_graph.py\", line 620, in run\n    return await self._make_request(ctx)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/_agent_graph.py\", line 857, in _make_request\n    model_response = await ctx.deps.root_capability.on_model_request_error(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        run_context, request_context=request_context, error=e\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 401, in on_model_request_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 398, in on_model_request_error\n    return await capability.on_model_request_error(cap_ctx, request_context=request_context, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 573, in on_model_request_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 398, in on_model_request_error\n    return await capability.on_model_request_error(cap_ctx, request_context=request_context, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 573, in on_model_request_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 398, in on_model_request_error\n    return await capability.on_model_request_error(cap_ctx, request_context=request_context, error=error)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 573, in on_model_request_error\n    raise error\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/_agent_graph.py\", line 847, in _make_request\n    model_response = await ctx.deps.root_capability.wrap_model_request(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 384, in wrap_model_request\n    return await chain(request_context)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 707, in wrapped\n    return await cap.wrap_model_request(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/instrumentation.py\", line 270, in wrap_model_request\n    response = await handler(request_context)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 707, in wrapped\n    return await cap.wrap_model_request(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 550, in wrap_model_request\n    return await handler(request_context)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/combined.py\", line 707, in wrapped\n    return await cap.wrap_model_request(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/capabilities/abstract.py\", line 550, in wrap_model_request\n    return await handler(request_context)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/_agent_graph.py\", line 832, in model_handler\n    response = await req_ctx.model.request(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        req_ctx.messages, req_ctx.model_settings, req_ctx.model_request_parameters\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/models/openai.py\", line 836, in request\n    response = await self._completions_create(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        messages, False, cast(OpenAIChatModelSettings, model_settings or {}), model_request_parameters\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/models/openai.py\", line 925, in _completions_create\n    with _map_api_errors(self.model_name):\n         ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/pydantic_ai/models/openai.py\", line 198, in _map_api_errors\n    raise ModelAPIError(model_name=model_name, message=e.message) from e\npydantic_ai.exceptions.ModelAPIError: Connection error.\n",
+        "expected_output": {
+          "classification": "RELEVANT"
+        },
+        "inputs": {
+          "description": "California lawmakers face an Aug. 31 deadline to resolve major deals on climate funding, antitrust law, wildfire liability and more",
+          "headline": "Keep an eye on these 5 deals as California lawmakers close out the legislative session",
+          "url": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+        },
+        "metadata": {
+          "label_source": "HUMAN",
+          "publication_id": "calmatters"
+        },
+        "name": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/",
+        "source_case_name": null,
+        "span_id": "63a510d05828e7aa",
+        "trace_id": "01a01c87415aa084b44476984bf69582"
+      }
+    ],
+    "name": "run",
+    "report_evaluator_failures": [],
+    "span_id": "1803b1ce410fc25e",
+    "trace_id": "01a01c87415aa084b44476984bf69582"
+  },
+  "split": null,
+  "task": "relevance"
+}

@@ -1,3 +1,5 @@
 # Validate task outcomes at the Task Binding
 
+Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+
 The Evaluation Task Binding is the sole runtime boundary responsible for validating each component invocation against its exact Evaluation Task Contract and converting the result into an Evaluation Task Outcome. The Binding also attaches references to task-produced or failure evidence, but remains persistence-free; the engine's checkpoint sink atomically persists the outcome and its artifact links. Authored Gold Set membership and Suite compatibility are validated before execution, while the shared engine trusts the Binding's typed success or provider-neutral failure and does not repeat output validation. This keeps component invocation and both synchronous and asynchronous validation behind one boundary without assuming that Python annotations guarantee runtime values.
