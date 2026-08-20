@@ -8,7 +8,7 @@ This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their
 
 ## Why now
 
-The evaluation package is 9,008 of the 19,455 lines in `src/`. `store.py` alone is 3,995 lines and issues 21 `CREATE TABLE` statements, none of which exist in `document_store.db`: no Evaluation Run has ever been recorded by the system built to record them. Forty of the 92 terms in `CONTEXT.md` are evaluation terms. Seventy-one commits touched `src/knowledge_map/evaluation/` between 2026-07-10 and 2026-07-31, and none since.
+The evaluation package is 9,008 of the 19,455 lines in `src/`. `store.py` alone is 3,995 lines and issues 21 `CREATE TABLE` statements, none of which exist in `document_store.db`: no Evaluation Run has ever been recorded by the system built to record them. Thirty-seven of the 91 terms in `CONTEXT.md` are evaluation terms, and 40 of 92 on `feat/evaluations`. Seventy-one commits touched `src/knowledge_map/evaluation/` between 2026-07-10 and 2026-07-31, and none since.
 
 Over the same period the pipeline those runs were meant to measure went to 14 `COMPLETED` and 59 `FAILED_DLQ` across the 73-article corpus. The evaluation contract was specified to a depth that outran every fact available to calibrate it, while the subject of the measurement stayed unmeasured and, on four articles in five, unfinished.
 
@@ -38,7 +38,7 @@ Calibrating the ledger against real runs before deciding was rejected as circula
 
 `store.py`, `runs.py`, `preflight.py`, `bindings.py`, and `compatibility.py` are removed. `definitions.py` is reduced to the `EvaluationCase` shape `engine.py` imports. `suites.py` keeps evaluator configuration and loses ledger binding. `runner.py` loses its ledger half. `__init__.py` and `runner.py` are the only files importing `store.py`, so the largest removal touches two call sites.
 
-The 14 `tests/test_evaluation_*.py` files covering ledger behavior are removed with the code they cover.
+Thirteen test files covering ledger behavior are removed with the code they cover: the 11 `tests/test_evaluation_*.py` files, `tests/test_metric_observation_ownership.py`, and `tests/conftest.py`, whose only contents were Gold Set construction helpers.
 
 `CONTEXT.md` loses roughly 35 evaluation terms, among them Evaluation Ledger, Evaluation Finalization, Evaluation Finalization Attempt, Frozen Aggregate Manifest, Evidence Contract Version, Evaluation Checkpoint, Schema Reference, Resolved Schema Binding, Structured Metric Observation Materialization, Evaluation Artifact, Artifact Location, and Release Gate. Evaluation Gold Set, Evaluation Case, Evaluation Split, Evaluation Suite, and Evaluation Rubric survive with their definitions narrowed to what a file and a report can carry.
 
