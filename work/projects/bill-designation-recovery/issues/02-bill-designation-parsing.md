@@ -42,11 +42,13 @@ are unchanged. Only the value they are keyed on changes.
 - [x] `SB 623`, `sb623`, `Senate Bill 623`, and `senate bill 623` all parse to
       the Bill Designation `SB 623`; the Assembly forms parse to `AB`.
 - [x] `ll 623`, `to 5`, and `the bill` parse to no Bill Designation.
-- [x] `number` is absent from the News Ontology's `Bill` properties, and the
+- [x] `name` is absent from the News Ontology's `Bill` properties, and the
       regenerated ontology document and Extraction Prompt no longer list it.
-- [x] `number` remains declared on `Bill` in the primary ontology.
-- [x] The parsed Bill Designation is written to the `Bill` node's `number`
-      property by the resolution, not by the extraction.
+- [x] `name` is declared on `Bill` in the primary ontology, and `number` is not.
+      Corrected from "`number` remains declared": issue 05 removed `number` under
+      ADR 0014, because a number without its chamber cannot key a bill.
+- [x] The parsed Bill Designation is written as the `Bill` node's `name` by the
+      resolution, not by the extraction.
 - [x] No code outside the ontology reads an extracted `number` property.
 - [x] A Source Article naming `Senate Bill 623` resolves it to a session under
       the same three tiers as one naming `SB 623`, observable through the Story

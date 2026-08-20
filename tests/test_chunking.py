@@ -100,17 +100,24 @@ def test_edge_case_no_spaces():
     assert "".join(c.text for c in chunks) == text
 
 
-def test_uber_ballot_measure_does_not_start_a_chunk_with_truncated_bill():
+def test_no_chunk_is_read_starting_in_the_middle_of_a_word():
+    # The `ll 623` node existed because a chunk was read starting mid-word,
+    # inside `Senate Bill 623`. What has to hold is the general property: what a
+    # reader of a chunk sees never begins part-way through a word.
     text = (
         "The Uber ballot measure said Senate Bill 623 would also prohibit the sale "
         "of such liens to drivers and would change the rules for transportation "
         "companies across the state"
     )
 
-    chunks = chunk_article(text, chunk_size=45, chunk_overlap_pct=0.16)
-
-    assert all(not chunk.text.startswith("ll 623") for chunk in chunks)
-    assert any(chunk.text.startswith("would also prohibit the sale") for chunk in chunks)
+    for chunk_size, overlap in ((45, 0.16), (60, 0.2), (120, 0.3)):
+        chunks = chunk_article(text, chunk_size=chunk_size, chunk_overlap_pct=overlap)
+        for chunk in chunks:
+            start = chunk.start_index - len(chunk.context or "")
+            assert start == 0 or text[start - 1].isspace() or text[start].isspace(), (
+                f"chunk {chunk.index} at size {chunk_size} begins mid-word: "
+                f"{chunk.embedded_text[:20]!r}"
+            )
 
 def test_invalid_parameters():
     with pytest.raises(ValueError, match="chunk_size must be a positive integer"):

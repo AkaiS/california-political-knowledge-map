@@ -91,7 +91,7 @@ class PydanticAIEmbeddingAdapter:
         if not chunks:
             return []
             
-        texts = [(chunk.context or "") + chunk.text for chunk in chunks]
+        texts = [chunk.embedded_text for chunk in chunks]
         result = self._run_async(self.embedder.embed_documents, texts)
         embeddings = result.embeddings
         

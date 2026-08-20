@@ -200,7 +200,7 @@ A declared, unresolved gap between the News Ontology and the primary ontology: e
 _Avoid_: Mismatch, schema drift, missing field, known issue
 
 **Bill Designation**:
-The chamber and number of a California bill together, normalized to the initials form — `SB 623`, `AB 1751`. It is written to a `Bill` node's `number` property by Bill Session Resolution rather than supplied by Entity Extraction, and qualifies a Bill's identity alongside its Bill Session Resolution.
+The chamber and number of a California bill together, normalized to the initials form — `SB 623`, `AB 1751`. It is a `Bill` node's `name`, written by Bill Session Resolution rather than supplied by Entity Extraction, and qualifies a Bill's identity alongside its Bill Session Resolution. Where no designation could be recovered, the surface string the article used stands in as the name and the Bill is flagged for review.
 _Avoid_: "bill number" used alone without a chamber
 
 **Bill Session Resolution**:

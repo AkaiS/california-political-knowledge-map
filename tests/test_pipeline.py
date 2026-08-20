@@ -281,24 +281,24 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     assert isinstance(first_map, BillSessionResolutions)
     assert first_map == BillSessionResolutions(by_name={
         "Senate Bill 623": BillSessionResolution(
-            number="SB 623", session="2019-2020", session_verified=True
+            name="SB 623", session="2019-2020", session_verified=True
         ),
         "ll 623": BillSessionResolution(
-            number="SB 623", session="2019-2020", session_verified=True
+            name="SB 623", session="2019-2020", session_verified=True
         ),
         "sb623": BillSessionResolution(
-            number="SB 623", session="2019-2020", session_verified=True
+            name="SB 623", session="2019-2020", session_verified=True
         ),
         "sb54": BillSessionResolution(
-            number="SB 54", session="2017-2018", session_verified=True
+            name="SB 54", session="2017-2018", session_verified=True
         ),
         "AB 99": BillSessionResolution(
-            number="AB 99", session="2025-2026", session_inferred=True
+            name="AB 99", session="2025-2026", session_inferred=True
         ),
         "Senate Bill 1": BillSessionResolution(
-            number="SB 1", session="2025-2026", session_inferred=True
+            name="SB 1", session="2025-2026", session_inferred=True
         ),
-        "AB 1": BillSessionResolution(number="AB 1", needs_review=True),
+        "AB 1": BillSessionResolution(name="AB 1", needs_review=True),
         "the bill": BillSessionResolution(needs_review=True),
         "Richardson's legislation": BillSessionResolution(needs_review=True),
     })
@@ -330,10 +330,10 @@ def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
 
     assert db.extractions[0][2] == BillSessionResolutions(by_name={
         "AB 623": BillSessionResolution(
-            number="AB 623", session="2025-2026", session_inferred=True
+            name="AB 623", session="2025-2026", session_inferred=True
         ),
         "SB 623": BillSessionResolution(
-            number="SB 623", session="2025-2026", session_inferred=True
+            name="SB 623", session="2025-2026", session_inferred=True
         ),
         "ll 623": BillSessionResolution(needs_review=True),
     })
@@ -356,10 +356,10 @@ def test_bill_designation_recovery_is_independent_of_extraction_order():
 
     assert forward == reverse == BillSessionResolutions(by_name={
         "Senate Bill 623": BillSessionResolution(
-            number="SB 623", session="2025-2026", session_inferred=True
+            name="SB 623", session="2025-2026", session_inferred=True
         ),
         "ll 623": BillSessionResolution(
-            number="SB 623", session="2025-2026", session_inferred=True
+            name="SB 623", session="2025-2026", session_inferred=True
         ),
     })
 

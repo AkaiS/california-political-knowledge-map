@@ -47,11 +47,6 @@ def parse_bill_designation(value: object) -> str | None:
     return f"{initials} {int(match.group('digits'))}"
 
 
-def normalize_bill_number(value: object) -> str | None:
-    """Keep the old internal helper name as an alias for designation parsing."""
-    return parse_bill_designation(value)
-
-
 def _publication_session(published_date: str | None) -> str | None:
     if not published_date:
         return None
@@ -93,43 +88,43 @@ def resolve_bill_sessions(
             session, _chamber, number = parsed
             linked_sessions.setdefault(number, set()).add(session)
 
-    bill_names = {
+    surfaces = {
         node.name
         for extraction in extractions
         for node in extraction.nodes
         if node.label == "Bill"
     }
     parsed_designations = {
-        name: parse_bill_designation(name) for name in bill_names
+        surface: parse_bill_designation(surface) for surface in surfaces
     }
     article_designations = {
         designation for designation in parsed_designations.values() if designation
     }
     inferred_session = _publication_session(article.published_date)
     resolved: dict[str, BillSessionResolution] = {}
-    for name in sorted(bill_names):
-        designation = parsed_designations[name]
+    for surface in sorted(surfaces):
+        designation = parsed_designations[surface]
         if designation is None:
-            designation = _recover_bill_designation(name, article_designations)
+            designation = _recover_bill_designation(surface, article_designations)
         if designation is None:
-            resolved[name] = BillSessionResolution(needs_review=True)
+            resolved[surface] = BillSessionResolution(needs_review=True)
             continue
 
         sessions = linked_sessions.get(designation, set())
         if len(sessions) == 1:
-            resolved[name] = BillSessionResolution(
-                number=designation,
+            resolved[surface] = BillSessionResolution(
+                name=designation,
                 session=next(iter(sessions)),
                 session_verified=True,
             )
         elif len(sessions) > 1:
-            resolved[name] = BillSessionResolution(
-                number=designation,
+            resolved[surface] = BillSessionResolution(
+                name=designation,
                 needs_review=True,
             )
         else:
-            resolved[name] = BillSessionResolution(
-                number=designation,
+            resolved[surface] = BillSessionResolution(
+                name=designation,
                 session=inferred_session,
                 session_inferred=inferred_session is not None,
                 needs_review=inferred_session is None,

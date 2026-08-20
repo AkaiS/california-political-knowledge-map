@@ -192,14 +192,18 @@ def test_a_declared_gap_removes_the_property_from_what_the_model_is_asked_for():
             )
 
 
-def test_bill_number_is_primary_only_and_resolution_owned():
-    assert "number" in primary.PROPERTIES["Bill"]
-    assert "number" not in news.PROPERTIES["Bill"]
+def test_bill_name_is_primary_only_and_resolution_owned():
+    # A Bill's name is its Bill Designation, which the extractor cannot supply:
+    # it reports the surface string, and resolution turns that into a designation.
+    assert "name" in primary.PROPERTIES["Bill"]
+    assert "name" not in news.PROPERTIES["Bill"]
+    assert "number" not in primary.PROPERTIES["Bill"]
 
     bill_line = next(
         line for line in render_extraction_ontology().splitlines()
         if line.startswith("- `Bill`: ")
     )
+    assert "`name`" not in bill_line
     assert "`number`" not in bill_line
 
 

@@ -94,7 +94,18 @@
 
 - `id`: `STRING` _(Primary Key: `Bill:<session>:<slugged Bill Designation>`, e.g., "Bill:2025-2026:sb-32")_
     
-- `number`: `STRING` _(Bill Designation, e.g., "SB 32")_
+- `name`: `STRING` _(Bill Designation — chamber and number together, e.g., "SB 32")_
+    
+
+> **Correction under [ADR 0014](docs/adr/0014-the-primary-ontology-is-authored-not-frozen.md).**
+> `:Bill` previously declared `number` alone, e.g. `"SB-32"`, and keyed on
+> "Session ID + Bill Number". A bill number without its chamber does not identify
+> a bill — `9` is not a bill, `SB 9` is — so `number` could not identify the thing
+> it keyed, and `AB 9` and `SB 9` would collapse onto one node. The identifying
+> property is the chamber and number together, which is the Bill Designation, and
+> it is the `Bill`'s name. That is a key that cannot identify what it keys, which
+> is what clears the bar; the spelling change from `SB-32` to `SB 32` rode along
+> with it and would not have cleared it on its own.
     
 - `session`: `STRING` _(e.g., "2025-2026")_
     

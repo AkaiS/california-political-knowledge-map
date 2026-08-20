@@ -6,9 +6,10 @@ adapter as :class:`BillSessionResolutions`: the properties themselves plus the
 flags that say how the session was arrived at, which the adapter writes onto the
 Bill and folds into its primary key.
 
-The map is keyed by the extracted Bill name. That lets resolution represent a
-Bill whose name did not yield a designation as explicitly as one that did: the
-failed resolution carries no designation or session and sets ``needs_review``.
+The map is keyed by the surface string the article used. That lets resolution
+represent a Bill whose surface string did not yield a designation as explicitly
+as one that did: the failed resolution carries no name or session and sets
+``needs_review``.
 """
 
 from pydantic import BaseModel, Field
@@ -17,7 +18,9 @@ from pydantic import BaseModel, Field
 class BillSessionResolution(BaseModel):
     """The Bill Designation and session a bill resolved to, and how it was reached."""
 
-    number: str | None = None
+    #: The Bill Designation, which is the Bill's name: `SB 623`, `AB 1751`.
+    #: ``None`` where the extracted surface string yielded none.
+    name: str | None = None
     session: str | None = None
     #: A bill link in the article named this session outright.
     session_verified: bool = False
@@ -36,8 +39,14 @@ class BillSessionResolutions(BaseModel):
 
     by_name: dict[str, BillSessionResolution] = Field(default_factory=dict)
 
-    def get(self, name: str | None) -> BillSessionResolution | None:
-        """Return the resolution for ``name``, or ``None`` if it has none."""
+    def get(self, name: str | None) -> BillSessionResolution:
+        """Return the resolution for ``name``.
+
+        Every extracted Bill is resolved, so a name with no entry is one the
+        adapter was handed without resolution ever seeing it. That is the same
+        state as a name that yielded nothing: unidentified, and needing review.
+        Answering for every name keeps the adapter free of existence checks.
+        """
         if name is None:
-            return None
-        return self.by_name.get(name)
+            return BillSessionResolution(needs_review=True)
+        return self.by_name.get(name) or BillSessionResolution(needs_review=True)
