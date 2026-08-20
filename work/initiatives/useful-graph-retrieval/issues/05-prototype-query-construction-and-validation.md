@@ -36,3 +36,14 @@ topology and the contract's failure states both depend on them.
 ## Blocking
 
 - Blocks: Decide the retrieval agent topology and orchestration.
+
+## Comments
+
+### Previously discussed — 2026-08-19 grilling session
+
+- **Prototype only what is genuinely uncertain; build the rest for keeps.** The
+  maintainer's position is that this ticket should not produce throwaway code
+  across the board. The uncertain part is whether graph traversal over a corpus
+  this small reaches evidence a vector search would not — that is worth a real
+  experiment. Everything the retrieval design already settles should be built to
+  keep.

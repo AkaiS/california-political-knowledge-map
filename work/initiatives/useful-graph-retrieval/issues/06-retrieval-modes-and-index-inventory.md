@@ -30,3 +30,21 @@ Decide it here as an index requirement.
 
 - Blocks: Decide the retrieval agent topology and orchestration.
 - Blocks: Prototype graph-aware reranking.
+
+## Comments
+
+### Previously discussed — 2026-08-19 grilling session
+
+- **Create a full-text index over entity `name`**, queried through
+  `db.index.fulltext.queryNodes`, as the primary way a question reaches its seed
+  node. Vector search over `chunk_vector_index` is the fallback when full-text
+  returns nothing, and is the only path for E3, which names no entity.
+- Correcting the framing in
+  [the survey findings](../research/03-graph-retrieval-patterns-findings.md):
+  "no full-text index" means none has been created, not that Neo4j Community
+  lacks the capability. Line 152 of that document records full-text indexes as
+  Lucene-backed and available. This is one `CREATE FULLTEXT INDEX` statement.
+- The maintainer's retrieval design is schema-first: the graph is the entry
+  point and vector retrieval is demoted to a supporting mechanism. This ticket's
+  mode inventory must be read against that stance, which is being settled in its
+  own session.

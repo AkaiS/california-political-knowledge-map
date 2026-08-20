@@ -22,3 +22,20 @@ article several times over, and only the graph can tell those apart.
 Record whether reranking justifies its latency, and whether the winning signal
 is cheap enough to compute per query or needs precomputation. If it needs
 precomputation, that is a new ticket, not a silent addition to this one.
+
+## Comments
+
+### Previously discussed — 2026-08-19 grilling session
+
+- **This ticket's question is not answerable on the v1 corpus.** Every structural
+  signal it proposes degenerates at 14 completed articles from one publication:
+  corroboration across *independent* publications is structurally impossible with
+  one publication; entity centrality over 14 articles is noise; path distance has
+  almost no range; recency spans weeks. The comparison this ticket asks for needs
+  a larger, multi-publication corpus to mean anything.
+- **Reranking is not deferrable past v1.** The maintainer's position is that
+  retrieval cannot be built without settling how nodes are ranked and selected,
+  so this is not an optimization layered on afterward.
+- **Reranking will be settled from the maintainer's own design grounding**, in a
+  separate session, not from
+  [the survey findings](../research/03-graph-retrieval-patterns-findings.md).
