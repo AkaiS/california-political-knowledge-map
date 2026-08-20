@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import Hooks
-from pydantic_ai.models.openai import OpenAIChatModel
 
 from knowledge_map.adapters.coreference import get_agent_metadata
 from knowledge_map.ontology.extraction_conformance import (
@@ -18,17 +17,6 @@ from knowledge_map.schemas import AdherenceReport, ExtractionResult
 from knowledge_map.utils.models import get_ollama_model
 
 logger = logging.getLogger(__name__)
-
-# monkey patch to get around content ollama rejecting content = <nil> on retries 
-_original = OpenAIChatModel._MapModelResponseContext._into_message_param
-
-def _patched(self):
-    result = _original(self)
-    if result is not None and result.get("content") is None:
-        result["content"] = ""
-    return result
-
-OpenAIChatModel._MapModelResponseContext._into_message_param = _patched
 
 PROMPT_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

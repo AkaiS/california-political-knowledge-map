@@ -1,7 +1,31 @@
 import os
 from dotenv import load_dotenv
 from pydantic_ai.models.ollama import OllamaModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
+
+# Ollama's OpenAI-compatible endpoint rejects an assistant message carrying
+# `content: null`, which pydantic-ai emits for a tool call with no text. That
+# shape only appears on a retry turn, so it surfaces as a sporadic 400
+# ("invalid message content type: <nil>") part-way through a run.
+#
+# This lives here rather than beside any one agent so that every caller of
+# `get_ollama_model` is covered by construction, instead of depending on
+# which modules happened to be imported first.
+_original_into_message_param = OpenAIChatModel._MapModelResponseContext._into_message_param
+
+
+def _into_message_param_with_empty_content(self):
+    result = _original_into_message_param(self)
+    if result is not None and result.get("content") is None:
+        result["content"] = ""
+    return result
+
+
+OpenAIChatModel._MapModelResponseContext._into_message_param = (
+    _into_message_param_with_empty_content
+)
+
 
 def get_ollama_model(
     default_model: str,
