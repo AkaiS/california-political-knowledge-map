@@ -10,3 +10,4 @@ manual_checks/*
 */ralph-queue.txt
 .logfire/*
 .claude/*
+# Evaluation reports are committed; the run's own scratch is not.

@@ -1,0 +1,163 @@
+"""`ca-map eval` — collect a Gold Set's candidates, and run it.
+
+Two commands, because authoring and running are separate sittings.
+`collect` writes the file the author then edits; `run` reads that file
+and writes one report. Neither touches a database of evaluation records —
+see ADR 0017.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from knowledge_map.evaluation import (
+    EvaluationSplit,
+    gold_set_path,
+    load_gold_set,
+    run_gold_set,
+    write_report,
+)
+from knowledge_map.evaluation.tasks import task_named, task_names
+
+
+def add_parser(subparsers: Any) -> None:
+    """Register `eval` and its two subcommands on the top-level parser."""
+    parser = subparsers.add_parser("eval", help="Run an Evaluation Gold Set")
+    actions = parser.add_subparsers(dest="eval_action", required=True)
+
+    collect = actions.add_parser(
+        "collect", help="Write a Gold Set file from the project's own labeled data"
+    )
+    collect.add_argument("task", choices=task_names())
+    collect.add_argument("--gold-set", type=Path, default=None)
+    collect.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing Gold Set file, discarding hand edits",
+    )
+
+    run = actions.add_parser("run", help="Run a Gold Set and write one report")
+    run.add_argument("task", choices=task_names())
+    run.add_argument("--gold-set", type=Path, default=None)
+    run.add_argument("--model", default=None, help="Defaults to the task's own model")
+    run.add_argument(
+        "--split",
+        choices=[member.value for member in EvaluationSplit],
+        default=None,
+        help="Defaults to every case in the file",
+    )
+    run.add_argument("--max-concurrency", type=int, default=1)
+    run.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Print the report without writing a file",
+    )
+
+
+def dispatch(args: argparse.Namespace) -> None:
+    if args.eval_action == "collect":
+        _collect(args)
+    else:
+        _run(args)
+
+
+def _collect(args: argparse.Namespace) -> None:
+    task = task_named(args.task)
+    if task.collect is None:
+        sys.exit(f"{task.name} has no labeled data to collect from; author the file by hand")
+
+    path = args.gold_set or gold_set_path(task.name)
+    if path.exists() and not args.force:
+        sys.exit(
+            f"{path} already exists. Editing it is the authoring step; pass --force "
+            "to discard those edits and rewrite it."
+        )
+
+    collected = task.collect()
+    cases, skipped = collected.cases, collected.skipped_urls
+    if not cases:
+        sys.exit(f"{task.name} has no labeled rows to collect")
+
+    document = {
+        "task": task.name,
+        "description": f"Hand-labeled cases for {task.name}, collected from the project's own data.",
+        "cases": cases,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=100))
+    print(f"Wrote {len(cases)} cases to {path}")
+
+    labels = Counter(case["expected_output"]["classification"] for case in cases)
+    print("Labels: " + ", ".join(f"{label} {count}" for label, count in labels.most_common()))
+    _warn_if_one_label_dominates(labels)
+
+    if skipped:
+        print(f"\nSkipped {len(skipped)} labeled rows with no headline:")
+        for url in skipped:
+            print(f"  {url}")
+
+    print("\nReview every case and assign its split, then commit the file.")
+
+
+def _warn_if_one_label_dominates(labels: Counter) -> None:
+    """Say so when the population makes a constant answer look good.
+
+    A Gold Set this lopsided cannot distinguish a working classifier from
+    one that returns the majority label, which is the first thing the
+    author needs to know about it.
+    """
+    total = sum(labels.values())
+    if not total:
+        return
+    label, count = labels.most_common(1)[0]
+    if count / total < 0.8:
+        return
+    print(
+        f"\nWarning: {count} of {total} cases are {label}. Always answering "
+        f"{label} scores {count / total:.0%} on this Gold Set, so agreement "
+        "will not tell you whether the classifier works. Label more of the "
+        "other class before trusting a run."
+    )
+
+
+def _run(args: argparse.Namespace) -> None:
+    task = task_named(args.task)
+    path = args.gold_set or gold_set_path(task.name)
+    if not path.exists():
+        sys.exit(f"{path} does not exist. Run `ca-map eval collect {task.name}` first.")
+
+    gold_set = load_gold_set(
+        path,
+        input_type=task.input_type,
+        output_type=task.output_type,
+        metadata_type=task.metadata_type,
+    )
+    split = EvaluationSplit(args.split) if args.split else None
+    model = args.model or task.default_model
+
+    report = run_gold_set(
+        gold_set,
+        task=task.build(model),
+        evaluators=task.evaluators,
+        split=split,
+        max_concurrency=args.max_concurrency,
+    )
+    report.print(include_input=False, include_output=False)
+
+    if args.no_report:
+        return
+    written = write_report(
+        report,
+        task=task.name,
+        model=model,
+        gold_set_path=path,
+        split=split.value if split else None,
+    )
+    print(f"\nWrote {written}")
+    print("Commit it — a run whose report is not committed did not happen.")

@@ -165,3 +165,40 @@ def test_a_report_filename_separates_runs_of_the_same_task() -> None:
 class MatchesExpectedOutput(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> bool:
         return ctx.output == ctx.expected_output
+
+
+def test_collected_relevance_candidates_carry_the_url_as_the_case_id(tmp_path: Path) -> None:
+    """Collection is idempotent because the id is the URL, not a row number."""
+    import sqlite3
+
+    from knowledge_map.evaluation.tasks.relevance import collect_candidates
+
+    db_path = tmp_path / "document_store.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute(
+        """
+        CREATE TABLE scraped_html_cache (
+            url TEXT PRIMARY KEY, publication_id TEXT, headline TEXT,
+            description TEXT, relevance_status TEXT, relevance_label_source TEXT,
+            raw_metadata_json TEXT
+        )
+        """
+    )
+    connection.executemany(
+        "INSERT INTO scraped_html_cache VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("u/1", "calmatters", "Newsom vetoes SB 1047", "d", "RELEVANT", "HUMAN", None),
+            ("u/2", "calmatters", None, None, "IRRELEVANT", "HUMAN",
+             '{"headline": "Pacific Catch opens", "description": "restaurants"}'),
+            ("u/3", "calmatters", None, None, "IRRELEVANT", "HUMAN", None),
+            ("u/4", "calmatters", "Machine labeled", "d", "RELEVANT", "LLM", None),
+        ],
+    )
+    connection.commit()
+    connection.close()
+
+    collected = collect_candidates(str(db_path))
+
+    assert [case["id"] for case in collected.cases] == ["u/1", "u/2"]
+    assert collected.cases[1]["task_input"]["headline"] == "Pacific Catch opens"
+    assert collected.skipped_urls == ("u/3",)
