@@ -202,7 +202,7 @@ def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
     )
 
 
-def get_annotator_agent(defer_check: bool = True) -> Agent:
+def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     model = _get_model()
 
     instructions = (
@@ -225,9 +225,10 @@ def get_annotator_agent(defer_check: bool = True) -> Agent:
         output_type=list[MentionSpan],
         instructions=instructions,
         defer_model_check=defer_check,
+        retries=retries,
     )
 
-def get_critic_agent(defer_check: bool = True) -> Agent:
+def get_critic_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     model = _get_model()
 
     instructions = (
@@ -251,6 +252,7 @@ def get_critic_agent(defer_check: bool = True) -> Agent:
         output_type=list[CriticVerdict],
         instructions=instructions,
         defer_model_check=defer_check,
+        retries=retries,
     )
 
 class CoreferenceResolutionError(Exception):
