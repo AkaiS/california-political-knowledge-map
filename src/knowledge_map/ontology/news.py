@@ -75,6 +75,16 @@ NODE_DIVERGENCES = (
         ),
     ),
     Divergence(
+        property_name="name",
+        applies_to=frozenset({"Bill"}),
+        reason=(
+            "A `Bill`'s name is its Bill Designation, parsed from the surface string the "
+            "article used and supplied by Bill Session Resolution. The extraction model "
+            "reports only that surface string, so it must not guess or decompose the "
+            "designation itself."
+        ),
+    ),
+    Divergence(
         property_name="session_inferred",
         applies_to=frozenset({"Bill"}),
         reason=(

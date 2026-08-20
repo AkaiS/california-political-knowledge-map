@@ -37,13 +37,14 @@ def derived_key(label: str, name: str) -> str:
     return f"{label}:{slug(name)}"
 
 
-def bill_key(session: str | None, number: str | None, name: str) -> str:
+def bill_key(session: str | None, designation: str | None, surface: str) -> str:
     """Mint a ``Bill`` key, which is qualified by legislative session.
 
-    A bill number identifies a bill only within a session — ``AB 1`` recurs every
-    session by design — so the number alone would conflate unrelated bills.
-    ``number`` is the normalized bill number where one could be recovered;
-    ``name`` is the extracted surface form, used when it could not.
+    A Bill Designation identifies a bill only within a session — ``AB 1`` recurs
+    every session by design — so the designation alone would conflate unrelated
+    bills. ``designation`` is the Bill's name where one could be recovered;
+    ``surface`` is the string the article used, keyed on when it could not, so an
+    unidentified Bill still keeps a stable key across re-ingestions.
     """
 
-    return f"Bill:{session or UNRESOLVED_SESSION}:{slug(number or name)}"
+    return f"Bill:{session or UNRESOLVED_SESSION}:{slug(designation or surface)}"

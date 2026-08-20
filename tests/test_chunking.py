@@ -20,13 +20,21 @@ def test_default_chunking_behavior():
         assert c.end_index > c.start_index
         assert len(c.text) > 0
         
-        # If it's not the first chunk, it should have a prefix context (since default overlap is 10% / 100 characters)
+        assert c.text == text[c.start_index:c.end_index]
+
+        # If it's not the first chunk, it should have a prefix context (since
+        # default overlap is 10% / 100 characters).
         if idx > 0:
             assert c.context is not None
             assert len(c.context) > 0
-            # The context should match the end of the previous chunk's content
-            prev_chunk = chunks[idx - 1]
-            assert prev_chunk.text.endswith(c.context)
+
+            context_start = c.start_index - len(c.context)
+            assert c.context + c.text == text[context_start:c.end_index]
+            assert (
+                context_start == 0
+                or text[context_start].isspace()
+                or text[context_start - 1].isspace()
+            )
         else:
             assert c.context is None
 
@@ -40,14 +48,15 @@ def test_config_overrides(monkeypatch):
     
     chunks = chunk_article(text)
     
-    # Verify that overlap context size matches 20% of 150 (30 characters)
-    # and chunk boundaries correspond to smaller chunk size.
+    # Verify that overlap context is at least 20% of 150 (30 characters),
+    # allowing the context to extend to the start of its containing word.
+    # Chunk text itself remains bounded by the recursive chunk size.
     assert len(chunks) > 1
     for c in chunks:
-        # With 150 chunk size + 30 context size, max length is 180 characters.
-        assert len(c.text) <= 180
+        assert len(c.text) <= 150
         if c.context is not None:
-            assert len(c.context) == 30
+            assert len(c.context) >= 30
+            assert c.context + c.text == text[c.start_index - len(c.context):c.end_index]
 
 def test_edge_case_extremely_short_text():
     text = "Hello"
@@ -77,22 +86,38 @@ def test_edge_case_no_spaces():
     chunks = chunk_article(text, chunk_size=5, chunk_overlap_pct=0.20)
     # The character tokenizer should split this into at least 2 chunks
     assert len(chunks) >= 2
-    # Verify that all characters are preserved
-    reconstructed = ""
+    # The recursive output owns every character exactly once; context is
+    # metadata for the following chunk rather than part of its text.
     for idx, c in enumerate(chunks):
         assert len(c.text) > 0
+        assert c.text == text[c.start_index:c.end_index]
         if idx > 0:
             assert c.context is not None
-            # Context size should be 1
-            assert len(c.context) == 1
-            # Reconstruct text by taking the chunk text without the overlap prefix
-            # Since merge=True, the overlap prefix is prepended to the chunk text
-            non_overlap = c.text[len(c.context):]
-            reconstructed += non_overlap
-        else:
-            reconstructed += c.text
-            
-    assert reconstructed == text
+            # With no word boundary available, the context expands to the
+            # start of the one whitespace-delimited word.
+            assert c.context + c.text == text[c.start_index - len(c.context):c.end_index]
+
+    assert "".join(c.text for c in chunks) == text
+
+
+def test_no_chunk_is_read_starting_in_the_middle_of_a_word():
+    # The `ll 623` node existed because a chunk was read starting mid-word,
+    # inside `Senate Bill 623`. What has to hold is the general property: what a
+    # reader of a chunk sees never begins part-way through a word.
+    text = (
+        "The Uber ballot measure said Senate Bill 623 would also prohibit the sale "
+        "of such liens to drivers and would change the rules for transportation "
+        "companies across the state"
+    )
+
+    for chunk_size, overlap in ((45, 0.16), (60, 0.2), (120, 0.3)):
+        chunks = chunk_article(text, chunk_size=chunk_size, chunk_overlap_pct=overlap)
+        for chunk in chunks:
+            start = chunk.start_index - len(chunk.context or "")
+            assert start == 0 or text[start - 1].isspace() or text[start].isspace(), (
+                f"chunk {chunk.index} at size {chunk_size} begins mid-word: "
+                f"{chunk.embedded_text[:20]!r}"
+            )
 
 def test_invalid_parameters():
     with pytest.raises(ValueError, match="chunk_size must be a positive integer"):
@@ -109,6 +134,5 @@ def test_invalid_parameters():
         
     with pytest.raises(ValueError, match="chunk_overlap_pct must be between 0.0 and 0.5"):
         chunk_article("some text", chunk_overlap_pct=1.5)
-
 
 

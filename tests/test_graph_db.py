@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
+from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 from knowledge_map.schemas import (
     ArticleChunk,
@@ -425,7 +426,8 @@ def test_ingest_chunk():
         text="Gavin Newsom did something.",
         start_index=0,
         end_index=27,
-        index=0
+        index=0,
+        context="Earlier context. ",
     )
     
     manager.ingest_chunk(
@@ -447,7 +449,7 @@ def test_ingest_chunk():
     assert "provenance" not in query
     assert kwargs["url"] == "http://example.com/1"
     assert kwargs["chunk_id"] == "http://example.com/1#chunk_0"
-    assert kwargs["text"] == "Gavin Newsom did something."
+    assert kwargs["text"] == "Earlier context. Gavin Newsom did something."
     assert kwargs["index"] == 0
     assert kwargs["embedding"] == [0.1, 0.2, 0.3]
 
@@ -709,21 +711,25 @@ def test_bill_session_participates_in_node_primary_key():
     mock_session.execute_write.side_effect = lambda func: func(mock_tx)
     manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
     extraction = ExtractionResult(nodes=[
-        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="Assembly Bill 218", label="Bill"),
     ])
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(session="2019-2020", session_verified=True)
+        BillSessionResolutions(by_name={
+            "Assembly Bill 218": BillSessionResolution(
+                name="AB 218", session="2019-2020", session_verified=True
+            )
         }),
     )
     manager.ingest_chunk_extraction(
         "article#chunk_1",
         extraction,
-        BillSessionResolutions(by_number={
-            "AB 218": BillSessionResolution(session="2025-2026", session_verified=True)
+        BillSessionResolutions(by_name={
+            "Assembly Bill 218": BillSessionResolution(
+                name="AB 218", session="2025-2026", session_verified=True
+            )
         }),
     )
 
@@ -733,11 +739,12 @@ def test_bill_session_participates_in_node_primary_key():
         "Bill:2025-2026:ab-218",
     ]
     assert node_calls[0][1]["properties"]["session_verified"] is True
+    assert node_calls[0][1]["properties"]["name"] == "AB 218"
 
 
-def test_a_bill_without_a_resolution_gets_no_session_properties():
-    # An unresolved number is not a resolution to nothing: the adapter writes no
-    # session flags at all rather than stamping the Bill as unreviewed.
+def test_a_bill_without_a_designation_gets_the_resolution_properties():
+    # Resolution explicitly represents an unidentifiable Bill, so the adapter
+    # writes the review flag instead of treating it as absent from the map.
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_tx = MagicMock()
@@ -745,20 +752,98 @@ def test_a_bill_without_a_resolution_gets_no_session_properties():
     mock_session.execute_write.side_effect = lambda func: func(mock_tx)
     manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
     extraction = ExtractionResult(nodes=[
-        Node(name="Assembly Bill 218", label="Bill", properties={"number": "AB 218"}),
+        Node(name="the bill", label="Bill"),
     ])
 
     manager.ingest_chunk_extraction(
         "article#chunk_0",
         extraction,
-        BillSessionResolutions(by_number={
-            "SB 54": BillSessionResolution(session="2017-2018", session_verified=True)
+        BillSessionResolutions(by_name={
+            "the bill": BillSessionResolution(needs_review=True)
         }),
     )
 
     node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
-    assert node_calls[0][1]["properties"] == {"number": "AB 218"}
-    assert node_calls[0][1]["node_id"] == "Bill:unresolved:ab-218"
+    assert node_calls[0][1]["properties"] == {
+        # No designation was recovered, so the surface string stands in as the
+        # name and `needs_review` says the Bill is unidentified.
+        "name": "the bill",
+        "session": None,
+        "session_verified": False,
+        "session_inferred": False,
+        "needs_review": True,
+    }
+    assert node_calls[0][1]["node_id"] == "Bill:unresolved:the-bill"
+
+
+def test_a_bill_endpoint_with_no_resolution_degrades_instead_of_failing():
+    # A relationship endpoint naming a Bill that resolution never saw must not
+    # take the whole chunk down with it. It degrades to the unresolved key.
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(
+        nodes=[Node(name="Gavin Newsom", label="Politician")],
+        relationships=[
+            Relationship(
+                source="Gavin Newsom",
+                target="Senate Bill 623",
+                target_label="Bill",
+                relationship_type="SUPPORTS",
+            )
+        ],
+    )
+
+    manager.ingest_chunk_extraction("article#chunk_0", extraction, BillSessionResolutions())
+
+    rel_calls = [
+        call for call in mock_tx.run.call_args_list
+        if "SUPPORTS" in call[0][0] and "tgt_id" in call[1]
+    ]
+    assert rel_calls, "the relationship write should still have run"
+    assert rel_calls[0][1]["tgt_id"] == "Bill:unresolved:senate-bill-623"
+
+
+def test_bill_names_with_the_same_resolution_share_one_primary_key():
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+    extraction = ExtractionResult(nodes=[
+        Node(name="Senate Bill 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
+    ])
+    resolution_map = resolve_bill_sessions(
+        SourceArticle(
+            url="https://example.com/uber-ballot-measures",
+            title="Uber Ballot Measures",
+            published_date="2020-04-10T12:00:00Z",
+            content="article content",
+        ),
+        [extraction],
+    )
+
+    manager.ingest_chunk_extraction(
+        "article#chunk_0",
+        extraction,
+        resolution_map,
+    )
+
+    node_calls = [call for call in mock_tx.run.call_args_list if "MERGE (n:Bill" in call[0][0]]
+    assert [call[1]["node_id"] for call in node_calls] == [
+        "Bill:2019-2020:sb-623",
+        "Bill:2019-2020:sb-623",
+    ]
+    assert all(
+        call[1]["properties"]
+        == resolution_map.get("Senate Bill 623").graph_properties()
+        for call in node_calls
+    )
 
 
 def _event_call(event_properties: dict, published_date: str | None):
@@ -817,7 +902,10 @@ def test_an_event_without_a_resolved_date_gets_no_date_properties():
         call for call in mock_tx.run.call_args_list
         if "MERGE (n:LegislativeEvent" in call[0][0]
     )
-    assert call[1]["properties"] == {"type": "Vote"}
+    assert call[1]["properties"] == {
+        "type": "Vote",
+        "name": "Assembly floor vote on AB 218",
+    }
 
 
 def test_a_legislative_event_key_never_contains_its_date():

@@ -21,6 +21,7 @@ from knowledge_map.core.pipeline import (
     CoreferenceAdapter,
     EntityExtractionAdapter,
 )
+from knowledge_map.core.bill_sessions import parse_bill_designation, resolve_bill_sessions
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter, get_annotator_agent, get_critic_agent
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter, get_extraction_agent
@@ -56,6 +57,28 @@ class MockDatabaseAdapter:
     ) -> None:
         self.extractions.append((chunk_id, extraction, bill_sessions, event_dates))
 
+
+@pytest.mark.parametrize(
+    ("name", "designation"),
+    [
+        ("SB 623", "SB 623"),
+        ("sb623", "SB 623"),
+        ("Senate Bill 623", "SB 623"),
+        ("senate bill 623", "SB 623"),
+        ("AB-1751", "AB 1751"),
+        ("Assembly Bill 1751", "AB 1751"),
+        ("assembly bill1751", "AB 1751"),
+    ],
+)
+def test_bill_designation_parser_accepts_the_four_supported_forms(name, designation):
+    assert parse_bill_designation(name) == designation
+
+
+@pytest.mark.parametrize("name", ["ll 623", "to 5", "the bill"])
+def test_bill_designation_parser_rejects_non_designations(name):
+    assert parse_bill_designation(name) is None
+
+
 class MockEmbeddingAdapter:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
         return [[0.1, 0.2, 0.3]] * len(chunks)
@@ -73,8 +96,10 @@ EMPTY_ADHERENCE_REPORT = AdherenceReport()
 class MockEntityExtractionAdapter:
     def __init__(self):
         self.reset_calls = 0
+        self.calls = []
 
     def extract(self, chunk_text: str) -> ExtractionResult:
+        self.calls.append(chunk_text)
         return ExtractionResult(
             nodes=[Node(name="Test Actor", label="Politician")],
             relationships=[]
@@ -175,14 +200,50 @@ def test_pipeline_persistence():
     assert stored_extraction.nodes[0].name == "Test Actor"
 
 
+def test_pipeline_extracts_owned_chunk_text_without_context():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    chunks = [
+        ArticleChunk(
+            text="owned chunk text",
+            start_index=10,
+            end_index=26,
+            index=0,
+            context="overlap context ",
+        )
+    ]
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="http://test.com/extraction-text",
+        title="Extraction Text",
+        content="article content",
+    )
+
+    with patch("knowledge_map.core.pipeline.chunk_article", return_value=chunks):
+        pipeline.run(article, dry_run=True)
+
+    assert extraction.calls == ["owned chunk text"]
+
+
 def test_pipeline_resolves_bill_sessions_once_per_article():
     db = MockDatabaseAdapter()
     extraction = MockEntityExtractionAdapter()
     extraction.extract = lambda _text: ExtractionResult(nodes=[
-        Node(name="AB 218", label="Bill", properties={"number": "AB 218"}),
-        Node(name="SB 54", label="Bill", properties={"number": "SB 54"}),
-        Node(name="AB 99", label="Bill", properties={"number": "AB 99"}),
-        Node(name="AB 1", label="Bill", properties={"number": "AB 1"}),
+        Node(name="Senate Bill 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
+        Node(name="sb623", label="Bill"),
+        Node(name="sb54", label="Bill"),
+        Node(name="AB 99", label="Bill"),
+        Node(name="Senate Bill 1", label="Bill"),
+        Node(name="AB 1", label="Bill"),
+        Node(name="the bill", label="Bill"),
+        Node(name="Richardson's legislation", label="Bill"),
     ])
     pipeline = StoryPipeline(
         db_adapter=db,
@@ -197,7 +258,7 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         published_date="2026-04-10T12:00:00Z",
         content="first chunk second chunk",
         links=[
-            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200AB218"),
+            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200SB623"),
             StoryLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
             StoryLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
             StoryLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
@@ -218,12 +279,90 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
     first_map = db.extractions[0][2]
     assert db.extractions[1][2] is first_map
     assert isinstance(first_map, BillSessionResolutions)
-    assert first_map == BillSessionResolutions(by_number={
-        "AB 218": BillSessionResolution(session="2019-2020", session_verified=True),
-        "SB 54": BillSessionResolution(session="2017-2018", session_verified=True),
-        "AB 99": BillSessionResolution(session="2025-2026", session_inferred=True),
-        "AB 1": BillSessionResolution(needs_review=True),
+    assert first_map == BillSessionResolutions(by_name={
+        "Senate Bill 623": BillSessionResolution(
+            name="SB 623", session="2019-2020", session_verified=True
+        ),
+        "ll 623": BillSessionResolution(
+            name="SB 623", session="2019-2020", session_verified=True
+        ),
+        "sb623": BillSessionResolution(
+            name="SB 623", session="2019-2020", session_verified=True
+        ),
+        "sb54": BillSessionResolution(
+            name="SB 54", session="2017-2018", session_verified=True
+        ),
+        "AB 99": BillSessionResolution(
+            name="AB 99", session="2025-2026", session_inferred=True
+        ),
+        "Senate Bill 1": BillSessionResolution(
+            name="SB 1", session="2025-2026", session_inferred=True
+        ),
+        "AB 1": BillSessionResolution(name="AB 1", needs_review=True),
+        "the bill": BillSessionResolution(needs_review=True),
+        "Richardson's legislation": BillSessionResolution(needs_review=True),
     })
+
+
+def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
+    db = MockDatabaseAdapter()
+    extraction = MockEntityExtractionAdapter()
+    extraction.extract = lambda _text: ExtractionResult(nodes=[
+        Node(name="SB 623", label="Bill"),
+        Node(name="AB 623", label="Bill"),
+        Node(name="ll 623", label="Bill"),
+    ])
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=extraction,
+        status_tracker=MockStatusTracker(),
+    )
+    article = SourceArticle(
+        url="https://example.com/ambiguous-bills",
+        title="Ambiguous Bills",
+        published_date="2026-04-10T12:00:00Z",
+        content="one chunk",
+    )
+
+    pipeline.run(article)
+
+    assert db.extractions[0][2] == BillSessionResolutions(by_name={
+        "AB 623": BillSessionResolution(
+            name="AB 623", session="2025-2026", session_inferred=True
+        ),
+        "SB 623": BillSessionResolution(
+            name="SB 623", session="2025-2026", session_inferred=True
+        ),
+        "ll 623": BillSessionResolution(needs_review=True),
+    })
+
+
+def test_bill_designation_recovery_is_independent_of_extraction_order():
+    article = SourceArticle(
+        url="https://example.com/order-independent",
+        title="Order Independent",
+        published_date="2026-04-10T12:00:00Z",
+        content="article content",
+    )
+    extractions = [
+        ExtractionResult(nodes=[Node(name="ll 623", label="Bill")]),
+        ExtractionResult(nodes=[Node(name="Senate Bill 623", label="Bill")]),
+    ]
+
+    forward = resolve_bill_sessions(article, extractions)
+    reverse = resolve_bill_sessions(article, list(reversed(extractions)))
+
+    assert forward == reverse == BillSessionResolutions(by_name={
+        "Senate Bill 623": BillSessionResolution(
+            name="SB 623", session="2025-2026", session_inferred=True
+        ),
+        "ll 623": BillSessionResolution(
+            name="SB 623", session="2025-2026", session_inferred=True
+        ),
+    })
+
 
 def test_pipeline_logging(caplog):
     caplog.set_level(logging.INFO)

@@ -1,6 +1,6 @@
 # 04 — Recover a Bill Designation from the Source Article
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -34,16 +34,16 @@ the article's full form.
 
 ## Acceptance criteria
 
-- [ ] A name yielding no Bill Designation but containing digits matching exactly
+- [x] A name yielding no Bill Designation but containing digits matching exactly
       one article-level Bill Designation adopts it.
-- [ ] `ll 623` in the Uber ballot-measure extractions mints the same key as
+- [x] `ll 623` in the Uber ballot-measure extractions mints the same key as
       `Senate Bill 623`, producing one node rather than two.
-- [ ] Digits matching two or more article-level Bill Designations adopt none and
+- [x] Digits matching two or more article-level Bill Designations adopt none and
       set `needs_review`.
-- [ ] A name with no digits attempts no recovery.
-- [ ] Recovery happens before any key is minted; no duplicate node is written and
+- [x] A name with no digits attempts no recovery.
+- [x] Recovery happens before any key is minted; no duplicate node is written and
       merged afterwards.
-- [ ] Resolving one article's extractions in reversed chunk order yields an equal
+- [x] Resolving one article's extractions in reversed chunk order yields an equal
       resolution map.
 
 ## Blocked by

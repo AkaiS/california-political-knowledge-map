@@ -81,7 +81,7 @@ PROPERTIES = {
     "District": frozenset({"id", "number", "cycle_year"}),
     "RedistrictingCycle": frozenset({"id", "year", "mid_cycle"}),
     "Committee": frozenset({"id", "name", "chamber"}),
-    "Bill": frozenset({"id", "number", "session", "current_status"}),
+    "Bill": frozenset({"id", "name", "session", "current_status"}),
     "LegislativeEvent": frozenset({"id", "type", "date", "sequence_number", "description"}),
     "Prop": frozenset({"id", "number", "election_date", "official_title", "summary"}),
     "Campaign": frozenset({"id", "name", "election_cycle", "status"}),

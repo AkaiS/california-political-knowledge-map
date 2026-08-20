@@ -12,7 +12,7 @@ from knowledge_map.schemas import (
     LegislativeEventDates,
     SourceArticle,
 )
-from knowledge_map.core.bill_sessions import normalize_bill_number
+
 
 def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
     """The values that identify this claim, canonicalized, and whether any are missing.
@@ -275,7 +275,7 @@ class Neo4jAdapter:
                         query,
                         url=article.url,
                         chunk_id=chunk_id,
-                        text=chunk.text,
+                        text=chunk.embedded_text,
                         index=chunk.index,
                         embedding=embedding,
                     )
@@ -308,15 +308,17 @@ class Neo4jAdapter:
                         labels = _validated_labels(label, node.sub_labels)
                         properties = dict(node.properties)
                         if label == "Bill":
-                            number = normalize_bill_number(properties.get("number") or node.name)
-                            resolution = bill_sessions.get(number)
-                            if resolution is not None:
-                                properties.update(resolution.graph_properties())
-                            if number:
-                                properties["number"] = number
-                            session = resolution.session if resolution else None
-                            node_id = bill_key(session, number, node.name)
+                            resolution = bill_sessions.get(node.name)
+                            properties.update(resolution.graph_properties())
+                            # A Bill's name is its Bill Designation. Where none was
+                            # recovered the surface string stands in, so the node is
+                            # still findable and `needs_review` says why.
+                            properties["name"] = resolution.name or node.name
+                            node_id = bill_key(
+                                resolution.session, resolution.name, node.name
+                            )
                         else:
+                            properties["name"] = node.name
                             if label == "LegislativeEvent":
                                 event_date = event_dates.get(node.name)
                                 if event_date is not None:
@@ -329,9 +331,9 @@ class Neo4jAdapter:
                         # Merge node
                         query = (
                             f"MERGE (n:{labels} {{id: $node_id}}) "
-                            "SET n += $properties, n.id = $node_id, n.name = $name"
+                            "SET n += $properties, n.id = $node_id"
                         )
-                        tx.run(query, node_id=node_id, name=node.name, properties=properties)
+                        tx.run(query, node_id=node_id, properties=properties)
 
                         # Connect node to chunk: (Entity)-[:MENTIONED_IN]->(Chunk)
                         mention_query = f"""
@@ -353,10 +355,8 @@ class Neo4jAdapter:
                             return node_id
                         if label != "Bill":
                             return derived_key(label, name)
-                        number = normalize_bill_number(name)
-                        resolution = bill_sessions.get(number)
-                        session = resolution.session if resolution else None
-                        return bill_key(session, number, name)
+                        resolution = bill_sessions.get(name)
+                        return bill_key(resolution.session, resolution.name, name)
 
                     for rel in extraction.relationships:
                         _write_relationship(

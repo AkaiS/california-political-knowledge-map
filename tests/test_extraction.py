@@ -273,6 +273,7 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
         ("Alex Lee", []), ("AB 1", []), ("Good Vote", ["Vote"]), ("Coalition", [])
     ]
     assert first.nodes[0].properties == {"first_name": "Alex"}
+    assert first.nodes[1].properties == {}
     assert [relationship.relationship_type for relationship in first.relationships] == ["ACTION_ON"]
     report = adapter.adherence_report
     assert report["rejected_labels"]["Campaign"].count == 2
@@ -281,9 +282,10 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
     assert report["rejected_relationship_types"]["ACTION_ON"].count == 1
     assert report["rejected_relationship_types"]["KNOWS"].count == 1
     assert report["rejected_relationship_types"]["VOTED_AYE"].count == 1
+    assert report["rejected_property_names"]["number"].count == 1
     assert report["rejected_property_names"]["nickname"].count == 2
     assert report["rejected_property_names"]["nickname"].example_chunk_id.startswith("sha256:")
-    assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 10
+    assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 11
 
 def test_pydantic_ai_entity_extraction_adapter_health_check_success():
     def mock_model(messages, info):

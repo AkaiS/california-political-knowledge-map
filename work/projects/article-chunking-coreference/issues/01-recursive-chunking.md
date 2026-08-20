@@ -19,3 +19,33 @@ The chunker utility must:
 ## Blocked by
 
 None - can start immediately
+
+## Comments
+
+### Previously discussed — 2026-08-19 grilling session
+
+This issue is `completed`; the decisions below change `chunk_article` and need
+their own issue. Recorded here because this issue owns the code.
+
+Finding: `chunk_article` in
+[utils/chunking.py](../../../../src/knowledge_map/utils/chunking.py) never passes
+`merge` to `OverlapRefinery`, so it takes the default `merge=True`. Verified
+empirically on a 2,057-character article at `chunk_size=300`:
+
+- `start_index`/`end_index` tile the article exactly once — spans sum to 2,057.
+- `text` does **not** equal `article[start_index:end_index]`. The refinery
+  prepends the previous chunk's tail at
+  [overlap.py:313](../../../../.venv/lib/python3.13/site-packages/chonkie/refinery/overlap.py:313),
+  under `if self.merge`. `setattr(chunk, "context", context)` runs regardless.
+- With `merge=False`, `text == article[start_index:end_index]` holds exactly and
+  `context` still carries the prefix separately.
+
+Decisions:
+
+- **Pass `merge=False`.** Offsets and `text` then agree by construction, which is
+  what lets the numbered sentence table align to chunk boundaries — each sentence
+  falls in exactly one `[start_index, end_index)` range.
+- **Each consumer gets a different string.** Entity Extraction gets `text` alone —
+  Coreference Resolution is what supplies antecedents, so the overlap prefix is
+  redundant there. Embedding gets `context + text`. Reader display gets `text`
+  alone, since `context` is a duplicate of the previous chunk.

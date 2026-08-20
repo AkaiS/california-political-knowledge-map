@@ -133,7 +133,7 @@ extracted once, from the chunk that owns it.
     that "number", "designation" and "name" are not used interchangeably in the
     next ticket.
 19. As a domain reader, I want the superseded `number` property gone from the
-    write path rather than left unwritten, so that no query is written against a
+    model rather than left unwritten, so that no query is written against a
     field nothing populates.
 
 ## Implementation Decisions
@@ -143,16 +143,19 @@ California bill, together, normalized to the initials form: `SB 623`, `AB 1751`.
 It is what qualifies a `Bill`'s identity alongside its session, and it replaces
 every current use of "bill number" standing alone. `CONTEXT.md` gains the entry.
 
-**The Bill Designation is stored in the declared `number` property.** No new
-property is introduced. The primary ontology declares `number` on `Bill` and the
-write path is guarded against undeclared properties, so what changes is who
-supplies it: Bill Session Resolution rather than the extraction model. The
-primary ontology's `SB-32` example is reconciled to the normalized form, so the
-legislative ingester that arrives later writes the same string.
+**The Bill Designation is the `Bill`'s `name`.** No new property is introduced.
+`:Bill` declared `number` alone, which cannot identify a bill without its
+chamber, so under ADR 0014 `:Bill` now declares `name` holding the designation
+and `number` is gone. What also changes is who supplies it: Bill Session
+Resolution rather than the extraction model. The primary ontology's `SB-32`
+example is reconciled to the normalized form, so the legislative ingester that
+arrives later writes the same string. Where no designation was recovered, the
+surface string the article used stands in as the name and `needs_review` says so.
 
-**Extraction reports the name only.** The Extraction Prompt stops asking for a
-`Bill`'s `number` property. The name is whatever the article wrote — `Senate Bill
-623`, `SB 623`, `the bill`. Nothing downstream reads `properties["number"]`.
+**Extraction reports the surface string only.** The Extraction Prompt stops
+asking for a `Bill`'s `number` property, and does not ask for its `name` either.
+The surface string is whatever the article wrote — `Senate Bill 623`, `SB 623`,
+`the bill`. Nothing downstream reads `properties["number"]`.
 
 **Bill Designation parsing accepts four forms and nothing else.** `SB`, `AB`,
 `Senate Bill`, `Assembly Bill`, case-insensitive, followed by digits with
@@ -171,15 +174,16 @@ Recovery reads all of the article's extractions at once, so it does not depend o
 chunk order.
 
 **Bill Session Resolution covers every extracted `Bill` node.** The resolution
-map is keyed by the `Bill` node's extracted name rather than by a normalized
-number, because a node whose name yields no designation has no number to key on.
+map is keyed by the surface string the article used rather than by a normalized
+designation, because a node whose surface string yields no designation has no
+designation to key on.
 Each resolution carries the Bill Designation it resolved to, the session, and the
 three provenance flags. Two names in one article that recover to the same Bill
 Designation resolve to the same session and mint the same key, which is what
 merges them.
 
 **The Graph Database Adapter looks up and writes.** It finds the resolution by
-the node's name, applies the resolution's properties to the node, and mints the
+the node's surface string, applies the resolution's properties to the node, and mints the
 key from the resolution's session and Bill Designation. It calls no parser and
 tests for no missing entry. Its import of the normalizer goes away.
 
