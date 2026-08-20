@@ -143,7 +143,7 @@ def _run(args: argparse.Namespace) -> None:
 
     report = run_gold_set(
         gold_set,
-        task=task.build(model),
+        task=task.build(model, gold_set),
         evaluators=task.evaluators,
         split=split,
         max_concurrency=args.max_concurrency,

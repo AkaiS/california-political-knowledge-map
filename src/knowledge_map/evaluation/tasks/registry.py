@@ -21,8 +21,14 @@ class EvaluationTask:
     name: str
     input_type: type[Any]
     output_type: type[Any]
-    build: Callable[[str], Callable[[Any], Any]]
-    """Given a model identifier, return the callable one case is run through."""
+    build: Callable[[str, Any], Callable[[Any], Any]]
+    """Given a model and the Gold Set, return the callable a case runs through.
+
+    The Gold Set is passed so a task that few-shots its prompt can draw
+    those examples from the `training` split. A task that reaches into
+    the project's database for examples instead will show the model the
+    answers to its own held-out cases.
+    """
     evaluators: Sequence[Evaluator]
     default_model: str
     metadata_type: type[Any] = dict

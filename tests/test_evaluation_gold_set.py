@@ -202,3 +202,76 @@ def test_collected_relevance_candidates_carry_the_url_as_the_case_id(tmp_path: P
     assert [case["id"] for case in collected.cases] == ["u/1", "u/2"]
     assert collected.cases[1]["task_input"]["headline"] == "Pacific Catch opens"
     assert collected.skipped_urls == ("u/3",)
+
+
+def test_few_shot_examples_come_only_from_the_training_split(tmp_path: Path) -> None:
+    """A held-out case must never reach the prompt that scores it."""
+    from knowledge_map.evaluation.tasks.relevance import _few_shot_examples
+
+    path = tmp_path / "relevance.yaml"
+    path.write_text(RELEVANCE_GOLD_SET_YAML)
+    gold_set = _load_relevance(path)
+
+    positives, negatives = _few_shot_examples(gold_set)
+
+    assert [example["title"] for example in positives] == ["A training positive"]
+    assert [example["title"] for example in negatives] == ["A training negative"]
+
+
+def test_a_gold_set_with_no_training_cases_few_shots_with_nothing(tmp_path: Path) -> None:
+    """Zero examples is the answer; reaching into the database is not."""
+    from knowledge_map.evaluation.tasks.relevance import _few_shot_examples
+
+    path = tmp_path / "relevance.yaml"
+    path.write_text(RELEVANCE_GOLD_SET_YAML.replace("split: training", "split: held-out"))
+
+    positives, negatives = _few_shot_examples(_load_relevance(path))
+
+    assert positives == []
+    assert negatives == []
+
+
+RELEVANCE_GOLD_SET_YAML = """
+task: relevance
+description: Two training examples and one held-out case.
+cases:
+  - id: https://example.test/train-positive
+    description: A training positive
+    split: training
+    task_input:
+      url: https://example.test/train-positive
+      headline: A training positive
+      description: body
+    expected_output:
+      classification: RELEVANT
+  - id: https://example.test/train-negative
+    description: A training negative
+    split: training
+    task_input:
+      url: https://example.test/train-negative
+      headline: A training negative
+      description: body
+    expected_output:
+      classification: IRRELEVANT
+  - id: https://example.test/held-out
+    description: A held-out case
+    split: held-out
+    task_input:
+      url: https://example.test/held-out
+      headline: A held-out case
+      description: body
+    expected_output:
+      classification: RELEVANT
+"""
+
+
+def _load_relevance(path: Path):
+    from knowledge_map.evaluation.tasks import task_named
+
+    task = task_named("relevance")
+    return load_gold_set(
+        path,
+        input_type=task.input_type,
+        output_type=task.output_type,
+        metadata_type=task.metadata_type,
+    )

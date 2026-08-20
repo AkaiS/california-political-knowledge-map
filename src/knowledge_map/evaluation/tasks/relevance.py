@@ -21,7 +21,7 @@ from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
 from knowledge_map.core.relevance_agent import (
     RELEVANCE_AGENT_INSTRUCTIONS,
     RelevanceClassification,
-    classify_article_with_llm,
+    get_relevance_agent_prompt,
 )
 from knowledge_map.utils.models import get_ollama_model
 
@@ -65,22 +65,56 @@ class RelevanceMetadata(BaseModel):
     label_source: str | None = None
 
 
-def build_task(model: str) -> Any:
-    """Return the callable one case is run through, bound to ``model``."""
+def build_task(model: str, gold_set: Any) -> Any:
+    """Return the callable one case is run through, bound to ``model``.
+
+    Few-shot examples come from the Gold Set's own `training` split, not
+    from `get_gold_standard_examples`. That function selects three
+    human-labeled rows per class straight out of `scraped_html_cache`,
+    which is where every case in this Gold Set came from: using it during
+    a run puts up to six of the run's own cases, with their labels, into
+    the prompt scoring them.
+    """
     agent = Agent(
         get_ollama_model(model),
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,
     )
+    positives, negatives = _few_shot_examples(gold_set)
 
     async def classify(case_input: RelevanceInput) -> RelevanceExpectation:
-        result = await classify_article_with_llm(
-            title=case_input.headline, body=case_input.description, agent=agent
+        prompt = get_relevance_agent_prompt(
+            title=case_input.headline,
+            body=case_input.description,
+            positive_examples=positives,
+            negative_examples=negatives,
         )
-        return RelevanceExpectation(classification=result.classification)
+        result = await agent.run(prompt)
+        return RelevanceExpectation(classification=result.output.classification)
 
     return classify
+
+
+def _few_shot_examples(gold_set: Any) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Draw up to three examples per class from the `training` split only.
+
+    A case the author put in `calibration` or `held-out` is reserved from
+    exactly this, so a Gold Set with no `training` cases few-shots with
+    nothing, which is the correct answer rather than a reason to fall
+    back to the database.
+    """
+    from knowledge_map.evaluation import EvaluationSplit
+
+    training = gold_set.split(EvaluationSplit.TRAINING)
+    by_label: dict[str, list[dict[str, str]]] = {"RELEVANT": [], "IRRELEVANT": []}
+    for case in training:
+        label = case.expected_output.classification
+        if len(by_label[label]) < 3:
+            by_label[label].append(
+                {"title": case.task_input.headline, "content": case.task_input.description}
+            )
+    return by_label["RELEVANT"], by_label["IRRELEVANT"]
 
 
 class MatchesTheAuthorsLabel(Evaluator):
