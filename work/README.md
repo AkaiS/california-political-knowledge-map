@@ -87,18 +87,18 @@ not parallel:
 4. [Specify Entity Extraction evaluation](initiatives/model-evaluation/issues/07-specify-entity-extraction-evaluation.md), blocked by the Coreference Resolution specification.
 
 These retain `needs-triage` until their blockers are resolved; they are not
-currently executable.
+currently executable. After ADR 0017 each of them is a smaller question than
+when it was written: what a case looks like for that component and what scores
+it, not how the run is persisted.
 
 ## Project state
 
 | Triage state | Projects |
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
-| `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md); [Unified Evaluation Execution Path](projects/unified-evaluation-execution/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Case Evaluation Requirements](projects/case-evaluation-requirements/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Contract Hardening](projects/evaluation-contract-hardening/PRD.md); [Evaluation Gold Set Construction and Revisioning](projects/gold-set-construction-factory/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Renewable Evaluation Finalization Authority](projects/renewable-evaluation-finalization-authority/PRD.md); [Shared Evaluation Contract](projects/shared-evaluation-contract/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md); [Structured Metric Observation Materialization](projects/structured-metric-observation-materialization/PRD.md) |
-
-The completed [ReportCase Evidence Contract](projects/report-case-evidence-contract/)
-contains two issue records but no parent PRD.
+| `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
 
@@ -145,6 +145,22 @@ files and the code:
 - The only remaining agent-takeable ticket is the Useful Graph Retrieval survey,
   which has produced no `research/` output yet.
 - The full deterministic suite passed: `544 passed`.
+
+On 2026-08-19, [ADR 0017](../docs/adr/0017-git-is-the-evaluation-versioning-system.md)
+removed the Evaluation Ledger:
+
+- Eight projects specifying the ledger and its contract were archived as
+  `superseded` under [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md).
+  They were built, most of them to completion, and then removed. They are not
+  relabeled `completed`, because the thing they completed no longer exists.
+- The evaluation package went from 9,008 lines to 281. `CONTEXT.md` went from
+  92 terms to 60, and from 40 evaluation terms to 6.
+- The deterministic suite went from `648 passed` to `399 passed` as the 249
+  ledger tests were removed with the code they covered, then to `407 passed`
+  with the eight covering the replacement.
+- [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
+  is unblocked and is now the whole of the evaluation work: a YAML file of
+  hand-labeled headlines.
 
 ## Information model
 

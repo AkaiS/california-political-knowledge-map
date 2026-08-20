@@ -1,6 +1,7 @@
 # Shared Evaluation Contract and Record Model
 
-Labels: completed
+Labels: superseded
+Superseded by ADR 0017; see [the archive note](../README.md). Archived on 2026-08-19.
 Source: [Define the shared evaluation contract and record model](../../initiatives/model-evaluation/issues/02-define-shared-evaluation-contract.md)
 
 ## Problem Statement

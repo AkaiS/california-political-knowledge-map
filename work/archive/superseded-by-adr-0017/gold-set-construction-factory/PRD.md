@@ -1,6 +1,7 @@
 # Evaluation Gold Set Construction and Revisioning
 
-Labels: completed
+Labels: superseded
+Superseded by ADR 0017; see [the archive note](../README.md). Archived on 2026-08-19.
 
 ## Problem Statement
 
