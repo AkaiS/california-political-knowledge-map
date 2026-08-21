@@ -1,13 +1,15 @@
 import math
 import os
 import asyncio
+import httpx
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 from pydantic_ai import Embedder
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
-from knowledge_map.config import settings
-from knowledge_map.utils.models import build_retrying_client
+from knowledge_map.config import TransportSettings, settings
+from knowledge_map.utils.models import build_retrying_client, resolve_base_url
 from typing import List
 from knowledge_map.schemas import ArticleChunk
 
@@ -21,29 +23,39 @@ def cosine_similarity(v1: list[float], v2: list[float]) -> float:
         return 0.0
     return dot_product / (mag1 * mag2)
 
-def get_embedding_embedder() -> Embedder:
+def get_embedding_embedder(
+    *,
+    transport_settings: TransportSettings | None = None,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> Embedder:
+    """Build the Embedder for the embedding stage, on the retrying HTTP client.
+
+    The embedding stage is not an LLM call and does not pass through the model
+    factory, so it does not inherit that factory's retrying client and builds
+    its own.  The retry therefore happens at the failed request rather than by
+    re-running the stage, and an exhausted budget still reaches the Story
+    Pipeline as a transport failure for the embedding component.
+    """
+
     load_dotenv()
-    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_embedding_model = os.environ.get("OLLAMA_EMBEDDING_MODEL", "embeddinggemma")
-    
-    base_url = ollama_base_url
-    if not base_url.endswith("/v1"):
-        base_url = f"{base_url}/v1"
-        
-    # The embedding stage is not an LLM call and does not pass through the
-    # model factory, so it builds its own retrying client rather than
-    # inheriting one.
-    provider = OpenAIProvider(
-        base_url=base_url,
+
+    # The OpenAI SDK retries on its own by default, which would multiply the
+    # configured attempt count rather than replace it.  Retries belong to the
+    # transport, so the SDK is told to make exactly one attempt.
+    openai_client = AsyncOpenAI(
+        base_url=resolve_base_url(),
         api_key="ollama",
-        http_client=build_retrying_client(),
+        http_client=build_retrying_client(transport_settings, transport),
+        max_retries=0,
     )
-    
+    provider = OpenAIProvider(openai_client=openai_client)
+
     model = OpenAIEmbeddingModel(
         ollama_embedding_model,
         provider=provider,
     )
-    
+
     return Embedder(model, settings=EmbeddingSettings(dimension=settings.embedding.dimension))
 
 

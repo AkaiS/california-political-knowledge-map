@@ -751,7 +751,7 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
 
 
 
-def test_a_coreference_socket_timeout_reaches_the_pipeline_as_a_system_error():
+def test_a_coreference_socket_timeout_returns_the_article_to_unprocessed():
     """The Dead Letter Queue never sees an infrastructure failure.
 
     A read timeout escaping the real Coreference Adapter is translated by the

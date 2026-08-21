@@ -27,6 +27,14 @@ Labels: ready-for-agent
 - [x] An empty Mention Span list is not a retry; `no_mentions_returned` remains a distinct failure type.
 - [x] `all_mentions_discarded` remains a failure type, reached only once the correction budget is exhausted.
 - [x] The Coreference Resolution Run's round count reflects the correction attempts, so an exhausted run is distinguishable from a first-response failure in the Dead Letter Queue payload.
+  `annotator_corrections` counts every `RetryPromptPart` in the annotator
+  conversation, which also covers a retry caused by output that did not
+  parse, so `retry_count` can exceed the number of span corrections.
+  Accepted: both are the annotator being asked again inside the run and
+  both cost a model pass, `retry_count` already aggregates critic rounds
+  with corrections, and separating them would mean sniffing the retry
+  part's content shape or text — the re-derivation this project deleted
+  from `classify_api_error`.
 - [x] A test shows an annotator citing an unknown sentence label being corrected on its second response and producing resolved text.
 - [x] A test shows a persistently unlocatable annotator reaching the Dead Letter Queue as `all_mentions_discarded`.
 - [ ] Every behavioral test in the coreference suite passes without modification.

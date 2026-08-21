@@ -22,6 +22,13 @@ Labels: ready-for-agent
 - [x] `classify_api_error` and `get_retry_after` are deleted, along with the tests asserting on them.
 - [x] `classify_exception`, which routes Dead Letter Queue-worthy errors, is unchanged.
 - [x] The embedding stage still retries, since it does not pass through the model factory.
+  It retries at the failed request rather than by re-running the stage: the
+  embedding adapter builds the same retrying HTTP client the model factory
+  uses, which is what the wrapper the PRD describes is for. Asserted in
+  `tests/test_embedding.py` through a real embedding call against an
+  `httpx.MockTransport` — a rate limit honoured from the `Retry-After`
+  header, an exhausted attempt count, and the exhaustion surfacing as
+  `PipelineConnectivityError` for the `embedding` component.
 - [x] The four backoff tests that patch `time.sleep` and assert delay sequences and call counts are deleted, replaced by assertions on the resulting pipeline error, component, and Article Status.
 - [x] Batch ingestion's consecutive-failure locking behaves exactly as before and its existing test passes unchanged.
 - [x] A coreference failure still reaches the Dead Letter Queue and still leaves the article `FAILED_DLQ`.

@@ -1,8 +1,30 @@
+import asyncio
 import pytest
 import os
+import httpx
 from unittest.mock import patch, MagicMock
 from knowledge_map.adapters.embedding import cosine_similarity, get_embedding_embedder, PydanticAIEmbeddingAdapter
+from knowledge_map.config import TransportSettings
+from knowledge_map.core.exceptions import (
+    PipelineConnectivityError,
+    transport_failures_as_pipeline_errors,
+)
 from knowledge_map.schemas import ArticleChunk
+
+
+@pytest.fixture
+def recorded_embedding_waits(monkeypatch):
+    """Record every retry wait and take none of them."""
+
+    waits: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def recording_sleep(delay, *args, **kwargs):
+        waits.append(delay)
+        return await real_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", recording_sleep)
+    return waits
 
 def test_cosine_similarity_exact_match():
     v1 = [1.0, 2.0, 3.0]
@@ -149,3 +171,87 @@ def test_pydantic_ai_embedding_adapter_health_check_failure():
     assert adapter.health_check() is False
     mock_embedder.embed_documents.assert_called_once_with(["health_check"])
 
+
+
+class TestTheEmbeddingStageRetriesItsOwnRequests:
+    """The embedding stage is not an LLM call and does not pass through the
+    model factory, so it does not inherit that factory's retrying client.  It
+    builds its own, and these assertions run a real embedding call against an
+    ``httpx.MockTransport`` standing in for the Ollama host.
+    """
+
+    @staticmethod
+    def embedding_response(dimension: int = 768) -> dict:
+        """A minimal OpenAI-compatible embeddings body."""
+
+        return {
+            "object": "list",
+            "model": "embeddinggemma",
+            "data": [
+                {"object": "embedding", "index": 0, "embedding": [0.1] * dimension}
+            ],
+            "usage": {"prompt_tokens": 1, "total_tokens": 1},
+        }
+
+    @staticmethod
+    def adapter_for(transport, **kwargs) -> PydanticAIEmbeddingAdapter:
+        return PydanticAIEmbeddingAdapter(
+            embedder=get_embedding_embedder(transport=transport, **kwargs)
+        )
+
+    def test_a_rate_limited_request_is_retried_after_the_header_delay(
+        self, recorded_embedding_waits
+    ):
+        requests = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if len(requests) == 1:
+                return httpx.Response(
+                    429,
+                    headers={"Retry-After": "7"},
+                    json={"error": {"message": "rate limited"}},
+                )
+            return httpx.Response(200, json=self.embedding_response())
+
+        adapter = self.adapter_for(httpx.MockTransport(handler))
+
+        assert adapter.embed_text("The Governor signed the bill.") == [0.1] * 768
+        assert len(requests) == 2
+        assert 7.0 in recorded_embedding_waits
+
+    def test_transport_errors_are_retried_until_the_attempt_count_is_exhausted(
+        self, recorded_embedding_waits
+    ):
+        attempts = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            attempts.append(request)
+            raise httpx.ConnectError("connection reset by peer")
+
+        transport_settings = TransportSettings(max_attempts=2)
+        adapter = self.adapter_for(
+            httpx.MockTransport(handler), transport_settings=transport_settings
+        )
+
+        with pytest.raises(Exception):
+            adapter.embed_text("The Governor signed the bill.")
+
+        assert len(attempts) == transport_settings.max_attempts
+
+    def test_an_exhausted_retry_reaches_the_pipeline_as_a_connectivity_error(
+        self, recorded_embedding_waits
+    ):
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("connection reset by peer")
+
+        adapter = self.adapter_for(
+            httpx.MockTransport(handler),
+            transport_settings=TransportSettings(max_attempts=2),
+        )
+
+        with pytest.raises(PipelineConnectivityError) as exc_info:
+            with transport_failures_as_pipeline_errors("embedding"):
+                adapter.embed_text("The Governor signed the bill.")
+
+        assert exc_info.value.component == "embedding"

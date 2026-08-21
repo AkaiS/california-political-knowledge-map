@@ -66,7 +66,9 @@ def build_retrying_client(
     )
 
 
-def _resolve_base_url() -> str:
+def resolve_base_url() -> str:
+    """The Ollama base URL, normalised to the OpenAI-compatible ``/v1`` path."""
+
     ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     if ollama_base_url.endswith("/v1"):
         return ollama_base_url
@@ -129,7 +131,7 @@ def get_ollama_model(
 
     load_dotenv()
 
-    base_url = _resolve_base_url()
+    base_url = resolve_base_url()
     model_name = _resolve_model_name(default_model, env_var_name)
 
     if transport is not None or transport_settings is not None:
