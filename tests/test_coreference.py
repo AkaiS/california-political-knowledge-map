@@ -605,7 +605,9 @@ def test_health_check_keeps_the_adapter_contract():
     annotator_agent = get_annotator_agent(defer_check=True)
 
     def mock_model(messages, info):
-        return ModelResponse(parts=[TextPart(content="ok")])
+        # The probe runs under the annotator's own output type, so a healthy
+        # model answers it the way it answers an annotation request.
+        return mention_response(info, [])
 
     with annotator_agent.override(model=FunctionModel(mock_model)):
         adapter = PydanticAICoreferenceAdapter(annotator_agent=annotator_agent)
@@ -1048,6 +1050,92 @@ def test_a_model_output_failure_carries_the_partial_run_to_the_dead_letter_queue
     assert [sentence.label for sentence in run.sentences] == ["1", "2"]
     # No verdict was ever recorded, so nothing reached the resolved text.
     assert run.resolved_text == content
+
+
+def retry_prompts(messages) -> list[str]:
+    """Return what the model was told when it was asked to answer again.
+
+    An output validator's ``ModelRetry`` reaches the model as a retry part
+    rather than a user part, so the discard reasons are read from there.
+    """
+
+    from pydantic_ai.messages import RetryPromptPart
+
+    return [
+        part.content if isinstance(part.content, str) else str(part.content)
+        for message in messages
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+        if isinstance(part, RetryPromptPart)
+    ]
+
+
+def test_an_annotator_citing_an_unknown_sentence_label_is_asked_again():
+    """A recoverable mistake is corrected rather than archived.
+
+    Every Mention Span in the first answer names a sentence label that does not
+    exist, so nothing can be located.  The annotator is told why and answers
+    again, and the corrected Mention Span reaches the resolved text.
+    """
+
+    content = "Gavin Newsom signed a bill. He was happy."
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    annotator_calls = 0
+    corrections: list[str] = []
+
+    def mock_annotator(messages, info):
+        nonlocal annotator_calls
+        annotator_calls += 1
+        corrections.extend(retry_prompts(messages[-1:]))
+        if annotator_calls == 1:
+            return mention_response(
+                info,
+                [
+                    {
+                        "sentence_label": "99",
+                        "mention_text": "He",
+                        "canonical_entity_name": "Gavin Newsom",
+                    }
+                ],
+            )
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "He",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        return critic_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "He",
+                    "accepted": True,
+                }
+            ],
+        )
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        run = PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent,
+        ).resolve(content)
+
+    assert run.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
+    assert annotator_calls == 2
+    # The annotator was told which deterministic check its answer failed.
+    assert len(corrections) == 1
+    assert "99" in corrections[0]
 
 
 def test_a_resolution_that_exceeds_its_request_limit_fails(monkeypatch):

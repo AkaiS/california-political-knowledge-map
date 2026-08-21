@@ -5,8 +5,9 @@ from dataclasses import dataclass, field
 from typing import NamedTuple
 
 from pydantic import ValidationError
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from knowledge_map.config import settings
@@ -266,8 +267,60 @@ CRITIC_INSTRUCTIONS = (
 )
 
 
+def _unlocatable_retry_message(discards: Sequence[MentionSpanDiscard]) -> str:
+    """Tell the annotator why nothing it returned could be located."""
+
+    reported = "\n".join(
+        f"{format_mention_spans([discard.mention_span])}\n  Reason: {discard.reason}"
+        for discard in discards
+    )
+    return (
+        "None of the Mention Spans you returned could be located in the "
+        "numbered Source Article. Copy `sentence_label` from a label shown at "
+        "the start of a sentence line, copy `mention_text` verbatim from that "
+        "sentence, and set `occurrence` to a one-based index that exists "
+        "there. Return the corrected Mention Spans.\n\n"
+        "Unlocatable Mention Spans:\n"
+        f"{reported}"
+    )
+
+
+def validate_annotator_output(
+    ctx: RunContext[CoreferenceDeps],
+    mention_spans: list[MentionSpan],
+) -> list[MentionSpan]:
+    """Ask the annotator again when nothing it returned can be located.
+
+    An unknown sentence label, or a mention text that does not occur where it
+    was claimed, is exactly the mistake an annotator can fix when told, so the
+    deterministic validation runs here as well as in the resolution loop.
+
+    Three answers pass straight through.  An empty list is a real outcome, so
+    ``no_mentions_returned`` stays a distinct failure rather than a correction
+    target.  A partially locatable answer passes, so one unlocatable Mention
+    Span never costs the neighbours that validated cleanly and its discards are
+    recorded by the loop as before.  And the last answer the agent's
+    structured-output retry budget allows passes, so a persistently unlocatable
+    annotator reaches the Dead Letter Queue as ``all_mentions_discarded``
+    carrying what it returned, rather than as an exhausted retry budget.
+    """
+
+    if not mention_spans:
+        return mention_spans
+
+    validation = validate_mention_spans(
+        ctx.deps.content,
+        ctx.deps.sentences,
+        mention_spans,
+    )
+    if validation.valid_spans or ctx.retry >= ctx.max_retries:
+        return mention_spans
+
+    raise ModelRetry(_unlocatable_retry_message(validation.discards))
+
+
 def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    return Agent(
+    agent = Agent(
         _get_model(),
         name="coreference_annotator",
         deps_type=CoreferenceDeps,
@@ -276,6 +329,8 @@ def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
         defer_model_check=defer_check,
         retries=retries,
     )
+    agent.output_validator(validate_annotator_output)
+    return agent
 
 
 def get_critic_agent(defer_check: bool = True, retries: int = 3) -> Agent:
@@ -570,6 +625,7 @@ class ResolutionState:
 
     deps: CoreferenceDeps
     observed_spans: list[MentionSpan] = field(default_factory=list)
+    annotator_corrections: int = 0
     outcomes: dict[MentionSpanIdentity, MentionSpanOutcome] = field(
         default_factory=dict
     )
@@ -635,6 +691,27 @@ class ResolutionState:
         self.observed_spans.extend(mention_spans)
         _log_contested_locations(mention_spans)
         return self._locate(mention_spans)
+
+    def record_annotator_corrections(
+        self,
+        messages: Sequence[ModelMessage],
+    ) -> None:
+        """Count the corrections the annotator was asked for within one call.
+
+        The output validator's corrections happen inside a single agent run, so
+        they are invisible to the loop; the annotator's own conversation is
+        where they are recorded.  The count is read from the whole conversation
+        rather than accumulated, because a correction round carries the earlier
+        messages forward and would otherwise be counted twice.
+        """
+
+        self.annotator_corrections = sum(
+            1
+            for message in messages
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
 
     def record_correction(
         self,
@@ -715,7 +792,11 @@ class ResolutionState:
             mention_spans=list(self.observed_spans),
             outcomes=list(self.outcomes.values()),
             discarded_proportion=self.discarded_proportion,
-            retry_count=self.critic_rounds,
+            # Every round the annotator was asked to answer again, whether the
+            # Coreference Critic asked or the output validator did, so a run
+            # that exhausted its corrections is not read as a first-response
+            # failure in the Dead Letter Queue.
+            retry_count=self.critic_rounds + self.annotator_corrections,
             failure_type=failure_type,
         )
 
@@ -832,6 +913,7 @@ def resolve_coreferences_run(
         # The annotator's own conversation, carried into a correction round so
         # that it sees the Mention Spans it is being asked to correct.
         annotator_messages = run_result.all_messages()
+        state.record_annotator_corrections(annotator_messages)
         pending_spans = state.record_annotation(run_result.output)
 
         if not state.observed_spans:
@@ -875,6 +957,7 @@ def resolve_coreferences_run(
                 usage_limits=usage_limits,
             )
             annotator_messages = retry_result.all_messages()
+            state.record_annotator_corrections(annotator_messages)
             pending_spans = state.record_correction(
                 retry_result.output,
                 rejected_spans,
@@ -947,14 +1030,23 @@ class PydanticAICoreferenceAdapter:
             ) from error
 
     def health_check(self) -> bool:
+        """Report whether the annotator can complete a trivial run.
+
+        The probe uses the annotator's own output type rather than overriding
+        it with plain text: an agent carrying an output validator cannot be
+        given a different output type per run, and the health of the agent is
+        the health of the contract it actually runs under.  A completed run is
+        healthy whatever it returned, since a trivial article legitimately
+        yields no Mention Spans.
+        """
+
         try:
             agent = self.annotator_agent or get_annotator_agent()
             result = agent.run_sync(
                 "health_check",
                 deps=CoreferenceDeps.for_content("health_check"),
-                output_type=str,
-                model_settings={"max_tokens": 1}
+                model_settings={"max_tokens": 1},
             )
-            return bool(result and result.output)
+            return result is not None
         except Exception:
             return False
