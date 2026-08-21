@@ -18,12 +18,12 @@ simply stops firing, so nothing breaks while the new path proves itself.
 
 Labels: ready-for-agent
 
-- [ ] The model factory builds an httpx client whose transport retries `HTTPStatusError` and httpx transport errors, waits using the parsed `Retry-After` header capped at a configured maximum, stops after a configured attempt count, and re-raises the final failure.
-- [ ] A 429 response becomes a retryable exception rather than reaching the caller as a response.
-- [ ] The retrying client is passed to the Ollama provider, so an agent constructed by any adapter inherits it.
-- [ ] A transport settings block holds the attempt count, the rate limit wait cap, and the request timeout, each overridable by environment variable.
-- [ ] Repeated agent construction for the same model name and base URL shares one provider and one connection pool.
-- [ ] The Ollama null-content patch still applies to every model the factory returns.
-- [ ] A test drives a real agent call through an injected `httpx.MockTransport` and shows a 429 carrying `Retry-After` followed by a 200 yielding one successful run.
-- [ ] A test shows the configured attempt count being exhausted and the final failure re-raised.
-- [ ] The existing suite passes unchanged; nothing is deleted in this ticket.
+- [x] The model factory builds an httpx client whose transport retries `HTTPStatusError` and httpx transport errors, waits using the parsed `Retry-After` header capped at a configured maximum, stops after a configured attempt count, and re-raises the final failure.
+- [x] A 429 response becomes a retryable exception rather than reaching the caller as a response.
+- [x] The retrying client is passed to the Ollama provider, so an agent constructed by any adapter inherits it.
+- [x] A transport settings block holds the attempt count, the rate limit wait cap, and the request timeout, each overridable by environment variable.
+- [x] Repeated agent construction for the same model name and base URL shares one provider and one connection pool.
+- [x] The Ollama null-content patch still applies to every model the factory returns.
+- [x] A test drives a real agent call through an injected `httpx.MockTransport` and shows a 429 carrying `Retry-After` followed by a 200 yielding one successful run.
+- [x] A test shows the configured attempt count being exhausted and the final failure re-raised.
+- [x] The existing suite passes unchanged; nothing is deleted in this ticket.

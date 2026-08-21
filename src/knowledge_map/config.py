@@ -10,6 +10,27 @@ class ChunkingSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     dimension: int = Field(default=768, description="Vector dimension size for Neo4j index")
 
+class TransportSettings(BaseModel):
+    """How the HTTP client behind every LLM model retries a failed request."""
+
+    max_attempts: int = Field(
+        default_factory=lambda: int(os.environ.get("LLM_TRANSPORT_MAX_ATTEMPTS", 3)),
+        description="Total attempts per HTTP request before the failure is re-raised",
+    )
+    rate_limit_wait_cap: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("LLM_TRANSPORT_RATE_LIMIT_WAIT_CAP", 120)
+        ),
+        description="Maximum seconds to honour from a parsed Retry-After header",
+    )
+    request_timeout: float = Field(
+        default_factory=lambda: float(
+            os.environ.get("LLM_TRANSPORT_REQUEST_TIMEOUT", 600.0)
+        ),
+        description="Per-request timeout in seconds",
+    )
+
+
 class BatchIngestionSettings(BaseModel):
     max_retries: int = Field(
         default_factory=lambda: int(os.environ.get("BATCH_MAX_RETRIES", 3)),
@@ -49,6 +70,7 @@ class BatchIngestionSettings(BaseModel):
 class Settings(BaseModel):
     chunking: ChunkingSettings = ChunkingSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
+    transport: TransportSettings = TransportSettings()
     batch_ingestion: BatchIngestionSettings = BatchIngestionSettings()
 
 settings = Settings()
