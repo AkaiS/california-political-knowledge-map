@@ -7,6 +7,7 @@ from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
 from knowledge_map.config import settings
+from knowledge_map.utils.models import build_retrying_client
 from typing import List
 from knowledge_map.schemas import ArticleChunk
 
@@ -29,9 +30,13 @@ def get_embedding_embedder() -> Embedder:
     if not base_url.endswith("/v1"):
         base_url = f"{base_url}/v1"
         
+    # The embedding stage is not an LLM call and does not pass through the
+    # model factory, so it builds its own retrying client rather than
+    # inheriting one.
     provider = OpenAIProvider(
         base_url=base_url,
         api_key="ollama",
+        http_client=build_retrying_client(),
     )
     
     model = OpenAIEmbeddingModel(

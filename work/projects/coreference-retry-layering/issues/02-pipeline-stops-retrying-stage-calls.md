@@ -16,12 +16,12 @@ carries the load.
 
 Labels: ready-for-agent
 
-- [ ] An exhausted transport retry reaching the Story Pipeline surfaces as `PipelineRateLimitError` when the final response was a 429 and as `PipelineConnectivityError` otherwise, carrying the failing component.
-- [ ] An article whose transport retries are exhausted returns to `UNPROCESSED`.
-- [ ] `_execute_with_retry` no longer exists in the Story Pipeline.
-- [ ] `classify_api_error` and `get_retry_after` are deleted, along with the tests asserting on them.
-- [ ] `classify_exception`, which routes Dead Letter Queue-worthy errors, is unchanged.
-- [ ] The embedding stage still retries, since it does not pass through the model factory.
-- [ ] The four backoff tests that patch `time.sleep` and assert delay sequences and call counts are deleted, replaced by assertions on the resulting pipeline error, component, and Article Status.
-- [ ] Batch ingestion's consecutive-failure locking behaves exactly as before and its existing test passes unchanged.
-- [ ] A coreference failure still reaches the Dead Letter Queue and still leaves the article `FAILED_DLQ`.
+- [x] An exhausted transport retry reaching the Story Pipeline surfaces as `PipelineRateLimitError` when the final response was a 429 and as `PipelineConnectivityError` otherwise, carrying the failing component.
+- [x] An article whose transport retries are exhausted returns to `UNPROCESSED`.
+- [x] `_execute_with_retry` no longer exists in the Story Pipeline.
+- [x] `classify_api_error` and `get_retry_after` are deleted, along with the tests asserting on them.
+- [x] `classify_exception`, which routes Dead Letter Queue-worthy errors, is unchanged.
+- [x] The embedding stage still retries, since it does not pass through the model factory.
+- [x] The four backoff tests that patch `time.sleep` and assert delay sequences and call counts are deleted, replaced by assertions on the resulting pipeline error, component, and Article Status.
+- [x] Batch ingestion's consecutive-failure locking behaves exactly as before and its existing test passes unchanged.
+- [x] A coreference failure still reaches the Dead Letter Queue and still leaves the article `FAILED_DLQ`.
