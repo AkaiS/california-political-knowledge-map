@@ -373,14 +373,24 @@ def get_agent_metadata(agent: Agent | None, instructions: str = "") -> dict:
     run to supply it, and the static text is the part worth recording anyway.
     No coreference agent configures model settings, so no temperature is
     reported.
+
+    Describing the agent is decoration on a record that is only being written
+    because something already failed, so an agent that will not name its model
+    yields no metadata rather than displacing the failure being recorded.
+    Reading the name is the part that can fail — an agent holding no model
+    attribute, or a ``model_name`` the provider computes — so only that read is
+    guarded, and every caller gets the swallow from here rather than repeating
+    it.
     """
 
     if agent is None:
         return {}
 
-    model_name = "unknown"
-    if agent.model:
-        model_name = getattr(agent.model, "model_name", str(agent.model))
+    try:
+        model = agent.model
+        model_name = getattr(model, "model_name", str(model)) if model else "unknown"
+    except Exception:
+        return {}
 
     return {
         "model": model_name,
@@ -428,10 +438,7 @@ def _structured_output_failure(
 ) -> CoreferenceResolutionError:
     """Build the adapter error for invalid structured model output."""
 
-    try:
-        metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
-    except Exception:
-        metadata = {}
+    metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
 
     return CoreferenceResolutionError(
         original_text=content,
@@ -843,10 +850,7 @@ def _zero_survivor_failure(
 ) -> CoreferenceResolutionError:
     """Create the DLQ-worthy error for a run with no accepted spans."""
 
-    try:
-        metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
-    except Exception:
-        metadata = {}
+    metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
 
     issues = _failure_issues(run.outcomes)
     if not issues and failure_type == "no_mentions_returned":
@@ -868,7 +872,8 @@ def resolve_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
     critic_agent: Agent | None = None,
-    max_critic_rounds: int | None = None,
+    *,
+    max_critic_rounds: int,
 ) -> CoreferenceResolutionRun:
     """Resolve references and retain one final outcome per Mention Span.
 
@@ -877,15 +882,14 @@ def resolve_coreferences_run(
     runs always raise: silently returning the source text would hide the
     failure.  ``max_critic_rounds`` bounds the Coreference Critic rounds beyond
     the annotator's first pass — one per correction round — and is unrelated to
-    the agents' own structured-output retry budget.
+    the agents' own structured-output retry budget.  Its caller chooses it;
+    ``PydanticAICoreferenceAdapter`` is where the configured default is read.
     """
 
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
     if critic_agent is None:
         critic_agent = get_critic_agent()
-    if max_critic_rounds is None:
-        max_critic_rounds = settings.coreference.max_critic_rounds
 
     deps = CoreferenceDeps.for_content(text)
     state = ResolutionState.for_deps(deps)
@@ -1003,6 +1007,8 @@ class PydanticAICoreferenceAdapter:
     ) -> None:
         self.annotator_agent = annotator_agent
         self.critic_agent = critic_agent
+        # The one place the configured critic round budget is read.  The
+        # resolution loop takes the number its caller chose.
         self.max_critic_rounds = (
             settings.coreference.max_critic_rounds
             if max_critic_rounds is None

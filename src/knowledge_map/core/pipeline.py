@@ -1,6 +1,5 @@
 import logging
 from typing import Protocol, List, Optional
-from knowledge_map.config import settings as global_settings
 from knowledge_map.schemas import (
     AdherenceReport,
     BillSessionResolutions,
@@ -106,7 +105,6 @@ class StoryPipeline:
         extraction_adapter: EntityExtractionAdapter,
         status_tracker: StatusTracker,
         dlq_adapter: Optional[DeadLetterQueueAdapter] = None,
-        settings = None,
     ) -> None:
         self.db_adapter = db_adapter
         self.embedding_adapter = embedding_adapter
@@ -114,12 +112,6 @@ class StoryPipeline:
         self.extraction_adapter = extraction_adapter
         self.status_tracker = status_tracker
         self.dlq_adapter = dlq_adapter
-        
-        # Load default batch ingestion settings if not explicitly passed
-        if settings is None:
-            self.settings = global_settings.batch_ingestion
-        else:
-            self.settings = settings
 
     def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")

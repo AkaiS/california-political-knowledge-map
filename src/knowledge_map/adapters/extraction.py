@@ -138,12 +138,16 @@ class PydanticAIEntityExtractionAdapter:
             if not validation_issues:
                 validation_issues = [str(e)]
 
-            metadata = {}
-            if hasattr(self.agent, "model"):
-                try:
-                    metadata = get_agent_metadata(self.agent, load_instructions())
-                except Exception:
-                    pass
+            # ``get_agent_metadata`` already yields ``{}`` for an agent that
+            # will not name its model.  Reading the instruction text off disk
+            # is the remaining call that can fail here, and failing to
+            # describe the prompt must not displace the extraction failure
+            # being raised.
+            try:
+                instructions = load_instructions()
+            except Exception:
+                instructions = ""
+            metadata = get_agent_metadata(self.agent, instructions)
 
             raise ExtractionError(
                 original_text=chunk_text,

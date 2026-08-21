@@ -70,9 +70,6 @@ def test_batch_ingestion_settings_defaults():
     assert hasattr(settings, "batch_ingestion")
     
     batch_cfg = settings.batch_ingestion
-    assert batch_cfg.max_retries == 3
-    assert batch_cfg.backoff_factor == 2.0
-    assert batch_cfg.rate_limit_wait_cap == 120
     assert batch_cfg.consecutive_failures_limit == 3
     assert batch_cfg.lock_file_path == ".scratch/pipeline.lock"
     assert batch_cfg.db_path == "document_store.db"
@@ -80,9 +77,6 @@ def test_batch_ingestion_settings_defaults():
 def test_batch_ingestion_settings_env_override():
     # Verify environment overrides work
     env_vars = {
-        "BATCH_MAX_RETRIES": "5",
-        "BATCH_BACKOFF_FACTOR": "3.5",
-        "BATCH_RATE_LIMIT_WAIT_CAP": "60",
         "BATCH_CONSECUTIVE_FAILURES_LIMIT": "4",
         "BATCH_LOCK_FILE_PATH": "test.lock",
         "SQLITE_DB_PATH": "test_db.db"
@@ -90,9 +84,6 @@ def test_batch_ingestion_settings_env_override():
     with patch.dict(os.environ, env_vars):
         # We instantiate a new BatchIngestionSettings to see if it loads from env
         batch_cfg = BatchIngestionSettings()
-        assert batch_cfg.max_retries == 5
-        assert batch_cfg.backoff_factor == 3.5
-        assert batch_cfg.rate_limit_wait_cap == 60
         assert batch_cfg.consecutive_failures_limit == 4
         assert batch_cfg.lock_file_path == "test.lock"
         assert batch_cfg.db_path == "test_db.db"

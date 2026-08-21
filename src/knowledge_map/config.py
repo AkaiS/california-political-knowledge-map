@@ -58,18 +58,13 @@ class CoreferenceSettings(BaseModel):
 
 
 class BatchIngestionSettings(BaseModel):
-    max_retries: int = Field(
-        default_factory=lambda: int(os.environ.get("BATCH_MAX_RETRIES", 3)),
-        description="Maximum retries for connectivity errors"
-    )
-    backoff_factor: float = Field(
-        default_factory=lambda: float(os.environ.get("BATCH_BACKOFF_FACTOR", 2.0)),
-        description="Multiplier applied to exponential backoff delay"
-    )
-    rate_limit_wait_cap: int = Field(
-        default_factory=lambda: int(os.environ.get("BATCH_RATE_LIMIT_WAIT_CAP", 120)),
-        description="Max delay in seconds to wait for Rate-After"
-    )
+    """What batch ingestion owns: the failure lock, the queue, and the report.
+
+    Retrying a failed request belongs to the transport, so the attempt count,
+    the backoff and the rate limit wait cap live in ``TransportSettings``.
+    Batch ingestion keeps only the consecutive-failure lock it decides itself.
+    """
+
     consecutive_failures_limit: int = Field(
         default_factory=lambda: int(os.environ.get("BATCH_CONSECUTIVE_FAILURES_LIMIT", 3)),
         description="Max consecutive failures before lock"
