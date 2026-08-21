@@ -22,13 +22,13 @@ resolver loop; working the two in parallel will conflict.
 
 Labels: ready-for-agent
 
-- [ ] Both coreference agents declare a dependency type carrying the Source Article and its numbered sentences.
-- [ ] The numbered Source Article is rendered by one instructions function shared by both agents, and by no other code path.
-- [ ] The annotation, Coreference Critic, and correction prompts carry only their task-specific content.
-- [ ] The Coreference Critic still receives exactly one copy of the article.
-- [ ] A correction round runs with the annotator's prior messages as history.
-- [ ] A correction round still names only the rejected Mention Spans and their Critic reasons, and leaves accepted Mention Spans untouched.
-- [ ] The Dead Letter Queue's agent metadata no longer introspects the agent's private instructions attribute.
-- [ ] That metadata reports the static instruction text, the prompt version, and the resolved model name, and no longer reports a temperature no agent configures.
-- [ ] The prompt assertions that read the final user message part are rewritten to read the whole rendered request; the properties they assert are unchanged.
+- [x] Both coreference agents declare a dependency type carrying the Source Article and its numbered sentences.
+- [x] The numbered Source Article is rendered by one instructions function shared by both agents, and by no other code path.
+- [x] The annotation, Coreference Critic, and correction prompts carry only their task-specific content.
+- [x] The Coreference Critic still receives exactly one copy of the article.
+- [x] A correction round runs with the annotator's prior messages as history.
+- [x] A correction round still names only the rejected Mention Spans and their Critic reasons, and leaves accepted Mention Spans untouched.
+- [x] The Dead Letter Queue's agent metadata no longer introspects the agent's private instructions attribute.
+- [x] That metadata reports the static instruction text, the prompt version, and the resolved model name, and no longer reports a temperature no agent configures.
+- [x] The prompt assertions that read the final user message part are rewritten to read the whole rendered request; the properties they assert are unchanged.
 - [ ] Every behavioral test in the coreference suite passes without modification.

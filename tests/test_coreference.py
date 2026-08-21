@@ -2,15 +2,37 @@ import logging
 
 import pytest
 from pydantic_ai import ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
 from knowledge_map.adapters.coreference import (
+    ANNOTATOR_INSTRUCTIONS,
+    CoreferenceDeps,
     CoreferenceResolutionError,
     PydanticAICoreferenceAdapter,
     get_annotator_agent,
     get_critic_agent,
 )
 from knowledge_map.schemas import CriticVerdict, MentionSpan
+
+
+def rendered_request(messages) -> str:
+    """Return everything the model is shown for the request being answered.
+
+    The numbered Source Article is rendered by an instructions function, so it
+    reaches the model through the request's instructions rather than its final
+    user part.  Prompt assertions read this whole rendered request.
+    """
+
+    request = messages[-1]
+    assert isinstance(request, ModelRequest)
+    sections = [request.instructions or ""]
+    sections.extend(
+        part.content
+        for part in request.parts
+        if isinstance(part, UserPromptPart) and isinstance(part.content, str)
+    )
+    return "\n\n".join(section for section in sections if section)
 
 
 def mention_response(info, spans: list[dict]) -> ModelResponse:
@@ -41,6 +63,41 @@ def critic_response(info, verdicts: list[dict]) -> ModelResponse:
     )
 
 
+def test_both_agents_render_the_numbered_article_from_their_dependencies():
+    """One instructions function shows both agents the same numbered article.
+
+    The Source Article travels as a typed dependency together with the
+    sentences split from it, so neither agent can be shown sentences that came
+    from different text.
+    """
+
+    content = "Gavin Newsom signed a bill. He was happy."
+    deps = CoreferenceDeps.for_content(content)
+    requests: list[str] = []
+
+    def mock_annotator(messages, info):
+        requests.append(rendered_request(messages))
+        return mention_response(info, [])
+
+    def mock_critic(messages, info):
+        requests.append(rendered_request(messages))
+        return critic_response(info, [])
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+
+    with annotator_agent.override(model=FunctionModel(mock_annotator)):
+        annotator_agent.run_sync("Resolve the references.", deps=deps)
+    with critic_agent.override(model=FunctionModel(mock_critic)):
+        critic_agent.run_sync("Judge the Mention Spans.", deps=deps)
+
+    assert len(requests) == 2
+    for request in requests:
+        assert "[1] Gavin Newsom signed a bill." in request
+        assert "[2] He was happy." in request
+        assert request.count("Gavin Newsom signed a bill.") == 1
+
+
 def test_get_annotator_agent_returns_structured_mention_spans():
     agent = get_annotator_agent(defer_check=True)
     assert agent.output_type == list[MentionSpan]
@@ -58,7 +115,12 @@ def test_get_annotator_agent_returns_structured_mention_spans():
         )
 
     with agent.override(model=FunctionModel(mock_model)):
-        result = agent.run_sync("[1] Gavin Newsom signed a bill.\n[2] He was happy.")
+        result = agent.run_sync(
+            "Resolve the references in the Source Article shown above.",
+            deps=CoreferenceDeps.for_content(
+                "Gavin Newsom signed a bill. He was happy."
+            ),
+        )
 
     assert result.output == [
         MentionSpan(
@@ -87,11 +149,12 @@ def test_get_critic_agent_returns_per_mention_verdicts():
 
     with agent.override(model=FunctionModel(mock_model)):
         result = agent.run_sync(
-            "Numbered Source Article:\n[1] Gavin Newsom signed a bill.\n"
-            "[2] He was happy.\n\n"
             "Validated Mention Spans:\n"
             '- sentence_label="2", mention_text="He", occurrence=1, '
-            'canonical_entity_name="Gavin Newsom"'
+            'canonical_entity_name="Gavin Newsom"',
+            deps=CoreferenceDeps.for_content(
+                "Gavin Newsom signed a bill. He was happy."
+            ),
         )
 
     assert result.output == [
@@ -110,7 +173,7 @@ def test_adapter_numbers_sentences_and_applies_structured_mentions():
     prompts: list[str] = []
 
     def mock_annotator(messages, info):
-        prompts.append(messages[-1].parts[0].content)
+        prompts.append(rendered_request(messages))
         return mention_response(
             info,
             [
@@ -175,7 +238,7 @@ def test_critic_rejects_one_span_while_accepted_neighbour_survives():
         )
 
     def mock_critic(messages, info):
-        critic_prompts.append(messages[-1].parts[0].content)
+        critic_prompts.append(rendered_request(messages))
         return critic_response(
             info,
             [
@@ -274,7 +337,7 @@ def test_retry_reannotates_only_rejected_spans_and_preserves_accepted_spans():
     critic_calls = 0
 
     def mock_annotator(messages, info):
-        annotator_prompts.append(messages[-1].parts[0].content)
+        annotator_prompts.append(rendered_request(messages))
         if len(annotator_prompts) == 1:
             return mention_response(
                 info,
@@ -713,3 +776,114 @@ def test_distinct_occurrences_are_not_contested(caplog):
         )
 
     assert caplog.text == ""
+
+
+def test_correction_round_continues_the_annotators_own_conversation():
+    """The annotator is asked to correct answers it can still see.
+
+    A correction round carries the annotator's prior messages, so its own
+    earlier Mention Spans are in front of it, and the new request still names
+    only the spans the Coreference Critic rejected.
+    """
+
+    content = "Gavin Newsom signed a bill. He thanked the committee, and it passed."
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    annotator_calls = 0
+    correction_history: list = []
+
+    def mock_annotator(messages, info):
+        nonlocal annotator_calls
+        annotator_calls += 1
+        if annotator_calls == 1:
+            return mention_response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "it",
+                        "canonical_entity_name": "the committee",
+                    }
+                ],
+            )
+        correction_history.extend(messages[:-1])
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "it",
+                    "canonical_entity_name": "the bill",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        return critic_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "it",
+                    "accepted": annotator_calls > 1,
+                    "reason": "It refers to the bill, not the committee.",
+                }
+            ],
+        )
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        run = PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent,
+            max_retries=1,
+        ).resolve(content)
+
+    assert run.resolved_text == (
+        "Gavin Newsom signed a bill. He thanked the committee, and the bill passed."
+    )
+    # The annotator's first answer is in front of it during the correction.
+    returned_spans = [
+        span
+        for message in correction_history
+        if isinstance(message, ModelResponse)
+        for part in message.parts
+        if isinstance(part, ToolCallPart)
+        for span in part.args_as_dict().get("response", [])
+    ]
+    assert {
+        "sentence_label": "2",
+        "mention_text": "it",
+        "canonical_entity_name": "the committee",
+    } in returned_spans
+
+
+def test_failure_metadata_comes_from_a_stable_source():
+    """The Dead Letter Queue's agent metadata does not scrape the agent.
+
+    It reports the static instruction text, the prompt version and the
+    resolved model name, and no temperature, because no coreference agent
+    configures model settings.
+    """
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        return mention_response(info, [])
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        pytest.raises(CoreferenceResolutionError) as exc_info,
+    ):
+        PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=get_critic_agent(defer_check=True),
+        ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+    metadata = exc_info.value.metadata
+    assert metadata["system_prompt"] == ANNOTATOR_INSTRUCTIONS
+    assert metadata["prompt_version"] == "1.0"
+    assert metadata["model"] == annotator_agent.model.model_name
+    assert "temperature" not in metadata

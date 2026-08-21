@@ -141,7 +141,7 @@ class PydanticAIEntityExtractionAdapter:
             metadata = {}
             if hasattr(self.agent, "model"):
                 try:
-                    metadata = get_agent_metadata(self.agent)
+                    metadata = get_agent_metadata(self.agent, load_instructions())
                 except Exception:
                     pass
 

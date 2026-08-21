@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 from pydantic import TypeAdapter
-from pydantic_ai import Agent
+from pydantic_ai import Agent, RunContext
 
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
@@ -202,58 +202,90 @@ def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
     )
 
 
-def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    model = _get_model()
+@dataclass(frozen=True, slots=True)
+class CoreferenceDeps:
+    """The Source Article and the numbered sentences split from it.
 
-    instructions = (
-        "You are an expert Coreference Resolution annotator.\n"
-        "Identify ambiguous pronouns and referring expressions in the numbered "
-        "Source Article and map each one to its canonical entity name.\n\n"
-        "Return only a structured list of Mention Spans. For every Mention Span:\n"
-        "- copy `sentence_label` from the label at the start of the sentence line;\n"
-        "- copy `mention_text` verbatim, including its capitalization;\n"
-        "- use `occurrence` only when the same mention text appears more than "
-        "once in that sentence (it is one-based and defaults to 1); and\n"
-        "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
-        "Return only Mention Spans; never return the Source Article itself. "
-        "Return an empty list when there are no references to resolve."
+    Both coreference agents take this as their dependency, so the sentences an
+    agent is shown always came from the content beside them.
+    """
+
+    content: str
+    sentences: tuple[NumberedSentence, ...]
+
+    @classmethod
+    def for_content(cls, content: str) -> "CoreferenceDeps":
+        """Split ``content`` into the numbered sentences shown to the agents."""
+
+        return cls(
+            content=content,
+            sentences=tuple(split_into_numbered_sentences(content)),
+        )
+
+
+def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
+    """Render the numbered Source Article, for both agents and nowhere else."""
+
+    return (
+        "Numbered Source Article:\n"
+        f"{format_numbered_sentences(ctx.deps.sentences)}"
     )
 
+
+ANNOTATOR_INSTRUCTIONS = (
+    "You are an expert Coreference Resolution annotator.\n"
+    "Identify ambiguous pronouns and referring expressions in the numbered "
+    "Source Article and map each one to its canonical entity name.\n\n"
+    "Return only a structured list of Mention Spans. For every Mention Span:\n"
+    "- copy `sentence_label` from the label at the start of the sentence line;\n"
+    "- copy `mention_text` verbatim, including its capitalization;\n"
+    "- use `occurrence` only when the same mention text appears more than "
+    "once in that sentence (it is one-based and defaults to 1); and\n"
+    "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
+    "Return only Mention Spans; never return the Source Article itself. "
+    "Return an empty list when there are no references to resolve."
+)
+
+
+CRITIC_INSTRUCTIONS = (
+    "You are a Coreference Critic.\n"
+    "Review the numbered Source Article and the validated Mention Spans "
+    "listed below it. The Source Article appears exactly once. Judge each "
+    "listed Mention Span independently.\n\n"
+    "You must:\n"
+    "1. Return one verdict for every validated Mention Span;\n"
+    "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
+    "3. set `accepted` to true only when its canonical entity is correct; and\n"
+    "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
+    "Return only the structured list of per-Mention-Span verdicts. Do not "
+    "return an article-level pass/fail value, and do not invent verdicts "
+    "for Mention Spans that were not listed."
+)
+
+
+def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     return Agent(
-        model,
+        _get_model(),
         name="coreference_annotator",
+        deps_type=CoreferenceDeps,
         output_type=list[MentionSpan],
-        instructions=instructions,
+        instructions=[ANNOTATOR_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
         retries=retries,
     )
+
 
 def get_critic_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    model = _get_model()
-
-    instructions = (
-        "You are a Coreference Critic.\n"
-        "Review the numbered Source Article and the validated Mention Spans "
-        "listed below it. The Source Article appears exactly once. Judge each "
-        "listed Mention Span independently.\n\n"
-        "You must:\n"
-        "1. Return one verdict for every validated Mention Span;\n"
-        "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
-        "3. set `accepted` to true only when its canonical entity is correct; and\n"
-        "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
-        "Return only the structured list of per-Mention-Span verdicts. Do not "
-        "return an article-level pass/fail value, and do not invent verdicts "
-        "for Mention Spans that were not listed."
-    )
-
     return Agent(
-        model,
+        _get_model(),
         name="coreference_critic",
+        deps_type=CoreferenceDeps,
         output_type=list[CriticVerdict],
-        instructions=instructions,
+        instructions=[CRITIC_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
         retries=retries,
     )
+
 
 class CoreferenceResolutionError(Exception):
     def __init__(
@@ -275,33 +307,27 @@ class CoreferenceResolutionError(Exception):
         self.resolution_run = resolution_run
         super().__init__(f"Coreference resolution failed: {failure_type}")
 
-def get_agent_metadata(agent: Agent | None) -> dict:
+def get_agent_metadata(agent: Agent | None, instructions: str = "") -> dict:
+    """Describe the agent behind a failure for the Dead Letter Queue record.
+
+    The instruction text is passed in rather than scraped off the agent: an
+    instructions function that renders a dependency cannot be called without a
+    run to supply it, and the static text is the part worth recording anyway.
+    No coreference agent configures model settings, so no temperature is
+    reported.
+    """
+
     if agent is None:
         return {}
-    
+
     model_name = "unknown"
     if agent.model:
         model_name = getattr(agent.model, "model_name", str(agent.model))
-        
-    system_prompt = ""
-    # Safe resolution of static and dynamic instructions from Pydantic AI Agent
-    if hasattr(agent, "_instructions") and agent._instructions:
-        parts = []
-        for inst in agent._instructions:
-            if isinstance(inst, str):
-                parts.append(inst)
-            elif callable(inst):
-                try:
-                    parts.append(inst())
-                except Exception:
-                    parts.append(str(inst))
-        system_prompt = "\n\n".join(parts)
-                
+
     return {
         "model": model_name,
-        "temperature": 0.0,
         "prompt_version": "1.0",
-        "system_prompt": system_prompt
+        "system_prompt": instructions,
     }
 
 
@@ -331,7 +357,7 @@ def _structured_output_failure(
     """Build the adapter error for invalid structured model output."""
 
     try:
-        metadata = get_agent_metadata(annotator_agent)
+        metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
     except Exception:
         metadata = {}
 
@@ -394,27 +420,19 @@ def _log_contested_locations(mention_spans: Sequence[MentionSpan]) -> None:
             )
 
 
-def _critic_prompt(
-    sentences: Sequence[NumberedSentence],
-    mention_spans: Sequence[MentionSpan],
-) -> str:
-    """Build the one-copy source plus compact Mention Span critic prompt."""
+def _critic_prompt(mention_spans: Sequence[MentionSpan]) -> str:
+    """Ask for one verdict per Mention Span; the article is in the instructions."""
 
     return (
-        "Review each validated Mention Span against the numbered Source Article. "
-        "The Source Article is included exactly once. Return one verdict per "
-        "listed Mention Span and copy its identity fields exactly.\n\n"
-        "Numbered Source Article:\n"
-        f"{format_numbered_sentences(sentences)}\n\n"
+        "Review each validated Mention Span against the numbered Source "
+        "Article. Return one verdict per listed Mention Span and copy its "
+        "identity fields exactly.\n\n"
         "Validated Mention Spans:\n"
         f"{format_mention_spans(mention_spans)}"
     )
 
 
-def _retry_prompt(
-    sentences: Sequence[NumberedSentence],
-    rejected_spans: Sequence[tuple[MentionSpan, str]],
-) -> str:
+def _retry_prompt(rejected_spans: Sequence[tuple[MentionSpan, str]]) -> str:
     """Ask the annotator to replace only the spans rejected by the critic."""
 
     # The Critic's reason is per-span feedback, so it stays attached to the
@@ -424,11 +442,9 @@ def _retry_prompt(
         for mention_span, reason in rejected_spans
     )
     return (
-        "Correct only the rejected Mention Spans listed below. Read the numbered "
-        "Source Article for context, return only replacement Mention Spans for "
-        "those targets, and do not return accepted or unrelated Mention Spans.\n\n"
-        "Numbered Source Article:\n"
-        f"{format_numbered_sentences(sentences)}\n\n"
+        "Correct only the rejected Mention Spans listed below. Return only "
+        "replacement Mention Spans for those targets, and do not return "
+        "accepted or unrelated Mention Spans.\n\n"
         "Rejected Mention Spans and Critic Reasons:\n"
         f"{rejected}"
     )
@@ -591,7 +607,7 @@ def _zero_survivor_failure(
     """Create the DLQ-worthy error for a run with no accepted spans."""
 
     try:
-        metadata = get_agent_metadata(annotator_agent)
+        metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
     except Exception:
         metadata = {}
 
@@ -633,15 +649,17 @@ def resolve_coreferences_run(
     current_run: CoreferenceResolutionRun | None = None
 
     try:
-        sentences = split_into_numbered_sentences(text)
+        deps = CoreferenceDeps.for_content(text)
+        sentences = deps.sentences
         annotation_prompt = (
-            "Resolve the references in the following Source Article. The article "
-            "is shown as numbered sentences; copy a visible sentence label into "
-            "each Mention Span.\n\n"
-            "Numbered Source Article:\n"
-            f"{format_numbered_sentences(sentences)}"
+            "Resolve the references in the Source Article shown above. It is "
+            "presented as numbered sentences; copy a visible sentence label "
+            "into each Mention Span."
         )
-        run_result = annotator_agent.run_sync(annotation_prompt)
+        run_result = annotator_agent.run_sync(annotation_prompt, deps=deps)
+        # The annotator's own conversation, carried into a correction round so
+        # that it sees the Mention Spans it is being asked to correct.
+        annotator_messages = run_result.all_messages()
         mention_spans = TypeAdapter(list[MentionSpan]).validate_python(
             run_result.output
         )
@@ -694,10 +712,9 @@ def resolve_coreferences_run(
 
         while pending_spans:
             critic_prompt = _critic_prompt(
-                sentences,
                 [located.mention_span for located in pending_spans],
             )
-            critic_result = critic_agent.run_sync(critic_prompt)
+            critic_result = critic_agent.run_sync(critic_prompt, deps=deps)
             verdicts = TypeAdapter(list[CriticVerdict]).validate_python(
                 critic_result.output
             )
@@ -726,8 +743,11 @@ def resolve_coreferences_run(
 
             retry_count += 1
             retry_result = annotator_agent.run_sync(
-                _retry_prompt(sentences, rejected_spans)
+                _retry_prompt(rejected_spans),
+                deps=deps,
+                message_history=annotator_messages,
             )
+            annotator_messages = retry_result.all_messages()
             retry_mentions = TypeAdapter(list[MentionSpan]).validate_python(
                 retry_result.output
             )
@@ -869,6 +889,7 @@ class PydanticAICoreferenceAdapter:
             agent = self.annotator_agent or get_annotator_agent()
             result = agent.run_sync(
                 "health_check",
+                deps=CoreferenceDeps.for_content("health_check"),
                 output_type=str,
                 model_settings={"max_tokens": 1}
             )
