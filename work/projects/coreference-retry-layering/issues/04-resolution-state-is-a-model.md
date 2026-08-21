@@ -18,12 +18,12 @@ resolver loop; working the two in parallel will conflict.
 
 Labels: ready-for-agent
 
-- [ ] One model holds the numbered sentence records, every observed Mention Span, the outcome map keyed by Mention Span identity, the accepted located spans, and the critic round count.
-- [ ] That model exposes the recording operations and the conversion to a Coreference Resolution Run.
-- [ ] The last-write-wins rule for a Mention Span corrected across rounds is enforced by the state rather than by loop ordering.
-- [ ] A correction response containing a Mention Span that was not a retry target is still excluded from the outcome map and cannot reach the resolved text.
-- [ ] The discard proportion is computed by the state that holds the outcomes.
-- [ ] The redundant structured-output re-validation is removed at all three call sites.
-- [ ] The text-only `resolve_coreferences` helper is deleted; the run-returning function is the only way to resolve a Source Article.
-- [ ] The critic round budget is renamed for what it counts and moves into a coreference settings block, distinct from the agents' structured-output retry budget.
+- [x] One model holds the numbered sentence records, every observed Mention Span, the outcome map keyed by Mention Span identity, the accepted located spans, and the critic round count.
+- [x] That model exposes the recording operations and the conversion to a Coreference Resolution Run.
+- [x] The last-write-wins rule for a Mention Span corrected across rounds is enforced by the state rather than by loop ordering.
+- [x] A correction response containing a Mention Span that was not a retry target is still excluded from the outcome map and cannot reach the resolved text.
+- [x] The discard proportion is computed by the state that holds the outcomes.
+- [x] The redundant structured-output re-validation is removed at all three call sites.
+- [x] The text-only `resolve_coreferences` helper is deleted; the run-returning function is the only way to resolve a Source Article.
+- [x] The critic round budget is renamed for what it counts and moves into a coreference settings block, distinct from the agents' structured-output retry budget.
 - [ ] Every behavioral test in the coreference suite passes without modification.

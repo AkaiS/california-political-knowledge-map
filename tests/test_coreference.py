@@ -263,7 +263,7 @@ def test_critic_rejects_one_span_while_accepted_neighbour_survives():
         result = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=0,
+            max_critic_rounds=0,
         ).resolve(content).resolved_text
 
     assert result == (
@@ -321,7 +321,7 @@ def test_missing_or_hallucinated_critic_verdicts_cannot_apply_spans():
         result = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=0,
+            max_critic_rounds=0,
         ).resolve(content).resolved_text
 
     assert result == (
@@ -403,7 +403,7 @@ def test_retry_reannotates_only_rejected_spans_and_preserves_accepted_spans():
         run = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=1,
+            max_critic_rounds=1,
         ).resolve(content)
 
     assert run.resolved_text == (
@@ -483,7 +483,7 @@ def test_retries_stop_at_the_configured_budget():
         result = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=1,
+            max_critic_rounds=1,
         ).resolve(content).resolved_text
 
     assert result == (
@@ -701,7 +701,7 @@ def test_unrequested_retry_span_is_neither_substituted_nor_recorded():
         run = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=1,
+            max_critic_rounds=1,
         ).resolve(content)
 
     assert run.resolved_text == (
@@ -838,7 +838,7 @@ def test_correction_round_continues_the_annotators_own_conversation():
         run = PydanticAICoreferenceAdapter(
             annotator_agent=annotator_agent,
             critic_agent=critic_agent,
-            max_retries=1,
+            max_critic_rounds=1,
         ).resolve(content)
 
     assert run.resolved_text == (
@@ -858,6 +858,96 @@ def test_correction_round_continues_the_annotators_own_conversation():
         "mention_text": "it",
         "canonical_entity_name": "the committee",
     } in returned_spans
+
+
+def test_resolution_state_keeps_one_final_outcome_per_mention_span_identity():
+    """The state, not the loop's ordering, enforces the invariant.
+
+    A Mention Span rejected in one Coreference Critic round and corrected in
+    the next is recorded once, with the decision the run ended on, and the
+    discard proportion is computed by the state that holds the outcomes.
+    """
+
+    from knowledge_map.adapters.coreference import ResolutionState
+
+    content = "Gavin Newsom signed a bill. He thanked the committee, and it passed."
+    state = ResolutionState.for_deps(CoreferenceDeps.for_content(content))
+
+    located = state.record_annotation(
+        [
+            MentionSpan(
+                sentence_label="2",
+                mention_text="it",
+                canonical_entity_name="the committee",
+            )
+        ]
+    )
+    rejected = state.record_critic_round(
+        located,
+        [
+            CriticVerdict(
+                sentence_label="2",
+                mention_text="it",
+                accepted=False,
+                reason="It refers to the bill, not the committee.",
+            )
+        ],
+    )
+    assert [span.mention_text for span, _ in rejected] == ["it"]
+
+    corrected = state.record_correction(
+        [
+            MentionSpan(
+                sentence_label="2",
+                mention_text="it",
+                canonical_entity_name="the bill",
+            )
+        ],
+        rejected,
+    )
+    state.record_critic_round(
+        corrected,
+        [
+            CriticVerdict(
+                sentence_label="2",
+                mention_text="it",
+                accepted=True,
+            )
+        ],
+    )
+
+    run = state.to_run()
+    assert run.resolved_text == (
+        "Gavin Newsom signed a bill. He thanked the committee, and the bill passed."
+    )
+    assert [outcome.outcome for outcome in run.outcomes] == ["accepted"]
+    assert run.discarded_proportion == 0.0
+    assert run.retry_count == 1
+    # Every raw span the annotator returned stays in the audit trail.
+    assert [span.canonical_entity_name for span in run.mention_spans] == [
+        "the committee",
+        "the bill",
+    ]
+    assert run.sentences[0].text == "Gavin Newsom signed a bill. "
+
+
+def test_critic_round_budget_is_a_coreference_setting():
+    """The budget that bounds correction rounds is configured, not literal.
+
+    It names the critic rounds it counts, so it cannot be confused with the
+    agents' structured-output retry budget, and it lives in the coreference
+    settings block beside the run's usage limits.
+    """
+
+    from knowledge_map.config import settings
+
+    assert settings.coreference.max_critic_rounds >= 0
+    assert settings.coreference.request_limit > 0
+    assert settings.coreference.total_tokens_limit > 0
+    assert (
+        PydanticAICoreferenceAdapter().max_critic_rounds
+        == settings.coreference.max_critic_rounds
+    )
 
 
 def test_failure_metadata_comes_from_a_stable_source():

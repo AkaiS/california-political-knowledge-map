@@ -37,15 +37,15 @@ def make_adapter(
     mentions: list[dict],
     verdicts: list[dict],
     *,
-    max_retries: int = 0,
+    max_critic_rounds: int = 0,
 ) -> PydanticAICoreferenceAdapter:
-    return _OverriddenAdapter(mentions, verdicts, max_retries=max_retries)
+    return _OverriddenAdapter(mentions, verdicts, max_critic_rounds=max_critic_rounds)
 
 
 class _OverriddenAdapter(PydanticAICoreferenceAdapter):
     """Keep FunctionModel overrides active for a test-created adapter."""
 
-    def __init__(self, mentions, verdicts, *, max_retries):
+    def __init__(self, mentions, verdicts, *, max_critic_rounds):
         annotator = get_annotator_agent(defer_check=True)
         critic = get_critic_agent(defer_check=True)
 
@@ -58,7 +58,7 @@ class _OverriddenAdapter(PydanticAICoreferenceAdapter):
         super().__init__(
             annotator_agent=annotator,
             critic_agent=critic,
-            max_retries=max_retries,
+            max_critic_rounds=max_critic_rounds,
         )
         self._annotator_model = FunctionModel(mock_annotator)
         self._critic_model = FunctionModel(mock_critic)

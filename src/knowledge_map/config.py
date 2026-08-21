@@ -31,6 +31,32 @@ class TransportSettings(BaseModel):
     )
 
 
+class CoreferenceSettings(BaseModel):
+    """What bounds one Coreference Resolution Run.
+
+    ``max_critic_rounds`` counts the Coreference Critic rounds a run may hold
+    beyond the annotator's first pass — one per correction round.  It is not
+    the agents' structured-output retry budget, which belongs to the agent.
+    """
+
+    max_critic_rounds: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_MAX_CRITIC_ROUNDS", 3)
+        ),
+        description="Critic rounds allowed beyond the annotator's first pass",
+    )
+    request_limit: int = Field(
+        default_factory=lambda: int(os.environ.get("COREFERENCE_REQUEST_LIMIT", 50)),
+        description="Total model requests allowed across one resolution",
+    )
+    total_tokens_limit: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_TOTAL_TOKENS_LIMIT", 500_000)
+        ),
+        description="Total tokens allowed across one resolution",
+    )
+
+
 class BatchIngestionSettings(BaseModel):
     max_retries: int = Field(
         default_factory=lambda: int(os.environ.get("BATCH_MAX_RETRIES", 3)),
@@ -71,6 +97,7 @@ class Settings(BaseModel):
     chunking: ChunkingSettings = ChunkingSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
     transport: TransportSettings = TransportSettings()
+    coreference: CoreferenceSettings = CoreferenceSettings()
     batch_ingestion: BatchIngestionSettings = BatchIngestionSettings()
 
 settings = Settings()

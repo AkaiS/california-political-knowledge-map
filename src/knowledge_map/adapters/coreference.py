@@ -1,12 +1,13 @@
 import logging
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from pydantic import TypeAdapter
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.usage import RunUsage, UsageLimits
 
+from knowledge_map.config import settings
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
     CriticVerdict,
@@ -505,55 +506,6 @@ def _apply_critic_verdicts(
     return accepted, rejected
 
 
-def _sentence_records(
-    sentences: Sequence[NumberedSentence],
-) -> list[NumberedSentenceRecord]:
-    """Copy the annotator's sentence table into the durable run schema."""
-
-    return [
-        NumberedSentenceRecord(
-            label=sentence.label,
-            text=sentence.text,
-            start_index=sentence.start_index,
-            end_index=sentence.end_index,
-        )
-        for sentence in sentences
-    ]
-
-
-def _build_resolution_run(
-    text: str,
-    sentences: Sequence[NumberedSentence],
-    mention_spans: Sequence[MentionSpan],
-    outcomes: Mapping["MentionSpanIdentity", MentionSpanOutcome],
-    retry_count: int,
-    *,
-    resolved_text: str | None = None,
-    failure_type: str | None = None,
-) -> CoreferenceResolutionRun:
-    """Build a serializable run record and calculate its discard metric.
-
-    ``outcomes`` is keyed by Mention Span identity, so the run holds exactly one
-    final outcome per span and the discard metric cannot be inflated by a span
-    that was rejected in one round and corrected in a later one.
-    """
-
-    final_outcomes = list(outcomes.values())
-    discarded_count = sum(not outcome.accepted for outcome in final_outcomes)
-    total_outcomes = len(final_outcomes)
-    return CoreferenceResolutionRun(
-        resolved_text=text if resolved_text is None else resolved_text,
-        sentences=_sentence_records(sentences),
-        mention_spans=list(mention_spans),
-        outcomes=final_outcomes,
-        discarded_proportion=(
-            discarded_count / total_outcomes if total_outcomes else 0.0
-        ),
-        retry_count=retry_count,
-        failure_type=failure_type,
-    )
-
-
 def _outcome_for_discard(discard: MentionSpanDiscard) -> MentionSpanOutcome:
     """Convert deterministic validation output into a run outcome."""
 
@@ -579,6 +531,194 @@ def _outcome_for_critic(
         outcome="accepted" if accepted else "rejected",
         reason=reason,
     )
+
+
+@dataclass(slots=True)
+class ResolutionState:
+    """The state of one resolution loop, and the rules that state must obey.
+
+    Outcomes are keyed by Mention Span identity with the last write winning, so
+    a Mention Span rejected in one Coreference Critic round and corrected in the
+    next is recorded once, with the decision the run ended on.  The loop used to
+    obey that rule by the order in which it assigned five local variables; here
+    the recording operations enforce it, which is also why the discard
+    proportion is computed by the state that holds the outcomes rather than
+    beside it.
+
+    A Mention Span the annotator returned without being asked for it is kept out
+    of ``outcomes`` and out of ``accepted_spans`` entirely, so it can neither
+    reach the resolved text nor move the discard proportion.  It still appears
+    in ``observed_spans``, which is the raw record of everything the model
+    returned.
+    """
+
+    deps: CoreferenceDeps
+    observed_spans: list[MentionSpan] = field(default_factory=list)
+    outcomes: dict[MentionSpanIdentity, MentionSpanOutcome] = field(
+        default_factory=dict
+    )
+    accepted_spans: dict[MentionSpanIdentity, LocatedMentionSpan] = field(
+        default_factory=dict
+    )
+    critic_rounds: int = 0
+
+    @classmethod
+    def for_deps(cls, deps: CoreferenceDeps) -> "ResolutionState":
+        """Start an empty state over the article both agents are shown."""
+
+        return cls(deps=deps)
+
+    @property
+    def content(self) -> str:
+        """The Source Article content Mention Spans are located against."""
+
+        return self.deps.content
+
+    @property
+    def sentence_records(self) -> list[NumberedSentenceRecord]:
+        """The annotator's sentence table in the durable run schema."""
+
+        return [
+            NumberedSentenceRecord(
+                label=sentence.label,
+                text=sentence.text,
+                start_index=sentence.start_index,
+                end_index=sentence.end_index,
+            )
+            for sentence in self.deps.sentences
+        ]
+
+    @property
+    def surviving_spans(self) -> list[LocatedMentionSpan]:
+        """The located Mention Spans the Coreference Critic last accepted."""
+
+        return list(self.accepted_spans.values())
+
+    @property
+    def resolved_text(self) -> str:
+        """The Source Article with every surviving Mention Span applied."""
+
+        return _substitute_located_mention_spans(self.content, self.surviving_spans)
+
+    @property
+    def discarded_proportion(self) -> float:
+        """The share of final outcomes that did not survive resolution."""
+
+        final_outcomes = list(self.outcomes.values())
+        if not final_outcomes:
+            return 0.0
+        discarded = sum(not outcome.accepted for outcome in final_outcomes)
+        return discarded / len(final_outcomes)
+
+    def record_annotation(
+        self,
+        mention_spans: Sequence[MentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Record the annotator's first answer and return its located spans."""
+
+        self.observed_spans.extend(mention_spans)
+        _log_contested_locations(mention_spans)
+        return self._locate(mention_spans)
+
+    def record_correction(
+        self,
+        mention_spans: Sequence[MentionSpan],
+        retry_targets: Sequence[tuple[MentionSpan, str]],
+    ) -> list[LocatedMentionSpan]:
+        """Record a correction round, keeping only the spans it asked for.
+
+        A correction preserves a Mention Span's identity and changes only its
+        canonical entity, so a returned identity outside the retry targets is
+        one the prompt never requested and the Coreference Critic never
+        reviewed.
+        """
+
+        self.critic_rounds += 1
+        self.observed_spans.extend(mention_spans)
+
+        target_identities = {
+            MentionSpanIdentity.of(mention_span) for mention_span, _ in retry_targets
+        }
+        requested = [
+            mention_span
+            for mention_span in mention_spans
+            if MentionSpanIdentity.of(mention_span) in target_identities
+        ]
+        unrequested = [
+            MentionSpanIdentity.of(mention_span)
+            for mention_span in mention_spans
+            if MentionSpanIdentity.of(mention_span) not in target_identities
+        ]
+        if unrequested:
+            logger.debug(
+                "Dropping %d unrequested Mention Span(s) from the retry "
+                "response: %s",
+                len(unrequested),
+                unrequested,
+            )
+
+        _log_contested_locations(requested)
+        return self._locate(requested)
+
+    def record_critic_round(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+        verdicts: Sequence[CriticVerdict],
+    ) -> list[tuple[MentionSpan, str]]:
+        """Record one round of verdicts and return the spans to correct."""
+
+        accepted, rejected = _apply_critic_verdicts(located_spans, verdicts)
+
+        for located in accepted:
+            identity = MentionSpanIdentity.of(located.mention_span)
+            self.accepted_spans[identity] = located
+            self.outcomes[identity] = _outcome_for_critic(
+                located.mention_span,
+                accepted=True,
+            )
+        for mention_span, reason in rejected:
+            identity = MentionSpanIdentity.of(mention_span)
+            # A later rejection displaces an earlier acceptance of the same
+            # identity, so the resolved text can only carry the decision the
+            # run ended on.
+            self.accepted_spans.pop(identity, None)
+            self.outcomes[identity] = _outcome_for_critic(
+                mention_span,
+                accepted=False,
+                reason=reason,
+            )
+
+        return rejected
+
+    def to_run(self, failure_type: str | None = None) -> CoreferenceResolutionRun:
+        """Convert the state into the Coreference Resolution Run it describes."""
+
+        return CoreferenceResolutionRun(
+            resolved_text=self.resolved_text,
+            sentences=self.sentence_records,
+            mention_spans=list(self.observed_spans),
+            outcomes=list(self.outcomes.values()),
+            discarded_proportion=self.discarded_proportion,
+            retry_count=self.critic_rounds,
+            failure_type=failure_type,
+        )
+
+    def _locate(
+        self,
+        mention_spans: Sequence[MentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Locate spans against the article, recording every discard."""
+
+        validation = validate_mention_spans(
+            self.content,
+            self.deps.sentences,
+            mention_spans,
+        )
+        for discard in validation.discards:
+            identity = MentionSpanIdentity.of(discard.mention_span)
+            self.accepted_spans.pop(identity, None)
+            self.outcomes[identity] = _outcome_for_discard(discard)
+        return validation.valid_spans
 
 
 def _failure_issues(outcomes: Sequence[MentionSpanOutcome]) -> list[str]:
@@ -631,224 +771,113 @@ def resolve_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
     critic_agent: Agent | None = None,
-    max_retries: int = 3,
+    max_critic_rounds: int | None = None,
 ) -> CoreferenceResolutionRun:
     """Resolve references and retain one final outcome per Mention Span.
 
-    ``outcomes`` accumulates by Mention Span identity with last write winning,
-    so a span rejected in one round and corrected in the next is recorded once,
-    with the decision the run actually ended on.  Zero-survivor runs always
-    raise: silently returning the source text would hide the failure.
+    The loop reads the model, calls the agents and decides when to stop; every
+    rule about what is recorded belongs to ``ResolutionState``.  Zero-survivor
+    runs always raise: silently returning the source text would hide the
+    failure.  ``max_critic_rounds`` bounds the Coreference Critic rounds beyond
+    the annotator's first pass — one per correction round — and is unrelated to
+    the agents' own structured-output retry budget.
     """
 
     if annotator_agent is None:
         annotator_agent = get_annotator_agent()
     if critic_agent is None:
         critic_agent = get_critic_agent()
-
-    current_run: CoreferenceResolutionRun | None = None
+    if max_critic_rounds is None:
+        max_critic_rounds = settings.coreference.max_critic_rounds
 
     try:
         deps = CoreferenceDeps.for_content(text)
-        sentences = deps.sentences
+        state = ResolutionState.for_deps(deps)
+        # One usage record for the whole resolution, so the limits below bound
+        # the article rather than any single model call.
+        usage = RunUsage()
+        usage_limits = UsageLimits(
+            request_limit=settings.coreference.request_limit,
+            total_tokens_limit=settings.coreference.total_tokens_limit,
+        )
+
         annotation_prompt = (
             "Resolve the references in the Source Article shown above. It is "
             "presented as numbered sentences; copy a visible sentence label "
             "into each Mention Span."
         )
-        run_result = annotator_agent.run_sync(annotation_prompt, deps=deps)
+        run_result = annotator_agent.run_sync(
+            annotation_prompt,
+            deps=deps,
+            usage=usage,
+            usage_limits=usage_limits,
+        )
         # The annotator's own conversation, carried into a correction round so
         # that it sees the Mention Spans it is being asked to correct.
         annotator_messages = run_result.all_messages()
-        mention_spans = TypeAdapter(list[MentionSpan]).validate_python(
-            run_result.output
-        )
+        pending_spans = state.record_annotation(run_result.output)
 
-        all_mention_spans = list(mention_spans)
-        _log_contested_locations(mention_spans)
-        validation = validate_mention_spans(text, sentences, mention_spans)
-        outcomes: dict[MentionSpanIdentity, MentionSpanOutcome] = {
-            MentionSpanIdentity.of(discard.mention_span): _outcome_for_discard(
-                discard
-            )
-            for discard in validation.discards
-        }
-
-        if not mention_spans:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=0,
-                failure_type="no_mentions_returned",
-            )
+        if not state.observed_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("no_mentions_returned"),
                 "no_mentions_returned",
                 annotator_agent,
             )
 
-        if not validation.valid_spans:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=0,
-                failure_type="all_mentions_discarded",
-            )
+        if not pending_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("all_mentions_discarded"),
                 "all_mentions_discarded",
                 annotator_agent,
             )
 
-        pending_spans = validation.valid_spans
-        accepted_spans: dict[MentionSpanIdentity, LocatedMentionSpan] = {}
-        retry_count = 0
-
         while pending_spans:
-            critic_prompt = _critic_prompt(
-                [located.mention_span for located in pending_spans],
+            critic_result = critic_agent.run_sync(
+                _critic_prompt(
+                    [located.mention_span for located in pending_spans],
+                ),
+                deps=deps,
+                usage=usage,
+                usage_limits=usage_limits,
             )
-            critic_result = critic_agent.run_sync(critic_prompt, deps=deps)
-            verdicts = TypeAdapter(list[CriticVerdict]).validate_python(
-                critic_result.output
-            )
-            newly_accepted, rejected_spans = _apply_critic_verdicts(
+            rejected_spans = state.record_critic_round(
                 pending_spans,
-                verdicts,
+                critic_result.output,
             )
 
-            for located in newly_accepted:
-                identity = MentionSpanIdentity.of(located.mention_span)
-                accepted_spans[identity] = located
-                outcomes[identity] = _outcome_for_critic(
-                    located.mention_span,
-                    accepted=True,
-                )
-            for mention_span, reason in rejected_spans:
-                identity = MentionSpanIdentity.of(mention_span)
-                outcomes[identity] = _outcome_for_critic(
-                    mention_span,
-                    accepted=False,
-                    reason=reason,
-                )
-
-            if not rejected_spans or retry_count >= max_retries:
+            if not rejected_spans or state.critic_rounds >= max_critic_rounds:
                 break
 
-            retry_count += 1
             retry_result = annotator_agent.run_sync(
                 _retry_prompt(rejected_spans),
                 deps=deps,
                 message_history=annotator_messages,
+                usage=usage,
+                usage_limits=usage_limits,
             )
             annotator_messages = retry_result.all_messages()
-            retry_mentions = TypeAdapter(list[MentionSpan]).validate_python(
-                retry_result.output
+            pending_spans = state.record_correction(
+                retry_result.output,
+                rejected_spans,
             )
-            # Every raw span the model returned stays in the run's audit trail,
-            # including the ones dropped just below.
-            all_mention_spans.extend(retry_mentions)
 
-            # A correction preserves the span's identity and changes only its
-            # canonical entity, so a returned identity that is not among the
-            # retry targets is one this prompt never asked for and the Critic
-            # never reviewed.  Such a span is dropped from substitution, and
-            # deliberately kept out of ``outcomes`` so that a chatty annotator
-            # cannot inflate the discard metric with spans nobody requested.
-            retry_targets = {
-                MentionSpanIdentity.of(mention_span)
-                for mention_span, _ in rejected_spans
-            }
-            requested_retry_mentions = [
-                mention_span
-                for mention_span in retry_mentions
-                if MentionSpanIdentity.of(mention_span) in retry_targets
-            ]
-            unrequested = [
-                MentionSpanIdentity.of(mention_span)
-                for mention_span in retry_mentions
-                if MentionSpanIdentity.of(mention_span) not in retry_targets
-            ]
-            if unrequested:
-                logger.debug(
-                    "Dropping %d unrequested Mention Span(s) from the retry "
-                    "response: %s",
-                    len(unrequested),
-                    unrequested,
-                )
-
-            _log_contested_locations(requested_retry_mentions)
-            retry_validation = validate_mention_spans(
-                text,
-                sentences,
-                requested_retry_mentions,
-            )
-            for discard in retry_validation.discards:
-                outcomes[MentionSpanIdentity.of(discard.mention_span)] = (
-                    _outcome_for_discard(discard)
-                )
-            pending_spans = retry_validation.valid_spans
-
-        surviving = list(accepted_spans.values())
-        resolved_text = _substitute_located_mention_spans(text, surviving)
-        if not surviving:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=retry_count,
-                resolved_text=resolved_text,
-                failure_type="all_mentions_rejected",
-            )
+        if not state.surviving_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("all_mentions_rejected"),
                 "all_mentions_rejected",
                 annotator_agent,
             )
 
-        return _build_resolution_run(
-            text,
-            sentences,
-            all_mention_spans,
-            outcomes,
-            retry_count=retry_count,
-            resolved_text=resolved_text,
-        )
+        return state.to_run()
     except CoreferenceResolutionError:
         raise
     except Exception as error:
         # Structured-output parsing and model failures are failures at this
         # seam.  In particular, never treat a text response as resolved text.
-        raise _structured_output_failure(
-            text,
-            annotator_agent,
-            error,
-            resolution_run=current_run,
-        ) from error
-
-
-def resolve_coreferences(
-    text: str,
-    annotator_agent: Agent | None = None,
-    critic_agent: Agent | None = None,
-    max_retries: int = 3,
-) -> str:
-    """Resolve references and return only the resolved content."""
-
-    return resolve_coreferences_run(
-        text,
-        annotator_agent=annotator_agent,
-        critic_agent=critic_agent,
-        max_retries=max_retries,
-    ).resolved_text
+        raise _structured_output_failure(text, annotator_agent, error) from error
 
 
 class PydanticAICoreferenceAdapter:
@@ -858,11 +887,15 @@ class PydanticAICoreferenceAdapter:
         self,
         annotator_agent: Agent | None = None,
         critic_agent: Agent | None = None,
-        max_retries: int = 3
+        max_critic_rounds: int | None = None,
     ) -> None:
         self.annotator_agent = annotator_agent
         self.critic_agent = critic_agent
-        self.max_retries = max_retries
+        self.max_critic_rounds = (
+            settings.coreference.max_critic_rounds
+            if max_critic_rounds is None
+            else max_critic_rounds
+        )
 
     def resolve(self, content: str) -> CoreferenceResolutionRun:
         annotator_agent: Agent | None = self.annotator_agent
@@ -873,7 +906,7 @@ class PydanticAICoreferenceAdapter:
                 content,
                 annotator_agent=annotator_agent,
                 critic_agent=critic_agent,
-                max_retries=self.max_retries,
+                max_critic_rounds=self.max_critic_rounds,
             )
         except CoreferenceResolutionError:
             raise
