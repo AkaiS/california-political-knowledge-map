@@ -15,7 +15,13 @@ from knowledge_map.adapters.sqlite_db import (
     get_unprocessed_stories,
     SQLiteStatusTracker
 )
-from knowledge_map.adapters.coreference import CoreferenceResolutionError
+from knowledge_map.adapters.coreference import (
+    CoreferenceResolutionError,
+    PydanticAICoreferenceAdapter,
+    get_annotator_agent,
+    get_critic_agent,
+)
+from pydantic_ai.models.function import FunctionModel
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.schemas import (
     AdherenceReport,
@@ -752,3 +758,77 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
 
 
 
+
+
+def test_a_coreference_socket_timeout_reaches_the_pipeline_as_a_system_error():
+    """The Dead Letter Queue never sees an infrastructure failure.
+
+    A read timeout escaping the real Coreference Adapter is translated by the
+    pipeline's transport seam, so the article returns to ``UNPROCESSED`` for
+    the next batch run rather than being archived as a prompt-quality problem.
+    """
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        raise httpx.ReadTimeout("The read operation timed out")
+
+    status_tracker = MockStatusTracker()
+    dlq = MockDeadLetterQueueAdapter()
+    article = SourceArticle(
+        url="http://test.com/coreference-timeout",
+        title="Timeout Title",
+        content="Gavin Newsom signed a bill. He was happy.",
+    )
+
+    with annotator_agent.override(model=FunctionModel(mock_annotator)):
+        pipeline = make_pipeline(
+            status_tracker,
+            coreference_adapter=PydanticAICoreferenceAdapter(
+                annotator_agent=annotator_agent,
+                critic_agent=get_critic_agent(defer_check=True),
+            ),
+            dlq_adapter=dlq,
+        )
+        with pytest.raises(PipelineConnectivityError) as exc_info:
+            pipeline.run(article)
+
+    assert exc_info.value.component == "coreference"
+    assert dlq.failures == []
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "UNPROCESSED"),
+    ]
+
+
+def test_a_coreference_programming_error_leaves_the_article_a_system_error():
+    """Anything that is not a model-output failure escapes as a system error.
+
+    It is neither archived in the Dead Letter Queue nor returned to
+    ``UNPROCESSED``, because neither re-running the batch nor rewriting a
+    prompt is what fixes it.
+    """
+
+    status_tracker = MockStatusTracker()
+    dlq = MockDeadLetterQueueAdapter()
+    pipeline = make_pipeline(
+        status_tracker,
+        coreference_adapter=FailingCoreferenceAdapter(
+            RuntimeError("resolution state is corrupt")
+        ),
+        dlq_adapter=dlq,
+    )
+    article = SourceArticle(
+        url="http://test.com/coreference-bug",
+        title="Bug Title",
+        content="Gavin Newsom went home.",
+    )
+
+    with pytest.raises(RuntimeError):
+        pipeline.run(article)
+
+    assert dlq.failures == []
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "SYSTEM_ERROR"),
+    ]

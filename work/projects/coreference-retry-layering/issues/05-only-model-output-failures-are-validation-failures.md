@@ -17,10 +17,10 @@ patience.
 
 Labels: ready-for-agent
 
-- [ ] The escaping exception handler catches only Pydantic validation errors and pydantic-ai's unexpected-behavior error.
-- [ ] Anything else propagates and is handled by the Story Pipeline as a system error, leaving the article `SYSTEM_ERROR` rather than `FAILED_DLQ`.
-- [ ] A model-output failure still produces a Dead Letter Queue record carrying the partial Coreference Resolution Run.
-- [ ] Each resolution runs under a request limit and a total token limit.
-- [ ] A resolution that exceeds either limit fails rather than continuing.
-- [ ] The limits are configured in the coreference settings block alongside the critic round budget.
-- [ ] Every behavioral test in the coreference suite passes without modification.
+- [x] The escaping exception handler catches only Pydantic validation errors and pydantic-ai's unexpected-behavior error.
+- [x] Anything else propagates and is handled by the Story Pipeline as a system error, leaving the article `SYSTEM_ERROR` rather than `FAILED_DLQ`.
+- [x] A model-output failure still produces a Dead Letter Queue record carrying the partial Coreference Resolution Run.
+- [x] Each resolution runs under a request limit and a total token limit.
+- [x] A resolution that exceeds either limit fails rather than continuing.
+- [x] The limits are configured in the coreference settings block alongside the critic round budget.
+- [x] Every behavioral test in the coreference suite passes without modification.

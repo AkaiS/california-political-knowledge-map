@@ -4,7 +4,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
+from pydantic import ValidationError
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from knowledge_map.config import settings
@@ -349,6 +351,20 @@ def _validation_issues_from_error(error: Exception) -> list[str]:
     return issues or [str(error) or "Annotator output could not be parsed"]
 
 
+#: What the resolver is willing to call a coreference validation failure.
+#:
+#: Both members describe model output: a Pydantic ``ValidationError`` is
+#: output that does not fit the agent's output type, and pydantic-ai's
+#: ``UnexpectedModelBehavior`` covers the rest — a text answer where a tool
+#: call was required, an exhausted structured-output retry budget.  Everything
+#: else escaping the resolver is an infrastructure failure, and the Dead Letter
+#: Queue is the corpus prompt work is done against.
+MODEL_OUTPUT_FAILURES: tuple[type[Exception], ...] = (
+    ValidationError,
+    UnexpectedModelBehavior,
+)
+
+
 def _structured_output_failure(
     content: str,
     annotator_agent: Agent | None,
@@ -366,7 +382,7 @@ def _structured_output_failure(
         original_text=content,
         validation_issues=_validation_issues_from_error(error),
         failure_type="coreference_validation_failure",
-        retry_count=0,
+        retry_count=0 if resolution_run is None else resolution_run.retry_count,
         metadata=metadata,
         resolution_run=resolution_run,
     )
@@ -790,9 +806,10 @@ def resolve_coreferences_run(
     if max_critic_rounds is None:
         max_critic_rounds = settings.coreference.max_critic_rounds
 
+    deps = CoreferenceDeps.for_content(text)
+    state = ResolutionState.for_deps(deps)
+
     try:
-        deps = CoreferenceDeps.for_content(text)
-        state = ResolutionState.for_deps(deps)
         # One usage record for the whole resolution, so the limits below bound
         # the article rather than any single model call.
         usage = RunUsage()
@@ -874,10 +891,22 @@ def resolve_coreferences_run(
         return state.to_run()
     except CoreferenceResolutionError:
         raise
-    except Exception as error:
-        # Structured-output parsing and model failures are failures at this
-        # seam.  In particular, never treat a text response as resolved text.
-        raise _structured_output_failure(text, annotator_agent, error) from error
+    except MODEL_OUTPUT_FAILURES as error:
+        # Only model output is a failure at this seam.  In particular, never
+        # treat a text response as resolved text.  Anything else -- an
+        # exhausted transport retry, a usage limit, a programming error --
+        # propagates to the Story Pipeline as a system error.
+        #
+        # The state is built before the loop so that whatever the run reached
+        # travels with the failure: the Mention Spans the annotator returned
+        # and the sentence table it worked from are what a prompt fix is made
+        # against.
+        raise _structured_output_failure(
+            text,
+            annotator_agent,
+            error,
+            resolution_run=state.to_run("coreference_validation_failure"),
+        ) from error
 
 
 class PydanticAICoreferenceAdapter:
@@ -910,7 +939,7 @@ class PydanticAICoreferenceAdapter:
             )
         except CoreferenceResolutionError:
             raise
-        except Exception as error:
+        except MODEL_OUTPUT_FAILURES as error:
             raise _structured_output_failure(
                 content,
                 annotator_agent,

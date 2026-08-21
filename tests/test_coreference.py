@@ -1,5 +1,6 @@
 import logging
 
+import httpx
 import pytest
 from pydantic_ai import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.messages import ModelRequest, UserPromptPart
@@ -977,3 +978,158 @@ def test_failure_metadata_comes_from_a_stable_source():
     assert metadata["prompt_version"] == "1.0"
     assert metadata["model"] == annotator_agent.model.model_name
     assert "temperature" not in metadata
+
+
+def test_a_transport_failure_is_not_a_coreference_validation_failure():
+    """A socket timeout that outlives its retries escapes the resolver.
+
+    The transport owns HTTP retries, so a timeout reaching this seam has
+    already exhausted them.  It is an infrastructure failure, not a statement
+    about what the annotator wrote, and the Story Pipeline handles it as a
+    system error rather than the Dead Letter Queue archiving it as a
+    prompt-quality problem.
+    """
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        raise httpx.ReadTimeout("The read operation timed out")
+
+    with annotator_agent.override(model=FunctionModel(mock_annotator)):
+        with pytest.raises(httpx.ReadTimeout):
+            PydanticAICoreferenceAdapter(
+                annotator_agent=annotator_agent,
+                critic_agent=get_critic_agent(defer_check=True),
+            ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+
+def test_a_model_output_failure_carries_the_partial_run_to_the_dead_letter_queue():
+    """What the run reached before the model failed is still archived.
+
+    The annotator's Mention Spans and the sentence table it worked from are
+    the material a prompt fix is made against, so a Coreference Critic that
+    answers with prose does not throw them away.
+    """
+
+    content = "Gavin Newsom signed a bill. He was happy."
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "He",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        return ModelResponse(parts=[TextPart(content="Looks fine to me.")])
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+        pytest.raises(CoreferenceResolutionError) as exc_info,
+    ):
+        PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent,
+        ).resolve(content)
+
+    error = exc_info.value
+    assert error.failure_type == "coreference_validation_failure"
+    run = error.resolution_run
+    assert run is not None
+    assert [span.mention_text for span in run.mention_spans] == ["He"]
+    assert [sentence.label for sentence in run.sentences] == ["1", "2"]
+    # No verdict was ever recorded, so nothing reached the resolved text.
+    assert run.resolved_text == content
+
+
+def test_a_resolution_that_exceeds_its_request_limit_fails(monkeypatch):
+    """The ceiling stops the run, and it is not a model-output failure.
+
+    An annotator returning Mention Spans faster than the Coreference Critic
+    can retire them is stopped by the configured limit rather than by
+    patience.  Exhausting a ceiling says nothing about what the annotator
+    wrote, so it escapes to the Story Pipeline as a system error instead of
+    being archived as a prompt-quality problem.
+    """
+
+    from pydantic_ai.exceptions import UsageLimitExceeded
+
+    from knowledge_map.config import settings
+
+    # One request buys the annotation; the Coreference Critic round is over
+    # the ceiling.
+    monkeypatch.setattr(settings.coreference, "request_limit", 1)
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "He",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        raise AssertionError("the ceiling should have stopped the resolution")
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        with pytest.raises(UsageLimitExceeded):
+            PydanticAICoreferenceAdapter(
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
+            ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+
+def test_a_resolution_that_exceeds_its_token_limit_fails(monkeypatch):
+    """The token ceiling stops the run as the request ceiling does."""
+
+    from pydantic_ai.exceptions import UsageLimitExceeded
+
+    from knowledge_map.config import settings
+
+    monkeypatch.setattr(settings.coreference, "total_tokens_limit", 1)
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "He",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        raise AssertionError("the ceiling should have stopped the resolution")
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        with pytest.raises(UsageLimitExceeded):
+            PydanticAICoreferenceAdapter(
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
+            ).resolve("Gavin Newsom signed a bill. He was happy.")
