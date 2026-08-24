@@ -920,6 +920,14 @@ def resolve_coreferences_run(
         state.record_annotator_corrections(annotator_messages)
         pending_spans = state.record_annotation(run_result.output)
 
+        logger.info(
+            "Annotator returned %d Mention Span(s); %d located, %d discarded "
+            "in validation",
+            len(state.observed_spans),
+            len(pending_spans),
+            len(state.observed_spans) - len(pending_spans),
+        )
+
         if not state.observed_spans:
             raise _zero_survivor_failure(
                 text,
@@ -937,6 +945,13 @@ def resolve_coreferences_run(
             )
 
         while pending_spans:
+            logger.info(
+                "Sending %d Mention Span(s) to the Coreference Critic "
+                "(round %d of %d)",
+                len(pending_spans),
+                state.critic_rounds + 1,
+                max_critic_rounds,
+            )
             critic_result = critic_agent.run_sync(
                 _critic_prompt(
                     [located.mention_span for located in pending_spans],
@@ -949,10 +964,28 @@ def resolve_coreferences_run(
                 pending_spans,
                 critic_result.output,
             )
+            logger.info(
+                "Coreference Critic returned %d verdict(s): %d accepted, "
+                "%d rejected",
+                len(critic_result.output),
+                len(pending_spans) - len(rejected_spans),
+                len(rejected_spans),
+            )
 
             if not rejected_spans or state.critic_rounds >= max_critic_rounds:
+                if rejected_spans:
+                    logger.warning(
+                        "Critic rounds exhausted with %d Mention Span(s) still "
+                        "rejected after %d round(s)",
+                        len(rejected_spans),
+                        state.critic_rounds,
+                    )
                 break
 
+            logger.info(
+                "Asking the annotator to correct %d rejected Mention Span(s)",
+                len(rejected_spans),
+            )
             retry_result = annotator_agent.run_sync(
                 _retry_prompt(rejected_spans),
                 deps=deps,

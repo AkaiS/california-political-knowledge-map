@@ -125,6 +125,14 @@ class StoryPipeline:
             with transport_failures_as_pipeline_errors("coreference"):
                 resolution_run = self.coreference_adapter.resolve(article.content)
             resolved_text = resolution_run.resolved_text
+            critic_outcomes = [o for o in resolution_run.outcomes if o.stage == "critic"]
+            logger.info(
+                f"Coreference resolved: {len(resolution_run.surviving_spans)} span(s) survived, "
+                f"{resolution_run.discarded_count} did not "
+                f"({len(critic_outcomes)} judged by the Critic, "
+                f"{resolution_run.retry_count} correction round(s), "
+                f"{resolution_run.discarded_proportion:.1%} discarded)."
+            )
 
             # 2. Chunking
             logger.info("Chunking text...")
