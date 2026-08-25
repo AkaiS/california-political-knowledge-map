@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import json
-from typing import List, Dict, Any, NamedTuple, Optional, Tuple
+from typing import List, Dict, Any, NamedTuple, Optional, Sequence, Tuple
 
 from knowledge_map.schemas.pipeline import ArticleStatus
 from knowledge_map.schemas.relevance import (
@@ -1660,6 +1660,77 @@ def get_latest_selector_proposal(
         return dict(row) if row else None
     finally:
         conn.close()
+
+
+# The two statuses a Story gets stuck at.  PROCESSING means a run claimed the
+# Story and never released it; FAILED_DLQ means the run gave up on it.  Neither
+# is terminal, and neither is picked up again without this reset.
+RESETTABLE_STORY_STATUSES = ("PROCESSING", "FAILED_DLQ")
+
+
+def count_stories_by_status(
+    statuses: Sequence[str], db_path: str = DEFAULT_DB_PATH
+) -> Dict[str, int]:
+    """How many Stories sit at each of ``statuses``, including the empty ones.
+
+    Statuses with no rows are reported as 0 rather than omitted, so a caller
+    showing the user what a reset would touch can say "0" instead of silently
+    leaving a status out of the list it just asked about.
+    """
+
+    if not statuses:
+        return {}
+
+    placeholders = ",".join("?" for _ in statuses)
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT status, COUNT(*) FROM stories "
+            f"WHERE status IN ({placeholders}) GROUP BY status",
+            tuple(statuses),
+        )
+        counted = dict(cursor.fetchall())
+    finally:
+        conn.close()
+
+    return {status: counted.get(status, 0) for status in statuses}
+
+
+def reset_stories_to_unprocessed(
+    statuses: Sequence[str] = RESETTABLE_STORY_STATUSES,
+    db_path: str = DEFAULT_DB_PATH,
+) -> Dict[str, int]:
+    """Send every Story at one of ``statuses`` back to UNPROCESSED for a re-run.
+
+    ``completed_at`` is cleared with it, matching `update_story_status`: a Story
+    that has not completed must not carry a completion time, and a DLQ row can
+    still be holding one from an earlier successful pass.
+
+    Returns the per-status counts as they were *before* the update, because
+    afterwards they are all UNPROCESSED and the caller can no longer tell what
+    was moved.
+    """
+
+    if not statuses:
+        return {}
+
+    before = count_stories_by_status(statuses, db_path=db_path)
+
+    placeholders = ",".join("?" for _ in statuses)
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"UPDATE stories SET status = 'UNPROCESSED', completed_at = NULL "
+            f"WHERE status IN ({placeholders})",
+            tuple(statuses),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return before
 
 
 def purge_html_cache(db_path: str = DEFAULT_DB_PATH) -> Dict[str, int]:
