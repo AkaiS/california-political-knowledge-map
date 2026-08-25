@@ -13,6 +13,7 @@ import os
 import sqlite3
 from typing import Any, Literal, NamedTuple
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
@@ -38,7 +39,15 @@ def default_model() -> str:
     `get_chat_model` lets `OLLAMA_MODEL_RELEVANCE` override its
     argument, which would silently ignore `--model`. This reads the same
     variable once, to supply the default the run then records.
+
+    `load_dotenv` is called because this runs at import, before anything
+    else has read the file. Without it the fallback wins and a run with no
+    `--model` records a model name that is in no configuration file --
+    which is what happened until `tasks.coreference` began loading the
+    file first, leaving this correct only by import order.
     """
+
+    load_dotenv()
     return (
         os.environ.get("OLLAMA_MODEL_RELEVANCE")
         or os.environ.get("OLLAMA_MODEL")

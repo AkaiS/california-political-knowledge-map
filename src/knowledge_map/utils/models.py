@@ -136,7 +136,13 @@ def resolve_thinking() -> bool:
     }
 
 
-def _resolve_model_name(default_model: str, env_var_name: str | None) -> str:
+def _resolve_model_name(
+    default_model: str,
+    env_var_name: str | None,
+    allow_env_override: bool = True,
+) -> str:
+    if not allow_env_override:
+        return default_model
     if env_var_name:
         model_name = os.environ.get(env_var_name)
         if model_name:
@@ -230,6 +236,7 @@ def get_chat_model(
     default_model: str,
     env_var_name: str | None = None,
     *,
+    allow_env_override: bool = True,
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> OpenAIChatModel:
@@ -247,6 +254,12 @@ def get_chat_model(
     whichever GGUF it was started with either way, so the name identifies the
     intended model rather than selecting one.
 
+    Pass ``allow_env_override=False`` to use ``default_model`` verbatim and
+    consult no variable.  An evaluation run names the model it is comparing,
+    and `OLLAMA_MODEL` is set in this project's `.env`, so without this an
+    explicit `--model` would be resolved away and the report would record a
+    model the run never sent.
+
     The result is memoized by resolved model name and base URL, so repeated
     agent construction shares one provider, one client, and one connection
     pool.  An injected transport or an explicit settings block is a caller
@@ -257,7 +270,7 @@ def get_chat_model(
     load_dotenv()
 
     base_url = resolve_chat_base_url()
-    model_name = _resolve_model_name(default_model, env_var_name)
+    model_name = _resolve_model_name(default_model, env_var_name, allow_env_override)
 
     if transport is not None or transport_settings is not None:
         return _build_model(model_name, base_url, transport_settings, transport)

@@ -1,58 +1,31 @@
 """The coreference silver set stays loadable and source-addressable."""
 
 from pathlib import Path
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict
 
 from knowledge_map.adapters.coreference import (
     CoreferenceDeps,
     validate_mention_spans,
 )
 from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_gold_set
-from knowledge_map.schemas import MentionSpan
+from knowledge_map.evaluation.tasks import task_named
 
 SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
 
 
-class CoreferenceCaseInput(BaseModel):
-    """The full Story content shown to the production annotator."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str
-    content: str
-
-
-class CoreferenceExpectation(BaseModel):
-    """Silver Mention Spans retained after model annotation and criticism."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    mention_spans: list[MentionSpan]
-
-
-class CoreferenceSilverMetadata(BaseModel):
-    """Source and model provenance for one silver-labeled Story."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    source_table: Literal["stories"]
-    story_id: int
-    label_quality: Literal["silver"]
-    annotator_model: Literal["gpt-5.6-sol"]
-    annotator_reasoning_effort: Literal["medium"]
-    critic_model: Literal["gpt-5.6-sol"]
-    critic_reasoning_effort: Literal["medium"]
-
-
 def _load_silver_set():
+    """Load the file through the registered task's own types.
+
+    Declaring a second set of types here would let the file drift from
+    what `ca-map eval run coreference` validates it against, which is the
+    one thing this test exists to prevent.
+    """
+
+    task = task_named("coreference")
     return load_gold_set(
         SILVER_SET_PATH,
-        input_type=CoreferenceCaseInput,
-        output_type=CoreferenceExpectation,
-        metadata_type=CoreferenceSilverMetadata,
+        input_type=task.input_type,
+        output_type=task.output_type,
+        metadata_type=task.metadata_type,
     )
 
 
