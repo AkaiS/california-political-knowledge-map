@@ -1,6 +1,22 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+def _strip_label_brackets(value: object) -> object:
+    """Normalise a sentence label the model copied verbatim from its prompt.
+
+    The sentence table is rendered as ``[1] ...``, so an annotator commonly
+    answers with ``"[1]"`` where the label itself is ``"1"``. Both spellings
+    name the same sentence.
+    """
+
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        stripped = stripped[1:-1].strip()
+    return stripped
 
 
 class MentionSpan(BaseModel):
@@ -34,6 +50,13 @@ class MentionSpan(BaseModel):
         min_length=1,
         description="The canonical name of the entity the mention refers to.",
     )
+
+    @field_validator("sentence_label", mode="before")
+    @classmethod
+    def normalise_sentence_label(cls, value: object) -> object:
+        """Accept the bracketed label the sentence table displays."""
+
+        return _strip_label_brackets(value)
 
 
 class MentionSpanDiscard(BaseModel):
@@ -140,6 +163,13 @@ class CriticVerdict(BaseModel):
         default=None,
         description="A short explanation required when the Mention Span is rejected.",
     )
+
+    @field_validator("sentence_label", mode="before")
+    @classmethod
+    def normalise_sentence_label(cls, value: object) -> object:
+        """Accept the bracketed label the sentence table displays."""
+
+        return _strip_label_brackets(value)
 
     @model_validator(mode="after")
     def require_rejection_reason(self) -> "CriticVerdict":

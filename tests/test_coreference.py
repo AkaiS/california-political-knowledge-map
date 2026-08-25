@@ -1221,3 +1221,77 @@ def test_a_resolution_that_exceeds_its_token_limit_fails(monkeypatch):
                 annotator_agent=annotator_agent,
                 critic_agent=critic_agent,
             ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+
+def test_a_bracketed_sentence_label_names_the_same_sentence_as_a_bare_one():
+    """The sentence table displays ``[2]``, so an annotator may echo it back."""
+
+    bracketed = MentionSpan(
+        sentence_label="[2]",
+        mention_text="He",
+        canonical_entity_name="Gavin Newsom",
+    )
+    bare = MentionSpan(
+        sentence_label="2",
+        mention_text="He",
+        canonical_entity_name="Gavin Newsom",
+    )
+
+    assert bracketed.sentence_label == "2"
+    assert bracketed == bare
+
+    bracketed_verdict = CriticVerdict(
+        sentence_label="[2]",
+        mention_text="He",
+        accepted=True,
+    )
+    bare_verdict = CriticVerdict(
+        sentence_label="2",
+        mention_text="He",
+        accepted=True,
+    )
+
+    assert bracketed_verdict.sentence_label == "2"
+    assert bracketed_verdict == bare_verdict
+
+
+def test_a_bracketed_label_from_the_annotator_still_substitutes():
+    content = "Gavin Newsom signed a bill. He was happy."
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "[2]",
+                    "mention_text": "He",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        return critic_response(
+            info,
+            [
+                {
+                    "sentence_label": "[2]",
+                    "mention_text": "He",
+                    "accepted": True,
+                }
+            ],
+        )
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        run = PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent,
+        ).resolve(content)
+
+    assert run.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
+    assert run.discarded_count == 0
