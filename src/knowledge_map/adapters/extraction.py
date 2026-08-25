@@ -14,7 +14,7 @@ from knowledge_map.ontology.extraction_conformance import (
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.schemas import AdherenceReport, ExtractionResult
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def load_instructions() -> str:
         return "Extract entities and relationships from California politics stories."
 
 def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    model = get_ollama_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
+    model = get_chat_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
     
     instructions = load_instructions()
     

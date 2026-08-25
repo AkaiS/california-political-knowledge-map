@@ -9,7 +9,7 @@ from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
 from knowledge_map.config import TransportSettings, settings
-from knowledge_map.utils.models import build_retrying_client, resolve_base_url
+from knowledge_map.utils.models import build_retrying_client, resolve_embedding_base_url
 from typing import List
 from knowledge_map.schemas import ArticleChunk
 
@@ -44,7 +44,7 @@ def get_embedding_embedder(
     # configured attempt count rather than replace it.  Retries belong to the
     # transport, so the SDK is told to make exactly one attempt.
     openai_client = AsyncOpenAI(
-        base_url=resolve_base_url(),
+        base_url=resolve_embedding_base_url(),
         api_key="ollama",
         http_client=build_retrying_client(transport_settings, transport),
         max_retries=0,

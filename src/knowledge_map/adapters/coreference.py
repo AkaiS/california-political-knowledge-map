@@ -19,7 +19,7 @@ from knowledge_map.schemas import (
     MentionSpanOutcome,
     NumberedSentenceRecord,
 )
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
     split_into_numbered_sentences,
@@ -182,7 +182,7 @@ def substitute_mention_spans(
 
 
 def _get_model():
-    return get_ollama_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
+    return get_chat_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
 
 
 def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:

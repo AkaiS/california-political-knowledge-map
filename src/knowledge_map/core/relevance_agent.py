@@ -3,7 +3,7 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ async def classify_article_with_llm(
     then runs the Pydantic AI classifier agent on the article.
     """
     if agent is None:
-        model = get_ollama_model("32k-gemma-e4b", "OLLAMA_MODEL_RELEVANCE")
+        model = get_chat_model("32k-gemma-e4b", "OLLAMA_MODEL_RELEVANCE")
         agent = Agent(
             model,
             output_type=RelevanceClassification,

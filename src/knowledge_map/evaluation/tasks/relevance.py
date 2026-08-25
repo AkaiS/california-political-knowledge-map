@@ -23,7 +23,7 @@ from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
     get_relevance_agent_prompt,
 )
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 
 from .registry import EvaluationTask, register
 
@@ -35,7 +35,7 @@ def default_model() -> str:
 
     Comparing two models is the point of a run, so the model is named
     explicitly rather than resolved from the environment at call time —
-    `get_ollama_model` lets `OLLAMA_MODEL_RELEVANCE` override its
+    `get_chat_model` lets `OLLAMA_MODEL_RELEVANCE` override its
     argument, which would silently ignore `--model`. This reads the same
     variable once, to supply the default the run then records.
     """
@@ -76,7 +76,7 @@ def build_task(model: str, gold_set: Any) -> Any:
     the prompt scoring them.
     """
     agent = Agent(
-        get_ollama_model(model),
+        get_chat_model(model),
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,

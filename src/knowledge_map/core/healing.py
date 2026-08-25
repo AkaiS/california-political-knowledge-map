@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
@@ -246,7 +246,7 @@ def annotate_ground_truth(soup: BeautifulSoup, gt: Dict[str, Any]) -> None:
 
 
 def _get_model():
-    return get_ollama_model("32k-gemma-e4b", "OLLAMA_MODEL_HEALING")
+    return get_chat_model("32k-gemma-e4b", "OLLAMA_MODEL_HEALING")
 
 
 def get_generator_agent(defer_check: bool = True) -> Agent:
