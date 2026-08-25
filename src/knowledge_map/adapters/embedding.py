@@ -38,21 +38,26 @@ def get_embedding_embedder(
     """
 
     load_dotenv()
-    ollama_embedding_model = os.environ.get("OLLAMA_EMBEDDING_MODEL", "embeddinggemma")
+    # `OLLAMA_EMBEDDING_MODEL` is still read so an existing `.env` keeps working
+    # now that the model is served by llama.cpp rather than Ollama.
+    embedding_model = os.environ.get("EMBEDDING_MODEL") or os.environ.get(
+        "OLLAMA_EMBEDDING_MODEL", "embeddinggemma"
+    )
 
     # The OpenAI SDK retries on its own by default, which would multiply the
     # configured attempt count rather than replace it.  Retries belong to the
     # transport, so the SDK is told to make exactly one attempt.
     openai_client = AsyncOpenAI(
         base_url=resolve_embedding_base_url(),
-        api_key="ollama",
+        # llama-server does not check it, but the SDK refuses to build without one.
+        api_key="llama.cpp",
         http_client=build_retrying_client(transport_settings, transport),
         max_retries=0,
     )
     provider = OpenAIProvider(openai_client=openai_client)
 
     model = OpenAIEmbeddingModel(
-        ollama_embedding_model,
+        embedding_model,
         provider=provider,
     )
 

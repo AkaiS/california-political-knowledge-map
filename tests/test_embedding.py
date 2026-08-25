@@ -60,8 +60,8 @@ def test_cosine_similarity_dimension_mismatch():
 
 def test_get_embedding_embedder():
     with patch.dict(os.environ, {
-        "OLLAMA_BASE_URL": "http://localhost:11434",
-        "OLLAMA_EMBEDDING_MODEL": "embeddinggemma"
+        "LLAMA_CPP_EMBEDDING_BASE_URL": "http://localhost:8081",
+        "EMBEDDING_MODEL": "embeddinggemma"
     }):
         embedder = get_embedding_embedder()
         assert embedder is not None

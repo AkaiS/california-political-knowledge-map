@@ -209,13 +209,28 @@ def test_a_base_url_that_already_names_v1_is_left_alone(monkeypatch):
     assert resolve_chat_base_url() == "http://localhost:9999/v1"
 
 
-def test_embedding_keeps_its_own_ollama_host(monkeypatch):
-    """llama-server serves one model, so embedding stays where it was."""
+def test_embedding_gets_its_own_llama_cpp_port(monkeypatch):
+    """llama-server serves one model per process, so embedding runs beside chat."""
 
     monkeypatch.setenv("LLAMA_CPP_BASE_URL", "http://localhost:9999")
-    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.delenv("LLAMA_CPP_EMBEDDING_BASE_URL", raising=False)
 
-    assert resolve_embedding_base_url() == "http://localhost:11434/v1"
+    assert resolve_embedding_base_url() == "http://localhost:8081/v1"
+
+
+def test_the_embedding_host_is_no_longer_read_from_ollama(monkeypatch):
+    """A leftover `OLLAMA_BASE_URL` must not pull embedding back onto Ollama."""
+
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.delenv("LLAMA_CPP_EMBEDDING_BASE_URL", raising=False)
+
+    assert resolve_embedding_base_url() == "http://localhost:8081/v1"
+
+
+def test_the_embedding_base_url_can_be_moved_and_keeps_a_named_v1(monkeypatch):
+    monkeypatch.setenv("LLAMA_CPP_EMBEDDING_BASE_URL", "http://localhost:9001/v1")
+
+    assert resolve_embedding_base_url() == "http://localhost:9001/v1"
 
 
 def test_agents_sample_deterministically_by_default(monkeypatch):

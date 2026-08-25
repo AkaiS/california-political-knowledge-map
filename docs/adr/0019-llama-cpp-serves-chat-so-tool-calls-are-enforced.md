@@ -70,9 +70,9 @@ quantization-aware trained rather than quantized after the fact.
 ## Consequences
 
 `get_ollama_model` is `get_chat_model` and returns an `OpenAIChatModel` on an
-`OpenAIProvider`. `resolve_base_url` is `resolve_embedding_base_url`, still
-Ollama, because `llama-server` serves one model per process and an embedding call
-has no tool use to enforce.
+`OpenAIProvider`. `resolve_base_url` is `resolve_embedding_base_url`, which now
+names a second `llama-server` on port 8081 rather than Ollama on 11434 — see
+"Embedding moved too" below.
 
 Temperature is 0 by default, set on the client via `LLM_TEMPERATURE` and again by
 `scripts/llama-server.sh --temp 0`. Extraction and coreference transcribe a fixed
@@ -161,3 +161,52 @@ Enforcement is therefore grammar-constrained JSON, not a constrained tool call.
 That is strictly stronger than what Ollama provided — Ollama accepted
 `tool_choice: "required"` and ignored it — but it is a different mechanism than
 this record's title implies, and `supports_json_schema_output` is what carries it.
+
+## Embedding moved too
+
+An embedding call has no tool use to enforce, so the argument above does not
+reach it. It moved anyway, so that the pipeline depends on Ollama for nothing.
+
+`llama-server` serves one model per process, so this is a second process on a
+second port — `scripts/llama-embed.sh`, port 8081, `LLAMA_CPP_EMBEDDING_BASE_URL`
+— rather than a flag on the chat server.
+
+### The Ollama blob does not load here either, for a different reason
+
+Reusing the blob under `~/.ollama/models` was tried first and failed with `wrong
+number of tensors; expected 316, got 314`. The cause is not the packed vision
+tower that stopped the 26B: EmbeddingGemma has none (`gguf_inspect.py` reports
+`vision_tensors=0`). Ollama's blob declares `general.architecture = gemma3`, so
+llama.cpp loads it with the text-model loader, which builds 314 tensors and has
+no slot for `dense.0.weight` `[768, 3072]` and `dense.1.weight` `[3072, 768]` —
+EmbeddingGemma's Matryoshka projection head. llama.cpp implements those under a
+dedicated `gemma-embedding` architecture, which the Ollama conversion does not
+declare.
+
+### Only the official conversion is complete
+
+`ggml-org/embeddinggemma-300M-GGUF` is the one to use, and the launcher says so.
+Every third-party conversion checked — unsloth BF16, unsloth F32, second-state
+f16 — declares `gemma-embedding` but ships **314** tensors, silently omitting
+`dense_2`/`dense_3`. Such a file loads without a word of complaint and returns
+768-dimension vectors from the wrong space, so the adapter's dimension check
+still passes. This is worth more than the precision: the official file is Q8_0
+rather than the bf16 Ollama served, and a near-lossless quantization of the right
+model beats an exact copy of a truncated one.
+
+Vectors are therefore close to but not bit-identical with what Neo4j already
+holds. If that matters, re-embed rather than assume.
+
+### Serving flags
+
+`--pooling` is deliberately not passed. The GGUF declares
+`gemma-embedding.pooling_type = 1` (mean) and llama.cpp honours the model's own
+declaration, as Ollama did; setting it would silently change every vector.
+
+`--ubatch-size` has to reach `--ctx-size`. The model is non-causal, so llama.cpp
+cannot split one sequence across micro-batches and rejects any request longer
+than a single one. The context is the model's own 2048, which is what the Ollama
+Modelfile set; a chunk is 512 characters and comes nowhere near it.
+
+`EMBEDDING_MODEL` replaces `OLLAMA_EMBEDDING_MODEL`, which is still read as a
+fallback so an existing `.env` keeps working.

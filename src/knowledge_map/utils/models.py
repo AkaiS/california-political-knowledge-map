@@ -88,16 +88,21 @@ def resolve_chat_base_url() -> str:
 
 
 def resolve_embedding_base_url() -> str:
-    """The Ollama base URL, normalised to the OpenAI-compatible ``/v1`` path.
+    """The embedding server's base URL, normalised to the ``/v1`` path.
 
-    Embedding stays on Ollama: ``llama-server`` serves one model per process,
-    and there is no tool calling to enforce for an embedding call.
+    Embedding runs on its own ``llama-server`` process, on its own port, because
+    ``llama-server`` serves one model per process and chat already holds 8080.
+    Nothing about an embedding call needs a grammar; the second process exists so
+    that the pipeline depends on Ollama for nothing.  Start it with
+    ``scripts/llama-embed.sh``.
     """
 
-    ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    if ollama_base_url.endswith("/v1"):
-        return ollama_base_url
-    return f"{ollama_base_url}/v1"
+    base_url = os.environ.get(
+        "LLAMA_CPP_EMBEDDING_BASE_URL", "http://localhost:8081"
+    )
+    if base_url.endswith("/v1"):
+        return base_url
+    return f"{base_url}/v1"
 
 
 def resolve_temperature() -> float:
