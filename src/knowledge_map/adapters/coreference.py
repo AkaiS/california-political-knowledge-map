@@ -267,6 +267,19 @@ CRITIC_INSTRUCTIONS = (
 )
 
 
+ANNOTATION_PROMPT = (
+    "Resolve the references in the Source Article shown above. It is "
+    "presented as numbered sentences; copy a visible sentence label "
+    "into each Mention Span."
+)
+"""What the annotator is asked for, in every path that asks it.
+
+A module constant because the annotator is now called from two places.
+An annotator-only run that asked for something subtly different would
+not be a baseline for the loop below it; it would be a different task.
+"""
+
+
 def _unlocatable_retry_message(discards: Sequence[MentionSpanDiscard]) -> str:
     """Tell the annotator why nothing it returned could be located."""
 
@@ -611,6 +624,18 @@ def _outcome_for_critic(
     )
 
 
+def _count_retry_prompts(messages: Sequence[ModelMessage]) -> int:
+    """Count the corrections asked for within one annotator conversation."""
+
+    return sum(
+        1
+        for message in messages
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+        if isinstance(part, RetryPromptPart)
+    )
+
+
 @dataclass(slots=True)
 class ResolutionState:
     """The state of one resolution loop, and the rules that state must obey.
@@ -712,13 +737,7 @@ class ResolutionState:
         messages forward and would otherwise be counted twice.
         """
 
-        self.annotator_corrections = sum(
-            1
-            for message in messages
-            if isinstance(message, ModelRequest)
-            for part in message.parts
-            if isinstance(part, RetryPromptPart)
-        )
+        self.annotator_corrections = _count_retry_prompts(messages)
 
     def record_correction(
         self,
@@ -789,6 +808,29 @@ class ResolutionState:
             )
 
         return rejected
+
+    def record_validated(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+    ) -> None:
+        """Accept located spans outright, for a run with no Coreference Critic.
+
+        The resolution loop never calls this: there a located Mention Span is
+        pending until the Critic rules on it, and accepting it here would
+        record a verdict that was never sought.  An annotator-only run has no
+        Critic to rule, so validation is the last stage a span passed and the
+        outcome names that stage.  Reading ``stage`` is how a consumer tells
+        an unreviewed span from an accepted one.
+        """
+
+        for located in located_spans:
+            identity = MentionSpanIdentity.of(located.mention_span)
+            self.accepted_spans[identity] = located
+            self.outcomes[identity] = MentionSpanOutcome(
+                mention_span=located.mention_span,
+                stage="validation",
+                outcome="accepted",
+            )
 
     def to_run(self, failure_type: str | None = None) -> CoreferenceResolutionRun:
         """Convert the state into the Coreference Resolution Run it describes."""
@@ -868,6 +910,86 @@ def _zero_survivor_failure(
 
 
 
+def annotate_coreferences_run(
+    text: str,
+    annotator_agent: Agent | None = None,
+) -> CoreferenceResolutionRun:
+    """Resolve references with the Coreference Annotator alone.
+
+    This is the first half of ``resolve_coreferences_run`` and nothing more:
+    the same prompt, the same numbered sentences, the same usage limits and
+    the same deterministic validation that decides what the Coreference
+    Critic would have been shown.  It exists so the loop has a baseline to be
+    measured against -- if the annotator alone scores what the whole pipeline
+    scores, the Critic rounds are latency without accuracy.
+
+    Zero-survivor runs raise for the same two reasons production does, and
+    invalid model output is converted to the same adapter error, so a failure
+    here counts as the failure it would have been in the pipeline rather than
+    as a case that quietly left the population.
+
+    There is no ``max_critic_rounds``.  Not running the Critic is the point,
+    and a budget of zero would be a third way to spell it.
+    """
+
+    if annotator_agent is None:
+        annotator_agent = get_annotator_agent()
+
+    deps = CoreferenceDeps.for_content(text)
+    state = ResolutionState.for_deps(deps)
+
+    try:
+        usage = RunUsage()
+        usage_limits = UsageLimits(
+            request_limit=settings.coreference.request_limit,
+            total_tokens_limit=settings.coreference.total_tokens_limit,
+        )
+
+        run_result = annotator_agent.run_sync(
+            ANNOTATION_PROMPT,
+            deps=deps,
+            usage=usage,
+            usage_limits=usage_limits,
+        )
+        state.record_annotator_corrections(run_result.all_messages())
+        located_spans = state.record_annotation(run_result.output)
+
+        logger.info(
+            "Annotator returned %d Mention Span(s); %d located, %d discarded "
+            "in validation (no Coreference Critic)",
+            len(state.observed_spans),
+            len(located_spans),
+            len(state.observed_spans) - len(located_spans),
+        )
+
+        if not state.observed_spans:
+            raise _zero_survivor_failure(
+                text,
+                state.to_run("no_mentions_returned"),
+                "no_mentions_returned",
+                annotator_agent,
+            )
+        if not located_spans:
+            raise _zero_survivor_failure(
+                text,
+                state.to_run("all_mentions_discarded"),
+                "all_mentions_discarded",
+                annotator_agent,
+            )
+
+        state.record_validated(located_spans)
+        return state.to_run()
+    except CoreferenceResolutionError:
+        raise
+    except MODEL_OUTPUT_FAILURES as error:
+        raise _structured_output_failure(
+            text,
+            annotator_agent,
+            error,
+            resolution_run=state.to_run("coreference_validation_failure"),
+        ) from error
+
+
 def resolve_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
@@ -903,13 +1025,8 @@ def resolve_coreferences_run(
             total_tokens_limit=settings.coreference.total_tokens_limit,
         )
 
-        annotation_prompt = (
-            "Resolve the references in the Source Article shown above. It is "
-            "presented as numbered sentences; copy a visible sentence label "
-            "into each Mention Span."
-        )
         run_result = annotator_agent.run_sync(
-            annotation_prompt,
+            ANNOTATION_PROMPT,
             deps=deps,
             usage=usage,
             usage_limits=usage_limits,

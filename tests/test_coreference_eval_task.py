@@ -11,11 +11,12 @@ from knowledge_map.evaluation.tasks.coreference import (
     CoreferenceOutput,
     FoundTheSilverMentionSpans,
     MatchedTheSilverClustering,
+    RejectedOnlyTheWrongMentionSpans,
     ResolvedWithoutFailing,
     entity_by_identity,
     normalize_entity_name,
 )
-from knowledge_map.schemas import MentionSpan
+from knowledge_map.schemas import MentionSpan, MentionSpanOutcome
 
 
 def _span(label: str, text: str, entity: str, occurrence: int = 1) -> MentionSpan:
@@ -52,17 +53,47 @@ def _scored(evaluator, expected, produced, **output_kwargs):
 # --- the task is registered and reachable from the CLI -----------------------
 
 
-def test_coreference_is_a_registered_task_with_its_four_evaluators() -> None:
+def test_coreference_is_a_registered_task_with_its_five_evaluators() -> None:
     task = task_named("coreference")
 
     assert task.name == "coreference"
     assert task.collect is None
+    assert task.gold_set_stem == "coreference"
     assert [type(evaluator).__name__ for evaluator in task.evaluators] == [
         "FoundTheSilverMentionSpans",
         "AgreedOnTheCanonicalEntity",
         "MatchedTheSilverClustering",
         "ResolvedWithoutFailing",
+        "RejectedOnlyTheWrongMentionSpans",
     ]
+
+
+def test_the_annotator_task_reads_the_same_gold_set_and_omits_the_critic() -> None:
+    """The baseline has to be the same cases, or it is not a baseline."""
+
+    pipeline = task_named("coreference")
+    annotator = task_named("coreference_annotator")
+
+    assert annotator.gold_set_stem == "coreference"
+    assert annotator.input_type is pipeline.input_type
+    assert annotator.output_type is pipeline.output_type
+    assert annotator.metadata_type is pipeline.metadata_type
+    assert annotator.default_model == pipeline.default_model
+
+    # The four agreement evaluators, and not the Critic one: no outcome in an
+    # annotator-only run carries a `critic` stage for it to read.
+    assert [type(evaluator).__name__ for evaluator in annotator.evaluators] == [
+        "FoundTheSilverMentionSpans",
+        "AgreedOnTheCanonicalEntity",
+        "MatchedTheSilverClustering",
+        "ResolvedWithoutFailing",
+    ]
+
+
+def test_the_two_tasks_do_not_share_a_build() -> None:
+    assert task_named("coreference").build is not task_named(
+        "coreference_annotator"
+    ).build
 
 
 # --- span detection ----------------------------------------------------------
@@ -311,3 +342,152 @@ def test_two_entities_claiming_one_location_collapse_to_the_last() -> None:
 
     assert len(indexed) == 1
     assert next(iter(indexed.values())) == normalize_entity_name("David Cameron")
+
+
+# --- what the Coreference Critic's rejections were worth ---------------------
+
+
+def _critic(span: MentionSpan, *, accepted: bool) -> MentionSpanOutcome:
+    return MentionSpanOutcome(
+        mention_span=span,
+        stage="critic",
+        outcome="accepted" if accepted else "rejected",
+        reason=None if accepted else "wrong entity",
+    )
+
+
+def _critic_scored(expected: list[MentionSpan], outcomes: list[MentionSpanOutcome]):
+    return RejectedOnlyTheWrongMentionSpans().evaluate(
+        _context(expected, CoreferenceOutput(outcomes=outcomes))
+    )
+
+
+def test_a_critic_that_rejects_only_wrong_spans_scores_one_everywhere() -> None:
+    silver = [_span("1", "He", "Steve Hilton"), _span("2", "He", "David Cameron")]
+    outcomes = [
+        _critic(_span("1", "He", "Steve Hilton"), accepted=True),
+        _critic(_span("2", "He", "Someone Else"), accepted=False),
+    ]
+
+    assert _critic_scored(silver, outcomes) == {
+        "critic_rejection_precision": 1.0,
+        "critic_rejection_recall": 1.0,
+        "critic_kept_correct_spans": 1.0,
+    }
+
+
+def test_a_critic_that_deletes_correct_work_is_visible_as_that() -> None:
+    """The failure the pipeline score alone cannot show: net-negative critic."""
+
+    silver = [_span("1", "He", "Steve Hilton"), _span("2", "She", "Kamala Harris")]
+    outcomes = [
+        _critic(_span("1", "He", "Steve Hilton"), accepted=False),
+        _critic(_span("2", "She", "Kamala Harris"), accepted=False),
+    ]
+
+    scores = _critic_scored(silver, outcomes)
+
+    # It threw away two spans and neither deserved it.
+    assert scores["critic_rejection_precision"] == 0.0
+    assert scores["critic_kept_correct_spans"] == 0.0
+    # It was shown no wrong spans, so there is no recall to report.
+    assert "critic_rejection_recall" not in scores
+
+
+def test_a_critic_that_waves_everything_through_has_no_recall() -> None:
+    silver = [_span("1", "He", "Steve Hilton"), _span("2", "She", "Kamala Harris")]
+    outcomes = [
+        _critic(_span("1", "He", "Steve Hilton"), accepted=True),
+        _critic(_span("2", "She", "Somebody Wrong"), accepted=True),
+    ]
+
+    scores = _critic_scored(silver, outcomes)
+
+    assert scores["critic_rejection_recall"] == 0.0
+    assert scores["critic_kept_correct_spans"] == 1.0
+    # It rejected nothing, so there is no rejection precision to report.
+    assert "critic_rejection_precision" not in scores
+
+
+def test_a_span_silver_never_annotated_is_skipped_not_counted_wrong() -> None:
+    """Silver's silence is not evidence, so it cannot make the Critic look bad."""
+
+    silver = [_span("1", "He", "Steve Hilton")]
+    outcomes = [
+        _critic(_span("1", "He", "Steve Hilton"), accepted=True),
+        _critic(_span("9", "They", "Some Group"), accepted=False),
+    ]
+
+    scores = _critic_scored(silver, outcomes)
+
+    # Only the judgeable span counted; the rejection of the unannotated one
+    # neither helped nor hurt.
+    assert scores["critic_kept_correct_spans"] == 1.0
+    assert "critic_rejection_precision" not in scores
+
+
+def test_validation_discards_are_not_critic_decisions() -> None:
+    """A span the Critic never saw cannot be scored as its judgement."""
+
+    silver = [_span("1", "He", "Steve Hilton")]
+    outcomes = [
+        MentionSpanOutcome(
+            mention_span=_span("1", "He", "Steve Hilton"),
+            stage="validation",
+            outcome="discarded",
+            reason="mention text does not occur in sentence '1'",
+        )
+    ]
+
+    assert _critic_scored(silver, outcomes) is None
+
+
+def test_an_annotator_only_run_reports_no_critic_scores() -> None:
+    """Its outcomes are all `validation`, so the evaluator stays silent."""
+
+    silver = [_span("1", "He", "Steve Hilton")]
+    outcomes = [
+        MentionSpanOutcome(
+            mention_span=_span("1", "He", "Steve Hilton"),
+            stage="validation",
+            outcome="accepted",
+        )
+    ]
+
+    assert _critic_scored(silver, outcomes) is None
+
+
+def test_a_run_with_no_outcomes_reports_nothing() -> None:
+    assert _critic_scored([_span("1", "He", "Steve Hilton")], []) is None
+
+
+def test_a_half_right_critic_scores_a_half() -> None:
+    silver = [
+        _span("1", "He", "Steve Hilton"),
+        _span("2", "He", "David Cameron"),
+        _span("3", "She", "Kamala Harris"),
+        _span("4", "She", "Katie Porter"),
+    ]
+    outcomes = [
+        # correct, kept -> good
+        _critic(_span("1", "He", "Steve Hilton"), accepted=True),
+        # correct, rejected -> deleted good work
+        _critic(_span("2", "He", "David Cameron"), accepted=False),
+        # wrong, rejected -> caught
+        _critic(_span("3", "She", "Nobody At All"), accepted=False),
+        # wrong, kept -> missed
+        _critic(_span("4", "She", "Nobody At All"), accepted=True),
+    ]
+
+    assert _critic_scored(silver, outcomes) == {
+        "critic_rejection_precision": 0.5,
+        "critic_rejection_recall": 0.5,
+        "critic_kept_correct_spans": 0.5,
+    }
+
+
+def test_critic_scoring_folds_case_and_whitespace_like_the_other_evaluators() -> None:
+    silver = [_span("1", "He", "Steve Hilton")]
+    outcomes = [_critic(_span("1", "He", "steve  hilton"), accepted=True)]
+
+    assert _critic_scored(silver, outcomes)["critic_kept_correct_spans"] == 1.0

@@ -6,6 +6,13 @@ criticized by `gpt-5.6-sol`, not by the author. A run therefore measures
 agreement with that model. A case both models get wrong scores as a pass,
 which is the standing limitation of the file and not of this module.
 
+Two tasks are registered against that one file. `coreference` runs the
+whole loop; `coreference_annotator` runs the annotator alone and skips the
+Critic. The difference between their reports is what the Critic rounds are
+worth, which no single report can show: a mediocre pipeline score is the
+same number whether the annotator is weak or the Critic is deleting its
+correct work, and those point at opposite prompts.
+
 There is no `collect` here. The Relevance Filter could read its cases out
 of `scraped_html_cache` because the author had already labeled those rows
 by hand; nothing in this project's database holds a Mention Span the
@@ -25,12 +32,17 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 from knowledge_map.adapters.coreference import (
     CoreferenceResolutionError,
     MentionSpanIdentity,
+    annotate_coreferences_run,
     get_annotator_agent,
     get_critic_agent,
     resolve_coreferences_run,
 )
 from knowledge_map.config import settings
-from knowledge_map.schemas import MentionSpan
+from knowledge_map.schemas import (
+    CoreferenceResolutionRun,
+    MentionSpan,
+    MentionSpanOutcome,
+)
 from knowledge_map.utils.models import get_chat_model
 
 from .registry import EvaluationTask, register
@@ -94,6 +106,13 @@ class CoreferenceOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     mention_spans: list[MentionSpan] = Field(default_factory=list)
+    outcomes: list[MentionSpanOutcome] = Field(default_factory=list)
+    """Every Mention Span the run ruled on, with the stage that ruled.
+
+    Carried so the Coreference Critic can be scored without a Gold Set of
+    verdicts: each outcome names the span it judged, and the silver file
+    says what that span should have been.
+    """
     failure_type: str | None = None
     retry_count: int = 0
     discarded_proportion: float = 0.0
@@ -111,6 +130,38 @@ class CoreferenceSilverMetadata(BaseModel):
     annotator_reasoning_effort: str
     critic_model: str
     critic_reasoning_effort: str
+
+
+def _output_from_run(run: CoreferenceResolutionRun) -> CoreferenceOutput:
+    """Carry a completed run into the shape the evaluators read."""
+
+    return CoreferenceOutput(
+        mention_spans=run.surviving_spans,
+        outcomes=run.outcomes,
+        failure_type=run.failure_type,
+        retry_count=run.retry_count,
+        discarded_proportion=run.discarded_proportion,
+    )
+
+
+def _output_from_failure(error: CoreferenceResolutionError) -> CoreferenceOutput:
+    """Carry a failed run into the same shape, keeping what it reached.
+
+    The outcomes travel even here. A run that failed because the Critic
+    rejected everything is precisely the run whose Critic decisions are
+    worth reading, and dropping them would hide the evidence in the case
+    that produced the most of it.
+    """
+
+    failed = error.resolution_run
+    if failed is None:
+        return CoreferenceOutput(failure_type=error.failure_type)
+    return CoreferenceOutput(
+        outcomes=failed.outcomes,
+        failure_type=error.failure_type,
+        retry_count=failed.retry_count,
+        discarded_proportion=failed.discarded_proportion,
+    )
 
 
 def build_task(model: str, gold_set: Any) -> Any:
@@ -148,22 +199,37 @@ def build_task(model: str, gold_set: Any) -> Any:
                     max_critic_rounds=settings.coreference.max_critic_rounds,
                 )
         except CoreferenceResolutionError as error:
-            failed = error.resolution_run
-            return CoreferenceOutput(
-                failure_type=error.failure_type,
-                retry_count=0 if failed is None else failed.retry_count,
-                discarded_proportion=(
-                    0.0 if failed is None else failed.discarded_proportion
-                ),
-            )
-        return CoreferenceOutput(
-            mention_spans=run.surviving_spans,
-            failure_type=run.failure_type,
-            retry_count=run.retry_count,
-            discarded_proportion=run.discarded_proportion,
-        )
+            return _output_from_failure(error)
+        return _output_from_run(run)
 
     return resolve
+
+
+def build_annotator_task(model: str, gold_set: Any) -> Any:
+    """Return the callable for one annotator-only case, bound to ``model``.
+
+    No Critic agent is built at all, rather than built and left unused: the
+    baseline this task measures is the annotator answering once, and a
+    Critic in scope is a Critic something can accidentally call.
+    """
+
+    del gold_set
+
+    chat_model = get_chat_model(model, allow_env_override=False)
+    annotator_agent = get_annotator_agent()
+
+    def annotate(case_input: CoreferenceInput) -> CoreferenceOutput:
+        try:
+            with annotator_agent.override(model=chat_model):
+                run = annotate_coreferences_run(
+                    case_input.content,
+                    annotator_agent=annotator_agent,
+                )
+        except CoreferenceResolutionError as error:
+            return _output_from_failure(error)
+        return _output_from_run(run)
+
+    return annotate
 
 
 def normalize_entity_name(name: str) -> str:
@@ -316,6 +382,89 @@ class ResolvedWithoutFailing(Evaluator):
         return ctx.output.failure_type is None
 
 
+class RejectedOnlyTheWrongMentionSpans(Evaluator):
+    """What the Coreference Critic's rejections were actually worth.
+
+    Read out of the run's own audit trail, because a Gold Set of verdicts
+    does not exist and would have to be authored: every outcome carries the
+    Mention Span it ruled on, and the silver file says what that span should
+    have been. A Critic decision is judgeable whenever silver annotated the
+    same location.
+
+    Spans silver never annotated are skipped rather than counted wrong.
+    Silver is one model's answer and its silence about a location is not
+    evidence that a span there is mistaken; counting it as one would turn
+    every mention silver simply missed into a Critic error.
+
+    Outcomes are last-wins, so a span rejected in one round and corrected in
+    the next appears here as the acceptance the run ended on. These are the
+    Critic's net decisions, which is the right unit: a rejection the
+    annotator repaired cost a round, not an answer.
+
+    Returns `None` when nothing was judgeable -- including every
+    `coreference_annotator` run, where no outcome has a `critic` stage at
+    all, so the same evaluator can sit on both tasks without reporting a
+    Critic that never ran.
+    """
+
+    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float] | None:
+        silver = entity_by_identity(ctx.expected_output.mention_spans)
+
+        # (the span was correct, the Critic rejected it)
+        judged: list[tuple[bool, bool]] = []
+        for outcome in ctx.output.outcomes:
+            if outcome.stage != "critic":
+                continue
+            expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
+            if expected_entity is None:
+                continue
+            judged.append(
+                (
+                    expected_entity
+                    == normalize_entity_name(
+                        outcome.mention_span.canonical_entity_name
+                    ),
+                    outcome.outcome == "rejected",
+                )
+            )
+
+        if not judged:
+            return None
+
+        rejected = [correct for correct, was_rejected in judged if was_rejected]
+        wrong = [was_rejected for correct, was_rejected in judged if not correct]
+        right = [was_rejected for correct, was_rejected in judged if correct]
+
+        scores: dict[str, float] = {}
+        if rejected:
+            # Of what it threw away, how much deserved it.
+            scores["critic_rejection_precision"] = sum(
+                not correct for correct in rejected
+            ) / len(rejected)
+        if wrong:
+            # Of the mistakes it was shown, how many it caught.
+            scores["critic_rejection_recall"] = sum(wrong) / len(wrong)
+        if right:
+            # Of the correct spans it was shown, how many it left alone.
+            # Phrased so that higher is better, like every other score in
+            # this report; it is the complement of a false-rejection rate,
+            # and a column where low means good invites misreading.
+            scores["critic_kept_correct_spans"] = sum(
+                not was_rejected for was_rejected in right
+            ) / len(right)
+        return scores or None
+
+
+#: Scored the same way for the annotator alone and for the whole loop, so
+#: the two reports subtract.
+AGREEMENT_EVALUATORS: tuple[Evaluator, ...] = (
+    FoundTheSilverMentionSpans(),
+    AgreedOnTheCanonicalEntity(),
+    MatchedTheSilverClustering(),
+    ResolvedWithoutFailing(),
+)
+
+
 COREFERENCE_TASK = register(
     EvaluationTask(
         name="coreference",
@@ -323,13 +472,30 @@ COREFERENCE_TASK = register(
         output_type=CoreferenceExpectation,
         metadata_type=CoreferenceSilverMetadata,
         build=build_task,
-        evaluators=(
-            FoundTheSilverMentionSpans(),
-            AgreedOnTheCanonicalEntity(),
-            MatchedTheSilverClustering(),
-            ResolvedWithoutFailing(),
-        ),
+        evaluators=(*AGREEMENT_EVALUATORS, RejectedOnlyTheWrongMentionSpans()),
         default_model=default_model(),
         collect=None,
     )
 )
+
+
+COREFERENCE_ANNOTATOR_TASK = register(
+    EvaluationTask(
+        name="coreference_annotator",
+        gold_set_name="coreference",
+        input_type=CoreferenceInput,
+        output_type=CoreferenceExpectation,
+        metadata_type=CoreferenceSilverMetadata,
+        build=build_annotator_task,
+        evaluators=AGREEMENT_EVALUATORS,
+        default_model=default_model(),
+        collect=None,
+    )
+)
+"""The annotator without the Critic, over the same cases as `coreference`.
+
+Run both at one model and subtract: `span_f1` here is the floor, and the
+same score there is what the Critic rounds bought. A difference of zero
+means the loop is spending its second and third model calls to arrive
+where the first one already was.
+"""
