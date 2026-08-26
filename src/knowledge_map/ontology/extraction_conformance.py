@@ -1,23 +1,14 @@
 """Conforming untrusted extraction output to the News Ontology.
 
-This is a pure function over an extraction result: it never logs, never mutates
-its input, and never raises on off-ontology output. Everything it refuses is
-returned as a drop for the caller to record. The untrusted-input boundary — the
-Entity Extraction Adapter — is what calls it; keeping the decision here means
-the whole ontology-to-conformance loop is testable without constructing an
-adapter or a model.
+Called by the Entity Extraction Adapter.  A pure function over an extraction
+result: it never logs, never mutates its input, and never raises.  Everything
+it refuses comes back as a drop for the caller to record.
 
-Node labels are gated on :data:`knowledge_map.ontology.news.EXTRACTED_LABELS`,
-not on the full News Ontology label set. ``NewsArticle`` and ``Chunk`` are
-written from the article itself, so a model that emits one is guessing: the node
-is dropped like any other off-ontology output and the conforming entities beside
-it survive.
-
-The drop-and-log rule holds on both sides of an edge. A relationship property the
-relationship's shape does not declare is dropped exactly as an undeclared node
-property is, under its own Adherence Report category; the relationship survives
-its own property drops, because an edge whose detail was refused still asserts
-that the claim exists.
+Node labels are gated on :data:`knowledge_map.ontology.news.EXTRACTED_LABELS`
+rather than the full label set, so an emitted ``NewsArticle`` or ``Chunk`` is
+dropped and the entities beside it survive.  Undeclared relationship
+properties are dropped under their own Adherence Report category and the
+relationship survives them.
 """
 
 from pydantic import BaseModel, ConfigDict
@@ -55,16 +46,9 @@ class ConformanceOutcome(BaseModel):
 def _resolve_endpoint(admitted: set[str], claimed: str | None) -> str | None:
     """The one label an endpoint means, or ``None`` where nothing can say.
 
-    ``admitted`` is every label carried by a node of the endpoint's name that the
-    relationship's shape allows. One is the answer, whatever the extractor claimed:
-    where the ontology leaves no choice there is nothing for a model's label to add,
-    and a wrong claim must not cost a fact the ontology already resolved.
-
-    More than one is a genuine choice the shape cannot make — ``ENDORSED`` admits
-    both a Politician and an Organization, so a name that is both says nothing about
-    who endorsed. Only there does the extractor's label decide, and only by picking
-    from the labels already admitted. A claim naming none of them decides nothing,
-    and the endpoint stays unresolved rather than resolving to a coin flip.
+    Pass every label a node of the endpoint's name carries that the
+    relationship's shape allows.  A single admitted label wins outright;
+    ``claimed`` decides only among several, and only by naming one of them.
     """
 
     if len(admitted) == 1:
@@ -109,11 +93,9 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
                 properties[name] = value
         nodes.append(node.model_copy(update={"properties": properties}))
 
-    # A name is not a key. Two conforming nodes can share a canonical name under
-    # different labels ("Newsom" the Politician and "Newsom" the Organization), so
-    # an endpoint resolves to every node that carries the name and the ontology
-    # picks among them. Keeping only the last one would silently validate the edge
-    # against the wrong label — discarding a true claim, or admitting a false one.
+    # A name is not a key: two nodes can share one under different labels, so
+    # an endpoint collects every node carrying the name and the ontology picks
+    # among them.
     nodes_by_name: dict[str, list[Node]] = {}
     for node in nodes:
         nodes_by_name.setdefault(node.name, []).append(node)
@@ -144,11 +126,9 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
             drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "ambiguous endpoint")
             continue
 
-        # Relationship properties are write-path-owned: an undeclared one is dropped
-        # like an undeclared node property, but recorded under its own category so a
-        # model attaching payload to edges is visible separately from one inventing
-        # node fields. The relationship itself survives — losing every property it
-        # carried costs the edge its detail, never its existence.
+        # An undeclared relationship property is dropped under its own
+        # category, so edge payload reads separately from invented node
+        # fields.  The relationship survives its own property drops.
         properties = {}
         for name, value in relationship.properties.items():
             if name not in shape.property_names:
@@ -159,10 +139,8 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
                 )
             else:
                 properties[name] = value
-        # The resolution rides along with the edge. Conformance is the only place
-        # that knows which of the nodes sharing a name this claim is about, and
-        # persistence would otherwise have to re-derive it from the name alone —
-        # the same collapse, one layer down.
+        # The resolved labels ride along with the edge, so persistence never
+        # re-derives them from the name alone.
         relationships.append(
             relationship.model_copy(
                 update={

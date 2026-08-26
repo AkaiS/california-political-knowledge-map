@@ -14,16 +14,9 @@ from tenacity import retry_if_exception_type, stop_after_attempt
 
 from knowledge_map.config import TransportSettings, settings
 
-# An OpenAI-compatible endpoint may reject an assistant message carrying
-# `content: null`, which pydantic-ai emits for a tool call with no text.  Ollama
-# does, with a 400 ("invalid message content type: <nil>"), and because that
-# shape only appears on a retry turn it surfaces part-way through a run rather
-# than on the first request.  Normalising null to "" costs nothing on a server
-# that would have accepted it.
-#
-# This lives here rather than beside any one agent so that every caller of
-# `get_chat_model` is covered by construction, instead of depending on which
-# modules happened to be imported first.
+# Normalise the `content: null` pydantic-ai emits for a text-free tool call:
+# some OpenAI-compatible servers 400 on it, and only on a retry turn.  Patched
+# at import so every `get_chat_model` caller is covered.
 _original_into_message_param = OpenAIChatModel._MapModelResponseContext._into_message_param
 
 
@@ -45,11 +38,8 @@ def build_retrying_client(
 ) -> httpx.AsyncClient:
     """Build the HTTP client that retries a failed request where it failed.
 
-    A rate limit or a dropped connection is retried inside the model call that
-    hit it, so an interrupted Coreference Critic round resumes rather than the
-    Source Article restarting.  ``raise_for_status`` turns a 429 into a
-    retryable exception instead of a response the caller has to interpret, and
-    the wait comes from the ``Retry-After`` header httpx already parsed.
+    Every model in this module runs on one of these, so callers never see a
+    rate limit or a dropped connection as a response.
     """
 
     transport_settings = transport_settings or settings.transport
@@ -74,11 +64,7 @@ def build_retrying_client(
 def resolve_chat_base_url() -> str:
     """The llama.cpp base URL, normalised to the OpenAI-compatible ``/v1`` path.
 
-    Chat runs on llama.cpp rather than Ollama because Ollama accepts
-    ``tool_choice: "required"`` and then ignores it, leaving pydantic-ai's
-    structured output tool as a suggestion the model may answer in prose.
-    ``llama-server`` compiles the tool schema to a GBNF grammar and constrains
-    decoding, so the tool call is the only output the sampler can reach.
+    Read from ``LLAMA_CPP_BASE_URL``, default ``http://localhost:8080``.
     """
 
     base_url = os.environ.get("LLAMA_CPP_BASE_URL", "http://localhost:8080")
@@ -90,10 +76,7 @@ def resolve_chat_base_url() -> str:
 def resolve_embedding_base_url() -> str:
     """The embedding server's base URL, normalised to the ``/v1`` path.
 
-    Embedding runs on its own ``llama-server`` process, on its own port, because
-    ``llama-server`` serves one model per process and chat already holds 8080.
-    Nothing about an embedding call needs a grammar; the second process exists so
-    that the pipeline depends on Ollama for nothing.  Start it with
+    A second ``llama-server`` process on its own port, started with
     ``scripts/llama-embed.sh``.
     """
 
@@ -108,10 +91,8 @@ def resolve_embedding_base_url() -> str:
 def resolve_temperature() -> float:
     """The sampling temperature every agent runs at.
 
-    Extraction and coreference are transcription tasks against a fixed Source
-    Article, so sampling breadth is not wanted: the default is 0.  It is set on
-    the client as well as by ``scripts/llama-server.sh --temp 0`` so that a run
-    is deterministic regardless of how the server was started.
+    Read from ``LLM_TEMPERATURE``, default 0.  Set here as well as on the
+    server, so a run is deterministic however the server was started.
     """
 
     return float(os.environ.get("LLM_TEMPERATURE") or 0.0)
@@ -120,15 +101,8 @@ def resolve_temperature() -> float:
 def resolve_thinking() -> bool:
     """Whether the model reasons before answering.  It does not, by default.
 
-    Gemma 4's own template defaults `enable_thinking` to false; llama.cpp's
-    `--reasoning auto` sees that the template *supports* thinking and turns it
-    on. Nothing then bounds it, because pydantic-ai sends no `max_tokens`: one
-    annotator call was measured emitting 6,181 characters of reasoning and no
-    tool call at all, and another was still going at 7,480 tokens. With thinking
-    off the same call returns a complete tool call in 724 tokens.
-
-    Coreference and extraction transcribe a fixed Source Article rather than
-    reason toward a conclusion, so the reasoning was not buying anything.
+    Read from ``LLM_THINKING``.  Turning it on lets a call reason unbounded,
+    since pydantic-ai sends no ``max_tokens``.
     """
 
     return (os.environ.get("LLM_THINKING") or "off").strip().lower() in {
@@ -153,24 +127,13 @@ def _resolve_model_name(
 def llama_cpp_model_profile(model_name: str) -> ModelProfile | None:
     """The capabilities of a model served by ``llama-server``.
 
-    ``llama-server`` has no strict-tool-definition mode, and its ``json_schema``
-    response format is a GBNF grammar rather than OpenAI's ``strict`` schema
-    validator, so both are declared explicitly.  The underlying model's own
-    profile still applies underneath — the weights are the same ones Ollama was
-    serving.
-
-    Tool schemas are inlined rather than passed as ``$ref``/``$defs``.  A schema
-    containing a ``$ref`` does not produce a grammar in ``llama-server``: instead
-    of failing, it drops the constraint and lets the model generate freely, which
-    it does until it runs out of context, because pydantic-ai sends no
-    ``max_tokens``.  Measured on one 25-sentence article, the same annotator
-    request took 66s and produced 4000 unconstrained tokens and no tool call with
-    ``$ref``, against 18s and a valid 30-span tool call once inlined.
+    Layered over the underlying model's own profile.  Tool schemas must be
+    inlined: ``llama-server`` silently drops the grammar constraint for a
+    schema containing a ``$ref``, and the model then generates unbounded.
     """
 
-    # Local builds are named for their context window or their purpose as often
-    # as for their family -- `32k-gemma-e4b-extraction` is still a gemma -- so
-    # the family is matched anywhere in the name rather than as a prefix.
+    # Local builds are named for their context window or purpose as often as
+    # their family -- `32k-gemma-e4b-extraction` is still a gemma.
     upstream = None
     if "gemma" in model_name.lower():
         upstream = google_model_profile(model_name)
@@ -181,16 +144,10 @@ def llama_cpp_model_profile(model_name: str) -> ModelProfile | None:
             # Last position deliberately: `merge_profile` is last-wins, and the
             # upstream google profile carries a transformer that keeps `$ref`.
             json_schema_transformer=InlineDefsJsonSchemaTransformer,
-            # Structured output goes through `response_format: json_schema`
-            # rather than a tool call.  Gemma 4's tool-call syntax does not match
-            # the `peg-gemma4` parser in llama-server: the model answers
-            # correctly, closes with a literal `<tool_call|>` -- which is not a
-            # real special token, so it does not stop decoding -- and then
-            # repeats the whole answer until the context runs out.  The parser
-            # finds no tool call, pydantic-ai sees no result, and retries.  The
-            # `json_schema` path compiles a GBNF grammar instead and terminates:
-            # the same critic request went from 1500+ tokens and no result to
-            # 123 tokens and a valid answer in 3s.
+            # Structured output goes through `response_format: json_schema`,
+            # not a tool call: llama-server's `peg-gemma4` parser does not
+            # match Gemma 4's tool-call syntax, and the model then decodes
+            # until the context runs out.
             default_structured_output_mode="native",
             openai_chat_thinking_field="reasoning_content",
             openai_supports_strict_tool_definition=False,
@@ -209,9 +166,8 @@ def _build_model(
     transport_settings: TransportSettings | None,
     transport: httpx.AsyncBaseTransport | None,
 ) -> OpenAIChatModel:
-    # The OpenAI SDK retries on its own by default, which would multiply the
-    # configured attempt count rather than replace it.  Retries belong to the
-    # transport, so the SDK is told to make exactly one attempt.
+    # Retries belong to the transport, so the SDK makes exactly one attempt
+    # rather than multiplying the configured count.
     openai_client = AsyncOpenAI(
         base_url=base_url,
         api_key=os.environ.get("LLAMA_CPP_API_KEY") or "api-key-not-set",
@@ -242,29 +198,17 @@ def get_chat_model(
 ) -> OpenAIChatModel:
     """Get a chat model served by llama.cpp, on the retrying HTTP client.
 
-    Loads configuration from environment variables:
-    1. Base URL is read from `LLAMA_CPP_BASE_URL` (default: "http://localhost:8080").
-       Automatically ensures the URL ends with "/v1".
-    2. Model name is read from:
-       - The custom `env_var_name` if specified (e.g., OLLAMA_MODEL_HEALING).
-       - Fallback to the general `OLLAMA_MODEL` environment variable.
-       - Fallback to the provided `default_model`.
+    The model name resolves from ``env_var_name`` (e.g.
+    ``OLLAMA_MODEL_HEALING``), then ``OLLAMA_MODEL``, then ``default_model``.
+    It names what ``llama-server --alias`` was given; the server serves
+    whichever GGUF it was started with regardless.
 
-    The model name is what `llama-server --alias` was given; the server serves
-    whichever GGUF it was started with either way, so the name identifies the
-    intended model rather than selecting one.
+    Pass ``allow_env_override=False`` to use ``default_model`` verbatim, as an
+    evaluation run naming the model it is comparing must.
 
-    Pass ``allow_env_override=False`` to use ``default_model`` verbatim and
-    consult no variable.  An evaluation run names the model it is comparing,
-    and `OLLAMA_MODEL` is set in this project's `.env`, so without this an
-    explicit `--model` would be resolved away and the report would record a
-    model the run never sent.
-
-    The result is memoized by resolved model name and base URL, so repeated
-    agent construction shares one provider, one client, and one connection
-    pool.  An injected transport or an explicit settings block is a caller
-    supplying its own wiring, so it is neither served from nor written to that
-    cache.
+    Memoized by resolved model name and base URL, so agents share one client
+    and connection pool.  Passing a transport or settings block bypasses the
+    cache in both directions.
     """
 
     load_dotenv()

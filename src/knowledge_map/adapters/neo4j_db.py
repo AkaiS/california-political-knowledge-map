@@ -17,22 +17,10 @@ from knowledge_map.schemas import (
 def _claim_key(relationship_type: str, properties: dict) -> tuple[dict, bool]:
     """The values that identify this claim, canonicalized, and whether any are missing.
 
-    A relationship's *declared* properties are its Claim Key — there is no second
-    table. The rule that fixes the declaration is the rule that fixes identity: if
-    two different values mean two different claims, the property is declared and
-    therefore identifying; if they do not, the property does not belong on the edge
-    at all, and what the article said about it stays in the Article Chunk the edge
-    points back to.
-
-    Normalization runs here and nowhere else, on Claim Key properties only. Making
-    two articles' claims comparable is its whole job. A declared value that will not
-    normalize is dropped rather than stored: keeping ``"a lot"`` alongside
-    ``6000000.0`` in the same field is what makes two articles look like they
-    disagree when only one of them was legible.
-
-    An incomplete key is not padded with nulls — Neo4j stores no nulls and would
-    never match one — so the edge merges on what it has and carries ``needs_review``
-    to say the comparison is not yet possible.
+    A relationship's declared properties are its Claim Key; normalization runs
+    here and nowhere else.  A declared value that will not normalize is
+    dropped rather than stored, and the missing flag it returns becomes the
+    edge's ``needs_review``.
     """
 
     shape = news.RELATIONSHIPS.get(relationship_type)
@@ -54,15 +42,9 @@ def _relationship_query(
 ) -> str:
     """A MERGE keyed on the claim.
 
-    Key names come from the ontology: they are the relationship's declared property
-    names, never a name an extractor invented. The relationship type is not
-    ontology-derived in the same sense — it is interpolated from conformed model
-    output, which conformance has already checked against the News Ontology's
-    relationship table and the schema has already checked for identifier characters.
-
-    There is no trailing property assignment. An edge carries its Claim Key, the
-    chunks that assert it, and the two write-path stamps — there is no free payload
-    left to write.
+    Interpolates ``relationship_type`` directly, so pass only conformed model
+    output; conformance and the schema are what check it.  Key names are
+    ontology-declared.
     """
 
     key_pattern = ""
@@ -83,30 +65,19 @@ def _write_relationship(
 ) -> None:
     """The one place an extractor-produced relationship reaches the graph.
 
-    Both ingestion entry points route through here, so a change to edge
-    semantics cannot land in one path and miss the other. ``resolve_id`` maps a
-    label and a name to the node's primary key, which is the only thing the two
-    entry points do differently. When ``chunk_id`` is given the edge also
-    accumulates the chunks that assert this claim.
+    Both ingestion entry points route through here; ``resolve_id`` maps a label
+    and a name to the node's primary key and is the only thing they do
+    differently.  Pass ``chunk_id`` to accumulate the chunks asserting the
+    claim.
 
-    An edge carries exactly three things: its Claim Key, in the MERGE pattern; the
-    chunks that assert it; and ``needs_review`` where an article asserted the claim
-    without a value the key depends on. Everything else the article said stays in the
-    Article Chunk, where it remains retrievable — an edge with no free payload has
-    nothing a later ingestion can silently overwrite.
-
-    All three vary with what this particular article supplied, which is what earns
-    them a place on the edge. A fact that is constant for every edge of a type — that
-    the type flattens a Shortcut Rule's path, say — is not written here: the edge
-    carries its type, the ontology holds the rule, and a copy on each edge would only
-    go stale when the rule changed.
+    An edge carries only its Claim Key, those chunks, and ``needs_review``.
+    Everything else the article said stays in the Article Chunk.
     """
 
     rel_type = rel.relationship_type
 
-    # Conformance already resolved which node each name meant. Falling back to the
-    # name map is for relationships that never passed through it; there a shared
-    # name has nothing left to disambiguate it.
+    # Conformance already resolved which node each name meant; the name map is
+    # the fallback for relationships that never passed through it.
     src_label = rel.source_label or node_labels.get(rel.source, "")
     tgt_label = rel.target_label or node_labels.get(rel.target, "")
 
@@ -143,10 +114,8 @@ def _write_relationship(
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
     """Assert the write path's own invariant on labels reaching the graph.
 
-    Extraction conformance already gates model output on the same
-    extracted-label subset, so this cannot fire on a conformed result. It stays
-    as an internal invariant: an ingester that skipped conformance fails here
-    rather than writing an off-ontology node.
+    Cannot fire on a conformed result; it catches an ingester that skipped
+    conformance.
     """
     if label not in news.EXTRACTED_LABELS:
         raise ValueError(f"Invalid extracted node label: {label}")
@@ -296,10 +265,9 @@ class Neo4jAdapter:
         try:
             with driver.session() as session:
                 def _tx(tx):
-                    # Node identity is (name, label) — two entities can share a
-                    # canonical name, and they are already written as two nodes with
-                    # two ids. The name-only map is the fallback for a relationship
-                    # that carries no resolved label, and keeps the last node seen.
+                    # Node identity is (name, label).  This name-only map is the
+                    # fallback for relationships carrying no resolved label, and
+                    # keeps the last node seen.
                     node_labels: dict[str, str] = {}
                     node_ids: dict[tuple[str, str], str] = {}
                     for node in extraction.nodes:
@@ -310,9 +278,8 @@ class Neo4jAdapter:
                         if label == "Bill":
                             resolution = bill_sessions.get(node.name)
                             properties.update(resolution.graph_properties())
-                            # A Bill's name is its Bill Designation. Where none was
-                            # recovered the surface string stands in, so the node is
-                            # still findable and `needs_review` says why.
+                            # A Bill's name is its Bill Designation, or the
+                            # surface string where none was recovered.
                             properties["name"] = resolution.name or node.name
                             node_id = bill_key(
                                 resolution.session, resolution.name, node.name

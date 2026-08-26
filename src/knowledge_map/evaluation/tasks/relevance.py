@@ -34,17 +34,8 @@ FALLBACK_MODEL = "32k-gemma-e4b"
 def default_model() -> str:
     """The model the Relevance Filter runs in production, per `.env`.
 
-    Comparing two models is the point of a run, so the model is named
-    explicitly rather than resolved from the environment at call time —
-    `get_chat_model` lets `OLLAMA_MODEL_RELEVANCE` override its
-    argument, which would silently ignore `--model`. This reads the same
-    variable once, to supply the default the run then records.
-
-    `load_dotenv` is called because this runs at import, before anything
-    else has read the file. Without it the fallback wins and a run with no
-    `--model` records a model name that is in no configuration file --
-    which is what happened until `tasks.coreference` began loading the
-    file first, leaving this correct only by import order.
+    Supplies the default a run records when `--model` is not given.  Called
+    at import, so it loads `.env` itself.
     """
 
     load_dotenv()
@@ -77,12 +68,7 @@ class RelevanceMetadata(BaseModel):
 def build_task(model: str, gold_set: Any) -> Any:
     """Return the callable one case is run through, bound to ``model``.
 
-    Few-shot examples come from the Gold Set's own `training` split, not
-    from `get_gold_standard_examples`. That function selects three
-    human-labeled rows per class straight out of `scraped_html_cache`,
-    which is where every case in this Gold Set came from: using it during
-    a run puts up to six of the run's own cases, with their labels, into
-    the prompt scoring them.
+    Few-shots come from the Gold Set's own `training` split.
     """
     agent = Agent(
         get_chat_model(model),
@@ -108,10 +94,7 @@ def build_task(model: str, gold_set: Any) -> Any:
 def _few_shot_examples(gold_set: Any) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     """Draw up to three examples per class from the `training` split only.
 
-    A case the author put in `calibration` or `held-out` is reserved from
-    exactly this, so a Gold Set with no `training` cases few-shots with
-    nothing, which is the correct answer rather than a reason to fall
-    back to the database.
+    A Gold Set with no `training` cases few-shots with nothing.
     """
     from knowledge_map.evaluation import EvaluationSplit
 
@@ -136,9 +119,8 @@ class MatchesTheAuthorsLabel(Evaluator):
 class RecalledARelevantArticle(Evaluator):
     """A `RELEVANT` article was not dropped.
 
-    Scored separately from agreement because dropping a relevant article
-    costs more than admitting an irrelevant one: the graph never sees it.
-    Cases the author labeled `IRRELEVANT` are not scored by this evaluator.
+    Read beside agreement, since a dropped relevant article never reaches
+    the graph.  Returns `None` for cases labeled `IRRELEVANT`.
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> bool | None:
@@ -158,15 +140,10 @@ class CollectedCandidates(NamedTuple):
 def collect_candidates(db_path: str = DEFAULT_DB_PATH) -> CollectedCandidates:
     """Read every human-labeled article out of `scraped_html_cache`.
 
-    The author labeled these while running the pipeline; this reads them
-    back as cases rather than asking for the judgment a second time. The
-    `id` is the URL, which is stable, so re-running this updates a member
-    instead of appending a second one.
-
-    A row whose `headline` column is null falls back to the headline in
-    `raw_metadata_json`, and is reported as skipped when neither has one.
-    Most such rows are `IRRELEVANT`, which is the label this Gold Set has
-    least of, so losing them silently would bias the population.
+    Cases are keyed by URL, so re-running updates members rather than
+    appending duplicates.  A null `headline` falls back to
+    `raw_metadata_json`; rows with neither come back in `skipped_urls`
+    rather than being dropped silently.
     """
     connection = sqlite3.connect(db_path)
     try:

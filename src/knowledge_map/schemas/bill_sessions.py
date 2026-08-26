@@ -1,15 +1,12 @@
 """Bill Session Resolution as it crosses the Graph Database Adapter boundary.
 
-Per ADR 0002 the adapters accept domain models, not raw structures. A bill's
-designation and session are resolved once per Source Article and handed to the
-adapter as :class:`BillSessionResolutions`: the properties themselves plus the
-flags that say how the session was arrived at, which the adapter writes onto the
-Bill and folds into its primary key.
+Resolve every Bill in a Source Article once, then hand the adapter one
+:class:`BillSessionResolutions`; it writes the properties onto the Bill and
+folds them into its primary key.
 
-The map is keyed by the surface string the article used. That lets resolution
-represent a Bill whose surface string did not yield a designation as explicitly
-as one that did: the failed resolution carries no name or session and sets
-``needs_review``.
+Keyed by the surface string the article used, so a Bill whose surface string
+yielded no designation is represented as explicitly as one that did — carrying
+no name or session, and ``needs_review``.
 """
 
 from pydantic import BaseModel, Field
@@ -42,10 +39,8 @@ class BillSessionResolutions(BaseModel):
     def get(self, name: str | None) -> BillSessionResolution:
         """Return the resolution for ``name``.
 
-        Every extracted Bill is resolved, so a name with no entry is one the
-        adapter was handed without resolution ever seeing it. That is the same
-        state as a name that yielded nothing: unidentified, and needing review.
-        Answering for every name keeps the adapter free of existence checks.
+        Answers for every name, so the adapter needs no existence check: an
+        unseen name resolves the same as one that yielded nothing.
         """
         if name is None:
             return BillSessionResolution(needs_review=True)

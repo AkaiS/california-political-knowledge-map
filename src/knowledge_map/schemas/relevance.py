@@ -1,12 +1,8 @@
 """Status vocabularies owned by the relevance and validation stages.
 
-`RelevanceStatus` and `ValidationStatus` both carry a `PENDING` member, but they
-are separate state machines writing separate columns of `scraped_html_cache`.
-Keeping them as distinct types is what stops one stage's state reaching the
-other stage's column.
-
-Member order matches the `CHECK` constraints these enums render, so the
-generated DDL is textually identical to what it replaced.
+`RelevanceStatus` and `ValidationStatus` write separate columns of
+`scraped_html_cache` and stay distinct types even where their members
+coincide.  Member order is load-bearing: it renders the `CHECK` constraints.
 """
 
 from enum import Enum, StrEnum

@@ -1,8 +1,7 @@
 """Write one Evaluation Run's report to a committed JSON file.
 
-A run's provenance is the commit it ran at plus the model it ran against,
-both recorded here. A run whose report is not committed did not happen as
-far as the repository is concerned — see ADR 0017.
+Records the commit a run ran at and the model it ran against.  Commit the
+report; an uncommitted run did not happen — see ADR 0017.
 """
 
 from __future__ import annotations

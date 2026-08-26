@@ -1,9 +1,7 @@
 """`ca-map eval` — collect a Gold Set's candidates, and run it.
 
-Two commands, because authoring and running are separate sittings.
-`collect` writes the file the author then edits; `run` reads that file
-and writes one report. Neither touches a database of evaluation records —
-see ADR 0017.
+`collect` writes the file the author then edits; `run` reads that file and
+writes one report.  Neither touches a database — see ADR 0017.
 """
 
 from __future__ import annotations
@@ -108,9 +106,7 @@ def _collect(args: argparse.Namespace) -> None:
 def _warn_if_one_label_dominates(labels: Counter) -> None:
     """Say so when the population makes a constant answer look good.
 
-    A Gold Set this lopsided cannot distinguish a working classifier from
-    one that returns the majority label, which is the first thing the
-    author needs to know about it.
+    Printed at the end of `collect`, where the author can still fix it.
     """
     total = sum(labels.values())
     if not total:

@@ -1,18 +1,12 @@
 """Normalized shapes for relationship properties.
 
-Relationship properties are closed, and declaring one is the whole of edge
-identity: a relationship's declared properties are its Claim Key, the values two
-articles must agree on before their edges can be called the same edge. What this
-module declares is the shape those values take, which is what makes the comparison
-possible at all — normalization exists for that one job and no other.
+A relationship's declared properties are its Claim Key, so these shapes are
+what lets two articles' edges be compared at all.  Normalization exists for
+that one job.
 
-Declaring a shape does not make a property required. It says: if you find one, it
-looks like this. A claim that arrives without a value the key depends on is written
-and flagged, never dropped and never demanded of the extractor.
-
-A normalizer returns ``None`` when it cannot produce a canonical value. The write
-path treats that exactly like an absent value: the claim is incomplete, so it is
-flagged rather than keyed on a string nothing else will ever match.
+A shape says only what a value looks like if one is found.  A normalizer
+returns ``None`` when it cannot produce a canonical value, and the write path
+treats that like an absent value: the claim is written and flagged.
 """
 
 import re

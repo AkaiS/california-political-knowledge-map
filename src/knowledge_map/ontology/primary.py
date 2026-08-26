@@ -11,11 +11,9 @@ from .properties import (
 class RelationshipShape:
     """Permitted endpoint labels for one primary-ontology relationship.
 
-    ``properties`` declares the canonical form of the properties ``ontology.md``
-    names for this relationship, and it is the whitelist conformance reads: a
-    property nobody declared is dropped rather than written, so the only values
-    reaching an edge are ones the system put there deliberately. Declaring one also
-    fixes its shape, so two articles asserting it can be compared.
+    ``properties`` is the whitelist conformance reads — an undeclared property
+    is dropped, never written — and fixes each declared property's canonical
+    shape.
     """
 
     source_labels: frozenset[str]

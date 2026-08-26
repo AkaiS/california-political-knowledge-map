@@ -1,23 +1,13 @@
 """Declaring where the news ontology departs from the primary ontology.
 
-The news ontology is closed: it holds the structures a news article can actually
-produce. It does not match the primary ontology, because prose carries less than the
-primary ontology expects. This module names that gap so it can be declared in
-``news.py``, rendered into ``news-ontology.md``, and checked by conformance.
+Divergences are declared in ``news.py``, rendered into ``news-ontology.md``,
+and checked by conformance.  Declare one only for an *unresolved* gap that
+needs an authoritative source to close, in either direction; a transformation
+we performed ourselves is recorded as that transformation instead, the way
+``ShortcutRule`` is.
 
-A ``Divergence`` is an *unresolved* gap, in either direction: the primary ontology
-declares a property news cannot supply, or a news write path stamps one the primary
-ontology does not declare. Both are gaps no record we hold can settle. Closing one
-needs an authoritative source, so the declaration says only what is provisional and
-why — it does not describe the fix.
-
-The two directions are one table on purpose. A dropped property is declared here and
-subtracted from ``news.PROPERTIES``, so the ontology and the gap that explains it
-cannot drift apart; a second table of dropped properties could contradict this one.
-
-A transformation we performed ourselves is not a divergence. Those are recorded as
-the transformation, which holds enough to reverse itself; the news ontology's
-``ShortcutRule`` is one such record.
+A dropped property is declared here and subtracted from ``news.PROPERTIES``,
+so the two cannot drift apart.
 """
 
 from dataclasses import dataclass
@@ -27,12 +17,9 @@ from dataclasses import dataclass
 class Divergence:
     """A property on which the news ontology parts from the primary ontology.
 
-    Either the news write path stamps one the primary ontology does not declare, or
-    the primary ontology declares one news cannot supply. Both are gaps only an
-    authoritative record can close.
-
-    Which of the two it is carries no field: it is read off the primary ontology by
-    ``gap_directions``, because that is where the answer already lives.
+    ``reason`` says why the gap is unresolved, not how to fix it.  The
+    direction carries no field; ``gap_directions`` reads it off the primary
+    ontology.
     """
 
     property_name: str
@@ -40,11 +27,9 @@ class Divergence:
     reason: str
 
 
-#: The two directions a divergence can part in, derived from the primary ontology
-#: rather than declared a second time on the ``Divergence`` itself. A property the
-#: primary ontology declares is one news drops; a property it does not declare is
-#: one a news write path stamps. Storing the direction would be a second copy of a
-#: fact the primary ontology already holds, and the two could disagree.
+#: The two directions a divergence can part in, read off the primary ontology
+#: rather than declared again: a property it declares is one news drops; one it
+#: does not is one a news write path stamps.
 NOT_SUPPLIED = "news cannot supply it"
 STAMPED = "the write path stamps it"
 

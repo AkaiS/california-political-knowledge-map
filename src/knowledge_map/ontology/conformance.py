@@ -122,14 +122,7 @@ def assert_news_ontology_conforms() -> None:
 
 
 def _assert_every_claim_key_property_has_a_shape() -> None:
-    """A relationship's declared properties are its Claim Key, so each needs a shape.
-
-    Keying on a property the primary ontology does not shape means keying on
-    whatever string the model happened to emit, which fragments the graph instead of
-    aligning it. The News Ontology inherits its relationship properties from the
-    primary ontology precisely so this cannot drift; the assertion is what makes
-    inheriting rather than restating enforceable.
-    """
+    """A relationship's declared properties are its Claim Key, so each needs a shape."""
 
     for relationship_type, news_shape in news.RELATIONSHIPS.items():
         primary_shape = primary.RELATIONSHIPS[relationship_type]
