@@ -1,8 +1,7 @@
 """The tasks a Gold Set can be run against.
 
-A task is registered in code rather than declared in the Gold Set file,
-because what a task needs — a model, a database path, an agent — is not
-something the author writes into a case.
+Register a task in code, not in the Gold Set file: a task's wiring — a model,
+a database path, an agent — is not something a case author supplies.
 """
 
 from __future__ import annotations

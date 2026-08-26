@@ -54,8 +54,7 @@ class MentionSpanSubstitutionResult(NamedTuple):
 def _mention_matches(sentence_text: str, mention_text: str) -> list[re.Match[str]]:
     """Find exact mention-text matches whose outer edges are word boundaries."""
 
-    # ``(?<!\\w)`` and ``(?!\\w)`` express the useful part of ``\\b`` while
-    # also handling mentions ending in punctuation, such as ``U.S.``.
+    # Lookarounds rather than ``\\b`` so mentions ending in punctuation match.
     pattern = re.compile(rf"(?<!\w){re.escape(mention_text)}(?!\w)")
     return list(pattern.finditer(sentence_text))
 
@@ -67,11 +66,8 @@ def validate_mention_spans(
 ) -> MentionSpanValidationResult:
     """Locate usable Mention Spans and report every deterministic discard.
 
-    Sentence ranges are the only source of positional information.  For each
-    Mention Span this function searches the source slice identified by its
-    sentence label, selects its one-based occurrence, and offsets the match by
-    the sentence's recorded start.  The first span in input order wins when
-    two located ranges overlap; the later span is reported as discarded.
+    Overlaps resolve in input order: the first span keeps its range and the
+    later one is discarded.
     """
 
     sentences_by_label = {sentence.label: sentence for sentence in sentences}
@@ -149,33 +145,13 @@ def unclaimed_occurrences(
     sentences: Sequence[NumberedSentence],
     located_spans: Sequence[LocatedMentionSpan],
 ) -> list[MentionSpan]:
-    """Propose every repeat of a resolved mention that no Mention Span claims.
+    """Propose a Mention Span for every repeat occurrence left unclaimed.
 
-    The annotator resolves the first ``he`` in a sentence and stops.  Over a
-    whole evaluation run it never once returned an ``occurrence`` above 1, and
-    it missed every silver Mention Span that had one, so the second ``I`` in a
-    three-``I`` sentence is never resolved and never substituted.
-
-    A repeat is not a judgment call.  The sentence either holds another match
-    for that exact text or it does not, so the repeats are counted here from
-    the article rather than prompted for.  Each one is proposed with the
-    entity its already-resolved sibling carries, which is the right answer
-    whenever a repeated mention corefers with itself -- the ordinary case --
-    and a proposal the Coreference Critic can reject when it does not.  That
-    keeps this function counting and leaves every entity judgment with the
-    agents that make the others.
-
-    Only mention texts the annotator resolved somewhere in that sentence are
-    swept.  A text it never proposed at all is a detection miss, and inventing
-    spans for it here would be this function annotating.
-
-    ``mention_text`` is matched exactly, so ``He`` and ``he`` are counted
-    separately and a sentence opening with ``He`` never lends its capital to
-    a lowercase repeat.
+    Each proposal inherits the entity of its already-resolved sibling, so the
+    Coreference Critic still judges every one of them.
     """
 
     sentences_by_label = {sentence.label: sentence for sentence in sentences}
-    # The claimed occurrences and one proposed entity per resolved location.
     claimed: dict[tuple[str, str], set[int]] = {}
     entities: dict[tuple[str, str], str] = {}
     for located in located_spans:
@@ -271,8 +247,7 @@ def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
 class CoreferenceDeps:
     """The Source Article and the numbered sentences split from it.
 
-    Both coreference agents take this as their dependency, so the sentences an
-    agent is shown always came from the content beside them.
+    Taken as the dependency by both coreference agents.
     """
 
     content: str
@@ -368,18 +343,9 @@ def validate_annotator_output(
 ) -> list[MentionSpan]:
     """Ask the annotator again when nothing it returned can be located.
 
-    An unknown sentence label, or a mention text that does not occur where it
-    was claimed, is exactly the mistake an annotator can fix when told, so the
-    deterministic validation runs here as well as in the resolution loop.
-
-    Three answers pass straight through.  An empty list is a real outcome, so
-    ``no_mentions_returned`` stays a distinct failure rather than a correction
-    target.  A partially locatable answer passes, so one unlocatable Mention
-    Span never costs the neighbours that validated cleanly and its discards are
-    recorded by the loop as before.  And the last answer the agent's
-    structured-output retry budget allows passes, so a persistently unlocatable
-    annotator reaches the Dead Letter Queue as ``all_mentions_discarded``
-    carrying what it returned, rather than as an exhausted retry budget.
+    Registered as the annotator's output validator.  Empty, partially
+    locatable, and retry-exhausted answers pass through for the resolution
+    loop to record.
     """
 
     if not mention_spans:
@@ -437,27 +403,17 @@ class CoreferenceResolutionError(Exception):
         self.failure_type = failure_type
         self.retry_count = retry_count
         self.metadata = metadata or {}
-        # Consumers that need the sentence table, the Mention Spans or the
-        # per-span outcomes unpack them from the run itself.
+        # Carries the sentence table, Mention Spans and per-span outcomes
+        # the run reached before failing.
         self.resolution_run = resolution_run
         super().__init__(f"Coreference resolution failed: {failure_type}")
 
 def get_agent_metadata(agent: Agent | None, instructions: str = "") -> dict:
     """Describe the agent behind a failure for the Dead Letter Queue record.
 
-    The instruction text is passed in rather than scraped off the agent: an
-    instructions function that renders a dependency cannot be called without a
-    run to supply it, and the static text is the part worth recording anyway.
-    No coreference agent configures model settings, so no temperature is
-    reported.
-
-    Describing the agent is decoration on a record that is only being written
-    because something already failed, so an agent that will not name its model
-    yields no metadata rather than displacing the failure being recorded.
-    Reading the name is the part that can fail — an agent holding no model
-    attribute, or a ``model_name`` the provider computes — so only that read is
-    guarded, and every caller gets the swallow from here rather than repeating
-    it.
+    Callers pass the static instruction text; it cannot be read back off an
+    agent whose instructions are rendered per run.  Never raises — an agent
+    that will not name its model yields no metadata.
     """
 
     if agent is None:
@@ -493,14 +449,8 @@ def _validation_issues_from_error(error: Exception) -> list[str]:
     return issues or [str(error) or "Annotator output could not be parsed"]
 
 
-#: What the resolver is willing to call a coreference validation failure.
-#:
-#: Both members describe model output: a Pydantic ``ValidationError`` is
-#: output that does not fit the agent's output type, and pydantic-ai's
-#: ``UnexpectedModelBehavior`` covers the rest — a text answer where a tool
-#: call was required, an exhausted structured-output retry budget.  Everything
-#: else escaping the resolver is an infrastructure failure, and the Dead Letter
-#: Queue is the corpus prompt work is done against.
+#: Caught by the resolver and recorded to the Dead Letter Queue as a
+#: coreference validation failure.
 MODEL_OUTPUT_FAILURES: tuple[type[Exception], ...] = (
     ValidationError,
     UnexpectedModelBehavior,
@@ -549,12 +499,8 @@ class MentionSpanIdentity:
 def _log_contested_locations(mention_spans: Sequence[MentionSpan]) -> None:
     """Report one text location claimed by more than one canonical entity.
 
-    ``MentionSpanIdentity`` deliberately excludes the canonical entity name, so
-    two Mention Spans naming the same location with different entities share one
-    key in the run's outcome map and only the last one survives there.  That
-    collapse is intended for a span corrected across retries; when it happens
-    inside a single response it means the annotator contradicted itself, which
-    is a signal about annotator quality rather than a resolution outcome.
+    Called on a single annotator response, where such a collision means the
+    annotator contradicted itself rather than corrected itself.
     """
 
     entities_by_identity: dict[MentionSpanIdentity, list[str]] = {}
@@ -591,8 +537,7 @@ def _critic_prompt(mention_spans: Sequence[MentionSpan]) -> str:
 def _retry_prompt(rejected_spans: Sequence[tuple[MentionSpan, str]]) -> str:
     """Ask the annotator to replace only the spans rejected by the critic."""
 
-    # The Critic's reason is per-span feedback, so it stays attached to the
-    # rendering of its own Mention Span rather than being pooled.
+    # Each reason stays attached to its own Mention Span.
     rejected = "\n".join(
         f"{format_mention_spans([mention_span])}\n  Critic reason: {reason}"
         for mention_span, reason in rejected_spans
@@ -638,9 +583,8 @@ def _apply_critic_verdicts(
             MentionSpanIdentity.of(located.mention_span)
         )
         if verdict is None:
-            # Fail closed when the Critic omits a Mention Span's verdict, and
-            # retain the reason so the retry and DLQ can distinguish it from a
-            # validation discard.
+            # Fail closed on an omitted verdict, with a reason the retry and
+            # DLQ can tell apart from a validation discard.
             rejected.append(
                 (
                     located.mention_span,
@@ -702,21 +646,12 @@ def _count_retry_prompts(messages: Sequence[ModelMessage]) -> int:
 
 @dataclass(slots=True)
 class ResolutionState:
-    """The state of one resolution loop, and the rules that state must obey.
+    """The state of one resolution loop.
 
-    Outcomes are keyed by Mention Span identity with the last write winning, so
-    a Mention Span rejected in one Coreference Critic round and corrected in the
-    next is recorded once, with the decision the run ended on.  The loop used to
-    obey that rule by the order in which it assigned five local variables; here
-    the recording operations enforce it, which is also why the discard
-    proportion is computed by the state that holds the outcomes rather than
-    beside it.
-
-    A Mention Span the annotator returned without being asked for it is kept out
-    of ``outcomes`` and out of ``accepted_spans`` entirely, so it can neither
-    reach the resolved text nor move the discard proportion.  It still appears
-    in ``observed_spans``, which is the raw record of everything the model
-    returned.
+    Outcomes are keyed by Mention Span identity, last write winning, so a run
+    records each identity once with the decision it ended on.  Unrequested
+    Mention Spans reach ``observed_spans`` only: they never enter the resolved
+    text or the discard proportion.
     """
 
     deps: CoreferenceDeps
@@ -794,11 +729,7 @@ class ResolutionState:
     ) -> None:
         """Count the corrections the annotator was asked for within one call.
 
-        The output validator's corrections happen inside a single agent run, so
-        they are invisible to the loop; the annotator's own conversation is
-        where they are recorded.  The count is read from the whole conversation
-        rather than accumulated, because a correction round carries the earlier
-        messages forward and would otherwise be counted twice.
+        Pass the annotator's whole conversation; the count is replaced.
         """
 
         self.annotator_corrections = _count_retry_prompts(messages)
@@ -810,15 +741,7 @@ class ResolutionState:
         """Add the repeat occurrences ``located_spans`` left unclaimed.
 
         Called once, after the annotator's first answer and before the
-        Coreference Critic sees anything, so a swept Mention Span is reviewed
-        on the same terms as one the annotator proposed itself.  Located spans
-        are the input rather than ``observed_spans`` because a span that
-        failed validation names no location, and repeats cannot be counted
-        from a location the article does not have.
-
-        No round is counted.  Nothing was asked of a model here, and folding
-        this into ``retry_count`` would make every article look like it had
-        needed a correction it never ran.
+        Coreference Critic sees anything.  Counts no round.
         """
 
         proposals = unclaimed_occurrences(
@@ -843,10 +766,8 @@ class ResolutionState:
     ) -> list[LocatedMentionSpan]:
         """Record a correction round, keeping only the spans it asked for.
 
-        A correction preserves a Mention Span's identity and changes only its
-        canonical entity, so a returned identity outside the retry targets is
-        one the prompt never requested and the Coreference Critic never
-        reviewed.
+        A correction changes only the canonical entity, so identities outside
+        ``retry_targets`` are dropped.
         """
 
         self.critic_rounds += 1
@@ -895,8 +816,7 @@ class ResolutionState:
         for mention_span, reason in rejected:
             identity = MentionSpanIdentity.of(mention_span)
             # A later rejection displaces an earlier acceptance of the same
-            # identity, so the resolved text can only carry the decision the
-            # run ended on.
+            # identity.
             self.accepted_spans.pop(identity, None)
             self.outcomes[identity] = _outcome_for_critic(
                 mention_span,
@@ -912,12 +832,9 @@ class ResolutionState:
     ) -> None:
         """Accept located spans outright, for a run with no Coreference Critic.
 
-        The resolution loop never calls this: there a located Mention Span is
-        pending until the Critic rules on it, and accepting it here would
-        record a verdict that was never sought.  An annotator-only run has no
-        Critic to rule, so validation is the last stage a span passed and the
-        outcome names that stage.  Reading ``stage`` is how a consumer tells
-        an unreviewed span from an accepted one.
+        Annotator-only runs call this.  The outcomes it writes carry
+        ``stage="validation"``, which is how a consumer tells an unreviewed
+        span from a Critic-accepted one.
         """
 
         for located in located_spans:
@@ -938,10 +855,8 @@ class ResolutionState:
             mention_spans=list(self.observed_spans),
             outcomes=list(self.outcomes.values()),
             discarded_proportion=self.discarded_proportion,
-            # Every round the annotator was asked to answer again, whether the
-            # Coreference Critic asked or the output validator did, so a run
-            # that exhausted its corrections is not read as a first-response
-            # failure in the Dead Letter Queue.
+            # Every round the annotator was asked to answer again, whether
+            # the Critic asked or the output validator did.
             retry_count=self.critic_rounds + self.annotator_corrections,
             failure_type=failure_type,
         )
@@ -1013,20 +928,8 @@ def annotate_coreferences_run(
 ) -> CoreferenceResolutionRun:
     """Resolve references with the Coreference Annotator alone.
 
-    This is the first half of ``resolve_coreferences_run`` and nothing more:
-    the same prompt, the same numbered sentences, the same usage limits and
-    the same deterministic validation that decides what the Coreference
-    Critic would have been shown.  It exists so the loop has a baseline to be
-    measured against -- if the annotator alone scores what the whole pipeline
-    scores, the Critic rounds are latency without accuracy.
-
-    Zero-survivor runs raise for the same two reasons production does, and
-    invalid model output is converted to the same adapter error, so a failure
-    here counts as the failure it would have been in the pipeline rather than
-    as a case that quietly left the population.
-
-    There is no ``max_critic_rounds``.  Not running the Critic is the point,
-    and a budget of zero would be a third way to spell it.
+    Evaluated as the baseline against ``resolve_coreferences_run``, so it
+    raises the same failures on the same terms.
     """
 
     if annotator_agent is None:
@@ -1059,9 +962,8 @@ def annotate_coreferences_run(
             len(state.observed_spans) - len(located_spans),
         )
 
-        # The sweep is deterministic, so it belongs to the annotator baseline
-        # too; leaving it out of this path would credit the Critic rounds with
-        # repeats no Critic found.
+        # Swept here too, so the baseline is not short the repeats the loop
+        # gets.
         located_spans = located_spans + state.record_occurrence_sweep(located_spans)
 
         if not state.observed_spans:
@@ -1101,13 +1003,10 @@ def resolve_coreferences_run(
 ) -> CoreferenceResolutionRun:
     """Resolve references and retain one final outcome per Mention Span.
 
-    The loop reads the model, calls the agents and decides when to stop; every
-    rule about what is recorded belongs to ``ResolutionState``.  Zero-survivor
-    runs always raise: silently returning the source text would hide the
-    failure.  ``max_critic_rounds`` bounds the Coreference Critic rounds beyond
-    the annotator's first pass — one per correction round — and is unrelated to
-    the agents' own structured-output retry budget.  Its caller chooses it;
-    ``PydanticAICoreferenceAdapter`` is where the configured default is read.
+    Raises when no Mention Span survives.  ``max_critic_rounds`` bounds the
+    correction rounds after the annotator's first pass, separately from the
+    agents' own retry budgets; ``PydanticAICoreferenceAdapter`` passes the
+    configured default.
     """
 
     if annotator_agent is None:
@@ -1119,8 +1018,7 @@ def resolve_coreferences_run(
     state = ResolutionState.for_deps(deps)
 
     try:
-        # One usage record for the whole resolution, so the limits below bound
-        # the article rather than any single model call.
+        # One usage record, so the limits bound the article, not a call.
         usage = RunUsage()
         usage_limits = UsageLimits(
             request_limit=settings.coreference.request_limit,
@@ -1133,8 +1031,8 @@ def resolve_coreferences_run(
             usage=usage,
             usage_limits=usage_limits,
         )
-        # The annotator's own conversation, carried into a correction round so
-        # that it sees the Mention Spans it is being asked to correct.
+        # Carried into correction rounds so the annotator sees what it is
+        # being asked to correct.
         annotator_messages = run_result.all_messages()
         state.record_annotator_corrections(annotator_messages)
         pending_spans = state.record_annotation(run_result.output)
@@ -1147,8 +1045,7 @@ def resolve_coreferences_run(
             len(state.observed_spans) - len(pending_spans),
         )
 
-        # Before the Critic, so a repeat the annotator skipped is reviewed on
-        # the same terms as one it proposed.
+        # Before the Critic, so swept repeats are reviewed like any other.
         pending_spans = pending_spans + state.record_occurrence_sweep(pending_spans)
 
         if not state.observed_spans:
@@ -1235,15 +1132,8 @@ def resolve_coreferences_run(
     except CoreferenceResolutionError:
         raise
     except MODEL_OUTPUT_FAILURES as error:
-        # Only model output is a failure at this seam.  In particular, never
-        # treat a text response as resolved text.  Anything else -- an
-        # exhausted transport retry, a usage limit, a programming error --
-        # propagates to the Story Pipeline as a system error.
-        #
-        # The state is built before the loop so that whatever the run reached
-        # travels with the failure: the Mention Spans the annotator returned
-        # and the sentence table it worked from are what a prompt fix is made
-        # against.
+        # Whatever the run reached travels with the failure, so a prompt fix
+        # can be made against it.
         raise _structured_output_failure(
             text,
             annotator_agent,
@@ -1263,8 +1153,7 @@ class PydanticAICoreferenceAdapter:
     ) -> None:
         self.annotator_agent = annotator_agent
         self.critic_agent = critic_agent
-        # The one place the configured critic round budget is read.  The
-        # resolution loop takes the number its caller chose.
+        # The one place the configured critic round budget is read.
         self.max_critic_rounds = (
             settings.coreference.max_critic_rounds
             if max_critic_rounds is None
@@ -1294,12 +1183,7 @@ class PydanticAICoreferenceAdapter:
     def health_check(self) -> bool:
         """Report whether the annotator can complete a trivial run.
 
-        The probe uses the annotator's own output type rather than overriding
-        it with plain text: an agent carrying an output validator cannot be
-        given a different output type per run, and the health of the agent is
-        the health of the contract it actually runs under.  A completed run is
-        healthy whatever it returned, since a trivial article legitimately
-        yields no Mention Spans.
+        Any completed run is healthy, whatever it returned.
         """
 
         try:

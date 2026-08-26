@@ -36,12 +36,10 @@ def classify_exception(e: Exception) -> bool:
 def transport_failures_as_pipeline_errors(component: str):
     """Translate an exhausted transport retry into a pipeline error category.
 
-    The HTTP client behind every LLM model retries a rate limit or a dropped
-    connection at the request that hit it.  What reaches this seam has already
-    outlived that budget, so it is mapped by the status the final response
-    carried -- 429 to the rate limit error, anything else to the connectivity
-    error -- rather than by reading the exception's text.  Batch ingestion's
-    consecutive-failure lock branches on those two types.
+    Wrap a stage that calls a model.  Failures arrive here having already
+    outlived the client's own retry budget, and are mapped by final status:
+    429 to the rate limit error, anything else to connectivity.  Batch
+    ingestion's consecutive-failure lock branches on those two types.
     """
 
     try:

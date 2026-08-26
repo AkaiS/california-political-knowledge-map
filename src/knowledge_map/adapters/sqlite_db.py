@@ -28,8 +28,7 @@ DECIDED_RELEVANCE_STATUSES = ", ".join(
 )
 
 # Fetch statuses meaning the URL is permanently gone, so it is never fetched
-# again. Blocking statuses (403, 429, 503) are deliberately absent: they say we
-# were refused, not that the article stopped existing.
+# again.
 TERMINAL_FETCH_STATUSES = (404, 410)
 
 
@@ -127,14 +126,8 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
             column_info = {row[1]: row for row in cursor.fetchall()}
             relevance_default = column_info.get("relevance_status", (None,) * 5)[4]
 
-            # Check if we need the new migration.
-            #
-            # Status strings inside migration code are frozen literals, never
-            # rendered from the domain enums. A migration describes the shape a
-            # database had at a point in history — including retired values like
-            # `PENDING_RELEVANCE` that no enum carries any more — so it must not
-            # move when the current vocabulary does. Runtime queries are the
-            # opposite: those bind to the enums.
+            # A migration describes a historical schema, so its status
+            # strings are frozen literals.
             needs_new_migration = (
                 "relevance_label_source" not in columns
                 or "fetch_status" not in columns
@@ -254,12 +247,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
         story_columns = [row[1] for row in cursor.fetchall()]
         cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='stories'")
         stories_sql = cursor.fetchone()[0]
-        # Deliberately a frozen literal, not `STORY_STATUS_CHECK`: this is the
-        # schema shape that migration 0003 produced, and it stays fixed at that
-        # historical text. Deriving it from `ArticleStatus` would make any future
-        # member silently rebuild the table and back up every existing database
-        # as a side effect of editing an enum. A new member needs a new,
-        # hand-written migration step here instead.
+        # Migration 0003's historical text.
         story_status_constraint = (
             "CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', "
             "'FAILED_DLQ', 'SYSTEM_ERROR'))"
@@ -1029,13 +1017,9 @@ def get_articles_needing_html_refetch(
 ) -> List[Dict[str, Any]]:
     """Return unmaterialized articles whose HTML can be retried.
 
-    Two populations qualify. Articles already known to be relevant are always
-    worth restoring. Articles that failed validation are worth restoring only
-    once a newer selector version exists, because that is the moment the
-    validation loop will pick them up again; the predicate mirrors the one in
-    `ArticleValidator.validate_pending_cache`. A failed article that has been
-    purged and has no new selectors to try is left alone rather than refetched
-    on the retention clock with no consumer waiting.
+    Relevant articles always qualify; failed ones only once a newer selector
+    version exists, mirroring `ArticleValidator.validate_pending_cache` so
+    nothing is refetched with no consumer waiting.
     """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -1104,11 +1088,9 @@ def is_url_known(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
     """
     Checks whether discovery has already dealt with a URL and should skip it.
 
-    A cache row left by a fetch that returned no content does not make a URL
-    known unless its recorded status is terminal. A URL that timed out or
-    returned 5xx stays discoverable so the next crawl retries it, while one that
-    is permanently gone is not fetched again. A row holding raw HTML or carrying
-    a relevance decision is known either way.
+    Raw HTML or a relevance decision makes a URL known.  An empty cache row
+    does so only at a terminal status, so a timeout or 5xx stays discoverable
+    for the next crawl.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -1201,9 +1183,8 @@ def get_articles_for_human_labeling(
     Retrieves cached articles a human may still label, as
     (url, headline, description, embedding) rows.
 
-    By default only INCONCLUSIVE articles are offered, since those are the ones
-    the classifier could not decide. `include_all` widens the set to every
-    machine-labeled article, for reviewing decisions the classifier did make.
+    Offers INCONCLUSIVE articles only; pass `include_all` to review every
+    machine-labeled article instead.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -1231,9 +1212,8 @@ def get_machine_labeled_for_reevaluation(db_path: str = DEFAULT_DB_PATH) -> List
     Retrieves machine-labeled articles the classifier may reconsider, as
     (url, headline, description, embedding, relevance_status) rows.
 
-    Only INCONCLUSIVE and IRRELEVANT articles are returned: reevaluation exists
-    to promote articles a weaker classifier passed over, not to revisit ones
-    already accepted as RELEVANT.
+    INCONCLUSIVE and IRRELEVANT only; reevaluation promotes, it never revisits
+    a RELEVANT article.
     """
     conn = sqlite3.connect(db_path)
     try:
@@ -1268,9 +1248,8 @@ def update_relevance_status(
     try:
         cursor = conn.cursor()
 
-        # `IS NOT` rather than `!=` so a row with no recorded source counts as
-        # non-human instead of failing the comparison against NULL. Only another
-        # human write may replace a human label.
+        # `IS NOT` rather than `!=`, so a row with no recorded source counts as
+        # non-human instead of failing against NULL.
         query = f"""
             UPDATE scraped_html_cache
             SET relevance_status = ?, relevance_label_source = ?
@@ -1662,9 +1641,8 @@ def get_latest_selector_proposal(
         conn.close()
 
 
-# The two statuses a Story gets stuck at.  PROCESSING means a run claimed the
-# Story and never released it; FAILED_DLQ means the run gave up on it.  Neither
-# is terminal, and neither is picked up again without this reset.
+# The two statuses a Story gets stuck at: claimed and never released, or given
+# up on.  Neither is picked up again without a reset.
 RESETTABLE_STORY_STATUSES = ("PROCESSING", "FAILED_DLQ")
 
 
@@ -1673,9 +1651,7 @@ def count_stories_by_status(
 ) -> Dict[str, int]:
     """How many Stories sit at each of ``statuses``, including the empty ones.
 
-    Statuses with no rows are reported as 0 rather than omitted, so a caller
-    showing the user what a reset would touch can say "0" instead of silently
-    leaving a status out of the list it just asked about.
+    Every requested status is in the result, at 0 if it has no rows.
     """
 
     if not statuses:
@@ -1703,13 +1679,9 @@ def reset_stories_to_unprocessed(
 ) -> Dict[str, int]:
     """Send every Story at one of ``statuses`` back to UNPROCESSED for a re-run.
 
-    ``completed_at`` is cleared with it, matching `update_story_status`: a Story
-    that has not completed must not carry a completion time, and a DLQ row can
-    still be holding one from an earlier successful pass.
-
-    Returns the per-status counts as they were *before* the update, because
-    afterwards they are all UNPROCESSED and the caller can no longer tell what
-    was moved.
+    Clears ``completed_at`` with it, matching `update_story_status`.  Returns
+    the per-status counts as they stood *before* the update, which is the only
+    point at which they can be told apart.
     """
 
     if not statuses:

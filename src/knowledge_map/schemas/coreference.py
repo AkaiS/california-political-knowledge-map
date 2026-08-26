@@ -22,10 +22,8 @@ def _strip_label_brackets(value: object) -> object:
 class MentionSpan(BaseModel):
     """A model-returned reference anchored to a numbered sentence.
 
-    The model supplies only the sentence label, the verbatim mention, the
-    occurrence of that mention within the sentence, and its canonical entity.
-    Character positions deliberately do not belong to this schema: they are
-    derived from the source content by the coreference adapter.
+    Carries no character positions; the coreference adapter derives those from
+    the source content.
     """
 
     model_config = ConfigDict(extra="forbid")

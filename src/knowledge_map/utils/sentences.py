@@ -13,10 +13,8 @@ DEFAULT_MIN_SENTENCE_CHARACTERS = 12
 class SentenceRangeInvariantError(ValueError):
     """A sentence table failed the positional invariant it must uphold.
 
-    The sentence table is the only source of positional truth for Mention Span
-    substitution, so a broken invariant here would silently corrupt resolved
-    content.  These checks are load-bearing and must survive ``python -O``,
-    which is why they are raised rather than asserted.
+    Raised, not asserted, so the checks survive ``python -O``; a broken
+    invariant silently corrupts Mention Span substitution.
     """
 
 
@@ -24,9 +22,8 @@ class SentenceRangeInvariantError(ValueError):
 class NumberedSentence:
     """A contiguous sentence range in Source Article content.
 
-    Labels are one-based strings because they are copied by the annotator into
-    a structured response.  ``end_index`` is exclusive, matching Chonkie's
-    range convention and normal Python slicing.
+    Labels are one-based strings, copied verbatim by the annotator.
+    ``end_index`` is exclusive, for ordinary Python slicing.
     """
 
     label: str
@@ -42,12 +39,9 @@ def split_into_numbered_sentences(
 ) -> list[NumberedSentence]:
     """Return ``content`` as an ordered list of contiguous sentence ranges.
 
-    Chonkie's sentence splitter supplies the raw, exact ranges.  A raw
-    fragment that is whitespace-only or shorter than the configured minimum is
-    folded into the preceding sentence.  At the beginning of content, where a
-    preceding sentence does not exist, such fragments are carried forward and
-    become the prefix of the first sentence.  This keeps the output addressable
-    without ever dropping a character.
+    Fragments below ``min_characters_per_sentence`` fold into the preceding
+    sentence, or into the following one at the start of content.  No character
+    is ever dropped, so the ranges tile ``content`` exactly.
     """
 
     if min_characters_per_sentence < 1:
@@ -56,17 +50,15 @@ def split_into_numbered_sentences(
     if not content:
         return []
 
-    # A one-character chunk limit makes each returned Chonkie chunk one raw
-    # sentence while retaining Chonkie's sentence-boundary and range logic.
+    # A one-character chunk limit makes each chunk one raw sentence.
     raw_chunks = SentenceChunker(
         tokenizer="character",
         chunk_size=1,
         min_characters_per_sentence=1,
     ).chunk(content)
 
-    # Chonkie intentionally returns no chunks for whitespace-only input.  It
-    # is still one contiguous range from this utility's perspective: otherwise
-    # the exact-content invariant could not hold.
+    # Chonkie returns no chunks for whitespace-only input; it is still one
+    # range here, or the exact-content invariant would not hold.
     if not raw_chunks:
         raw_ranges = [(0, len(content))]
     else:

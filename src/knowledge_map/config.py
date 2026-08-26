@@ -34,9 +34,8 @@ class TransportSettings(BaseModel):
 class CoreferenceSettings(BaseModel):
     """What bounds one Coreference Resolution Run.
 
-    ``max_critic_rounds`` counts the Coreference Critic rounds a run may hold
-    beyond the annotator's first pass — one per correction round.  It is not
-    the agents' structured-output retry budget, which belongs to the agent.
+    ``max_critic_rounds`` counts correction rounds after the annotator's first
+    pass, separately from the agents' own structured-output retry budgets.
     """
 
     max_critic_rounds: int = Field(
@@ -60,9 +59,8 @@ class CoreferenceSettings(BaseModel):
 class BatchIngestionSettings(BaseModel):
     """What batch ingestion owns: the failure lock, the queue, and the report.
 
-    Retrying a failed request belongs to the transport, so the attempt count,
-    the backoff and the rate limit wait cap live in ``TransportSettings``.
-    Batch ingestion keeps only the consecutive-failure lock it decides itself.
+    Retry attempts, backoff and the rate limit wait cap are
+    ``TransportSettings``, not here.
     """
 
     consecutive_failures_limit: int = Field(

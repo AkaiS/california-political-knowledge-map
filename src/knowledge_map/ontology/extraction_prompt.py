@@ -6,12 +6,8 @@ from knowledge_map.ontology import news, primary
 def _relationship_property_lines(relationships: dict) -> list[str]:
     """Fix the form of declared properties, without asking for any of them.
 
-    The prompt says how to write a value, never that one is owed. The properties a
-    claim needs to be comparable are the ones declared here — that declaration is its
-    Claim Key — and the write path settles a gap itself: a claim that arrives without
-    one of them is written and flagged rather than dropped or demanded. Asking
-    the model to supply one it did not find only invites an invented value, which
-    keys a confident-looking edge instead of an honestly incomplete one.
+    The lines it renders say how to write a value.  The write path flags a
+    missing Claim Key property; an invented one it cannot catch.
     """
 
     described = {

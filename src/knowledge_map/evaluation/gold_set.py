@@ -29,9 +29,8 @@ class EvaluationSplit(str, Enum):
 class EvaluationCase(BaseModel, Generic[InputT, OutputT, MetadataT]):
     """One authored example for a component task.
 
-    ``id`` is stable across revisions of the Gold Set and is what makes a
-    report comparable to an earlier one. It is authored, not derived, so
-    regenerating the file cannot silently renumber the population.
+    ``id`` is authored, never derived, and must stay stable across revisions:
+    it is what makes one report comparable to an earlier one.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -85,10 +84,8 @@ def load_gold_set(
 ) -> EvaluationGoldSet[Any, Any, Any]:
     """Read and validate one Gold Set file.
 
-    Pass the task's own types to have every case's ``task_input`` and
-    ``expected_output`` validated against them as the file is read; the
-    file is the only place a case is authored, so this is where a typo in
-    one is caught.
+    Pass the task's own types to validate every case's ``task_input`` and
+    ``expected_output`` as the file is read.
     """
     path = Path(path)
     document = yaml.safe_load(path.read_text())

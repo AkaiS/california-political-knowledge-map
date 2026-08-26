@@ -31,23 +31,11 @@ class Node(BaseModel):
 class Relationship(BaseModel):
     """A claim between two named entities.
 
-    An endpoint is a name plus the label of the node that name refers to. The label
-    is what a bare name cannot supply: two entities in one chunk can share a
-    canonical name, and the name alone then picks between them arbitrarily. It is a
-    sibling field rather than a nested endpoint object because it has to stay
-    optional — a relationship built by hand, or read back from an extraction stored
-    before labels were asked for, names its endpoints and nothing more.
-
-    Conformance decides what these mean. It resolves each endpoint against the nodes
-    beside it and the ontology's shape for the relationship type, and stamps the
-    label it settled on; a model's label is consulted only where the ontology leaves
-    a genuine choice. What persistence reads back is therefore always the resolved
-    label, never the extractor's unexamined claim.
-
-    The label earns a field because it varies per claim: the name alone cannot supply
-    it. What a relationship type fixes for every one of its claims — whether it
-    flattens a Shortcut Rule's path, for one — needs no field here and no copy on the
-    edge, because the type is already carried and the ontology already holds the rule.
+    An endpoint is a name plus, optionally, the label of the node it refers to,
+    which disambiguates two entities sharing a canonical name.  The endpoint
+    labels persistence reads back are always the ones conformance stamped; a
+    model's claimed label is consulted only where the ontology leaves a genuine
+    choice.
     """
 
     source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
@@ -96,9 +84,8 @@ class ExtractionResult(BaseModel):
 class DropCategory(StrEnum):
     """The closed set of buckets an Adherence Report drop can fall into.
 
-    A category is not a free-form string: a mistyped one has to fail loudly at
-    the drop site rather than quietly open a fifth bucket that no reader of the
-    report ever looks in.
+    Record against a member, never a string: a mistyped category must fail at
+    the drop site rather than open a bucket nobody reads.
     """
 
     REJECTED_LABELS = "rejected_labels"
@@ -117,9 +104,9 @@ class DroppedItem(BaseModel):
 class AdherenceReport(RootModel[dict[DropCategory, dict[str, DroppedItem]]]):
     """Ontology items an extraction adapter dropped from model output.
 
-    Shaped ``category -> dropped value -> {"count", "example_chunk_id"}``, with
-    every category present from the start so a reader never has to distinguish
-    "nothing was dropped" from "that bucket does not exist".
+    Shaped ``category -> dropped value -> {"count", "example_chunk_id"}``.
+    Every category is present from the start, so a reader indexes any of them
+    without checking.
     """
 
     root: dict[DropCategory, dict[str, DroppedItem]] = Field(

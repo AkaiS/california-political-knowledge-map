@@ -47,7 +47,7 @@ SUB_LABELS = {
 
 REQUIRED_SUB_LABELS = frozenset({"LegislativeEvent", "Campaign"})
 
-#: Labels the pipeline writes from the article itself, never from model output.
+#: Labels the pipeline writes from the article itself.
 WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
 
 #: Labels the extraction model is responsible for producing.
@@ -134,11 +134,9 @@ NODE_DIVERGENCES = (
 )
 
 #: Property names the model may supply, per label: what the primary ontology
-#: declares, less every divergence. One subtraction covers both directions. A
-#: property news cannot supply drops out here, which is what makes it absent from
-#: the ontology; a property the write path stamps was never in the primary
-#: ontology to begin with, so the subtraction is a no-op and the property stays
-#: absent. Either way a model that emits one is guessing, and it gets dropped.
+#: declares, less every divergence.  The one subtraction covers both
+#: directions.  A model emitting anything else is guessing, and conformance
+#: drops it.
 PROPERTIES = {
     label: PRIMARY_PROPERTIES[label]
     - frozenset(
@@ -202,9 +200,8 @@ SHORTCUTS = tuple(
     for relationship_type, target_label in _SHORTCUT_TARGETS.items()
 )
 
-#: Shortcuts by the edge they produce. A shortcut edge is reversible from this
-#: alone: the rule holds the path it flattened, so expanding one back out needs
-#: no further record on the edge beyond the type it already carries.
+#: Shortcuts by the edge they produce.  The rule holds the path it flattened,
+#: so an edge is expanded back out from its type alone.
 SHORTCUTS_BY_TYPE = {shortcut.relationship_type: shortcut for shortcut in SHORTCUTS}
 
 _RELATIONSHIP_ENDPOINTS = {
@@ -258,22 +255,13 @@ RELATIONSHIP_DIVERGENCES = (
     ),
 )
 
-#: News relationships, endpoints as declared above and properties inherited from the
-#: primary ontology, less every divergence. Inheriting rather than restating is what
-#: keeps the two tables from disagreeing: the extraction prompt asks for exactly the
-#: primary ontology's declared properties, so those and only those are the ones a model
-#: may attach to an edge. Anything else it supplies is dropped during conformance — a
-#: relationship property is write-path-owned, so the only values reaching an edge are
-#: ones the system put there deliberately.
+#: News relationships: endpoints as declared above, properties inherited from
+#: the primary ontology less every divergence.  The extraction prompt asks for
+#: exactly these, and conformance drops anything else a model attaches.
 #:
-#: One subtraction covers both directions, exactly as it does for labels. A property
-#: news cannot supply drops out of the Claim Key here, which is what makes it absent
-#: from the ontology; a property the write path stamps was never in the primary
-#: ontology to begin with, so the subtraction is a no-op and it stays absent. The
-#: subtraction is also what stops inheritance from over-reaching: a property the
-#: primary ontology declares because an authoritative record supplies it is not
-#: thereby one an article can assert, and inheriting it regardless would key every
-#: edge on a value no article will ever fill.
+#: The one subtraction covers both directions, as it does for labels.  It is
+#: also what keeps inheritance from keying an edge on a property only an
+#: authoritative record could ever fill.
 RELATIONSHIPS = {
     relationship_type: replace(
         shape,
@@ -293,22 +281,10 @@ RELATIONSHIPS = {
 def claim_key_properties(relationship_type: str) -> frozenset[str]:
     """The Claim Key of ``relationship_type``: its declared property names.
 
-    A relationship asserts that a claim exists and what identifies it — nothing
-    more. Its declared properties, and only those, are what two edges of the same
-    type between the same pair must agree on to be the same edge. A `FUNDED` edge
-    means something different at six million than at four; two articles naming
-    different figures are making different assertions, and the graph holds both
-    rather than letting the last one ingested overwrite the first.
-
-    There is no separate identifying-property table to disagree with this one. The
-    rule that decides what a relationship declares is the rule that decides edge
-    identity: if two different values mean two different claims, the property is
-    declared and therefore identifying; if they do not, the property does not belong
-    on the edge, and what the article said stays in the Article Chunk it points to.
-
-    Nothing requires an extractor to produce these. The prompt never asks for one,
-    and an edge that arrives without them is written and flagged rather than dropped
-    — a missing value is recoverable, an invented one is not.
+    What two edges of the same type between the same pair must agree on to be
+    the same edge, so a `FUNDED` at six million and one at four are both held.
+    Nothing requires an extractor to produce them: an edge arriving without
+    them is written and flagged, never dropped.
     """
 
     shape = RELATIONSHIPS.get(relationship_type)

@@ -30,11 +30,9 @@ def get_embedding_embedder(
 ) -> Embedder:
     """Build the Embedder for the embedding stage, on the retrying HTTP client.
 
-    The embedding stage is not an LLM call and does not pass through the model
-    factory, so it does not inherit that factory's retrying client and builds
-    its own.  The retry therefore happens at the failed request rather than by
-    re-running the stage, and an exhausted budget still reaches the Story
-    Pipeline as a transport failure for the embedding component.
+    The embedding stage bypasses the model factory, so it builds its own
+    client here.  An exhausted retry budget still reaches the Story Pipeline
+    as a transport failure for the embedding component.
     """
 
     load_dotenv()
@@ -44,9 +42,8 @@ def get_embedding_embedder(
         "OLLAMA_EMBEDDING_MODEL", "embeddinggemma"
     )
 
-    # The OpenAI SDK retries on its own by default, which would multiply the
-    # configured attempt count rather than replace it.  Retries belong to the
-    # transport, so the SDK is told to make exactly one attempt.
+    # Retries belong to the transport, so the SDK makes exactly one attempt
+    # rather than multiplying the configured count.
     openai_client = AsyncOpenAI(
         base_url=resolve_embedding_base_url(),
         # llama-server does not check it, but the SDK refuses to build without one.
