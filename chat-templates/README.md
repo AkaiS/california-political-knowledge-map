@@ -40,6 +40,6 @@ mentions that it was offered no tools.
 
 ## Checking a GGUF
 
-    python3 scripts/gguf_inspect.py <path-to.gguf>
+    uv run scripts/gguf_inspect.py <path-to.gguf>
 
 Reads the header only, so it is instant on an 18 GB file.
