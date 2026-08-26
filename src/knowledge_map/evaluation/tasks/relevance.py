@@ -13,6 +13,7 @@ import os
 import sqlite3
 from typing import Any, Literal, NamedTuple
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
@@ -23,7 +24,7 @@ from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
     get_relevance_agent_prompt,
 )
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 
 from .registry import EvaluationTask, register
 
@@ -35,10 +36,18 @@ def default_model() -> str:
 
     Comparing two models is the point of a run, so the model is named
     explicitly rather than resolved from the environment at call time —
-    `get_ollama_model` lets `OLLAMA_MODEL_RELEVANCE` override its
+    `get_chat_model` lets `OLLAMA_MODEL_RELEVANCE` override its
     argument, which would silently ignore `--model`. This reads the same
     variable once, to supply the default the run then records.
+
+    `load_dotenv` is called because this runs at import, before anything
+    else has read the file. Without it the fallback wins and a run with no
+    `--model` records a model name that is in no configuration file --
+    which is what happened until `tasks.coreference` began loading the
+    file first, leaving this correct only by import order.
     """
+
+    load_dotenv()
     return (
         os.environ.get("OLLAMA_MODEL_RELEVANCE")
         or os.environ.get("OLLAMA_MODEL")
@@ -76,7 +85,7 @@ def build_task(model: str, gold_set: Any) -> Any:
     the prompt scoring them.
     """
     agent = Agent(
-        get_ollama_model(model),
+        get_chat_model(model),
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,

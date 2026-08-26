@@ -10,19 +10,61 @@ class ChunkingSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     dimension: int = Field(default=768, description="Vector dimension size for Neo4j index")
 
-class BatchIngestionSettings(BaseModel):
-    max_retries: int = Field(
-        default_factory=lambda: int(os.environ.get("BATCH_MAX_RETRIES", 3)),
-        description="Maximum retries for connectivity errors"
-    )
-    backoff_factor: float = Field(
-        default_factory=lambda: float(os.environ.get("BATCH_BACKOFF_FACTOR", 2.0)),
-        description="Multiplier applied to exponential backoff delay"
+class TransportSettings(BaseModel):
+    """How the HTTP client behind every LLM model retries a failed request."""
+
+    max_attempts: int = Field(
+        default_factory=lambda: int(os.environ.get("LLM_TRANSPORT_MAX_ATTEMPTS", 3)),
+        description="Total attempts per HTTP request before the failure is re-raised",
     )
     rate_limit_wait_cap: int = Field(
-        default_factory=lambda: int(os.environ.get("BATCH_RATE_LIMIT_WAIT_CAP", 120)),
-        description="Max delay in seconds to wait for Rate-After"
+        default_factory=lambda: int(
+            os.environ.get("LLM_TRANSPORT_RATE_LIMIT_WAIT_CAP", 120)
+        ),
+        description="Maximum seconds to honour from a parsed Retry-After header",
     )
+    request_timeout: float = Field(
+        default_factory=lambda: float(
+            os.environ.get("LLM_TRANSPORT_REQUEST_TIMEOUT", 600.0)
+        ),
+        description="Per-request timeout in seconds",
+    )
+
+
+class CoreferenceSettings(BaseModel):
+    """What bounds one Coreference Resolution Run.
+
+    ``max_critic_rounds`` counts the Coreference Critic rounds a run may hold
+    beyond the annotator's first pass — one per correction round.  It is not
+    the agents' structured-output retry budget, which belongs to the agent.
+    """
+
+    max_critic_rounds: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_MAX_CRITIC_ROUNDS", 3)
+        ),
+        description="Critic rounds allowed beyond the annotator's first pass",
+    )
+    request_limit: int = Field(
+        default_factory=lambda: int(os.environ.get("COREFERENCE_REQUEST_LIMIT", 50)),
+        description="Total model requests allowed across one resolution",
+    )
+    total_tokens_limit: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_TOTAL_TOKENS_LIMIT", 500_000)
+        ),
+        description="Total tokens allowed across one resolution",
+    )
+
+
+class BatchIngestionSettings(BaseModel):
+    """What batch ingestion owns: the failure lock, the queue, and the report.
+
+    Retrying a failed request belongs to the transport, so the attempt count,
+    the backoff and the rate limit wait cap live in ``TransportSettings``.
+    Batch ingestion keeps only the consecutive-failure lock it decides itself.
+    """
+
     consecutive_failures_limit: int = Field(
         default_factory=lambda: int(os.environ.get("BATCH_CONSECUTIVE_FAILURES_LIMIT", 3)),
         description="Max consecutive failures before lock"
@@ -49,6 +91,8 @@ class BatchIngestionSettings(BaseModel):
 class Settings(BaseModel):
     chunking: ChunkingSettings = ChunkingSettings()
     embedding: EmbeddingSettings = EmbeddingSettings()
+    transport: TransportSettings = TransportSettings()
+    coreference: CoreferenceSettings = CoreferenceSettings()
     batch_ingestion: BatchIngestionSettings = BatchIngestionSettings()
 
 settings = Settings()

@@ -37,28 +37,41 @@ def make_adapter(
     mentions: list[dict],
     verdicts: list[dict],
     *,
-    max_retries: int = 0,
+    max_critic_rounds: int = 0,
+    annotator_retries: int = 3,
 ) -> PydanticAICoreferenceAdapter:
-    return _OverriddenAdapter(mentions, verdicts, max_retries=max_retries)
+    return _OverriddenAdapter(
+        mentions,
+        verdicts,
+        max_critic_rounds=max_critic_rounds,
+        annotator_retries=annotator_retries,
+    )
 
 
 class _OverriddenAdapter(PydanticAICoreferenceAdapter):
     """Keep FunctionModel overrides active for a test-created adapter."""
 
-    def __init__(self, mentions, verdicts, *, max_retries):
-        annotator = get_annotator_agent(defer_check=True)
+    def __init__(self, mentions, verdicts, *, max_critic_rounds, annotator_retries=3):
+        annotator = get_annotator_agent(
+            defer_check=True,
+            retries=annotator_retries,
+        )
         critic = get_critic_agent(defer_check=True)
 
+        annotator_calls: list[int] = []
+
         def mock_annotator(messages, info):
+            annotator_calls.append(1)
             return structured_response(info, mentions)
 
         def mock_critic(messages, info):
             return structured_response(info, verdicts)
 
+        self.annotator_calls = annotator_calls
         super().__init__(
             annotator_agent=annotator,
             critic_agent=critic,
-            max_retries=max_retries,
+            max_critic_rounds=max_critic_rounds,
         )
         self._annotator_model = FunctionModel(mock_annotator)
         self._critic_model = FunctionModel(mock_critic)
@@ -79,6 +92,9 @@ def test_empty_annotator_output_is_a_distinct_zero_survivor_failure():
 
     error = exc_info.value
     assert error.failure_type == "no_mentions_returned"
+    # An article with nothing to resolve is a real outcome, not a mistake the
+    # annotator is asked to correct.
+    assert len(adapter.annotator_calls) == 1
     assert error.resolution_run.outcomes == []
     assert error.resolution_run.discarded_proportion == 0.0
     assert error.resolution_run.sentences[0].text == "Gavin Newsom signed a bill."
@@ -105,6 +121,55 @@ def test_validation_discard_of_every_span_has_its_own_failure_type():
     assert [outcome.outcome for outcome in run.outcomes] == ["discarded"]
     assert run.outcomes[0].stage == "validation"
     assert run.discarded_proportion == 1.0
+
+
+def test_a_persistently_unlocatable_annotator_exhausts_its_correction_budget():
+    """`all_mentions_discarded` is now reached only after the corrections fail.
+
+    The annotator is asked again for as long as its structured-output retry
+    budget allows, and the Coreference Resolution Run's round count records
+    those attempts, so an exhausted run is not mistaken for a first-response
+    failure.
+    """
+
+    unlocatable = [
+        {
+            "sentence_label": "99",
+            "mention_text": "He",
+            "canonical_entity_name": "Gavin Newsom",
+        }
+    ]
+    adapter = make_adapter(unlocatable, [], annotator_retries=3)
+
+    with pytest.raises(CoreferenceResolutionError) as exc_info:
+        adapter.resolve("Gavin Newsom signed a bill.")
+
+    error = exc_info.value
+    assert error.failure_type == "all_mentions_discarded"
+    # One first answer plus the three corrections the budget allows.
+    assert len(adapter.annotator_calls) == 4
+    assert error.resolution_run.retry_count == 3
+    assert error.retry_count == 3
+
+
+def test_an_annotator_with_no_correction_budget_fails_on_its_first_response():
+    """Without a retry budget there is nothing to distinguish but the count."""
+
+    unlocatable = [
+        {
+            "sentence_label": "99",
+            "mention_text": "He",
+            "canonical_entity_name": "Gavin Newsom",
+        }
+    ]
+    adapter = make_adapter(unlocatable, [], annotator_retries=0)
+
+    with pytest.raises(CoreferenceResolutionError) as exc_info:
+        adapter.resolve("Gavin Newsom signed a bill.")
+
+    assert exc_info.value.failure_type == "all_mentions_discarded"
+    assert len(adapter.annotator_calls) == 1
+    assert exc_info.value.resolution_run.retry_count == 0
 
 
 def test_critic_rejection_of_every_valid_span_has_its_own_failure_type():
@@ -170,6 +235,10 @@ def test_partial_discard_completes_and_records_outcomes_and_proportion():
         "accepted",
     ]
     assert run.discarded_proportion == 0.5
+    # One locatable Mention Span is enough: the unlocatable neighbour stays a
+    # recorded discard rather than costing the answer a correction round.
+    assert len(adapter.annotator_calls) == 1
+    assert run.retry_count == 0
 
 
 class _Database:
@@ -297,3 +366,53 @@ def test_zero_survivor_failures_reach_failed_dlq_with_replayable_payload(
     assert run_payload["failure_type"] == failure_type
     assert run_payload["sentences"][0]["label"] == "1"
     assert len(run_payload["mention_spans"]) == len(mentions)
+
+
+def test_an_exhausted_correction_is_visible_in_the_dead_letter_queue_record(tmp_path):
+    """The record says a correction was attempted before it was archived.
+
+    A Dead Letter Queue reader has to tell a run that failed on its first
+    response from one that was asked again and kept getting it wrong, because
+    only the second is evidence that the annotator cannot recover.
+    """
+
+    status = _Status()
+    adapter = make_adapter(
+        [
+            {
+                "sentence_label": "99",
+                "mention_text": "He",
+                "canonical_entity_name": "Gavin Newsom",
+            }
+        ],
+        [],
+        annotator_retries=3,
+    )
+    dlq = LocalFileDLQAdapter(directory=str(tmp_path / "dlq"))
+    article = SourceArticle(
+        url="https://example.com/exhausted-correction",
+        title="An annotator that could not be corrected",
+        content="Gavin Newsom signed a bill. He was happy.",
+    )
+    pipeline = StoryPipeline(
+        db_adapter=_Database(),
+        embedding_adapter=_Embedding(),
+        coreference_adapter=adapter,
+        extraction_adapter=_Extraction(),
+        status_tracker=status,
+        dlq_adapter=dlq,
+    )
+
+    with pytest.raises(CoreferenceResolutionError) as exc_info:
+        pipeline.run(article)
+
+    assert exc_info.value.failure_type == "all_mentions_discarded"
+    assert status.updates == [(article.url, "PROCESSING"), (article.url, "FAILED_DLQ")]
+    files = list((tmp_path / "dlq" / "coreference").glob("*.json"))
+    assert len(files) == 1
+    payload = json.loads(files[0].read_text(encoding="utf-8"))
+    assert payload["failure_type"] == "all_mentions_discarded"
+    assert payload["retry_count"] == 3
+    assert payload["resolution_run"]["retry_count"] == 3
+    # The reasons the annotator was given are the ones the record carries.
+    assert any("99" in issue for issue in payload["validation_issues"])

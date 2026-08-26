@@ -24,6 +24,14 @@ have not yet been shaped into executable work.
   a character-sliced chunk overlap cut `Senate Bill 623` into a second node named
   `ll 623`. Broken into five issues on 2026-08-17; the frontier is below.
 - [Coreference Resolution via Mention Spans](projects/coreference-mention-spans/PRD.md), `ready-for-agent` as of 2026-08-17. Replaces whole-article `<ref>` tag rewriting with structured Mention Spans anchored to numbered sentences, and gives the Coreference Critic per-reference verdicts. Broken into seven issues on 2026-08-17; the frontier is below.
+- [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md), `ready-for-agent` as of 2026-08-20.
+  Three unrelated failures share the word `retries`, and the pipeline's copy is
+  at the wrong layer: a connection reset during a Coreference Critic round
+  discards the annotation and every accepted verdict, then re-runs the Source
+  Article. HTTP retries move into the model factory's httpx transport; the
+  Coreference Adapter's plumbing becomes dependencies, a state model, and
+  narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
+  below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
 
 ### Bill Designation Recovery frontier
@@ -36,6 +44,19 @@ independent of it.
 - [03 Every extracted Bill gets a resolution](projects/bill-designation-recovery/issues/03-resolution-covers-every-bill.md), blocked by 02. The map is keyed by name and covers unidentifiable bills; the adapter stops deciding.
 - [04 Recover a Bill Designation from the Source Article](projects/bill-designation-recovery/issues/04-recover-designation-from-article.md), blocked by 03. `ll 623` reaches `Senate Bill 623`'s node before any key is minted.
 - [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `CONTEXT.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
+
+### Retry Layering frontier
+
+Three tickets are takeable now. 01 and 02 are an expand-and-contract pair on the
+transport; 03 and 04 both rewrite the resolver loop and will conflict if worked
+in parallel.
+
+- [01 A retrying HTTP client behind every Ollama model](projects/coreference-retry-layering/issues/01-retrying-http-client.md), takeable. Adds only: the retry happens at the failed request, and the pipeline's own retry stops firing.
+- [02 The Story Pipeline stops retrying stage calls](projects/coreference-retry-layering/issues/02-pipeline-stops-retrying-stage-calls.md), blocked by 01. The contract half: `_execute_with_retry`, `classify_api_error`, and the four `time.sleep` backoff tests are deleted.
+- [03 Coreference agents take dependencies](projects/coreference-retry-layering/issues/03-agents-take-dependencies.md), takeable. One rendering of the numbered Source Article; a correction round continues the annotator's conversation. Costs tokens rather than saving them.
+- [04 Prefactor: the resolution loop's state becomes a model](projects/coreference-retry-layering/issues/04-resolution-state-is-a-model.md), takeable. No behavior change; the last-write-wins invariant stops being a docstring.
+- [05 Only model-output failures are recorded as validation failures](projects/coreference-retry-layering/issues/05-only-model-output-failures-are-validation-failures.md), blocked by 04. A socket timeout stops being archived as a prompt-quality problem.
+- [06 An annotator whose Mention Spans cannot be located is asked again](projects/coreference-retry-layering/issues/06-correct-unlocatable-mention-spans.md), blocked by 03. Changes what reaches the Dead Letter Queue, so it lands last.
 
 ### Coreference Resolution via Mention Spans frontier
 
@@ -95,7 +116,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |

@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import Hooks
-from pydantic_ai.models.openai import OpenAIChatModel
 
 from knowledge_map.adapters.coreference import get_agent_metadata
 from knowledge_map.ontology.extraction_conformance import (
@@ -15,20 +14,9 @@ from knowledge_map.ontology.extraction_conformance import (
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.schemas import AdherenceReport, ExtractionResult
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 
 logger = logging.getLogger(__name__)
-
-# monkey patch to get around content ollama rejecting content = <nil> on retries 
-_original = OpenAIChatModel._MapModelResponseContext._into_message_param
-
-def _patched(self):
-    result = _original(self)
-    if result is not None and result.get("content") is None:
-        result["content"] = ""
-    return result
-
-OpenAIChatModel._MapModelResponseContext._into_message_param = _patched
 
 PROMPT_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -64,7 +52,7 @@ def load_instructions() -> str:
         return "Extract entities and relationships from California politics stories."
 
 def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    model = get_ollama_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
+    model = get_chat_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
     
     instructions = load_instructions()
     
@@ -150,12 +138,16 @@ class PydanticAIEntityExtractionAdapter:
             if not validation_issues:
                 validation_issues = [str(e)]
 
-            metadata = {}
-            if hasattr(self.agent, "model"):
-                try:
-                    metadata = get_agent_metadata(self.agent)
-                except Exception:
-                    pass
+            # ``get_agent_metadata`` already yields ``{}`` for an agent that
+            # will not name its model.  Reading the instruction text off disk
+            # is the remaining call that can fail here, and failing to
+            # describe the prompt must not displace the extraction failure
+            # being raised.
+            try:
+                instructions = load_instructions()
+            except Exception:
+                instructions = ""
+            metadata = get_agent_metadata(self.agent, instructions)
 
             raise ExtractionError(
                 original_text=chunk_text,

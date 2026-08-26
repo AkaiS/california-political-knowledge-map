@@ -72,7 +72,7 @@ def _collect(args: argparse.Namespace) -> None:
     if task.collect is None:
         sys.exit(f"{task.name} has no labeled data to collect from; author the file by hand")
 
-    path = args.gold_set or gold_set_path(task.name)
+    path = args.gold_set or gold_set_path(task.gold_set_stem)
     if path.exists() and not args.force:
         sys.exit(
             f"{path} already exists. Editing it is the authoring step; pass --force "
@@ -128,7 +128,7 @@ def _warn_if_one_label_dominates(labels: Counter) -> None:
 
 def _run(args: argparse.Namespace) -> None:
     task = task_named(args.task)
-    path = args.gold_set or gold_set_path(task.name)
+    path = args.gold_set or gold_set_path(task.gold_set_stem)
     if not path.exists():
         sys.exit(f"{path} does not exist. Run `ca-map eval collect {task.name}` first.")
 

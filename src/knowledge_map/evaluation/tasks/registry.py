@@ -34,6 +34,21 @@ class EvaluationTask:
     metadata_type: type[Any] = dict
     collect: Callable[[], Any] | None = None
     """Read labeled candidates out of the project's own data, if it has any."""
+    gold_set_name: str | None = None
+    """The Gold Set file this task reads, when it is not the task's own name.
+
+    Two tasks can measure two stages of one pipeline against the same
+    authored cases -- the whole loop, and the annotator alone -- and the
+    cases are the same cases. The file names one task in its `task:` field
+    and the other borrows it, rather than the author maintaining the same
+    twenty Stories twice and letting them drift.
+    """
+
+    @property
+    def gold_set_stem(self) -> str:
+        """The stem of the Gold Set file, defaulting to the task's own name."""
+
+        return self.gold_set_name or self.name
 
 
 _TASKS: dict[str, EvaluationTask] = {}

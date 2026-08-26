@@ -1,12 +1,16 @@
 import logging
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from pydantic import TypeAdapter
-from pydantic_ai import Agent
+from pydantic import ValidationError
+from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
+from pydantic_ai.usage import RunUsage, UsageLimits
 
+from knowledge_map.config import settings
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
     CriticVerdict,
@@ -15,7 +19,7 @@ from knowledge_map.schemas import (
     MentionSpanOutcome,
     NumberedSentenceRecord,
 )
-from knowledge_map.utils.models import get_ollama_model
+from knowledge_map.utils.models import get_chat_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
     split_into_numbered_sentences,
@@ -140,6 +144,67 @@ def validate_mention_spans(
     return MentionSpanValidationResult(valid_spans=located, discards=discards)
 
 
+def unclaimed_occurrences(
+    content: str,
+    sentences: Sequence[NumberedSentence],
+    located_spans: Sequence[LocatedMentionSpan],
+) -> list[MentionSpan]:
+    """Propose every repeat of a resolved mention that no Mention Span claims.
+
+    The annotator resolves the first ``he`` in a sentence and stops.  Over a
+    whole evaluation run it never once returned an ``occurrence`` above 1, and
+    it missed every silver Mention Span that had one, so the second ``I`` in a
+    three-``I`` sentence is never resolved and never substituted.
+
+    A repeat is not a judgment call.  The sentence either holds another match
+    for that exact text or it does not, so the repeats are counted here from
+    the article rather than prompted for.  Each one is proposed with the
+    entity its already-resolved sibling carries, which is the right answer
+    whenever a repeated mention corefers with itself -- the ordinary case --
+    and a proposal the Coreference Critic can reject when it does not.  That
+    keeps this function counting and leaves every entity judgment with the
+    agents that make the others.
+
+    Only mention texts the annotator resolved somewhere in that sentence are
+    swept.  A text it never proposed at all is a detection miss, and inventing
+    spans for it here would be this function annotating.
+
+    ``mention_text`` is matched exactly, so ``He`` and ``he`` are counted
+    separately and a sentence opening with ``He`` never lends its capital to
+    a lowercase repeat.
+    """
+
+    sentences_by_label = {sentence.label: sentence for sentence in sentences}
+    # The claimed occurrences and one proposed entity per resolved location.
+    claimed: dict[tuple[str, str], set[int]] = {}
+    entities: dict[tuple[str, str], str] = {}
+    for located in located_spans:
+        mention_span = located.mention_span
+        key = (mention_span.sentence_label, mention_span.mention_text)
+        claimed.setdefault(key, set()).add(mention_span.occurrence)
+        entities.setdefault(key, mention_span.canonical_entity_name)
+
+    proposals: list[MentionSpan] = []
+    for (sentence_label, mention_text), occurrences in claimed.items():
+        sentence = sentences_by_label.get(sentence_label)
+        if sentence is None:
+            continue
+        sentence_text = content[sentence.start_index : sentence.end_index]
+        available = len(_mention_matches(sentence_text, mention_text))
+        for occurrence in range(1, available + 1):
+            if occurrence in occurrences:
+                continue
+            proposals.append(
+                MentionSpan(
+                    sentence_label=sentence_label,
+                    mention_text=mention_text,
+                    occurrence=occurrence,
+                    canonical_entity_name=entities[(sentence_label, mention_text)],
+                )
+            )
+    return proposals
+
+
 def _substitute_located_mention_spans(
     content: str,
     located_spans: Sequence[LocatedMentionSpan],
@@ -178,7 +243,7 @@ def substitute_mention_spans(
 
 
 def _get_model():
-    return get_ollama_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
+    return get_chat_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
 
 
 def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:
@@ -202,56 +267,160 @@ def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
     )
 
 
-def get_annotator_agent(defer_check: bool = True) -> Agent:
-    model = _get_model()
+@dataclass(frozen=True, slots=True)
+class CoreferenceDeps:
+    """The Source Article and the numbered sentences split from it.
 
-    instructions = (
-        "You are an expert Coreference Resolution annotator.\n"
-        "Identify ambiguous pronouns and referring expressions in the numbered "
-        "Source Article and map each one to its canonical entity name.\n\n"
-        "Return only a structured list of Mention Spans. For every Mention Span:\n"
-        "- copy `sentence_label` from the label at the start of the sentence line;\n"
-        "- copy `mention_text` verbatim, including its capitalization;\n"
-        "- use `occurrence` only when the same mention text appears more than "
-        "once in that sentence (it is one-based and defaults to 1); and\n"
-        "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
-        "Return only Mention Spans; never return the Source Article itself. "
-        "Return an empty list when there are no references to resolve."
+    Both coreference agents take this as their dependency, so the sentences an
+    agent is shown always came from the content beside them.
+    """
+
+    content: str
+    sentences: tuple[NumberedSentence, ...]
+
+    @classmethod
+    def for_content(cls, content: str) -> "CoreferenceDeps":
+        """Split ``content`` into the numbered sentences shown to the agents."""
+
+        return cls(
+            content=content,
+            sentences=tuple(split_into_numbered_sentences(content)),
+        )
+
+
+def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
+    """Render the numbered Source Article, for both agents and nowhere else."""
+
+    return (
+        "Numbered Source Article:\n"
+        f"{format_numbered_sentences(ctx.deps.sentences)}"
     )
 
-    return Agent(
-        model,
+
+ANNOTATOR_INSTRUCTIONS = (
+    "You are an expert Coreference Resolution annotator.\n"
+    "Identify ambiguous pronouns and referring expressions in the numbered "
+    "Source Article and map each one to its canonical entity name.\n\n"
+    "Return only a structured list of Mention Spans. For every Mention Span:\n"
+    "- copy `sentence_label` from the label at the start of the sentence line;\n"
+    "- copy `mention_text` verbatim, including its capitalization;\n"
+    "- return a separate Mention Span for every occurrence of a mention, "
+    "including repeats within one sentence: number them with `occurrence` "
+    "1, 2, 3 and so on in the order they appear. `occurrence` is one-based "
+    "and defaults to 1. Occurrences are counted over the exact "
+    "`mention_text`, so `He` and `he` are counted separately; and\n"
+    "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
+    "Return only Mention Spans; never return the Source Article itself. "
+    "Return an empty list when there are no references to resolve."
+)
+
+
+CRITIC_INSTRUCTIONS = (
+    "You are a Coreference Critic.\n"
+    "Review the numbered Source Article and the validated Mention Spans "
+    "listed below it. The Source Article appears exactly once. Judge each "
+    "listed Mention Span independently.\n\n"
+    "You must:\n"
+    "1. Return one verdict for every validated Mention Span;\n"
+    "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
+    "3. set `accepted` to true only when its canonical entity is correct; and\n"
+    "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
+    "Return only the structured list of per-Mention-Span verdicts. Do not "
+    "return an article-level pass/fail value, and do not invent verdicts "
+    "for Mention Spans that were not listed."
+)
+
+
+ANNOTATION_PROMPT = (
+    "Resolve the references in the Source Article shown above. It is "
+    "presented as numbered sentences; copy a visible sentence label "
+    "into each Mention Span."
+)
+"""What the annotator is asked for, in every path that asks it.
+
+A module constant because the annotator is now called from two places.
+An annotator-only run that asked for something subtly different would
+not be a baseline for the loop below it; it would be a different task.
+"""
+
+
+def _unlocatable_retry_message(discards: Sequence[MentionSpanDiscard]) -> str:
+    """Tell the annotator why nothing it returned could be located."""
+
+    reported = "\n".join(
+        f"{format_mention_spans([discard.mention_span])}\n  Reason: {discard.reason}"
+        for discard in discards
+    )
+    return (
+        "None of the Mention Spans you returned could be located in the "
+        "numbered Source Article. Copy `sentence_label` from a label shown at "
+        "the start of a sentence line, copy `mention_text` verbatim from that "
+        "sentence, and set `occurrence` to a one-based index that exists "
+        "there. Return the corrected Mention Spans.\n\n"
+        "Unlocatable Mention Spans:\n"
+        f"{reported}"
+    )
+
+
+def validate_annotator_output(
+    ctx: RunContext[CoreferenceDeps],
+    mention_spans: list[MentionSpan],
+) -> list[MentionSpan]:
+    """Ask the annotator again when nothing it returned can be located.
+
+    An unknown sentence label, or a mention text that does not occur where it
+    was claimed, is exactly the mistake an annotator can fix when told, so the
+    deterministic validation runs here as well as in the resolution loop.
+
+    Three answers pass straight through.  An empty list is a real outcome, so
+    ``no_mentions_returned`` stays a distinct failure rather than a correction
+    target.  A partially locatable answer passes, so one unlocatable Mention
+    Span never costs the neighbours that validated cleanly and its discards are
+    recorded by the loop as before.  And the last answer the agent's
+    structured-output retry budget allows passes, so a persistently unlocatable
+    annotator reaches the Dead Letter Queue as ``all_mentions_discarded``
+    carrying what it returned, rather than as an exhausted retry budget.
+    """
+
+    if not mention_spans:
+        return mention_spans
+
+    validation = validate_mention_spans(
+        ctx.deps.content,
+        ctx.deps.sentences,
+        mention_spans,
+    )
+    if validation.valid_spans or ctx.retry >= ctx.max_retries:
+        return mention_spans
+
+    raise ModelRetry(_unlocatable_retry_message(validation.discards))
+
+
+def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
+    agent = Agent(
+        _get_model(),
         name="coreference_annotator",
+        deps_type=CoreferenceDeps,
         output_type=list[MentionSpan],
-        instructions=instructions,
+        instructions=[ANNOTATOR_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
+        retries=retries,
     )
+    agent.output_validator(validate_annotator_output)
+    return agent
 
-def get_critic_agent(defer_check: bool = True) -> Agent:
-    model = _get_model()
 
-    instructions = (
-        "You are a Coreference Critic.\n"
-        "Review the numbered Source Article and the validated Mention Spans "
-        "listed below it. The Source Article appears exactly once. Judge each "
-        "listed Mention Span independently.\n\n"
-        "You must:\n"
-        "1. Return one verdict for every validated Mention Span;\n"
-        "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
-        "3. set `accepted` to true only when its canonical entity is correct; and\n"
-        "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
-        "Return only the structured list of per-Mention-Span verdicts. Do not "
-        "return an article-level pass/fail value, and do not invent verdicts "
-        "for Mention Spans that were not listed."
-    )
-
+def get_critic_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     return Agent(
-        model,
+        _get_model(),
         name="coreference_critic",
+        deps_type=CoreferenceDeps,
         output_type=list[CriticVerdict],
-        instructions=instructions,
+        instructions=[CRITIC_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
+        retries=retries,
     )
+
 
 class CoreferenceResolutionError(Exception):
     def __init__(
@@ -273,33 +442,37 @@ class CoreferenceResolutionError(Exception):
         self.resolution_run = resolution_run
         super().__init__(f"Coreference resolution failed: {failure_type}")
 
-def get_agent_metadata(agent: Agent | None) -> dict:
+def get_agent_metadata(agent: Agent | None, instructions: str = "") -> dict:
+    """Describe the agent behind a failure for the Dead Letter Queue record.
+
+    The instruction text is passed in rather than scraped off the agent: an
+    instructions function that renders a dependency cannot be called without a
+    run to supply it, and the static text is the part worth recording anyway.
+    No coreference agent configures model settings, so no temperature is
+    reported.
+
+    Describing the agent is decoration on a record that is only being written
+    because something already failed, so an agent that will not name its model
+    yields no metadata rather than displacing the failure being recorded.
+    Reading the name is the part that can fail — an agent holding no model
+    attribute, or a ``model_name`` the provider computes — so only that read is
+    guarded, and every caller gets the swallow from here rather than repeating
+    it.
+    """
+
     if agent is None:
         return {}
-    
-    model_name = "unknown"
-    if agent.model:
-        model_name = getattr(agent.model, "model_name", str(agent.model))
-        
-    system_prompt = ""
-    # Safe resolution of static and dynamic instructions from Pydantic AI Agent
-    if hasattr(agent, "_instructions") and agent._instructions:
-        parts = []
-        for inst in agent._instructions:
-            if isinstance(inst, str):
-                parts.append(inst)
-            elif callable(inst):
-                try:
-                    parts.append(inst())
-                except Exception:
-                    parts.append(str(inst))
-        system_prompt = "\n\n".join(parts)
-                
+
+    try:
+        model = agent.model
+        model_name = getattr(model, "model_name", str(model)) if model else "unknown"
+    except Exception:
+        return {}
+
     return {
         "model": model_name,
-        "temperature": 0.0,
         "prompt_version": "1.0",
-        "system_prompt": system_prompt
+        "system_prompt": instructions,
     }
 
 
@@ -320,6 +493,20 @@ def _validation_issues_from_error(error: Exception) -> list[str]:
     return issues or [str(error) or "Annotator output could not be parsed"]
 
 
+#: What the resolver is willing to call a coreference validation failure.
+#:
+#: Both members describe model output: a Pydantic ``ValidationError`` is
+#: output that does not fit the agent's output type, and pydantic-ai's
+#: ``UnexpectedModelBehavior`` covers the rest — a text answer where a tool
+#: call was required, an exhausted structured-output retry budget.  Everything
+#: else escaping the resolver is an infrastructure failure, and the Dead Letter
+#: Queue is the corpus prompt work is done against.
+MODEL_OUTPUT_FAILURES: tuple[type[Exception], ...] = (
+    ValidationError,
+    UnexpectedModelBehavior,
+)
+
+
 def _structured_output_failure(
     content: str,
     annotator_agent: Agent | None,
@@ -328,16 +515,13 @@ def _structured_output_failure(
 ) -> CoreferenceResolutionError:
     """Build the adapter error for invalid structured model output."""
 
-    try:
-        metadata = get_agent_metadata(annotator_agent)
-    except Exception:
-        metadata = {}
+    metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
 
     return CoreferenceResolutionError(
         original_text=content,
         validation_issues=_validation_issues_from_error(error),
         failure_type="coreference_validation_failure",
-        retry_count=0,
+        retry_count=0 if resolution_run is None else resolution_run.retry_count,
         metadata=metadata,
         resolution_run=resolution_run,
     )
@@ -392,27 +576,19 @@ def _log_contested_locations(mention_spans: Sequence[MentionSpan]) -> None:
             )
 
 
-def _critic_prompt(
-    sentences: Sequence[NumberedSentence],
-    mention_spans: Sequence[MentionSpan],
-) -> str:
-    """Build the one-copy source plus compact Mention Span critic prompt."""
+def _critic_prompt(mention_spans: Sequence[MentionSpan]) -> str:
+    """Ask for one verdict per Mention Span; the article is in the instructions."""
 
     return (
-        "Review each validated Mention Span against the numbered Source Article. "
-        "The Source Article is included exactly once. Return one verdict per "
-        "listed Mention Span and copy its identity fields exactly.\n\n"
-        "Numbered Source Article:\n"
-        f"{format_numbered_sentences(sentences)}\n\n"
+        "Review each validated Mention Span against the numbered Source "
+        "Article. Return one verdict per listed Mention Span and copy its "
+        "identity fields exactly.\n\n"
         "Validated Mention Spans:\n"
         f"{format_mention_spans(mention_spans)}"
     )
 
 
-def _retry_prompt(
-    sentences: Sequence[NumberedSentence],
-    rejected_spans: Sequence[tuple[MentionSpan, str]],
-) -> str:
+def _retry_prompt(rejected_spans: Sequence[tuple[MentionSpan, str]]) -> str:
     """Ask the annotator to replace only the spans rejected by the critic."""
 
     # The Critic's reason is per-span feedback, so it stays attached to the
@@ -422,11 +598,9 @@ def _retry_prompt(
         for mention_span, reason in rejected_spans
     )
     return (
-        "Correct only the rejected Mention Spans listed below. Read the numbered "
-        "Source Article for context, return only replacement Mention Spans for "
-        "those targets, and do not return accepted or unrelated Mention Spans.\n\n"
-        "Numbered Source Article:\n"
-        f"{format_numbered_sentences(sentences)}\n\n"
+        "Correct only the rejected Mention Spans listed below. Return only "
+        "replacement Mention Spans for those targets, and do not return "
+        "accepted or unrelated Mention Spans.\n\n"
         "Rejected Mention Spans and Critic Reasons:\n"
         f"{rejected}"
     )
@@ -487,55 +661,6 @@ def _apply_critic_verdicts(
     return accepted, rejected
 
 
-def _sentence_records(
-    sentences: Sequence[NumberedSentence],
-) -> list[NumberedSentenceRecord]:
-    """Copy the annotator's sentence table into the durable run schema."""
-
-    return [
-        NumberedSentenceRecord(
-            label=sentence.label,
-            text=sentence.text,
-            start_index=sentence.start_index,
-            end_index=sentence.end_index,
-        )
-        for sentence in sentences
-    ]
-
-
-def _build_resolution_run(
-    text: str,
-    sentences: Sequence[NumberedSentence],
-    mention_spans: Sequence[MentionSpan],
-    outcomes: Mapping["MentionSpanIdentity", MentionSpanOutcome],
-    retry_count: int,
-    *,
-    resolved_text: str | None = None,
-    failure_type: str | None = None,
-) -> CoreferenceResolutionRun:
-    """Build a serializable run record and calculate its discard metric.
-
-    ``outcomes`` is keyed by Mention Span identity, so the run holds exactly one
-    final outcome per span and the discard metric cannot be inflated by a span
-    that was rejected in one round and corrected in a later one.
-    """
-
-    final_outcomes = list(outcomes.values())
-    discarded_count = sum(not outcome.accepted for outcome in final_outcomes)
-    total_outcomes = len(final_outcomes)
-    return CoreferenceResolutionRun(
-        resolved_text=text if resolved_text is None else resolved_text,
-        sentences=_sentence_records(sentences),
-        mention_spans=list(mention_spans),
-        outcomes=final_outcomes,
-        discarded_proportion=(
-            discarded_count / total_outcomes if total_outcomes else 0.0
-        ),
-        retry_count=retry_count,
-        failure_type=failure_type,
-    )
-
-
 def _outcome_for_discard(discard: MentionSpanDiscard) -> MentionSpanOutcome:
     """Convert deterministic validation output into a run outcome."""
 
@@ -563,6 +688,282 @@ def _outcome_for_critic(
     )
 
 
+def _count_retry_prompts(messages: Sequence[ModelMessage]) -> int:
+    """Count the corrections asked for within one annotator conversation."""
+
+    return sum(
+        1
+        for message in messages
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+        if isinstance(part, RetryPromptPart)
+    )
+
+
+@dataclass(slots=True)
+class ResolutionState:
+    """The state of one resolution loop, and the rules that state must obey.
+
+    Outcomes are keyed by Mention Span identity with the last write winning, so
+    a Mention Span rejected in one Coreference Critic round and corrected in the
+    next is recorded once, with the decision the run ended on.  The loop used to
+    obey that rule by the order in which it assigned five local variables; here
+    the recording operations enforce it, which is also why the discard
+    proportion is computed by the state that holds the outcomes rather than
+    beside it.
+
+    A Mention Span the annotator returned without being asked for it is kept out
+    of ``outcomes`` and out of ``accepted_spans`` entirely, so it can neither
+    reach the resolved text nor move the discard proportion.  It still appears
+    in ``observed_spans``, which is the raw record of everything the model
+    returned.
+    """
+
+    deps: CoreferenceDeps
+    observed_spans: list[MentionSpan] = field(default_factory=list)
+    annotator_corrections: int = 0
+    outcomes: dict[MentionSpanIdentity, MentionSpanOutcome] = field(
+        default_factory=dict
+    )
+    accepted_spans: dict[MentionSpanIdentity, LocatedMentionSpan] = field(
+        default_factory=dict
+    )
+    critic_rounds: int = 0
+
+    @classmethod
+    def for_deps(cls, deps: CoreferenceDeps) -> "ResolutionState":
+        """Start an empty state over the article both agents are shown."""
+
+        return cls(deps=deps)
+
+    @property
+    def content(self) -> str:
+        """The Source Article content Mention Spans are located against."""
+
+        return self.deps.content
+
+    @property
+    def sentence_records(self) -> list[NumberedSentenceRecord]:
+        """The annotator's sentence table in the durable run schema."""
+
+        return [
+            NumberedSentenceRecord(
+                label=sentence.label,
+                text=sentence.text,
+                start_index=sentence.start_index,
+                end_index=sentence.end_index,
+            )
+            for sentence in self.deps.sentences
+        ]
+
+    @property
+    def surviving_spans(self) -> list[LocatedMentionSpan]:
+        """The located Mention Spans the Coreference Critic last accepted."""
+
+        return list(self.accepted_spans.values())
+
+    @property
+    def resolved_text(self) -> str:
+        """The Source Article with every surviving Mention Span applied."""
+
+        return _substitute_located_mention_spans(self.content, self.surviving_spans)
+
+    @property
+    def discarded_proportion(self) -> float:
+        """The share of final outcomes that did not survive resolution."""
+
+        final_outcomes = list(self.outcomes.values())
+        if not final_outcomes:
+            return 0.0
+        discarded = sum(not outcome.accepted for outcome in final_outcomes)
+        return discarded / len(final_outcomes)
+
+    def record_annotation(
+        self,
+        mention_spans: Sequence[MentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Record the annotator's first answer and return its located spans."""
+
+        self.observed_spans.extend(mention_spans)
+        _log_contested_locations(mention_spans)
+        return self._locate(mention_spans)
+
+    def record_annotator_corrections(
+        self,
+        messages: Sequence[ModelMessage],
+    ) -> None:
+        """Count the corrections the annotator was asked for within one call.
+
+        The output validator's corrections happen inside a single agent run, so
+        they are invisible to the loop; the annotator's own conversation is
+        where they are recorded.  The count is read from the whole conversation
+        rather than accumulated, because a correction round carries the earlier
+        messages forward and would otherwise be counted twice.
+        """
+
+        self.annotator_corrections = _count_retry_prompts(messages)
+
+    def record_occurrence_sweep(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Add the repeat occurrences ``located_spans`` left unclaimed.
+
+        Called once, after the annotator's first answer and before the
+        Coreference Critic sees anything, so a swept Mention Span is reviewed
+        on the same terms as one the annotator proposed itself.  Located spans
+        are the input rather than ``observed_spans`` because a span that
+        failed validation names no location, and repeats cannot be counted
+        from a location the article does not have.
+
+        No round is counted.  Nothing was asked of a model here, and folding
+        this into ``retry_count`` would make every article look like it had
+        needed a correction it never ran.
+        """
+
+        proposals = unclaimed_occurrences(
+            self.content,
+            self.deps.sentences,
+            located_spans,
+        )
+        if not proposals:
+            return []
+        self.observed_spans.extend(proposals)
+        logger.info(
+            "Occurrence sweep proposed %d repeat Mention Span(s) the "
+            "annotator left unclaimed",
+            len(proposals),
+        )
+        return self._locate(proposals)
+
+    def record_correction(
+        self,
+        mention_spans: Sequence[MentionSpan],
+        retry_targets: Sequence[tuple[MentionSpan, str]],
+    ) -> list[LocatedMentionSpan]:
+        """Record a correction round, keeping only the spans it asked for.
+
+        A correction preserves a Mention Span's identity and changes only its
+        canonical entity, so a returned identity outside the retry targets is
+        one the prompt never requested and the Coreference Critic never
+        reviewed.
+        """
+
+        self.critic_rounds += 1
+        self.observed_spans.extend(mention_spans)
+
+        target_identities = {
+            MentionSpanIdentity.of(mention_span) for mention_span, _ in retry_targets
+        }
+        requested = [
+            mention_span
+            for mention_span in mention_spans
+            if MentionSpanIdentity.of(mention_span) in target_identities
+        ]
+        unrequested = [
+            MentionSpanIdentity.of(mention_span)
+            for mention_span in mention_spans
+            if MentionSpanIdentity.of(mention_span) not in target_identities
+        ]
+        if unrequested:
+            logger.debug(
+                "Dropping %d unrequested Mention Span(s) from the retry "
+                "response: %s",
+                len(unrequested),
+                unrequested,
+            )
+
+        _log_contested_locations(requested)
+        return self._locate(requested)
+
+    def record_critic_round(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+        verdicts: Sequence[CriticVerdict],
+    ) -> list[tuple[MentionSpan, str]]:
+        """Record one round of verdicts and return the spans to correct."""
+
+        accepted, rejected = _apply_critic_verdicts(located_spans, verdicts)
+
+        for located in accepted:
+            identity = MentionSpanIdentity.of(located.mention_span)
+            self.accepted_spans[identity] = located
+            self.outcomes[identity] = _outcome_for_critic(
+                located.mention_span,
+                accepted=True,
+            )
+        for mention_span, reason in rejected:
+            identity = MentionSpanIdentity.of(mention_span)
+            # A later rejection displaces an earlier acceptance of the same
+            # identity, so the resolved text can only carry the decision the
+            # run ended on.
+            self.accepted_spans.pop(identity, None)
+            self.outcomes[identity] = _outcome_for_critic(
+                mention_span,
+                accepted=False,
+                reason=reason,
+            )
+
+        return rejected
+
+    def record_validated(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+    ) -> None:
+        """Accept located spans outright, for a run with no Coreference Critic.
+
+        The resolution loop never calls this: there a located Mention Span is
+        pending until the Critic rules on it, and accepting it here would
+        record a verdict that was never sought.  An annotator-only run has no
+        Critic to rule, so validation is the last stage a span passed and the
+        outcome names that stage.  Reading ``stage`` is how a consumer tells
+        an unreviewed span from an accepted one.
+        """
+
+        for located in located_spans:
+            identity = MentionSpanIdentity.of(located.mention_span)
+            self.accepted_spans[identity] = located
+            self.outcomes[identity] = MentionSpanOutcome(
+                mention_span=located.mention_span,
+                stage="validation",
+                outcome="accepted",
+            )
+
+    def to_run(self, failure_type: str | None = None) -> CoreferenceResolutionRun:
+        """Convert the state into the Coreference Resolution Run it describes."""
+
+        return CoreferenceResolutionRun(
+            resolved_text=self.resolved_text,
+            sentences=self.sentence_records,
+            mention_spans=list(self.observed_spans),
+            outcomes=list(self.outcomes.values()),
+            discarded_proportion=self.discarded_proportion,
+            # Every round the annotator was asked to answer again, whether the
+            # Coreference Critic asked or the output validator did, so a run
+            # that exhausted its corrections is not read as a first-response
+            # failure in the Dead Letter Queue.
+            retry_count=self.critic_rounds + self.annotator_corrections,
+            failure_type=failure_type,
+        )
+
+    def _locate(
+        self,
+        mention_spans: Sequence[MentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Locate spans against the article, recording every discard."""
+
+        validation = validate_mention_spans(
+            self.content,
+            self.deps.sentences,
+            mention_spans,
+        )
+        for discard in validation.discards:
+            identity = MentionSpanIdentity.of(discard.mention_span)
+            self.accepted_spans.pop(identity, None)
+            self.outcomes[identity] = _outcome_for_discard(discard)
+        return validation.valid_spans
+
+
 def _failure_issues(outcomes: Sequence[MentionSpanOutcome]) -> list[str]:
     """Return readable outcome details for the legacy DLQ issue field."""
 
@@ -588,10 +989,7 @@ def _zero_survivor_failure(
 ) -> CoreferenceResolutionError:
     """Create the DLQ-worthy error for a run with no accepted spans."""
 
-    try:
-        metadata = get_agent_metadata(annotator_agent)
-    except Exception:
-        metadata = {}
+    metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
 
     issues = _failure_issues(run.outcomes)
     if not issues and failure_type == "no_mentions_returned":
@@ -609,18 +1007,107 @@ def _zero_survivor_failure(
 
 
 
+def annotate_coreferences_run(
+    text: str,
+    annotator_agent: Agent | None = None,
+) -> CoreferenceResolutionRun:
+    """Resolve references with the Coreference Annotator alone.
+
+    This is the first half of ``resolve_coreferences_run`` and nothing more:
+    the same prompt, the same numbered sentences, the same usage limits and
+    the same deterministic validation that decides what the Coreference
+    Critic would have been shown.  It exists so the loop has a baseline to be
+    measured against -- if the annotator alone scores what the whole pipeline
+    scores, the Critic rounds are latency without accuracy.
+
+    Zero-survivor runs raise for the same two reasons production does, and
+    invalid model output is converted to the same adapter error, so a failure
+    here counts as the failure it would have been in the pipeline rather than
+    as a case that quietly left the population.
+
+    There is no ``max_critic_rounds``.  Not running the Critic is the point,
+    and a budget of zero would be a third way to spell it.
+    """
+
+    if annotator_agent is None:
+        annotator_agent = get_annotator_agent()
+
+    deps = CoreferenceDeps.for_content(text)
+    state = ResolutionState.for_deps(deps)
+
+    try:
+        usage = RunUsage()
+        usage_limits = UsageLimits(
+            request_limit=settings.coreference.request_limit,
+            total_tokens_limit=settings.coreference.total_tokens_limit,
+        )
+
+        run_result = annotator_agent.run_sync(
+            ANNOTATION_PROMPT,
+            deps=deps,
+            usage=usage,
+            usage_limits=usage_limits,
+        )
+        state.record_annotator_corrections(run_result.all_messages())
+        located_spans = state.record_annotation(run_result.output)
+
+        logger.info(
+            "Annotator returned %d Mention Span(s); %d located, %d discarded "
+            "in validation (no Coreference Critic)",
+            len(state.observed_spans),
+            len(located_spans),
+            len(state.observed_spans) - len(located_spans),
+        )
+
+        # The sweep is deterministic, so it belongs to the annotator baseline
+        # too; leaving it out of this path would credit the Critic rounds with
+        # repeats no Critic found.
+        located_spans = located_spans + state.record_occurrence_sweep(located_spans)
+
+        if not state.observed_spans:
+            raise _zero_survivor_failure(
+                text,
+                state.to_run("no_mentions_returned"),
+                "no_mentions_returned",
+                annotator_agent,
+            )
+        if not located_spans:
+            raise _zero_survivor_failure(
+                text,
+                state.to_run("all_mentions_discarded"),
+                "all_mentions_discarded",
+                annotator_agent,
+            )
+
+        state.record_validated(located_spans)
+        return state.to_run()
+    except CoreferenceResolutionError:
+        raise
+    except MODEL_OUTPUT_FAILURES as error:
+        raise _structured_output_failure(
+            text,
+            annotator_agent,
+            error,
+            resolution_run=state.to_run("coreference_validation_failure"),
+        ) from error
+
+
 def resolve_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
     critic_agent: Agent | None = None,
-    max_retries: int = 3,
+    *,
+    max_critic_rounds: int,
 ) -> CoreferenceResolutionRun:
     """Resolve references and retain one final outcome per Mention Span.
 
-    ``outcomes`` accumulates by Mention Span identity with last write winning,
-    so a span rejected in one round and corrected in the next is recorded once,
-    with the decision the run actually ended on.  Zero-survivor runs always
-    raise: silently returning the source text would hide the failure.
+    The loop reads the model, calls the agents and decides when to stop; every
+    rule about what is recorded belongs to ``ResolutionState``.  Zero-survivor
+    runs always raise: silently returning the source text would hide the
+    failure.  ``max_critic_rounds`` bounds the Coreference Critic rounds beyond
+    the annotator's first pass — one per correction round — and is unrelated to
+    the agents' own structured-output retry budget.  Its caller chooses it;
+    ``PydanticAICoreferenceAdapter`` is where the configured default is read.
     """
 
     if annotator_agent is None:
@@ -628,205 +1115,141 @@ def resolve_coreferences_run(
     if critic_agent is None:
         critic_agent = get_critic_agent()
 
-    current_run: CoreferenceResolutionRun | None = None
+    deps = CoreferenceDeps.for_content(text)
+    state = ResolutionState.for_deps(deps)
 
     try:
-        sentences = split_into_numbered_sentences(text)
-        annotation_prompt = (
-            "Resolve the references in the following Source Article. The article "
-            "is shown as numbered sentences; copy a visible sentence label into "
-            "each Mention Span.\n\n"
-            "Numbered Source Article:\n"
-            f"{format_numbered_sentences(sentences)}"
-        )
-        run_result = annotator_agent.run_sync(annotation_prompt)
-        mention_spans = TypeAdapter(list[MentionSpan]).validate_python(
-            run_result.output
+        # One usage record for the whole resolution, so the limits below bound
+        # the article rather than any single model call.
+        usage = RunUsage()
+        usage_limits = UsageLimits(
+            request_limit=settings.coreference.request_limit,
+            total_tokens_limit=settings.coreference.total_tokens_limit,
         )
 
-        all_mention_spans = list(mention_spans)
-        _log_contested_locations(mention_spans)
-        validation = validate_mention_spans(text, sentences, mention_spans)
-        outcomes: dict[MentionSpanIdentity, MentionSpanOutcome] = {
-            MentionSpanIdentity.of(discard.mention_span): _outcome_for_discard(
-                discard
-            )
-            for discard in validation.discards
-        }
+        run_result = annotator_agent.run_sync(
+            ANNOTATION_PROMPT,
+            deps=deps,
+            usage=usage,
+            usage_limits=usage_limits,
+        )
+        # The annotator's own conversation, carried into a correction round so
+        # that it sees the Mention Spans it is being asked to correct.
+        annotator_messages = run_result.all_messages()
+        state.record_annotator_corrections(annotator_messages)
+        pending_spans = state.record_annotation(run_result.output)
 
-        if not mention_spans:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=0,
-                failure_type="no_mentions_returned",
-            )
+        logger.info(
+            "Annotator returned %d Mention Span(s); %d located, %d discarded "
+            "in validation",
+            len(state.observed_spans),
+            len(pending_spans),
+            len(state.observed_spans) - len(pending_spans),
+        )
+
+        # Before the Critic, so a repeat the annotator skipped is reviewed on
+        # the same terms as one it proposed.
+        pending_spans = pending_spans + state.record_occurrence_sweep(pending_spans)
+
+        if not state.observed_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("no_mentions_returned"),
                 "no_mentions_returned",
                 annotator_agent,
             )
 
-        if not validation.valid_spans:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=0,
-                failure_type="all_mentions_discarded",
-            )
+        if not pending_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("all_mentions_discarded"),
                 "all_mentions_discarded",
                 annotator_agent,
             )
 
-        pending_spans = validation.valid_spans
-        accepted_spans: dict[MentionSpanIdentity, LocatedMentionSpan] = {}
-        retry_count = 0
-
         while pending_spans:
-            critic_prompt = _critic_prompt(
-                sentences,
-                [located.mention_span for located in pending_spans],
+            logger.info(
+                "Sending %d Mention Span(s) to the Coreference Critic "
+                "(round %d of %d)",
+                len(pending_spans),
+                state.critic_rounds + 1,
+                max_critic_rounds,
             )
-            critic_result = critic_agent.run_sync(critic_prompt)
-            verdicts = TypeAdapter(list[CriticVerdict]).validate_python(
-                critic_result.output
+            critic_result = critic_agent.run_sync(
+                _critic_prompt(
+                    [located.mention_span for located in pending_spans],
+                ),
+                deps=deps,
+                usage=usage,
+                usage_limits=usage_limits,
             )
-            newly_accepted, rejected_spans = _apply_critic_verdicts(
+            rejected_spans = state.record_critic_round(
                 pending_spans,
-                verdicts,
+                critic_result.output,
+            )
+            logger.info(
+                "Coreference Critic returned %d verdict(s): %d accepted, "
+                "%d rejected",
+                len(critic_result.output),
+                len(pending_spans) - len(rejected_spans),
+                len(rejected_spans),
             )
 
-            for located in newly_accepted:
-                identity = MentionSpanIdentity.of(located.mention_span)
-                accepted_spans[identity] = located
-                outcomes[identity] = _outcome_for_critic(
-                    located.mention_span,
-                    accepted=True,
-                )
-            for mention_span, reason in rejected_spans:
-                identity = MentionSpanIdentity.of(mention_span)
-                outcomes[identity] = _outcome_for_critic(
-                    mention_span,
-                    accepted=False,
-                    reason=reason,
-                )
-
-            if not rejected_spans or retry_count >= max_retries:
+            if not rejected_spans or state.critic_rounds >= max_critic_rounds:
+                if rejected_spans:
+                    logger.warning(
+                        "Critic rounds exhausted with %d Mention Span(s) still "
+                        "rejected after %d round(s)",
+                        len(rejected_spans),
+                        state.critic_rounds,
+                    )
                 break
 
-            retry_count += 1
+            logger.info(
+                "Asking the annotator to correct %d rejected Mention Span(s)",
+                len(rejected_spans),
+            )
             retry_result = annotator_agent.run_sync(
-                _retry_prompt(sentences, rejected_spans)
+                _retry_prompt(rejected_spans),
+                deps=deps,
+                message_history=annotator_messages,
+                usage=usage,
+                usage_limits=usage_limits,
             )
-            retry_mentions = TypeAdapter(list[MentionSpan]).validate_python(
-                retry_result.output
+            annotator_messages = retry_result.all_messages()
+            state.record_annotator_corrections(annotator_messages)
+            pending_spans = state.record_correction(
+                retry_result.output,
+                rejected_spans,
             )
-            # Every raw span the model returned stays in the run's audit trail,
-            # including the ones dropped just below.
-            all_mention_spans.extend(retry_mentions)
 
-            # A correction preserves the span's identity and changes only its
-            # canonical entity, so a returned identity that is not among the
-            # retry targets is one this prompt never asked for and the Critic
-            # never reviewed.  Such a span is dropped from substitution, and
-            # deliberately kept out of ``outcomes`` so that a chatty annotator
-            # cannot inflate the discard metric with spans nobody requested.
-            retry_targets = {
-                MentionSpanIdentity.of(mention_span)
-                for mention_span, _ in rejected_spans
-            }
-            requested_retry_mentions = [
-                mention_span
-                for mention_span in retry_mentions
-                if MentionSpanIdentity.of(mention_span) in retry_targets
-            ]
-            unrequested = [
-                MentionSpanIdentity.of(mention_span)
-                for mention_span in retry_mentions
-                if MentionSpanIdentity.of(mention_span) not in retry_targets
-            ]
-            if unrequested:
-                logger.debug(
-                    "Dropping %d unrequested Mention Span(s) from the retry "
-                    "response: %s",
-                    len(unrequested),
-                    unrequested,
-                )
-
-            _log_contested_locations(requested_retry_mentions)
-            retry_validation = validate_mention_spans(
-                text,
-                sentences,
-                requested_retry_mentions,
-            )
-            for discard in retry_validation.discards:
-                outcomes[MentionSpanIdentity.of(discard.mention_span)] = (
-                    _outcome_for_discard(discard)
-                )
-            pending_spans = retry_validation.valid_spans
-
-        surviving = list(accepted_spans.values())
-        resolved_text = _substitute_located_mention_spans(text, surviving)
-        if not surviving:
-            current_run = _build_resolution_run(
-                text,
-                sentences,
-                all_mention_spans,
-                outcomes,
-                retry_count=retry_count,
-                resolved_text=resolved_text,
-                failure_type="all_mentions_rejected",
-            )
+        if not state.surviving_spans:
             raise _zero_survivor_failure(
                 text,
-                current_run,
+                state.to_run("all_mentions_rejected"),
                 "all_mentions_rejected",
                 annotator_agent,
             )
 
-        return _build_resolution_run(
-            text,
-            sentences,
-            all_mention_spans,
-            outcomes,
-            retry_count=retry_count,
-            resolved_text=resolved_text,
-        )
+        return state.to_run()
     except CoreferenceResolutionError:
         raise
-    except Exception as error:
-        # Structured-output parsing and model failures are failures at this
-        # seam.  In particular, never treat a text response as resolved text.
+    except MODEL_OUTPUT_FAILURES as error:
+        # Only model output is a failure at this seam.  In particular, never
+        # treat a text response as resolved text.  Anything else -- an
+        # exhausted transport retry, a usage limit, a programming error --
+        # propagates to the Story Pipeline as a system error.
+        #
+        # The state is built before the loop so that whatever the run reached
+        # travels with the failure: the Mention Spans the annotator returned
+        # and the sentence table it worked from are what a prompt fix is made
+        # against.
         raise _structured_output_failure(
             text,
             annotator_agent,
             error,
-            resolution_run=current_run,
+            resolution_run=state.to_run("coreference_validation_failure"),
         ) from error
-
-
-def resolve_coreferences(
-    text: str,
-    annotator_agent: Agent | None = None,
-    critic_agent: Agent | None = None,
-    max_retries: int = 3,
-) -> str:
-    """Resolve references and return only the resolved content."""
-
-    return resolve_coreferences_run(
-        text,
-        annotator_agent=annotator_agent,
-        critic_agent=critic_agent,
-        max_retries=max_retries,
-    ).resolved_text
 
 
 class PydanticAICoreferenceAdapter:
@@ -836,11 +1259,17 @@ class PydanticAICoreferenceAdapter:
         self,
         annotator_agent: Agent | None = None,
         critic_agent: Agent | None = None,
-        max_retries: int = 3
+        max_critic_rounds: int | None = None,
     ) -> None:
         self.annotator_agent = annotator_agent
         self.critic_agent = critic_agent
-        self.max_retries = max_retries
+        # The one place the configured critic round budget is read.  The
+        # resolution loop takes the number its caller chose.
+        self.max_critic_rounds = (
+            settings.coreference.max_critic_rounds
+            if max_critic_rounds is None
+            else max_critic_rounds
+        )
 
     def resolve(self, content: str) -> CoreferenceResolutionRun:
         annotator_agent: Agent | None = self.annotator_agent
@@ -851,11 +1280,11 @@ class PydanticAICoreferenceAdapter:
                 content,
                 annotator_agent=annotator_agent,
                 critic_agent=critic_agent,
-                max_retries=self.max_retries,
+                max_critic_rounds=self.max_critic_rounds,
             )
         except CoreferenceResolutionError:
             raise
-        except Exception as error:
+        except MODEL_OUTPUT_FAILURES as error:
             raise _structured_output_failure(
                 content,
                 annotator_agent,
@@ -863,13 +1292,23 @@ class PydanticAICoreferenceAdapter:
             ) from error
 
     def health_check(self) -> bool:
+        """Report whether the annotator can complete a trivial run.
+
+        The probe uses the annotator's own output type rather than overriding
+        it with plain text: an agent carrying an output validator cannot be
+        given a different output type per run, and the health of the agent is
+        the health of the contract it actually runs under.  A completed run is
+        healthy whatever it returned, since a trivial article legitimately
+        yields no Mention Spans.
+        """
+
         try:
             agent = self.annotator_agent or get_annotator_agent()
             result = agent.run_sync(
                 "health_check",
-                output_type=str,
-                model_settings={"max_tokens": 1}
+                deps=CoreferenceDeps.for_content("health_check"),
+                model_settings={"max_tokens": 1},
             )
-            return bool(result and result.output)
+            return result is not None
         except Exception:
             return False

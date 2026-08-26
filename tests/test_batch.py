@@ -15,7 +15,13 @@ from knowledge_map.adapters.sqlite_db import (
     get_unprocessed_stories,
     SQLiteStatusTracker
 )
-from knowledge_map.adapters.coreference import CoreferenceResolutionError
+from knowledge_map.adapters.coreference import (
+    CoreferenceResolutionError,
+    PydanticAICoreferenceAdapter,
+    get_annotator_agent,
+    get_critic_agent,
+)
+from pydantic_ai.models.function import FunctionModel
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.schemas import (
     AdherenceReport,
@@ -29,10 +35,10 @@ from knowledge_map.schemas import (
 )
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
+from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+
 from knowledge_map.core.exceptions import (
     classify_exception,
-    classify_api_error,
-    get_retry_after,
     PipelineConnectivityError,
     PipelineRateLimitError,
     PipelineLockError
@@ -64,9 +70,6 @@ def test_batch_ingestion_settings_defaults():
     assert hasattr(settings, "batch_ingestion")
     
     batch_cfg = settings.batch_ingestion
-    assert batch_cfg.max_retries == 3
-    assert batch_cfg.backoff_factor == 2.0
-    assert batch_cfg.rate_limit_wait_cap == 120
     assert batch_cfg.consecutive_failures_limit == 3
     assert batch_cfg.lock_file_path == ".scratch/pipeline.lock"
     assert batch_cfg.db_path == "document_store.db"
@@ -74,9 +77,6 @@ def test_batch_ingestion_settings_defaults():
 def test_batch_ingestion_settings_env_override():
     # Verify environment overrides work
     env_vars = {
-        "BATCH_MAX_RETRIES": "5",
-        "BATCH_BACKOFF_FACTOR": "3.5",
-        "BATCH_RATE_LIMIT_WAIT_CAP": "60",
         "BATCH_CONSECUTIVE_FAILURES_LIMIT": "4",
         "BATCH_LOCK_FILE_PATH": "test.lock",
         "SQLITE_DB_PATH": "test_db.db"
@@ -84,9 +84,6 @@ def test_batch_ingestion_settings_env_override():
     with patch.dict(os.environ, env_vars):
         # We instantiate a new BatchIngestionSettings to see if it loads from env
         batch_cfg = BatchIngestionSettings()
-        assert batch_cfg.max_retries == 5
-        assert batch_cfg.backoff_factor == 3.5
-        assert batch_cfg.rate_limit_wait_cap == 60
         assert batch_cfg.consecutive_failures_limit == 4
         assert batch_cfg.lock_file_path == "test.lock"
         assert batch_cfg.db_path == "test_db.db"
@@ -511,201 +508,126 @@ def test_batch_ingestion_system_error_reset_on_success(tmp_path):
     assert service.consecutive_failures == 1 # ended on failure
 
 
-def test_exception_classification_and_parsing():
+def make_pipeline(status_tracker, **adapters):
+    """A Story Pipeline over mock adapters, with one adapter replaced per test."""
 
-    # 1. Test HTTP 429 Status Error -> RATE_LIMIT
-    resp_429 = httpx.Response(429, headers={"Retry-After": "45"})
-    err_429 = httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp_429)
-    assert classify_api_error(err_429) == "RATE_LIMIT"
-    assert get_retry_after(err_429) == 45
-
-    # 2. Test text/keyword based -> RATE_LIMIT
-    err_msg = ValueError("API rate limit exceeded. Too many requests.")
-    assert classify_api_error(err_msg) == "RATE_LIMIT"
-
-    # 3. Test HTTP connectivity errors -> CONNECTIVITY
-    err_conn = httpx.ConnectError("Connection refused")
-    assert classify_api_error(err_conn) == "CONNECTIVITY"
-
-    # 4. Test TimeoutError -> CONNECTIVITY
-    err_timeout = TimeoutError("Request timed out")
-    assert classify_api_error(err_timeout) == "CONNECTIVITY"
-
-    # 5. Test recursive cause check for rate limit
-    wrapped_err = ValueError("Something failed")
-    wrapped_err.__cause__ = err_429
-    assert classify_api_error(wrapped_err) == "RATE_LIMIT"
-    assert get_retry_after(wrapped_err) == 45
+    defaults = dict(
+        db_adapter=MockDatabaseAdapter(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+    )
+    defaults.update(adapters)
+    return StoryPipeline(status_tracker=status_tracker, **defaults)
 
 
-def test_connectivity_retries_and_backoff():
-    db = MockDatabaseAdapter()
-    embedding = MockEmbeddingAdapter()
-    coref = MockCoreferenceAdapter()
-    extraction = MockEntityExtractionAdapter()
+class FailingCoreferenceAdapter:
+    """A Coreference Adapter whose transport retries are already exhausted."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def resolve(self, content: str):
+        raise self.error
+
+
+def test_exhausted_rate_limit_retry_surfaces_as_a_pipeline_rate_limit_error():
     status_tracker = MockStatusTracker()
-
-    settings = BatchIngestionSettings(max_retries=3, backoff_factor=2.0)
-
-    pipeline = StoryPipeline(
-        db_adapter=db,
-        embedding_adapter=embedding,
-        coreference_adapter=coref,
-        extraction_adapter=extraction,
-        status_tracker=status_tracker,
-        settings=settings,
+    pipeline = make_pipeline(
+        status_tracker,
+        coreference_adapter=FailingCoreferenceAdapter(
+            ModelHTTPError(status_code=429, model_name="test-model", body=None)
+        ),
+    )
+    article = SourceArticle(
+        url="http://test.com/rate-limited",
+        title="Rate Title",
+        content="Gavin Newsom went home.",
     )
 
-    call_count = 0
-    def resolve_side_effect(content):
-        nonlocal call_count
-        call_count += 1
-        raise httpx.ConnectError("Connection refused")
+    with pytest.raises(PipelineRateLimitError) as exc_info:
+        pipeline.run(article)
 
-    coref.resolve = resolve_side_effect
+    assert exc_info.value.component == "coreference"
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "UNPROCESSED"),
+    ]
 
+
+def test_exhausted_transport_retry_surfaces_as_a_pipeline_connectivity_error():
+    status_tracker = MockStatusTracker()
+    pipeline = make_pipeline(
+        status_tracker,
+        coreference_adapter=FailingCoreferenceAdapter(
+            ModelAPIError(model_name="test-model", message="Connection error.")
+        ),
+    )
     article = SourceArticle(
-        url="http://test.com/conn-retry",
+        url="http://test.com/connection-reset",
         title="Conn Title",
-        content="Some content."
+        content="Gavin Newsom went home.",
     )
 
-    sleep_delays = []
-    with patch("time.sleep", side_effect=sleep_delays.append):
-        with pytest.raises(PipelineConnectivityError) as exc_info:
-            pipeline.run(article)
+    with pytest.raises(PipelineConnectivityError) as exc_info:
+        pipeline.run(article)
 
-    assert call_count == 4
-    assert sleep_delays == [2.0, 4.0, 8.0]
     assert exc_info.value.component == "coreference"
-    assert isinstance(exc_info.value.original_exception, httpx.ConnectError)
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "UNPROCESSED"),
+    ]
 
 
-def test_rate_limit_retry_after_under_cap():
-    db = MockDatabaseAdapter()
-    embedding = MockEmbeddingAdapter()
-    coref = MockCoreferenceAdapter()
-    extraction = MockEntityExtractionAdapter()
+def test_a_non_rate_limit_status_is_a_connectivity_error():
     status_tracker = MockStatusTracker()
-
-    settings = BatchIngestionSettings(rate_limit_wait_cap=120)
-    pipeline = StoryPipeline(
-        db_adapter=db,
-        embedding_adapter=embedding,
-        coreference_adapter=coref,
-        extraction_adapter=extraction,
-        status_tracker=status_tracker,
-        settings=settings,
+    pipeline = make_pipeline(
+        status_tracker,
+        coreference_adapter=FailingCoreferenceAdapter(
+            ModelHTTPError(status_code=503, model_name="test-model", body=None)
+        ),
     )
-
-    call_count = 0
-    def resolve_side_effect(content):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            resp = httpx.Response(429, headers={"Retry-After": "45"})
-            raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
-        return CoreferenceResolutionRun(
-            resolved_text="Gavin Newsom went home.",
-            discarded_proportion=0.0,
-        )
-
-    coref.resolve = resolve_side_effect
-
     article = SourceArticle(
-        url="http://test.com/rate-under-cap",
-        title="Rate Title",
-        content="Gavin Newsom went home."
+        url="http://test.com/unavailable",
+        title="Unavailable Title",
+        content="Gavin Newsom went home.",
     )
 
-    sleep_delays = []
-    with patch("time.sleep", side_effect=sleep_delays.append):
-        result = pipeline.run(article)
+    with pytest.raises(PipelineConnectivityError) as exc_info:
+        pipeline.run(article)
 
-    assert call_count == 2
-    assert sleep_delays == [45.0]
-    assert result.resolved_text == "Gavin Newsom went home."
-
-
-def test_rate_limit_retry_after_over_cap():
-    db = MockDatabaseAdapter()
-    embedding = MockEmbeddingAdapter()
-    coref = MockCoreferenceAdapter()
-    extraction = MockEntityExtractionAdapter()
-    status_tracker = MockStatusTracker()
-
-    settings = BatchIngestionSettings(rate_limit_wait_cap=120)
-    pipeline = StoryPipeline(
-        db_adapter=db,
-        embedding_adapter=embedding,
-        coreference_adapter=coref,
-        extraction_adapter=extraction,
-        status_tracker=status_tracker,
-        settings=settings,
-    )
-
-    def resolve_side_effect(content):
-        resp = httpx.Response(429, headers={"Retry-After": "150"})
-        raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
-
-    coref.resolve = resolve_side_effect
-
-    article = SourceArticle(
-        url="http://test.com/rate-over-cap",
-        title="Rate Title",
-        content="Gavin Newsom went home."
-    )
-
-    sleep_delays = []
-    with patch("time.sleep", side_effect=sleep_delays.append):
-        with pytest.raises(PipelineRateLimitError) as exc_info:
-            pipeline.run(article)
-
-    assert len(sleep_delays) == 0
     assert exc_info.value.component == "coreference"
-    assert "exceeds cap" in str(exc_info.value)
 
 
-def test_rate_limit_without_retry_after():
-    db = MockDatabaseAdapter()
-    embedding = MockEmbeddingAdapter()
-    coref = MockCoreferenceAdapter()
-    extraction = MockEntityExtractionAdapter()
+def test_an_exhausted_embedding_retry_names_the_embedding_component():
+    class FailingEmbeddingAdapter:
+        def process_chunks(self, chunks):
+            raise httpx.ConnectError("connection refused")
+
     status_tracker = MockStatusTracker()
-
-    settings = BatchIngestionSettings(max_retries=3, backoff_factor=2.0)
-    pipeline = StoryPipeline(
-        db_adapter=db,
-        embedding_adapter=embedding,
-        coreference_adapter=coref,
-        extraction_adapter=extraction,
-        status_tracker=status_tracker,
-        settings=settings,
+    pipeline = make_pipeline(
+        status_tracker, embedding_adapter=FailingEmbeddingAdapter()
     )
-
-    call_count = 0
-    def resolve_side_effect(content):
-        nonlocal call_count
-        call_count += 1
-        resp = httpx.Response(429)
-        raise httpx.HTTPStatusError("Rate Limit", request=httpx.Request("GET", "http://test.com"), response=resp)
-
-    coref.resolve = resolve_side_effect
-
     article = SourceArticle(
-        url="http://test.com/rate-no-header",
-        title="Rate Title",
-        content="Gavin Newsom went home."
+        url="http://test.com/embedding-down",
+        title="Embedding Title",
+        content="Gavin Newsom went home.",
     )
 
-    sleep_delays = []
-    with patch("time.sleep", side_effect=sleep_delays.append):
-        with pytest.raises(PipelineRateLimitError) as exc_info:
-            pipeline.run(article)
+    with pytest.raises(PipelineConnectivityError) as exc_info:
+        pipeline.run(article)
 
-    assert call_count == 4
-    assert sleep_delays == [15.0, 30.0, 60.0]
-    assert exc_info.value.component == "coreference"
+    assert exc_info.value.component == "embedding"
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "UNPROCESSED"),
+    ]
+
+
+def test_the_story_pipeline_no_longer_retries_stage_calls():
+    """Retries belong to the transport; the pipeline only orchestrates."""
+
+    assert not hasattr(StoryPipeline, "_execute_with_retry")
 
 
 def test_batch_ingestion_rate_limit_tracking_and_locking(tmp_path):
@@ -827,3 +749,77 @@ def test_batch_ingestion_startup_lock_check(tmp_path):
 
 
 
+
+
+def test_a_coreference_socket_timeout_returns_the_article_to_unprocessed():
+    """The Dead Letter Queue never sees an infrastructure failure.
+
+    A read timeout escaping the real Coreference Adapter is translated by the
+    pipeline's transport seam, so the article returns to ``UNPROCESSED`` for
+    the next batch run rather than being archived as a prompt-quality problem.
+    """
+
+    annotator_agent = get_annotator_agent(defer_check=True)
+
+    def mock_annotator(messages, info):
+        raise httpx.ReadTimeout("The read operation timed out")
+
+    status_tracker = MockStatusTracker()
+    dlq = MockDeadLetterQueueAdapter()
+    article = SourceArticle(
+        url="http://test.com/coreference-timeout",
+        title="Timeout Title",
+        content="Gavin Newsom signed a bill. He was happy.",
+    )
+
+    with annotator_agent.override(model=FunctionModel(mock_annotator)):
+        pipeline = make_pipeline(
+            status_tracker,
+            coreference_adapter=PydanticAICoreferenceAdapter(
+                annotator_agent=annotator_agent,
+                critic_agent=get_critic_agent(defer_check=True),
+            ),
+            dlq_adapter=dlq,
+        )
+        with pytest.raises(PipelineConnectivityError) as exc_info:
+            pipeline.run(article)
+
+    assert exc_info.value.component == "coreference"
+    assert dlq.failures == []
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "UNPROCESSED"),
+    ]
+
+
+def test_a_coreference_programming_error_leaves_the_article_a_system_error():
+    """Anything that is not a model-output failure escapes as a system error.
+
+    It is neither archived in the Dead Letter Queue nor returned to
+    ``UNPROCESSED``, because neither re-running the batch nor rewriting a
+    prompt is what fixes it.
+    """
+
+    status_tracker = MockStatusTracker()
+    dlq = MockDeadLetterQueueAdapter()
+    pipeline = make_pipeline(
+        status_tracker,
+        coreference_adapter=FailingCoreferenceAdapter(
+            RuntimeError("resolution state is corrupt")
+        ),
+        dlq_adapter=dlq,
+    )
+    article = SourceArticle(
+        url="http://test.com/coreference-bug",
+        title="Bug Title",
+        content="Gavin Newsom went home.",
+    )
+
+    with pytest.raises(RuntimeError):
+        pipeline.run(article)
+
+    assert dlq.failures == []
+    assert status_tracker.updates == [
+        (article.url, "PROCESSING"),
+        (article.url, "SYSTEM_ERROR"),
+    ]

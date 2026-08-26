@@ -249,3 +249,25 @@ _Avoid_: Prompt, grading scale, judge config
 **Evaluation Run**:
 One execution of a Gold Set against one task and one model, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the model, the Gold Set path, and the split. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files; there is no run identity, no resumption, and no finalization — an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
+
+## Operational Constraints
+
+**Ollama null-content patch**:
+`utils/models.py` monkeypatches a private pydantic-ai internal,
+`OpenAIChatModel._MapModelResponseContext._into_message_param`, to rewrite an
+assistant message's `content: null` to `""`. Ollama's OpenAI-compatible
+endpoint rejects `null` there; pydantic-ai emits it for a tool call carrying no
+text, which only happens on a retry turn. Without the patch a run fails partway
+through with `400 invalid message content type: <nil>`, and whether it fires at
+all depends on whether that particular sample returned text alongside its tool
+call — so it presents as intermittent.
+
+The patch runs at import of `utils/models.py`, which every agent reaches
+through `get_ollama_model`. It previously lived in the extraction adapter and
+applied only as an import side effect, leaving coreference dependent on import
+order.
+
+Being a patch against a private name, it will break silently on a pydantic-ai
+upgrade rather than raising at import. The symptom is the 400 above returning.
+Check this first when a previously working agent starts failing intermittently
+after a dependency bump. Verified against pydantic-ai 2.0.0.
