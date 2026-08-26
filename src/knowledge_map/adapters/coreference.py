@@ -144,6 +144,67 @@ def validate_mention_spans(
     return MentionSpanValidationResult(valid_spans=located, discards=discards)
 
 
+def unclaimed_occurrences(
+    content: str,
+    sentences: Sequence[NumberedSentence],
+    located_spans: Sequence[LocatedMentionSpan],
+) -> list[MentionSpan]:
+    """Propose every repeat of a resolved mention that no Mention Span claims.
+
+    The annotator resolves the first ``he`` in a sentence and stops.  Over a
+    whole evaluation run it never once returned an ``occurrence`` above 1, and
+    it missed every silver Mention Span that had one, so the second ``I`` in a
+    three-``I`` sentence is never resolved and never substituted.
+
+    A repeat is not a judgment call.  The sentence either holds another match
+    for that exact text or it does not, so the repeats are counted here from
+    the article rather than prompted for.  Each one is proposed with the
+    entity its already-resolved sibling carries, which is the right answer
+    whenever a repeated mention corefers with itself -- the ordinary case --
+    and a proposal the Coreference Critic can reject when it does not.  That
+    keeps this function counting and leaves every entity judgment with the
+    agents that make the others.
+
+    Only mention texts the annotator resolved somewhere in that sentence are
+    swept.  A text it never proposed at all is a detection miss, and inventing
+    spans for it here would be this function annotating.
+
+    ``mention_text`` is matched exactly, so ``He`` and ``he`` are counted
+    separately and a sentence opening with ``He`` never lends its capital to
+    a lowercase repeat.
+    """
+
+    sentences_by_label = {sentence.label: sentence for sentence in sentences}
+    # The claimed occurrences and one proposed entity per resolved location.
+    claimed: dict[tuple[str, str], set[int]] = {}
+    entities: dict[tuple[str, str], str] = {}
+    for located in located_spans:
+        mention_span = located.mention_span
+        key = (mention_span.sentence_label, mention_span.mention_text)
+        claimed.setdefault(key, set()).add(mention_span.occurrence)
+        entities.setdefault(key, mention_span.canonical_entity_name)
+
+    proposals: list[MentionSpan] = []
+    for (sentence_label, mention_text), occurrences in claimed.items():
+        sentence = sentences_by_label.get(sentence_label)
+        if sentence is None:
+            continue
+        sentence_text = content[sentence.start_index : sentence.end_index]
+        available = len(_mention_matches(sentence_text, mention_text))
+        for occurrence in range(1, available + 1):
+            if occurrence in occurrences:
+                continue
+            proposals.append(
+                MentionSpan(
+                    sentence_label=sentence_label,
+                    mention_text=mention_text,
+                    occurrence=occurrence,
+                    canonical_entity_name=entities[(sentence_label, mention_text)],
+                )
+            )
+    return proposals
+
+
 def _substitute_located_mention_spans(
     content: str,
     located_spans: Sequence[LocatedMentionSpan],
@@ -243,8 +304,11 @@ ANNOTATOR_INSTRUCTIONS = (
     "Return only a structured list of Mention Spans. For every Mention Span:\n"
     "- copy `sentence_label` from the label at the start of the sentence line;\n"
     "- copy `mention_text` verbatim, including its capitalization;\n"
-    "- use `occurrence` only when the same mention text appears more than "
-    "once in that sentence (it is one-based and defaults to 1); and\n"
+    "- return a separate Mention Span for every occurrence of a mention, "
+    "including repeats within one sentence: number them with `occurrence` "
+    "1, 2, 3 and so on in the order they appear. `occurrence` is one-based "
+    "and defaults to 1. Occurrences are counted over the exact "
+    "`mention_text`, so `He` and `he` are counted separately; and\n"
     "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
     "Return only Mention Spans; never return the Source Article itself. "
     "Return an empty list when there are no references to resolve."
@@ -739,6 +803,39 @@ class ResolutionState:
 
         self.annotator_corrections = _count_retry_prompts(messages)
 
+    def record_occurrence_sweep(
+        self,
+        located_spans: Sequence[LocatedMentionSpan],
+    ) -> list[LocatedMentionSpan]:
+        """Add the repeat occurrences ``located_spans`` left unclaimed.
+
+        Called once, after the annotator's first answer and before the
+        Coreference Critic sees anything, so a swept Mention Span is reviewed
+        on the same terms as one the annotator proposed itself.  Located spans
+        are the input rather than ``observed_spans`` because a span that
+        failed validation names no location, and repeats cannot be counted
+        from a location the article does not have.
+
+        No round is counted.  Nothing was asked of a model here, and folding
+        this into ``retry_count`` would make every article look like it had
+        needed a correction it never ran.
+        """
+
+        proposals = unclaimed_occurrences(
+            self.content,
+            self.deps.sentences,
+            located_spans,
+        )
+        if not proposals:
+            return []
+        self.observed_spans.extend(proposals)
+        logger.info(
+            "Occurrence sweep proposed %d repeat Mention Span(s) the "
+            "annotator left unclaimed",
+            len(proposals),
+        )
+        return self._locate(proposals)
+
     def record_correction(
         self,
         mention_spans: Sequence[MentionSpan],
@@ -962,6 +1059,11 @@ def annotate_coreferences_run(
             len(state.observed_spans) - len(located_spans),
         )
 
+        # The sweep is deterministic, so it belongs to the annotator baseline
+        # too; leaving it out of this path would credit the Critic rounds with
+        # repeats no Critic found.
+        located_spans = located_spans + state.record_occurrence_sweep(located_spans)
+
         if not state.observed_spans:
             raise _zero_survivor_failure(
                 text,
@@ -1044,6 +1146,10 @@ def resolve_coreferences_run(
             len(pending_spans),
             len(state.observed_spans) - len(pending_spans),
         )
+
+        # Before the Critic, so a repeat the annotator skipped is reviewed on
+        # the same terms as one it proposed.
+        pending_spans = pending_spans + state.record_occurrence_sweep(pending_spans)
 
         if not state.observed_spans:
             raise _zero_survivor_failure(
