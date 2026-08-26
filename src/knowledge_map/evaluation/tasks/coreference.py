@@ -119,7 +119,13 @@ class CoreferenceOutput(BaseModel):
 
 
 class CoreferenceSilverMetadata(BaseModel):
-    """Source and model provenance for one silver-labeled Story."""
+    """Source and model provenance for one silver-labeled Story.
+
+    There is no critic provenance here because the annotation is a single
+    pass against a written guideline rather than an annotator/critic loop.
+    ``annotation_guideline`` names that guideline, which is the only thing
+    that makes one case's judgment calls comparable to another's.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -127,9 +133,7 @@ class CoreferenceSilverMetadata(BaseModel):
     story_id: int
     label_quality: Literal["silver"]
     annotator_model: str
-    annotator_reasoning_effort: str
-    critic_model: str
-    critic_reasoning_effort: str
+    annotation_guideline: str
 
 
 def _output_from_run(run: CoreferenceResolutionRun) -> CoreferenceOutput:
