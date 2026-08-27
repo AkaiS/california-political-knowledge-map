@@ -16,12 +16,14 @@
 # Usage:
 #   scripts/llama-server.sh
 #   PORT=8081 CTX=65536 scripts/llama-server.sh
+#   PARALLEL=1 scripts/llama-server.sh
 #   MODEL_GGUF=/path/to/other.gguf scripts/llama-server.sh
 #
 set -euo pipefail
 
 PORT="${PORT:-8080}"
-CTX="${CTX:-32768}"
+CTX="${CTX:-65536}"
+PARALLEL="${PARALLEL:-5}"
 TEMP="${TEMP:-0}"
 ALIAS="${ALIAS:-gemma4:26b}"
 
@@ -70,10 +72,12 @@ elif [[ "$chat_template" == "no" ]]; then
     template_args=(--chat-template-file "$fallback")
 fi
 
+ctx_total=$(( CTX * PARALLEL ))
+
 echo "gguf     $gguf"
 echo "alias    $ALIAS"
 echo "template ${template_args[1]:-<embedded in model>}"
-echo "temp     $TEMP   ctx $CTX   port $PORT"
+echo "temp     $TEMP   ctx $CTX/slot x $PARALLEL slots = $ctx_total   port $PORT"
 echo
 
 # --temp 0 replaces the temperature 1 / top_p 0.95 that ship in the Ollama
@@ -83,10 +87,18 @@ echo
 # --no-mmproj because nothing here sends an image, and loading the projector
 # would only cost memory.
 #
-# `--parallel 1` because the default of 4 gives every slot its own full
-# `--ctx-size` of KV cache for a pipeline that only ever has one client, and
-# because concurrent slots silently halve decode throughput when a stray
-# second process shows up.
+# `--ctx-size` is the TOTAL KV pool, which llama.cpp divides evenly among the
+# slots: n_ctx_slot = n_ctx / n_parallel.  So CTX here means per-slot context
+# and the total is computed from it -- otherwise raising PARALLEL would quietly
+# shrink every slot's window instead of adding capacity.
+#
+# Five slots because decode at batch size 1 is memory-bandwidth-bound: the GPU
+# spends its time streaming weights, not computing, so batching several
+# sequences reads those weights once and applies them to all of them.  Measured
+# on this machine that is ~79 t/s aggregate across five slots against ~40 t/s
+# on one -- roughly 2x, not 5x, because gemma-4-26B is 26B-A4B and concurrent
+# sequences route to different experts, which is exactly the weight sharing
+# batching depends on.  Set PARALLEL=1 to get the whole pool back on one slot.
 #
 # The template array is expanded through `${x[@]+...}` because bash 3.2, which
 # is what /bin/bash is on macOS, treats an empty array as unset under `set -u`.
@@ -96,8 +108,8 @@ exec llama-server \
     ${template_args[@]+"${template_args[@]}"} \
     --jinja \
     --no-mmproj \
-    --ctx-size "$CTX" \
-    --parallel 1 \
+    --ctx-size "$ctx_total" \
+    --parallel "$PARALLEL" \
     --temp "$TEMP" \
     --top-k 1 \
     --n-gpu-layers 999 \
