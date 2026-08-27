@@ -25,7 +25,7 @@ class TransportSettings(BaseModel):
     )
     request_timeout: float = Field(
         default_factory=lambda: float(
-            os.environ.get("LLM_TRANSPORT_REQUEST_TIMEOUT", 600.0)
+            os.environ.get("LLM_TRANSPORT_REQUEST_TIMEOUT", 3600.0)
         ),
         description="Per-request timeout in seconds",
     )
