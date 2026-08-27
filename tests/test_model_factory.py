@@ -157,7 +157,7 @@ def test_transport_settings_come_from_the_environment(monkeypatch):
 def test_transport_settings_have_defaults():
     assert settings.transport.max_attempts == 3
     assert settings.transport.rate_limit_wait_cap == 120
-    assert settings.transport.request_timeout == 600.0
+    assert settings.transport.request_timeout == 3600.0
 
 
 def test_repeated_construction_shares_one_model_and_connection_pool():
