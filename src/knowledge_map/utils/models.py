@@ -190,12 +190,17 @@ _RETRYABLE_OPENROUTER_STATUS_CODES = frozenset({
 
 
 class OpenRouterAdmissionGate:
-    """Coordinate the pause for new OpenRouter requests."""
+    """Coordinate adaptive admission for new OpenRouter requests."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_concurrency: int | None = None) -> None:
+        if max_concurrency is not None and max_concurrency < 1:
+            raise ValueError("OpenRouter admission ceiling must be greater than 0")
         self._deadline = 0.0
         self._paused = False
         self._probe_in_flight = False
+        self._ceiling = max_concurrency
+        self._working_limit = max_concurrency
+        self._in_flight = 0
         self._lock = threading.Lock()
         self._waiters: dict[asyncio.AbstractEventLoop, set[asyncio.Event]] = {}
 
@@ -207,16 +212,23 @@ class OpenRouterAdmissionGate:
 
     def _try_admit(self, now: float) -> tuple[float | None, bool, bool]:
         with self._lock:
-            if not self._paused:
+            if self._paused:
+                remaining = self._deadline - now
+                if remaining > 0:
+                    return remaining, False, False
+                if self._probe_in_flight:
+                    return None, False, True
+                # This check is the admission point. A pause racing after it
+                # affects later requests, not this already-admitted request.
+                self._probe_in_flight = True
+                self._in_flight += 1
+                return None, True, True
+            if (
+                self._working_limit is not None
+                and self._in_flight >= self._working_limit
+            ):
                 return None, False, False
-            remaining = self._deadline - now
-            if remaining > 0:
-                return remaining, False, False
-            if self._probe_in_flight:
-                return None, False, True
-            # This check is the admission point. A pause racing after it
-            # affects later requests, not this already-admitted request.
-            self._probe_in_flight = True
+            self._in_flight += 1
             return None, True, False
 
     def _register_waiter(self) -> asyncio.Event:
@@ -256,45 +268,98 @@ class OpenRouterAdmissionGate:
         with self._lock:
             return self._probe_in_flight
 
-    def probe_succeeded(self, now: float) -> None:
+    def _release_slot_locked(self) -> None:
+        if self._in_flight:
+            self._in_flight -= 1
+
+    def _complete_request(
+        self,
+        *,
+        is_probe: bool,
+        now: float,
+        successful: bool,
+        release_slot: bool,
+    ) -> None:
         with self._lock:
-            if not self._probe_in_flight:
-                return
-            self._probe_in_flight = False
-            if self._deadline <= now:
-                self._paused = False
+            if release_slot:
+                self._release_slot_locked()
+            if successful and self._working_limit is not None:
+                self._working_limit = min(
+                    self._ceiling, self._working_limit + 1
+                )
+            if is_probe:
+                self._probe_in_flight = False
+                if successful and self._deadline <= now:
+                    self._paused = False
+                elif not successful:
+                    # A failed probe must leave the pause in place so another
+                    # caller can probe later instead of releasing a burst.
+                    self._paused = True
         self._wake_waiters()
+
+    def _record_rate_limit_locked(self) -> None:
+        if self._working_limit is not None:
+            self._working_limit = max(1, self._working_limit - 1)
+        self._paused = True
+
+    def record_rate_limit(self) -> None:
+        """Lower the working limit in response to one observed ``429``."""
+
+        with self._lock:
+            self._record_rate_limit_locked()
+        self._wake_waiters()
+
+    def request_completed(
+        self, *, is_probe: bool, now: float, successful: bool = True
+    ) -> None:
+        self._complete_request(
+            is_probe=is_probe,
+            now=now,
+            successful=successful,
+            release_slot=True,
+        )
+
+    def request_failed(self, *, is_probe: bool) -> None:
+        with self._lock:
+            self._release_slot_locked()
+            if is_probe:
+                self._probe_in_flight = False
+                # A transport failure is not evidence that the route is
+                # healthy, so leave the pause for a later probe.
+                self._paused = True
+        self._wake_waiters()
+
+    def request_rate_limited(self, *, is_probe: bool) -> None:
+        with self._lock:
+            self._record_rate_limit_locked()
+            self._release_slot_locked()
+            if is_probe:
+                self._probe_in_flight = False
+        self._wake_waiters()
+
+    def probe_succeeded(self, now: float) -> None:
+        self.request_completed(is_probe=True, now=now)
 
     def probe_rate_limited(self) -> None:
-        with self._lock:
-            if not self._probe_in_flight:
-                return
-            self._probe_in_flight = False
-            self._paused = True
-        self._wake_waiters()
+        self.request_rate_limited(is_probe=True)
 
     def probe_failed(self) -> None:
-        with self._lock:
-            if not self._probe_in_flight:
-                return
-            # Release only this probe's permit. A failed probe is not evidence
-            # that the route is healthy, so waiting callers must not bypass the
-            # pause until another caller can probe it.
-            self._probe_in_flight = False
-            self._paused = True
-        self._wake_waiters()
+        self.request_failed(is_probe=True)
 
     async def wait_until_open(self, hooks: "OpenRouterRetryHooks") -> bool:
         while True:
-            wait, is_probe, wait_for_probe = self._try_admit(hooks.now())
-            if is_probe or (wait is None and not wait_for_probe):
+            wait, admitted, is_probe = self._try_admit(hooks.now())
+            if admitted:
                 return is_probe
             if wait is not None:
                 await hooks.sleep(wait)
                 continue
             event = self._register_waiter()
             try:
-                if self._probe_is_in_flight():
+                wait, admitted, is_probe = self._try_admit(hooks.now())
+                if admitted:
+                    return is_probe
+                if wait is None:
                     await event.wait()
             finally:
                 self._unregister_waiter(event)
@@ -441,6 +506,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     wait = self._rate_limit_wait(response, attempt, now)
                     self._admission_gate.pause_until(now + wait)
                     if attempt + 1 < self._max_attempts:
+                        self._admission_gate.record_rate_limit()
                         # Release the failed response before waiting so its
                         # connection is available while this request backs off.
                         await response.aclose()
@@ -448,8 +514,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                         # request-local retry finish while new callers wait.
                         await self._retry_hooks.sleep(wait)
                         continue
-                    if is_probe:
-                        self._admission_gate.probe_rate_limited()
+                    self._admission_gate.request_rate_limited(is_probe=is_probe)
                     return response
 
                 if (
@@ -460,12 +525,14 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     # HTTP error; raising here would turn it into a connection error.
                     await response.aclose()
                     continue
-                if is_probe:
-                    self._admission_gate.probe_succeeded(self._retry_hooks.now())
+                self._admission_gate.request_completed(
+                    is_probe=is_probe,
+                    now=self._retry_hooks.now(),
+                    successful=200 <= response.status_code < 300,
+                )
                 return response
         except BaseException:
-            if is_probe:
-                self._admission_gate.probe_failed()
+            self._admission_gate.request_failed(is_probe=is_probe)
             raise
 
         raise AssertionError("OpenRouter retry transport made no attempt")
