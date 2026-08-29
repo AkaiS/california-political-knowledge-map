@@ -223,7 +223,7 @@ def test_retry_closes_the_intermediate_response_before_retry(monkeypatch):
     assert first_response_stream.closed
 
 
-@pytest.mark.parametrize("status_code", [400, 401, 402, 403, 404, 422, 429])
+@pytest.mark.parametrize("status_code", [400, 401, 402, 403, 404, 422])
 def test_nonretryable_openrouter_responses_make_one_attempt(
     monkeypatch,
     status_code: int,

@@ -1,5 +1,13 @@
+import asyncio
+import math
 import os
+import random
+import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from types import TracebackType
+from typing import Self
 
 import httpx
 from dotenv import load_dotenv
@@ -180,6 +188,70 @@ _RETRYABLE_OPENROUTER_STATUS_CODES = frozenset({
 })
 
 
+def _default_openrouter_jitter(max_delay: float) -> float:
+    return random.uniform(0.0, max_delay)
+
+
+@dataclass(frozen=True)
+class OpenRouterRetryHooks:
+    """Clock and wait hooks for deterministic OpenRouter retry behavior.
+
+    ``now`` returns Unix epoch seconds, ``sleep`` receives the selected delay,
+    and ``jitter`` receives the exponential-delay upper bound and returns the
+    actual fallback delay.
+    """
+
+    now: Callable[[], float] = time.time
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
+    jitter: Callable[[float], float] = _default_openrouter_jitter
+
+
+def _parse_openrouter_reset_wait(
+    value: str | None,
+    now: float,
+) -> float | None:
+    """Parse OpenRouter's Unix reset timestamp in seconds or milliseconds."""
+
+    if not value:
+        return None
+    try:
+        reset = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(reset):
+        return None
+    if reset >= 10_000_000_000:
+        reset /= 1_000
+    wait = reset - now
+    return wait if wait >= 0 else None
+
+
+def _parse_retry_after_wait(
+    value: str | None,
+    now: float,
+) -> float | None:
+    """Parse RFC 9110 delay-seconds or HTTP-date Retry-After evidence."""
+
+    if not value:
+        return None
+    value = value.strip()
+    if value.isascii() and value.isdecimal():
+        return float(value)
+
+    for date_format in (
+        "%a, %d %b %Y %H:%M:%S GMT",
+        "%A, %d-%b-%y %H:%M:%S GMT",
+        "%a %b %d %H:%M:%S %Y",
+    ):
+        try:
+            retry_at = datetime.strptime(value, date_format).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+        wait = retry_at.timestamp() - now
+        return wait if wait >= 0 else None
+    return None
+
+
 class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
     """Retry request-local OpenRouter failures that are safe to repeat."""
 
@@ -187,11 +259,47 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         self,
         wrapped: httpx.AsyncBaseTransport | None,
         max_attempts: int,
+        rate_limit_wait_cap: float,
+        retry_hooks: OpenRouterRetryHooks | None = None,
     ) -> None:
         self._wrapped = (
             wrapped if wrapped is not None else httpx.AsyncHTTPTransport()
         )
         self._max_attempts = max_attempts
+        self._rate_limit_wait_cap = rate_limit_wait_cap
+        self._retry_hooks = retry_hooks or OpenRouterRetryHooks()
+
+    def _bounded_wait(self, wait: float) -> float:
+        return min(max(wait, 0.0), self._rate_limit_wait_cap)
+
+    def _rate_limit_wait(self, response: httpx.Response, retry_index: int) -> float:
+        now = self._retry_hooks.now()
+        reset_wait = _parse_openrouter_reset_wait(
+            response.headers.get("X-RateLimit-Reset"), now
+        )
+        if reset_wait is not None:
+            return self._bounded_wait(reset_wait)
+
+        retry_after_wait = _parse_retry_after_wait(
+            response.headers.get("Retry-After"), now
+        )
+        if retry_after_wait is not None:
+            return self._bounded_wait(retry_after_wait)
+
+        exponential_wait = min(self._rate_limit_wait_cap, 2.0**retry_index)
+        return self._bounded_wait(self._retry_hooks.jitter(exponential_wait))
+
+    async def __aenter__(self) -> Self:
+        await self._wrapped.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
+    ) -> None:
+        await self._wrapped.__aexit__(exc_type, exc_value, traceback)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         for attempt in range(self._max_attempts):
@@ -201,6 +309,16 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                 if attempt + 1 == self._max_attempts:
                     raise
                 continue
+
+            if response.status_code == 429:
+                if attempt + 1 < self._max_attempts:
+                    wait = self._rate_limit_wait(response, attempt)
+                    # Release the failed response before waiting so its
+                    # connection is available while this request backs off.
+                    await response.aclose()
+                    await self._retry_hooks.sleep(wait)
+                    continue
+                return response
 
             if (
                 response.status_code in _RETRYABLE_OPENROUTER_STATUS_CODES
@@ -221,10 +339,16 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
 def _openrouter_retry_transport(
     transport_settings: TransportSettings,
     transport: httpx.AsyncBaseTransport | None,
+    retry_hooks: OpenRouterRetryHooks | None = None,
 ) -> httpx.AsyncBaseTransport:
-    """Apply bounded, non-rate OpenRouter retries at the HTTP boundary."""
+    """Apply bounded OpenRouter retries at the HTTP boundary."""
 
-    return _OpenRouterRetryTransport(transport, transport_settings.max_attempts)
+    return _OpenRouterRetryTransport(
+        transport,
+        transport_settings.max_attempts,
+        transport_settings.rate_limit_wait_cap,
+        retry_hooks,
+    )
 
 
 def _deployment_transport_settings(
@@ -322,6 +446,7 @@ def _build_openrouter_model(
     deployment: ModelDeployment,
     transport_settings: TransportSettings | None,
     transport: httpx.AsyncBaseTransport | None,
+    retry_hooks: OpenRouterRetryHooks | None = None,
 ) -> OpenRouterModel:
     """Build one native OpenRouter model with deployment request settings."""
 
@@ -336,7 +461,9 @@ def _build_openrouter_model(
     )
 
     http_client = httpx.AsyncClient(
-        transport=_openrouter_retry_transport(effective_transport_settings, transport),
+        transport=_openrouter_retry_transport(
+            effective_transport_settings, transport, retry_hooks
+        ),
         timeout=request_timeout,
     )
     provider = OpenRouterProvider(
@@ -392,6 +519,7 @@ def get_chat_model(
     allow_env_override: bool = True,
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    openrouter_retry_hooks: OpenRouterRetryHooks | None = None,
 ) -> OpenAIChatModel:
     """Get a chat model from a typed deployment or the legacy local path.
 
@@ -429,11 +557,12 @@ def get_chat_model(
             effective_deployment = default_model.model_copy(
                 update={"request_settings": request_settings}
             )
-            if transport_settings is not None:
+            if transport_settings is not None or openrouter_retry_hooks is not None:
                 return _build_openrouter_model(
                     effective_deployment,
                     transport_settings,
                     transport,
+                    openrouter_retry_hooks,
                 )
             key = (effective_deployment, transport)
             model = _models.get(key)

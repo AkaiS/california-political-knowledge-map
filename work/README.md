@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–09 are complete. Issues 10, 14, and 22 are now takeable; the later tickets
+Issues 01–10 are complete. Issues 11, 14, and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -57,8 +57,8 @@ implementation contexts.
 - [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), completed on 2026-08-29.
 - [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), completed on 2026-08-29.
 - [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), completed on 2026-08-29.
-- [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), takeable.
-- [11 Pause every OpenRouter caller after a 429](projects/openrouter-model-deployments/issues/11-shared-openrouter-pause-gate.md), blocked by 10.
+- [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), completed on 2026-08-29.
+- [11 Pause every OpenRouter caller after a 429](projects/openrouter-model-deployments/issues/11-shared-openrouter-pause-gate.md), takeable.
 - [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), blocked by 11.
 - [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), blocked by 12.
 - [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), takeable.
