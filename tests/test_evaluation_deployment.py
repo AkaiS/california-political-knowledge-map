@@ -62,7 +62,7 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
         build=build,
         evaluators=(),
     )
-    report = SimpleNamespace(print=lambda **kwargs: None)
+    report = SimpleNamespace(print=lambda **kwargs: None, failures=())
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
     monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())

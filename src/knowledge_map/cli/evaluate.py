@@ -251,6 +251,11 @@ def _run(args: argparse.Namespace) -> None:
         )
     report.print(include_input=False, include_output=False)
 
+    if report.failures:
+        # A failed case is not a completed Evaluation Run; do not persist a
+        # report whose cases would be mistaken for a complete Gold Set result.
+        raise SystemExit("Evaluation Run failed; no report was written.")
+
     if args.no_report:
         return
     written = write_report(

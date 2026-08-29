@@ -61,7 +61,7 @@ def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
         build=build,
         evaluators=(),
     )
-    report = SimpleNamespace(print=lambda **kwargs: None)
+    report = SimpleNamespace(print=lambda **kwargs: None, failures=())
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
     monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())
