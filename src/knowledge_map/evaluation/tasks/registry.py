@@ -7,10 +7,12 @@ a database path, an agent — is not something a case author supplies.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic_evals.evaluators import Evaluator
+
+from knowledge_map.schemas import ModelDeployment
 
 
 @dataclass(frozen=True)
@@ -20,8 +22,8 @@ class EvaluationTask:
     name: str
     input_type: type[Any]
     output_type: type[Any]
-    build: Callable[[str, Any], Callable[[Any], Any]]
-    """Given a model and the Gold Set, return the callable a case runs through.
+    build: Callable[[ModelDeployment, Any], Callable[[Any], Any]]
+    """Given a Model Deployment and the Gold Set, return the case callable.
 
     The Gold Set is passed so a task that few-shots its prompt can draw
     those examples from the `training` split. A task that reaches into

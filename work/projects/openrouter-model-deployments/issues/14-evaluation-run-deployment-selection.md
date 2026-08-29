@@ -10,12 +10,11 @@ incomplete OpenRouter deployment fails before Gold Set execution begins.
 05 — Pass a Model Deployment through the Relevance Filter; 08 — Constrain every
 OpenRouter route.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The Evaluation Run command accepts local and OpenRouter deployment selections and defaults to OpenRouter.
-- [ ] The existing model override replaces the configured model for the selected deployment verbatim.
-- [ ] The deployment passed to the Evaluation Task is the deployment serialized in the report.
-- [ ] Local and OpenRouter reports for the same upstream release have distinct structured deployment values and filenames.
-- [ ] Missing OpenRouter API key, requested model, or provider list fails before any Evaluation Case executes.
-- [ ] Gold Set loading, Evaluation Split selection, task construction, evaluators, and local `pydantic-evals` execution remain the existing system.
-
+- [x] The Evaluation Run command accepts local and OpenRouter deployment selections and defaults to OpenRouter.
+- [x] The existing model override replaces the configured model for the selected deployment verbatim.
+- [x] The deployment passed to the Evaluation Task is the deployment serialized in the report.
+- [x] Local and OpenRouter reports for the same upstream release have distinct structured deployment values and filenames.
+- [x] Missing OpenRouter API key, requested model, or provider list fails before any Evaluation Case executes.
+- [x] Gold Set loading, Evaluation Split selection, task construction, evaluators, and local `pydantic-evals` execution remain the existing system.
