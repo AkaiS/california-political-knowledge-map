@@ -170,6 +170,63 @@ _models: dict[
 ] = {}
 
 
+_RETRYABLE_OPENROUTER_STATUS_CODES = frozenset({
+    500,
+    502,
+    503,
+    504,
+    524,
+    529,
+})
+
+
+class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
+    """Retry request-local OpenRouter failures that are safe to repeat."""
+
+    def __init__(
+        self,
+        wrapped: httpx.AsyncBaseTransport | None,
+        max_attempts: int,
+    ) -> None:
+        self._wrapped = (
+            wrapped if wrapped is not None else httpx.AsyncHTTPTransport()
+        )
+        self._max_attempts = max_attempts
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        for attempt in range(self._max_attempts):
+            try:
+                response = await self._wrapped.handle_async_request(request)
+            except httpx.TransportError:
+                if attempt + 1 == self._max_attempts:
+                    raise
+                continue
+
+            if (
+                response.status_code in _RETRYABLE_OPENROUTER_STATUS_CODES
+                and attempt + 1 < self._max_attempts
+            ):
+                # Return the final response so OpenAI can preserve its typed
+                # HTTP error; raising here would turn it into a connection error.
+                await response.aclose()
+                continue
+            return response
+
+        raise AssertionError("OpenRouter retry transport made no attempt")
+
+    async def aclose(self) -> None:
+        await self._wrapped.aclose()
+
+
+def _openrouter_retry_transport(
+    transport_settings: TransportSettings,
+    transport: httpx.AsyncBaseTransport | None,
+) -> httpx.AsyncBaseTransport:
+    """Apply bounded, non-rate OpenRouter retries at the HTTP boundary."""
+
+    return _OpenRouterRetryTransport(transport, transport_settings.max_attempts)
+
+
 def _deployment_transport_settings(
     request_settings: ModelRequestSettings,
     transport_settings: TransportSettings | None,
@@ -269,15 +326,17 @@ def _build_openrouter_model(
     """Build one native OpenRouter model with deployment request settings."""
 
     request_settings = deployment.request_settings
-    configured = transport_settings or settings.transport
+    effective_transport_settings = _deployment_transport_settings(
+        request_settings, transport_settings
+    )
     request_timeout = (
         request_settings.timeout
         if request_settings.timeout is not None
-        else configured.request_timeout
+        else effective_transport_settings.request_timeout
     )
 
     http_client = httpx.AsyncClient(
-        transport=transport,
+        transport=_openrouter_retry_transport(effective_transport_settings, transport),
         timeout=request_timeout,
     )
     provider = OpenRouterProvider(
