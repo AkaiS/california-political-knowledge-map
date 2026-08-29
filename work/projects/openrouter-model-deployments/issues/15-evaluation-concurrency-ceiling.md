@@ -8,11 +8,10 @@ operator's ceiling.
 **Blocked by:** 13 — Adapt OpenRouter request admission after probes; 14 —
 Select and record an Evaluation Run Model Deployment.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The Evaluation Run passes its positive concurrency setting to OpenRouter request admission.
-- [ ] The same setting continues to bound concurrent Evaluation Cases in `pydantic-evals`.
-- [ ] Reactive restoration never admits more OpenRouter requests than the operator selected.
-- [ ] Local Evaluation Runs preserve their current case-concurrency behavior without entering OpenRouter flow control.
-- [ ] Command and concurrent Agent tests demonstrate the ceiling without live inference.
-
+- [x] The Evaluation Run passes its positive concurrency setting to OpenRouter request admission.
+- [x] The same setting continues to bound concurrent Evaluation Cases in `pydantic-evals`.
+- [x] Reactive restoration never admits more OpenRouter requests than the operator selected.
+- [x] Local Evaluation Runs preserve their current case-concurrency behavior without entering OpenRouter flow control.
+- [x] Command and concurrent Agent tests demonstrate the ceiling without live inference.

@@ -33,6 +33,14 @@ def test_evaluation_run_defaults_to_openrouter_deployment() -> None:
     assert args.deployment == "openrouter"
 
 
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_evaluation_run_requires_positive_max_concurrency(value: str) -> None:
+    with pytest.raises(SystemExit):
+        _parser().parse_args(
+            ["eval", "run", "relevance", "--max-concurrency", value]
+        )
+
+
 def test_eval_run_binds_one_model_deployment_to_task_and_report(
     tmp_path: Path, monkeypatch
 ) -> None:

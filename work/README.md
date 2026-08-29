@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–14 are complete. Issues 15, 16, 21, and 22 are now takeable; the later tickets
+Issues 01–15 are complete. Issues 16, 21, and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -62,7 +62,7 @@ implementation contexts.
 - [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), completed on 2026-08-29.
 - [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), completed on 2026-08-29.
 - [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), completed on 2026-08-29.
-- [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), takeable.
+- [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), completed on 2026-08-29.
 - [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), takeable.
 - [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), blocked by 16.
 - [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), blocked by 16.

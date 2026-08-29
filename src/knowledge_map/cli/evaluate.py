@@ -10,6 +10,7 @@ import argparse
 import os
 import sys
 from collections import Counter
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +30,10 @@ from knowledge_map.schemas import (
     ModelDeployment,
     OpenRouterProviderPolicy,
 )
-from knowledge_map.utils.models import resolve_chat_base_url
+from knowledge_map.utils.models import (
+    openrouter_admission_ceiling,
+    resolve_chat_base_url,
+)
 
 
 def select_deployment(
@@ -127,12 +131,22 @@ def add_parser(subparsers: Any) -> None:
         default=None,
         help="Defaults to every case in the file",
     )
-    run.add_argument("--max-concurrency", type=int, default=1)
+    run.add_argument("--max-concurrency", type=_positive_int, default=1)
     run.add_argument(
         "--no-report",
         action="store_true",
         help="Print the report without writing a file",
     )
+
+
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer") from error
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be greater than 0")
+    return parsed
 
 
 def dispatch(args: argparse.Namespace) -> None:
@@ -222,13 +236,19 @@ def _run(args: argparse.Namespace) -> None:
     )
     split = EvaluationSplit(args.split) if args.split else None
 
-    report = run_gold_set(
-        gold_set,
-        task=task.build(deployment, gold_set),
-        evaluators=task.evaluators,
-        split=split,
-        max_concurrency=args.max_concurrency,
+    admission_scope = (
+        openrouter_admission_ceiling(args.max_concurrency)
+        if deployment.kind is DeploymentKind.OPENROUTER
+        else nullcontext()
     )
+    with admission_scope:
+        report = run_gold_set(
+            gold_set,
+            task=task.build(deployment, gold_set),
+            evaluators=task.evaluators,
+            split=split,
+            max_concurrency=args.max_concurrency,
+        )
     report.print(include_input=False, include_output=False)
 
     if args.no_report:

@@ -4,7 +4,8 @@ import os
 import random
 import threading
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import TracebackType
@@ -198,11 +199,58 @@ class OpenRouterAdmissionGate:
         self._deadline = 0.0
         self._paused = False
         self._probe_in_flight = False
+        self._base_ceiling = max_concurrency
         self._ceiling = max_concurrency
         self._working_limit = max_concurrency
+        self._ceiling_leases: dict[int, int] = {}
+        self._next_ceiling_lease = 0
         self._in_flight = 0
         self._lock = threading.Lock()
         self._waiters: dict[asyncio.AbstractEventLoop, set[asyncio.Event]] = {}
+
+    @contextmanager
+    def configured_ceiling(self, max_concurrency: int) -> Iterator[None]:
+        """Temporarily bound this shared gate to one evaluation's ceiling.
+
+        Multiple evaluations can overlap, so active ceilings combine by the
+        strictest bound. Releasing the last run-scoped ceiling restores the
+        gate's unbounded default rather than leaking a prior run's limit into
+        later model calls.
+        """
+
+        if max_concurrency < 1:
+            raise ValueError("OpenRouter admission ceiling must be greater than 0")
+        with self._lock:
+            lease = self._next_ceiling_lease
+            self._next_ceiling_lease += 1
+            self._ceiling_leases[lease] = max_concurrency
+            self._ceiling = self._effective_ceiling_locked()
+            self._working_limit = self._bounded_working_limit_locked()
+        self._wake_waiters()
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._ceiling_leases.pop(lease, None)
+                self._ceiling = self._effective_ceiling_locked()
+                if self._ceiling is None:
+                    self._working_limit = None
+                else:
+                    self._working_limit = self._bounded_working_limit_locked()
+            self._wake_waiters()
+
+    def _effective_ceiling_locked(self) -> int | None:
+        ceilings = list(self._ceiling_leases.values())
+        if self._base_ceiling is not None:
+            ceilings.append(self._base_ceiling)
+        return min(ceilings) if ceilings else None
+
+    def _bounded_working_limit_locked(self) -> int | None:
+        if self._ceiling is None:
+            return self._working_limit
+        if self._working_limit is None:
+            return self._ceiling
+        return min(self._working_limit, self._ceiling)
 
     def pause_until(self, deadline: float) -> None:
         with self._lock:
@@ -216,6 +264,11 @@ class OpenRouterAdmissionGate:
                 remaining = self._deadline - now
                 if remaining > 0:
                     return remaining, False, False
+                if (
+                    self._working_limit is not None
+                    and self._in_flight >= self._working_limit
+                ):
+                    return None, False, False
                 if self._probe_in_flight:
                     return None, False, True
                 # This check is the admission point. A pause racing after it
@@ -366,6 +419,14 @@ class OpenRouterAdmissionGate:
 
 
 _DEFAULT_OPENROUTER_ADMISSION_GATE = OpenRouterAdmissionGate()
+
+
+@contextmanager
+def openrouter_admission_ceiling(max_concurrency: int) -> Iterator[None]:
+    """Apply one Evaluation Run's ceiling to the process-wide OpenRouter gate."""
+
+    with _DEFAULT_OPENROUTER_ADMISSION_GATE.configured_ceiling(max_concurrency):
+        yield
 
 
 def _default_openrouter_jitter(max_delay: float) -> float:
