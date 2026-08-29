@@ -13,7 +13,7 @@ from knowledge_map.ontology.extraction_conformance import (
     conform_extraction_result,
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
-from knowledge_map.schemas import AdherenceReport, ExtractionResult
+from knowledge_map.schemas import AdherenceReport, ExtractionResult, ModelDeployment
 from knowledge_map.utils.models import get_chat_model
 
 logger = logging.getLogger(__name__)
@@ -51,11 +51,25 @@ def load_instructions() -> str:
     else:
         return "Extract entities and relationships from California politics stories."
 
-def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
-    model = get_chat_model("gemma4:31b", "OLLAMA_MODEL_EXTRACTION")
-    
+def get_extraction_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+    retries: int = 3,
+) -> Agent:
+    """Build the Entity Extraction agent from one explicit deployment.
+
+    Legacy callers without a deployment retain the shared global model
+    override, but stage-specific model aliases cannot replace a deployment.
+    """
+
+    model = (
+        get_chat_model(deployment)
+        if deployment is not None
+        else get_chat_model("gemma4:31b", allow_env_override=True)
+    )
     instructions = load_instructions()
-    
+
     return Agent(
         model,
         output_type=ExtractionResult,
@@ -65,10 +79,15 @@ def get_extraction_agent(defer_check: bool = True, retries: int = 3) -> Agent:
         capabilities=[hooks],
     )
 
-def extract_entities(text: str, agent: Agent | None = None) -> ExtractionResult:
+def extract_entities(
+    text: str,
+    agent: Agent | None = None,
+    *,
+    deployment: ModelDeployment | None = None,
+) -> ExtractionResult:
     if agent is None:
-        agent = get_extraction_agent()
-    
+        agent = get_extraction_agent(deployment)
+
     result = agent.run_sync(text)
     return result.output
 
@@ -93,8 +112,14 @@ class ExtractionError(Exception):
 class PydanticAIEntityExtractionAdapter:
     """Concrete adapter for entity extraction that conforms to the EntityExtractionAdapter protocol."""
 
-    def __init__(self, agent: Agent | None = None) -> None:
-        self.agent = agent or get_extraction_agent()
+    def __init__(
+        self,
+        agent: Agent | None = None,
+        *,
+        deployment: ModelDeployment | None = None,
+    ) -> None:
+        self.deployment = deployment
+        self.agent = agent or get_extraction_agent(deployment)
         self.reset_adherence_report()
 
     def reset_adherence_report(self) -> None:
@@ -156,7 +181,7 @@ class PydanticAIEntityExtractionAdapter:
 
     def health_check(self) -> bool:
         try:
-            agent = self.agent or get_extraction_agent()
+            agent = self.agent
             result = agent.run_sync(
                 "health_check",
                 output_type=str,
@@ -165,6 +190,4 @@ class PydanticAIEntityExtractionAdapter:
             return bool(result and result.output)
         except Exception:
             return False
-
-
 

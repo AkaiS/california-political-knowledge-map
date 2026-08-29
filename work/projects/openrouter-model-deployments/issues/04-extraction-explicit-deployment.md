@@ -7,11 +7,10 @@ dropping stage-specific model lookup.
 
 **Blocked by:** 02 — Build local chat models from a Model Deployment.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The Entity Extraction agent is constructed from the supplied Model Deployment through the shared factory.
-- [ ] The concrete adapter can receive an agent or deployment without consulting a stage-specific model variable.
-- [ ] A conflicting stage-specific environment value cannot replace the supplied deployment.
-- [ ] Deterministic adapter injection continues to avoid live inference.
-- [ ] Existing extraction and conformance tests remain green with a local deployment.
-
+- [x] The Entity Extraction agent is constructed from the supplied Model Deployment through the shared factory.
+- [x] The concrete adapter can receive an agent or deployment without consulting a stage-specific model variable.
+- [x] A conflicting stage-specific environment value cannot replace the supplied deployment.
+- [x] Deterministic adapter injection continues to avoid live inference.
+- [x] Existing extraction and conformance tests remain green with a local deployment.
