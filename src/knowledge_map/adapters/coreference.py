@@ -17,6 +17,7 @@ from knowledge_map.schemas import (
     MentionSpan,
     MentionSpanDiscard,
     MentionSpanOutcome,
+    ModelDeployment,
     NumberedSentenceRecord,
 )
 from knowledge_map.utils.models import get_chat_model
@@ -218,8 +219,12 @@ def substitute_mention_spans(
     )
 
 
-def _get_model():
-    return get_chat_model("8k-gemma-e4b-extraction", "OLLAMA_MODEL_COREFERENCE")
+def _get_model(deployment: ModelDeployment | None = None):
+    """Build the coreference model without consulting a stage alias."""
+
+    if deployment is not None:
+        return get_chat_model(deployment)
+    return get_chat_model("8k-gemma-e4b-extraction", allow_env_override=True)
 
 
 def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:
@@ -380,9 +385,14 @@ def validate_annotator_output(
     raise ModelRetry(_unlocatable_retry_message(validation.discards))
 
 
-def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
+def get_annotator_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+    retries: int = 3,
+) -> Agent:
     agent = Agent(
-        _get_model(),
+        _get_model(deployment),
         name="coreference_annotator",
         deps_type=CoreferenceDeps,
         output_type=list[MentionSpan],
@@ -394,9 +404,14 @@ def get_annotator_agent(defer_check: bool = True, retries: int = 3) -> Agent:
     return agent
 
 
-def get_critic_agent(defer_check: bool = True, retries: int = 3) -> Agent:
+def get_critic_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+    retries: int = 3,
+) -> Agent:
     return Agent(
-        _get_model(),
+        _get_model(deployment),
         name="coreference_critic",
         deps_type=CoreferenceDeps,
         output_type=list[CriticVerdict],
@@ -943,6 +958,8 @@ def _zero_survivor_failure(
 def annotate_coreferences_run(
     text: str,
     annotator_agent: Agent | None = None,
+    *,
+    deployment: ModelDeployment | None = None,
 ) -> CoreferenceResolutionRun:
     """Resolve references with the Coreference Annotator alone.
 
@@ -951,7 +968,7 @@ def annotate_coreferences_run(
     """
 
     if annotator_agent is None:
-        annotator_agent = get_annotator_agent()
+        annotator_agent = get_annotator_agent(deployment)
 
     deps = CoreferenceDeps.for_content(text)
     state = ResolutionState.for_deps(deps)
@@ -1018,6 +1035,7 @@ def resolve_coreferences_run(
     critic_agent: Agent | None = None,
     *,
     max_critic_rounds: int,
+    deployment: ModelDeployment | None = None,
 ) -> CoreferenceResolutionRun:
     """Resolve references and retain one final outcome per Mention Span.
 
@@ -1028,9 +1046,9 @@ def resolve_coreferences_run(
     """
 
     if annotator_agent is None:
-        annotator_agent = get_annotator_agent()
+        annotator_agent = get_annotator_agent(deployment)
     if critic_agent is None:
-        critic_agent = get_critic_agent()
+        critic_agent = get_critic_agent(deployment)
 
     deps = CoreferenceDeps.for_content(text)
     state = ResolutionState.for_deps(deps)
@@ -1168,9 +1186,12 @@ class PydanticAICoreferenceAdapter:
         annotator_agent: Agent | None = None,
         critic_agent: Agent | None = None,
         max_critic_rounds: int | None = None,
+        *,
+        deployment: ModelDeployment | None = None,
     ) -> None:
-        self.annotator_agent = annotator_agent
-        self.critic_agent = critic_agent
+        self.deployment = deployment
+        self.annotator_agent = annotator_agent or get_annotator_agent(deployment)
+        self.critic_agent = critic_agent or get_critic_agent(deployment)
         # The one place the configured critic round budget is read.
         self.max_critic_rounds = (
             settings.coreference.max_critic_rounds
@@ -1180,14 +1201,14 @@ class PydanticAICoreferenceAdapter:
 
     def resolve(self, content: str) -> CoreferenceResolutionRun:
         annotator_agent: Agent | None = self.annotator_agent
+        critic_agent: Agent | None = self.critic_agent
         try:
-            annotator_agent = annotator_agent or get_annotator_agent()
-            critic_agent = self.critic_agent or get_critic_agent()
             return resolve_coreferences_run(
                 content,
                 annotator_agent=annotator_agent,
                 critic_agent=critic_agent,
                 max_critic_rounds=self.max_critic_rounds,
+                deployment=self.deployment,
             )
         except CoreferenceResolutionError:
             raise
@@ -1205,7 +1226,7 @@ class PydanticAICoreferenceAdapter:
         """
 
         try:
-            agent = self.annotator_agent or get_annotator_agent()
+            agent = self.annotator_agent
             result = agent.run_sync(
                 "health_check",
                 deps=CoreferenceDeps.for_content("health_check"),

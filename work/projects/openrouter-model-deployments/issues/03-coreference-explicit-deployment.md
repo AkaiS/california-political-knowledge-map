@@ -7,11 +7,10 @@ resolving stage-specific model names from ambient environment variables.
 
 **Blocked by:** 02 — Build local chat models from a Model Deployment.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The Coreference Annotator and Coreference Critic obtain their models through the shared factory from the same supplied deployment.
-- [ ] The full Coreference Resolution Evaluation Task and annotator-only task bind their selected deployment explicitly.
-- [ ] Agent injection and overrides used by deterministic tests still work without live model credentials.
-- [ ] A conflicting stage-specific environment value cannot replace the supplied deployment.
-- [ ] Existing Coreference Resolution behavior and focused tests remain green with a local deployment.
-
+- [x] The Coreference Annotator and Coreference Critic obtain their models through the shared factory from the same supplied deployment.
+- [x] The full Coreference Resolution Evaluation Task and annotator-only task bind their selected deployment explicitly.
+- [x] Agent injection and overrides used by deterministic tests still work without live model credentials.
+- [x] A conflicting stage-specific environment value cannot replace the supplied deployment.
+- [x] Existing Coreference Resolution behavior and focused tests remain green with a local deployment.

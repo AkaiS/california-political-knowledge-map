@@ -6,6 +6,7 @@ from pydantic_ai import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
+import knowledge_map.adapters.coreference as coreference_adapter_module
 from knowledge_map.adapters.coreference import (
     ANNOTATOR_INSTRUCTIONS,
     CoreferenceDeps,
@@ -14,7 +15,13 @@ from knowledge_map.adapters.coreference import (
     get_annotator_agent,
     get_critic_agent,
 )
-from knowledge_map.schemas import CriticVerdict, MentionSpan
+from knowledge_map.schemas import (
+    CriticVerdict,
+    DeploymentKind,
+    MentionSpan,
+    ModelDeployment,
+    ModelRequestSettings,
+)
 
 
 def rendered_request(messages) -> str:
@@ -62,6 +69,79 @@ def critic_response(info, verdicts: list[dict]) -> ModelResponse:
             )
         ]
     )
+
+
+def local_deployment() -> ModelDeployment:
+    return ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-coreference-model",
+        endpoint="http://explicit-coreference.test:9999",
+        request_settings=ModelRequestSettings(
+            temperature=0.0,
+            thinking=False,
+            max_attempts=2,
+            rate_limit_wait_cap=5.0,
+        ),
+    )
+
+
+def test_production_resolution_binds_one_explicit_deployment_to_both_agents(
+    monkeypatch,
+):
+    seen: list[object] = []
+    calls = 0
+
+    def model_factory(requested):
+        nonlocal calls
+        seen.append(requested)
+        assert isinstance(requested, ModelDeployment)
+
+        def respond(messages, info):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return mention_response(
+                    info,
+                    [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "canonical_entity_name": "Gavin Newsom",
+                        }
+                    ],
+                )
+            return critic_response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "He",
+                        "accepted": True,
+                    }
+                ],
+            )
+
+        return FunctionModel(respond)
+
+    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
+    monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
+    deployment = local_deployment()
+    adapter = PydanticAICoreferenceAdapter(deployment=deployment)
+    run = adapter.resolve("Gavin Newsom signed a bill. He was happy.")
+
+    assert run.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
+    assert seen == [deployment, deployment]
+
+
+def test_default_coreference_model_ignores_stage_alias_but_keeps_global_override(
+    monkeypatch,
+):
+    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
+    monkeypatch.setenv("OLLAMA_MODEL", "global-model")
+
+    agent = get_annotator_agent(defer_check=True)
+
+    assert agent.model.model_name == "global-model"
 
 
 def test_both_agents_render_the_numbered_article_from_their_dependencies():

@@ -50,7 +50,7 @@ implementation contexts.
 
 - [01 Define the Model Deployment contract](projects/openrouter-model-deployments/issues/01-model-deployment-contract.md), completed on 2026-08-28.
 - [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), completed on 2026-08-28.
-- [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), takeable.
+- [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), completed on 2026-08-29.
 - [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), takeable.
 - [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), takeable.
 - [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), takeable.
