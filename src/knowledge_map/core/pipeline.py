@@ -1,19 +1,20 @@
 import logging
-from typing import Protocol, List, Optional
-from knowledge_map.schemas import (
-    AdherenceReport,
-    BillSessionResolutions,
-    CoreferenceResolutionRun,
-    LegislativeEventDates,
-    SourceArticle,
-    ArticleChunk,
-    ExtractionResult,
-    PipelineResult,
-    ArticleStatus,
-)
-from knowledge_map.utils.chunking import chunk_article
+from typing import List, Optional, Protocol
+
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
+from knowledge_map.schemas import (
+    AdherenceReport,
+    ArticleChunk,
+    ArticleStatus,
+    BillSessionResolutions,
+    CoreferenceResolutionRun,
+    ExtractionResult,
+    LegislativeEventDates,
+    PipelineResult,
+    SourceArticle,
+)
+from knowledge_map.utils.chunking import chunk_article
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +93,12 @@ class StatusTracker(Protocol):
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.core.exceptions import (
+    PipelineConnectivityError,
     PipelineException,
+    PipelineRateLimitError,
     transport_failures_as_pipeline_errors,
 )
+
 
 class StoryPipeline:
     def __init__(
@@ -190,8 +194,12 @@ class StoryPipeline:
 
     def _handle_pipeline_failure(self, e: Exception, article: SourceArticle, dry_run: bool) -> None:
         if not dry_run:
-            if isinstance(e, PipelineException):
+            if isinstance(e, PipelineRateLimitError) or (
+                isinstance(e, PipelineConnectivityError) and e.retryable
+            ):
                 self._safe_update_status(article.url, ArticleStatus.UNPROCESSED)
+            elif isinstance(e, PipelineException):
+                self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
 
         if isinstance(e, (CoreferenceResolutionError, ExtractionError)):
             error_cat = "coreference" if isinstance(e, CoreferenceResolutionError) else "extraction"

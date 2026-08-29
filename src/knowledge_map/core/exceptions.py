@@ -6,6 +6,7 @@ from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
 
+
 class PipelineException(Exception):
     """Base exception for pipeline execution issues."""
     def __init__(self, message: str, component: str, original_exception: Exception) -> None:
@@ -13,17 +14,26 @@ class PipelineException(Exception):
         self.original_exception = original_exception
         super().__init__(message)
 
+
 class PipelineRateLimitError(PipelineException):
     """Raised when a rate limit is hit and cannot be retried or exceeds cap."""
     pass
 
+
 class PipelineConnectivityError(PipelineException):
     """Raised when connectivity errors are exhausted."""
-    pass
+
+    @property
+    def retryable(self) -> bool:
+        """Whether the original provider failure can succeed on a later run."""
+
+        return _is_retryable_transport_failure(self.original_exception)
+
 
 class PipelineLockError(Exception):
     """Raised when a pipeline lock file exists or is written."""
     pass
+
 
 def classify_exception(e: Exception) -> bool:
     """
@@ -31,6 +41,7 @@ def classify_exception(e: Exception) -> bool:
     rather than aborting the batch process.
     """
     return isinstance(e, (CoreferenceResolutionError, ExtractionError))
+
 
 @contextmanager
 def transport_failures_as_pipeline_errors(component: str):
@@ -64,3 +75,23 @@ def _final_status_code(error: Exception) -> int | None:
     if isinstance(error, httpx.HTTPStatusError):
         return error.response.status_code
     return None
+
+
+_RETRYABLE_SERVER_STATUS_CODES = frozenset({
+    500,
+    502,
+    503,
+    504,
+    524,
+    529,
+})
+
+
+def _is_retryable_transport_failure(error: Exception) -> bool:
+    """Classify typed failures that may succeed when the Story is retried."""
+
+    if isinstance(error, httpx.TransportError):
+        return True
+    if isinstance(error, ModelAPIError) and not isinstance(error, ModelHTTPError):
+        return True
+    return _final_status_code(error) in _RETRYABLE_SERVER_STATUS_CODES

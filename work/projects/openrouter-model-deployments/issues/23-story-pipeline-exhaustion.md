@@ -9,11 +9,10 @@ failed Story.
 **Blocked by:** 13 — Adapt OpenRouter request admission after probes; 22 —
 Select one Story Pipeline chat deployment.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Exhausted retryable transport and rate-limit failures retain the existing retry-later Article Status behavior.
-- [ ] Non-retryable provider failures surface immediately through the established pipeline error translation.
-- [ ] Existing Coreference Resolution and Entity Extraction validation failures retain their Dead Letter Queue behavior.
-- [ ] A failed Story is never marked completed and may be selected by a later batch according to existing rules.
-- [ ] Focused Story Pipeline tests use injected adapters or mock transports and make no live provider calls.
-
+- [x] Exhausted retryable transport and rate-limit failures retain the existing retry-later Article Status behavior.
+- [x] Non-retryable provider failures surface immediately through the established pipeline error translation.
+- [x] Existing Coreference Resolution and Entity Extraction validation failures retain their Dead Letter Queue behavior.
+- [x] A failed Story is never marked completed and may be selected by a later batch according to existing rules.
+- [x] Focused Story Pipeline tests use injected adapters or mock transports and make no live provider calls.
