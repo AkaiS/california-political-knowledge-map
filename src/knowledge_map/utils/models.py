@@ -6,10 +6,12 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pydantic_ai import ModelProfile
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
+from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
 from pydantic_ai.profiles import InlineDefsJsonSchemaTransformer, merge_profile
 from pydantic_ai.profiles.google import google_model_profile
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
@@ -35,10 +37,10 @@ def build_retrying_client(
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> httpx.AsyncClient:
-    """Build the HTTP client that retries a failed request where it failed.
+    """Build the HTTP client used to retry failed local model requests.
 
-    Every model in this module runs on one of these, so callers never see a
-    rate limit or a dropped connection as a response.
+    A rate limit or dropped connection is retried before the local model sees
+    it as a response.
     """
 
     transport_settings = transport_settings or settings.transport
@@ -259,6 +261,59 @@ def _build_model(
     )
 
 
+def _build_openrouter_model(
+    deployment: ModelDeployment,
+    transport_settings: TransportSettings | None,
+    transport: httpx.AsyncBaseTransport | None,
+) -> OpenRouterModel:
+    """Build one native OpenRouter model with deployment request settings."""
+
+    request_settings = deployment.request_settings
+    configured = transport_settings or settings.transport
+    request_timeout = (
+        request_settings.timeout
+        if request_settings.timeout is not None
+        else configured.request_timeout
+    )
+
+    http_client = httpx.AsyncClient(
+        transport=transport,
+        timeout=request_timeout,
+    )
+    provider = OpenRouterProvider(
+        api_key=os.environ.get("OPENROUTER_API_KEY"),
+        http_client=http_client,
+    )
+    # OpenAI's default retries would make one failed request look like several
+    # attempts to the surrounding request handling.
+    provider.client.max_retries = 0
+
+    extra_body: dict[str, object] = {}
+    if request_settings.top_k is not None:
+        extra_body["top_k"] = request_settings.top_k
+
+    model_settings: dict[str, object] = {
+        "temperature": request_settings.temperature,
+        "max_tokens": request_settings.max_tokens,
+        "timeout": request_timeout,
+        "extra_body": extra_body,
+    }
+    if request_settings.top_p is not None:
+        model_settings["top_p"] = request_settings.top_p
+    if request_settings.thinking is not None:
+        model_settings["thinking"] = request_settings.thinking
+    if request_settings.reasoning_effort is not None:
+        model_settings["openrouter_reasoning"] = {
+            "effort": request_settings.reasoning_effort
+        }
+
+    return OpenRouterModel(
+        deployment.model,
+        provider=provider,
+        settings=OpenRouterModelSettings(**model_settings),  # type: ignore[arg-type]
+    )
+
+
 def get_chat_model(
     default_model: str | ModelDeployment,
     env_var_name: str | None = None,
@@ -267,7 +322,7 @@ def get_chat_model(
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> OpenAIChatModel:
-    """Get a chat model served by llama.cpp, on the retrying HTTP client.
+    """Get a chat model from a typed deployment or the legacy local path.
 
     The model name resolves from ``env_var_name`` (e.g.
     ``OLLAMA_MODEL_HEALING``), then ``OLLAMA_MODEL``, then ``default_model``.
@@ -286,14 +341,39 @@ def get_chat_model(
     load_dotenv()
 
     if isinstance(default_model, ModelDeployment):
-        if default_model.kind is not DeploymentKind.LOCAL:
-            raise ValueError(
-                "the local chat model factory only accepts local deployments"
-            )
         if env_var_name is not None:
             raise ValueError(
                 "a Model Deployment cannot be combined with model environment overrides"
             )
+        if default_model.kind is DeploymentKind.OPENROUTER:
+            request_settings = default_model.request_settings
+            if request_settings.timeout is None:
+                request_settings = request_settings.model_copy(
+                    update={
+                        "timeout": (
+                            transport_settings or settings.transport
+                        ).request_timeout
+                    }
+                )
+            effective_deployment = default_model.model_copy(
+                update={"request_settings": request_settings}
+            )
+            if transport_settings is not None:
+                return _build_openrouter_model(
+                    effective_deployment,
+                    transport_settings,
+                    transport,
+                )
+            key = (effective_deployment, transport)
+            model = _models.get(key)
+            if model is None:
+                model = _build_openrouter_model(
+                    effective_deployment, None, transport
+                )
+                _models[key] = model
+            return model
+        if default_model.kind is not DeploymentKind.LOCAL:
+            raise ValueError(f"unsupported chat deployment kind: {default_model.kind}")
         base_url = _normalise_chat_base_url(
             default_model.endpoint or resolve_chat_base_url()
         )
