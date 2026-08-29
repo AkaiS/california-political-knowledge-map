@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–11 are complete. Issues 12, 14, and 22 are now takeable; the later tickets
+Issues 01–12 are complete. Issues 13, 14, and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -59,8 +59,8 @@ implementation contexts.
 - [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), completed on 2026-08-29.
 - [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), completed on 2026-08-29.
 - [11 Pause every OpenRouter caller after a 429](projects/openrouter-model-deployments/issues/11-shared-openrouter-pause-gate.md), completed on 2026-08-29.
-- [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), takeable.
-- [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), blocked by 12.
+- [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), completed on 2026-08-29.
+- [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), takeable.
 - [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), takeable.
 - [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), blocked by 13 and 14.
 - [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), blocked by 14.

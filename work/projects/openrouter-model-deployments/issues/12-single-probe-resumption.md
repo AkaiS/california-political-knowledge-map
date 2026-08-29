@@ -6,11 +6,10 @@ that probe succeeds or another rate limit establishes a new pause.
 
 **Blocked by:** 11 — Pause every OpenRouter caller after a 429.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] A controlled-clock concurrency test shows that only one request begins at the pause deadline.
-- [ ] Other waiting callers remain blocked while the probe is pending.
-- [ ] A successful probe permits waiting work to resume under the current working limit.
-- [ ] A probe that receives another `429` closes the gate again without releasing the waiting burst.
-- [ ] Probe behavior is observed through real Agent calls and mock transports, not private controller fields.
-
+- [x] A controlled-clock concurrency test shows that only one request begins at the pause deadline.
+- [x] Other waiting callers remain blocked while the probe is pending.
+- [x] A successful probe permits waiting work to resume under the current working limit.
+- [x] A probe that receives another `429` closes the gate again without releasing the waiting burst.
+- [x] Probe behavior is observed through real Agent calls and mock transports, not private controller fields.

@@ -250,6 +250,14 @@ _Avoid_: Prompt, grading scale, judge config
 The concrete form of an upstream model release that an Evaluation Run invokes. Two Model Deployments may share an upstream release while differing enough that one deployment's scores are evidence about the other only after paired calibration.
 _Avoid_: Model, endpoint, provider, backend
 
+**OpenRouter Admission Gate**:
+The shared control that determines when new requests for OpenRouter Model Deployments may begin after a provider rate limit, while local requests remain outside it.
+_Avoid_: OpenRouter throttle, rate limiter
+
+**OpenRouter Probe**:
+The first request allowed after an OpenRouter Admission Gate's pause expires, used to establish whether waiting requests may resume.
+_Avoid_: Health check, test request
+
 **Evaluation Run**:
 One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the Model Deployment, the Gold Set path, and the split. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
