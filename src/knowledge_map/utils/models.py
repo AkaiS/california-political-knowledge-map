@@ -2,6 +2,7 @@ import asyncio
 import math
 import os
 import random
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -188,6 +189,37 @@ _RETRYABLE_OPENROUTER_STATUS_CODES = frozenset({
 })
 
 
+class OpenRouterAdmissionGate:
+    """Coordinate the pause for new OpenRouter requests."""
+
+    def __init__(self) -> None:
+        self._deadline = 0.0
+        self._lock = threading.Lock()
+
+    def pause_until(self, deadline: float) -> None:
+        with self._lock:
+            self._deadline = max(self._deadline, deadline)
+
+    def _try_admit(self, now: float) -> float | None:
+        with self._lock:
+            remaining = self._deadline - now
+            if remaining <= 0:
+                # This check is the admission point. A pause racing after it
+                # affects later requests, not this already-admitted request.
+                return None
+            return remaining
+
+    async def wait_until_open(self, hooks: "OpenRouterRetryHooks") -> None:
+        while True:
+            wait = self._try_admit(hooks.now())
+            if wait is None:
+                return
+            await hooks.sleep(wait)
+
+
+_DEFAULT_OPENROUTER_ADMISSION_GATE = OpenRouterAdmissionGate()
+
+
 def _default_openrouter_jitter(max_delay: float) -> float:
     return random.uniform(0.0, max_delay)
 
@@ -204,6 +236,7 @@ class OpenRouterRetryHooks:
     now: Callable[[], float] = time.time
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
     jitter: Callable[[float], float] = _default_openrouter_jitter
+    admission_gate: OpenRouterAdmissionGate | None = None
 
 
 def _parse_openrouter_reset_wait(
@@ -268,12 +301,20 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         self._max_attempts = max_attempts
         self._rate_limit_wait_cap = rate_limit_wait_cap
         self._retry_hooks = retry_hooks or OpenRouterRetryHooks()
+        self._admission_gate = (
+            self._retry_hooks.admission_gate or _DEFAULT_OPENROUTER_ADMISSION_GATE
+        )
 
     def _bounded_wait(self, wait: float) -> float:
         return min(max(wait, 0.0), self._rate_limit_wait_cap)
 
-    def _rate_limit_wait(self, response: httpx.Response, retry_index: int) -> float:
-        now = self._retry_hooks.now()
+    def _rate_limit_wait(
+        self,
+        response: httpx.Response,
+        retry_index: int,
+        now: float | None = None,
+    ) -> float:
+        now = self._retry_hooks.now() if now is None else now
         reset_wait = _parse_openrouter_reset_wait(
             response.headers.get("X-RateLimit-Reset"), now
         )
@@ -302,6 +343,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         await self._wrapped.__aexit__(exc_type, exc_value, traceback)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        await self._admission_gate.wait_until_open(self._retry_hooks)
         for attempt in range(self._max_attempts):
             try:
                 response = await self._wrapped.handle_async_request(request)
@@ -311,11 +353,15 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                 continue
 
             if response.status_code == 429:
+                now = self._retry_hooks.now()
+                wait = self._rate_limit_wait(response, attempt, now)
+                self._admission_gate.pause_until(now + wait)
                 if attempt + 1 < self._max_attempts:
-                    wait = self._rate_limit_wait(response, attempt)
                     # Release the failed response before waiting so its
                     # connection is available while this request backs off.
                     await response.aclose()
+                    # This request was admitted before the 429; let its
+                    # request-local retry finish while new callers wait.
                     await self._retry_hooks.sleep(wait)
                     continue
                 return response

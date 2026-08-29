@@ -16,7 +16,11 @@ from knowledge_map.schemas import (
     ModelRequestSettings,
     OpenRouterProviderPolicy,
 )
-from knowledge_map.utils.models import OpenRouterRetryHooks, get_chat_model
+from knowledge_map.utils.models import (
+    OpenRouterAdmissionGate,
+    OpenRouterRetryHooks,
+    get_chat_model,
+)
 
 
 @dataclass
@@ -72,6 +76,15 @@ def chat_completion() -> dict:
     }
 
 
+def retry_hooks_for(clock, *, jitter) -> OpenRouterRetryHooks:
+    return OpenRouterRetryHooks(
+        now=clock.now,
+        sleep=clock.sleep,
+        jitter=jitter,
+        admission_gate=OpenRouterAdmissionGate(),
+    )
+
+
 class TrackingStream(httpx.AsyncByteStream):
     def __init__(self, content: bytes) -> None:
         self.content = content
@@ -109,10 +122,8 @@ def test_valid_reset_header_wins_and_releases_response_before_wait(monkeypatch):
         get_chat_model(
             openrouter_deployment(),
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound
             ),
         ),
         output_type=str,
@@ -149,10 +160,8 @@ def test_retry_after_wins_when_reset_header_is_invalid(monkeypatch):
         get_chat_model(
             openrouter_deployment(),
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound
             ),
         ),
         output_type=str,
@@ -186,10 +195,8 @@ def test_retry_after_http_date_is_supported(monkeypatch):
         get_chat_model(
             openrouter_deployment(),
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound
             ),
         ),
         output_type=str,
@@ -226,10 +233,8 @@ def test_invalid_timing_headers_use_jittered_exponential_backoff(monkeypatch):
         get_chat_model(
             openrouter_deployment(),
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound / 2,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound / 2
             ),
         ),
         output_type=str,
@@ -263,10 +268,8 @@ def test_reset_header_accepts_openrouter_millisecond_epoch(monkeypatch):
         get_chat_model(
             openrouter_deployment(),
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound
             ),
         ),
         output_type=str,
@@ -307,10 +310,8 @@ def test_server_timing_is_capped_before_waiting(monkeypatch):
         get_chat_model(
             deployment,
             transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                now=clock.now,
-                sleep=clock.sleep,
-                jitter=lambda upper_bound: upper_bound,
+            openrouter_retry_hooks=retry_hooks_for(
+                clock, jitter=lambda upper_bound: upper_bound
             ),
         ),
         output_type=str,
@@ -347,10 +348,8 @@ def test_rate_limit_exhaustion_uses_the_attempt_bound_without_wall_sleep(monkeyp
             get_chat_model(
                 deployment,
                 transport=httpx.MockTransport(handler),
-                openrouter_retry_hooks=OpenRouterRetryHooks(
-                    now=clock.now,
-                    sleep=clock.sleep,
-                    jitter=lambda upper_bound: upper_bound,
+                openrouter_retry_hooks=retry_hooks_for(
+                    clock, jitter=lambda upper_bound: upper_bound
                 ),
             ),
             output_type=str,
@@ -386,10 +385,8 @@ def test_fallback_backoff_is_exponential_and_capped(monkeypatch):
             get_chat_model(
                 deployment,
                 transport=httpx.MockTransport(handler),
-                openrouter_retry_hooks=OpenRouterRetryHooks(
-                    now=clock.now,
-                    sleep=clock.sleep,
-                    jitter=lambda upper_bound: upper_bound,
+                openrouter_retry_hooks=retry_hooks_for(
+                    clock, jitter=lambda upper_bound: upper_bound
                 ),
             ),
             output_type=str,
@@ -419,10 +416,8 @@ def test_transport_settings_bound_openrouter_rate_limit_attempts(monkeypatch):
                 openrouter_deployment(),
                 transport_settings=TransportSettings(max_attempts=3),
                 transport=httpx.MockTransport(handler),
-                openrouter_retry_hooks=OpenRouterRetryHooks(
-                    now=clock.now,
-                    sleep=clock.sleep,
-                    jitter=lambda upper_bound: upper_bound,
+                openrouter_retry_hooks=retry_hooks_for(
+                    clock, jitter=lambda upper_bound: upper_bound
                 ),
             ),
             output_type=str,

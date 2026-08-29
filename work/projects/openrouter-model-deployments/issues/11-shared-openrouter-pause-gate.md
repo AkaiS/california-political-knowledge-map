@@ -8,12 +8,11 @@ outside the gate.
 
 **Blocked by:** 10 — Honor OpenRouter rate-limit timing for one request.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Concurrent real Agent calls through mock transports show one `429` preventing every new OpenRouter request from starting.
-- [ ] OpenRouter models with different non-secret identities still share the same process-wide gate.
-- [ ] A later deadline replaces an earlier deadline, while an earlier deadline cannot shorten an active pause.
-- [ ] Requests admitted before the gate closes may complete.
-- [ ] Local Model Deployment requests continue while OpenRouter admission is paused.
-- [ ] Tests use controlled clocks and coordination hooks rather than inspecting private gate state.
-
+- [x] Concurrent real Agent calls through mock transports show one `429` preventing every new OpenRouter request from starting.
+- [x] OpenRouter models with different non-secret identities still share the same process-wide gate.
+- [x] A later deadline replaces an earlier deadline, while an earlier deadline cannot shorten an active pause.
+- [x] Requests admitted before the gate closes may complete.
+- [x] Local Model Deployment requests continue while OpenRouter admission is paused.
+- [x] Tests use controlled clocks and coordination hooks rather than inspecting private gate state.
