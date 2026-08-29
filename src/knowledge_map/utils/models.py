@@ -291,12 +291,24 @@ def _build_openrouter_model(
     extra_body: dict[str, object] = {}
     if request_settings.top_k is not None:
         extra_body["top_k"] = request_settings.top_k
+    provider_policy = deployment.provider_policy
+    if provider_policy is None:  # pragma: no cover - ModelDeployment validates this
+        raise ValueError("an OpenRouter Model Deployment needs a provider policy")
+    provider_names = list(provider_policy.providers)
+    provider_settings = {
+        "order": provider_names,
+        "only": provider_names,
+        "allow_fallbacks": provider_policy.allow_fallback,
+        "require_parameters": provider_policy.require_parameters,
+    }
 
     model_settings: dict[str, object] = {
         "temperature": request_settings.temperature,
         "max_tokens": request_settings.max_tokens,
         "timeout": request_timeout,
         "extra_body": extra_body,
+        "extra_headers": {"X-OpenRouter-Metadata": "enabled"},
+        "openrouter_provider": provider_settings,
     }
     if request_settings.top_p is not None:
         model_settings["top_p"] = request_settings.top_p

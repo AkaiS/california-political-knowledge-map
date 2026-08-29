@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–07 are complete. Issues 08 and 09 are now takeable; the later tickets
+Issues 01–08 are complete. Issues 09, 14, and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -55,21 +55,21 @@ implementation contexts.
 - [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), completed on 2026-08-29.
 - [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), completed on 2026-08-29.
 - [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), completed on 2026-08-29.
-- [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), takeable.
+- [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), completed on 2026-08-29.
 - [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), takeable.
 - [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), blocked by 09.
 - [11 Pause every OpenRouter caller after a 429](projects/openrouter-model-deployments/issues/11-shared-openrouter-pause-gate.md), blocked by 10.
 - [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), blocked by 11.
 - [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), blocked by 12.
-- [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), blocked by 08.
+- [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), takeable.
 - [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), blocked by 13 and 14.
-- [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), blocked by 08 and 14.
+- [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), blocked by 14.
 - [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), blocked by 16.
 - [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), blocked by 11 and 16.
 - [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), blocked by 03 and 16.
 - [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), blocked by 17, 18, and 19.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), blocked by 10 and 14.
-- [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), blocked by 08.
+- [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), takeable.
 - [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), blocked by 13 and 22.
 - [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), blocked by 14 and 22.
 - [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), blocked by 20, 21, 23, and 24.
