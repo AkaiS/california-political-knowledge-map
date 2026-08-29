@@ -11,12 +11,11 @@ spending limit.
 
 **Blocked by:** None — can start immediately.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Local and OpenRouter are the only accepted deployment kinds.
-- [ ] A deployment carries the requested model and explicit sampling, reasoning, output, and request-limit settings that the factory needs.
-- [ ] Local identity can carry its endpoint, and OpenRouter identity can carry its ordered provider policy.
-- [ ] Validation rejects incomplete or internally inconsistent deployment values before a model request can start.
-- [ ] Serialization, equality, and hashing exclude API keys and authorization headers.
-- [ ] Focused tests show that two deployments sharing an upstream model remain distinct values.
-
+- [x] Local and OpenRouter are the only accepted deployment kinds.
+- [x] A deployment carries the requested model and explicit sampling, reasoning, output, and request-limit settings that the factory needs.
+- [x] Local identity can carry its endpoint, and OpenRouter identity can carry its ordered provider policy.
+- [x] Validation rejects incomplete or internally inconsistent deployment values before a model request can start.
+- [x] Serialization, equality, and hashing exclude API keys and authorization headers.
+- [x] Focused tests show that two deployments sharing an upstream model remain distinct values.

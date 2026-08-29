@@ -43,12 +43,13 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Only issue 01 is takeable now. The later tickets keep the Model Deployment
-prefactor, OpenRouter transport, report provenance, and command changes small
-enough for separate implementation contexts.
+Issue 01 is complete. Issue 02 is now takeable; the later tickets retain their
+declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
+transport, report provenance, and command changes small enough for separate
+implementation contexts.
 
-- [01 Define the Model Deployment contract](projects/openrouter-model-deployments/issues/01-model-deployment-contract.md), takeable.
-- [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), blocked by 01.
+- [01 Define the Model Deployment contract](projects/openrouter-model-deployments/issues/01-model-deployment-contract.md), completed on 2026-08-28.
+- [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), takeable.
 - [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), blocked by 02.
 - [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), blocked by 02.
 - [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), blocked by 02.
