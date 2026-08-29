@@ -6,10 +6,9 @@ stored proposals remain unchanged.
 
 **Blocked by:** 02 — Build local chat models from a Model Deployment.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The Selector Healing Generator and Critic obtain models through the shared factory from the same supplied deployment.
-- [ ] A conflicting stage-specific environment value cannot replace the supplied deployment.
-- [ ] Existing agent injection and deterministic Selector Healing tests continue to avoid live inference.
-- [ ] Selector proposal and review behavior is unchanged with a local deployment.
-
+- [x] The Selector Healing Generator and Critic obtain models through the shared factory from the same supplied deployment.
+- [x] A conflicting stage-specific environment value cannot replace the supplied deployment.
+- [x] Existing agent injection and deterministic Selector Healing tests continue to avoid live inference.
+- [x] Selector proposal and review behavior is unchanged with a local deployment.

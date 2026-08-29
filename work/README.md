@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–05 are complete. Issues 06–07 are now takeable; the later tickets
+Issues 01–06 are complete. Issue 07 is now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -53,7 +53,7 @@ implementation contexts.
 - [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), completed on 2026-08-29.
 - [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), completed on 2026-08-29.
 - [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), completed on 2026-08-29.
-- [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), takeable.
+- [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), completed on 2026-08-29.
 - [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), takeable.
 - [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), blocked by 07.
 - [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), blocked by 07.
@@ -71,7 +71,7 @@ implementation contexts.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), blocked by 10 and 14.
 - [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), blocked by 08.
 - [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), blocked by 13 and 22.
-- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), blocked by 06, 14, and 22.
+- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), blocked by 14 and 22.
 - [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), blocked by 20, 21, 23, and 24.
 
 ### Bill Designation Recovery frontier

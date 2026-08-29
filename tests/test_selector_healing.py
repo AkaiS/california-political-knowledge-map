@@ -15,7 +15,8 @@ from knowledge_map.adapters.sqlite_db import (
     get_publication,
     has_unresolved_selector_proposal,
     set_publication_healing_in_progress,
-    insert_selector_proposal
+    insert_selector_proposal,
+    get_latest_selector_proposal,
 )
 from knowledge_map.core.healing import (
     preprocess_html,
@@ -26,6 +27,104 @@ from knowledge_map.core.healing import (
     CriticFeedback,
     annotate_ground_truth
 )
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.utils.models import get_chat_model
+
+
+def test_explicit_selector_healing_agents_share_deployment(monkeypatch):
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-selector-healing-model",
+        endpoint="http://selector-healing.test:9999",
+    )
+    monkeypatch.setenv("OLLAMA_MODEL_HEALING", "stage-specific-model")
+
+    with patch(
+        "knowledge_map.core.healing.get_chat_model",
+        wraps=get_chat_model,
+    ) as factory:
+        generator = get_generator_agent(deployment=deployment, defer_check=True)
+        critic = get_critic_agent(deployment=deployment, defer_check=True)
+
+    assert [call.args[0] for call in factory.call_args_list] == [
+        deployment,
+        deployment,
+    ]
+    assert generator.model is critic.model
+    assert generator.model.model_name == deployment.model
+
+
+@pytest.mark.anyio
+async def test_selector_healing_flow_binds_one_deployment_and_stores_proposal(tmp_path):
+    db_path = str(tmp_path / "test_explicit_deployment.db")
+    init_db(db_path)
+    register_publication("testpub", "Test Pub", "https://testpub.com", db_path=db_path)
+    cache_scraped_html(
+        "https://testpub.com/art1",
+        "testpub",
+        """
+        <html>
+        <body>
+            <h1 class="entry-title">Expected Headline</h1>
+            <span class="author">By John Doe</span>
+            <div class="content">This is a long article content with multiple stopwords so it validates cleanly.</div>
+        </body>
+        </html>
+        """,
+        validation="VALIDATION_FAILED",
+        db_path=db_path,
+    )
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-selector-healing-model",
+        endpoint="http://selector-healing.test:9999",
+    )
+
+    generator_result = MagicMock()
+    generator_result.output = ArticleSelectors(
+        title="h1.entry-title",
+        author="span.author",
+        date="",
+        body="div.content",
+    )
+    generator_result.all_messages.return_value = []
+    critic_result = MagicMock()
+    critic_result.output = CriticFeedback(is_valid=True, issues=[])
+    generator = MagicMock()
+    async def mock_generator_run(*args, **kwargs):
+        return generator_result
+    generator.run = mock_generator_run
+    critic = MagicMock()
+    async def mock_critic_run(*args, **kwargs):
+        return critic_result
+    critic.run = mock_critic_run
+
+    with patch(
+        "knowledge_map.core.healing.get_generator_agent",
+        return_value=generator,
+    ) as generator_factory, patch(
+        "knowledge_map.core.healing.get_critic_agent",
+        return_value=critic,
+    ) as critic_factory:
+        await run_selector_healing_flow(
+            publication_id="testpub",
+            tripping_article_url="https://testpub.com/art1",
+            db_path=db_path,
+            bypass_guards=True,
+            deployment=deployment,
+        )
+
+    generator_factory.assert_called_once_with(deployment)
+    critic_factory.assert_called_once_with(deployment)
+
+    proposal = get_latest_selector_proposal("testpub", db_path=db_path)
+    assert proposal["status"] == "PENDING_REVIEW"
+    assert json.loads(proposal["selectors_json"]) == {
+        "title": "h1.entry-title",
+        "author": "span.author",
+        "date": "",
+        "body": "div.content",
+    }
 
 def test_preprocess_html_with_article():
     raw_html = """
@@ -701,5 +800,3 @@ def test_annotate_ground_truth_nested_authors():
 
     parent_div = soup.find("div", class_="authors")
     assert not parent_div.has_attr("data-is-author-gt")
-
-
