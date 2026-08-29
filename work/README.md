@@ -17,6 +17,13 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md),
+  `ready-for-agent` as of 2026-08-28. Evaluation Runs use OpenRouter by default
+  as a directional proxy for the local Gemma deployment, while the Story
+  Pipeline stays local by default. One model factory owns explicit deployment
+  selection, approved same-model provider fallback, reactive rate control, and
+  complete provider and cost provenance. Embeddings remain local. Broken into
+  25 small tickets on 2026-08-28; the frontier is below.
 - [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
   Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
   for a bill number it cannot supply, normalization rejects every spelled-out
@@ -33,6 +40,38 @@ have not yet been shaped into executable work.
   narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
   below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### OpenRouter Model Deployments frontier
+
+Only issue 01 is takeable now. The later tickets keep the Model Deployment
+prefactor, OpenRouter transport, report provenance, and command changes small
+enough for separate implementation contexts.
+
+- [01 Define the Model Deployment contract](projects/openrouter-model-deployments/issues/01-model-deployment-contract.md), takeable.
+- [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), blocked by 01.
+- [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), blocked by 02.
+- [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), blocked by 02.
+- [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), blocked by 02.
+- [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), blocked by 02.
+- [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), blocked by 02.
+- [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), blocked by 07.
+- [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), blocked by 07.
+- [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), blocked by 09.
+- [11 Pause every OpenRouter caller after a 429](projects/openrouter-model-deployments/issues/11-shared-openrouter-pause-gate.md), blocked by 10.
+- [12 Resume a paused route with one probe](projects/openrouter-model-deployments/issues/12-single-probe-resumption.md), blocked by 11.
+- [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), blocked by 12.
+- [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), blocked by 03, 05, and 08.
+- [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), blocked by 13 and 14.
+- [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), blocked by 08 and 14.
+- [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), blocked by 16.
+- [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), blocked by 11 and 16.
+- [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), blocked by 03 and 16.
+- [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), blocked by 17, 18, and 19.
+- [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), blocked by 10 and 14.
+- [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), blocked by 03, 04, and 08.
+- [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), blocked by 13 and 22.
+- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), blocked by 03, 04, 05, 06, 14, and 22.
+- [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), blocked by 20, 21, 23, and 24.
 
 ### Bill Designation Recovery frontier
 
@@ -116,7 +155,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |

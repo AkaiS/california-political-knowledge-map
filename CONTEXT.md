@@ -246,8 +246,12 @@ _Avoid_: Test suite, evaluator registry, suite definition
 The written criteria an LLM-judge evaluator applies to one case. It lives with the evaluator that sends it, and changing it changes the evaluator, which the commit records.
 _Avoid_: Prompt, grading scale, judge config
 
+**Model Deployment**:
+The concrete form of an upstream model release that an Evaluation Run invokes. Two Model Deployments may share an upstream release while differing enough that one deployment's scores are evidence about the other only after paired calibration.
+_Avoid_: Model, endpoint, provider, backend
+
 **Evaluation Run**:
-One execution of a Gold Set against one task and one model, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the model, the Gold Set path, and the split. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files; there is no run identity, no resumption, and no finalization — an interrupted run is re-run.
+One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the Model Deployment, the Gold Set path, and the split. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
 
 ## Operational Constraints
