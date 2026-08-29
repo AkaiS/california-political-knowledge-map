@@ -19,6 +19,8 @@ from pydantic_evals.reporting import EvaluationReport
 
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 
+from .provenance import aggregate_request_provenance
+
 
 def report_path(
     task: str,
@@ -70,6 +72,9 @@ def write_report(
         failure_data["request_provenance"] = getattr(
             failure, "request_provenance", []
         )
+    serialized_report["request_provenance_aggregate"] = (
+        aggregate_request_provenance(report).as_dict()
+    )
     document = {
         "task": task,
         "model": selected.model,

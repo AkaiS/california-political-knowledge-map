@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–19 are complete. Issues 21 and 22 are now takeable; the later tickets
+Issues 01–20 are complete. Issues 21 and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -67,7 +67,7 @@ implementation contexts.
 - [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), completed on 2026-08-29.
 - [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), completed on 2026-08-29.
 - [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), completed on 2026-08-29.
-- [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), blocked by 19.
+- [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), completed on 2026-08-29.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), takeable.
 - [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), takeable.
 - [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), blocked by 22.

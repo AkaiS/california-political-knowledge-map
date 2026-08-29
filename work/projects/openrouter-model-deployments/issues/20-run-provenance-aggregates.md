@@ -9,12 +9,11 @@ actual downstream provider and BYOK status.
 attempts and rate-limit waits for each request; 19 — Keep concurrent Evaluation
 Case requests isolated and ordered.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Aggregate input, output, reasoning, cache, and total tokens equal the available per-request values.
-- [ ] Charged and upstream costs are summed separately without treating unavailable values as observed zero cost.
-- [ ] Attempts, retries, and rate-limit wait time equal the per-request evidence.
-- [ ] Request counts are grouped by downstream provider and BYOK status, including explicit unavailable groups.
-- [ ] Aggregation is deterministic regardless of concurrent case completion order.
-- [ ] Thin report tests cover mixed local, BYOK, funded-provider, and unavailable examples.
-
+- [x] Aggregate input, output, reasoning, cache, and total tokens equal the available per-request values.
+- [x] Charged and upstream costs are summed separately without treating unavailable values as observed zero cost.
+- [x] Attempts, retries, and rate-limit wait time equal the per-request evidence.
+- [x] Request counts are grouped by downstream provider and BYOK status, including explicit unavailable groups.
+- [x] Aggregation is deterministic regardless of concurrent case completion order.
+- [x] Thin report tests cover mixed local, BYOK, funded-provider, and unavailable examples.
