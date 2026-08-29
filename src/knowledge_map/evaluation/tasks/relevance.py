@@ -24,6 +24,7 @@ from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
     get_relevance_agent_prompt,
 )
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.utils.models import get_chat_model
 
 from .registry import EvaluationTask, register
@@ -39,11 +40,7 @@ def default_model() -> str:
     """
 
     load_dotenv()
-    return (
-        os.environ.get("OLLAMA_MODEL_RELEVANCE")
-        or os.environ.get("OLLAMA_MODEL")
-        or FALLBACK_MODEL
-    )
+    return os.environ.get("OLLAMA_MODEL") or FALLBACK_MODEL
 
 
 class RelevanceInput(BaseModel):
@@ -65,13 +62,22 @@ class RelevanceMetadata(BaseModel):
     label_source: str | None = None
 
 
-def build_task(model: str, gold_set: Any) -> Any:
-    """Return the callable one case is run through, bound to ``model``.
+def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
+    """Turn a legacy model argument into an explicit local deployment."""
+
+    if isinstance(model, ModelDeployment):
+        return model
+    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
+
+
+def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+    """Return the callable one case is run through, bound to a deployment.
 
     Few-shots come from the Gold Set's own `training` split.
     """
+    deployment = _as_deployment(model)
     agent = Agent(
-        get_chat_model(model),
+        get_chat_model(deployment),
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,

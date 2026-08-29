@@ -1,13 +1,42 @@
-import pytest
-from unittest.mock import patch, AsyncMock
-from pydantic import ValidationError
+from unittest.mock import AsyncMock, patch
 
-from knowledge_map.adapters.sqlite_db import init_db, cache_scraped_html, register_publication
+import pytest
+from pydantic import ValidationError
+from pydantic_ai import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import FunctionModel
+
+from knowledge_map.adapters.sqlite_db import (
+    cache_scraped_html,
+    init_db,
+    register_publication,
+)
 from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
+    classify_article_with_llm,
     get_relevance_agent_prompt,
-    classify_article_with_llm
 )
+from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
+
+
+def _local_deployment() -> ModelDeployment:
+    return ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-relevance-model",
+        endpoint="http://explicit-relevance.test:9999",
+        request_settings=ModelRequestSettings(thinking=False),
+    )
+
+
+def _relevance_response(messages, info) -> ModelResponse:
+    return ModelResponse(
+        parts=[
+            ToolCallPart(
+                tool_name=info.output_tools[0].name,
+                args={"classification": "RELEVANT"},
+                tool_call_id="call-1",
+            )
+        ]
+    )
 
 def test_relevance_classification_schema():
     """Verify that RelevanceClassification enforces schema fields and validation."""
@@ -59,6 +88,34 @@ def test_prompt_rendering_no_examples():
     assert "Examples of RELEVANT" not in prompt
     assert "Examples of IRRELEVANT" not in prompt
     assert "based on the examples provided" not in prompt
+
+
+@pytest.mark.anyio
+async def test_production_relevance_classification_uses_explicit_deployment(
+    tmp_path, monkeypatch
+):
+    deployment = _local_deployment()
+    seen: list[object] = []
+
+    def model_factory(requested):
+        seen.append(requested)
+        assert isinstance(requested, ModelDeployment)
+        return FunctionModel(_relevance_response)
+
+    monkeypatch.setenv("OLLAMA_MODEL_RELEVANCE", "ambient-stage-model")
+    monkeypatch.setattr(
+        "knowledge_map.core.relevance_agent.get_chat_model", model_factory
+    )
+
+    result = await classify_article_with_llm(
+        title="California election results",
+        body="The county reported its election results.",
+        db_path=str(tmp_path / "missing.db"),
+        deployment=deployment,
+    )
+
+    assert result == RelevanceClassification(classification="RELEVANT")
+    assert seen == [deployment]
 
 
 @pytest.mark.anyio

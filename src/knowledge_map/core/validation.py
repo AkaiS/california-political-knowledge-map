@@ -8,6 +8,7 @@ import logging
 from typing import List, Optional, Any, Dict, Tuple
 from bs4 import BeautifulSoup
 from knowledge_map.config import settings
+from knowledge_map.schemas import ModelDeployment
 from knowledge_map.adapters.sqlite_db import (
     clear_cached_html,
     replace_story,
@@ -496,8 +497,14 @@ def validate_extraction(extracted: Dict[str, Any], ground_truth: Dict[str, Any])
 
 
 class ArticleValidatorService:
-    def __init__(self, db_path: str = None):
+    def __init__(
+        self,
+        db_path: str | None = None,
+        *,
+        deployment: ModelDeployment | None = None,
+    ):
         self.db_path = db_path or settings.batch_ingestion.db_path
+        self.deployment = deployment
 
     def validate_article(self, url: str, publication_id: str, raw_html: str, scraped_at: datetime.datetime) -> Dict[str, Any]:
         """
@@ -704,10 +711,15 @@ class ArticleValidatorService:
 
                         if effective_relevance_status == RelevanceStatus.INCONCLUSIVE or not weights:
                             try:
+                                relevance_kwargs: dict[str, Any] = {
+                                    "db_path": self.db_path,
+                                }
+                                if self.deployment is not None:
+                                    relevance_kwargs["deployment"] = self.deployment
                                 classification_res = await classify_article_with_llm(
                                     title,
                                     body,
-                                    db_path=self.db_path,
+                                    **relevance_kwargs,
                                 )
                                 effective_relevance_status = RelevanceStatus(classification_res.classification)
                                 label_source = LabelSource.LLM
