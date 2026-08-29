@@ -10,12 +10,11 @@ OpenRouter configuration fails before a Story changes status.
 04 — Pass a Model Deployment through Entity Extraction; 08 — Constrain every
 OpenRouter route.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Story Pipeline command assembly accepts local and OpenRouter deployment selections and defaults to local.
-- [ ] One selected deployment is passed explicitly to both Coreference Resolution and Entity Extraction.
-- [ ] The Embedding Adapter still uses the configured local embedding server and model under either chat selection.
-- [ ] Missing OpenRouter API key, requested model, or provider list fails before a Story enters processing.
-- [ ] An explicit OpenRouter selection is visible in mock requests from both chat stages.
-- [ ] Existing injected-adapter Story Pipeline tests remain deterministic and require no model credentials.
-
+- [x] Story Pipeline command assembly accepts local and OpenRouter deployment selections and defaults to local.
+- [x] One selected deployment is passed explicitly to both Coreference Resolution and Entity Extraction.
+- [x] The Embedding Adapter still uses the configured local embedding server and model under either chat selection.
+- [x] Missing OpenRouter API key, requested model, or provider list fails before a Story enters processing.
+- [x] An explicit OpenRouter selection is visible in mock requests from both chat stages.
+- [x] Existing injected-adapter Story Pipeline tests remain deterministic and require no model credentials.

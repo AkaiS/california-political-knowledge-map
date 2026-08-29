@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–21 are complete. Issue 22 is now takeable; the later tickets
+Issues 01–22 are complete. Issues 23 and 24 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -69,9 +69,9 @@ implementation contexts.
 - [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), completed on 2026-08-29.
 - [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), completed on 2026-08-29.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), completed on 2026-08-29.
-- [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), takeable.
-- [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), blocked by 22.
-- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), blocked by 22.
+- [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), completed on 2026-08-29.
+- [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), takeable.
+- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), takeable.
 - [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), blocked by 23 and 24.
 
 ### Bill Designation Recovery frontier
