@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 from decimal import Decimal
@@ -11,11 +12,22 @@ import httpx
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
+import knowledge_map.adapters.coreference as coreference_adapter_module
+import knowledge_map.evaluation.tasks.coreference as coreference_task_module
+import knowledge_map.evaluation.tasks.relevance as relevance_task_module
 from knowledge_map.evaluation import (
     EvaluationCase,
     EvaluationGoldSet,
     run_gold_set,
     write_report,
+)
+from knowledge_map.evaluation.tasks.coreference import (
+    CoreferenceExpectation,
+    CoreferenceInput,
+)
+from knowledge_map.evaluation.tasks.relevance import (
+    RelevanceExpectation,
+    RelevanceInput,
 )
 from knowledge_map.schemas import (
     DeploymentKind,
@@ -92,6 +104,20 @@ def _completion_with_usage(
     return response
 
 
+def _structured_completion(
+    *, model: str, response_id: str, provider: str, payload: object
+) -> dict:
+    """Return the JSON-schema envelope pydantic-ai expects from OpenRouter."""
+
+    response = _completion(
+        model=model,
+        response_id=response_id,
+        provider=provider,
+    )
+    response["choices"][0]["message"]["content"] = json.dumps({"response": payload})
+    return response
+
+
 def test_openrouter_route_provenance_reaches_the_case_report(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -123,6 +149,7 @@ def test_openrouter_route_provenance_reaches_the_case_report(
 
     expected = {
         "case_id": "case-route",
+        "request_sequence": 1,
         "deployment": "openrouter",
         "requested_model": "google/gemma-4-26b-a4b-it",
         "returned_model": "google/gemma-4-26b-a4b-it",
@@ -189,6 +216,7 @@ def test_failed_case_keeps_request_provenance_in_report(
     report = run_gold_set(_gold_set("case-failure"), task=task, evaluators=())
     expected = {
         "case_id": "case-failure",
+        "request_sequence": 1,
         "deployment": "openrouter",
         "requested_model": "google/gemma-4-26b-a4b-it",
         "returned_model": "google/gemma-4-26b-a4b-it",
@@ -311,6 +339,7 @@ def test_missing_openrouter_route_facts_are_unavailable(
     assert report.cases[0].attributes["request_provenance"] == [
         {
             "case_id": "case-missing-route",
+            "request_sequence": 1,
             "deployment": "openrouter",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": "google/gemma-4-26b-a4b-it",
@@ -403,6 +432,7 @@ def test_local_route_provenance_identifies_llama_cpp_and_not_remote_facts(
     assert report.cases[0].attributes["request_provenance"] == [
         {
             "case_id": "case-local",
+            "request_sequence": 1,
             "deployment": "llama.cpp",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": "google/gemma-4-26b-a4b-it",
@@ -468,6 +498,7 @@ def test_openrouter_usage_and_cost_provenance_reaches_serialized_case_report(
     )
     expected = {
         "case_id": "case-token-cost",
+        "request_sequence": 1,
         "deployment": "openrouter",
         "requested_model": "google/gemma-4-26b-a4b-it",
         "returned_model": "google/gemma-4-26b-a4b-it",
@@ -550,6 +581,7 @@ def test_missing_usage_categories_and_costs_remain_unavailable(
     assert report.cases[0].attributes["request_provenance"] == [
         {
             "case_id": "case-token-cost-partial",
+            "request_sequence": 1,
             "deployment": "openrouter",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": "google/gemma-4-26b-a4b-it",
@@ -648,6 +680,7 @@ def test_partial_usage_preserves_available_tokens_and_missing_total(
     assert report.cases[0].attributes["request_provenance"] == [
         {
             "case_id": "case-token-cost-partial-usage",
+            "request_sequence": 1,
             "deployment": "openrouter",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": "google/gemma-4-26b-a4b-it",
@@ -718,6 +751,7 @@ def test_local_usage_provenance_keeps_tokens_but_not_billed_cost(
     assert report.cases[0].attributes["request_provenance"] == [
         {
             "case_id": "case-token-cost-local",
+            "request_sequence": 1,
             "deployment": "llama.cpp",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": "google/gemma-4-26b-a4b-it",
@@ -971,6 +1005,452 @@ def test_concurrent_case_records_keep_their_retry_state_separate(monkeypatch) ->
     assert records["case-direct"]["rate_limit_wait"] == 0.0
 
 
+def test_one_case_sequences_requests_by_invocation_not_completion(monkeypatch) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-ordered-provenance")
+    deployment = _openrouter_deployment()
+    first_started = asyncio.Event()
+    second_returned = asyncio.Event()
+    release_first = asyncio.Event()
+
+    class ReorderedTransport(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            prompt = body["messages"][-1]["content"]
+            if prompt == "first request":
+                first_started.set()
+                await second_returned.wait()
+                await release_first.wait()
+            else:
+                second_returned.set()
+            return httpx.Response(
+                200,
+                json=_completion(
+                    model="google/gemma-4-26b-a4b-it",
+                    response_id=prompt,
+                    provider="google-ai-studio/vertex-test",
+                ),
+            )
+
+        async def aclose(self) -> None:
+            return None
+
+    agent = Agent(
+        get_chat_model(
+            deployment,
+            transport=ReorderedTransport(),
+            openrouter_retry_hooks=OpenRouterRetryHooks(
+                admission_gate=OpenRouterAdmissionGate(max_concurrency=2),
+            ),
+        ),
+        name="ordered_provenance_agent",
+        output_type=str,
+        defer_model_check=True,
+    )
+
+    async def task(case_input: _PromptInput) -> str:
+        first_task = asyncio.create_task(agent.run("first request"))
+        await first_started.wait()
+        second_task = asyncio.create_task(agent.run("second request"))
+        await second_returned.wait()
+        release_first.set()
+        first_result, _second_result = await asyncio.gather(first_task, second_task)
+        return first_result.output
+
+    report = run_gold_set(
+        _gold_set("case-ordered"),
+        task=task,
+        evaluators=(),
+    )
+
+    records = report.cases[0].attributes["request_provenance"]
+    assert [record["request_sequence"] for record in records] == [1, 2]
+    assert [record["generation_id"] for record in records] == [
+        "first request",
+        "second request",
+    ]
+
+
+def test_relevance_task_keeps_concurrent_authored_cases_isolated(monkeypatch) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-relevance-ordering")
+    deployment = _openrouter_deployment()
+    gold_set = EvaluationGoldSet(
+        task="relevance",
+        description="Concurrent relevance provenance cases.",
+        cases=(
+            EvaluationCase(
+                id="case-relevance-alpha",
+                description="Alpha article",
+                task_input=RelevanceInput(
+                    url="https://example.test/alpha",
+                    headline="Alpha case headline",
+                    description="Alpha case body",
+                ),
+                expected_output=RelevanceExpectation(classification="RELEVANT"),
+            ),
+            EvaluationCase(
+                id="case-relevance-beta",
+                description="Beta article",
+                task_input=RelevanceInput(
+                    url="https://example.test/beta",
+                    headline="Beta case headline",
+                    description="Beta case body",
+                ),
+                expected_output=RelevanceExpectation(classification="IRRELEVANT"),
+            ),
+        ),
+    )
+    started = threading.Barrier(2)
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if "Alpha case headline" in body:
+            case_id = "alpha"
+        elif "Beta case headline" in body:
+            case_id = "beta"
+        else:
+            raise AssertionError("the relevance request lost its authored case")
+
+        try:
+            await asyncio.to_thread(started.wait, 5)
+        except threading.BrokenBarrierError as error:
+            raise AssertionError(
+                "the relevance cases did not run concurrently"
+            ) from error
+        if case_id == "alpha":
+            await asyncio.sleep(0.01)
+        classification = "RELEVANT" if case_id == "alpha" else "IRRELEVANT"
+        response = _completion(
+            model=deployment.model,
+            response_id=f"relevance-{case_id}",
+            provider="google-ai-studio/vertex-test",
+        )
+        response["choices"][0]["message"]["content"] = json.dumps(
+            {"classification": classification}
+        )
+        return httpx.Response(
+            200,
+            json=response,
+        )
+
+    transport = httpx.MockTransport(handler)
+    gate = OpenRouterAdmissionGate(max_concurrency=2)
+    monkeypatch.setattr(
+        relevance_task_module,
+        "get_chat_model",
+        lambda requested: get_chat_model(
+            requested,
+            transport=transport,
+            openrouter_retry_hooks=OpenRouterRetryHooks(admission_gate=gate),
+        ),
+    )
+    classify = relevance_task_module.build_task(deployment, gold_set)
+
+    report = run_gold_set(
+        gold_set,
+        task=classify,
+        evaluators=(),
+        max_concurrency=2,
+    )
+
+    assert not report.failures
+    records = {
+        case.name: case.attributes["request_provenance"] for case in report.cases
+    }
+    assert {
+        case_id: [record["case_id"] for record in case_records]
+        for case_id, case_records in records.items()
+    } == {
+        "case-relevance-alpha": ["case-relevance-alpha"],
+        "case-relevance-beta": ["case-relevance-beta"],
+    }
+    assert {
+        case_id: [
+            (record["request_sequence"], record["generation_id"])
+            for record in case_records
+        ]
+        for case_id, case_records in records.items()
+    } == {
+        "case-relevance-alpha": [(1, "relevance-alpha")],
+        "case-relevance-beta": [(1, "relevance-beta")],
+    }
+
+
+def test_coreference_task_orders_annotator_critic_and_correction_requests(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-coreference-ordering")
+    deployment = _openrouter_deployment()
+    gold_set = EvaluationGoldSet(
+        task="coreference",
+        description="Concurrent coreference provenance cases.",
+        cases=(
+            EvaluationCase(
+                id="case-alice",
+                description="Alice story",
+                task_input=CoreferenceInput(
+                    url="https://example.test/alice",
+                    title="Alice story",
+                    content="Alice signed a bill. She celebrated.",
+                ),
+                expected_output=CoreferenceExpectation(mention_spans=[]),
+            ),
+            EvaluationCase(
+                id="case-bob",
+                description="Bob story",
+                task_input=CoreferenceInput(
+                    url="https://example.test/bob",
+                    title="Bob story",
+                    content="Bob signed a bill. He celebrated.",
+                ),
+                expected_output=CoreferenceExpectation(mention_spans=[]),
+            ),
+        ),
+    )
+    started = threading.Barrier(2)
+    lock = threading.Lock()
+    calls: dict[tuple[str, str], int] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if "Alice signed a bill" in body:
+            case_id = "alice"
+            mention_text = "She"
+            entity_name = "Alice"
+        elif "Bob signed a bill" in body:
+            case_id = "bob"
+            mention_text = "He"
+            entity_name = "Bob"
+        else:
+            raise AssertionError("the coreference request lost its authored case")
+
+        if "Correct only the rejected Mention Spans" in body:
+            stage = "correction"
+        elif "Validated Mention Spans:" in body:
+            stage = "critic"
+        else:
+            stage = "annotator"
+        with lock:
+            call_key = (case_id, stage)
+            calls[call_key] = calls.get(call_key, 0) + 1
+            stage_call = calls[call_key]
+
+        if stage == "annotator" and stage_call == 1:
+            try:
+                await asyncio.to_thread(started.wait, 5)
+            except threading.BrokenBarrierError as error:
+                raise AssertionError(
+                    "the coreference cases did not run concurrently"
+                ) from error
+            if case_id == "alice":
+                await asyncio.sleep(0.01)
+
+        if stage == "annotator":
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": mention_text,
+                    "canonical_entity_name": (
+                        "Unclear Alice" if case_id == "alice" else entity_name
+                    ),
+                }
+            ]
+        elif stage == "critic":
+            accepted = not (case_id == "alice" and stage_call == 1)
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": mention_text,
+                    "accepted": accepted,
+                    **(
+                        {"reason": "Use the author's full name."}
+                        if not accepted
+                        else {}
+                    ),
+                }
+            ]
+        else:
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": mention_text,
+                    "canonical_entity_name": entity_name,
+                }
+            ]
+        return httpx.Response(
+            200,
+            json=_structured_completion(
+                model=deployment.model,
+                response_id=f"{case_id}-{stage}-{stage_call}",
+                provider="google-ai-studio/vertex-test",
+                payload=payload,
+            ),
+        )
+
+    transport = httpx.MockTransport(handler)
+    gate = OpenRouterAdmissionGate(max_concurrency=2)
+    monkeypatch.setattr(
+        coreference_adapter_module,
+        "get_chat_model",
+        lambda requested: get_chat_model(
+            requested,
+            transport=transport,
+            openrouter_retry_hooks=OpenRouterRetryHooks(admission_gate=gate),
+        ),
+    )
+    resolve = coreference_task_module.build_task(deployment, gold_set)
+
+    report = run_gold_set(
+        gold_set,
+        task=resolve,
+        evaluators=(),
+        max_concurrency=2,
+    )
+
+    assert not report.failures
+    records = {
+        case.name: case.attributes["request_provenance"] for case in report.cases
+    }
+    assert {
+        case_id: [record["case_id"] for record in case_records]
+        for case_id, case_records in records.items()
+    } == {
+        "case-alice": [
+            "case-alice",
+            "case-alice",
+            "case-alice",
+            "case-alice",
+        ],
+        "case-bob": ["case-bob", "case-bob"],
+    }
+    assert {
+        case_id: [
+            (record["request_sequence"], record["generation_id"])
+            for record in case_records
+        ]
+        for case_id, case_records in records.items()
+    } == {
+        "case-alice": [
+            (1, "alice-annotator-1"),
+            (2, "alice-critic-1"),
+            (3, "alice-correction-1"),
+            (4, "alice-critic-2"),
+        ],
+        "case-bob": [
+            (1, "bob-annotator-1"),
+            (2, "bob-critic-1"),
+        ],
+    }
+
+
+def test_coreference_annotator_task_uses_case_ordered_provenance(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-annotator-ordering")
+    deployment = _openrouter_deployment()
+    gold_set = EvaluationGoldSet(
+        task="coreference",
+        description="Concurrent annotator provenance cases.",
+        cases=(
+            EvaluationCase(
+                id="case-annotator-alpha",
+                description="Alpha annotator story",
+                task_input=CoreferenceInput(
+                    url="https://example.test/annotator-alpha",
+                    title="Alpha story",
+                    content="Alpha signed a bill. She celebrated.",
+                ),
+                expected_output=CoreferenceExpectation(mention_spans=[]),
+            ),
+            EvaluationCase(
+                id="case-annotator-beta",
+                description="Beta annotator story",
+                task_input=CoreferenceInput(
+                    url="https://example.test/annotator-beta",
+                    title="Beta story",
+                    content="Beta signed a bill. He celebrated.",
+                ),
+                expected_output=CoreferenceExpectation(mention_spans=[]),
+            ),
+        ),
+    )
+    started = threading.Barrier(2)
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if "Alpha signed a bill" in body:
+            case_id = "alpha"
+            mention_text = "She"
+            entity_name = "Alpha"
+        elif "Beta signed a bill" in body:
+            case_id = "beta"
+            mention_text = "He"
+            entity_name = "Beta"
+        else:
+            raise AssertionError("the annotator request lost its authored case")
+        try:
+            await asyncio.to_thread(started.wait, 5)
+        except threading.BrokenBarrierError as error:
+            raise AssertionError(
+                "the annotator cases did not run concurrently"
+            ) from error
+        if case_id == "alpha":
+            await asyncio.sleep(0.01)
+        return httpx.Response(
+            200,
+            json=_structured_completion(
+                model=deployment.model,
+                response_id=f"annotator-{case_id}",
+                provider="google-ai-studio/vertex-test",
+                payload=[
+                    {
+                        "sentence_label": "2",
+                        "mention_text": mention_text,
+                        "canonical_entity_name": entity_name,
+                    }
+                ],
+            ),
+        )
+
+    transport = httpx.MockTransport(handler)
+    gate = OpenRouterAdmissionGate(max_concurrency=2)
+    monkeypatch.setattr(
+        coreference_adapter_module,
+        "get_chat_model",
+        lambda requested: get_chat_model(
+            requested,
+            transport=transport,
+            openrouter_retry_hooks=OpenRouterRetryHooks(admission_gate=gate),
+        ),
+    )
+    annotate = coreference_task_module.build_annotator_task(deployment, gold_set)
+
+    report = run_gold_set(
+        gold_set,
+        task=annotate,
+        evaluators=(),
+        max_concurrency=2,
+    )
+
+    assert not report.failures
+    records = {
+        case.name: case.attributes["request_provenance"] for case in report.cases
+    }
+    assert {
+        case_id: [
+            (
+                record["case_id"],
+                record["request_sequence"],
+                record["generation_id"],
+            )
+            for record in case_records
+        ]
+        for case_id, case_records in records.items()
+    } == {
+        "case-annotator-alpha": [("case-annotator-alpha", 1, "annotator-alpha")],
+        "case-annotator-beta": [("case-annotator-beta", 1, "annotator-beta")],
+    }
+
+
 def test_exhausted_openrouter_retry_keeps_attempt_provenance_on_failure(
     monkeypatch,
 ) -> None:
@@ -1014,6 +1494,7 @@ def test_exhausted_openrouter_retry_keeps_attempt_provenance_on_failure(
     assert report.failures[0].request_provenance == [
         {
             "case_id": "case-retry-provenance-exhausted",
+            "request_sequence": 1,
             "deployment": "openrouter",
             "requested_model": "google/gemma-4-26b-a4b-it",
             "returned_model": None,

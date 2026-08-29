@@ -7,7 +7,7 @@ import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from types import TracebackType
@@ -36,6 +36,7 @@ class ModelRequestProvenance:
     """Safe route, usage, and cost facts for one model response in a case."""
 
     case_id: str
+    request_sequence: int
     deployment: str
     requested_model: str
     returned_model: str | None
@@ -60,6 +61,7 @@ class ModelRequestProvenance:
 
         return {
             "case_id": self.case_id,
+            "request_sequence": self.request_sequence,
             "deployment": self.deployment,
             "requested_model": self.requested_model,
             "returned_model": self.returned_model,
@@ -85,6 +87,7 @@ class ModelRequestProvenance:
 class _RequestRetryState:
     """Track one HTTP request across its bounded transport attempts."""
 
+    request_sequence: int | None = None
     attempts: int = 0
     rate_limit_wait: float = 0.0
 
@@ -93,10 +96,37 @@ class _RequestRetryState:
 class _RequestProvenanceCapture:
     case_id: str
     records: list[ModelRequestProvenance]
+    _next_request_sequence: int = field(default=1, init=False, repr=False)
+    _lock: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False
+    )
 
     @classmethod
     def for_case(cls, case_id: str) -> "_RequestProvenanceCapture":
         return cls(case_id=case_id, records=[])
+
+    def start_request(self) -> int:
+        """Reserve the next case-local sequence at request initiation."""
+
+        with self._lock:
+            sequence = self._next_request_sequence
+            self._next_request_sequence += 1
+            return sequence
+
+    def _request_sequence(self, retry_state: _RequestRetryState) -> int:
+        """Return the sequence reserved when this request started."""
+
+        sequence = retry_state.request_sequence
+        if sequence is None:
+            raise RuntimeError(
+                "request provenance lost the sequence reserved at initiation"
+            )
+        return sequence
+
+    def _append_in_sequence_order(self, record: ModelRequestProvenance) -> None:
+        with self._lock:
+            self.records.append(record)
+            self.records.sort(key=lambda item: item.request_sequence)
 
     def record(
         self,
@@ -104,7 +134,7 @@ class _RequestProvenanceCapture:
         requested_model: str,
         response: ModelResponse,
         raw_response: Any,
-        retry_state: _RequestRetryState | None,
+        retry_state: _RequestRetryState,
     ) -> None:
         details = response.provider_details
         downstream_provider = None
@@ -130,11 +160,12 @@ class _RequestProvenanceCapture:
         usage_facts = _request_usage_facts(
             response, raw_response, deployment=deployment
         )
-        retry_state = retry_state or _RequestRetryState(attempts=1)
         attempts = retry_state.attempts or 1
-        self.records.append(
+        request_sequence = self._request_sequence(retry_state)
+        self._append_in_sequence_order(
             ModelRequestProvenance(
                 case_id=self.case_id,
+                request_sequence=request_sequence,
                 deployment=deployment,
                 requested_model=requested_model,
                 returned_model=returned_model,
@@ -160,9 +191,11 @@ class _RequestProvenanceCapture:
         retry_state: _RequestRetryState,
     ) -> None:
         attempts = retry_state.attempts or 1
-        self.records.append(
+        request_sequence = self._request_sequence(retry_state)
+        self._append_in_sequence_order(
             ModelRequestProvenance(
                 case_id=self.case_id,
+                request_sequence=request_sequence,
                 deployment=deployment,
                 requested_model=requested_model,
                 returned_model=None,
@@ -362,6 +395,16 @@ _CURRENT_REQUEST_RETRY: ContextVar[_RequestRetryState | None] = ContextVar(
 )
 
 
+def _start_request_retry_state() -> _RequestRetryState:
+    """Reserve case order before a model request can await or complete."""
+
+    capture = _CURRENT_REQUEST_PROVENANCE.get()
+    request_sequence = capture.start_request() if capture is not None else None
+    retry_state = _RequestRetryState(request_sequence=request_sequence)
+    _CURRENT_REQUEST_RETRY.set(retry_state)
+    return retry_state
+
+
 @contextmanager
 def request_provenance_scope(
     case_id: str,
@@ -385,6 +428,10 @@ def _record_request_provenance(
 ) -> None:
     capture = _CURRENT_REQUEST_PROVENANCE.get()
     if capture is not None:
+        if retry_state is None:
+            raise RuntimeError(
+                "request provenance has no state reserved at request initiation"
+            )
         capture.record(
             deployment,
             requested_model,
@@ -451,8 +498,7 @@ class _RequestTrackingAsyncTenacityTransport(AsyncTenacityTransport):
         self._provenance_model = requested_model
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        retry_state = _RequestRetryState()
-        _CURRENT_REQUEST_RETRY.set(retry_state)
+        retry_state = _start_request_retry_state()
         try:
             return await super().handle_async_request(request)
         except BaseException:
@@ -1064,8 +1110,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         await self._wrapped.__aexit__(exc_type, exc_value, traceback)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        retry_state = _RequestRetryState()
-        _CURRENT_REQUEST_RETRY.set(retry_state)
+        retry_state = _start_request_retry_state()
         try:
             is_probe = await self._admission_gate.wait_until_open(
                 self._retry_hooks
