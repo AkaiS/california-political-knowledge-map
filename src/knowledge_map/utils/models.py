@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from types import TracebackType
 from typing import Any, Self
 
@@ -32,7 +33,7 @@ from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestS
 
 @dataclass(frozen=True)
 class ModelRequestProvenance:
-    """Safe route facts captured for one model response in an Evaluation Case."""
+    """Safe route, usage, and cost facts for one model response in a case."""
 
     case_id: str
     deployment: str
@@ -41,9 +42,17 @@ class ModelRequestProvenance:
     downstream_provider: str | None
     generation_id: str | None
     is_byok: bool | None
+    input_tokens: int | None
+    output_tokens: int | None
+    reasoning_tokens: int | None
+    cache_write_tokens: int | None
+    cache_read_tokens: int | None
+    total_tokens: int | None
+    charged_cost: Decimal | None
+    upstream_cost: Decimal | None
 
     def as_dict(self) -> dict[str, object]:
-        """Return only normalized route fields safe to serialize in a report."""
+        """Return normalized facts safe to serialize in a report."""
 
         return {
             "case_id": self.case_id,
@@ -53,6 +62,14 @@ class ModelRequestProvenance:
             "downstream_provider": self.downstream_provider,
             "generation_id": self.generation_id,
             "is_byok": self.is_byok,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
+            "cache_write_tokens": self.cache_write_tokens,
+            "cache_read_tokens": self.cache_read_tokens,
+            "total_tokens": self.total_tokens,
+            "charged_cost": self.charged_cost,
+            "upstream_cost": self.upstream_cost,
         }
 
 
@@ -65,7 +82,13 @@ class _RequestProvenanceCapture:
     def for_case(cls, case_id: str) -> "_RequestProvenanceCapture":
         return cls(case_id=case_id, records=[])
 
-    def record(self, deployment: str, requested_model: str, response: ModelResponse) -> None:
+    def record(
+        self,
+        deployment: str,
+        requested_model: str,
+        response: ModelResponse,
+        raw_response: Any,
+    ) -> None:
         details = response.provider_details
         downstream_provider = None
         is_byok = None
@@ -87,6 +110,9 @@ class _RequestProvenanceCapture:
             if deployment == "openrouter" and response.provider_response_id
             else None
         )
+        usage_facts = _request_usage_facts(
+            response, raw_response, deployment=deployment
+        )
         self.records.append(
             ModelRequestProvenance(
                 case_id=self.case_id,
@@ -96,8 +122,144 @@ class _RequestProvenanceCapture:
                 downstream_provider=downstream_provider,
                 generation_id=generation_id,
                 is_byok=is_byok,
+                **usage_facts,
             )
         )
+
+
+def _raw_response_usage(raw_response: Any) -> dict[str, Any] | None:
+    """Keep provider-reported usage before SDK normalization drops raw totals."""
+
+    if isinstance(raw_response, dict):
+        response_data = raw_response
+    else:
+        model_dump = getattr(raw_response, "model_dump", None)
+        if not callable(model_dump):
+            return None
+        response_data = model_dump(exclude_none=True)
+    if not isinstance(response_data, dict):
+        return None
+    nested_provider = response_data.get("provider")
+    if isinstance(nested_provider, dict) and isinstance(
+        nested_provider.get("choices"), list
+    ):
+        nested_usage = nested_provider.get("usage")
+        if isinstance(nested_usage, dict):
+            return nested_usage
+    raw_usage = response_data.get("usage")
+    if isinstance(raw_usage, dict):
+        return raw_usage
+    return None
+
+
+def _raw_mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _usage_int(mapping: dict[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        if key in mapping:
+            value = mapping[key]
+            return value if type(value) is int else None
+    return None
+
+
+def _usage_cost(mapping: dict[str, Any], *keys: str) -> Decimal | None:
+    for key in keys:
+        if key in mapping:
+            value = mapping[key]
+            if isinstance(value, bool) or value is None:
+                return None
+            try:
+                cost = Decimal(str(value))
+            except (InvalidOperation, TypeError, ValueError):
+                return None
+            return cost if cost.is_finite() else None
+    return None
+
+
+def _usage_for_validation(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    usage_data = dict(value)
+    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        if usage_data.get(key) is None:
+            usage_data[key] = 0
+    return usage_data
+
+
+def _request_usage_facts(
+    response: ModelResponse,
+    raw_response: Any,
+    *,
+    deployment: str,
+) -> dict[str, int | Decimal | None]:
+    """Normalize only usage values explicitly returned by the model.
+
+    ``RequestUsage`` intentionally exposes a computed total and zero defaults;
+    neither is evidence that a provider returned that value. Read the raw
+    response so missing categories stay unavailable and a reported total is not
+    reconstructed from input and output counts.
+    """
+
+    raw_usage = _raw_response_usage(raw_response)
+    if raw_usage is None:
+        return {
+            "input_tokens": None,
+            "output_tokens": None,
+            "reasoning_tokens": None,
+            "cache_write_tokens": None,
+            "cache_read_tokens": None,
+            "total_tokens": None,
+            "charged_cost": None,
+            "upstream_cost": None,
+        }
+
+    prompt_details = _raw_mapping(raw_usage.get("prompt_tokens_details"))
+    completion_details = _raw_mapping(raw_usage.get("completion_tokens_details"))
+    usage_details = _raw_mapping(raw_usage.get("usage_details"))
+    input_tokens = _usage_int(raw_usage, "prompt_tokens", "input_tokens")
+    output_tokens = _usage_int(raw_usage, "completion_tokens", "output_tokens")
+    reasoning_tokens = _usage_int(completion_details, "reasoning_tokens")
+    if reasoning_tokens is None:
+        reasoning_tokens = _usage_int(usage_details, "reasoning_tokens")
+    cache_write_tokens = _usage_int(prompt_details, "cache_write_tokens")
+    if cache_write_tokens is None:
+        cache_write_tokens = _usage_int(usage_details, "cache_write_tokens")
+    cache_read_tokens = _usage_int(prompt_details, "cached_tokens", "cache_read_tokens")
+    if cache_read_tokens is None:
+        cache_read_tokens = _usage_int(usage_details, "cache_read_tokens")
+    total_tokens = _usage_int(raw_usage, "total_tokens")
+
+    charged_cost = None
+    upstream_cost = None
+    if deployment == "openrouter":
+        charged_cost = _usage_cost(raw_usage, "cost", "charged_cost")
+        if charged_cost is None and "cost" not in raw_usage and "charged_cost" not in raw_usage:
+            charged_cost = _usage_cost(response.provider_details or {}, "cost")
+        cost_details = _raw_mapping(raw_usage.get("cost_details"))
+        upstream_cost = _usage_cost(
+            raw_usage, "upstream_inference_cost", "upstream_cost"
+        )
+        if upstream_cost is None:
+            upstream_cost = _usage_cost(
+                cost_details, "upstream_inference_cost", "upstream_cost"
+            )
+        if upstream_cost is None and "cost_details" not in raw_usage:
+            upstream_cost = _usage_cost(
+                response.provider_details or {}, "upstream_inference_cost"
+            )
+
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "reasoning_tokens": reasoning_tokens,
+        "cache_write_tokens": cache_write_tokens,
+        "cache_read_tokens": cache_read_tokens,
+        "total_tokens": total_tokens,
+        "charged_cost": charged_cost,
+        "upstream_cost": upstream_cost,
+    }
 
 
 _CURRENT_REQUEST_PROVENANCE: ContextVar[_RequestProvenanceCapture | None] = ContextVar(
@@ -120,11 +282,14 @@ def request_provenance_scope(
 
 
 def _record_request_provenance(
-    deployment: str, requested_model: str, response: ModelResponse
+    deployment: str,
+    requested_model: str,
+    response: ModelResponse,
+    raw_response: Any,
 ) -> None:
     capture = _CURRENT_REQUEST_PROVENANCE.get()
     if capture is not None:
-        capture.record(deployment, requested_model, response)
+        capture.record(deployment, requested_model, response, raw_response)
 
 
 class _RequestProvenanceModelMixin:
@@ -136,6 +301,7 @@ class _RequestProvenanceModelMixin:
             self._provenance_deployment,
             self.model_name,
             model_response,
+            response,
         )
         return model_response
 
@@ -165,10 +331,36 @@ class _OpenRouterModel(_RequestProvenanceModelMixin, OpenRouterModel):
         """Keep a response usable when OpenRouter omits its provider field."""
 
         response_data = response.model_dump()
+        updates: dict[str, Any] = {}
         if not response_data.get("provider"):
             # The provider is optional in OpenRouter's response in practice;
             # retain the successful completion while provenance marks it unknown.
-            response = response.model_copy(update={"provider": "unknown"})
+            updates["provider"] = "unknown"
+
+        usage_data = _usage_for_validation(response_data.get("usage"))
+        if usage_data is not None:
+            # OpenAI's typed usage model requires these fields even when an
+            # OpenRouter response omits one; zero is validation-only, while
+            # provenance reads the original response and records None.
+            usage_type = type(response.usage)
+            usage_validate = getattr(usage_type, "model_validate", None)
+            if callable(usage_validate):
+                updates["usage"] = usage_validate(usage_data)
+            else:
+                updates["usage"] = usage_data
+
+        provider_data = response_data.get("provider")
+        if isinstance(provider_data, dict) and isinstance(
+            provider_data.get("choices"), list
+        ):
+            nested_usage_data = _usage_for_validation(provider_data.get("usage"))
+            if nested_usage_data is not None:
+                provider_data = dict(provider_data)
+                provider_data["usage"] = nested_usage_data
+                updates["provider"] = provider_data
+
+        if updates:
+            response = response.model_copy(update=updates)
         return super()._validate_completion(response)
 
 
