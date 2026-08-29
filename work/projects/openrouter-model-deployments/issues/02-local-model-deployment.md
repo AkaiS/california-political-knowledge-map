@@ -8,12 +8,11 @@ defaults for another deployment kind.
 
 **Blocked by:** 01 — Define the Model Deployment contract.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] A real Pydantic AI Agent built from a local Model Deployment completes against an injected mock HTTP transport.
-- [ ] The request uses the configured llama.cpp endpoint, requested model, and applicable explicit request settings.
-- [ ] Schema inlining, native structured output, and the llama.cpp profile still reach local requests.
-- [ ] The null-content workaround applies to local requests only.
-- [ ] Repeated construction shares a model and connection pool only when the complete local deployment identity agrees.
-- [ ] Local transport retries retain their existing bounded behavior.
-
+- [x] A real Pydantic AI Agent built from a local Model Deployment completes against an injected mock HTTP transport.
+- [x] The request uses the configured llama.cpp endpoint, requested model, and applicable explicit request settings.
+- [x] Schema inlining, native structured output, and the llama.cpp profile still reach local requests.
+- [x] The null-content workaround applies to local requests only.
+- [x] Repeated construction shares a model and connection pool only when the complete local deployment identity agrees.
+- [x] Local transport retries retain their existing bounded behavior.

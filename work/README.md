@@ -43,18 +43,18 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issue 01 is complete. Issue 02 is now takeable; the later tickets retain their
-declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
+Issues 01 and 02 are complete. Issues 03–07 are now takeable; the later tickets
+retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
 
 - [01 Define the Model Deployment contract](projects/openrouter-model-deployments/issues/01-model-deployment-contract.md), completed on 2026-08-28.
-- [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), takeable.
-- [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), blocked by 02.
-- [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), blocked by 02.
-- [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), blocked by 02.
-- [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), blocked by 02.
-- [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), blocked by 02.
+- [02 Build local chat models from a Model Deployment](projects/openrouter-model-deployments/issues/02-local-model-deployment.md), completed on 2026-08-28.
+- [03 Pass a Model Deployment through Coreference Resolution](projects/openrouter-model-deployments/issues/03-coreference-explicit-deployment.md), takeable.
+- [04 Pass a Model Deployment through Entity Extraction](projects/openrouter-model-deployments/issues/04-extraction-explicit-deployment.md), takeable.
+- [05 Pass a Model Deployment through the Relevance Filter](projects/openrouter-model-deployments/issues/05-relevance-explicit-deployment.md), takeable.
+- [06 Pass a Model Deployment through Selector Healing](projects/openrouter-model-deployments/issues/06-selector-healing-explicit-deployment.md), takeable.
+- [07 Build a native OpenRouter chat model](projects/openrouter-model-deployments/issues/07-native-openrouter-model.md), takeable.
 - [08 Constrain every OpenRouter route](projects/openrouter-model-deployments/issues/08-constrain-openrouter-route.md), blocked by 07.
 - [09 Retry only failures that waiting can fix](projects/openrouter-model-deployments/issues/09-retry-only-retryable-failures.md), blocked by 07.
 - [10 Honor OpenRouter rate-limit timing for one request](projects/openrouter-model-deployments/issues/10-honor-openrouter-rate-limit-timing.md), blocked by 09.

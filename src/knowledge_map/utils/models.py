@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 
 import httpx
 from dotenv import load_dotenv
@@ -13,23 +14,21 @@ from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_
 from tenacity import retry_if_exception_type, stop_after_attempt
 
 from knowledge_map.config import TransportSettings, settings
-
-# Normalise the `content: null` pydantic-ai emits for a text-free tool call:
-# some OpenAI-compatible servers 400 on it, and only on a retry turn.  Patched
-# at import so every `get_chat_model` caller is covered.
-_original_into_message_param = OpenAIChatModel._MapModelResponseContext._into_message_param
+from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
 
 
-def _into_message_param_with_empty_content(self):
-    result = _original_into_message_param(self)
-    if result is not None and result.get("content") is None:
-        result["content"] = ""
-    return result
+class _LocalOpenAIChatModel(OpenAIChatModel):
+    """OpenAI-compatible model with llama.cpp's empty-content workaround."""
 
-
-OpenAIChatModel._MapModelResponseContext._into_message_param = (
-    _into_message_param_with_empty_content
-)
+    @dataclass
+    class _MapModelResponseContext(OpenAIChatModel._MapModelResponseContext):
+        def _into_message_param(self):
+            # Normalize the ``content: null`` pydantic-ai emits for a text-free
+            # tool call: llama.cpp rejects it on the retry request.
+            result = super()._into_message_param()
+            if result is not None and result.get("content") is None:
+                result["content"] = ""
+            return result
 
 
 def build_retrying_client(
@@ -67,7 +66,13 @@ def resolve_chat_base_url() -> str:
     Read from ``LLAMA_CPP_BASE_URL``, default ``http://localhost:8080``.
     """
 
-    base_url = os.environ.get("LLAMA_CPP_BASE_URL", "http://localhost:8080")
+    return _normalise_chat_base_url(
+        os.environ.get("LLAMA_CPP_BASE_URL", "http://localhost:8080")
+    )
+
+
+def _normalise_chat_base_url(base_url: str) -> str:
+    base_url = base_url.rstrip("/")
     if base_url.endswith("/v1"):
         return base_url
     return f"{base_url}/v1"
@@ -151,45 +156,111 @@ def llama_cpp_model_profile(model_name: str) -> ModelProfile | None:
             default_structured_output_mode="native",
             openai_chat_thinking_field="reasoning_content",
             openai_supports_strict_tool_definition=False,
+            openai_chat_supports_max_completion_tokens=False,
             supports_json_schema_output=True,
             supports_json_object_output=True,
         ),
     )
 
 
-_models: dict[tuple[str, str], OpenAIChatModel] = {}
+_models: dict[
+    tuple[ModelDeployment, httpx.AsyncBaseTransport | None], OpenAIChatModel
+] = {}
+
+
+def _deployment_transport_settings(
+    request_settings: ModelRequestSettings,
+    transport_settings: TransportSettings | None,
+) -> TransportSettings:
+    """Resolve retry and client timeout settings for one local deployment."""
+
+    configured = transport_settings or settings.transport
+    return TransportSettings(
+        max_attempts=(
+            transport_settings.max_attempts
+            if transport_settings is not None
+            else request_settings.max_attempts
+        ),
+        rate_limit_wait_cap=(
+            transport_settings.rate_limit_wait_cap
+            if transport_settings is not None
+            else request_settings.rate_limit_wait_cap
+        ),
+        request_timeout=(
+            request_settings.timeout
+            if request_settings.timeout is not None
+            else configured.request_timeout
+        ),
+    )
 
 
 def _build_model(
     model_name: str,
     base_url: str,
+    request_settings: ModelRequestSettings | None,
     transport_settings: TransportSettings | None,
     transport: httpx.AsyncBaseTransport | None,
 ) -> OpenAIChatModel:
     # Retries belong to the transport, so the SDK makes exactly one attempt
     # rather than multiplying the configured count.
+    request_settings = request_settings or ModelRequestSettings(
+        temperature=resolve_temperature(),
+        thinking=resolve_thinking(),
+        max_attempts=(
+            transport_settings.max_attempts
+            if transport_settings is not None
+            else settings.transport.max_attempts
+        ),
+        rate_limit_wait_cap=(
+            transport_settings.rate_limit_wait_cap
+            if transport_settings is not None
+            else settings.transport.rate_limit_wait_cap
+        ),
+        timeout=(
+            transport_settings.request_timeout
+            if transport_settings is not None
+            else None
+        ),
+    )
+    effective_transport_settings = _deployment_transport_settings(
+        request_settings, transport_settings
+    )
     openai_client = AsyncOpenAI(
         base_url=base_url,
         api_key=os.environ.get("LLAMA_CPP_API_KEY") or "api-key-not-set",
-        http_client=build_retrying_client(transport_settings, transport),
+        http_client=build_retrying_client(effective_transport_settings, transport),
         max_retries=0,
     )
     provider = OpenAIProvider(openai_client=openai_client)
-    return OpenAIChatModel(
+    extra_body = {
+        "chat_template_kwargs": {
+            "enable_thinking": (
+                request_settings.thinking
+                if request_settings.thinking is not None
+                else resolve_thinking()
+            )
+        }
+    }
+    if request_settings.top_k is not None:
+        extra_body["top_k"] = request_settings.top_k
+    return _LocalOpenAIChatModel(
         model_name,
         provider=provider,
         profile=llama_cpp_model_profile(model_name),
         settings=OpenAIChatModelSettings(
-            temperature=resolve_temperature(),
+            temperature=request_settings.temperature,
+            top_p=request_settings.top_p,
+            max_tokens=request_settings.max_tokens,
+            timeout=effective_transport_settings.request_timeout,
             # Read by the chat template, not by the sampler, so it has to travel
             # in the request body rather than as a sampling parameter.
-            extra_body={"chat_template_kwargs": {"enable_thinking": resolve_thinking()}},
+            extra_body=extra_body,
         ),
     )
 
 
 def get_chat_model(
-    default_model: str,
+    default_model: str | ModelDeployment,
     env_var_name: str | None = None,
     *,
     allow_env_override: bool = True,
@@ -206,22 +277,77 @@ def get_chat_model(
     Pass ``allow_env_override=False`` to use ``default_model`` verbatim, as an
     evaluation run naming the model it is comparing must.
 
-    Memoized by resolved model name and base URL, so agents share one client
-    and connection pool.  Passing a transport or settings block bypasses the
-    cache in both directions.
+    Typed local deployments are memoized by their effective identity and an
+    injected transport, so equivalent agents share one client and connection
+    pool without allowing distinct mock transports to leak into one another.
+    Legacy string calls retain their existing environment lookup behavior.
     """
 
     load_dotenv()
+
+    if isinstance(default_model, ModelDeployment):
+        if default_model.kind is not DeploymentKind.LOCAL:
+            raise ValueError(
+                "the local chat model factory only accepts local deployments"
+            )
+        if env_var_name is not None:
+            raise ValueError(
+                "a Model Deployment cannot be combined with model environment overrides"
+            )
+        base_url = _normalise_chat_base_url(
+            default_model.endpoint or resolve_chat_base_url()
+        )
+        request_settings = default_model.request_settings
+        if request_settings.thinking is None:
+            request_settings = request_settings.model_copy(
+                update={"thinking": resolve_thinking()}
+            )
+        effective_deployment = default_model.model_copy(
+            update={"endpoint": base_url, "request_settings": request_settings}
+        )
+        if transport_settings is not None:
+            return _build_model(
+                effective_deployment.model,
+                base_url,
+                request_settings,
+                transport_settings,
+                transport,
+            )
+        key = (effective_deployment, transport)
+        model = _models.get(key)
+        if model is None:
+            model = _build_model(
+                effective_deployment.model,
+                base_url,
+                request_settings,
+                None,
+                transport,
+            )
+            _models[key] = model
+        return model
 
     base_url = resolve_chat_base_url()
     model_name = _resolve_model_name(default_model, env_var_name, allow_env_override)
 
     if transport is not None or transport_settings is not None:
-        return _build_model(model_name, base_url, transport_settings, transport)
+        return _build_model(model_name, base_url, None, transport_settings, transport)
 
-    key = (model_name, base_url)
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model=model_name,
+        endpoint=base_url,
+        request_settings=ModelRequestSettings(
+            temperature=resolve_temperature(),
+            thinking=resolve_thinking(),
+            max_attempts=settings.transport.max_attempts,
+            rate_limit_wait_cap=settings.transport.rate_limit_wait_cap,
+        ),
+    )
+    key = (deployment, None)
     model = _models.get(key)
     if model is None:
-        model = _build_model(model_name, base_url, None, None)
+        model = _build_model(
+            deployment.model, base_url, deployment.request_settings, None, None
+        )
         _models[key] = model
     return model
