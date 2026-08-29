@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–15 are complete. Issues 16, 21, and 22 are now takeable; the later tickets
+Issues 01–16 are complete. Issues 17, 18, 19, 21, and 22 are now takeable; the later tickets
 retain their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -63,10 +63,10 @@ implementation contexts.
 - [13 Adapt OpenRouter request admission after probes](projects/openrouter-model-deployments/issues/13-adaptive-openrouter-admission.md), completed on 2026-08-29.
 - [14 Select and record an Evaluation Run Model Deployment](projects/openrouter-model-deployments/issues/14-evaluation-run-deployment-selection.md), completed on 2026-08-29.
 - [15 Keep evaluation concurrency as the OpenRouter ceiling](projects/openrouter-model-deployments/issues/15-evaluation-concurrency-ceiling.md), completed on 2026-08-29.
-- [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), takeable.
-- [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), blocked by 16.
-- [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), blocked by 16.
-- [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), blocked by 03 and 16.
+- [16 Record the actual OpenRouter route for each request](projects/openrouter-model-deployments/issues/16-request-route-provenance.md), completed on 2026-08-29.
+- [17 Record tokens and costs for each request](projects/openrouter-model-deployments/issues/17-request-token-cost-provenance.md), takeable.
+- [18 Record attempts and rate-limit waits for each request](projects/openrouter-model-deployments/issues/18-request-retry-wait-provenance.md), takeable.
+- [19 Keep concurrent Evaluation Case requests isolated and ordered](projects/openrouter-model-deployments/issues/19-case-request-ordering.md), takeable.
 - [20 Aggregate Evaluation Run request provenance](projects/openrouter-model-deployments/issues/20-run-provenance-aggregates.md), blocked by 17, 18, and 19.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), takeable.
 - [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), takeable.

@@ -6,15 +6,16 @@ import threading
 import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import TracebackType
-from typing import Self
+from typing import Any, Self
 
 import httpx
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from pydantic_ai import ModelProfile
+from pydantic_ai import ModelProfile, ModelResponse
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
 from pydantic_ai.profiles import InlineDefsJsonSchemaTransformer, merge_profile
@@ -29,8 +30,120 @@ from knowledge_map.config import TransportSettings, settings
 from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
 
 
-class _LocalOpenAIChatModel(OpenAIChatModel):
+@dataclass(frozen=True)
+class ModelRequestProvenance:
+    """Safe route facts captured for one model response in an Evaluation Case."""
+
+    case_id: str
+    deployment: str
+    requested_model: str
+    returned_model: str | None
+    downstream_provider: str | None
+    generation_id: str | None
+    is_byok: bool | None
+
+    def as_dict(self) -> dict[str, object]:
+        """Return only normalized route fields safe to serialize in a report."""
+
+        return {
+            "case_id": self.case_id,
+            "deployment": self.deployment,
+            "requested_model": self.requested_model,
+            "returned_model": self.returned_model,
+            "downstream_provider": self.downstream_provider,
+            "generation_id": self.generation_id,
+            "is_byok": self.is_byok,
+        }
+
+
+@dataclass
+class _RequestProvenanceCapture:
+    case_id: str
+    records: list[ModelRequestProvenance]
+
+    @classmethod
+    def for_case(cls, case_id: str) -> "_RequestProvenanceCapture":
+        return cls(case_id=case_id, records=[])
+
+    def record(self, deployment: str, requested_model: str, response: ModelResponse) -> None:
+        details = response.provider_details
+        downstream_provider = None
+        is_byok = None
+        if deployment == "openrouter" and isinstance(details, dict):
+            provider = details.get("downstream_provider")
+            if (
+                isinstance(provider, str)
+                and provider.strip()
+                and provider.casefold() not in {"unknown", "unavailable"}
+            ):
+                downstream_provider = provider
+            byok = details.get("is_byok")
+            if isinstance(byok, bool):
+                is_byok = byok
+
+        returned_model = response.model_name if response.model_name else None
+        generation_id = (
+            response.provider_response_id
+            if deployment == "openrouter" and response.provider_response_id
+            else None
+        )
+        self.records.append(
+            ModelRequestProvenance(
+                case_id=self.case_id,
+                deployment=deployment,
+                requested_model=requested_model,
+                returned_model=returned_model,
+                downstream_provider=downstream_provider,
+                generation_id=generation_id,
+                is_byok=is_byok,
+            )
+        )
+
+
+_CURRENT_REQUEST_PROVENANCE: ContextVar[_RequestProvenanceCapture | None] = ContextVar(
+    "current_request_provenance", default=None
+)
+
+
+@contextmanager
+def request_provenance_scope(
+    case_id: str,
+) -> Iterator[list[ModelRequestProvenance]]:
+    """Capture safe model-response route facts for one authored case."""
+
+    capture = _RequestProvenanceCapture.for_case(case_id)
+    token = _CURRENT_REQUEST_PROVENANCE.set(capture)
+    try:
+        yield capture.records
+    finally:
+        _CURRENT_REQUEST_PROVENANCE.reset(token)
+
+
+def _record_request_provenance(
+    deployment: str, requested_model: str, response: ModelResponse
+) -> None:
+    capture = _CURRENT_REQUEST_PROVENANCE.get()
+    if capture is not None:
+        capture.record(deployment, requested_model, response)
+
+
+class _RequestProvenanceModelMixin:
+    _provenance_deployment: str
+
+    def _process_response(self, response: Any) -> ModelResponse:
+        model_response = super()._process_response(response)  # type: ignore[misc]
+        _record_request_provenance(
+            self._provenance_deployment,
+            self.model_name,
+            model_response,
+        )
+        return model_response
+
+
+class _LocalOpenAIChatModel(_RequestProvenanceModelMixin, OpenAIChatModel):
     """OpenAI-compatible model with llama.cpp's empty-content workaround."""
+
+    _provenance_deployment = "llama.cpp"
 
     @dataclass
     class _MapModelResponseContext(OpenAIChatModel._MapModelResponseContext):
@@ -41,6 +154,22 @@ class _LocalOpenAIChatModel(OpenAIChatModel):
             if result is not None and result.get("content") is None:
                 result["content"] = ""
             return result
+
+
+class _OpenRouterModel(_RequestProvenanceModelMixin, OpenRouterModel):
+    """Native OpenRouter model that exposes safe response route facts."""
+
+    _provenance_deployment = "openrouter"
+
+    def _validate_completion(self, response: Any) -> Any:
+        """Keep a response usable when OpenRouter omits its provider field."""
+
+        response_data = response.model_dump()
+        if not response_data.get("provider"):
+            # The provider is optional in OpenRouter's response in practice;
+            # retain the successful completion while provenance marks it unknown.
+            response = response.model_copy(update={"provider": "unknown"})
+        return super()._validate_completion(response)
 
 
 def build_retrying_client(
@@ -771,7 +900,7 @@ def _build_openrouter_model(
             "effort": request_settings.reasoning_effort
         }
 
-    return OpenRouterModel(
+    return _OpenRouterModel(
         deployment.model,
         provider=provider,
         settings=OpenRouterModelSettings(**model_settings),  # type: ignore[arg-type]

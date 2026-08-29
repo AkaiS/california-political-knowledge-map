@@ -61,6 +61,15 @@ def write_report(
         root=root,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
+    serialized_report = dataclasses.asdict(report)
+    for failure_data, failure in zip(
+        serialized_report.get("failures", []),
+        getattr(report, "failures", []),
+        strict=True,
+    ):
+        failure_data["request_provenance"] = getattr(
+            failure, "request_provenance", []
+        )
     document = {
         "task": task,
         "model": selected.model,
@@ -70,7 +79,7 @@ def write_report(
         "gold_set": str(gold_set_path),
         "split": split,
         "ran_at": ran_at.isoformat(),
-        "report": to_jsonable_python(dataclasses.asdict(report), fallback=str),
+        "report": to_jsonable_python(serialized_report, fallback=str),
     }
     path.write_text(json.dumps(document, indent=2, sort_keys=True, default=str) + "\n")
     return path
