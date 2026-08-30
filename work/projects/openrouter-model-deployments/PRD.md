@@ -1,6 +1,6 @@
 # Product Requirements: OpenRouter Model Deployments
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

@@ -32,3 +32,9 @@ data.
 Use `--dry-run` to preview the setup, `--source PATH` to transfer local state
 from a different worktree, or `--skip-sync` when dependencies are already set
 up.
+
+## Model deployments
+
+Operational guidance for choosing local llama.cpp or OpenRouter chat, configuring
+providers and BYOK, and reading Evaluation Run provenance is in
+[`docs/model-deployments.md`](docs/model-deployments.md).

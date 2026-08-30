@@ -247,8 +247,12 @@ The written criteria an LLM-judge evaluator applies to one case. It lives with t
 _Avoid_: Prompt, grading scale, judge config
 
 **Model Deployment**:
-The concrete form of an upstream model release that an Evaluation Run invokes. Two Model Deployments may share an upstream release while differing enough that one deployment's scores are evidence about the other only after paired calibration.
+The concrete chat execution target an Evaluation Run or Story Pipeline invokes. The local Model Deployment is a llama.cpp-served local GGUF, while the OpenRouter Model Deployment requests a named upstream model through OpenRouter's ordered provider policy; they remain distinct even when they refer to the same upstream release, so an OpenRouter run is directional evidence about the local deployment rather than proof of equivalent behavior.
 _Avoid_: Model, endpoint, provider, backend
+
+**Request Provenance**:
+The non-secret facts recorded for one model request in an Evaluation Run: its authored Evaluation Case and request order, deployment, returned route, usage and cost, attempts, and rate-limit wait. A fact the provider does not return remains explicitly unavailable rather than being inferred.
+_Avoid_: Request log, provider trace, billing record
 
 **OpenRouter Admission Gate**:
 The shared control that determines when new requests for OpenRouter Model Deployments may begin after a provider rate limit, while local requests remain outside it.
@@ -259,25 +263,25 @@ The first request allowed after an OpenRouter Admission Gate's pause expires, us
 _Avoid_: Health check, test request
 
 **Evaluation Run**:
-One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the Model Deployment, the Gold Set path, and the split. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no run identity, resumption, or finalization; an interrupted run is re-run.
+One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Gold Set path and split, and each request's Request Provenance. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
 
 ## Operational Constraints
 
-**Ollama null-content patch**:
+**Local llama.cpp null-content patch**:
 `utils/models.py` monkeypatches a private pydantic-ai internal,
 `OpenAIChatModel._MapModelResponseContext._into_message_param`, to rewrite an
-assistant message's `content: null` to `""`. Ollama's OpenAI-compatible
-endpoint rejects `null` there; pydantic-ai emits it for a tool call carrying no
-text, which only happens on a retry turn. Without the patch a run fails partway
-through with `400 invalid message content type: <nil>`, and whether it fires at
-all depends on whether that particular sample returned text alongside its tool
-call — so it presents as intermittent.
+assistant message's `content: null` to `""`. The local llama.cpp
+OpenAI-compatible endpoint rejects `null` there; pydantic-ai emits it for a
+tool call carrying no text, which only happens on a retry turn. Without the
+patch a run fails partway through with `400 invalid message content type:
+<nil>`, and whether it fires at all depends on whether that particular sample
+returned text alongside its tool call — so it presents as intermittent.
 
 The patch runs at import of `utils/models.py`, which every agent reaches
-through `get_ollama_model`. It previously lived in the extraction adapter and
-applied only as an import side effect, leaving coreference dependent on import
-order.
+through `get_chat_model` for the local deployment. OpenRouter does not use this
+local workaround. It previously lived in the extraction adapter and applied
+only as an import side effect, leaving coreference dependent on import order.
 
 Being a patch against a private name, it will break silently on a pydantic-ai
 upgrade rather than raising at import. The symptom is the 400 above returning.
