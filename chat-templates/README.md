@@ -18,25 +18,19 @@ Not for the GGUF we serve. `gemma-4-26B_q4_0-it.gguf` from
 by extracting it from the file's header — so `scripts/llama-server.sh` lets the
 model's own template win and passes no `--chat-template-file`.
 
-It is here for the GGUFs that have no template of their own. Every blob under
-`~/.ollama/models/blobs` is one: Ollama renders prompts with its own Go
-templates and drops the Jinja one on import.
-
-    32k-gemma-e4b-extraction   chat_template=NO
-    8k-gemma-e4b-extraction    chat_template=NO
-    gemma4/26b                 chat_template=NO
-    gemma4/31b                 chat_template=NO
-    gemma4/e4b                 chat_template=NO
+It is here for any llama.cpp-compatible GGUF that has no template of its own.
+The active chat deployment uses the llama.cpp-built GGUF above, which carries
+the template in its metadata.
 
 `scripts/llama-server.sh` inspects the GGUF up front and falls back to this file
 when the model has no template, or use `TEMPLATE=` to force one. The template is
 a property of the Gemma 4 conversation format, not of a parameter count, so it
 applies to any `gemma4` build.
 
-Those Ollama blobs will not load into llama.cpp anyway — they pack the vision
-tower into the same file — but a template can go missing from a GGUF for other
-reasons, and the failure is silent: the model loads, answers in prose, and never
-mentions that it was offered no tools.
+A GGUF with a packed vision tower will not load into llama.cpp, but a template
+can go missing from a compatible GGUF for other reasons.  The failure is
+silent: the model loads, answers in prose, and never mentions that it was
+offered no tools.
 
 ## Checking a GGUF
 

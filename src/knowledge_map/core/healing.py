@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from knowledge_map.schemas import ModelDeployment
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
@@ -251,7 +251,7 @@ def _get_model(deployment: ModelDeployment | None = None):
 
     if deployment is not None:
         return get_chat_model(deployment)
-    return get_chat_model("32k-gemma-e4b", "OLLAMA_MODEL_HEALING")
+    return get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
 
 
 def get_generator_agent(

@@ -12,11 +12,9 @@ see what the Critic rounds are worth.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -36,10 +34,14 @@ from knowledge_map.schemas import (
     MentionSpanOutcome,
     ModelDeployment,
 )
+from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    resolve_local_chat_model,
+)
 
 from .registry import EvaluationTask, register
 
-FALLBACK_MODEL = "8k-gemma-e4b-extraction"
+FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
 
 
 def default_model() -> str:
@@ -49,8 +51,7 @@ def default_model() -> str:
     at import, so it loads `.env` itself.
     """
 
-    load_dotenv()
-    return os.environ.get("OLLAMA_MODEL") or FALLBACK_MODEL
+    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class CoreferenceInput(BaseModel):

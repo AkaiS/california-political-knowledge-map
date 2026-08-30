@@ -123,7 +123,7 @@ def test_production_resolution_binds_one_explicit_deployment_to_both_agents(
 
         return FunctionModel(respond)
 
-    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
     deployment = local_deployment()
     adapter = PydanticAICoreferenceAdapter(deployment=deployment)
@@ -133,15 +133,14 @@ def test_production_resolution_binds_one_explicit_deployment_to_both_agents(
     assert seen == [deployment, deployment]
 
 
-def test_default_coreference_model_ignores_stage_alias_but_keeps_global_override(
+def test_default_coreference_model_uses_the_single_local_chat_model(
     monkeypatch,
 ):
-    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
-    monkeypatch.setenv("OLLAMA_MODEL", "global-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
 
     agent = get_annotator_agent(defer_check=True)
 
-    assert agent.model.model_name == "global-model"
+    assert agent.model.model_name == "configured/local-model"
 
 
 def test_both_agents_render_the_numbered_article_from_their_dependencies():

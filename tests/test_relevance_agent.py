@@ -102,7 +102,7 @@ async def test_production_relevance_classification_uses_explicit_deployment(
         assert isinstance(requested, ModelDeployment)
         return FunctionModel(_relevance_response)
 
-    monkeypatch.setenv("OLLAMA_MODEL_RELEVANCE", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(
         "knowledge_map.core.relevance_agent.get_chat_model", model_factory
     )

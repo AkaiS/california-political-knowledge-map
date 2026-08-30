@@ -30,7 +30,11 @@ from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
-from knowledge_map.utils.models import resolve_chat_base_url
+from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    resolve_chat_base_url,
+    resolve_local_chat_model,
+)
 
 
 CLI_COMMAND_HELP = {
@@ -70,12 +74,7 @@ def select_story_deployment(
     load_dotenv()
     deployment_kind = DeploymentKind(selected_kind)
     if deployment_kind is DeploymentKind.LOCAL:
-        model = "gemma4:26b"
-        for env_name in ("LLAMA_CPP_MODEL", "LLM_MODEL"):
-            configured_model = os.environ.get(env_name, "").strip()
-            if configured_model:
-                model = configured_model
-                break
+        model = resolve_local_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
         return ModelDeployment(
             kind=deployment_kind,
             model=model,

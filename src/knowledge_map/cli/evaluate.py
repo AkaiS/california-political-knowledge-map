@@ -31,8 +31,10 @@ from knowledge_map.schemas import (
     OpenRouterProviderPolicy,
 )
 from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
     openrouter_admission_ceiling,
     resolve_chat_base_url,
+    resolve_local_chat_model,
 )
 
 
@@ -54,7 +56,9 @@ def select_deployment(
     load_dotenv()
     deployment_kind = DeploymentKind(kind)
     if deployment_kind is DeploymentKind.LOCAL:
-        configured_model = os.environ.get("LLAMA_CPP_MODEL") or task.default_model
+        configured_model = resolve_local_chat_model(
+            task.default_model or DEFAULT_LOCAL_CHAT_MODEL
+        )
         model = configured_model if model_override is None else model_override
         return ModelDeployment(
             kind=deployment_kind,

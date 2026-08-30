@@ -20,7 +20,7 @@ from knowledge_map.schemas import (
     ModelDeployment,
     NumberedSentenceRecord,
 )
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
     split_into_numbered_sentences,
@@ -220,11 +220,11 @@ def substitute_mention_spans(
 
 
 def _get_model(deployment: ModelDeployment | None = None):
-    """Build the coreference model without consulting a stage alias."""
+    """Build the coreference model from an explicit or local deployment."""
 
     if deployment is not None:
         return get_chat_model(deployment)
-    return get_chat_model("8k-gemma-e4b-extraction", allow_env_override=True)
+    return get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
 
 
 def format_numbered_sentences(sentences: Sequence[NumberedSentence]) -> str:

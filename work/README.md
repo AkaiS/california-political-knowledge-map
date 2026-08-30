@@ -43,7 +43,7 @@ have not yet been shaped into executable work.
 
 ### OpenRouter Model Deployments frontier
 
-Issues 01–23 are complete. Issue 24 is now takeable; the later tickets retain
+Issues 01–24 are complete. Issue 25 is now takeable; the later tickets retain
 their declared blockers. The tickets keep the Model Deployment prefactor, OpenRouter
 transport, report provenance, and command changes small enough for separate
 implementation contexts.
@@ -71,8 +71,8 @@ implementation contexts.
 - [21 Write no report after exhausted inference](projects/openrouter-model-deployments/issues/21-no-report-after-exhaustion.md), completed on 2026-08-29.
 - [22 Select one Story Pipeline chat deployment](projects/openrouter-model-deployments/issues/22-story-pipeline-deployment-selection.md), completed on 2026-08-29.
 - [23 Preserve Story Pipeline failure handling after exhaustion](projects/openrouter-model-deployments/issues/23-story-pipeline-exhaustion.md), completed on 2026-08-29.
-- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), takeable.
-- [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), blocked by 24.
+- [24 Remove obsolete Ollama chat configuration](projects/openrouter-model-deployments/issues/24-remove-ollama-chat-config.md), completed on 2026-08-29.
+- [25 Reconcile Model Deployment documentation](projects/openrouter-model-deployments/issues/25-model-deployment-documentation.md), takeable.
 
 ### Bill Designation Recovery frontier
 

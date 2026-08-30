@@ -33,14 +33,15 @@ def test_story_pipeline_deployment_defaults_to_local(monkeypatch) -> None:
     assert deployment.provider_policy is None
 
 
-def test_story_pipeline_local_selection_honors_configured_model(monkeypatch) -> None:
+def test_story_pipeline_local_selection_uses_default_when_model_is_unset(
+    monkeypatch,
+) -> None:
     monkeypatch.delenv("LLAMA_CPP_MODEL", raising=False)
-    monkeypatch.setenv("LLM_MODEL", "configured/local-model")
     monkeypatch.setenv("LLAMA_CPP_BASE_URL", "http://story-local.test:8080")
 
     deployment = select_story_deployment()
 
-    assert deployment.model == "configured/local-model"
+    assert deployment.model == "gemma4:26b"
 
 
 def test_story_pipeline_deployment_selects_one_openrouter_configuration(

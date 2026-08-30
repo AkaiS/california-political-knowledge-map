@@ -122,7 +122,7 @@ def test_full_task_binds_one_explicit_deployment_to_both_coreference_agents(
 
         return FunctionModel(respond)
 
-    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
 
     resolve = coreference_task_module.build_task(deployment, None)
@@ -164,7 +164,7 @@ def test_annotator_task_binds_its_explicit_deployment_without_stage_lookup(
             )
         )
 
-    monkeypatch.setenv("OLLAMA_MODEL_COREFERENCE", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
 
     annotate = coreference_task_module.build_annotator_task(deployment, None)

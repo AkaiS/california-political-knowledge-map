@@ -9,12 +9,10 @@ author's own label as the expected output rather than leaving it blank.
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from typing import Any, Literal, NamedTuple
 
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -25,11 +23,15 @@ from knowledge_map.core.relevance_agent import (
     get_relevance_agent_prompt,
 )
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    get_chat_model,
+    resolve_local_chat_model,
+)
 
 from .registry import EvaluationTask, register
 
-FALLBACK_MODEL = "32k-gemma-e4b"
+FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
 
 
 def default_model() -> str:
@@ -39,8 +41,7 @@ def default_model() -> str:
     at import, so it loads `.env` itself.
     """
 
-    load_dotenv()
-    return os.environ.get("OLLAMA_MODEL") or FALLBACK_MODEL
+    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class RelevanceInput(BaseModel):

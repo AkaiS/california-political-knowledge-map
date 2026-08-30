@@ -3,15 +3,15 @@
 # Serve the coreference/extraction model through llama.cpp, with tool calling
 # actually enforced.
 #
-# Ollama accepts `tool_choice: "required"` and ignores it, so pydantic-ai's
-# structured output tool is a suggestion the model is free to answer in prose --
-# which is what it did.  llama-server compiles the tool schema to a GBNF grammar
-# and constrains decoding, so the tool call is the only output the sampler can
-# reach.
+# An OpenAI-compatible server may accept `tool_choice: "required"` without
+# enforcing it, leaving pydantic-ai's structured output tool as a suggestion the
+# model is free to answer in prose.  llama-server compiles the tool schema to a
+# GBNF grammar and constrains decoding, so the tool call is the only output the
+# sampler can reach.
 #
-# The GGUF has to be one llama.cpp can load, which the blobs under
-# ~/.ollama/models are not: Ollama packs the vision tower into the same file,
-# and llama.cpp wants the projector separate (see docs/adr/0019).
+# The GGUF has to be one llama.cpp can load.  Some model artifacts pack the
+# vision tower into the same file, while llama.cpp wants the projector separate
+# (see docs/adr/0019).
 #
 # Usage:
 #   scripts/llama-server.sh
@@ -59,7 +59,7 @@ if [[ "$vision_tensors" != "0" ]]; then
     echo "$gguf packs $vision_tensors vision/projector tensors." >&2
     echo "llama.cpp needs the projector in a separate --mmproj file and will" >&2
     echo "refuse this one with 'wrong number of tensors'. Use a GGUF built for" >&2
-    echo "llama.cpp rather than an Ollama blob." >&2
+    echo "llama.cpp with the projector supplied separately." >&2
     exit 1
 fi
 
@@ -80,9 +80,8 @@ echo "template ${template_args[1]:-<embedded in model>}"
 echo "temp     $TEMP   ctx $CTX/slot x $PARALLEL slots = $ctx_total   port $PORT"
 echo
 
-# --temp 0 replaces the temperature 1 / top_p 0.95 that ship in the Ollama
-# Modelfile.  The client sets temperature per request as well; this makes a
-# request that omits it deterministic too.
+# --temp 0 makes sampling deterministic even when a request omits temperature.
+# The client sets temperature per request as well.
 #
 # --no-mmproj because nothing here sends an image, and loading the projector
 # would only cost memory.

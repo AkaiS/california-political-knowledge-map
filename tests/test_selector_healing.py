@@ -37,7 +37,7 @@ def test_explicit_selector_healing_agents_share_deployment(monkeypatch):
         model="explicit-selector-healing-model",
         endpoint="http://selector-healing.test:9999",
     )
-    monkeypatch.setenv("OLLAMA_MODEL_HEALING", "stage-specific-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
 
     with patch(
         "knowledge_map.core.healing.get_chat_model",

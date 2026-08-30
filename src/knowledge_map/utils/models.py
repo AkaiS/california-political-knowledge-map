@@ -30,6 +30,8 @@ from tenacity import retry_if_exception_type, stop_after_attempt
 from knowledge_map.config import TransportSettings, settings
 from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
 
+DEFAULT_LOCAL_CHAT_MODEL = "gemma4:26b"
+
 
 @dataclass(frozen=True)
 class ModelRequestProvenance:
@@ -683,18 +685,11 @@ def resolve_thinking() -> bool:
     }
 
 
-def _resolve_model_name(
-    default_model: str,
-    env_var_name: str | None,
-    allow_env_override: bool = True,
-) -> str:
-    if not allow_env_override:
-        return default_model
-    if env_var_name:
-        model_name = os.environ.get(env_var_name)
-        if model_name:
-            return model_name
-    return os.environ.get("OLLAMA_MODEL") or default_model
+def resolve_local_chat_model(default_model: str) -> str:
+    """Resolve the one configured llama.cpp chat model for a legacy caller."""
+
+    load_dotenv()
+    return os.environ.get("LLAMA_CPP_MODEL", "").strip() or default_model
 
 
 def llama_cpp_model_profile(model_name: str) -> ModelProfile | None:
@@ -1367,36 +1362,25 @@ def _build_openrouter_model(
 
 def get_chat_model(
     default_model: str | ModelDeployment,
-    env_var_name: str | None = None,
     *,
-    allow_env_override: bool = True,
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     openrouter_retry_hooks: OpenRouterRetryHooks | None = None,
 ) -> OpenAIChatModel:
-    """Get a chat model from a typed deployment or the legacy local path.
+    """Get a chat model from a typed deployment or a configured local path.
 
-    The model name resolves from ``env_var_name`` (e.g.
-    ``OLLAMA_MODEL_HEALING``), then ``OLLAMA_MODEL``, then ``default_model``.
-    It names what ``llama-server --alias`` was given; the server serves
-    whichever GGUF it was started with regardless.
-
-    Pass ``allow_env_override=False`` to use ``default_model`` verbatim, as an
-    evaluation run naming the model it is comparing must.
+    Typed deployments are authoritative and cannot be replaced by ambient
+    configuration. Legacy string callers resolve only ``LLAMA_CPP_MODEL`` and
+    otherwise use their explicit default.
 
     Typed local deployments are memoized by their effective identity and an
     injected transport, so equivalent agents share one client and connection
     pool without allowing distinct mock transports to leak into one another.
-    Legacy string calls retain their existing environment lookup behavior.
     """
 
     load_dotenv()
 
     if isinstance(default_model, ModelDeployment):
-        if env_var_name is not None:
-            raise ValueError(
-                "a Model Deployment cannot be combined with model environment overrides"
-            )
         if default_model.kind is DeploymentKind.OPENROUTER:
             request_settings = default_model.request_settings
             if request_settings.timeout is None:
@@ -1460,7 +1444,7 @@ def get_chat_model(
         return model
 
     base_url = resolve_chat_base_url()
-    model_name = _resolve_model_name(default_model, env_var_name, allow_env_override)
+    model_name = resolve_local_chat_model(default_model)
 
     if transport is not None or transport_settings is not None:
         return _build_model(model_name, base_url, None, transport_settings, transport)

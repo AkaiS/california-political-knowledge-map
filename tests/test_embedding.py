@@ -177,7 +177,7 @@ class TestTheEmbeddingStageRetriesItsOwnRequests:
     """The embedding stage is not an LLM call and does not pass through the
     model factory, so it does not inherit that factory's retrying client.  It
     builds its own, and these assertions run a real embedding call against an
-    ``httpx.MockTransport`` standing in for the Ollama host.
+    ``httpx.MockTransport`` standing in for the local llama.cpp embedding host.
     """
 
     @staticmethod

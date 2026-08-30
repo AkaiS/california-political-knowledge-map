@@ -14,7 +14,7 @@ from knowledge_map.ontology.extraction_conformance import (
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.schemas import AdherenceReport, ExtractionResult, ModelDeployment
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +59,13 @@ def get_extraction_agent(
 ) -> Agent:
     """Build the Entity Extraction agent from one explicit deployment.
 
-    Legacy callers without a deployment retain the shared global model
-    override, but stage-specific model aliases cannot replace a deployment.
+    Callers without a deployment use the configured local chat deployment.
     """
 
     model = (
         get_chat_model(deployment)
         if deployment is not None
-        else get_chat_model("gemma4:31b", allow_env_override=True)
+        else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
     )
     instructions = load_instructions()
 
@@ -190,4 +189,3 @@ class PydanticAIEntityExtractionAdapter:
             return bool(result and result.output)
         except Exception:
             return False
-

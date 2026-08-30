@@ -6,7 +6,7 @@ from pydantic_ai import Agent
 
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
 from knowledge_map.schemas import ModelDeployment
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -79,15 +79,13 @@ def get_relevance_agent(
 ) -> Agent:
     """Build the Relevance Filter agent from one explicit deployment.
 
-    Legacy callers without a deployment retain the shared global model
-    override, but a supplied deployment cannot be replaced by an environment
-    model alias.
+    Callers without a deployment use the configured local chat deployment.
     """
 
     model = (
         get_chat_model(deployment)
         if deployment is not None
-        else get_chat_model("32k-gemma-e4b", allow_env_override=True)
+        else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
     )
     return Agent(
         model,

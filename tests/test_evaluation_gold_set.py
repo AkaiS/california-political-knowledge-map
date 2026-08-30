@@ -312,7 +312,7 @@ async def test_relevance_task_binds_explicit_deployment_and_keeps_training_few_s
         assert isinstance(requested, ModelDeployment)
         return FunctionModel(respond)
 
-    monkeypatch.setenv("OLLAMA_MODEL_RELEVANCE", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(relevance_task_module, "get_chat_model", model_factory)
 
     gold_set_path = tmp_path / "relevance.yaml"
@@ -359,10 +359,11 @@ def test_relevance_task_converts_legacy_model_name_to_local_deployment(
     ]
 
 
-def test_relevance_task_default_model_ignores_stage_specific_alias(monkeypatch) -> None:
+def test_relevance_task_default_model_uses_the_configured_local_chat_model(
+    monkeypatch,
+) -> None:
     import knowledge_map.evaluation.tasks.relevance as relevance_task_module
 
-    monkeypatch.setenv("OLLAMA_MODEL", "global-model")
-    monkeypatch.setenv("OLLAMA_MODEL_RELEVANCE", "stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
 
-    assert relevance_task_module.default_model() == "global-model"
+    assert relevance_task_module.default_model() == "configured/local-model"

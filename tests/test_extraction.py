@@ -138,7 +138,7 @@ def test_get_extraction_agent_uses_explicit_deployment_without_stage_lookup(
         seen.append(requested)
         return model
 
-    monkeypatch.setenv("OLLAMA_MODEL_EXTRACTION", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
 
     agent = get_extraction_agent(deployment)
@@ -147,7 +147,7 @@ def test_get_extraction_agent_uses_explicit_deployment_without_stage_lookup(
     assert agent.model is model
 
 
-def test_default_extraction_agent_ignores_stage_alias_but_keeps_global_override(
+def test_default_extraction_agent_uses_the_single_local_chat_model(
     monkeypatch,
 ):
     seen: list[tuple[object, dict]] = []
@@ -156,13 +156,12 @@ def test_default_extraction_agent_ignores_stage_alias_but_keeps_global_override(
         seen.append((requested, kwargs))
         return FunctionModel(lambda messages, info: ModelResponse(parts=[]))
 
-    monkeypatch.setenv("OLLAMA_MODEL_EXTRACTION", "ambient-stage-model")
-    monkeypatch.setenv("OLLAMA_MODEL", "global-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
     monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
 
     get_extraction_agent()
 
-    assert seen == [("gemma4:31b", {"allow_env_override": True})]
+    assert seen == [("gemma4:26b", {})]
 
 
 def test_adapter_binds_explicit_deployment_without_constructing_another_agent(
@@ -176,7 +175,7 @@ def test_adapter_binds_explicit_deployment_without_constructing_another_agent(
         seen.append(requested)
         return model
 
-    monkeypatch.setenv("OLLAMA_MODEL_EXTRACTION", "ambient-stage-model")
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
 
     adapter = PydanticAIEntityExtractionAdapter(deployment=deployment)

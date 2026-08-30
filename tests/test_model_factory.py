@@ -223,24 +223,46 @@ def test_transport_settings_have_defaults():
 
 
 def test_repeated_construction_shares_one_model_and_connection_pool():
-    first = get_chat_model("test-model", "OLLAMA_MODEL_COREFERENCE")
-    second = get_chat_model("test-model", "OLLAMA_MODEL_COREFERENCE")
+    first = get_chat_model("test-model")
+    second = get_chat_model("test-model")
 
     assert first is second
 
 
-def test_a_different_model_name_gets_its_own_client(monkeypatch):
-    # `default_model` is the lowest precedence, so a developer's `.env` setting
-    # `OLLAMA_MODEL` would answer both calls with the same name and collapse the
-    # two into one cache entry.  Deleting it is not enough: the factory calls
-    # `load_dotenv`, which puts an absent key straight back.  An empty value is
-    # present enough for dotenv to leave alone and falsy enough to fall through.
-    monkeypatch.setenv("OLLAMA_MODEL", "")
-
+def test_a_different_model_name_gets_its_own_client():
     first = get_chat_model("test-model-a")
     second = get_chat_model("test-model-b")
 
     assert first is not second
+
+
+def test_configured_local_model_overrides_a_legacy_factory_default(
+    monkeypatch,
+):
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
+
+    model = get_chat_model(
+        "legacy-default-model",
+        transport=httpx.MockTransport(lambda request: None),
+    )
+
+    assert model.model_name == "configured/local-model"
+
+
+def test_legacy_chat_model_environment_names_do_not_override_explicit_default(
+    monkeypatch,
+):
+    monkeypatch.setattr("knowledge_map.utils.models.load_dotenv", lambda: None)
+    monkeypatch.delenv("LLAMA_CPP_MODEL", raising=False)
+    monkeypatch.setenv("OLLAMA_" + "MODEL", "obsolete-global-model")
+    monkeypatch.setenv("OLLAMA_" + "MODEL_EXTRACTION", "obsolete-stage-model")
+
+    model = get_chat_model(
+        "explicit-local-default",
+        transport=httpx.MockTransport(lambda request: None),
+    )
+
+    assert model.model_name == "explicit-local-default"
 
 
 def test_local_null_content_workaround_reaches_the_next_agent_request():
@@ -362,7 +384,7 @@ def test_local_deployment_keeps_transport_retries_bounded(recorded_waits):
 
 
 def test_every_model_is_built_for_the_llama_cpp_host(monkeypatch):
-    """Chat goes to llama.cpp, not Ollama, and the ``/v1`` path is added once."""
+    """Chat uses llama.cpp and adds the ``/v1`` path exactly once."""
 
     monkeypatch.setenv("LLAMA_CPP_BASE_URL", "http://localhost:9999")
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -387,8 +409,8 @@ def test_embedding_gets_its_own_llama_cpp_port(monkeypatch):
     assert resolve_embedding_base_url() == "http://localhost:8081/v1"
 
 
-def test_the_embedding_host_is_no_longer_read_from_ollama(monkeypatch):
-    """A leftover `OLLAMA_BASE_URL` must not pull embedding back onto Ollama."""
+def test_the_embedding_host_ignores_a_legacy_chat_host_setting(monkeypatch):
+    """A legacy host setting must not pull embedding off its local endpoint."""
 
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.delenv("LLAMA_CPP_EMBEDDING_BASE_URL", raising=False)
