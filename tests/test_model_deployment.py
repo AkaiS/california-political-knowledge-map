@@ -119,6 +119,7 @@ def test_request_settings_reject_impossible_sampling_and_limit_values():
         {"top_k": 0},
         {"max_tokens": 0},
         {"timeout": 0.0},
+        {"timeout": None},
         {"max_attempts": 0},
         {"rate_limit_wait_cap": -1.0},
         {"reasoning_effort": " "},

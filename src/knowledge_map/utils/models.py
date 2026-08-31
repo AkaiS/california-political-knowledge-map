@@ -28,7 +28,12 @@ from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
-from knowledge_map.config import TransportSettings, settings
+from knowledge_map.config import (
+    TransportSettings,
+    configured_temperature,
+    configured_thinking,
+    settings,
+)
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -624,7 +629,7 @@ def resolve_temperature() -> float:
     server, so a run is deterministic however the server was started.
     """
 
-    return float(os.environ.get("LLM_TEMPERATURE") or 0.0)
+    return configured_temperature()
 
 
 def resolve_thinking() -> bool:
@@ -634,9 +639,7 @@ def resolve_thinking() -> bool:
     since pydantic-ai sends no ``max_tokens``.
     """
 
-    return (os.environ.get("LLM_THINKING") or "off").strip().lower() in {
-        "1", "on", "true", "yes",
-    }
+    return configured_thinking()
 
 
 def resolve_local_chat_model(default_model: str) -> str:
@@ -1157,7 +1160,6 @@ def _deployment_transport_settings(
 ) -> TransportSettings:
     """Resolve retry and client timeout settings for one local deployment."""
 
-    configured = transport_settings or settings.transport
     return TransportSettings(
         max_attempts=(
             transport_settings.max_attempts
@@ -1169,11 +1171,7 @@ def _deployment_transport_settings(
             if transport_settings is not None
             else request_settings.rate_limit_wait_cap
         ),
-        request_timeout=(
-            request_settings.timeout
-            if request_settings.timeout is not None
-            else configured.request_timeout
-        ),
+        request_timeout=request_settings.timeout,
     )
 
 
@@ -1202,7 +1200,7 @@ def _build_model(
         timeout=(
             transport_settings.request_timeout
             if transport_settings is not None
-            else None
+            else settings.transport.request_timeout
         ),
     )
     effective_transport_settings = _deployment_transport_settings(
@@ -1222,11 +1220,7 @@ def _build_model(
     provider = OpenAIProvider(openai_client=openai_client)
     extra_body = {
         "chat_template_kwargs": {
-            "enable_thinking": (
-                request_settings.thinking
-                if request_settings.thinking is not None
-                else resolve_thinking()
-            )
+            "enable_thinking": request_settings.thinking
         }
     }
     if request_settings.top_k is not None:
@@ -1259,11 +1253,7 @@ def _build_openrouter_model(
     effective_transport_settings = _deployment_transport_settings(
         request_settings, transport_settings
     )
-    request_timeout = (
-        request_settings.timeout
-        if request_settings.timeout is not None
-        else effective_transport_settings.request_timeout
-    )
+    request_timeout = request_settings.timeout
 
     http_client = httpx.AsyncClient(
         transport=_openrouter_retry_transport(
@@ -1338,31 +1328,24 @@ def get_chat_model(
     load_dotenv()
 
     if isinstance(default_model, ModelDeployment):
-        if default_model.kind is DeploymentKind.OPENROUTER:
-            request_settings = default_model.request_settings
-            if request_settings.timeout is None:
-                request_settings = request_settings.model_copy(
-                    update={
-                        "timeout": (
-                            transport_settings or settings.transport
-                        ).request_timeout
-                    }
-                )
-            effective_deployment = default_model.model_copy(
-                update={"request_settings": request_settings}
+        if transport_settings is not None:
+            raise ValueError(
+                "transport settings for a typed Model Deployment must be part of "
+                "its request_settings"
             )
-            if transport_settings is not None or openrouter_retry_hooks is not None:
+        if default_model.kind is DeploymentKind.OPENROUTER:
+            if openrouter_retry_hooks is not None:
                 return _build_openrouter_model(
-                    effective_deployment,
-                    transport_settings,
+                    default_model,
+                    None,
                     transport,
                     openrouter_retry_hooks,
                 )
-            key = (effective_deployment, transport)
+            key = (default_model, transport)
             model = _models.get(key)
             if model is None:
                 model = _build_openrouter_model(
-                    effective_deployment, None, transport
+                    default_model, None, transport
                 )
                 _models[key] = model
             return model
@@ -1372,26 +1355,11 @@ def get_chat_model(
             default_model.endpoint or resolve_chat_base_url()
         )
         request_settings = default_model.request_settings
-        if request_settings.thinking is None:
-            request_settings = request_settings.model_copy(
-                update={"thinking": resolve_thinking()}
-            )
-        effective_deployment = default_model.model_copy(
-            update={"endpoint": base_url, "request_settings": request_settings}
-        )
-        if transport_settings is not None:
-            return _build_model(
-                effective_deployment.model,
-                base_url,
-                request_settings,
-                transport_settings,
-                transport,
-            )
-        key = (effective_deployment, transport)
+        key = (default_model, transport)
         model = _models.get(key)
         if model is None:
             model = _build_model(
-                effective_deployment.model,
+                default_model.model,
                 base_url,
                 request_settings,
                 None,
@@ -1415,6 +1383,7 @@ def get_chat_model(
             thinking=resolve_thinking(),
             max_attempts=settings.transport.max_attempts,
             rate_limit_wait_cap=settings.transport.rate_limit_wait_cap,
+            timeout=settings.transport.request_timeout,
         ),
     )
     key = (deployment, None)

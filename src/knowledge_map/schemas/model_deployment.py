@@ -25,10 +25,10 @@ class ModelRequestSettings(BaseModel):
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     top_p: float | None = Field(default=None, gt=0.0, le=1.0)
     top_k: int | None = Field(default=None, ge=1)
-    thinking: bool | None = None
+    thinking: bool | None = False
     reasoning_effort: str | None = Field(default=None, min_length=1)
     max_tokens: int | None = Field(default=None, ge=1)
-    timeout: float | None = Field(default=None, gt=0.0)
+    timeout: float = Field(default=3600.0, gt=0.0)
     max_attempts: int = Field(default=3, ge=1)
     rate_limit_wait_cap: float = Field(default=120.0, ge=0.0)
 

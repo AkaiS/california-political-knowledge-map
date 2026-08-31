@@ -1,6 +1,35 @@
 import os
+from collections.abc import Callable
 
 from pydantic import BaseModel, Field
+
+from knowledge_map.schemas.model_deployment import ModelRequestSettings
+
+
+def _optional_environment_value[ValueT](
+    name: str, convert: Callable[[str], ValueT]
+) -> ValueT | None:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return None
+    return convert(value)
+
+
+def configured_temperature() -> float:
+    """Return the configured sampling temperature."""
+
+    return float(os.environ.get("LLM_TEMPERATURE") or 0.0)
+
+
+def configured_thinking() -> bool:
+    """Return whether configured chat requests enable thinking."""
+
+    return (os.environ.get("LLM_THINKING") or "off").strip().lower() in {
+        "1",
+        "on",
+        "true",
+        "yes",
+    }
 
 
 class ChunkingSettings(BaseModel):
@@ -28,6 +57,25 @@ class TransportSettings(BaseModel):
             os.environ.get("LLM_TRANSPORT_REQUEST_TIMEOUT", 3600.0)
         ),
         description="Per-request timeout in seconds",
+    )
+
+
+def configured_model_request_settings() -> ModelRequestSettings:
+    """Resolve the shared, non-secret settings for one Model Deployment."""
+
+    transport = TransportSettings()
+    return ModelRequestSettings(
+        temperature=configured_temperature(),
+        top_p=_optional_environment_value("LLM_TOP_P", float),
+        top_k=_optional_environment_value("LLM_TOP_K", int),
+        thinking=configured_thinking(),
+        reasoning_effort=_optional_environment_value(
+            "LLM_REASONING_EFFORT", lambda value: value.strip()
+        ),
+        max_tokens=_optional_environment_value("LLM_MAX_TOKENS", int),
+        timeout=transport.request_timeout,
+        max_attempts=transport.max_attempts,
+        rate_limit_wait_cap=transport.rate_limit_wait_cap,
     )
 
 
@@ -114,4 +162,3 @@ SECONDARY_RELEVANCE_KEYWORDS = [
     "traffic", "transit", "resident", "neighborhood", "county", "district",
     "city", "regional"
 ]
-

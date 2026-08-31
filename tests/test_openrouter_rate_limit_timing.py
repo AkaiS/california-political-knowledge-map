@@ -9,7 +9,6 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError
 
-from knowledge_map.config import TransportSettings
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -408,7 +407,7 @@ def test_fallback_backoff_is_exponential_and_capped(monkeypatch):
     assert clock.sleeps == [1.0, 2.0, 4.0, 5.0]
 
 
-def test_transport_settings_bound_openrouter_rate_limit_attempts(monkeypatch):
+def test_deployment_settings_bound_openrouter_rate_limit_attempts(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-rate-limit-test")
     clock = ControlledClock()
     requests: list[httpx.Request] = []
@@ -424,8 +423,9 @@ def test_transport_settings_bound_openrouter_rate_limit_attempts(monkeypatch):
     with pytest.raises(ModelHTTPError):
         Agent(
             get_chat_model(
-                openrouter_deployment(),
-                transport_settings=TransportSettings(max_attempts=3),
+                openrouter_deployment(
+                    request_settings=ModelRequestSettings(max_attempts=3)
+                ),
                 transport=httpx.MockTransport(handler),
                 openrouter_retry_hooks=retry_hooks_for(
                     clock, jitter=lambda upper_bound: upper_bound

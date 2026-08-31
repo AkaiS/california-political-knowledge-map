@@ -2,6 +2,7 @@
 
 import os
 
+from knowledge_map.config import configured_model_request_settings
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -21,12 +22,14 @@ def deployment_from_environment(
     """Build and validate one command-selected chat deployment."""
 
     deployment_kind = DeploymentKind(kind)
+    request_settings = configured_model_request_settings()
     if deployment_kind is DeploymentKind.LOCAL:
         configured_model = resolve_local_chat_model(default_local_model)
         model = configured_model if model_override is None else model_override
         return ModelDeployment(
             kind=deployment_kind,
             model=model,
+            request_settings=request_settings,
             endpoint=resolve_chat_base_url(),
         )
 
@@ -56,5 +59,6 @@ def deployment_from_environment(
     return ModelDeployment(
         kind=deployment_kind,
         model=model,
+        request_settings=request_settings,
         provider_policy=OpenRouterProviderPolicy(providers=providers),
     )

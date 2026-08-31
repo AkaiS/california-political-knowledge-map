@@ -16,6 +16,7 @@ from knowledge_map.evaluation import report_path, write_report
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
+    ModelRequestSettings,
     OpenRouterProviderPolicy,
 )
 
@@ -76,6 +77,15 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-evaluation-test")
     monkeypatch.setenv("OPENROUTER_MODEL", "configured/model")
     monkeypatch.setenv("OPENROUTER_PROVIDERS", "google-ai-studio,openai")
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.25")
+    monkeypatch.setenv("LLM_TOP_P", "0.85")
+    monkeypatch.setenv("LLM_TOP_K", "40")
+    monkeypatch.setenv("LLM_THINKING", "on")
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "high")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "512")
+    monkeypatch.setenv("LLM_TRANSPORT_REQUEST_TIMEOUT", "90.5")
+    monkeypatch.setenv("LLM_TRANSPORT_MAX_ATTEMPTS", "4")
+    monkeypatch.setenv("LLM_TRANSPORT_RATE_LIMIT_WAIT_CAP", "45")
 
     evaluate.dispatch(
         argparse.Namespace(
@@ -97,6 +107,17 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
     assert task_deployment.provider_policy.providers == (
         "google-ai-studio",
         "openai",
+    )
+    assert task_deployment.request_settings == ModelRequestSettings(
+        temperature=0.25,
+        top_p=0.85,
+        top_k=40,
+        thinking=True,
+        reasoning_effort="high",
+        max_tokens=512,
+        timeout=90.5,
+        max_attempts=4,
+        rate_limit_wait_cap=45.0,
     )
     assert calls["report_deployment"] is task_deployment
 

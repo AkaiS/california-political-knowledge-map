@@ -109,20 +109,13 @@ def test_local_deployment_builds_a_real_agent_with_explicit_request_settings():
     assert bodies[0]["chat_template_kwargs"] == {"enable_thinking": True}
 
 
-def test_local_deployment_uses_transport_timeout_when_request_timeout_is_unset():
-    deployment = local_deployment(
-        request_settings=local_deployment().request_settings.model_copy(
-            update={"timeout": None}
+def test_typed_local_deployment_rejects_out_of_band_transport_settings():
+    with pytest.raises(ValueError, match="must be part of its request_settings"):
+        get_chat_model(
+            local_deployment(),
+            transport_settings=TransportSettings(request_timeout=11.5),
+            transport=httpx.MockTransport(lambda request: None),
         )
-    )
-
-    model = get_chat_model(
-        deployment,
-        transport_settings=TransportSettings(request_timeout=11.5),
-        transport=httpx.MockTransport(lambda request: None),
-    )
-
-    assert model.settings["timeout"] == 11.5
 
 
 def test_rate_limited_request_is_retried_after_the_header_delay(recorded_waits):

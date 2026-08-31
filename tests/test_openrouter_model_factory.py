@@ -7,7 +7,7 @@ import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.openrouter import OpenRouterModel
 
-from knowledge_map.config import TransportSettings, settings
+from knowledge_map.config import TransportSettings
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -134,23 +134,17 @@ def test_openrouter_uses_native_profile_without_local_message_workarounds(
     assert "chat_template_kwargs" not in bodies[0]
 
 
-def test_openrouter_uses_transport_timeout_when_deployment_timeout_is_unset(
+def test_typed_openrouter_deployment_rejects_out_of_band_transport_settings(
     monkeypatch,
 ):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
-    deployment = openrouter_deployment(
-        request_settings=openrouter_deployment().request_settings.model_copy(
-            update={"timeout": None}
+
+    with pytest.raises(ValueError, match="must be part of its request_settings"):
+        get_chat_model(
+            openrouter_deployment(),
+            transport_settings=TransportSettings(request_timeout=11.5),
+            transport=httpx.MockTransport(lambda request: None),
         )
-    )
-
-    model = get_chat_model(
-        deployment,
-        transport_settings=TransportSettings(request_timeout=11.5),
-        transport=httpx.MockTransport(lambda request: None),
-    )
-
-    assert model.settings["timeout"] == 11.5
 
 
 def test_openrouter_api_key_is_provider_state_not_deployment_identity(monkeypatch):
@@ -169,25 +163,24 @@ def test_openrouter_api_key_is_provider_state_not_deployment_identity(monkeypatc
     assert "sk-first" not in deployment.model_dump_json()
 
 
-def test_openrouter_cache_identity_includes_effective_request_timeout(monkeypatch):
+def test_openrouter_cache_identity_includes_deployment_request_timeout(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
     transport = httpx.MockTransport(
         lambda request: httpx.Response(200, json=chat_completion("resolved"))
     )
-    deployment = openrouter_deployment(
+    first_deployment = openrouter_deployment(
         request_settings=openrouter_deployment().request_settings.model_copy(
-            update={"timeout": None}
+            update={"timeout": 11.5}
+        )
+    )
+    second_deployment = openrouter_deployment(
+        request_settings=openrouter_deployment().request_settings.model_copy(
+            update={"timeout": 22.0}
         )
     )
 
-    monkeypatch.setattr(
-        settings, "transport", TransportSettings(request_timeout=11.5)
-    )
-    first = get_chat_model(deployment, transport=transport)
-    monkeypatch.setattr(
-        settings, "transport", TransportSettings(request_timeout=22.0)
-    )
-    second = get_chat_model(deployment, transport=transport)
+    first = get_chat_model(first_deployment, transport=transport)
+    second = get_chat_model(second_deployment, transport=transport)
 
     assert first is not second
     assert first.settings["timeout"] == 11.5

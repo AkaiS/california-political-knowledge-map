@@ -32,9 +32,13 @@ selected for an Evaluation Run or Story Pipeline. It uses the separate
 ## Configure the deployments
 
 Copy [`.env.example`](../.env.example) to `.env` and replace placeholders. The
-local chat settings are `LLAMA_CPP_BASE_URL` (default `http://localhost:8080`),
-`LLAMA_CPP_MODEL` (default `gemma4:26b`), `LLM_TEMPERATURE` (default `0`), and
-`LLM_THINKING` (default `off`). Start the local chat server with
+local chat target uses `LLAMA_CPP_BASE_URL` (default `http://localhost:8080`)
+and `LLAMA_CPP_MODEL` (default `gemma4:26b`). Shared request configuration for
+local and OpenRouter deployments uses `LLM_TEMPERATURE`, `LLM_TOP_P`,
+`LLM_TOP_K`, `LLM_THINKING`, `LLM_REASONING_EFFORT`, `LLM_MAX_TOKENS`, and the
+`LLM_TRANSPORT_*` settings. Blank optional values are omitted from requests.
+Command assembly resolves these values into the Model Deployment before the
+model factory builds a Pydantic AI model. Start the local chat server with
 `scripts/llama-server.sh` and the local embedding server with
 `scripts/llama-embed.sh`.
 
