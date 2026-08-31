@@ -21,20 +21,13 @@ from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus, ValidationStatus
-from knowledge_map.schemas import (
-    DeploymentKind,
-    ModelDeployment,
-    OpenRouterProviderPolicy,
-)
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    resolve_chat_base_url,
-    resolve_local_chat_model,
-)
+from knowledge_map.utils.deployments import deployment_from_environment
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
 
 
 CLI_COMMAND_HELP = {
@@ -72,36 +65,10 @@ def select_story_deployment(
     """
 
     load_dotenv()
-    deployment_kind = DeploymentKind(selected_kind)
-    if deployment_kind is DeploymentKind.LOCAL:
-        model = resolve_local_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
-        return ModelDeployment(
-            kind=deployment_kind,
-            model=model,
-            endpoint=resolve_chat_base_url(),
-        )
-
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    model = os.environ.get("OPENROUTER_MODEL", "").strip()
-    provider_text = os.environ.get("OPENROUTER_PROVIDERS", "")
-    providers = tuple(provider.strip() for provider in provider_text.split(","))
-    missing: list[str] = []
-    if not api_key:
-        missing.append("OPENROUTER_API_KEY")
-    if not model:
-        missing.append("OPENROUTER_MODEL")
-    if not provider_text.strip() or any(not provider for provider in providers):
-        missing.append("OPENROUTER_PROVIDERS")
-    if missing:
-        raise ValueError(
-            "OpenRouter Story Pipeline deployment is incomplete; set "
-            + ", ".join(missing)
-        )
-
-    return ModelDeployment(
-        kind=deployment_kind,
-        model=model,
-        provider_policy=OpenRouterProviderPolicy(providers=providers),
+    return deployment_from_environment(
+        selected_kind,
+        default_local_model=DEFAULT_LOCAL_CHAT_MODEL,
+        command_name="Story Pipeline",
     )
 
 

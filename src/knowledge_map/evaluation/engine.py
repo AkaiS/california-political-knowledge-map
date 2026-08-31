@@ -18,6 +18,7 @@ from pydantic_evals.evaluators import Evaluator, ReportEvaluator
 from pydantic_evals.lifecycle import CaseLifecycle
 from pydantic_evals.reporting import EvaluationReport
 
+from knowledge_map.schemas import ModelRequestProvenance
 from knowledge_map.utils.models import request_provenance_scope
 
 from .gold_set import EvaluationCase, EvaluationGoldSet, EvaluationSplit
@@ -84,7 +85,7 @@ def run_gold_set(
         report_evaluators=report_evaluators,
         split=split,
     )
-    records_by_case: dict[str, list[dict[str, object]]] = {}
+    records_by_case: dict[str, list[ModelRequestProvenance]] = {}
     records_lock = threading.Lock()
     synchronous_task = _synchronous(task)
 
@@ -98,7 +99,7 @@ def run_gold_set(
                 return synchronous_task(task_input)
             finally:
                 with records_lock:
-                    records_by_case[case_id] = [record.as_dict() for record in records]
+                    records_by_case[case_id] = list(records)
 
     report = dataset.evaluate_sync(
         run_case,

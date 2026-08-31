@@ -8,8 +8,9 @@ from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC
 from decimal import Decimal, InvalidOperation
+from email.utils import parsedate_to_datetime
 from types import TracebackType
 from typing import Any, Self
 
@@ -28,61 +29,14 @@ from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_
 from tenacity import retry_if_exception_type, stop_after_attempt
 
 from knowledge_map.config import TransportSettings, settings
-from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
+from knowledge_map.schemas import (
+    DeploymentKind,
+    ModelDeployment,
+    ModelRequestProvenance,
+    ModelRequestSettings,
+)
 
 DEFAULT_LOCAL_CHAT_MODEL = "gemma4:26b"
-
-
-@dataclass(frozen=True)
-class ModelRequestProvenance:
-    """Safe route, usage, and cost facts for one model response in a case."""
-
-    case_id: str
-    request_sequence: int
-    deployment: str
-    requested_model: str
-    returned_model: str | None
-    downstream_provider: str | None
-    generation_id: str | None
-    is_byok: bool | None
-    input_tokens: int | None
-    output_tokens: int | None
-    reasoning_tokens: int | None
-    cache_write_tokens: int | None
-    cache_read_tokens: int | None
-    total_tokens: int | None
-    charged_cost: Decimal | None
-    upstream_cost: Decimal | None
-    route_attempts: int | None
-    attempts: int
-    retry_count: int
-    rate_limit_wait: float
-
-    def as_dict(self) -> dict[str, object]:
-        """Return normalized facts safe to serialize in a report."""
-
-        return {
-            "case_id": self.case_id,
-            "request_sequence": self.request_sequence,
-            "deployment": self.deployment,
-            "requested_model": self.requested_model,
-            "returned_model": self.returned_model,
-            "downstream_provider": self.downstream_provider,
-            "generation_id": self.generation_id,
-            "is_byok": self.is_byok,
-            "input_tokens": self.input_tokens,
-            "output_tokens": self.output_tokens,
-            "reasoning_tokens": self.reasoning_tokens,
-            "cache_write_tokens": self.cache_write_tokens,
-            "cache_read_tokens": self.cache_read_tokens,
-            "total_tokens": self.total_tokens,
-            "charged_cost": self.charged_cost,
-            "upstream_cost": self.upstream_cost,
-            "route_attempts": self.route_attempts,
-            "attempts": self.attempts,
-            "retry_count": self.retry_count,
-            "rate_limit_wait": self.rate_limit_wait,
-        }
 
 
 @dataclass
@@ -1031,18 +985,21 @@ def _parse_retry_after_wait(
     if value.isascii() and value.isdecimal():
         return float(value)
 
-    for date_format in (
-        "%a, %d %b %Y %H:%M:%S GMT",
-        "%A, %d-%b-%y %H:%M:%S GMT",
-        "%a %b %d %H:%M:%S %Y",
-    ):
-        try:
-            retry_at = datetime.strptime(value, date_format).replace(tzinfo=UTC)
-        except ValueError:
-            continue
-        wait = retry_at.timestamp() - now
-        return wait if wait >= 0 else None
-    return None
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=UTC)
+    retry_at = retry_at.astimezone(UTC)
+    if value not in {
+        retry_at.strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        retry_at.strftime("%A, %d-%b-%y %H:%M:%S GMT"),
+        retry_at.strftime("%a %b %d %H:%M:%S %Y"),
+    }:
+        return None
+    wait = retry_at.timestamp() - now
+    return wait if wait >= 0 else None
 
 
 class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):

@@ -173,10 +173,23 @@ def test_retry_after_wins_when_reset_header_is_invalid(monkeypatch):
     assert clock.sleeps == [11.0]
 
 
-def test_retry_after_http_date_is_supported(monkeypatch):
+@pytest.mark.parametrize(
+    "date_format",
+    (
+        None,
+        "%A, %d-%b-%y %H:%M:%S GMT",
+        "%a %b %d %H:%M:%S %Y",
+    ),
+)
+def test_retry_after_http_date_is_supported(monkeypatch, date_format):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-rate-limit-test")
     clock = ControlledClock()
     retry_at = datetime.fromtimestamp(clock.now_value + 11, UTC)
+    retry_after = (
+        format_datetime(retry_at, usegmt=True)
+        if date_format is None
+        else retry_at.strftime(date_format)
+    )
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -184,9 +197,7 @@ def test_retry_after_http_date_is_supported(monkeypatch):
         if len(requests) == 1:
             return httpx.Response(
                 429,
-                headers={
-                    "Retry-After": format_datetime(retry_at, usegmt=True),
-                },
+                headers={"Retry-After": retry_after},
                 json={"error": {"message": "rate limited", "code": 429}},
             )
         return httpx.Response(200, json=chat_completion())

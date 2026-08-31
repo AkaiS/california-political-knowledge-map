@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic_evals.reporting import EvaluationReport
 
+from knowledge_map.schemas import ModelRequestProvenance
+
 
 @dataclass(frozen=True)
 class RequestProvenanceCount:
@@ -76,25 +78,31 @@ def aggregate_request_provenance(
     records = list(_report_records(report))
     counts: dict[tuple[str | None, bool | None], int] = {}
     for record in records:
-        provider = _optional_provider(record.get("downstream_provider"))
-        is_byok = _optional_bool(record.get("is_byok"))
-        key = (provider, is_byok)
+        key = (record.downstream_provider, record.is_byok)
         counts[key] = counts.get(key, 0) + 1
 
     return RequestProvenanceAggregate(
-        input_tokens=_sum_int(records, "input_tokens"),
-        output_tokens=_sum_int(records, "output_tokens"),
-        reasoning_tokens=_sum_int(records, "reasoning_tokens"),
-        cache_write_tokens=_sum_int(records, "cache_write_tokens"),
-        cache_read_tokens=_sum_int(records, "cache_read_tokens"),
-        total_tokens=_sum_int(records, "total_tokens"),
-        charged_cost=_sum_decimal(records, "charged_cost"),
-        upstream_cost=_sum_decimal(records, "upstream_cost"),
-        attempts=sum(_required_int(record, "attempts") for record in records),
-        retry_count=sum(_required_int(record, "retry_count") for record in records),
-        rate_limit_wait=fsum(
-            _required_number(record, "rate_limit_wait") for record in records
+        input_tokens=_sum_optional_int(record.input_tokens for record in records),
+        output_tokens=_sum_optional_int(record.output_tokens for record in records),
+        reasoning_tokens=_sum_optional_int(
+            record.reasoning_tokens for record in records
         ),
+        cache_write_tokens=_sum_optional_int(
+            record.cache_write_tokens for record in records
+        ),
+        cache_read_tokens=_sum_optional_int(
+            record.cache_read_tokens for record in records
+        ),
+        total_tokens=_sum_optional_int(record.total_tokens for record in records),
+        charged_cost=_sum_optional_decimal(
+            record.charged_cost for record in records
+        ),
+        upstream_cost=_sum_optional_decimal(
+            record.upstream_cost for record in records
+        ),
+        attempts=sum(record.attempts for record in records),
+        retry_count=sum(record.retry_count for record in records),
+        rate_limit_wait=fsum(record.rate_limit_wait for record in records),
         request_counts=tuple(
             RequestProvenanceCount(
                 downstream_provider=provider,
@@ -110,7 +118,7 @@ def aggregate_request_provenance(
 
 def _report_records(
     report: EvaluationReport[Any, Any, Any],
-) -> Iterable[Mapping[str, object]]:
+) -> Iterable[ModelRequestProvenance]:
     for case in report.cases:
         attributes = getattr(case, "attributes", None)
         if isinstance(attributes, Mapping):
@@ -119,76 +127,27 @@ def _report_records(
         yield from _records_from(getattr(failure, "request_provenance", ()))
 
 
-def _records_from(records: Any) -> Iterable[Mapping[str, object]]:
+def _records_from(records: Any) -> Iterable[ModelRequestProvenance]:
     if records is None:
         return
     for record in records:
-        if isinstance(record, Mapping):
+        if isinstance(record, ModelRequestProvenance):
             yield record
             continue
-        as_dict = getattr(record, "as_dict", None)
-        if callable(as_dict):
-            converted = as_dict()
-            if isinstance(converted, Mapping):
-                yield converted
-                continue
-        raise TypeError("request provenance evidence must be a mapping")
+        if isinstance(record, Mapping):
+            yield ModelRequestProvenance.from_mapping(record)
+            continue
+        raise TypeError("request provenance evidence must be typed or a mapping")
 
 
-def _sum_int(records: list[Mapping[str, object]], field: str) -> int | None:
-    values = [value for record in records if (value := record.get(field)) is not None]
-    if not values:
-        return None
-    return sum(_typed_int(value, field) for value in values)
+def _sum_optional_int(values: Iterable[int | None]) -> int | None:
+    present = [value for value in values if value is not None]
+    return sum(present) if present else None
 
 
-def _sum_decimal(records: list[Mapping[str, object]], field: str) -> Decimal | None:
-    values = [value for record in records if (value := record.get(field)) is not None]
-    if not values:
-        return None
-    return sum((_typed_decimal(value, field) for value in values), Decimal(0))
-
-
-def _required_int(record: Mapping[str, object], field: str) -> int:
-    value = record.get(field)
-    if value is None:
-        raise ValueError(f"request provenance is missing required {field}")
-    return _typed_int(value, field)
-
-
-def _required_number(record: Mapping[str, object], field: str) -> float:
-    value = record.get(field)
-    if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"request provenance has invalid required {field}")
-    return float(value)
-
-
-def _typed_int(value: object, field: str) -> int:
-    if type(value) is not int:
-        raise ValueError(f"request provenance has invalid {field}")
-    return value
-
-
-def _typed_decimal(value: object, field: str) -> Decimal:
-    if not isinstance(value, Decimal):
-        raise TypeError(f"request provenance has invalid {field}")
-    return value
-
-
-def _optional_provider(value: object) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise TypeError("request provenance has invalid downstream_provider")
-    return value
-
-
-def _optional_bool(value: object) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise TypeError("request provenance has invalid is_byok")
-    return value
+def _sum_optional_decimal(values: Iterable[Decimal | None]) -> Decimal | None:
+    present = [value for value in values if value is not None]
+    return sum(present, Decimal(0)) if present else None
 
 
 def _request_count_sort_key(

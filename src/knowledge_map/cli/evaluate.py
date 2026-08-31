@@ -7,7 +7,6 @@ writes one report.  Neither touches a database — see ADR 0017.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from collections import Counter
 from contextlib import nullcontext
@@ -25,16 +24,11 @@ from knowledge_map.evaluation import (
     write_report,
 )
 from knowledge_map.evaluation.tasks import task_named, task_names
-from knowledge_map.schemas import (
-    DeploymentKind,
-    ModelDeployment,
-    OpenRouterProviderPolicy,
-)
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.utils.deployments import deployment_from_environment
 from knowledge_map.utils.models import (
     DEFAULT_LOCAL_CHAT_MODEL,
     openrouter_admission_ceiling,
-    resolve_chat_base_url,
-    resolve_local_chat_model,
 )
 
 
@@ -54,48 +48,13 @@ def select_deployment(
     """
 
     load_dotenv()
-    deployment_kind = DeploymentKind(kind)
-    if deployment_kind is DeploymentKind.LOCAL:
-        configured_model = resolve_local_chat_model(
-            task.default_model or DEFAULT_LOCAL_CHAT_MODEL
-        )
-        model = configured_model if model_override is None else model_override
-        return ModelDeployment(
-            kind=deployment_kind,
-            model=model,
-            endpoint=resolve_chat_base_url(),
-        )
-
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    configured_model = os.environ.get("OPENROUTER_MODEL", "").strip()
-    provider_text = os.environ.get("OPENROUTER_PROVIDERS", "")
-    providers = tuple(
-        provider.strip()
-        for provider in provider_text.split(",")
-    )
-    missing: list[str] = []
-    if not api_key:
-        missing.append("OPENROUTER_API_KEY")
-    if model_override is None:
-        if not configured_model:
-            missing.append("OPENROUTER_MODEL")
-        model = configured_model
-    else:
-        model = model_override
-    if not model or not model.strip():
-        missing.append("--model")
-    if not provider_text.strip() or any(not provider for provider in providers):
-        missing.append("OPENROUTER_PROVIDERS")
-    if missing:
-        raise ValueError(
-            "OpenRouter evaluation deployment is incomplete; set "
-            + ", ".join(missing)
-        )
-
-    return ModelDeployment(
-        kind=deployment_kind,
-        model=model,
-        provider_policy=OpenRouterProviderPolicy(providers=providers),
+    return deployment_from_environment(
+        kind,
+        default_local_model=(
+            getattr(task, "default_model", None) or DEFAULT_LOCAL_CHAT_MODEL
+        ),
+        model_override=model_override,
+        command_name="evaluation",
     )
 
 

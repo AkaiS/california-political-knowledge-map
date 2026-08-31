@@ -32,6 +32,7 @@ from knowledge_map.evaluation.tasks.relevance import (
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
+    ModelRequestProvenance,
     ModelRequestSettings,
     OpenRouterProviderPolicy,
 )
@@ -169,7 +170,9 @@ def test_openrouter_route_provenance_reaches_the_case_report(
         "retry_count": 0,
         "rate_limit_wait": 0.0,
     }
-    assert report.cases[0].attributes["request_provenance"] == [expected]
+    records = report.cases[0].attributes["request_provenance"]
+    assert isinstance(records[0], ModelRequestProvenance)
+    assert records == [expected]
 
     path = write_report(
         report,
