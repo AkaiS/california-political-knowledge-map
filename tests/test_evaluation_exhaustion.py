@@ -70,7 +70,6 @@ def _failed_report(error_message: str) -> EvaluationReport:
             "case_id": "case",
             "attempts": 3,
             "retry_count": 2,
-            "rate_limit_wait": 0.0,
         }
     ]
     return EvaluationReport(name="relevance", cases=[], failures=[failure])
@@ -122,7 +121,6 @@ def test_exhausted_evaluation_fails_before_report_write(
             "case_id": "case",
             "attempts": 3,
             "retry_count": 2,
-            "rate_limit_wait": 0.0,
         }
     ]
     assert list(report_root.rglob("*.json")) == []

@@ -50,7 +50,6 @@ class _RequestRetryState:
 
     request_sequence: int | None = None
     attempts: int = 0
-    rate_limit_wait: float = 0.0
 
 
 @dataclass
@@ -141,7 +140,6 @@ class _RequestProvenanceCapture:
                 ),
                 attempts=attempts,
                 retry_count=max(attempts - 1, 0),
-                rate_limit_wait=retry_state.rate_limit_wait,
             )
         )
 
@@ -174,7 +172,6 @@ class _RequestProvenanceCapture:
                 route_attempts=None,
                 attempts=attempts,
                 retry_count=max(attempts - 1, 0),
-                rate_limit_wait=retry_state.rate_limit_wait,
             )
         )
 
@@ -1092,7 +1089,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     self._admission_gate.request_rate_limited(is_probe=is_probe)
                     admitted = False
                     if attempt + 1 < self._max_attempts:
-                        retry_state.rate_limit_wait += wait
                         # Release the failed response before waiting so its
                         # connection is available while this request backs off.
                         await response.aclose()

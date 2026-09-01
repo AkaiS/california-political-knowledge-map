@@ -168,7 +168,6 @@ def test_openrouter_route_provenance_reaches_the_case_report(
         "route_attempts": None,
         "attempts": 1,
         "retry_count": 0,
-        "rate_limit_wait": 0.0,
     }
     records = report.cases[0].attributes["request_provenance"]
     assert isinstance(records[0], ModelRequestProvenance)
@@ -237,7 +236,6 @@ def test_failed_case_keeps_request_provenance_in_report(
         "route_attempts": None,
         "attempts": 1,
         "retry_count": 0,
-        "rate_limit_wait": 0.0,
     }
 
     assert len(report.failures) == 1
@@ -360,7 +358,6 @@ def test_missing_openrouter_route_facts_are_unavailable(
             "route_attempts": None,
             "attempts": 1,
             "retry_count": 0,
-            "rate_limit_wait": 0.0,
         }
     ]
 
@@ -453,7 +450,6 @@ def test_local_route_provenance_identifies_llama_cpp_and_not_remote_facts(
             "route_attempts": None,
             "attempts": 1,
             "retry_count": 0,
-            "rate_limit_wait": 0.0,
         }
     ]
 
@@ -519,7 +515,6 @@ def test_openrouter_usage_and_cost_provenance_reaches_serialized_case_report(
         "route_attempts": None,
         "attempts": 1,
         "retry_count": 0,
-        "rate_limit_wait": 0.0,
     }
 
     assert report.cases[0].attributes["request_provenance"] == [expected]
@@ -602,7 +597,6 @@ def test_missing_usage_categories_and_costs_remain_unavailable(
             "route_attempts": None,
             "attempts": 1,
             "retry_count": 0,
-            "rate_limit_wait": 0.0,
         }
     ]
 
@@ -701,7 +695,6 @@ def test_partial_usage_preserves_available_tokens_and_missing_total(
             "route_attempts": None,
             "attempts": 1,
             "retry_count": 0,
-            "rate_limit_wait": 0.0,
         }
     ]
 
@@ -772,7 +765,6 @@ def test_local_usage_provenance_keeps_tokens_but_not_billed_cost(
             "route_attempts": None,
             "attempts": 1,
             "retry_count": 0,
-            "rate_limit_wait": 0.0,
         }
     ]
 
@@ -845,7 +837,6 @@ def test_retry_provenance_separates_router_attempts_from_application_retries(
     assert record["route_attempts"] == 2
     assert record["attempts"] == 3
     assert record["retry_count"] == 2
-    assert record["rate_limit_wait"] == 10.0
 
     path = write_report(
         report,
@@ -861,7 +852,6 @@ def test_retry_provenance_separates_router_attempts_from_application_retries(
     assert serialized_record["route_attempts"] == 2
     assert serialized_record["attempts"] == 3
     assert serialized_record["retry_count"] == 2
-    assert serialized_record["rate_limit_wait"] == 10.0
     assert "sk-retry-provenance-secret" not in json.dumps(document)
 
 
@@ -918,7 +908,6 @@ def test_non_rate_retry_has_no_route_attempt_or_rate_wait_inference(
     assert record["route_attempts"] is None
     assert record["attempts"] == 2
     assert record["retry_count"] == 1
-    assert record["rate_limit_wait"] == 0.0
 
 
 def test_concurrent_case_records_keep_their_retry_state_separate(monkeypatch) -> None:
@@ -1001,11 +990,9 @@ def test_concurrent_case_records_keep_their_retry_state_separate(monkeypatch) ->
     assert records["case-retried"]["route_attempts"] == 4
     assert records["case-retried"]["attempts"] == 2
     assert records["case-retried"]["retry_count"] == 1
-    assert records["case-retried"]["rate_limit_wait"] == 0.0
     assert records["case-direct"]["route_attempts"] is None
     assert records["case-direct"]["attempts"] == 1
     assert records["case-direct"]["retry_count"] == 0
-    assert records["case-direct"]["rate_limit_wait"] == 0.0
 
 
 def test_one_case_sequences_requests_by_invocation_not_completion(monkeypatch) -> None:
@@ -1515,7 +1502,6 @@ def test_exhausted_openrouter_retry_keeps_attempt_provenance_on_failure(
             "route_attempts": None,
             "attempts": 2,
             "retry_count": 1,
-            "rate_limit_wait": 4.0,
         }
     ]
     assert clock["waits"] == [4.0]
@@ -1565,7 +1551,6 @@ def test_local_transport_retries_are_kept_in_request_provenance(monkeypatch) -> 
     assert record["deployment"] == "llama.cpp"
     assert record["attempts"] == 2
     assert record["retry_count"] == 1
-    assert record["rate_limit_wait"] == 0.0
 
 
 async def _record_sleep(clock: dict[str, object], delay: float) -> None:

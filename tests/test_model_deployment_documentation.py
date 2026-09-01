@@ -97,7 +97,6 @@ def test_report_guidance_preserves_fields_and_avoids_equivalence_claims() -> Non
         "route_attempts",
         "attempts",
         "retry_count",
-        "rate_limit_wait",
     ):
         assert field in guide
 

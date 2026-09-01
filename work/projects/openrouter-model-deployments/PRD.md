@@ -64,8 +64,8 @@ quota, or in-process spending ceiling is added.
 
 Evaluation Run reports retain their git provenance and add the requested Model
 Deployment, request settings, downstream route, token usage, charged cost,
-attempts, and rate-limit waits. An interrupted or exhausted run still writes no
-report and must be rerun, preserving ADR 0017.
+and attempts. An interrupted or exhausted run still writes no report and must
+be rerun, preserving ADR 0017.
 
 ## User Stories
 
@@ -172,23 +172,20 @@ report and must be rerun, preserving ADR 0017.
 36. As an operator, I want transport failures and retryable server errors to keep
     their existing bounded retry behavior without closing the global rate gate,
     so that only evidence of rate limiting pauses unrelated requests.
-37. As an AI engineer, I want reports to show total attempts and rate-limit wait
-    time, so that a fast model served through a congested route does not appear
-    operationally fast.
-38. As a developer, I want local and OpenRouter model objects cached by their
+37. As a developer, I want local and OpenRouter model objects cached by their
     full Model Deployment identity, so that clients and connection pools are
     shared only when model, endpoint, route, and request settings agree.
-39. As a developer, I want the llama.cpp compatibility profile and null-content
+38. As a developer, I want the llama.cpp compatibility profile and null-content
     patch isolated to the local deployment, so that local server workarounds do
     not silently define OpenRouter behavior.
-40. As a developer, I want all chat-backed components to obtain models through
+39. As a developer, I want all chat-backed components to obtain models through
     the same factory, so that Coreference Resolution, Entity Extraction,
     Selector Healing, and the Relevance Filter cannot drift into separate
     provider implementations.
-41. As a developer, I want deterministic tests to exercise real Pydantic AI
+40. As a developer, I want deterministic tests to exercise real Pydantic AI
     agent calls against mock HTTP transports, so that provider and retry wiring
     are tested without live API calls.
-42. As a maintainer, I want ADR 0017 and ADR 0019 reconciled with Model
+41. As a maintainer, I want ADR 0017 and ADR 0019 reconciled with Model
     Deployments and the removal of Ollama chat configuration, so that the
     documented architecture matches the commands and reports.
 
@@ -304,10 +301,10 @@ report and must be rerun, preserving ADR 0017.
 - Each model request record identifies its Evaluation Case and request order,
   returned model, selected downstream provider, BYOK status, route attempts,
   token usage, charged cost, upstream cost when available, generation identity,
-  retry count, and rate-limit wait time.
+  and retry count.
 - The report also records aggregate input, output, reasoning, cache, and total
-  tokens when available; charged and upstream costs; attempt count; wait time;
-  and request counts grouped by downstream provider and BYOK status.
+  tokens when available; charged and upstream costs; attempt count; and request
+  counts grouped by downstream provider and BYOK status.
 - Missing provider fields remain explicit unknown or unavailable values. The
   report never guesses a provider, quantization, cost, or BYOK result.
 - Local reports identify llama.cpp as the deployment and record the same

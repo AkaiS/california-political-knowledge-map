@@ -13,7 +13,7 @@ string. It identifies the selected deployment kind, requested model, effective
 non-secret request settings, and, for OpenRouter, the ordered provider policy.
 It contains no API key. Each model request records its authored Evaluation Case
 and request order, the returned route and model facts, usage and cost when the
-provider supplies them, and application attempts and rate-limit wait. Missing
+provider supplies them, and application attempts. Missing
 provider facts remain unavailable; they are never inferred from the requested
 deployment or from a retry.
 

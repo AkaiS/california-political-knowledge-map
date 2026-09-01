@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
-from math import fsum
 from typing import Any
 
 from pydantic_evals.reporting import EvaluationReport
@@ -43,7 +42,6 @@ class RequestProvenanceAggregate:
     upstream_cost: Decimal | None
     attempts: int
     retry_count: int
-    rate_limit_wait: float
     request_counts: tuple[RequestProvenanceCount, ...]
 
     def as_dict(self) -> dict[str, object]:
@@ -60,7 +58,6 @@ class RequestProvenanceAggregate:
             "upstream_cost": self.upstream_cost,
             "attempts": self.attempts,
             "retry_count": self.retry_count,
-            "rate_limit_wait": self.rate_limit_wait,
             "request_counts": [count.as_dict() for count in self.request_counts],
         }
 
@@ -102,7 +99,6 @@ def aggregate_request_provenance(
         ),
         attempts=sum(record.attempts for record in records),
         retry_count=sum(record.retry_count for record in records),
-        rate_limit_wait=fsum(record.rate_limit_wait for record in records),
         request_counts=tuple(
             RequestProvenanceCount(
                 downstream_provider=provider,

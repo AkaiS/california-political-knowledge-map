@@ -44,7 +44,6 @@ def _request(
     upstream_cost: Decimal | None,
     attempts: int,
     retry_count: int,
-    rate_limit_wait: float,
 ) -> dict[str, object]:
     return {
         "case_id": "authored-case",
@@ -66,7 +65,6 @@ def _request(
         "route_attempts": None,
         "attempts": attempts,
         "retry_count": retry_count,
-        "rate_limit_wait": rate_limit_wait,
     }
 
 
@@ -87,7 +85,6 @@ def test_written_report_serializes_mixed_request_provenance_aggregate(
         upstream_cost=None,
         attempts=1,
         retry_count=0,
-        rate_limit_wait=0.0,
     )
     byok = _request(
         provider="google-ai-studio/vertex",
@@ -102,7 +99,6 @@ def test_written_report_serializes_mixed_request_provenance_aggregate(
         upstream_cost=Decimal("0.0008"),
         attempts=2,
         retry_count=1,
-        rate_limit_wait=1.5,
     )
     funded = _request(
         provider="openai/hosted",
@@ -117,7 +113,6 @@ def test_written_report_serializes_mixed_request_provenance_aggregate(
         upstream_cost=None,
         attempts=1,
         retry_count=0,
-        rate_limit_wait=0.25,
     )
     unavailable = _request(
         provider=None,
@@ -132,7 +127,6 @@ def test_written_report_serializes_mixed_request_provenance_aggregate(
         upstream_cost=None,
         attempts=3,
         retry_count=2,
-        rate_limit_wait=2.25,
     )
     report = EvaluationReport(
         name="provenance",
@@ -160,7 +154,6 @@ def test_written_report_serializes_mixed_request_provenance_aggregate(
         "upstream_cost": "0.0008",
         "attempts": 7,
         "retry_count": 3,
-        "rate_limit_wait": 4.0,
         "request_counts": [
             {"downstream_provider": None, "is_byok": None, "count": 2},
             {
@@ -191,7 +184,6 @@ def test_request_provenance_aggregate_is_order_independent_and_keeps_missing_val
         upstream_cost=Decimal("0.20"),
         attempts=2,
         retry_count=1,
-        rate_limit_wait=0.1,
     )
     unavailable = _request(
         provider=None,
@@ -206,7 +198,6 @@ def test_request_provenance_aggregate_is_order_independent_and_keeps_missing_val
         upstream_cost=None,
         attempts=1,
         retry_count=0,
-        rate_limit_wait=0.2,
     )
     provider_a = _request(
         provider="provider-a",
@@ -221,7 +212,6 @@ def test_request_provenance_aggregate_is_order_independent_and_keeps_missing_val
         upstream_cost=None,
         attempts=1,
         retry_count=0,
-        rate_limit_wait=0.3,
     )
     first = EvaluationReport(
         name="provenance",
@@ -249,7 +239,6 @@ def test_request_provenance_aggregate_is_order_independent_and_keeps_missing_val
         "upstream_cost": Decimal("0.20"),
         "attempts": 4,
         "retry_count": 1,
-        "rate_limit_wait": 0.6,
         "request_counts": [
             {"downstream_provider": None, "is_byok": None, "count": 1},
             {"downstream_provider": "provider-a", "is_byok": True, "count": 1},

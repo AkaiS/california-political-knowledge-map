@@ -114,14 +114,13 @@ fields:
   separate token categories;
 * `charged_cost` and `upstream_cost` retain the distinct cost facts;
 * `route_attempts` is provider-reported route metadata when available, while
-  `attempts` and `retry_count` describe application request retries; and
-* `rate_limit_wait` records accumulated rate-limit waiting for that request.
+  `attempts` and `retry_count` describe application request retries.
 
 The report also contains aggregates for available token and cost categories,
-attempts, retries, waits, and request counts grouped by observed provider and
+attempts, retries, and request counts grouped by observed provider and
 BYOK status. Missing values are explicit `null`/unavailable values: the report
 does not infer a provider, BYOK result, token total, cost, route attempt count,
-or wait. Local reports identify llama.cpp and may include applicable token
+or retry count. Local reports identify llama.cpp and may include applicable token
 usage, but remote provider, BYOK, and billed-cost facts are unavailable rather
 than fabricated.
 

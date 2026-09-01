@@ -29,7 +29,6 @@ class ModelRequestProvenance(Mapping[str, object]):
     route_attempts: int | None
     attempts: int
     retry_count: int
-    rate_limit_wait: float
 
     _FIELD_NAMES: ClassVar[tuple[str, ...]]
 
@@ -57,7 +56,6 @@ class ModelRequestProvenance(Mapping[str, object]):
             route_attempts=_optional_int(value, "route_attempts"),
             attempts=_required_int(value, "attempts"),
             retry_count=_required_int(value, "retry_count"),
-            rate_limit_wait=_required_number(value, "rate_limit_wait"),
         )
 
     def as_dict(self) -> dict[str, object]:
@@ -135,10 +133,3 @@ def _optional_bool(record: Mapping[str, object], field: str) -> bool | None:
     if value is not None and not isinstance(value, bool):
         raise TypeError(f"request provenance has invalid {field}")
     return value
-
-
-def _required_number(record: Mapping[str, object], field: str) -> float:
-    value = _value(record, field)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"request provenance has invalid {field}")
-    return float(value)
