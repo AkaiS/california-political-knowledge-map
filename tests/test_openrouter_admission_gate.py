@@ -257,11 +257,12 @@ async def _test_later_openrouter_rate_limit_deadline_extends_shared_pause(monkey
     ]
 
     clock.advance(10)
-    await yield_until(lambda: len(starts) == 3)
+    assert await clock.sleep_notifications.get() == 20.0
+    for _ in range(100):
+        await asyncio.sleep(0)
     assert [model for model, _ in starts] == [
         "openai/model-one",
         "openai/model-two",
-        "openai/model-one",
     ]
 
     clock.advance(20)
@@ -280,7 +281,7 @@ async def _test_later_openrouter_rate_limit_deadline_extends_shared_pause(monkey
         for model in attempts
     }
     assert starts_by_model == {
-        "openai/model-one": [base_time, base_time + 10],
+        "openai/model-one": [base_time, base_time + 30],
         "openai/model-two": [base_time, base_time + 30],
         "openai/model-three": [base_time + 30],
     }

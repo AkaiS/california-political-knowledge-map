@@ -163,6 +163,80 @@ async def _test_pause_expiry_admits_exactly_one_probe(monkeypatch):
     assert len(waiting_starts) == 3
 
 
+def test_rate_limited_requests_rejoin_admission_before_retry(monkeypatch):
+    asyncio.run(_test_rate_limited_requests_rejoin_admission_before_retry(monkeypatch))
+
+
+async def _test_rate_limited_requests_rejoin_admission_before_retry(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-probe-test")
+    clock = ControlledClock()
+    gate = OpenRouterAdmissionGate(max_concurrency=2)
+    hooks = OpenRouterRetryHooks(
+        now=clock.now,
+        sleep=clock.sleep,
+        jitter=lambda upper_bound: upper_bound,
+        admission_gate=gate,
+    )
+    base_time = clock.now_value
+    attempts = {"openai/one": 0, "openai/two": 0}
+    starts: list[tuple[str, int, float]] = []
+    both_initial_attempts_started = asyncio.Event()
+    probe_started = asyncio.Event()
+    release_probe = asyncio.Event()
+
+    def handler_for(model: str):
+        async def handler(request: httpx.Request) -> httpx.Response:
+            del request
+            attempts[model] += 1
+            attempt = attempts[model]
+            starts.append((model, attempt, clock.now()))
+            if attempt == 1:
+                if sum(value == 1 for value in attempts.values()) == 2:
+                    both_initial_attempts_started.set()
+                await both_initial_attempts_started.wait()
+                return rate_limited_response(base_time + 10)
+
+            retry_starts = [start for start in starts if start[1] == 2]
+            if len(retry_starts) == 1:
+                probe_started.set()
+                await release_probe.wait()
+            return httpx.Response(200, json=completion(model))
+
+        return handler
+
+    agents = [
+        Agent(
+            get_chat_model(
+                deployment(model, max_attempts=2),
+                transport=httpx.MockTransport(handler_for(model)),
+                openrouter_retry_hooks=hooks,
+            ),
+            name=f"retry_rejoins_gate_{index}",
+            output_type=str,
+            defer_model_check=True,
+        )
+        for index, model in enumerate(attempts)
+    ]
+    tasks = [
+        asyncio.create_task(agent.run(f"request-{index}"))
+        for index, agent in enumerate(agents)
+    ]
+
+    await both_initial_attempts_started.wait()
+    assert [await clock.sleep_notifications.get() for _ in range(2)] == [10.0, 10.0]
+    clock.advance(10)
+    await probe_started.wait()
+    for _ in range(100):
+        await asyncio.sleep(0)
+
+    assert len([start for start in starts if start[1] == 2]) == 1
+
+    release_probe.set()
+    results = await asyncio.gather(*tasks)
+    assert [result.output for result in results] == ["resolved"] * 2
+    assert attempts == {"openai/one": 2, "openai/two": 2}
+
+
 def test_probe_429_recloses_without_releasing_waiting_burst(monkeypatch):
     asyncio.run(_test_probe_429_recloses_without_releasing_waiting_burst(monkeypatch))
 

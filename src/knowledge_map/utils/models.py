@@ -1066,10 +1066,12 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         retry_state = _start_request_retry_state()
+        admitted = False
         try:
             is_probe = await self._admission_gate.wait_until_open(
                 self._retry_hooks
             )
+            admitted = True
         except BaseException:
             _CURRENT_REQUEST_RETRY.set(None)
             raise
@@ -1087,17 +1089,20 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     now = self._retry_hooks.now()
                     wait = self._rate_limit_wait(response, attempt, now)
                     self._admission_gate.pause_until(now + wait)
+                    self._admission_gate.request_rate_limited(is_probe=is_probe)
+                    admitted = False
                     if attempt + 1 < self._max_attempts:
                         retry_state.rate_limit_wait += wait
-                        self._admission_gate.record_rate_limit()
                         # Release the failed response before waiting so its
                         # connection is available while this request backs off.
                         await response.aclose()
-                        # This request was admitted before the 429; let its
-                        # request-local retry finish while new callers wait.
-                        await self._retry_hooks.sleep(wait)
+                        # A rate-limited retry competes with every other waiting
+                        # request for the one probe admitted after the pause.
+                        is_probe = await self._admission_gate.wait_until_open(
+                            self._retry_hooks
+                        )
+                        admitted = True
                         continue
-                    self._admission_gate.request_rate_limited(is_probe=is_probe)
                     _record_failed_request_provenance(
                         "openrouter", self._requested_model, retry_state
                     )
@@ -1117,6 +1122,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     now=self._retry_hooks.now(),
                     successful=200 <= response.status_code < 300,
                 )
+                admitted = False
                 if not 200 <= response.status_code < 300:
                     _record_failed_request_provenance(
                         "openrouter", self._requested_model, retry_state
@@ -1128,7 +1134,8 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                 "openrouter", self._requested_model, retry_state
             )
             _CURRENT_REQUEST_RETRY.set(None)
-            self._admission_gate.request_failed(is_probe=is_probe)
+            if admitted:
+                self._admission_gate.request_failed(is_probe=is_probe)
             raise
 
         raise AssertionError("OpenRouter retry transport made no attempt")

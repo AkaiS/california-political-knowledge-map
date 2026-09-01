@@ -433,7 +433,8 @@ def test_deployment_settings_bound_openrouter_rate_limit_attempts(monkeypatch):
             ),
             output_type=str,
             defer_model_check=True,
-        ).run_sync("Resolve it.")
+    ).run_sync("Resolve it.")
 
     assert len(requests) == 3
-    assert clock.sleeps == [0.0, 0.0]
+    # A zero-length pause can reacquire probe admission without yielding to sleep.
+    assert clock.sleeps == []
