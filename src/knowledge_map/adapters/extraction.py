@@ -14,6 +14,7 @@ from knowledge_map.ontology.extraction_conformance import (
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
 from knowledge_map.schemas import AdherenceReport, ExtractionResult, ModelDeployment
+from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
@@ -69,8 +70,9 @@ def get_extraction_agent(
     )
     instructions = load_instructions()
 
-    return Agent(
+    return create_agent(
         model,
+        name="entity_extractor",
         output_type=ExtractionResult,
         instructions=instructions,
         defer_model_check=defer_check,

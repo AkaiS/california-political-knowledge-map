@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from knowledge_map.schemas import ModelDeployment
+from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 from knowledge_map.config import settings
@@ -278,8 +279,9 @@ def get_generator_agent(
         "Avoid sections meant to direct the reader to another page. They include phrases such as: READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
         "Output the selectors as CSS selectors in the structured format matching the output schema."
     )
-    return Agent(
+    return create_agent(
         model,
+        name="selector_generator",
         output_type=ArticleSelectors,
         instructions=instructions,
         defer_model_check=defer_check,
@@ -309,8 +311,9 @@ def get_critic_agent(
         "- is_valid: True if selectors successfully extract clean, correct content. False otherwise.\n"
         "- issues: A list of specific issues found if is_valid is False (e.g. 'Extracted title was empty', 'Extracted body contained header links'). If is_valid is True, this must be empty."
     )
-    return Agent(
+    return create_agent(
         model,
+        name="selector_critic",
         output_type=CriticFeedback,
         instructions=instructions,
         defer_model_check=defer_check,

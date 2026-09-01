@@ -13,7 +13,6 @@ import sqlite3
 from typing import Any, Literal, NamedTuple
 
 from pydantic import BaseModel
-from pydantic_ai import Agent
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
@@ -23,6 +22,7 @@ from knowledge_map.core.relevance_agent import (
     get_relevance_agent_prompt,
 )
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import (
     DEFAULT_LOCAL_CHAT_MODEL,
     get_chat_model,
@@ -77,8 +77,9 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     Few-shots come from the Gold Set's own `training` split.
     """
     deployment = _as_deployment(model)
-    agent = Agent(
+    agent = create_agent(
         get_chat_model(deployment),
+        name="relevance_evaluation",
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,

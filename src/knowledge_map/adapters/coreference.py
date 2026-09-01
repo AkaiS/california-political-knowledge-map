@@ -20,6 +20,7 @@ from knowledge_map.schemas import (
     ModelDeployment,
     NumberedSentenceRecord,
 )
+from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 from knowledge_map.utils.sentences import (
     NumberedSentence,
@@ -385,7 +386,7 @@ def get_annotator_agent(
     defer_check: bool = True,
     retries: int = 3,
 ) -> Agent:
-    agent = Agent(
+    agent = create_agent(
         _get_model(deployment),
         name="coreference_annotator",
         deps_type=CoreferenceDeps,
@@ -404,7 +405,7 @@ def get_critic_agent(
     defer_check: bool = True,
     retries: int = 3,
 ) -> Agent:
-    return Agent(
+    return create_agent(
         _get_model(deployment),
         name="coreference_critic",
         deps_type=CoreferenceDeps,

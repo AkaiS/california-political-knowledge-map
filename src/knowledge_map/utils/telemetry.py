@@ -1,49 +1,61 @@
+import logging
 import os
 import sys
-import logging
+import threading
+
+import logfire
 
 logger = logging.getLogger(__name__)
 
+_CONFIGURATION_LOCK = threading.Lock()
+_configured = False
+
+
+def _is_testing() -> bool:
+    return (
+        "pytest" in sys.modules
+        or os.environ.get("PYTEST_CURRENT_TEST") is not None
+        or (
+            "unittest" in sys.modules
+            and any("unittest" in arg or "pytest" in arg for arg in sys.argv)
+        )
+    )
+
+
 def setup_telemetry() -> None:
-    """Configure Pydantic Logfire telemetry."""
-    if getattr(setup_telemetry, "_configured", False):
+    """Configure Logfire before any model client or Pydantic AI agent runs."""
+
+    global _configured
+    if _configured:
         return
 
-    try:
-        import logfire
-        
-        # Check if running in a testing environment (pytest/unittest)
-        is_testing = (
-            "pytest" in sys.modules
-            or os.environ.get("PYTEST_CURRENT_TEST") is not None
-            or (
-                "unittest" in sys.modules
-                and any("unittest" in arg or "pytest" in arg for arg in sys.argv)
-            )
-        )
-        
-        # Disable remote exporting in test suite runs by default
-        send_to_logfire = 'if-token-present' if not is_testing else False
-        
+    with _CONFIGURATION_LOCK:
+        if _configured:
+            return
+
+        is_testing = _is_testing()
         logfire.configure(
             advanced=logfire.AdvancedOptions(
                 base_url="https://logfire-us.pydantic.dev"
             ),
-            send_to_logfire=send_to_logfire
+            service_name="california-political-knowledge-map",
+            service_version="0.1.0",
+            environment=(
+                "test"
+                if is_testing
+                else os.environ.get("DEPLOYMENT_ENVIRONMENT", "development")
+            ),
+            send_to_logfire=False if is_testing else "if-token-present",
         )
-        
-        # Instrument Pydantic AI
+
+        # This must follow configure() and precede Agent construction.
         logfire.instrument_pydantic_ai()
-        
-        # Instrument HTTPX calls (capturing LLM request payloads)
+
+        # Model clients use HTTPX. Full capture exposes the OpenRouter request and
+        # response beneath the parent Pydantic AI run span; Logfire scrubs common
+        # credential fields before export.
         logfire.instrument_httpx(capture_all=True)
-        
-        # Instrument host/system metrics (installed with [system-metrics])
         logfire.instrument_system_metrics()
-        
-        setup_telemetry._configured = True
-        logger.debug("Logfire telemetry initialized successfully.")
-    except ImportError:
-        logger.warning("Logfire package not found. Telemetry is disabled.")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Logfire telemetry: {e}")
+
+        _configured = True
+        logger.debug("Logfire telemetry initialized successfully")

@@ -6,6 +6,7 @@ from pydantic_ai import Agent
 
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
 from knowledge_map.schemas import ModelDeployment
+from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
@@ -87,8 +88,9 @@ def get_relevance_agent(
         if deployment is not None
         else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
     )
-    return Agent(
+    return create_agent(
         model,
+        name="relevance_classifier",
         output_type=RelevanceClassification,
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=defer_check,

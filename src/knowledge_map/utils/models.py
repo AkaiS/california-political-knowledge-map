@@ -15,6 +15,7 @@ from types import TracebackType
 from typing import Any, Self
 
 import httpx
+import logfire
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pydantic_ai import ModelProfile, ModelResponse
@@ -40,6 +41,7 @@ from knowledge_map.schemas import (
     ModelRequestProvenance,
     ModelRequestSettings,
 )
+from knowledge_map.utils.telemetry import setup_telemetry
 
 DEFAULT_LOCAL_CHAT_MODEL = "gemma4:26b"
 
@@ -476,6 +478,13 @@ class _RequestProvenanceModelMixin:
         retry_state = _CURRENT_REQUEST_RETRY.get()
         _CURRENT_REQUEST_RETRY.set(None)
         model_response = super()._process_response(response)  # type: ignore[misc]
+        if self._provenance_deployment == "openrouter":
+            _log_openrouter_route(
+                self,
+                model_response,
+                response,
+                retry_state,
+            )
         _record_request_provenance(
             self._provenance_deployment,
             self.model_name,
@@ -484,6 +493,50 @@ class _RequestProvenanceModelMixin:
             retry_state,
         )
         return model_response
+
+
+def _log_openrouter_route(
+    model: Any,
+    response: ModelResponse,
+    raw_response: Any,
+    retry_state: _RequestRetryState | None,
+) -> None:
+    """Attach OpenRouter's safe routing result to the active model trace."""
+
+    details = response.provider_details or {}
+    downstream_provider = details.get("downstream_provider")
+    is_byok = details.get("is_byok")
+    provider_policy = (getattr(model, "settings", None) or {}).get(
+        "openrouter_provider", {}
+    )
+    usage = _request_usage_facts(response, raw_response, deployment="openrouter")
+    logfire.info(
+        "OpenRouter model request completed",
+        deployment="openrouter",
+        requested_model=model.model_name,
+        returned_model=response.model_name or None,
+        downstream_provider=(
+            downstream_provider
+            if isinstance(downstream_provider, str) and downstream_provider.strip()
+            else None
+        ),
+        is_byok=is_byok if isinstance(is_byok, bool) else None,
+        generation_id=response.provider_response_id or None,
+        route_attempts=_raw_response_route_attempts(raw_response),
+        application_attempts=(retry_state.attempts if retry_state else 1),
+        provider_order=provider_policy.get("order"),
+        allow_fallbacks=provider_policy.get("allow_fallbacks"),
+        charged_cost=(
+            str(usage["charged_cost"])
+            if usage["charged_cost"] is not None
+            else None
+        ),
+        upstream_cost=(
+            str(usage["upstream_cost"])
+            if usage["upstream_cost"] is not None
+            else None
+        ),
+    )
 
 
 class _LocalOpenAIChatModel(_RequestProvenanceModelMixin, OpenAIChatModel):
@@ -1328,6 +1381,10 @@ def get_chat_model(
     pool without allowing distinct mock transports to leak into one another.
     """
 
+    # Instrument Pydantic AI and HTTPX before constructing either provider's
+    # client. This also covers callers that build their own Agent around a
+    # model returned by this factory.
+    setup_telemetry()
     load_dotenv()
 
     if isinstance(default_model, ModelDeployment):

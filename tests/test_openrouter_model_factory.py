@@ -86,6 +86,48 @@ def test_openrouter_deployment_builds_a_real_agent_with_native_provider(
     assert bodies[0]["model"] == deployment.model
 
 
+def test_openrouter_route_is_emitted_as_structured_logfire_data(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
+    events: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        "knowledge_map.utils.models.logfire.info",
+        lambda message, **attributes: events.append((message, attributes)),
+    )
+
+    model = get_chat_model(
+        openrouter_deployment(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=chat_completion("resolved"))
+        ),
+    )
+    Agent(
+        model,
+        name="openrouter_observability_test",
+        output_type=str,
+        defer_model_check=True,
+    ).run_sync("Resolve it.")
+
+    assert events == [
+        (
+            "OpenRouter model request completed",
+            {
+                "deployment": "openrouter",
+                "requested_model": "openai/gpt-4o-mini",
+                "returned_model": "openai/gpt-4o-mini",
+                "downstream_provider": "openai/test",
+                "is_byok": None,
+                "generation_id": "chatcmpl-openrouter-test",
+                "route_attempts": None,
+                "application_attempts": 1,
+                "provider_order": ["openai"],
+                "allow_fallbacks": True,
+                "charged_cost": None,
+                "upstream_cost": None,
+            },
+        )
+    ]
+
+
 def test_openrouter_request_has_one_model_and_shared_request_settings(
     monkeypatch,
 ):
