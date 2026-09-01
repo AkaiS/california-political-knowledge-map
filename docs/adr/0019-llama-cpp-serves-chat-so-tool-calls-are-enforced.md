@@ -1,10 +1,15 @@
 # llama.cpp serves chat so tool calls are enforced
 
-Every agent that returns structured output talks to `llama-server`, started from
-`scripts/llama-server.sh`, at `LLAMA_CPP_BASE_URL`. Ollama keeps the embedding
-stage and nothing else, and is no longer the source of the chat weights: the
-served GGUF is `gemma-4-26B_q4_0-it.gguf` from
+Every local chat agent that returns structured output talks to `llama-server`, started from
+`scripts/llama-server.sh`, at `LLAMA_CPP_BASE_URL`. The original move left the
+embedding stage on Ollama temporarily; the current runtime keeps embeddings
+local too, on their own llama.cpp server. The chat weights are served from
+`gemma-4-26B_q4_0-it.gguf` from
 `google/gemma-4-26B-A4B-it-qat-q4_0-gguf`, cached outside the repository.
+
+This record covers only the local Model Deployment. OpenRouter is a separate chat Model Deployment
+and uses its provider's structured-output behavior; the local llama.cpp enforcement described here
+does not apply to it.
 
 pydantic-ai's default output mode synthesises a `final_result` tool and sends
 `tool_choice: "required"`. On llama.cpp that is binding — the tool's JSON schema
@@ -69,10 +74,10 @@ quantization-aware trained rather than quantized after the fact.
 
 ## Consequences
 
-`get_ollama_model` is `get_chat_model` and returns an `OpenAIChatModel` on an
-`OpenAIProvider`. `resolve_base_url` is `resolve_embedding_base_url`, which now
-names a second `llama-server` on port 8081 rather than Ollama on 11434 — see
-"Embedding moved too" below.
+`get_chat_model` returns an `OpenAIChatModel` on an `OpenAIProvider` for the
+local llama.cpp chat server. `resolve_embedding_base_url` names the separate
+local embedding `llama-server` on port 8081 rather than Ollama on 11434 — see
+"Embeddings remain local" below.
 
 Temperature is 0 by default, set on the client via `LLM_TEMPERATURE` and again by
 `scripts/llama-server.sh --temp 0`. Extraction and coreference transcribe a fixed
@@ -96,9 +101,11 @@ The chat template ships inside that GGUF, byte-identical to
 `chat-templates/gemma-4.jinja`, so the committed copy is a fallback for GGUFs
 that lack one rather than a required input.
 
-The `OLLAMA_MODEL_*` variables keep their names and now identify the intended
-model rather than selecting one — `llama-server` serves whichever GGUF it was
-started with, and `--alias` is what makes the configured name match.
+The obsolete `OLLAMA_MODEL_*` chat names were removed from runtime
+configuration, `.env.example`, tests, and active operator guidance. They are
+named here only as historical context for that migration and were replaced by
+`LLAMA_CPP_MODEL`; the configured name still identifies the GGUF alias served
+by `llama-server`.
 
 ## What enforcement actually required
 
@@ -141,7 +148,8 @@ tokens, no tool call, and invented the fields `start`, `end`, and `text`, which
 `MentionSpan` does not have. With the definitions inlined, the identical request
 returned 30 valid spans in 18 s.
 
-Both are fixed in the model profile, which is the one place every agent shares:
+Both are fixed in the local Model Deployment's model profile, which is the one
+place every local agent shares:
 `default_structured_output_mode="native"` routes structured output through
 `response_format: json_schema`, which compiles a real GBNF grammar, and
 `InlineDefsJsonSchemaTransformer` keeps `$ref` off the wire. The transformer sits
@@ -162,10 +170,11 @@ That is strictly stronger than what Ollama provided — Ollama accepted
 `tool_choice: "required"` and ignored it — but it is a different mechanism than
 this record's title implies, and `supports_json_schema_output` is what carries it.
 
-## Embedding moved too
+## Embeddings remain local
 
 An embedding call has no tool use to enforce, so the argument above does not
-reach it. It moved anyway, so that the pipeline depends on Ollama for nothing.
+reach it. The later embedding migration kept it local so the pipeline depends
+on Ollama for neither chat nor embeddings.
 
 `llama-server` serves one model per process, so this is a second process on a
 second port — `scripts/llama-embed.sh`, port 8081, `LLAMA_CPP_EMBEDDING_BASE_URL`
@@ -208,5 +217,6 @@ cannot split one sequence across micro-batches and rejects any request longer
 than a single one. The context is the model's own 2048, which is what the Ollama
 Modelfile set; a chunk is 512 characters and comes nowhere near it.
 
-`EMBEDDING_MODEL` replaces `OLLAMA_EMBEDDING_MODEL`, which is still read as a
-fallback so an existing `.env` keeps working.
+`EMBEDDING_MODEL` is the active embedding name. `OLLAMA_EMBEDDING_MODEL` remains
+only as a compatibility fallback for an existing `.env`; it is not a chat
+Model Deployment name and cannot select a chat deployment.

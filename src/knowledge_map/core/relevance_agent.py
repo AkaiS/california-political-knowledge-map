@@ -1,10 +1,12 @@
 import logging
-from typing import Literal, Optional, List, Dict, Any
+from typing import Any, Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
-from knowledge_map.utils.models import get_chat_model
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
+from knowledge_map.schemas import ModelDeployment
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -70,24 +72,43 @@ def get_relevance_agent_prompt(
     return "\n".join(prompt_lines)
 
 
+def get_relevance_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+) -> Agent:
+    """Build the Relevance Filter agent from one explicit deployment.
+
+    Callers without a deployment use the configured local chat deployment.
+    """
+
+    model = (
+        get_chat_model(deployment)
+        if deployment is not None
+        else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
+    )
+    return Agent(
+        model,
+        output_type=RelevanceClassification,
+        instructions=RELEVANCE_AGENT_INSTRUCTIONS,
+        defer_model_check=defer_check,
+    )
+
+
 async def classify_article_with_llm(
     title: str,
     body: str,
     db_path: str = DEFAULT_DB_PATH,
-    agent: Optional[Agent] = None
+    agent: Optional[Agent] = None,
+    *,
+    deployment: ModelDeployment | None = None,
 ) -> RelevanceClassification:
     """
     Asynchronously queries the database for gold standard examples,
     then runs the Pydantic AI classifier agent on the article.
     """
     if agent is None:
-        model = get_chat_model("32k-gemma-e4b", "OLLAMA_MODEL_RELEVANCE")
-        agent = Agent(
-            model,
-            output_type=RelevanceClassification,
-            instructions=RELEVANCE_AGENT_INSTRUCTIONS,
-            defer_model_check=True
-        )
+        agent = get_relevance_agent(deployment)
 
     # Fetch examples from database
     try:

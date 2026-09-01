@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 from pydantic import BaseModel, ValidationError
+from pydantic_ai import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import FunctionModel
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.evaluation import (
@@ -17,6 +19,7 @@ from knowledge_map.evaluation import (
     run_gold_set,
     write_report,
 )
+from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
 
 
 class RelevanceInput(BaseModel):
@@ -275,3 +278,92 @@ def _load_relevance(path: Path):
         output_type=task.output_type,
         metadata_type=task.metadata_type,
     )
+
+
+@pytest.mark.anyio
+async def test_relevance_task_binds_explicit_deployment_and_keeps_training_few_shots(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import knowledge_map.evaluation.tasks.relevance as relevance_task_module
+
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-relevance-evaluation-model",
+        endpoint="http://explicit-relevance-evaluation.test:9999",
+        request_settings=ModelRequestSettings(thinking=False),
+    )
+    seen: list[object] = []
+    prompts: list[str] = []
+
+    def respond(messages, info) -> ModelResponse:
+        prompts.append(messages[-1].parts[0].content)
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    tool_name=info.output_tools[0].name,
+                    args={"classification": "RELEVANT"},
+                    tool_call_id="call-1",
+                )
+            ]
+        )
+
+    def model_factory(requested):
+        seen.append(requested)
+        assert isinstance(requested, ModelDeployment)
+        return FunctionModel(respond)
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
+    monkeypatch.setattr(relevance_task_module, "get_chat_model", model_factory)
+
+    gold_set_path = tmp_path / "relevance.yaml"
+    gold_set_path.write_text(RELEVANCE_GOLD_SET_YAML)
+    gold_set = _load_relevance(gold_set_path)
+    classify = relevance_task_module.build_task(deployment, gold_set)
+    result = await classify(
+        relevance_task_module.RelevanceInput(
+            url="https://example.test/held-out",
+            headline="A held-out article",
+            description="body",
+        )
+    )
+
+    assert result.classification == "RELEVANT"
+    assert seen == [deployment]
+    assert "A training positive" in prompts[0]
+    assert "A training negative" in prompts[0]
+
+
+def test_relevance_task_converts_legacy_model_name_to_local_deployment(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import knowledge_map.evaluation.tasks.relevance as relevance_task_module
+
+    gold_set_path = tmp_path / "relevance.yaml"
+    gold_set_path.write_text(RELEVANCE_GOLD_SET_YAML)
+    gold_set = _load_relevance(gold_set_path)
+    seen: list[object] = []
+
+    def model_factory(requested):
+        seen.append(requested)
+        return FunctionModel(lambda messages, info: ModelResponse(parts=[]))
+
+    monkeypatch.setattr(relevance_task_module, "get_chat_model", model_factory)
+
+    relevance_task_module.build_task("legacy-relevance-model", gold_set)
+
+    assert seen == [
+        ModelDeployment(
+            kind=DeploymentKind.LOCAL,
+            model="legacy-relevance-model",
+        )
+    ]
+
+
+def test_relevance_task_default_model_uses_the_configured_local_chat_model(
+    monkeypatch,
+) -> None:
+    import knowledge_map.evaluation.tasks.relevance as relevance_task_module
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
+
+    assert relevance_task_module.default_model() == "configured/local-model"

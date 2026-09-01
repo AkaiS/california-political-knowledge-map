@@ -7,6 +7,7 @@ from knowledge_map.adapters.sqlite_db import get_story_links, get_unprocessed_st
 from knowledge_map.config import BatchIngestionSettings
 from knowledge_map.config import settings as global_settings
 from knowledge_map.core.exceptions import (
+    PipelineConnectivityError,
     PipelineLockError,
     PipelineRateLimitError,
     classify_exception,
@@ -123,6 +124,20 @@ class BatchIngestionService:
                     )
                 continue
             except Exception as e:
+                if isinstance(e, PipelineConnectivityError) and e.retryable:
+                    logger.warning(
+                        f"Connectivity error processing story {title}; "
+                        f"leaving it for a later batch: {e}"
+                    )
+                    try:
+                        self.pipeline.status_tracker.update_status(
+                            url, ArticleStatus.UNPROCESSED
+                        )
+                    except Exception as status_err:
+                        logger.error(
+                            f"Failed to reset status to UNPROCESSED: {status_err}"
+                        )
+                    continue
                 if classify_exception(e):
                     logger.warning(f"Non-breaking error processing story {title}: {e}")
                 else:

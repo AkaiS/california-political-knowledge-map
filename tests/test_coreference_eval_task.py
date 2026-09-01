@@ -1,8 +1,12 @@
 """The coreference evaluators score the four things they claim to score."""
 
 import pytest
+from pydantic_ai import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import FunctionModel
 from pydantic_evals.evaluators import EvaluatorContext
 
+import knowledge_map.adapters.coreference as coreference_adapter_module
+import knowledge_map.evaluation.tasks.coreference as coreference_task_module
 from knowledge_map.evaluation.tasks import task_named
 from knowledge_map.evaluation.tasks.coreference import (
     AgreedOnTheCanonicalEntity,
@@ -16,7 +20,13 @@ from knowledge_map.evaluation.tasks.coreference import (
     entity_by_identity,
     normalize_entity_name,
 )
-from knowledge_map.schemas import MentionSpan, MentionSpanOutcome
+from knowledge_map.schemas import (
+    DeploymentKind,
+    MentionSpan,
+    MentionSpanOutcome,
+    ModelDeployment,
+    ModelRequestSettings,
+)
 
 
 def _span(label: str, text: str, entity: str, occurrence: int = 1) -> MentionSpan:
@@ -48,6 +58,128 @@ def _scored(evaluator, expected, produced, **output_kwargs):
     return evaluator.evaluate(
         _context(expected, CoreferenceOutput(mention_spans=produced, **output_kwargs))
     )
+
+
+def _local_deployment() -> ModelDeployment:
+    return ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-evaluation-coreference-model",
+        endpoint="http://explicit-evaluation-coreference.test:9999",
+        request_settings=ModelRequestSettings(thinking=False),
+    )
+
+
+def _response(info, spans: list[dict]) -> ModelResponse:
+    return ModelResponse(
+        parts=[
+            ToolCallPart(
+                tool_name=info.output_tools[0].name,
+                args={"response": spans},
+                tool_call_id="call-1",
+            )
+        ]
+    )
+
+
+def test_full_task_binds_one_explicit_deployment_to_both_coreference_agents(
+    monkeypatch,
+):
+    seen: list[object] = []
+    calls = 0
+    deployment = _local_deployment()
+
+    def model_factory(requested, *args, **kwargs):
+        nonlocal calls
+        seen.append(requested)
+        assert isinstance(requested, ModelDeployment)
+        assert not args
+        assert not kwargs
+
+        def respond(messages, info):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return _response(
+                    info,
+                    [
+                        {
+                            "sentence_label": "2",
+                            "mention_text": "He",
+                            "canonical_entity_name": "Gavin Newsom",
+                        }
+                    ],
+                )
+            return _response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "He",
+                        "accepted": True,
+                    }
+                ],
+            )
+
+        return FunctionModel(respond)
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
+    monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
+
+    resolve = coreference_task_module.build_task(deployment, None)
+    output = resolve(
+        CoreferenceInput(
+            url="https://example.test/coreference",
+            title="A story",
+            content="Gavin Newsom signed a bill. He was happy.",
+        )
+    )
+
+    assert [span.canonical_entity_name for span in output.mention_spans] == [
+        "Gavin Newsom"
+    ]
+    assert seen == [deployment, deployment]
+
+
+def test_annotator_task_binds_its_explicit_deployment_without_stage_lookup(
+    monkeypatch,
+):
+    seen: list[object] = []
+    deployment = _local_deployment()
+
+    def model_factory(requested, *args, **kwargs):
+        seen.append(requested)
+        assert isinstance(requested, ModelDeployment)
+        assert not args
+        assert not kwargs
+        return FunctionModel(
+            lambda messages, info: _response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "He",
+                        "canonical_entity_name": "Gavin Newsom",
+                    }
+                ],
+            )
+        )
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
+    monkeypatch.setattr(coreference_adapter_module, "get_chat_model", model_factory)
+
+    annotate = coreference_task_module.build_annotator_task(deployment, None)
+    output = annotate(
+        CoreferenceInput(
+            url="https://example.test/coreference",
+            title="A story",
+            content="Gavin Newsom signed a bill. He was happy.",
+        )
+    )
+
+    assert [span.canonical_entity_name for span in output.mention_spans] == [
+        "Gavin Newsom"
+    ]
+    assert seen == [deployment]
 
 
 # --- the task is registered and reachable from the CLI -----------------------

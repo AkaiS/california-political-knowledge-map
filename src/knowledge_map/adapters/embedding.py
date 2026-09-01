@@ -36,8 +36,9 @@ def get_embedding_embedder(
     """
 
     load_dotenv()
-    # `OLLAMA_EMBEDDING_MODEL` is still read so an existing `.env` keeps working
-    # now that the model is served by llama.cpp rather than Ollama.
+    # Keep the legacy embedding variable as a compatibility read for existing
+    # local configs.  It only selects the local embedding model; it cannot
+    # affect chat deployment selection.
     embedding_model = os.environ.get("EMBEDDING_MODEL") or os.environ.get(
         "OLLAMA_EMBEDDING_MODEL", "embeddinggemma"
     )

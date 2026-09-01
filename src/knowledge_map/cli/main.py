@@ -21,10 +21,13 @@ from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus, ValidationStatus
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.core.ingestion import BatchIngestionService
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
+from knowledge_map.utils.deployments import deployment_from_environment
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
 
 
 CLI_COMMAND_HELP = {
@@ -48,6 +51,59 @@ CLI_COMMAND_HELP = {
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
     "eval": "Collect and run an Evaluation Gold Set",
 }
+
+
+def select_story_deployment(
+    selected_kind: str | DeploymentKind = DeploymentKind.LOCAL,
+) -> ModelDeployment:
+    """Build the one chat deployment selected for a Story Pipeline command.
+
+    Validate OpenRouter configuration before constructing the pipeline so an
+    invalid command cannot start processing a Story and then fail on its first
+    model request.  The API key is used only for that validation; it is never
+    retained in the deployment value passed to adapters.
+    """
+
+    load_dotenv()
+    return deployment_from_environment(
+        selected_kind,
+        default_local_model=DEFAULT_LOCAL_CHAT_MODEL,
+        command_name="Story Pipeline",
+    )
+
+
+def build_story_pipeline(
+    deployment: ModelDeployment,
+    *,
+    db_adapter,
+    status_tracker,
+    embedding_adapter=None,
+    coreference_adapter=None,
+    extraction_adapter=None,
+    dlq_adapter=None,
+) -> StoryPipeline:
+    """Assemble a Story Pipeline while preserving adapter injection seams."""
+
+    return StoryPipeline(
+        db_adapter=db_adapter,
+        embedding_adapter=(
+            embedding_adapter
+            if embedding_adapter is not None
+            else PydanticAIEmbeddingAdapter()
+        ),
+        coreference_adapter=(
+            coreference_adapter
+            if coreference_adapter is not None
+            else PydanticAICoreferenceAdapter(deployment=deployment)
+        ),
+        extraction_adapter=(
+            extraction_adapter
+            if extraction_adapter is not None
+            else PydanticAIEntityExtractionAdapter(deployment=deployment)
+        ),
+        status_tracker=status_tracker,
+        dlq_adapter=dlq_adapter,
+    )
 
 
 def add_record_metadata(logger, name, event_dict):
@@ -155,6 +211,12 @@ def main(args=None):
     # Ingest subcommand
     ingest_parser = subparsers.add_parser("ingest", help=CLI_COMMAND_HELP["ingest"])
     ingest_parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without saving to Neo4j")
+    ingest_parser.add_argument(
+        "--deployment",
+        choices=("local", "openrouter"),
+        default="local",
+        help="Chat Model Deployment for the Story Pipeline (default: local)",
+    )
 
     # Clear subcommand
     subparsers.add_parser("clear", help=CLI_COMMAND_HELP["clear"])
@@ -233,6 +295,16 @@ def main(args=None):
     parsed_args = parser.parse_args(args)
 
     if parsed_args.action == "ingest":
+        try:
+            deployment = select_story_deployment(parsed_args.deployment)
+        except ValueError as error:
+            ConsoleNotifier.notify_critical_failure(
+                error_title="Configuration Error",
+                message="Story Pipeline Model Deployment is invalid.",
+                details={"Error": str(error)},
+            )
+            sys.exit(1)
+
         uri = os.environ.get("NEO4J_URI")
         username = os.environ.get("NEO4J_USERNAME")
         password = os.environ.get("NEO4J_PASSWORD")
@@ -249,18 +321,15 @@ def main(args=None):
                 db_adapter = Neo4jAdapter(uri=uri, username=username, password=password)
 
             embedding_adapter = PydanticAIEmbeddingAdapter()
-            coreference_adapter = PydanticAICoreferenceAdapter()
-            extraction_adapter = PydanticAIEntityExtractionAdapter()
             dlq_adapter = LocalFileDLQAdapter()
             status_tracker = SQLiteStatusTracker()
 
-            pipeline = StoryPipeline(
+            pipeline = build_story_pipeline(
+                deployment,
                 db_adapter=db_adapter,
                 embedding_adapter=embedding_adapter,
-                coreference_adapter=coreference_adapter,
-                extraction_adapter=extraction_adapter,
                 status_tracker=status_tracker,
-                dlq_adapter=dlq_adapter
+                dlq_adapter=dlq_adapter,
             )
 
             service = BatchIngestionService(pipeline=pipeline)

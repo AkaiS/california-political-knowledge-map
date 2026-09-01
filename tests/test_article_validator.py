@@ -12,6 +12,7 @@ from knowledge_map.core.validation import (
 )
 from unittest.mock import patch
 from knowledge_map.schemas.stories import Story, StoryLink
+from knowledge_map.schemas import ModelDeployment
 
 @pytest.fixture(autouse=True)
 def mock_relevance_agent():
@@ -1711,6 +1712,8 @@ async def test_story_skip_still_classifies_pending_relevance(tmp_path):
     )
     update_cached_html_status(url, "PENDING", db_path=db_path)
 
+    deployment = ModelDeployment(kind="local", model="explicit-relevance-model")
+
     with patch.object(
         ArticleValidatorService,
         "validate_article",
@@ -1721,7 +1724,7 @@ async def test_story_skip_still_classifies_pending_relevance(tmp_path):
         "knowledge_map.core.validation.classify_article_with_llm",
         return_value=RelevanceClassification(classification="IRRELEVANT"),
     ) as mock_llm:
-        service = ArticleValidatorService(db_path=db_path)
+        service = ArticleValidatorService(db_path=db_path, deployment=deployment)
         await service.validate_pending_articles()
 
     mock_validate.assert_not_called()
@@ -1729,6 +1732,7 @@ async def test_story_skip_still_classifies_pending_relevance(tmp_path):
         "Classify Existing Story",
         "Previously extracted body",
         db_path=db_path,
+        deployment=deployment,
     )
     cached = get_cached_html(url, db_path=db_path)
     assert cached["relevance_status"] == "IRRELEVANT"

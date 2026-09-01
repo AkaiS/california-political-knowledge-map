@@ -26,3 +26,10 @@ from .relevance import (
     sql_check_values,
 )
 from .selectors import ArticleSelectors, SelectorVersion
+from .model_deployment import (
+    DeploymentKind,
+    ModelDeployment,
+    ModelRequestSettings,
+    OpenRouterProviderPolicy,
+)
+from .request_provenance import ModelRequestProvenance

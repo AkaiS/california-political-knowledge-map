@@ -12,11 +12,9 @@ see what the Critic rounds are worth.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -31,14 +29,19 @@ from knowledge_map.adapters.coreference import (
 from knowledge_map.config import settings
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
+    DeploymentKind,
     MentionSpan,
     MentionSpanOutcome,
+    ModelDeployment,
 )
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    resolve_local_chat_model,
+)
 
 from .registry import EvaluationTask, register
 
-FALLBACK_MODEL = "8k-gemma-e4b-extraction"
+FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
 
 
 def default_model() -> str:
@@ -48,12 +51,7 @@ def default_model() -> str:
     at import, so it loads `.env` itself.
     """
 
-    load_dotenv()
-    return (
-        os.environ.get("OLLAMA_MODEL_COREFERENCE")
-        or os.environ.get("OLLAMA_MODEL")
-        or FALLBACK_MODEL
-    )
+    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class CoreferenceInput(BaseModel):
@@ -145,8 +143,16 @@ def _output_from_failure(error: CoreferenceResolutionError) -> CoreferenceOutput
     )
 
 
-def build_task(model: str, gold_set: Any) -> Any:
-    """Return the callable one case is run through, bound to ``model``.
+def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
+    """Turn a legacy model argument into an explicit local deployment."""
+
+    if isinstance(model, ModelDeployment):
+        return model
+    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
+
+
+def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+    """Return the callable one case is run through, bound to a deployment.
 
     `gold_set` is in the signature for the registry's uniform call and goes
     unused; nothing here few-shots.  The callable is synchronous, which
@@ -156,24 +162,19 @@ def build_task(model: str, gold_set: Any) -> Any:
 
     del gold_set
 
-    chat_model = get_chat_model(model, allow_env_override=False)
-    annotator_agent = get_annotator_agent()
-    critic_agent = get_critic_agent()
+    deployment = _as_deployment(model)
+    annotator_agent = get_annotator_agent(deployment)
+    critic_agent = get_critic_agent(deployment)
 
     def resolve(case_input: CoreferenceInput) -> CoreferenceOutput:
-        # `override` rather than assigning `.model`, so only the weights
-        # change and the production agent config stands.
         try:
-            with (
-                annotator_agent.override(model=chat_model),
-                critic_agent.override(model=chat_model),
-            ):
-                run = resolve_coreferences_run(
-                    case_input.content,
-                    annotator_agent=annotator_agent,
-                    critic_agent=critic_agent,
-                    max_critic_rounds=settings.coreference.max_critic_rounds,
-                )
+            run = resolve_coreferences_run(
+                case_input.content,
+                annotator_agent=annotator_agent,
+                critic_agent=critic_agent,
+                max_critic_rounds=settings.coreference.max_critic_rounds,
+                deployment=deployment,
+            )
         except CoreferenceResolutionError as error:
             return _output_from_failure(error)
         return _output_from_run(run)
@@ -181,21 +182,21 @@ def build_task(model: str, gold_set: Any) -> Any:
     return resolve
 
 
-def build_annotator_task(model: str, gold_set: Any) -> Any:
-    """Return the callable for one annotator-only case, bound to ``model``."""
+def build_annotator_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+    """Return the callable for one annotator-only case, bound to a deployment."""
 
     del gold_set
 
-    chat_model = get_chat_model(model, allow_env_override=False)
-    annotator_agent = get_annotator_agent()
+    deployment = _as_deployment(model)
+    annotator_agent = get_annotator_agent(deployment)
 
     def annotate(case_input: CoreferenceInput) -> CoreferenceOutput:
         try:
-            with annotator_agent.override(model=chat_model):
-                run = annotate_coreferences_run(
-                    case_input.content,
-                    annotator_agent=annotator_agent,
-                )
+            run = annotate_coreferences_run(
+                case_input.content,
+                annotator_agent=annotator_agent,
+                deployment=deployment,
+            )
         except CoreferenceResolutionError as error:
             return _output_from_failure(error)
         return _output_from_run(run)

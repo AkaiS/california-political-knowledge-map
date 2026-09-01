@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from knowledge_map.utils.models import get_chat_model
+from knowledge_map.schemas import ModelDeployment
+from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 from knowledge_map.config import settings
 from knowledge_map.adapters.sqlite_db import (
@@ -245,12 +246,20 @@ def annotate_ground_truth(soup: BeautifulSoup, gt: Dict[str, Any]) -> None:
         _annotate_authors(soup, authors)
 
 
-def _get_model():
-    return get_chat_model("32k-gemma-e4b", "OLLAMA_MODEL_HEALING")
+def _get_model(deployment: ModelDeployment | None = None):
+    """Build Selector Healing's model from one explicit deployment when given."""
+
+    if deployment is not None:
+        return get_chat_model(deployment)
+    return get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
 
 
-def get_generator_agent(defer_check: bool = True) -> Agent:
-    model = _get_model()
+def get_generator_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+) -> Agent:
+    model = _get_model(deployment)
     instructions = (
         "You are an expert web scraping agent.\n"
         "Your task is to analyze the cleaned HTML structure of a news article page and propose CSS selectors to extract four specific fields:\n"
@@ -277,8 +286,12 @@ def get_generator_agent(defer_check: bool = True) -> Agent:
     )
 
 
-def get_critic_agent(defer_check: bool = True) -> Agent:
-    model = _get_model()
+def get_critic_agent(
+    deployment: ModelDeployment | None = None,
+    *,
+    defer_check: bool = True,
+) -> Agent:
+    model = _get_model(deployment)
     instructions = (
         "You are an expert QA Web Scraping Critic.\n"
         "Your task is to validate the CSS selectors proposed by the Generator.\n"
@@ -312,7 +325,9 @@ async def run_selector_healing_flow(
     retry_negative_selectors: Optional[str] = None,
     bypass_guards: bool = False,
     generator_agent: Optional[Agent] = None,
-    critic_agent: Optional[Agent] = None
+    critic_agent: Optional[Agent] = None,
+    *,
+    deployment: ModelDeployment | None = None,
 ) -> None:
     """
     Runs the iterative Selector Healing Generator/Critic loop on the tripping article.
@@ -368,8 +383,8 @@ async def run_selector_healing_flow(
             cleaned_html = str(cleaned_soup)
 
         # Initialize Agents
-        generator = generator_agent or get_generator_agent()
-        critic = critic_agent or get_critic_agent()
+        generator = generator_agent or get_generator_agent(deployment)
+        critic = critic_agent or get_critic_agent(deployment)
 
         # Prepare negative selectors context if available
         negative_selectors_str = ""

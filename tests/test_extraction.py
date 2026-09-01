@@ -1,10 +1,13 @@
+import json
 from unittest.mock import patch
 
+import httpx
 import pytest
 from pydantic import ValidationError
-from pydantic_ai import ModelResponse, TextPart, ToolCallPart
+from pydantic_ai import Agent, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
+import knowledge_map.adapters.extraction as extraction_adapter_module
 from knowledge_map.adapters.extraction import (
     PydanticAIEntityExtractionAdapter,
     extract_entities,
@@ -14,12 +17,25 @@ from knowledge_map.adapters.extraction import (
 from knowledge_map.ontology import news
 from knowledge_map.schemas import (
     AdherenceReport,
+    DeploymentKind,
     DropCategory,
     DroppedItem,
     ExtractionResult,
+    ModelDeployment,
+    ModelRequestSettings,
     Node,
     Relationship,
 )
+from knowledge_map.utils.models import get_chat_model as build_chat_model
+
+
+def _local_deployment() -> ModelDeployment:
+    return ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="explicit-extraction-model",
+        endpoint="http://explicit-extraction.test:9999",
+        request_settings=ModelRequestSettings(thinking=False),
+    )
 
 
 def test_node_validation_valid():
@@ -109,6 +125,156 @@ def test_get_extraction_agent():
         agent = get_extraction_agent(defer_check=True)
         assert agent.output_type == ExtractionResult
         assert "Custom test prompt" in agent._instructions
+
+
+def test_get_extraction_agent_uses_explicit_deployment_without_stage_lookup(
+    monkeypatch,
+):
+    deployment = _local_deployment()
+    seen: list[object] = []
+    model = FunctionModel(lambda messages, info: ModelResponse(parts=[]))
+
+    def model_factory(requested):
+        seen.append(requested)
+        return model
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
+    monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
+
+    agent = get_extraction_agent(deployment)
+
+    assert seen == [deployment]
+    assert agent.model is model
+
+
+def test_default_extraction_agent_uses_the_single_local_chat_model(
+    monkeypatch,
+):
+    seen: list[tuple[object, dict]] = []
+
+    def model_factory(requested, **kwargs):
+        seen.append((requested, kwargs))
+        return FunctionModel(lambda messages, info: ModelResponse(parts=[]))
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
+    monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
+
+    get_extraction_agent()
+
+    assert seen == [("gemma4:26b", {})]
+
+
+def test_adapter_binds_explicit_deployment_without_constructing_another_agent(
+    monkeypatch,
+):
+    deployment = _local_deployment()
+    seen: list[object] = []
+    model = FunctionModel(lambda messages, info: ModelResponse(parts=[]))
+
+    def model_factory(requested):
+        seen.append(requested)
+        return model
+
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
+    monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
+
+    adapter = PydanticAIEntityExtractionAdapter(deployment=deployment)
+
+    assert adapter.deployment == deployment
+    assert seen == [deployment]
+
+
+def test_injected_extraction_agent_remains_credential_free_with_deployment(
+    monkeypatch,
+):
+    deployment = _local_deployment()
+    agent = Agent(
+        FunctionModel(lambda messages, info: ModelResponse(parts=[])),
+        output_type=ExtractionResult,
+        defer_model_check=True,
+    )
+
+    def fail_if_model_is_constructed(*args, **kwargs):
+        raise AssertionError("injected agents must not construct a live model")
+
+    monkeypatch.setattr(
+        extraction_adapter_module,
+        "get_extraction_agent",
+        fail_if_model_is_constructed,
+    )
+
+    adapter = PydanticAIEntityExtractionAdapter(agent=agent, deployment=deployment)
+
+    assert adapter.agent is agent
+
+
+def test_adapter_extracts_and_conforms_with_explicit_local_deployment(monkeypatch):
+    deployment = _local_deployment()
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "id": "chatcmpl-extraction",
+                "object": "chat.completion",
+                "created": 0,
+                "model": deployment.model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps(
+                                {
+                                    "nodes": [
+                                        {
+                                            "name": "Gavin Newsom",
+                                            "label": "Politician",
+                                        }
+                                    ],
+                                    "relationships": [],
+                                }
+                            ),
+                        },
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                    "total_tokens": 2,
+                },
+            },
+        )
+
+    seen: list[ModelDeployment] = []
+
+    def model_factory(requested: ModelDeployment):
+        seen.append(requested)
+        return build_chat_model(
+            requested,
+            transport=httpx.MockTransport(handler),
+        )
+
+    monkeypatch.setattr(extraction_adapter_module, "get_chat_model", model_factory)
+
+    adapter = PydanticAIEntityExtractionAdapter(deployment=deployment)
+    result = adapter.extract("A California politics story.")
+
+    assert seen == [deployment]
+    assert result.nodes[0].name == "Gavin Newsom"
+    assert result.relationships == []
+    assert adapter.adherence_report["rejected_labels"] == {}
+    assert str(requests[0].url) == (
+        "http://explicit-extraction.test:9999/v1/chat/completions"
+    )
+    body = json.loads(requests[0].content)
+    assert body["model"] == deployment.model
+    assert body["response_format"]["type"] == "json_schema"
+    assert "tools" not in body
+
 
 def test_extract_entities_success():
     def mock_model(messages, info):

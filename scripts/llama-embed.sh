@@ -4,14 +4,13 @@
 #
 # `llama-server` serves one model per process, so this is a second process on a
 # second port rather than a flag on `scripts/llama-server.sh`.  Nothing here
-# needs a grammar or a chat template -- the reason for the move is that the
-# pipeline no longer depends on Ollama at all.
+# needs a grammar or a chat template: both chat and embedding stay on the local
+# llama.cpp runtime.
 #
-# The GGUF has to be llama.cpp's own conversion, which the blob under
-# ~/.ollama/models is not: it declares `general.architecture = gemma3`, so
-# llama.cpp loads it with the text-model loader, which has no slot for
-# EmbeddingGemma's two dense projection tensors and aborts with `wrong number of
-# tensors; expected 316, got 314`.  See `docs/adr/0019`.
+# The GGUF has to be llama.cpp's own conversion.  A model artifact that declares
+# `general.architecture = gemma3` is loaded with the text-model loader, which
+# has no slot for EmbeddingGemma's two dense projection tensors and aborts with
+# `wrong number of tensors; expected 316, got 314`.  See `docs/adr/0019`.
 #
 # Usage:
 #   scripts/llama-embed.sh
@@ -53,16 +52,16 @@ echo "gguf     $gguf"
 echo "alias    $ALIAS   port $PORT"
 echo
 
-# --ctx-size 2048 is the model's own trained context, and is what the Ollama
-# Modelfile set.  A chunk is 512 characters, so nothing comes close to it.
+# --ctx-size 2048 is the model's own trained context.  A chunk is 512
+# characters, so nothing comes close to it.
 #
 # --ubatch-size has to reach --ctx-size: the model is non-causal
 # (`attention.causal = false`), so llama.cpp cannot split a sequence
 # across micro-batches and refuses a request longer than one.
 #
 # --pooling is deliberately not passed.  The GGUF declares mean pooling
-# (`gemma-embedding.pooling_type = 1`) and llama.cpp honours that, which is what
-# Ollama did too -- overriding it would silently change every vector in Neo4j.
+# (`gemma-embedding.pooling_type = 1`) and llama.cpp honours that; overriding it
+# would silently change every vector in Neo4j.
 exec llama-server \
     --model "$gguf" \
     --alias "$ALIAS" \

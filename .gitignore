@@ -10,3 +10,4 @@ manual_checks/*
 */ralph-queue.txt
 .logfire/*
 .claude/*
+.codex/*

@@ -1,10 +1,26 @@
 # Git is the evaluation versioning system
 
-An Evaluation Gold Set is a YAML file under `evals/gold/`. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Gold Set's revision is a commit; a run's provenance is the commit it ran at plus the model identifier recorded in its report; comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
+An Evaluation Gold Set is a YAML file under `evals/gold/`. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Gold Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and the request provenance recorded in its report; comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
 
 This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their entirety. It also restates the decision recorded as ADR 0018 on `feat/evaluations` — Gold Sets are authored as version-controlled files — so that decision survives without porting the branch it was written on.
 
 `pydantic-evals` remains the execution substrate, unchanged. It was never the problem: `engine.py` imports `Case`, `Dataset`, `Evaluator`, `ReportEvaluator`, and `EvaluationReport` from it and imports nothing from `store.py`. Everything this decision removes was built around `pydantic-evals`, not through it.
+
+## Model Deployment and request provenance
+
+The report records a structured Model Deployment rather than a bare model
+string. It identifies the selected deployment kind, requested model, effective
+non-secret request settings, and, for OpenRouter, the ordered provider policy.
+It contains no API key. Each model request records its authored Evaluation Case
+and request order, the returned route and model facts, usage and cost when the
+provider supplies them, and application attempts. Missing
+provider facts remain unavailable; they are never inferred from the requested
+deployment or from a retry.
+
+This is evidence attached to the local report, not a second persistence system.
+There is no remote run identity, remote job, polling, resumption, or finalization.
+The local command writes no report for an interrupted or exhausted run; it is
+rerun instead.
 
 ## Why now
 
@@ -22,7 +38,7 @@ The properties the superseded ADRs required survive the change:
 
 Immutability of authored definitions is a committed file plus the fact that a commit cannot be edited. Content addressing is the object hash. A run's exact inputs are recoverable by checking out its recorded commit. Atomicity of a run's evidence is one commit containing one report. Fenced Finalization has nothing left to fence, because a run either wrote its report file or did not.
 
-Two properties do not survive, and both are deliberate. Automated Release Gate enforcement is removed; there is no release process and no CI to enforce it in. Resumption of an interrupted run is removed; a run over a Gold Set of this size is re-run rather than resumed.
+Two properties do not survive, and both are deliberate. Automated Release Gate enforcement is removed; there is no release process and no CI to enforce it in. There is no resumption of an interrupted run; a run over a Gold Set of this size is re-run rather than resumed.
 
 ## Considered options
 

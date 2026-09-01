@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 
 from knowledge_map.config import TransportSettings, settings
+from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
 from knowledge_map.utils.models import (
     get_chat_model,
     llama_cpp_model_profile,
@@ -22,6 +23,26 @@ from knowledge_map.utils.models import (
     resolve_embedding_base_url,
     resolve_thinking,
 )
+
+
+def local_deployment(**overrides) -> ModelDeployment:
+    values = {
+        "kind": DeploymentKind.LOCAL,
+        "model": "google/gemma-4-26b-a4b-it-qat-q4_0",
+        "request_settings": ModelRequestSettings(
+            temperature=0.25,
+            top_p=0.85,
+            top_k=40,
+            thinking=True,
+            max_tokens=128,
+            timeout=7.5,
+            max_attempts=3,
+            rate_limit_wait_cap=30.0,
+        ),
+        "endpoint": "http://local.test:9999",
+    }
+    values.update(overrides)
+    return ModelDeployment(**values)
 
 
 def chat_completion(content: str) -> dict:
@@ -61,6 +82,40 @@ def recorded_waits(monkeypatch):
 def agent_for(transport: httpx.MockTransport, **kwargs) -> Agent:
     model = get_chat_model("test-model", transport=transport, **kwargs)
     return Agent(model, output_type=str, defer_model_check=True)
+
+
+def test_local_deployment_builds_a_real_agent_with_explicit_request_settings():
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        assert str(request.url) == (
+            "http://local.test:9999/v1/chat/completions"
+        )
+        return httpx.Response(200, json=chat_completion("resolved"))
+
+    result = Agent(
+        get_chat_model(local_deployment(), transport=httpx.MockTransport(handler)),
+        output_type=str,
+        defer_model_check=True,
+    ).run_sync("Resolve the references.")
+
+    assert result.output == "resolved"
+    assert bodies[0]["model"] == "google/gemma-4-26b-a4b-it-qat-q4_0"
+    assert bodies[0]["temperature"] == 0.25
+    assert bodies[0]["top_p"] == 0.85
+    assert bodies[0]["top_k"] == 40
+    assert bodies[0]["max_tokens"] == 128
+    assert bodies[0]["chat_template_kwargs"] == {"enable_thinking": True}
+
+
+def test_typed_local_deployment_rejects_out_of_band_transport_settings():
+    with pytest.raises(ValueError, match="must be part of its request_settings"):
+        get_chat_model(
+            local_deployment(),
+            transport_settings=TransportSettings(request_timeout=11.5),
+            transport=httpx.MockTransport(lambda request: None),
+        )
 
 
 def test_rate_limited_request_is_retried_after_the_header_delay(recorded_waits):
@@ -161,39 +216,168 @@ def test_transport_settings_have_defaults():
 
 
 def test_repeated_construction_shares_one_model_and_connection_pool():
-    first = get_chat_model("test-model", "OLLAMA_MODEL_COREFERENCE")
-    second = get_chat_model("test-model", "OLLAMA_MODEL_COREFERENCE")
+    first = get_chat_model("test-model")
+    second = get_chat_model("test-model")
 
     assert first is second
 
 
-def test_a_different_model_name_gets_its_own_client(monkeypatch):
-    # `default_model` is the lowest precedence, so a developer's `.env` setting
-    # `OLLAMA_MODEL` would answer both calls with the same name and collapse the
-    # two into one cache entry.  Deleting it is not enough: the factory calls
-    # `load_dotenv`, which puts an absent key straight back.  An empty value is
-    # present enough for dotenv to leave alone and falsy enough to fall through.
-    monkeypatch.setenv("OLLAMA_MODEL", "")
-
+def test_a_different_model_name_gets_its_own_client():
     first = get_chat_model("test-model-a")
     second = get_chat_model("test-model-b")
 
     assert first is not second
 
 
-def test_the_null_content_patch_applies_to_every_model():
-    from pydantic_ai.models.openai import OpenAIChatModel
+def test_configured_local_model_overrides_a_legacy_factory_default(
+    monkeypatch,
+):
+    monkeypatch.setenv("LLAMA_CPP_MODEL", "configured/local-model")
 
-    get_chat_model("test-model")
-
-    assert (
-        OpenAIChatModel._MapModelResponseContext._into_message_param.__name__
-        == "_into_message_param_with_empty_content"
+    model = get_chat_model(
+        "legacy-default-model",
+        transport=httpx.MockTransport(lambda request: None),
     )
+
+    assert model.model_name == "configured/local-model"
+
+
+def test_legacy_chat_model_environment_names_do_not_override_explicit_default(
+    monkeypatch,
+):
+    monkeypatch.setattr("knowledge_map.utils.models.load_dotenv", lambda: None)
+    monkeypatch.delenv("LLAMA_CPP_MODEL", raising=False)
+    monkeypatch.setenv("OLLAMA_" + "MODEL", "obsolete-global-model")
+    monkeypatch.setenv("OLLAMA_" + "MODEL_EXTRACTION", "obsolete-stage-model")
+
+    model = get_chat_model(
+        "explicit-local-default",
+        transport=httpx.MockTransport(lambda request: None),
+    )
+
+    assert model.model_name == "explicit-local-default"
+
+
+def test_local_null_content_workaround_reaches_the_next_agent_request():
+    requests: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        requests.append(body)
+        if len(requests) == 1:
+            return httpx.Response(
+                200,
+                json={
+                    **chat_completion(""),
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [
+                                    {
+                                        "id": "call-test",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "resolve_reference",
+                                            "arguments": "{}",
+                                        },
+                                    }
+                                ],
+                            },
+                            "finish_reason": "tool_calls",
+                        }
+                    ],
+                },
+            )
+        return httpx.Response(200, json=chat_completion("done"))
+
+    agent = Agent(
+        get_chat_model(
+            local_deployment(
+                request_settings=ModelRequestSettings(
+                    temperature=0.0,
+                    thinking=False,
+                )
+            ),
+            transport=httpx.MockTransport(handler),
+        ),
+        output_type=str,
+        defer_model_check=True,
+    )
+
+    @agent.tool
+    def resolve_reference(ctx) -> str:
+        return "resolved"
+
+    result = agent.run_sync("Resolve the references.")
+
+    assert result.output == "done"
+    assistant_message = next(
+        message
+        for message in requests[1]["messages"]
+        if message["role"] == "assistant"
+    )
+    assert assistant_message["content"] == ""
+
+
+def test_local_model_cache_uses_the_complete_deployment_identity():
+    transport = httpx.MockTransport(lambda request: None)
+    first = get_chat_model(local_deployment(), transport=transport)
+    equivalent = get_chat_model(local_deployment(), transport=transport)
+    different_endpoint = get_chat_model(
+        local_deployment(endpoint="http://another-local.test:9999")
+    )
+    different_settings = get_chat_model(
+        local_deployment(
+            request_settings=local_deployment().request_settings.model_copy(
+                update={"top_p": 0.7}
+            )
+        )
+    )
+
+    assert first is equivalent
+    assert first.client is equivalent.client
+    assert first is not different_endpoint
+    assert first is not different_settings
+
+
+def test_local_deployment_keeps_transport_retries_bounded(recorded_waits):
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if len(requests) == 1:
+            return httpx.Response(
+                429,
+                headers={"Retry-After": "600"},
+                json={"error": {"message": "rate limited"}},
+            )
+        return httpx.Response(200, json=chat_completion("resolved"))
+
+    deployment = local_deployment(
+        request_settings=ModelRequestSettings(
+            temperature=0.0,
+            thinking=False,
+            max_attempts=2,
+            rate_limit_wait_cap=3.0,
+        )
+    )
+
+    result = Agent(
+        get_chat_model(deployment, transport=httpx.MockTransport(handler)),
+        output_type=str,
+        defer_model_check=True,
+    ).run_sync("Resolve the references.")
+
+    assert result.output == "resolved"
+    assert len(requests) == 2
+    assert recorded_waits == [3.0]
 
 
 def test_every_model_is_built_for_the_llama_cpp_host(monkeypatch):
-    """Chat goes to llama.cpp, not Ollama, and the ``/v1`` path is added once."""
+    """Chat uses llama.cpp and adds the ``/v1`` path exactly once."""
 
     monkeypatch.setenv("LLAMA_CPP_BASE_URL", "http://localhost:9999")
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -218,8 +402,8 @@ def test_embedding_gets_its_own_llama_cpp_port(monkeypatch):
     assert resolve_embedding_base_url() == "http://localhost:8081/v1"
 
 
-def test_the_embedding_host_is_no_longer_read_from_ollama(monkeypatch):
-    """A leftover `OLLAMA_BASE_URL` must not pull embedding back onto Ollama."""
+def test_the_embedding_host_ignores_a_legacy_chat_host_setting(monkeypatch):
+    """A legacy host setting must not pull embedding off its local endpoint."""
 
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.delenv("LLAMA_CPP_EMBEDDING_BASE_URL", raising=False)
@@ -333,7 +517,9 @@ class _Item(BaseModel):
     accepted: bool
 
 
-def _structured_request_body(monkeypatch) -> dict:
+def _structured_request_body(
+    monkeypatch, deployment: str | ModelDeployment = "test-model"
+) -> dict:
     monkeypatch.delenv("LLM_THINKING", raising=False)
     bodies: list[dict] = []
 
@@ -343,7 +529,7 @@ def _structured_request_body(monkeypatch) -> dict:
             200, json=chat_completion('{"response": [{"label": "1", "accepted": true}]}')
         )
 
-    model = get_chat_model("test-model", transport=httpx.MockTransport(handler))
+    model = get_chat_model(deployment, transport=httpx.MockTransport(handler))
     Agent(model, output_type=list[_Item], defer_model_check=True).run_sync("Judge them.")
     return bodies[0]
 
@@ -377,3 +563,13 @@ def test_the_response_schema_carries_no_refs(monkeypatch):
     assert "$ref" not in schema
     assert "$defs" not in schema
     assert "accepted" in schema
+
+
+def test_typed_local_deployment_preserves_the_structured_output_profile(monkeypatch):
+    body = _structured_request_body(monkeypatch, local_deployment())
+    schema = json.dumps(body["response_format"]["json_schema"]["schema"])
+
+    assert body["response_format"]["type"] == "json_schema"
+    assert "tools" not in body
+    assert "$ref" not in schema
+    assert "$defs" not in schema

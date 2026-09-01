@@ -9,10 +9,12 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 
 from knowledge_map.evaluation import (
     EvaluationSplit,
@@ -22,6 +24,38 @@ from knowledge_map.evaluation import (
     write_report,
 )
 from knowledge_map.evaluation.tasks import task_named, task_names
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.utils.deployments import deployment_from_environment
+from knowledge_map.utils.models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    openrouter_admission_ceiling,
+)
+
+
+def select_deployment(
+    task: Any,
+    *,
+    kind: str | DeploymentKind = DeploymentKind.OPENROUTER,
+    model_override: str | None = None,
+) -> ModelDeployment:
+    """Build the command-selected chat deployment before evaluation starts.
+
+    OpenRouter configuration is deliberately checked at this boundary so a
+    malformed command cannot execute part of a Gold Set before it fails.
+    ``model_override`` is kept verbatim when supplied; an empty override is
+    therefore rejected as an invalid requested model rather than replaced by
+    an ambient setting.
+    """
+
+    load_dotenv()
+    return deployment_from_environment(
+        kind,
+        default_local_model=(
+            getattr(task, "default_model", None) or DEFAULT_LOCAL_CHAT_MODEL
+        ),
+        model_override=model_override,
+        command_name="evaluation",
+    )
 
 
 def add_parser(subparsers: Any) -> None:
@@ -43,19 +77,39 @@ def add_parser(subparsers: Any) -> None:
     run = actions.add_parser("run", help="Run a Gold Set and write one report")
     run.add_argument("task", choices=task_names())
     run.add_argument("--gold-set", type=Path, default=None)
-    run.add_argument("--model", default=None, help="Defaults to the task's own model")
+    run.add_argument(
+        "--deployment",
+        choices=("local", "openrouter"),
+        default="openrouter",
+        help="Chat Model Deployment to evaluate against (default: openrouter)",
+    )
+    run.add_argument(
+        "--model",
+        default=None,
+        help="Overrides the selected deployment's configured model",
+    )
     run.add_argument(
         "--split",
         choices=[member.value for member in EvaluationSplit],
         default=None,
         help="Defaults to every case in the file",
     )
-    run.add_argument("--max-concurrency", type=int, default=1)
+    run.add_argument("--max-concurrency", type=_positive_int, default=1)
     run.add_argument(
         "--no-report",
         action="store_true",
         help="Print the report without writing a file",
     )
+
+
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer") from error
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be greater than 0")
+    return parsed
 
 
 def dispatch(args: argparse.Namespace) -> None:
@@ -124,6 +178,15 @@ def _warn_if_one_label_dominates(labels: Counter) -> None:
 
 def _run(args: argparse.Namespace) -> None:
     task = task_named(args.task)
+    try:
+        deployment = select_deployment(
+            task,
+            kind=getattr(args, "deployment", None) or DeploymentKind.OPENROUTER,
+            model_override=args.model,
+        )
+    except ValueError as error:
+        sys.exit(str(error))
+
     path = args.gold_set or gold_set_path(task.gold_set_stem)
     if not path.exists():
         sys.exit(f"{path} does not exist. Run `ca-map eval collect {task.name}` first.")
@@ -135,23 +198,33 @@ def _run(args: argparse.Namespace) -> None:
         metadata_type=task.metadata_type,
     )
     split = EvaluationSplit(args.split) if args.split else None
-    model = args.model or task.default_model
 
-    report = run_gold_set(
-        gold_set,
-        task=task.build(model, gold_set),
-        evaluators=task.evaluators,
-        split=split,
-        max_concurrency=args.max_concurrency,
+    admission_scope = (
+        openrouter_admission_ceiling(args.max_concurrency)
+        if deployment.kind is DeploymentKind.OPENROUTER
+        else nullcontext()
     )
+    with admission_scope:
+        report = run_gold_set(
+            gold_set,
+            task=task.build(deployment, gold_set),
+            evaluators=task.evaluators,
+            split=split,
+            max_concurrency=args.max_concurrency,
+        )
     report.print(include_input=False, include_output=False)
+
+    if report.failures:
+        # A failed case is not a completed Evaluation Run; do not persist a
+        # report whose cases would be mistaken for a complete Gold Set result.
+        raise SystemExit("Evaluation Run failed; no report was written.")
 
     if args.no_report:
         return
     written = write_report(
         report,
         task=task.name,
-        model=model,
+        deployment=deployment,
         gold_set_path=path,
         split=split.value if split else None,
     )
