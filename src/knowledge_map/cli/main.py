@@ -515,6 +515,8 @@ def main(args=None):
             adapter = PydanticAICoreferenceAdapter()
         elif component == "extraction":
             adapter = PydanticAIEntityExtractionAdapter()
+        elif component == "policy_area_classification":
+            adapter = PydanticAIPolicyAreaAdapter()
         elif component == "database":
             uri = os.environ.get("NEO4J_URI")
             username = os.environ.get("NEO4J_USERNAME")

@@ -45,6 +45,7 @@ class MockDatabaseAdapter:
         self.articles = []
         self.chunks = []
         self.extractions = []
+        self.topics = []
 
     def ingest_article(self, article: SourceArticle) -> None:
         self.articles.append(article)
@@ -65,6 +66,32 @@ class MockDatabaseAdapter:
         event_dates: LegislativeEventDates | None = None,
     ) -> None:
         self.extractions.append((chunk_id, extraction, bill_sessions, event_dates))
+
+    def ingest_article_topics(
+        self,
+        article: SourceArticle,
+        policy_areas: list[str],
+        assignments=None,
+        bill_sessions: BillSessionResolutions | None = None,
+    ) -> None:
+        self.topics.append((article, policy_areas, assignments))
+
+
+class MockPolicyAreaAdapter:
+    """A fake classification stage that returns the areas it was given."""
+
+    def __init__(self, policy_areas=None, call_log=None):
+        self.policy_areas = list(policy_areas or [])
+        self.classified = []
+        self.call_log = call_log if call_log is not None else []
+
+    def classify(self, resolved_text: str) -> list[str]:
+        self.classified.append(resolved_text)
+        self.call_log.append("classify")
+        return list(self.policy_areas)
+
+    def health_check(self) -> bool:
+        return True
 
 
 @pytest.mark.parametrize(
@@ -139,6 +166,7 @@ def test_pipeline_dry_run():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
 
@@ -174,6 +202,7 @@ def test_pipeline_persistence():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
 
@@ -226,6 +255,7 @@ def test_pipeline_extracts_owned_chunk_text_without_context():
         embedding_adapter=MockEmbeddingAdapter(),
         coreference_adapter=MockCoreferenceAdapter(),
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
     article = SourceArticle(
@@ -259,6 +289,7 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         embedding_adapter=MockEmbeddingAdapter(),
         coreference_adapter=MockCoreferenceAdapter(),
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
     article = SourceArticle(
@@ -326,6 +357,7 @@ def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
         embedding_adapter=MockEmbeddingAdapter(),
         coreference_adapter=MockCoreferenceAdapter(),
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
     article = SourceArticle(
@@ -386,6 +418,7 @@ def test_pipeline_logging(caplog):
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
 
@@ -421,6 +454,7 @@ def test_pipeline_error_handling():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
 
@@ -518,6 +552,7 @@ def test_pipeline_with_concrete_adapters():
         embedding_adapter=embedding_adapter,
         coreference_adapter=coreference_adapter,
         extraction_adapter=extraction_adapter,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
 
@@ -579,6 +614,7 @@ def test_pipeline_with_neo4j_adapter():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
     
@@ -649,6 +685,7 @@ def test_pipeline_coreference_failure_logs_to_dlq():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
         dlq_adapter=dlq
     )
@@ -700,6 +737,7 @@ def test_pipeline_extraction_failure_logs_to_dlq():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
         dlq_adapter=dlq
     )
@@ -750,6 +788,7 @@ def test_pipeline_status_extraction_failure():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
     )
 
@@ -780,6 +819,7 @@ def test_pipeline_status_success():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
     )
 
@@ -818,6 +858,7 @@ def test_pipeline_status_coref_failure():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
     )
 
@@ -852,6 +893,7 @@ def test_pipeline_status_unexpected_error():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
     )
 
@@ -899,6 +941,7 @@ def test_pipeline_status_dlq_failure():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
         dlq_adapter=dlq
     )
@@ -930,6 +973,7 @@ def test_pipeline_status_dry_run():
         embedding_adapter=embedding,
         coreference_adapter=coref,
         extraction_adapter=extraction,
+        policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=status_tracker,
     )
 
@@ -943,35 +987,12 @@ def test_pipeline_status_dry_run():
     assert status_tracker.updates == []
 
 
-class MockPolicyAreaAdapter:
-    """A fake classification stage that returns the areas it was given."""
-
-    def __init__(self, policy_areas=None, call_log=None):
-        self.policy_areas = list(policy_areas or [])
-        self.classified = []
-        self.call_log = call_log if call_log is not None else []
-
-    def classify(self, resolved_text: str) -> list[str]:
-        self.classified.append(resolved_text)
-        self.call_log.append("classify")
-        return list(self.policy_areas)
-
-    def health_check(self) -> bool:
-        return True
-
-
 class TopicRecordingDatabase(MockDatabaseAdapter):
-    """A database that remembers the article-level topic writes it received."""
+    """A database that also records where the topic write fell in the run."""
 
     def __init__(self, call_log=None):
         super().__init__()
-        self.topics = []
         self.call_log = call_log if call_log is not None else []
-
-    def ingest_article_topics(
-        self, article, policy_areas, assignments=None, bill_sessions=None
-    ):
-        self.topics.append((article, policy_areas, assignments))
 
 
 class ResolvingCoreferenceAdapter:

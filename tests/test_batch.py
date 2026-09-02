@@ -52,6 +52,7 @@ from test_pipeline import (
     MockEmbeddingAdapter,
     MockCoreferenceAdapter,
     MockEntityExtractionAdapter,
+    MockPolicyAreaAdapter,
     MockStatusTracker,
     MockDeadLetterQueueAdapter
 )
@@ -271,6 +272,10 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
         def ingest_article(self, article): pass
         def ingest_chunk(self, article, chunk, embedding): pass
         def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, event_dates=None): pass
+        def ingest_article_topics(self, article, policy_areas, assignments=None, bill_sessions=None): pass
+
+    class LocalMockPolicyAreaAdapter:
+        def classify(self, resolved_text): return []
 
     class LocalMockEmbeddingAdapter:
         def process_chunks(self, chunks): return [[0.1] * 768] * len(chunks)
@@ -312,6 +317,7 @@ def test_batch_ingestion_service_status_transitions(tmp_path):
         embedding_adapter=LocalMockEmbeddingAdapter(),
         coreference_adapter=LocalMockCoreferenceAdapter(),
         extraction_adapter=LocalMockEntityExtractionAdapter(),
+        policy_area_adapter=LocalMockPolicyAreaAdapter(),
         status_tracker=status_tracker
     )
     
@@ -516,6 +522,7 @@ def make_pipeline(status_tracker, **adapters):
         embedding_adapter=MockEmbeddingAdapter(),
         coreference_adapter=MockCoreferenceAdapter(),
         extraction_adapter=MockEntityExtractionAdapter(),
+        policy_area_adapter=MockPolicyAreaAdapter(),
     )
     defaults.update(adapters)
     return StoryPipeline(status_tracker=status_tracker, **defaults)

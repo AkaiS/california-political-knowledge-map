@@ -149,9 +149,11 @@ def test_neither_areas_nor_assignments_writes_nothing(transaction):
     tx.run.assert_not_called()
 
 
-def test_a_pipeline_without_the_classification_stage_writes_no_article_topics():
+def test_the_pipeline_cannot_be_assembled_without_the_classification_stage():
     """The write path is driven by Policy Area Classification, so a pipeline
-    assembled without that stage has nothing article-level to write."""
+    that could be assembled without that stage would silently write no
+    article-level topics.  The stage is a collaborator like Coreference
+    Resolution and Entity Extraction, not an optional side channel."""
 
     from test_pipeline import (
         MockCoreferenceAdapter,
@@ -161,25 +163,14 @@ def test_a_pipeline_without_the_classification_stage_writes_no_article_topics():
         MockStatusTracker,
     )
 
-    class RecordingDatabase(MockDatabaseAdapter):
-        def __init__(self):
-            super().__init__()
-            self.topics = []
-
-        def ingest_article_topics(self, article, policy_areas, assignments=None, bill_sessions=None):
-            self.topics.append((article, policy_areas, assignments))
-
-    db = RecordingDatabase()
-    StoryPipeline(
-        db_adapter=db,
-        embedding_adapter=MockEmbeddingAdapter(),
-        coreference_adapter=MockCoreferenceAdapter(),
-        extraction_adapter=MockEntityExtractionAdapter(),
-        status_tracker=MockStatusTracker(),
-    ).run(ARTICLE)
-
-    assert db.articles == [ARTICLE]
-    assert db.topics == []
+    with pytest.raises(TypeError):
+        StoryPipeline(
+            db_adapter=MockDatabaseAdapter(),
+            embedding_adapter=MockEmbeddingAdapter(),
+            coreference_adapter=MockCoreferenceAdapter(),
+            extraction_adapter=MockEntityExtractionAdapter(),
+            status_tracker=MockStatusTracker(),
+        )
 
 
 def _protocol_methods() -> list[str]:

@@ -141,6 +141,20 @@ _ERROR_CATEGORIES = {
 }
 
 
+def _error_category(e: Exception) -> Optional[str]:
+    """The category a stage failure is recorded under, or None if it is not one.
+
+    Matched by isinstance rather than exact type, so a stage that narrows its
+    failure into a subclass is still recorded rather than raising out of the
+    failure handler and displacing the failure it was called to report.
+    """
+
+    for error_type, category in _ERROR_CATEGORIES.items():
+        if isinstance(e, error_type):
+            return category
+    return None
+
+
 class StoryPipeline:
     def __init__(
         self,
@@ -148,19 +162,17 @@ class StoryPipeline:
         embedding_adapter: EmbeddingAdapter,
         coreference_adapter: CoreferenceAdapter,
         extraction_adapter: EntityExtractionAdapter,
+        policy_area_adapter: PolicyAreaAdapter,
         status_tracker: StatusTracker,
         dlq_adapter: Optional[DeadLetterQueueAdapter] = None,
-        policy_area_adapter: Optional[PolicyAreaAdapter] = None,
     ) -> None:
         self.db_adapter = db_adapter
         self.embedding_adapter = embedding_adapter
         self.coreference_adapter = coreference_adapter
         self.extraction_adapter = extraction_adapter
+        self.policy_area_adapter = policy_area_adapter
         self.status_tracker = status_tracker
         self.dlq_adapter = dlq_adapter
-        # A pipeline assembled without the stage classifies nothing and writes
-        # no article-level topics, as it did before the stage existed.
-        self.policy_area_adapter = policy_area_adapter
 
     def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
@@ -186,16 +198,10 @@ class StoryPipeline:
             # 2. Policy Area Classification, over the resolved text and
             # before chunking: it is decided once for the article, and
             # nothing earlier needs its result.
-            policy_areas: List[str] = []
-            if self.policy_area_adapter is not None:
-                logger.info("Classifying Policy Areas...")
-                with transport_failures_as_pipeline_errors(
-                    "policy_area_classification"
-                ):
-                    policy_areas = self.policy_area_adapter.classify(resolved_text)
-                logger.info(
-                    f"Article classified into {len(policy_areas)} Policy Area(s)."
-                )
+            logger.info("Classifying Policy Areas...")
+            with transport_failures_as_pipeline_errors("policy_area_classification"):
+                policy_areas = self.policy_area_adapter.classify(resolved_text)
+            logger.info(f"Article classified into {len(policy_areas)} Policy Area(s).")
 
             # 3. Chunking
             logger.info("Chunking text...")
@@ -232,12 +238,11 @@ class StoryPipeline:
                         chunk_id, extractions[idx], bill_sessions, event_dates
                     )
 
-                if self.policy_area_adapter is not None:
-                    # Assignments arrive with the Topic Assignment stage; the
-                    # areas are article-level on their own.
-                    self.db_adapter.ingest_article_topics(
-                        article, policy_areas, None, bill_sessions
-                    )
+                # Assignments arrive with the Topic Assignment stage; the areas
+                # are article-level on their own.
+                self.db_adapter.ingest_article_topics(
+                    article, policy_areas, None, bill_sessions
+                )
 
                 # 7. Update status to COMPLETED
                 self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)
@@ -268,11 +273,8 @@ class StoryPipeline:
             elif isinstance(e, PipelineException):
                 self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
 
-        if isinstance(
-            e,
-            (CoreferenceResolutionError, ExtractionError, PolicyAreaClassificationError),
-        ):
-            error_cat = _ERROR_CATEGORIES[type(e)]
+        error_cat = _error_category(e)
+        if error_cat is not None:
             resolution_run = getattr(e, "resolution_run", None)
             dlq_id = "N/A"
             if self.dlq_adapter:
