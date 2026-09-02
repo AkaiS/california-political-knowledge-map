@@ -32,6 +32,17 @@ have not yet been shaped into executable work.
   Coreference Adapter's plumbing becomes dependencies, a state model, and
   narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
   below.
+- [Policy Area Staging](projects/policy-area-staging/PRD.md), `ready-for-agent` as of 2026-09-02.
+  A Policy Area is a property of an article's discussion, not of a sentence, and
+  Entity Extraction is asked for it per Article Chunk anyway — where it is the
+  only label whose emission writes an edge by itself. The extraction Silver Set
+  had to narrow its own annotation rule to record it at all, and the first
+  extraction Evaluation Run agreed with that Silver Set on zero of ten Policy
+  Areas. Splits the question into an article-level classification before
+  extraction and a topic assignment after it, retires the Article Chunk topic
+  edge, and builds the Source Article topic edge the ontology declares and
+  nothing produces. Broken into seven issues on 2026-09-02; the frontier is
+  below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
 
 ### Bill Designation Recovery frontier
@@ -44,6 +55,19 @@ independent of it.
 - [03 Every extracted Bill gets a resolution](projects/bill-designation-recovery/issues/03-resolution-covers-every-bill.md), blocked by 02. The map is keyed by name and covers unidentifiable bills; the adapter stops deciding.
 - [04 Recover a Bill Designation from the Source Article](projects/bill-designation-recovery/issues/04-recover-designation-from-article.md), blocked by 03. `ll 623` reaches `Senate Bill 623`'s node before any key is minted.
 - [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `CONTEXT.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
+
+### Policy Area Staging frontier
+
+Only issue 01 is takeable now. The chain 01 -> 02 -> 03 -> 04 is linear; the two
+Gold Sets hang off the stages they measure and can be worked beside them.
+
+- [01 The article-level topic write path](projects/policy-area-staging/issues/01-article-level-topic-write-path.md), takeable. The seam both new stages write through, built before either exists. Nothing calls it yet.
+- [02 Policy Area Classification, once per Source Article](projects/policy-area-staging/issues/02-policy-area-classification-stage.md), blocked by 01. One adapter Protocol for both stages; the Source Article topic edge stops being declared and unbuilt.
+- [03 Policy Area leaves Entity Extraction](projects/policy-area-staging/issues/03-policy-area-leaves-entity-extraction.md), blocked by 02. The contract half: the label, the topic relationship, the twenty-seven-line vocabulary, the chunk topic edge, and the Silver Set's Policy Area annotations all go together, because the Silver Set's conformance assertion fails the moment the label does.
+- [04 Topic Assignment, measures to areas](projects/policy-area-staging/issues/04-topic-assignment-stage.md), blocked by 01 and 03. The first stage that asserts a claim with no Article Chunk behind it.
+- [05 Policy Area Classification Gold Set](projects/policy-area-staging/issues/05-classification-gold-set.md), blocked by 02. Twenty article-level cases, multi-label scoring, and the areas-per-article distribution any future cap is set from.
+- [06 Topic Assignment Gold Set](projects/policy-area-staging/issues/06-topic-assignment-gold-set.md), blocked by 04. Scored on measure-to-area pairs, over the same twenty Stories.
+- [07 Record both stages in the domain vocabulary](projects/policy-area-staging/issues/07-record-the-two-stages.md), blocked by 04. `CONTEXT.md` gains both stages; Grounding Evidence for a topic edge becomes the Source Article. No ADR expected.
 
 ### Retry Layering frontier
 
@@ -116,7 +140,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
