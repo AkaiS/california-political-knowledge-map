@@ -32,10 +32,14 @@ pronouns were. Annotate that text as it is.
 
 ## Labels
 
-Only the eight extracted labels exist: `Politician`, `Organization`, `Bill`,
-`Prop`, `Committee`, `Campaign`, `LegislativeEvent`, `PolicyArea`. There is no
-`Person`, no party, no district and no place, so an entity that is none of the
-eight is not annotated at all.
+Only the seven extracted labels exist: `Politician`, `Organization`, `Bill`,
+`Prop`, `Committee`, `Campaign`, `LegislativeEvent`. There is no `Person`, no
+party, no district and no place, so an entity that is none of the seven is not
+annotated at all.
+
+What an article is about is not among them. That question is answered once per
+Source Article by Policy Area Classification, over the whole resolved text, so
+no case here asks what topic a chunk covers or which topic a measure concerns.
 
 ### Politician (load-bearing)
 
@@ -97,14 +101,6 @@ annotators write the same string:
 
 A veto is none of the three. It is a `DECLARED_STANCE` from the governor.
 
-### PolicyArea
-
-Annotated **only** as the topic of a `Bill` or `Prop` named in the same chunk,
-always with an `ABOUT_TOPIC` edge, and only where the chunk says what the
-measure concerns. Never annotate a bare `PolicyArea` for the chunk's own
-subject matter. Use the vocabulary's canonical name as the node name; where
-two entries fit, pick the one the measure's stated purpose centers on.
-
 ### Campaign
 
 Only where the chunk speaks of a campaign as a thing. The one exception is the
@@ -112,7 +108,7 @@ endorsement convention below, which mints one.
 
 ## Relationships
 
-Only the 17 permitted types, only where the chunk states the connection.
+Only the 16 permitted types, only where the chunk states the connection.
 Never infer a claim from quotation, coverage, employment, funding or mention.
 
 - **Stance vs lobbying.** `LOBBIED_FOR` / `LOBBIED_AGAINST` need lobbying
@@ -163,10 +159,6 @@ future pass makes the same choice rather than rediscovering the question.
 - **Public universities as `GovernmentAgency`.** UCLA, UC Davis, Cal State
   Northridge and Mt. San Antonio College carry it; Cornell and McMaster carry
   no sub-label. The line is public-vs-private, which the chunk rarely states.
-- **Bare `PolicyArea`.** Emitting one for the chunk's own subject would fire a
-  `DISCUSSES_TOPIC` edge from the Chunk, which is a real thing we want. It was
-  excluded here because "what is this chunk about" produced two defensible
-  answers too often to annotate consistently.
 - **`Congress`, `U.S. Navy` and other bodies as `Organization`.** They are
   actors the chunk names, so they are annotated, but nothing else in a case
   ever connects to them.

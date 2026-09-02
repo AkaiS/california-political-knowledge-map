@@ -334,13 +334,6 @@ class Neo4jAdapter:
                         """
                         tx.run(mention_query, chunk_id=chunk_id, node_id=node_id)
 
-                        if label == "PolicyArea":
-                            topic_query = """
-                            MATCH (c:Chunk {id: $chunk_id}), (n:PolicyArea {id: $node_id})
-                            MERGE (c)-[:DISCUSSES_TOPIC]->(n)
-                            """
-                            tx.run(topic_query, chunk_id=chunk_id, node_id=node_id)
-
                     def resolved_id(label: str, name: str) -> str:
                         node_id = node_ids.get((name, label))
                         if node_id is not None:

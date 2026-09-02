@@ -88,9 +88,9 @@ inferred relationship when the article does not state the connection.
 - A `LegislativeEvent` is a vote, hearing, or amendment the passage reports happening.
   Name it `Vote on <bill name>`, `Hearing on <bill name>`, or
   `Amendment to <bill name>`, and connect it with `ACTION_ON`.
-- Emit a `PolicyArea` only as the topic of a `Bill` or `Prop` named in this same
-  passage, always with an `ABOUT_TOPIC` relationship, and only where the passage says
-  what the measure concerns.
+- What the passage is about is not extracted here. A Policy Area is decided once per
+  article by a stage of its own, so never label a topic and never connect a measure
+  to one.
 
 ### Judging claims
 

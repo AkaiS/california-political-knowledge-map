@@ -7,10 +7,12 @@ from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_gold_s
 from knowledge_map.evaluation.tasks import task_named
 from knowledge_map.evaluation.tasks.extraction import silver_extraction_result
 from knowledge_map.ontology.extraction_conformance import conform_extraction_result
+from knowledge_map.ontology.news import EXTRACTED_LABELS
 from knowledge_map.utils.chunking import chunk_article
 
 SILVER_SET_PATH = Path("evals/gold/extraction.yaml")
 COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
+ANNOTATION_GUIDELINE_PATH = Path("docs/evaluation/extraction-annotation.md")
 
 
 def _load_silver_set(path: Path, task_name: str):
@@ -88,6 +90,24 @@ def test_every_silver_label_survives_news_ontology_conformance() -> None:
 
         assert outcome.drops == (), case.id
         assert outcome.result.model_dump() == expected.model_dump(), case.id
+
+
+def test_the_guideline_asks_only_for_labels_extraction_is_responsible_for() -> None:
+    """A guideline asking for more than the ontology admits re-annotates itself.
+
+    Every case names this file, so a label it still asks for is one a later
+    pass would annotate and conformance would then drop.
+    """
+
+    guideline = ANNOTATION_GUIDELINE_PATH.read_text()
+
+    assert "PolicyArea" not in guideline
+    assert "ABOUT_TOPIC" not in guideline
+    assert "DISCUSSES_TOPIC" not in guideline
+    # It says where the question went instead of leaving it open.
+    assert "Policy Area Classification" in guideline
+    for label in sorted(EXTRACTED_LABELS):
+        assert f"`{label}`" in guideline, label
 
 
 def test_the_fifty_chunks_are_drawn_from_all_twenty_stories() -> None:

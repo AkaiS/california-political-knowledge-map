@@ -644,7 +644,6 @@ def test_ingest_chunk_extraction():
         nodes=[
             Node(name="California Teachers Association", label="Organization", sub_labels=["LaborUnion"]),
             Node(name="Yes on Schools", label="Campaign", sub_labels=["BallotMeasureCampaign"]),
-            Node(name="Education (K–12)", label="PolicyArea")
         ],
         relationships=[
             Relationship(
@@ -661,17 +660,18 @@ def test_ingest_chunk_extraction():
         extraction=extraction
     )
     
-    # Three node merges and mentions, one topic edge, and one extracted relationship.
-    assert mock_tx.run.call_count == 8
-    
+    # Two node merges and mentions, and one extracted relationship.
+    assert mock_tx.run.call_count == 5
+
     # Inspect calls
     calls = [call[0][0] for call in mock_tx.run.call_args_list]
     assert any("MERGE (n:Organization:LaborUnion {id: $node_id})" in q for q in calls)
     assert any("MERGE (n:Campaign:BallotMeasureCampaign {id: $node_id})" in q for q in calls)
     assert any("MERGE (n)-[:MENTIONED_IN]->(c)" in q for q in calls)
-    assert any("MERGE (c)-[:DISCUSSES_TOPIC]->(n)" in q for q in calls)
-    assert not any("NewsArticle" in q and "DISCUSSES_TOPIC" in q for q in calls)
     assert any("MERGE (src)-[r:FUNDED]->(tgt)" in q for q in calls)
+    # A chunk asserts that an entity was mentioned in it, never what it is about:
+    # the Policy Area is decided once per article and its edge hangs off the article.
+    assert not any("DISCUSSES_TOPIC" in q for q in calls)
 
     # Nothing is stamped with a source: the `Chunk` an edge hangs off already says
     # where it came from, and it says so per mention rather than once per node.
@@ -701,6 +701,29 @@ def test_ingest_chunk_extraction_rejects_unvalidated_sub_label():
     with pytest.raises(Neo4jConnectionError, match="Invalid sub-label for Organization: Club"):
         manager.ingest_chunk_extraction("article#chunk_0", extraction)
     mock_tx.run.assert_not_called()
+
+
+def test_ingest_chunk_extraction_refuses_a_policy_area_and_writes_no_topic_edge():
+    """The chunk write has no topic edge left to derive, and says so.
+
+    A Policy Area reaching this entry point means conformance was skipped, so it
+    is refused outright rather than written from the one chunk that named it.
+    """
+
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    extraction = ExtractionResult(nodes=[Node(name="Housing & Community Development", label="PolicyArea")])
+
+    with pytest.raises(Neo4jConnectionError, match="Invalid extracted node label: PolicyArea"):
+        manager.ingest_chunk_extraction("article#chunk_0", extraction)
+    assert not any(
+        "DISCUSSES_TOPIC" in call[0][0] for call in mock_tx.run.call_args_list
+    )
 
 
 def test_bill_session_participates_in_node_primary_key():

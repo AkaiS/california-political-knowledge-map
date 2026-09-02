@@ -50,8 +50,14 @@ REQUIRED_SUB_LABELS = frozenset({"LegislativeEvent", "Campaign"})
 #: Labels the pipeline writes from the article itself.
 WRITE_PATH_LABELS = frozenset({"NewsArticle", "Chunk"})
 
+#: Labels a Source Article stage decides, not the chunk extractor.  A Policy
+#: Area is a property of an article's discussion, which an Article Chunk
+#: usually cannot see: Policy Area Classification chooses it once per article.
+#: The graph still holds the node, so the label stays declared here.
+STAGE_DECIDED_LABELS = frozenset({"PolicyArea"})
+
 #: Labels the extraction model is responsible for producing.
-EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS
+EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS - STAGE_DECIDED_LABELS
 
 NODE_DIVERGENCES = (
     Divergence(
@@ -227,7 +233,11 @@ _RELATIONSHIP_ENDPOINTS = {
         frozenset({"Politician", "Committee", "Bill", "LegislativeEvent", "Prop", "Campaign", "Organization"}),
         frozenset({"Chunk"}),
     ),
-    "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle", "Chunk"}), frozenset({"PolicyArea"})),
+    # The Article Chunk half the primary ontology permits is retired: a Policy
+    # Area is decided once per Source Article, and hanging that one decision off
+    # every chunk of the article would assert that every chunk is equally about
+    # it.  A Policy Area still reaches an Article Chunk, through the article.
+    "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle"}), frozenset({"PolicyArea"})),
 }
 
 RELATIONSHIP_DIVERGENCES = (
@@ -277,6 +287,17 @@ RELATIONSHIPS = {
     )
     for relationship_type, shape in _RELATIONSHIP_ENDPOINTS.items()
 }
+
+#: Relationships the extraction model is responsible for producing: those whose
+#: endpoints it is responsible for producing.  A relationship touching a label
+#: another stage owns is not a claim an Article Chunk can make, so it is neither
+#: rendered into the chunk prompt nor admitted by conformance.
+EXTRACTED_RELATIONSHIPS = {
+    relationship_type: shape
+    for relationship_type, shape in RELATIONSHIPS.items()
+    if shape.source_labels <= EXTRACTED_LABELS and shape.target_labels <= EXTRACTED_LABELS
+}
+
 
 def claim_key_properties(relationship_type: str) -> frozenset[str]:
     """The Claim Key of ``relationship_type``: its declared property names.

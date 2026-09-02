@@ -341,10 +341,6 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Privacy & Consumer Protection
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Isaac Bryan
       source_label: Politician
@@ -353,12 +349,6 @@ cases:
       target_label: Bill
       properties:
         alignment: POSITIVE
-    - source: Assembly Bill 1883
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Privacy & Consumer Protection
-      target_label: PolicyArea
-      properties: {}
   metadata:
     source_table: stories
     story_id: 70
@@ -418,10 +408,6 @@ cases:
       sub_labels:
       - Amendment
       properties: {}
-    - name: Privacy & Consumer Protection
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Gavin Newsom
       source_label: Politician
@@ -435,12 +421,6 @@ cases:
       relationship_type: ACTION_ON
       target: Senate Bill 7
       target_label: Bill
-      properties: {}
-    - source: Senate Bill 7
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Privacy & Consumer Protection
-      target_label: PolicyArea
       properties: {}
   metadata:
     source_table: stories
@@ -521,17 +501,7 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Housing & Community Development
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
-    relationships:
-    - source: federal housing bill
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Housing & Community Development
-      target_label: PolicyArea
-      properties: {}
+    relationships: []
   metadata:
     source_table: stories
     story_id: 41
@@ -612,10 +582,6 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Energy & Utilities
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Henry Stern
       source_label: Politician
@@ -624,12 +590,6 @@ cases:
       target_label: Bill
       properties:
         alignment: POSITIVE
-    - source: SB 1245
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Energy & Utilities
-      target_label: PolicyArea
-      properties: {}
   metadata:
     source_table: stories
     story_id: 24
@@ -706,10 +666,6 @@ cases:
       sub_labels:
       - Hearing
       properties: {}
-    - name: Insurance
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Consumer Federation of California
       source_label: Organization
@@ -723,12 +679,6 @@ cases:
       relationship_type: ACTION_ON
       target: Senate Bill 371
       target_label: Bill
-      properties: {}
-    - source: Senate Bill 371
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Insurance
-      target_label: PolicyArea
       properties: {}
   metadata:
     source_table: stories
@@ -755,17 +705,7 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Housing & Community Development
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
-    relationships:
-    - source: Senate Bill 1090
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Housing & Community Development
-      target_label: PolicyArea
-      properties: {}
+    relationships: []
   metadata:
     source_table: stories
     story_id: 11
@@ -795,17 +735,7 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Housing & Community Development
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
-    relationships:
-    - source: SB 9
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Housing & Community Development
-      target_label: PolicyArea
-      properties: {}
+    relationships: []
   metadata:
     source_table: stories
     story_id: 11
@@ -1139,10 +1069,6 @@ cases:
       label: Bill
       sub_labels: []
       properties: {}
-    - name: Business & Professions
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Josh Hoover
       source_label: Politician
@@ -1151,12 +1077,6 @@ cases:
       target_label: Bill
       properties:
         alignment: POSITIVE
-    - source: Assembly Bill 2211
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Business & Professions
-      target_label: PolicyArea
-      properties: {}
   metadata:
     source_table: stories
     story_id: 63
@@ -1512,10 +1432,6 @@ cases:
       sub_labels:
       - Vote
       properties: {}
-    - name: Technology & Communications
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: Common Sense Media
       source_label: Organization
@@ -1529,12 +1445,6 @@ cases:
       relationship_type: ACTION_ON
       target: Common Sense Media bill banning AI chatbots for minors
       target_label: Bill
-      properties: {}
-    - source: Common Sense Media bill banning AI chatbots for minors
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Technology & Communications
-      target_label: PolicyArea
       properties: {}
   metadata:
     source_table: stories
@@ -1570,10 +1480,6 @@ cases:
       sub_labels:
       - LaborUnion
       properties: {}
-    - name: Labor & Employment
-      label: PolicyArea
-      sub_labels: []
-      properties: {}
     relationships:
     - source: State Building and Construction Trades Council
       source_label: Organization
@@ -1582,12 +1488,6 @@ cases:
       target_label: Bill
       properties:
         alignment: NEGATIVE
-    - source: Assembly Bill 1751
-      source_label: Bill
-      relationship_type: ABOUT_TOPIC
-      target: Labor & Employment
-      target_label: PolicyArea
-      properties: {}
   metadata:
     source_table: stories
     story_id: 16

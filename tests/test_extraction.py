@@ -353,9 +353,12 @@ def test_pydantic_ai_entity_extraction_adapter_success():
         assert len(result.nodes) == 1
         assert result.nodes[0].name == "Gavin Newsom"
         assert len(result.relationships) == 0
-        for label in news.LABELS - {"NewsArticle", "Chunk"}:
+        for label in news.EXTRACTED_LABELS:
             assert f"`{label}`" in received_prompt["messages"]
-        assert "`aging-and-long-term-care`: Aging & Long-Term Care" in received_prompt["messages"]
+        # The Policy Area vocabulary is the classification stage's, not the
+        # chunk extractor's: the prompt an Article Chunk is read against no
+        # longer carries a line of it.
+        assert "`aging-and-long-term-care`" not in received_prompt["messages"]
 
 
 def test_adapter_drops_undeclared_relationship_properties_into_their_own_category():
@@ -522,6 +525,20 @@ def test_the_output_contract_gives_a_required_sub_label_somewhere_to_go():
 
     assert separator, "the generated ontology section is missing from the prompt"
     assert '"sub_labels"' in contract
+
+
+def test_the_chunk_prompt_never_asks_for_a_policy_area():
+    """The hand-written instructions retire with the ontology section.
+
+    Rendering none of the vocabulary while an instruction still asks for the
+    label would leave the model reaching for a value it has no vocabulary for,
+    and conformance dropping every one it invented.
+    """
+
+    instructions = load_instructions()
+
+    assert "PolicyArea" not in instructions
+    assert "ABOUT_TOPIC" not in instructions
 
 
 def test_entities_requiring_a_sub_label_survive_conformance_when_they_carry_one():
