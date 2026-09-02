@@ -5,6 +5,7 @@ Cypher it issued, as the chunk extraction tests beside it do.  Nothing here
 asserts how a Policy Area was arrived at — only what reached the graph.
 """
 
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -180,16 +181,34 @@ def test_the_pipeline_does_not_yet_write_article_topics():
     assert db.topics == []
 
 
+def _protocol_methods() -> list[str]:
+    return [
+        name
+        for name, _ in inspect.getmembers(DatabaseAdapter, inspect.isfunction)
+        if not name.startswith("_")
+    ]
+
+
 def test_the_database_adapter_protocol_declares_the_article_level_write():
     """One seam, extended — not a second seam beside it."""
 
-    assert "ingest_article_topics" in DatabaseAdapter.__protocol_attrs__
+    assert "ingest_article_topics" in _protocol_methods()
 
 
-def test_every_database_adapter_satisfies_the_protocol():
-    adapter = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=MagicMock())
+def test_the_neo4j_adapter_implements_the_whole_protocol():
+    """The repo's only Database Adapter: ``sqlite_db`` exposes a status
+    tracker, not a second implementer of this seam.
 
-    assert isinstance(adapter, DatabaseAdapter)
+    Parameter names are compared, not just method presence, so a write the
+    pipeline calls by keyword cannot drift from the Protocol unnoticed.
+    """
+
+    for name in _protocol_methods():
+        assert callable(getattr(Neo4jAdapter, name, None)), name
+
+    declared = inspect.signature(DatabaseAdapter.ingest_article_topics)
+    implemented = inspect.signature(Neo4jAdapter.ingest_article_topics)
+    assert list(implemented.parameters) == list(declared.parameters)
 
 
 def test_writing_the_same_topics_twice_is_idempotent(transaction):

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import List, Optional, Protocol
 
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
@@ -19,7 +19,6 @@ from knowledge_map.utils.chunking import chunk_article
 
 logger = logging.getLogger(__name__)
 
-@runtime_checkable
 class DatabaseAdapter(Protocol):
     def ingest_article(self, article: SourceArticle) -> None:
         ...

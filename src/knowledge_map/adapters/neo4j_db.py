@@ -65,12 +65,16 @@ def _write_relationship(
     resolve_id,
     chunk_id: str | None = None,
 ) -> None:
-    """The one place an extractor-produced relationship reaches the graph.
+    """The one place a relationship reaches the graph.
 
-    Both ingestion entry points route through here; ``resolve_id`` maps a label
-    and a name to the node's primary key and is the only thing they do
-    differently.  Pass ``chunk_id`` to accumulate the chunks asserting the
-    claim.
+    Every ingestion entry point routes through here, whether the relationship
+    came from an extractor or was composed from an article-level decision;
+    ``resolve_id`` maps a label and a name to the node's primary key and is the
+    only thing they do differently.  Pass ``chunk_id`` to accumulate the chunks
+    asserting the claim, which only a per-chunk write has.
+
+    Both endpoints are matched, never created: a relationship reaches the graph
+    only once something has merged the nodes it connects.
 
     An edge carries only its Claim Key, those chunks, and ``needs_review``.
     Everything else the article said stays in the Article Chunk.
@@ -405,6 +409,9 @@ class Neo4jAdapter:
                         )
 
                     for assignment in assignments:
+                        # Both endpoints are matched, so an assignment writes
+                        # an edge only where the measure was already ingested
+                        # and its area was among the ones classified above.
                         _write_relationship(
                             tx,
                             Relationship(
