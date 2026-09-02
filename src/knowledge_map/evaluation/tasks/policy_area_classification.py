@@ -31,7 +31,7 @@ from knowledge_map.adapters.policy_areas import (
     PydanticAIPolicyAreaAdapter,
     get_classification_agent,
 )
-from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.schemas import DeploymentKind, ModelDeployment, PolicyAreaName
 from knowledge_map.utils.models import (
     DEFAULT_LOCAL_CHAT_MODEL,
     resolve_local_chat_model,
@@ -70,18 +70,25 @@ class ClassificationExpectation(BaseModel):
     """The Policy Areas silver says one Source Article discusses.
 
     An empty list is an answer: the vocabulary does not cover this article.
+
+    Typed by `PolicyAreaName` rather than by `str` so that a silver label
+    outside the closed vocabulary -- a stale name, or an id where the name
+    belongs -- fails when the Gold Set is read rather than scoring a silent
+    zero against every model on every run.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    policy_areas: list[str] = Field(default_factory=list)
+    policy_areas: list[PolicyAreaName] = Field(default_factory=list)
 
 
 class ClassificationOutput(BaseModel):
     """What one classification attempt produced, including its own failure.
 
     A failed classification is scored as a zero rather than raised, so it stays
-    in the population.
+    in the population.  That is why `policy_areas` is `str` here where the
+    expectation is `PolicyAreaName`: this side holds what a model produced, and
+    an off-vocabulary answer is a result to score, not a case to crash.
     """
 
     model_config = ConfigDict(extra="forbid")
