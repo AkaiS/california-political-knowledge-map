@@ -17,6 +17,7 @@ import knowledge_map.adapters.policy_areas as policy_area_adapter_module
 from knowledge_map.adapters.policy_areas import (
     PolicyAreaClassificationError,
     PydanticAIPolicyAreaAdapter,
+    get_assignment_agent,
     get_classification_agent,
 )
 from knowledge_map.core.pipeline import PolicyAreaAdapter
@@ -149,21 +150,47 @@ def test_the_classification_agent_is_built_from_an_explicit_deployment(monkeypat
     assert agent.model is model
 
 
+def _healthy_adapter():
+    """An adapter whose two stages both answer, so neither reaches a real model."""
+
+    adapter = PydanticAIPolicyAreaAdapter(
+        agent=get_classification_agent(), assignment_agent=get_assignment_agent()
+    )
+    return adapter
+
+
 def test_the_adapter_reports_health_from_a_completed_run():
-    adapter = PydanticAIPolicyAreaAdapter(agent=get_classification_agent())
+    adapter = _healthy_adapter()
 
     with adapter.agent.override(model=_classifier({"policy_areas": []})):
-        assert adapter.health_check() is True
+        with adapter.assignment_agent.override(model=_classifier({"assignments": []})):
+            assert adapter.health_check() is True
 
 
 def test_the_adapter_reports_unhealthy_when_the_model_cannot_be_reached():
     def failing_model(messages, info):
         raise ModelHTTPError(status_code=503, model_name="remote-model", body=None)
 
-    adapter = PydanticAIPolicyAreaAdapter(agent=get_classification_agent())
+    adapter = _healthy_adapter()
 
-    with adapter.agent.override(model=FunctionModel(failing_model)):
-        assert adapter.health_check() is False
+    with adapter.assignment_agent.override(model=_classifier({"assignments": []})):
+        with adapter.agent.override(model=FunctionModel(failing_model)):
+            assert adapter.health_check() is False
+
+
+def test_the_adapter_reports_unhealthy_when_only_assignment_cannot_be_reached():
+    """Either stage's component name clears a lock through this one check, so a
+    check that passed on the classifier alone would clear an assignment lock on
+    the strength of a model assignment never runs on."""
+
+    def failing_model(messages, info):
+        raise ModelHTTPError(status_code=503, model_name="remote-model", body=None)
+
+    adapter = _healthy_adapter()
+
+    with adapter.agent.override(model=_classifier({"policy_areas": []})):
+        with adapter.assignment_agent.override(model=FunctionModel(failing_model)):
+            assert adapter.health_check() is False
 
 
 def test_the_pipeline_declares_one_policy_area_protocol():

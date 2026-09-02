@@ -273,15 +273,20 @@ class PydanticAIPolicyAreaAdapter:
         return assignments
 
     def health_check(self) -> bool:
-        """Report whether the classifier can complete a trivial run.
+        """Report whether both stages behind this adapter can complete a run.
 
-        Any completed run is healthy, whatever it returned.
+        Any completed run is healthy, whatever it returned.  Both agents are
+        probed because either stage's component name clears a lock through this
+        one check, and the two can be built from different Model Deployments —
+        probing only the classifier would clear an assignment lock on the
+        strength of a model assignment never runs on.
         """
 
-        try:
-            result = self.agent.run_sync(
-                "health_check", model_settings={"max_tokens": 1}
-            )
-            return result is not None
-        except Exception:
-            return False
+        for agent in (self.agent, self.assignment_agent):
+            try:
+                result = agent.run_sync("health_check", model_settings={"max_tokens": 1})
+            except Exception:
+                return False
+            if result is None:
+                return False
+        return True

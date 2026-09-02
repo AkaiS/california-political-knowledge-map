@@ -12,11 +12,13 @@ Dropping both cases before persistence turns that silence into a rule the
 pipeline states and a test can hold it to.
 """
 
+from knowledge_map.ontology import news
 from knowledge_map.schemas import ExtractionResult, Node, TopicAssignment
 
 #: The `ABOUT_TOPIC` source labels the News Ontology permits: the measures a
-#: Policy Area can be the topic of.
-MEASURE_LABELS = ("Bill", "Prop")
+#: Policy Area can be the topic of.  Read from the ontology rather than
+#: restated, so a measure label added there is one this stage already collects.
+MEASURE_LABELS = news.RELATIONSHIPS["ABOUT_TOPIC"].source_labels
 
 
 def extracted_measures(extractions: list[ExtractionResult]) -> list[Node]:
