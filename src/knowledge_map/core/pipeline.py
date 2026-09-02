@@ -108,6 +108,11 @@ class PolicyAreaAdapter(Protocol):
     ) -> List[TopicAssignment]:
         """Which of the article's Policy Areas each of its measures is about.
 
+        The article's content is the resolved text, as it is for classification
+        beside it: the areas and the measures were both derived from that text,
+        so judging them against the raw content would read pronouns where the
+        measures are named.
+
         Measures are named by the surface strings extraction produced, which is
         the only vocabulary an assignment may draw its measures from.
         """
@@ -253,9 +258,17 @@ class StoryPipeline:
             assignments: List[TopicAssignment] = []
             if policy_areas and measures:
                 logger.info("Assigning measures to Policy Areas...")
+                # Assignment reads the article as its other two inputs were
+                # derived: the areas were classified over the resolved text and
+                # the measures were extracted from chunks of it.  Handing it the
+                # raw content would ask it to connect measures named by resolved
+                # surface strings to a text that still says "the bill".
+                resolved_article = article.model_copy(
+                    update={"content": resolved_text}
+                )
                 with transport_failures_as_pipeline_errors("topic_assignment"):
                     assignments = self.policy_area_adapter.assign(
-                        article, policy_areas, measures
+                        resolved_article, policy_areas, measures
                     )
                 # Both drops are enforced here rather than in the prompt: the
                 # write path matches an assignment's endpoints, so one naming a

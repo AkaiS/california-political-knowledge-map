@@ -1275,6 +1275,34 @@ def test_assignment_is_given_the_article_its_areas_and_its_extracted_measures():
     assert assigner.assigned == [(POLICY_AREA_ARTICLE, [HOUSING], measures)]
 
 
+def test_assignment_reads_the_resolved_text_not_the_raw_content():
+    """The areas and the measures were both derived from the resolved text.
+
+    Assignment connects measures named by resolved surface strings to areas
+    classified over the same text, so reading the raw content would hand it
+    "She signed it." where the measure says "SB 623".
+    """
+
+    measures = [Node(name="SB 623", label="Bill")]
+    assigner = MockPolicyAreaAdapter([HOUSING])
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=ResolvingCoreferenceAdapter("SB 623 caps rent."),
+        extraction_adapter=MeasureExtractionAdapter(measures),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assigned_article, _, _ = assigner.assigned[0]
+    assert assigned_article.content == "SB 623 caps rent."
+    assert assigned_article.url == POLICY_AREA_ARTICLE.url
+    assert assigned_article.title == POLICY_AREA_ARTICLE.title
+
+
 def test_assignment_runs_after_the_extraction_loop():
     """The position Bill Session Resolution already occupies."""
 

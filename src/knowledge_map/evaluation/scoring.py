@@ -23,8 +23,8 @@ def f1(precision: float, recall: float) -> float:
     Every task that reports set agreement -- spans, clusters, nodes,
     relationships, Policy Areas, Topic Assignments -- reports the same three
     numbers, and the third is derived from the first two the same way in all
-    of them.  One definition here rather than one per task keeps a score named
-    `_f1` in a report meaning one thing.
+    of them.  One definition here rather than one per task keeps every score a
+    report names `..._f1` meaning one thing.
     """
 
     if precision + recall == 0.0:
