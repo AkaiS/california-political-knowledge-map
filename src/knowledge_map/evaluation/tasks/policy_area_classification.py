@@ -37,6 +37,7 @@ from knowledge_map.utils.models import (
     resolve_local_chat_model,
 )
 
+from ..scoring import f1
 from .registry import EvaluationTask, register
 
 FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
@@ -149,12 +150,6 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     return classify
 
 
-def _f1(precision: float, recall: float) -> float:
-    if precision + recall == 0.0:
-        return 0.0
-    return 2 * precision * recall / (precision + recall)
-
-
 class AgreedOnThePolicyAreas(Evaluator):
     """The same Policy Areas were chosen, by canonical name.
 
@@ -186,7 +181,7 @@ class AgreedOnThePolicyAreas(Evaluator):
         return {
             "policy_area_precision": precision,
             "policy_area_recall": recall,
-            "policy_area_f1": _f1(precision, recall),
+            "policy_area_f1": f1(precision, recall),
         }
 
 

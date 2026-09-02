@@ -36,7 +36,7 @@ from knowledge_map.utils.models import (
     resolve_local_chat_model,
 )
 
-from ..scoring import UNSCORED
+from ..scoring import UNSCORED, f1
 from .registry import EvaluationTask, register
 
 FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
@@ -215,12 +215,6 @@ def _by_identity(
     return {identity(item): item for item in items}
 
 
-def _f1(precision: float, recall: float) -> float:
-    if precision + recall == 0.0:
-        return 0.0
-    return 2 * precision * recall / (precision + recall)
-
-
 def _detection_scores(expected: set[Any], found: set[Any], prefix: str) -> dict[str, float]:
     matched = len(expected & found)
     precision = matched / len(found) if found else 0.0
@@ -228,7 +222,7 @@ def _detection_scores(expected: set[Any], found: set[Any], prefix: str) -> dict[
     return {
         f"{prefix}_precision": precision,
         f"{prefix}_recall": recall,
-        f"{prefix}_f1": _f1(precision, recall),
+        f"{prefix}_f1": f1(precision, recall),
     }
 
 
