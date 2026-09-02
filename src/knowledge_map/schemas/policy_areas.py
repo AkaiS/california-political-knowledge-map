@@ -15,6 +15,25 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from knowledge_map.ontology import news
+
+#: The closed vocabulary as the classification stage offers it to a model: one
+#: string per Policy Area, its canonical name, which is also how the write path
+#: keys the node.  Offering the id alongside would make an area two answers a
+#: model could pick between.
+PolicyAreaName = Literal[tuple(area.name for area in news.POLICY_AREAS)]  # type: ignore[valid-type]
+
+
+class PolicyAreaClassification(BaseModel):
+    """The Policy Areas one Source Article discusses.
+
+    No maximum is set: the Gold Set records the distribution before any limit
+    is drawn from it.  An article the vocabulary does not cover classifies to
+    nothing rather than to a nearest miss.
+    """
+
+    policy_areas: list[PolicyAreaName] = Field(default_factory=list)
+
 
 class TopicAssignment(BaseModel):
     """One measure named in a Source Article, and the Policy Area it is about."""

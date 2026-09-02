@@ -149,8 +149,9 @@ def test_neither_areas_nor_assignments_writes_nothing(transaction):
     tx.run.assert_not_called()
 
 
-def test_the_pipeline_does_not_yet_write_article_topics():
-    """A caller arrives with areas in 02 and with assignments in 04, not here."""
+def test_a_pipeline_without_the_classification_stage_writes_no_article_topics():
+    """The write path is driven by Policy Area Classification, so a pipeline
+    assembled without that stage has nothing article-level to write."""
 
     from test_pipeline import (
         MockCoreferenceAdapter,

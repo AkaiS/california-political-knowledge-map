@@ -13,13 +13,22 @@ from knowledge_map.schemas import (
     SourceArticle,
     StoryLink,
 )
+from pydantic_ai.exceptions import ModelHTTPError
+
 from knowledge_map.adapters.extraction import ExtractionError
+from knowledge_map.adapters.policy_areas import PolicyAreaClassificationError
+from knowledge_map.core.exceptions import (
+    PipelineConnectivityError,
+    PipelineRateLimitError,
+    classify_exception,
+)
 from knowledge_map.core.pipeline import (
     StoryPipeline,
     DatabaseAdapter,
     EmbeddingAdapter,
     CoreferenceAdapter,
     EntityExtractionAdapter,
+    PolicyAreaAdapter,
 )
 from knowledge_map.core.bill_sessions import parse_bill_designation, resolve_bill_sessions
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter
@@ -932,3 +941,254 @@ def test_pipeline_status_dry_run():
 
     pipeline.run(article, dry_run=True)
     assert status_tracker.updates == []
+
+
+class MockPolicyAreaAdapter:
+    """A fake classification stage that returns the areas it was given."""
+
+    def __init__(self, policy_areas=None, call_log=None):
+        self.policy_areas = list(policy_areas or [])
+        self.classified = []
+        self.call_log = call_log if call_log is not None else []
+
+    def classify(self, resolved_text: str) -> list[str]:
+        self.classified.append(resolved_text)
+        self.call_log.append("classify")
+        return list(self.policy_areas)
+
+    def health_check(self) -> bool:
+        return True
+
+
+class TopicRecordingDatabase(MockDatabaseAdapter):
+    """A database that remembers the article-level topic writes it received."""
+
+    def __init__(self, call_log=None):
+        super().__init__()
+        self.topics = []
+        self.call_log = call_log if call_log is not None else []
+
+    def ingest_article_topics(
+        self, article, policy_areas, assignments=None, bill_sessions=None
+    ):
+        self.topics.append((article, policy_areas, assignments))
+
+
+class ResolvingCoreferenceAdapter:
+    """A coreference stage whose resolved text differs from the article."""
+
+    def __init__(self, resolved_text: str, call_log=None):
+        self.resolved_text = resolved_text
+        self.call_log = call_log if call_log is not None else []
+
+    def resolve(self, content: str) -> CoreferenceResolutionRun:
+        self.call_log.append("resolve")
+        return CoreferenceResolutionRun(
+            resolved_text=self.resolved_text, discarded_proportion=0.0
+        )
+
+
+class OrderRecordingEmbeddingAdapter(MockEmbeddingAdapter):
+    def __init__(self, call_log):
+        self.call_log = call_log
+
+    def process_chunks(self, chunks):
+        self.call_log.append("embed")
+        return super().process_chunks(chunks)
+
+
+POLICY_AREA_ARTICLE = SourceArticle(
+    url="http://test.com/policy-areas",
+    title="Rent and clinics",
+    content="She signed it.",
+)
+
+
+def test_classified_areas_reach_the_database_as_article_level_topics():
+    db = TopicRecordingDatabase()
+    classifier = MockPolicyAreaAdapter(["Housing & Community Development", "Health"])
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=classifier,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert db.topics == [
+        (
+            POLICY_AREA_ARTICLE,
+            ["Housing & Community Development", "Health"],
+            None,
+        )
+    ]
+
+
+def test_classification_reads_the_resolved_text_before_chunking():
+    call_log: list[str] = []
+    coref = ResolvingCoreferenceAdapter("Kamala Harris signed it.", call_log)
+    classifier = MockPolicyAreaAdapter(["Health"], call_log)
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=OrderRecordingEmbeddingAdapter(call_log),
+        coreference_adapter=coref,
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=classifier,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert classifier.classified == ["Kamala Harris signed it."]
+    assert call_log == ["resolve", "classify", "embed"]
+
+
+def test_the_pipeline_result_carries_the_classified_areas():
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=MockPolicyAreaAdapter(["Water"]),
+    )
+
+    result = pipeline.run(POLICY_AREA_ARTICLE, dry_run=True)
+
+    assert result.policy_areas == ["Water"]
+
+
+def test_an_article_with_no_policy_areas_completes_and_is_persisted():
+    db = TopicRecordingDatabase()
+    status_tracker = MockStatusTracker()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=status_tracker,
+        policy_area_adapter=MockPolicyAreaAdapter([]),
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert db.articles == [POLICY_AREA_ARTICLE]
+    assert len(db.chunks) == 1
+    assert db.topics == [(POLICY_AREA_ARTICLE, [], None)]
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "COMPLETED")
+
+
+def test_a_dry_run_classifies_without_writing_article_topics():
+    db = TopicRecordingDatabase()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=MockPolicyAreaAdapter(["Health"]),
+    )
+
+    result = pipeline.run(POLICY_AREA_ARTICLE, dry_run=True)
+
+    assert result.policy_areas == ["Health"]
+    assert db.topics == []
+
+
+class FailingPolicyAreaAdapter:
+    def __init__(self, error):
+        self.error = error
+
+    def classify(self, resolved_text: str) -> list[str]:
+        raise self.error
+
+    def health_check(self) -> bool:
+        return True
+
+
+def test_a_classification_failure_logs_to_the_dlq_and_fails_the_article():
+    dlq = MockDeadLetterQueueAdapter()
+    status_tracker = MockStatusTracker()
+    db = TopicRecordingDatabase()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=status_tracker,
+        dlq_adapter=dlq,
+        policy_area_adapter=FailingPolicyAreaAdapter(
+            PolicyAreaClassificationError(
+                original_text="She signed it.",
+                validation_issues=["Interstellar Affairs is not a Policy Area"],
+                retry_count=3,
+                metadata={"model": "gemma"},
+            )
+        ),
+    )
+
+    with pytest.raises(PolicyAreaClassificationError):
+        pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert len(dlq.failures) == 1
+    failure = dlq.failures[0]
+    assert failure["url"] == POLICY_AREA_ARTICLE.url
+    assert failure["original_text"] == "She signed it."
+    assert failure["validation_issues"] == [
+        "Interstellar Affairs is not a Policy Area"
+    ]
+    assert failure["failure_type"] == "policy_area_classification_failure"
+    assert failure["retry_count"] == 3
+    assert failure["metadata"] == {"model": "gemma"}
+    assert failure["error_category"] == "policy_area_classification"
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "FAILED_DLQ")
+    assert db.articles == []
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_error", "expected_status"),
+    [
+        (429, PipelineRateLimitError, "UNPROCESSED"),
+        (503, PipelineConnectivityError, "UNPROCESSED"),
+        (401, PipelineConnectivityError, "SYSTEM_ERROR"),
+    ],
+)
+def test_a_transport_failure_in_classification_is_classified_like_every_stage(
+    status_code, expected_error, expected_status
+):
+    status_tracker = MockStatusTracker()
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=status_tracker,
+        policy_area_adapter=FailingPolicyAreaAdapter(
+            ModelHTTPError(
+                status_code=status_code, model_name="remote-model", body=None
+            )
+        ),
+    )
+
+    with pytest.raises(expected_error) as failure:
+        pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert failure.value.component == "policy_area_classification"
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, expected_status)
+
+
+def test_a_classification_failure_is_routed_to_the_dlq_by_batch_ingestion():
+    """The batch loop treats it as a Story-level failure, not a batch abort."""
+
+    assert classify_exception(
+        PolicyAreaClassificationError(original_text="She signed it.")
+    )

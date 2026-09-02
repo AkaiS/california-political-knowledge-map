@@ -102,7 +102,8 @@ def test_story_pipeline_assembly_passes_one_deployment_to_chat_stages_only() -> 
     dlq_adapter = MagicMock()
 
     with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter") as coref, \
-         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter") as extraction:
+         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter") as extraction, \
+         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter"):
         pipeline = build_story_pipeline(
             deployment,
             db_adapter=db_adapter,
@@ -134,6 +135,7 @@ def test_story_ingest_command_forwards_selected_deployment_to_both_chat_stages()
         patch("knowledge_map.cli.main.PydanticAIEmbeddingAdapter") as embedding,
         patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter") as coref,
         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter") as extraction,
+        patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as policy_areas,
         patch("knowledge_map.cli.main.LocalFileDLQAdapter"),
         patch("knowledge_map.cli.main.SQLiteStatusTracker"),
         patch("knowledge_map.cli.main.BatchIngestionService") as service,
@@ -146,6 +148,7 @@ def test_story_ingest_command_forwards_selected_deployment_to_both_chat_stages()
     embedding.assert_called_once_with()
     coref.assert_called_once_with(deployment=deployment)
     extraction.assert_called_once_with(deployment=deployment)
+    policy_areas.assert_called_once_with(deployment=deployment)
     service.return_value.run.assert_called_once_with()
 
 
@@ -364,3 +367,45 @@ def test_selected_openrouter_deployment_reaches_concrete_chat_stage_agents(
         }
         for body in requests
     )
+
+
+def test_story_pipeline_assembly_builds_the_policy_area_stage_from_the_deployment() -> None:
+    deployment = ModelDeployment(
+        kind=DeploymentKind.OPENROUTER,
+        model="remote/story-model",
+        provider_policy={"providers": ("google-ai-studio",)},
+    )
+
+    with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"), \
+         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"), \
+         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as policy_areas:
+        pipeline = build_story_pipeline(
+            deployment,
+            db_adapter=MagicMock(),
+            embedding_adapter=MagicMock(),
+            status_tracker=MagicMock(),
+        )
+
+    policy_areas.assert_called_once_with(deployment=deployment)
+    assert pipeline.policy_area_adapter is policy_areas.return_value
+
+
+def test_story_pipeline_assembly_preserves_the_policy_area_injection_seam() -> None:
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="local/story-model",
+        endpoint="http://story-local.test:8080/v1",
+    )
+    injected = MagicMock()
+
+    with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"), \
+         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"):
+        pipeline = build_story_pipeline(
+            deployment,
+            db_adapter=MagicMock(),
+            embedding_adapter=MagicMock(),
+            status_tracker=MagicMock(),
+            policy_area_adapter=injected,
+        )
+
+    assert pipeline.policy_area_adapter is injected

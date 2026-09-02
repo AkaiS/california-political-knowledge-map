@@ -86,6 +86,22 @@ class EntityExtractionAdapter(Protocol):
     def health_check(self) -> bool:
         ...
 
+class PolicyAreaAdapter(Protocol):
+    """The article-level topic judgement, decided once per Source Article.
+
+    One seam for both article-level topic stages: classification over the
+    resolved text here, and Topic Assignment beside it once extraction has
+    discovered the measures.
+    """
+
+    def classify(self, resolved_text: str) -> List[str]:
+        """The Policy Areas the article discusses, by canonical name."""
+        ...
+
+    def health_check(self) -> bool:
+        ...
+
+
 class DeadLetterQueueAdapter(Protocol):
     def log_failure(
         self,
@@ -107,12 +123,22 @@ class StatusTracker(Protocol):
 
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
+from knowledge_map.adapters.policy_areas import PolicyAreaClassificationError
 from knowledge_map.core.exceptions import (
     PipelineConnectivityError,
     PipelineException,
     PipelineRateLimitError,
     transport_failures_as_pipeline_errors,
 )
+
+
+#: The Dead Letter Queue category each stage failure is recorded under, so the
+#: pipeline keeps one vocabulary of failure across its stages.
+_ERROR_CATEGORIES = {
+    CoreferenceResolutionError: "coreference",
+    ExtractionError: "extraction",
+    PolicyAreaClassificationError: "policy_area_classification",
+}
 
 
 class StoryPipeline:
@@ -124,6 +150,7 @@ class StoryPipeline:
         extraction_adapter: EntityExtractionAdapter,
         status_tracker: StatusTracker,
         dlq_adapter: Optional[DeadLetterQueueAdapter] = None,
+        policy_area_adapter: Optional[PolicyAreaAdapter] = None,
     ) -> None:
         self.db_adapter = db_adapter
         self.embedding_adapter = embedding_adapter
@@ -131,6 +158,9 @@ class StoryPipeline:
         self.extraction_adapter = extraction_adapter
         self.status_tracker = status_tracker
         self.dlq_adapter = dlq_adapter
+        # A pipeline assembled without the stage classifies nothing and writes
+        # no article-level topics, as it did before the stage existed.
+        self.policy_area_adapter = policy_area_adapter
 
     def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
@@ -153,16 +183,30 @@ class StoryPipeline:
                 f"{resolution_run.discarded_proportion:.1%} discarded)."
             )
 
-            # 2. Chunking
+            # 2. Policy Area Classification, over the resolved text and
+            # before chunking: it is decided once for the article, and
+            # nothing earlier needs its result.
+            policy_areas: List[str] = []
+            if self.policy_area_adapter is not None:
+                logger.info("Classifying Policy Areas...")
+                with transport_failures_as_pipeline_errors(
+                    "policy_area_classification"
+                ):
+                    policy_areas = self.policy_area_adapter.classify(resolved_text)
+                logger.info(
+                    f"Article classified into {len(policy_areas)} Policy Area(s)."
+                )
+
+            # 3. Chunking
             logger.info("Chunking text...")
             chunks = chunk_article(resolved_text)
 
-            # 3. Embedding
+            # 4. Embedding
             logger.info("Generating embeddings...")
             with transport_failures_as_pipeline_errors("embedding"):
                 embeddings = self.embedding_adapter.process_chunks(chunks)
 
-            # 4. Extraction
+            # 5. Extraction
             logger.info("Extracting entities...")
             extractions = []
             for idx, chunk in enumerate(chunks):
@@ -176,7 +220,7 @@ class StoryPipeline:
                 extractions, article.published_date
             )
 
-            # 5. DB Persistence (skip if dry_run)
+            # 6. DB Persistence (skip if dry_run)
             if not dry_run:
                 logger.info("Ingesting article and chunks into DB...")
                 self.db_adapter.ingest_article(article)
@@ -188,11 +232,19 @@ class StoryPipeline:
                         chunk_id, extractions[idx], bill_sessions, event_dates
                     )
 
-                # 6. Update status to COMPLETED
+                if self.policy_area_adapter is not None:
+                    # Assignments arrive with the Topic Assignment stage; the
+                    # areas are article-level on their own.
+                    self.db_adapter.ingest_article_topics(
+                        article, policy_areas, None, bill_sessions
+                    )
+
+                # 7. Update status to COMPLETED
                 self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)
 
             return PipelineResult(
                 resolved_text=resolved_text,
+                policy_areas=policy_areas,
                 chunks=chunks,
                 embeddings=embeddings,
                 extractions=extractions,
@@ -216,8 +268,11 @@ class StoryPipeline:
             elif isinstance(e, PipelineException):
                 self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
 
-        if isinstance(e, (CoreferenceResolutionError, ExtractionError)):
-            error_cat = "coreference" if isinstance(e, CoreferenceResolutionError) else "extraction"
+        if isinstance(
+            e,
+            (CoreferenceResolutionError, ExtractionError, PolicyAreaClassificationError),
+        ):
+            error_cat = _ERROR_CATEGORIES[type(e)]
             resolution_run = getattr(e, "resolution_run", None)
             dlq_id = "N/A"
             if self.dlq_adapter:
