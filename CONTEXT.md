@@ -134,7 +134,7 @@ _Avoid_: Prompt, template, instruction set
 
 
 **Entity Extraction**:
-The process of identifying specific real-world entities (political actors, organizations, public policy measures) and the semantic relationships between them from unstructured article text.
+The process of identifying specific real-world entities (political actors, organizations, public policy measures) and the semantic relationships between them from unstructured article text, one Article Chunk at a time. It is not asked for Policy Areas: those are decided for the whole article by Policy Area Classification and Topic Assignment, and a Policy Area or topic relationship arriving from the chunk extractor is dropped and counted in the Adherence Report.
 _Avoid_: Named Entity Recognition, parsing, data extraction
 
 **Influence Graph Playground**:
@@ -168,7 +168,7 @@ The outcome of resolving one Source Article: the resolved text, the numbered sen
 _Avoid_: Resolution result, coref run, annotation run
 
 **Story Pipeline**:
-A synchronous pipeline coordinator that orchestrates the coreference resolution, chunking, embedding generation, entity extraction, and persistence steps for a Source Article.
+A synchronous pipeline coordinator that orchestrates the coreference resolution, Policy Area Classification, chunking, embedding generation, entity extraction, Topic Assignment, and persistence steps for a Source Article.
 _Avoid_: Ingestion runner, story processor
 
 **Pipeline Result**:
@@ -187,8 +187,12 @@ _Avoid_: Resolver wrapper, coref helper
 The adapter protocol and its concrete implementation that extracts entities and relationships from Article Chunks.
 _Avoid_: Extractor model, agent helper
 
+**Policy Area Adapter**:
+The adapter protocol and its concrete implementation behind both article-level topic stages: Policy Area Classification over a Source Article's resolved text, and Topic Assignment over that article, its areas, and its extracted measures. Two stages, one seam, so the Story Pipeline gains one collaborator and one fake covers both.
+_Avoid_: Topic adapter, classifier wrapper, two adapters
+
 **News Ontology**:
-The closed ontology of the structures a Source Article can actually produce — the labels, sub-labels, per-label properties, relationships, and Policy Area vocabulary that news prose supports. It is a subset of the primary ontology (`ontology.md`), which remains the authored whole, and it is the only thing extraction output is checked against.
+The closed ontology of the structures a Source Article can actually produce — the labels, sub-labels, per-label properties, relationships, and Policy Area vocabulary that news prose supports. It is a subset of the primary ontology (`ontology.md`), which remains the authored whole. Not every label it holds is Entity Extraction's to produce: it derives the extracted labels and relationships by setting aside the ones a named stage decides instead, `PolicyArea` and the topic relationships among them, and that derived subset is what extraction output is checked against.
 _Avoid_: Schema, extraction schema, LLM schema, ontology subset
 
 **Shortcut Rule**:
@@ -219,13 +223,22 @@ _Avoid_: Error log, validation errors, drop log, conformance failures
 The values that identify one relationship claim: a relationship's declared properties, and only those. Two articles asserting the same relationship at equal Claim Key values assert one claim and produce one edge; at differing values they assert two claims and produce two edges. Everything else an article said about the relationship stays in the Article Chunk the edge points back to.
 _Avoid_: Edge properties, relationship payload, identifying properties, edge attributes
 
+**Policy Area Classification**:
+The Story Pipeline stage that decides, once per Source Article and over its coreference-resolved text, which Policy Areas from the closed vocabulary the article discusses. It runs between Coreference Resolution and chunking, offers the vocabulary by canonical name so an id is never a second answer, and writes the article's own topic edge. An article the vocabulary does not cover classifies to none and continues.
+_Avoid_: Topic Assignment, Entity Extraction, topic classification, tagging, per-chunk classification
+
+**Topic Assignment**:
+The Story Pipeline stage that decides which of a Source Article's classified Policy Areas each measure the article names is about. It runs once per article after the extraction loop, in the position Bill Session Resolution already occupies, because extraction is what discovers the measures. Its standard is what the article states rather than what a chunk states, and an assignment naming a measure no extraction produced or an area outside the article's classified set is dropped before persistence.
+_Avoid_: Policy Area Classification, Entity Extraction, topic tagging, inferred topic edge
+
 **Policy Area**:
-A thematic policy category serving as a hub node that Bills, Props, Article Chunks, and Source Articles attach to. Its vocabulary is fixed and declared by the ontology rather than invented per article, so that two articles covering the same subject reach the same hub.
-_Avoid_: Topic, tag, category, subject, theme
+A thematic policy category serving as a hub node that Bills, Props, and Source Articles attach to. Its vocabulary is fixed and declared by the ontology rather than invented per article, so that two articles covering the same subject reach the same hub. Policy Area Classification writes the node, and the edge to it from a Source Article is article-level: the article discusses the area, and no Article Chunk carries an edge of its own. The relationships are named for topic and the stage that draws one from a measure is Topic Assignment, so "topic" names those and never the node.
+_Avoid_: Tag, category, subject, theme; "a topic" as a name for the node
 
 **Grounding Evidence**:
-The Article Chunks loaded into context to support a retrieval answer. The graph is what reaches them — a query assembles a subgraph, and the Chunks attached to its nodes and edges are the evidence — rather than what supplies them: a relationship asserts existence and identity only, so the detail an answer needs lives in the Chunk the edge points back to. An answer derived from graph structure alone still carries the Chunks behind each element it counted.
+The Article Chunks loaded into context to support a retrieval answer. The graph is what reaches them — a query assembles a subgraph, and the Chunks attached to its nodes and edges are the evidence — rather than what supplies them: a relationship asserts existence and identity only, so the detail an answer needs lives in the Chunk the edge points back to. An answer derived from graph structure alone still carries the Chunks behind each element it counted. A topic edge names no Article Chunk, because it is decided for the whole article: what grounds it is the Source Article, and the Chunks reached through it are the ones that article attaches.
 _Avoid_: Context, retrieved documents, source text, supporting chunks
+
 **Evaluation Gold Set**:
 Every human-labeled example for one component operation, authored as one YAML file under `evals/gold/`. The file is the Gold Set; there is no database copy, no construction factory, and no immutable revision beyond the commit the file is read at. Revising it is editing the file and committing; reviewing a revision is reading the diff. Reading it validates every case against the task's own Pydantic types, so a mislabeled field is caught at read time rather than at run time.
 _Avoid_: Test fixtures, benchmark data, model labels, dataset
