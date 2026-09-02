@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Mapping
 from typing import Any, Literal, NamedTuple
 
 from pydantic import BaseModel
@@ -29,6 +30,7 @@ from knowledge_map.utils.models import (
     resolve_local_chat_model,
 )
 
+from ..scoring import UNSCORED
 from .registry import EvaluationTask, register
 
 FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
@@ -128,12 +130,12 @@ class RecalledARelevantArticle(Evaluator):
     """A `RELEVANT` article was not dropped.
 
     Read beside agreement, since a dropped relevant article never reaches
-    the graph.  Returns `None` for cases labeled `IRRELEVANT`.
+    the graph.  Scores nothing for cases labeled `IRRELEVANT`.
     """
 
-    def evaluate(self, ctx: EvaluatorContext) -> bool | None:
+    def evaluate(self, ctx: EvaluatorContext) -> bool | Mapping[str, float]:
         if ctx.expected_output.classification != "RELEVANT":
-            return None
+            return UNSCORED
         return ctx.output.classification == "RELEVANT"
 
 

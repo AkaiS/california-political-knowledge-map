@@ -39,6 +39,7 @@ from knowledge_map.utils.models import (
     resolve_local_chat_model,
 )
 
+from ..scoring import UNSCORED
 from .registry import EvaluationTask, register
 
 FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
@@ -261,16 +262,16 @@ class AgreedOnTheCanonicalEntity(Evaluator):
     """Of the mentions both found, how many carry the same entity name.
 
     Conditional on detection: read it as "when it saw the mention, did it
-    name the right entity".  Returns `None`, not 0, when the two sets share
-    no location.
+    name the right entity".  Scores nothing, rather than 0, when the two
+    sets share no location.
     """
 
-    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float] | None:
+    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
         expected = entity_by_identity(ctx.expected_output.mention_spans)
         found = entity_by_identity(ctx.output.mention_spans)
         shared = expected.keys() & found.keys()
         if not shared:
-            return None
+            return UNSCORED
         agreed = sum(expected[key] == found[key] for key in shared)
         return {"entity_accuracy": agreed / len(shared)}
 
@@ -284,7 +285,7 @@ class MatchedTheSilverClustering(Evaluator):
     miss, not this one's.  Returns `None` on an empty intersection.
     """
 
-    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float] | None:
+    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
         expected = entity_by_identity(ctx.expected_output.mention_spans)
         found = entity_by_identity(ctx.output.mention_spans)
         shared = sorted(
@@ -292,7 +293,7 @@ class MatchedTheSilverClustering(Evaluator):
             key=lambda key: (key.sentence_label, key.mention_text, key.occurrence),
         )
         if not shared:
-            return None
+            return UNSCORED
 
         expected_clusters = _clusters(shared, expected)
         found_clusters = _clusters(shared, found)
@@ -347,11 +348,11 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
     decisions: a rejection the annotator repaired cost a round, not an
     answer.
 
-    Returns `None` when nothing was judgeable, which is every
+    Scores nothing when nothing was judgeable, which is every
     `coreference_annotator` run, so this can sit on both tasks.
     """
 
-    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float] | None:
+    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
         silver = entity_by_identity(ctx.expected_output.mention_spans)
 
         # (the span was correct, the Critic rejected it)
@@ -373,7 +374,7 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
             )
 
         if not judged:
-            return None
+            return UNSCORED
 
         rejected = [correct for correct, was_rejected in judged if was_rejected]
         wrong = [was_rejected for correct, was_rejected in judged if not correct]
@@ -395,7 +396,7 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
             scores["critic_kept_correct_spans"] = sum(
                 not was_rejected for was_rejected in right
             ) / len(right)
-        return scores or None
+        return scores or UNSCORED
 
 
 #: Scored the same way for the annotator alone and for the whole loop, so

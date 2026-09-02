@@ -7,6 +7,7 @@ from pydantic_evals.evaluators import EvaluatorContext
 
 import knowledge_map.adapters.coreference as coreference_adapter_module
 import knowledge_map.evaluation.tasks.coreference as coreference_task_module
+from knowledge_map.evaluation.scoring import UNSCORED
 from knowledge_map.evaluation.tasks import task_named
 from knowledge_map.evaluation.tasks.coreference import (
     AgreedOnTheCanonicalEntity,
@@ -339,13 +340,15 @@ def test_a_shortened_name_is_a_disagreement_here() -> None:
 
 
 def test_no_shared_mention_is_unscored_rather_than_zero() -> None:
+    """Unscored is `UNSCORED`: `pydantic-evals` fails the case on `None`."""
+
     assert (
         _scored(
             AgreedOnTheCanonicalEntity(),
             [_span("1", "He", "X")],
             [_span("9", "they", "Y")],
         )
-        is None
+        == UNSCORED
     )
 
 
@@ -433,7 +436,7 @@ def test_clustering_ignores_mentions_only_one_side_found() -> None:
 def test_clustering_is_unscored_when_nothing_overlaps() -> None:
     assert (
         _scored(MatchedTheSilverClustering(), [_span("1", "He", "X")], [])
-        is None
+        == UNSCORED
     )
 
 
@@ -571,7 +574,7 @@ def test_validation_discards_are_not_critic_decisions() -> None:
         )
     ]
 
-    assert _critic_scored(silver, outcomes) is None
+    assert _critic_scored(silver, outcomes) == UNSCORED
 
 
 def test_an_annotator_only_run_reports_no_critic_scores() -> None:
@@ -586,11 +589,11 @@ def test_an_annotator_only_run_reports_no_critic_scores() -> None:
         )
     ]
 
-    assert _critic_scored(silver, outcomes) is None
+    assert _critic_scored(silver, outcomes) == UNSCORED
 
 
 def test_a_run_with_no_outcomes_reports_nothing() -> None:
-    assert _critic_scored([_span("1", "He", "Steve Hilton")], []) is None
+    assert _critic_scored([_span("1", "He", "Steve Hilton")], []) == UNSCORED
 
 
 def test_a_half_right_critic_scores_a_half() -> None:
