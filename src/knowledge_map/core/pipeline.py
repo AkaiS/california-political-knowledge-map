@@ -3,6 +3,7 @@ from typing import List, Optional, Protocol
 
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
+from knowledge_map.core.topic_assignment import extracted_measures, supported_assignments
 from knowledge_map.schemas import (
     AdherenceReport,
     ArticleChunk,
@@ -11,6 +12,7 @@ from knowledge_map.schemas import (
     CoreferenceResolutionRun,
     ExtractionResult,
     LegislativeEventDates,
+    Node,
     PipelineResult,
     SourceArticle,
     TopicAssignment,
@@ -98,6 +100,19 @@ class PolicyAreaAdapter(Protocol):
         """The Policy Areas the article discusses, by canonical name."""
         ...
 
+    def assign(
+        self,
+        article: SourceArticle,
+        policy_areas: List[str],
+        measures: List[Node],
+    ) -> List[TopicAssignment]:
+        """Which of the article's Policy Areas each of its measures is about.
+
+        Measures are named by the surface strings extraction produced, which is
+        the only vocabulary an assignment may draw its measures from.
+        """
+        ...
+
     def health_check(self) -> bool:
         ...
 
@@ -123,7 +138,10 @@ class StatusTracker(Protocol):
 
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
-from knowledge_map.adapters.policy_areas import PolicyAreaClassificationError
+from knowledge_map.adapters.policy_areas import (
+    PolicyAreaClassificationError,
+    TopicAssignmentError,
+)
 from knowledge_map.core.exceptions import (
     PipelineConnectivityError,
     PipelineException,
@@ -138,6 +156,7 @@ _ERROR_CATEGORIES = {
     CoreferenceResolutionError: "coreference",
     ExtractionError: "extraction",
     PolicyAreaClassificationError: "policy_area_classification",
+    TopicAssignmentError: "topic_assignment",
 }
 
 
@@ -226,7 +245,28 @@ class StoryPipeline:
                 extractions, article.published_date
             )
 
-            # 6. DB Persistence (skip if dry_run)
+            # 6. Topic Assignment, the other article-level pass over the
+            # extractions: it needs every measure the article names, so it
+            # cannot run before extraction has discovered them.  With no areas
+            # or no measures there is nothing for it to decide.
+            measures = extracted_measures(extractions)
+            assignments: List[TopicAssignment] = []
+            if policy_areas and measures:
+                logger.info("Assigning measures to Policy Areas...")
+                with transport_failures_as_pipeline_errors("topic_assignment"):
+                    assignments = self.policy_area_adapter.assign(
+                        article, policy_areas, measures
+                    )
+                # Both drops are enforced here rather than in the prompt: the
+                # write path matches an assignment's endpoints, so one naming a
+                # measure or an area that is not there would write nothing at
+                # all instead of saying so.
+                assignments = supported_assignments(
+                    assignments, measures, policy_areas
+                )
+            logger.info(f"Assigned {len(assignments)} measure(s) to a Policy Area.")
+
+            # 7. DB Persistence (skip if dry_run)
             if not dry_run:
                 logger.info("Ingesting article and chunks into DB...")
                 self.db_adapter.ingest_article(article)
@@ -238,13 +278,13 @@ class StoryPipeline:
                         chunk_id, extractions[idx], bill_sessions, event_dates
                     )
 
-                # Assignments arrive with the Topic Assignment stage; the areas
-                # are article-level on their own.
+                # Both halves of the article-level topic judgement are written
+                # together, at the level they were decided.
                 self.db_adapter.ingest_article_topics(
-                    article, policy_areas, None, bill_sessions
+                    article, policy_areas, assignments, bill_sessions
                 )
 
-                # 7. Update status to COMPLETED
+                # 8. Update status to COMPLETED
                 self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)
 
             return PipelineResult(

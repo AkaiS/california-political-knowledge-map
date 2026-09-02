@@ -44,3 +44,14 @@ class TopicAssignment(BaseModel):
     measure_label: Literal["Bill", "Prop"]
     #: The canonical name of the Policy Area, which is how the node is keyed.
     policy_area: str = Field(..., min_length=1)
+
+
+class TopicAssignments(BaseModel):
+    """Every measure-to-area assignment one Source Article supports.
+
+    An assignment is not marked with how it was arrived at.  A declared
+    relationship property joins that relationship's Claim Key, so two edges
+    differing only in their provenance would become two claims about one pair.
+    """
+
+    assignments: list[TopicAssignment] = Field(default_factory=list)

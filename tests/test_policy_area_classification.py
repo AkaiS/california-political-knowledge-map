@@ -167,7 +167,7 @@ def test_the_adapter_reports_unhealthy_when_the_model_cannot_be_reached():
 
 
 def test_the_pipeline_declares_one_policy_area_protocol():
-    """One seam for both stages: classification here, assignment in 04."""
+    """One seam for both article-level topic stages, not one seam each."""
 
     methods = [
         name
@@ -175,6 +175,6 @@ def test_the_pipeline_declares_one_policy_area_protocol():
         if not name.startswith("_")
     ]
 
-    assert sorted(methods) == ["classify", "health_check"]
-    assert callable(getattr(PydanticAIPolicyAreaAdapter, "classify", None))
-    assert callable(getattr(PydanticAIPolicyAreaAdapter, "health_check", None))
+    assert sorted(methods) == ["assign", "classify", "health_check"]
+    for method in methods:
+        assert callable(getattr(PydanticAIPolicyAreaAdapter, method, None))

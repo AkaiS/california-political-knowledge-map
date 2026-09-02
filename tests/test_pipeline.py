@@ -1,5 +1,6 @@
-import pytest
 import logging
+
+import pytest
 from knowledge_map.schemas import (
     AdherenceReport,
     ArticleChunk,
@@ -12,11 +13,15 @@ from knowledge_map.schemas import (
     PipelineResult,
     SourceArticle,
     StoryLink,
+    TopicAssignment,
 )
 from pydantic_ai.exceptions import ModelHTTPError
 
 from knowledge_map.adapters.extraction import ExtractionError
-from knowledge_map.adapters.policy_areas import PolicyAreaClassificationError
+from knowledge_map.adapters.policy_areas import (
+    PolicyAreaClassificationError,
+    TopicAssignmentError,
+)
 from knowledge_map.core.exceptions import (
     PipelineConnectivityError,
     PipelineRateLimitError,
@@ -78,17 +83,28 @@ class MockDatabaseAdapter:
 
 
 class MockPolicyAreaAdapter:
-    """A fake classification stage that returns the areas it was given."""
+    """A fake for both article-level topic stages behind the one seam.
 
-    def __init__(self, policy_areas=None, call_log=None):
+    Returns the areas and the assignments it was given, and records what each
+    stage was handed.
+    """
+
+    def __init__(self, policy_areas=None, call_log=None, assignments=None):
         self.policy_areas = list(policy_areas or [])
+        self.assignments = list(assignments or [])
         self.classified = []
+        self.assigned = []
         self.call_log = call_log if call_log is not None else []
 
     def classify(self, resolved_text: str) -> list[str]:
         self.classified.append(resolved_text)
         self.call_log.append("classify")
         return list(self.policy_areas)
+
+    def assign(self, article, policy_areas, measures):
+        self.assigned.append((article, list(policy_areas), list(measures)))
+        self.call_log.append("assign")
+        return list(self.assignments)
 
     def health_check(self) -> bool:
         return True
@@ -1044,7 +1060,7 @@ def test_classified_areas_reach_the_database_as_article_level_topics():
         (
             POLICY_AREA_ARTICLE,
             ["Housing & Community Development", "Health"],
-            None,
+            [],
         )
     ]
 
@@ -1101,7 +1117,7 @@ def test_an_article_with_no_policy_areas_completes_and_is_persisted():
 
     assert db.articles == [POLICY_AREA_ARTICLE]
     assert len(db.chunks) == 1
-    assert db.topics == [(POLICY_AREA_ARTICLE, [], None)]
+    assert db.topics == [(POLICY_AREA_ARTICLE, [], [])]
     assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "COMPLETED")
 
 
@@ -1213,3 +1229,258 @@ def test_a_classification_failure_is_routed_to_the_dlq_by_batch_ingestion():
     assert classify_exception(
         PolicyAreaClassificationError(original_text="She signed it.")
     )
+
+
+class MeasureExtractionAdapter(MockEntityExtractionAdapter):
+    """An extraction stage that produces the measures it was given, per chunk."""
+
+    def __init__(self, nodes=None, call_log=None):
+        super().__init__()
+        self.nodes = list(nodes or [Node(name="SB 623", label="Bill")])
+        self.call_log = call_log if call_log is not None else []
+
+    def extract(self, chunk_text: str) -> ExtractionResult:
+        self.calls.append(chunk_text)
+        self.call_log.append("extract")
+        return ExtractionResult(
+            nodes=[node.model_copy(deep=True) for node in self.nodes],
+            relationships=[],
+        )
+
+
+HOUSING = "Housing & Community Development"
+
+HOUSING_ASSIGNMENT = TopicAssignment(
+    measure_name="SB 623",
+    measure_label="Bill",
+    policy_area=HOUSING,
+)
+
+
+def test_assignment_is_given_the_article_its_areas_and_its_extracted_measures():
+    measures = [Node(name="SB 623", label="Bill"), Node(name="Prop 13", label="Prop")]
+    assigner = MockPolicyAreaAdapter([HOUSING])
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(measures),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert assigner.assigned == [(POLICY_AREA_ARTICLE, [HOUSING], measures)]
+
+
+def test_assignment_runs_after_the_extraction_loop():
+    """The position Bill Session Resolution already occupies."""
+
+    call_log: list[str] = []
+    assigner = MockPolicyAreaAdapter([HOUSING], call_log)
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=OrderRecordingEmbeddingAdapter(call_log),
+        coreference_adapter=ResolvingCoreferenceAdapter("SB 623 caps rent.", call_log),
+        extraction_adapter=MeasureExtractionAdapter(call_log=call_log),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert call_log == ["resolve", "classify", "embed", "extract", "assign"]
+
+
+def test_assignments_reach_the_database_alongside_the_areas():
+    db = TopicRecordingDatabase()
+    assigner = MockPolicyAreaAdapter([HOUSING], assignments=[HOUSING_ASSIGNMENT])
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert db.topics == [(POLICY_AREA_ARTICLE, [HOUSING], [HOUSING_ASSIGNMENT])]
+
+
+def test_an_assignment_naming_an_unextracted_measure_never_reaches_the_database():
+    db = TopicRecordingDatabase()
+    hallucinated = TopicAssignment(
+        measure_name="SB 999", measure_label="Bill", policy_area=HOUSING
+    )
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=MockPolicyAreaAdapter(
+            [HOUSING], assignments=[hallucinated, HOUSING_ASSIGNMENT]
+        ),
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert db.topics == [(POLICY_AREA_ARTICLE, [HOUSING], [HOUSING_ASSIGNMENT])]
+
+
+def test_an_assignment_naming_an_unclassified_area_never_reaches_the_database():
+    db = TopicRecordingDatabase()
+    contradiction = TopicAssignment(
+        measure_name="SB 623", measure_label="Bill", policy_area="Water"
+    )
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=MockStatusTracker(),
+        policy_area_adapter=MockPolicyAreaAdapter(
+            [HOUSING], assignments=[contradiction, HOUSING_ASSIGNMENT]
+        ),
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert db.topics == [(POLICY_AREA_ARTICLE, [HOUSING], [HOUSING_ASSIGNMENT])]
+
+
+def test_an_article_with_no_areas_completes_without_calling_assignment():
+    db = TopicRecordingDatabase()
+    status_tracker = MockStatusTracker()
+    assigner = MockPolicyAreaAdapter([], assignments=[HOUSING_ASSIGNMENT])
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=status_tracker,
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert assigner.assigned == []
+    assert db.topics == [(POLICY_AREA_ARTICLE, [], [])]
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "COMPLETED")
+
+
+def test_an_article_with_no_extracted_measures_completes_without_calling_assignment():
+    db = TopicRecordingDatabase()
+    status_tracker = MockStatusTracker()
+    assigner = MockPolicyAreaAdapter([HOUSING], assignments=[HOUSING_ASSIGNMENT])
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MockEntityExtractionAdapter(),
+        status_tracker=status_tracker,
+        policy_area_adapter=assigner,
+    )
+
+    pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert assigner.assigned == []
+    assert db.topics == [(POLICY_AREA_ARTICLE, [HOUSING], [])]
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "COMPLETED")
+
+
+class FailingAssignmentAdapter(MockPolicyAreaAdapter):
+    def __init__(self, error, policy_areas=None):
+        super().__init__(policy_areas or [HOUSING])
+        self.error = error
+
+    def assign(self, article, policy_areas, measures):
+        raise self.error
+
+
+def test_an_assignment_failure_logs_to_the_dlq_and_fails_the_article():
+    dlq = MockDeadLetterQueueAdapter()
+    status_tracker = MockStatusTracker()
+    db = TopicRecordingDatabase()
+
+    pipeline = StoryPipeline(
+        db_adapter=db,
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=status_tracker,
+        dlq_adapter=dlq,
+        policy_area_adapter=FailingAssignmentAdapter(
+            TopicAssignmentError(
+                original_text="She signed it.",
+                validation_issues=["Statute is not a measure label"],
+                retry_count=3,
+                metadata={"model": "gemma"},
+            )
+        ),
+    )
+
+    with pytest.raises(TopicAssignmentError):
+        pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert len(dlq.failures) == 1
+    failure = dlq.failures[0]
+    assert failure["url"] == POLICY_AREA_ARTICLE.url
+    assert failure["original_text"] == "She signed it."
+    assert failure["validation_issues"] == ["Statute is not a measure label"]
+    assert failure["failure_type"] == "topic_assignment_failure"
+    assert failure["retry_count"] == 3
+    assert failure["metadata"] == {"model": "gemma"}
+    assert failure["error_category"] == "topic_assignment"
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, "FAILED_DLQ")
+    assert db.articles == []
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_error", "expected_status"),
+    [
+        (429, PipelineRateLimitError, "UNPROCESSED"),
+        (503, PipelineConnectivityError, "UNPROCESSED"),
+        (401, PipelineConnectivityError, "SYSTEM_ERROR"),
+    ],
+)
+def test_a_transport_failure_in_assignment_is_classified_like_every_stage(
+    status_code, expected_error, expected_status
+):
+    status_tracker = MockStatusTracker()
+
+    pipeline = StoryPipeline(
+        db_adapter=TopicRecordingDatabase(),
+        embedding_adapter=MockEmbeddingAdapter(),
+        coreference_adapter=MockCoreferenceAdapter(),
+        extraction_adapter=MeasureExtractionAdapter(),
+        status_tracker=status_tracker,
+        policy_area_adapter=FailingAssignmentAdapter(
+            ModelHTTPError(
+                status_code=status_code, model_name="remote-model", body=None
+            )
+        ),
+    )
+
+    with pytest.raises(expected_error) as failure:
+        pipeline.run(POLICY_AREA_ARTICLE)
+
+    assert failure.value.component == "topic_assignment"
+    assert status_tracker.updates[-1] == (POLICY_AREA_ARTICLE.url, expected_status)
+
+
+def test_an_assignment_failure_is_routed_to_the_dlq_by_batch_ingestion():
+    """The batch loop treats it as a Story-level failure, not a batch abort."""
+
+    assert classify_exception(TopicAssignmentError(original_text="She signed it."))
+

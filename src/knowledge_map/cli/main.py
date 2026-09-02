@@ -515,7 +515,9 @@ def main(args=None):
             adapter = PydanticAICoreferenceAdapter()
         elif component == "extraction":
             adapter = PydanticAIEntityExtractionAdapter()
-        elif component == "policy_area_classification":
+        elif component in ("policy_area_classification", "topic_assignment"):
+            # Both article-level topic stages sit behind one adapter, so one
+            # health check answers for either lock.
             adapter = PydanticAIPolicyAreaAdapter()
         elif component == "database":
             uri = os.environ.get("NEO4J_URI")

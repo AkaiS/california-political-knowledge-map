@@ -5,7 +5,10 @@ from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
 from knowledge_map.adapters.coreference import CoreferenceResolutionError
 from knowledge_map.adapters.extraction import ExtractionError
-from knowledge_map.adapters.policy_areas import PolicyAreaClassificationError
+from knowledge_map.adapters.policy_areas import (
+    PolicyAreaClassificationError,
+    TopicAssignmentError,
+)
 
 
 class PipelineException(Exception):
@@ -43,7 +46,12 @@ def classify_exception(e: Exception) -> bool:
     """
     return isinstance(
         e,
-        (CoreferenceResolutionError, ExtractionError, PolicyAreaClassificationError),
+        (
+            CoreferenceResolutionError,
+            ExtractionError,
+            PolicyAreaClassificationError,
+            TopicAssignmentError,
+        ),
     )
 
 
