@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, runtime_checkable
 
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
@@ -13,11 +13,13 @@ from knowledge_map.schemas import (
     LegislativeEventDates,
     PipelineResult,
     SourceArticle,
+    TopicAssignment,
 )
 from knowledge_map.utils.chunking import chunk_article
 
 logger = logging.getLogger(__name__)
 
+@runtime_checkable
 class DatabaseAdapter(Protocol):
     def ingest_article(self, article: SourceArticle) -> None:
         ...
@@ -37,6 +39,20 @@ class DatabaseAdapter(Protocol):
         bill_sessions: BillSessionResolutions | None = None,
         event_dates: LegislativeEventDates | None = None,
     ) -> None:
+        ...
+
+    def ingest_article_topics(
+        self,
+        article: SourceArticle,
+        policy_areas: List[str],
+        assignments: List[TopicAssignment] | None = None,
+        bill_sessions: BillSessionResolutions | None = None,
+    ) -> None:
+        """Write the Policy Areas a Source Article discusses and its assignments.
+
+        Named for the level it works at: these edges are decided once per
+        article, unlike the per-chunk write above.
+        """
         ...
 
     def health_check(self) -> bool:

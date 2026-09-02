@@ -10,7 +10,9 @@ from knowledge_map.schemas import (
     BillSessionResolutions,
     ExtractionResult,
     LegislativeEventDates,
+    Relationship,
     SourceArticle,
+    TopicAssignment,
 )
 
 
@@ -109,6 +111,25 @@ def _write_relationship(
         parameters["chunk_id"] = chunk_id
 
     tx.run(query, **parameters)
+
+
+def _topic_endpoint_id(article: SourceArticle, bill_sessions: BillSessionResolutions):
+    """Resolve an article-level topic edge's endpoint to a node primary key.
+
+    The measure endpoints resolve exactly as the chunk extraction write
+    resolves one, Bill Session Resolution included; the Source Article is the
+    endpoint that write never has, and its URL is its key.
+    """
+
+    def resolve(label: str, name: str) -> str:
+        if label == "NewsArticle":
+            return article.url
+        if label != "Bill":
+            return derived_key(label, name)
+        resolution = bill_sessions.get(name)
+        return bill_key(resolution.session, resolution.name, name)
+
+    return resolve
 
 
 def _validated_labels(label: str, sub_labels: list[str]) -> str:
@@ -332,6 +353,73 @@ class Neo4jAdapter:
                 session.execute_write(_tx)
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to ingest chunk extraction to Neo4j: {e}")
+
+    def ingest_article_topics(
+        self,
+        article: SourceArticle,
+        policy_areas: list[str],
+        assignments: list[TopicAssignment] | None = None,
+        bill_sessions: BillSessionResolutions | None = None,
+    ) -> None:
+        """Write what a Source Article is about, at the level it was decided.
+
+        A Policy Area is judged once per article, so its edge hangs off the
+        Source Article rather than off any one Article Chunk, and an assignment
+        carries no chunk: the article is what connects the measure to the area.
+
+        Areas with no assignments is a normal call, not an empty case — it is
+        what the pipeline hands over between classification and assignment.
+        """
+
+        assignments = assignments or []
+        bill_sessions = bill_sessions or BillSessionResolutions()
+        if not policy_areas and not assignments:
+            return
+
+        driver = self.connect()
+        try:
+            with driver.session() as session:
+                def _tx(tx):
+                    for name in policy_areas:
+                        # Keyed like every non-Bill node, so the hub one
+                        # article's classification writes is the node a later
+                        # article reaches.
+                        node_id = derived_key("PolicyArea", name)
+                        tx.run(
+                            "MERGE (n:PolicyArea {id: $node_id}) "
+                            "SET n += $properties, n.id = $node_id",
+                            node_id=node_id,
+                            properties={"name": name},
+                        )
+                        _write_relationship(
+                            tx,
+                            Relationship(
+                                source=article.url,
+                                source_label="NewsArticle",
+                                target=name,
+                                target_label="PolicyArea",
+                                relationship_type="DISCUSSES_TOPIC",
+                            ),
+                            {},
+                            _topic_endpoint_id(article, bill_sessions),
+                        )
+
+                    for assignment in assignments:
+                        _write_relationship(
+                            tx,
+                            Relationship(
+                                source=assignment.measure_name,
+                                source_label=assignment.measure_label,
+                                target=assignment.policy_area,
+                                target_label="PolicyArea",
+                                relationship_type="ABOUT_TOPIC",
+                            ),
+                            {},
+                            _topic_endpoint_id(article, bill_sessions),
+                        )
+                session.execute_write(_tx)
+        except Exception as e:
+            raise Neo4jConnectionError(f"Failed to ingest article topics to Neo4j: {e}")
 
     def clear_database(self):
         driver = self.connect()

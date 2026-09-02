@@ -8,6 +8,7 @@ from .extraction import (
 )
 from .bill_sessions import BillSessionResolution, BillSessionResolutions
 from .legislative_events import LegislativeEventDate, LegislativeEventDates
+from .policy_areas import TopicAssignment
 from .chunking import ArticleChunk
 from .coreference import (
     CoreferenceResolutionRun,
