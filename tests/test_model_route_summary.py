@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,19 +34,19 @@ from knowledge_map.utils.models import (
 )
 
 
-class _PromptInput(BaseModel):
+class _ModelRoutePromptInput(BaseModel):
     prompt: str
 
 
 @dataclass
-class _ModelJudge(Evaluator):
+class _ModelOutputAcceptanceEvaluator(Evaluator):
     agent: Agent
 
     async def evaluate(self, ctx: EvaluatorContext) -> bool:
         return (await self.agent.run(f"Judge {ctx.output}")).output == "accepted"
 
 
-def _gold_set(case_id: str = "case-route") -> EvaluationGoldSet:
+def _build_model_route_gold_set(case_id: str = "case-route") -> EvaluationGoldSet:
     return EvaluationGoldSet(
         task="model-routes",
         description="Model route summary cases.",
@@ -53,13 +54,13 @@ def _gold_set(case_id: str = "case-route") -> EvaluationGoldSet:
             EvaluationCase(
                 id=case_id,
                 description="One model response",
-                task_input=_PromptInput(prompt="Resolve this."),
+                task_input=_ModelRoutePromptInput(prompt="Resolve this."),
             ),
         ),
     )
 
 
-def _deployment() -> ModelDeployment:
+def _build_openrouter_model_route_deployment() -> ModelDeployment:
     return ModelDeployment(
         kind=DeploymentKind.OPENROUTER,
         model="requested/model",
@@ -67,8 +68,10 @@ def _deployment() -> ModelDeployment:
     )
 
 
-def _completion(
-    *, response_model: str = "effective/model", provider: str | None = "observed/provider"
+def _build_chat_completion_payload(
+    *,
+    response_model: str = "effective/model",
+    provider: str | None = "observed/provider",
 ) -> dict:
     response = {
         "id": "route-response",
@@ -89,20 +92,43 @@ def _completion(
     return response
 
 
+def _build_local_model_route_deployment() -> ModelDeployment:
+    return ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="local/requested-model",
+        endpoint="http://llama.test/v1",
+        request_settings=ModelRequestSettings(max_attempts=1),
+    )
+
+
+def _build_chat_agent_with_mock_transport(
+    deployment: ModelDeployment,
+    handler: Callable[[httpx.Request], httpx.Response | Awaitable[httpx.Response]],
+    *,
+    openrouter_retry_hooks: OpenRouterRetryHooks | None = None,
+) -> Agent:
+    return Agent(
+        get_chat_model(
+            deployment,
+            transport=httpx.MockTransport(handler),
+            openrouter_retry_hooks=openrouter_retry_hooks,
+        ),
+        output_type=str,
+        defer_model_check=True,
+    )
+
+
 def test_completed_report_serializes_one_observed_model_route(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-test")
-    deployment = _deployment()
-    model = get_chat_model(
+    deployment = _build_openrouter_model_route_deployment()
+    agent = _build_chat_agent_with_mock_transport(
         deployment,
-        transport=httpx.MockTransport(
-            lambda request: httpx.Response(200, json=_completion())
-        ),
+        lambda request: httpx.Response(200, json=_build_chat_completion_payload()),
     )
-    agent = Agent(model, output_type=str, defer_model_check=True)
     report = run_gold_set(
-        _gold_set(),
+        _build_model_route_gold_set(),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -134,7 +160,7 @@ def test_completed_report_serializes_one_observed_model_route(
 
 def test_successful_case_without_a_model_response_has_no_routes() -> None:
     report = run_gold_set(
-        _gold_set("case-without-response"),
+        _build_model_route_gold_set("case-without-response"),
         task=lambda case_input: case_input.prompt,
         evaluators=(),
     )
@@ -145,27 +171,32 @@ def test_successful_case_without_a_model_response_has_no_routes() -> None:
 
 def test_repeated_and_mixed_routes_are_grouped_in_stable_order(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-grouping")
-    deployment = _deployment()
+    deployment = _build_openrouter_model_route_deployment()
     responses = iter(
         (
-            _completion(response_model="z/model", provider="provider-b"),
-            _completion(response_model="a/model", provider="provider-a"),
-            _completion(response_model="z/model", provider="provider-b"),
+            _build_chat_completion_payload(
+                response_model="z/model", provider="provider-b"
+            ),
+            _build_chat_completion_payload(
+                response_model="a/model", provider="provider-a"
+            ),
+            _build_chat_completion_payload(
+                response_model="z/model", provider="provider-b"
+            ),
         )
     )
-    model = get_chat_model(
+    agent = _build_chat_agent_with_mock_transport(
         deployment,
-        transport=httpx.MockTransport(
-            lambda request: httpx.Response(200, json=next(responses))
-        ),
+        lambda request: httpx.Response(200, json=next(responses)),
     )
-    agent = Agent(model, output_type=str, defer_model_check=True)
 
-    def task(case_input: _PromptInput) -> str:
+    def task(case_input: _ModelRoutePromptInput) -> str:
         outputs = [agent.run_sync(case_input.prompt).output for _ in range(3)]
         return " ".join(outputs)
 
-    report = run_gold_set(_gold_set("case-grouped"), task=task, evaluators=())
+    report = run_gold_set(
+        _build_model_route_gold_set("case-grouped"), task=task, evaluators=()
+    )
 
     assert report.cases[0].attributes["model_routes"] == [
         {
@@ -183,23 +214,19 @@ def test_repeated_and_mixed_routes_are_grouped_in_stable_order(monkeypatch) -> N
 
 def test_missing_response_model_uses_pydantic_ai_fallback(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-fallback")
-    deployment = _deployment()
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json=_completion(response_model="", provider="observed/provider"),
-                )
+    deployment = _build_openrouter_model_route_deployment()
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200,
+            json=_build_chat_completion_payload(
+                response_model="", provider="observed/provider"
             ),
         ),
-        output_type=str,
-        defer_model_check=True,
     )
 
     report = run_gold_set(
-        _gold_set("case-model-fallback"),
+        _build_model_route_gold_set("case-model-fallback"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -217,22 +244,16 @@ def test_missing_openrouter_provider_is_not_inferred_from_configuration(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-no-provider")
-    deployment = _deployment()
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200, json=_completion(provider=None)
-                )
-            ),
+    deployment = _build_openrouter_model_route_deployment()
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200, json=_build_chat_completion_payload(provider=None)
         ),
-        output_type=str,
-        defer_model_check=True,
     )
 
     report = run_gold_set(
-        _gold_set("case-no-provider"),
+        _build_model_route_gold_set("case-no-provider"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -247,31 +268,20 @@ def test_missing_openrouter_provider_is_not_inferred_from_configuration(
 
 
 def test_local_response_has_no_downstream_provider() -> None:
-    deployment = ModelDeployment(
-        kind=DeploymentKind.LOCAL,
-        model="local/requested-model",
-        endpoint="http://llama.test/v1",
-        request_settings=ModelRequestSettings(max_attempts=1),
-    )
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json=_completion(
-                        response_model="local/effective-model",
-                        provider="payload/provider-must-not-leak",
-                    ),
-                )
+    deployment = _build_local_model_route_deployment()
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200,
+            json=_build_chat_completion_payload(
+                response_model="local/effective-model",
+                provider="payload/provider-must-not-leak",
             ),
         ),
-        output_type=str,
-        defer_model_check=True,
     )
 
     report = run_gold_set(
-        _gold_set("case-local"),
+        _build_model_route_gold_set("case-local"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -289,54 +299,42 @@ def test_evaluator_model_request_is_excluded_but_its_result_remains(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-evaluator")
-    deployment = _deployment()
-    task_agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json=_completion(
-                        response_model="task/model", provider="task/provider"
-                    ),
-                )
+    deployment = _build_openrouter_model_route_deployment()
+    task_agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200,
+            json=_build_chat_completion_payload(
+                response_model="task/model", provider="task/provider"
             ),
         ),
-        output_type=str,
-        defer_model_check=True,
     )
-    judge_agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json={
-                        **_completion(
-                            response_model="judge/model", provider="judge/provider"
-                        ),
-                        "choices": [
-                            {
-                                "index": 0,
-                                "message": {
-                                    "role": "assistant",
-                                    "content": "accepted",
-                                },
-                                "finish_reason": "stop",
-                            }
-                        ],
-                    },
-                )
-            ),
+    judge_agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200,
+            json={
+                **_build_chat_completion_payload(
+                    response_model="judge/model", provider="judge/provider"
+                ),
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": "accepted",
+                        },
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
         ),
-        output_type=str,
-        defer_model_check=True,
     )
 
     report = run_gold_set(
-        _gold_set("case-evaluator"),
+        _build_model_route_gold_set("case-evaluator"),
         task=lambda case_input: task_agent.run_sync(case_input.prompt).output,
-        evaluators=(_ModelJudge(agent=judge_agent),),
+        evaluators=(_ModelOutputAcceptanceEvaluator(agent=judge_agent),),
     )
 
     assert report.cases[0].attributes["model_routes"] == [
@@ -346,12 +344,12 @@ def test_evaluator_model_request_is_excluded_but_its_result_remains(
             "request_count": 1,
         }
     ]
-    assert report.cases[0].assertions["_ModelJudge"].value is True
+    assert report.cases[0].assertions["_ModelOutputAcceptanceEvaluator"].value is True
 
 
 def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-concurrency")
-    deployment = _deployment()
+    deployment = _build_openrouter_model_route_deployment()
     gold_set = EvaluationGoldSet(
         task="model-routes",
         description="Concurrent route cases.",
@@ -359,12 +357,12 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
             EvaluationCase(
                 id="case-alpha",
                 description="Alpha route",
-                task_input=_PromptInput(prompt="Run alpha."),
+                task_input=_ModelRoutePromptInput(prompt="Run alpha."),
             ),
             EvaluationCase(
                 id="case-beta",
                 description="Beta route",
-                task_input=_PromptInput(prompt="Run beta."),
+                task_input=_ModelRoutePromptInput(prompt="Run beta."),
             ),
         ),
     )
@@ -379,21 +377,17 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
             raise AssertionError("the Evaluation Cases did not overlap") from error
         return httpx.Response(
             200,
-            json=_completion(
+            json=_build_chat_completion_payload(
                 response_model=f"{route}/model", provider=f"{route}/provider"
             ),
         )
 
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(handler),
-            openrouter_retry_hooks=OpenRouterRetryHooks(
-                admission_gate=OpenRouterAdmissionGate(max_concurrency=2)
-            ),
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        handler,
+        openrouter_retry_hooks=OpenRouterRetryHooks(
+            admission_gate=OpenRouterAdmissionGate(max_concurrency=2)
         ),
-        output_type=str,
-        defer_model_check=True,
     )
 
     report = run_gold_set(
@@ -403,9 +397,7 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
         max_concurrency=2,
     )
 
-    assert {
-        case.name: case.attributes["model_routes"] for case in report.cases
-    } == {
+    assert {case.name: case.attributes["model_routes"] for case in report.cases} == {
         "case-alpha": [
             {
                 "response_model": "alpha/model",
@@ -424,33 +416,22 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
 
 
 def test_request_without_a_response_does_not_contribute_a_route() -> None:
-    deployment = ModelDeployment(
-        kind=DeploymentKind.LOCAL,
-        model="local/requested-model",
-        endpoint="http://llama.test/v1",
-        request_settings=ModelRequestSettings(max_attempts=1),
-    )
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    500, json={"error": {"message": "unavailable"}}
-                )
-            ),
-        ),
-        output_type=str,
-        defer_model_check=True,
+    deployment = _build_local_model_route_deployment()
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(500, json={"error": {"message": "unavailable"}}),
     )
 
-    def task(case_input: _PromptInput) -> str:
+    def task(case_input: _ModelRoutePromptInput) -> str:
         try:
             return agent.run_sync(case_input.prompt).output
         except ModelAPIError:
             return "task fallback"
 
     report = run_gold_set(
-        _gold_set("case-request-without-response"), task=task, evaluators=()
+        _build_model_route_gold_set("case-request-without-response"),
+        task=task,
+        evaluators=(),
     )
 
     assert not report.failures
@@ -466,24 +447,17 @@ def test_serialized_route_summary_preserves_metrics_and_run_provenance(
         model="openai/gpt-4o-mini",
         provider_policy=OpenRouterProviderPolicy(providers=("openai",)),
     )
-    agent = Agent(
-        get_chat_model(
-            deployment,
-            transport=httpx.MockTransport(
-                lambda request: httpx.Response(
-                    200,
-                    json=_completion(
-                        response_model="openai/gpt-4o-mini",
-                        provider="openai/hosted",
-                    ),
-                )
+    agent = _build_chat_agent_with_mock_transport(
+        deployment,
+        lambda request: httpx.Response(
+            200,
+            json=_build_chat_completion_payload(
+                response_model="openai/gpt-4o-mini", provider="openai/hosted"
             ),
         ),
-        output_type=str,
-        defer_model_check=True,
     )
     report = run_gold_set(
-        _gold_set("case-complete-report"),
+        _build_model_route_gold_set("case-complete-report"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
