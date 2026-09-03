@@ -17,6 +17,12 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [Reprocessing an article leaves its old chunk extractions in the graph](issues/02-chunk-extraction-retains-stale-decisions.md), `ready-for-agent` as of 2026-09-03.
+  A standalone defect, found while fixing the article-level topic write. The
+  chunk write path is merge-only, so a re-run strands the tail chunks of a
+  shorter article, keeps relationship claims no extraction still makes, and
+  leaves entity nodes nothing mentions. Carries the orphan decision the topic
+  fix did not have to make.
 - [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
   Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
   for a bill number it cannot supply, normalization rejects every spelled-out

@@ -221,6 +221,8 @@ _Avoid_: Error log, validation errors, drop log, conformance failures
 
 **Claim Key**:
 The values that identify one relationship claim: a relationship's declared properties, and only those. Two articles asserting the same relationship at equal Claim Key values assert one claim and produce one edge; at differing values they assert two claims and produce two edges. Everything else an article said about the relationship stays in the Article Chunk the edge points back to.
+
+Beside the key, an edge carries only who is asserting the claim and `needs_review`. The assertion is recorded at the level the claim was decided: a chunk-level claim lists the Article Chunks asserting it, and an article-level topic claim, decided once per article and pointing back at no chunk, lists the Source Articles instead. That list is also what lets a claim be withdrawn — reprocessing an article is a fresh verdict over the same text, so it removes itself from the claims it no longer makes, and an edge nothing asserts any longer does not survive.
 _Avoid_: Edge properties, relationship payload, identifying properties, edge attributes
 
 **Policy Area Classification**:
