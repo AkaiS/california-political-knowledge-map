@@ -16,11 +16,11 @@ from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import (
     BillSessionResolution,
     BillSessionResolutions,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
 )
 
-ARTICLE = SourceArticle(
+ARTICLE = IngestionArticle(
     url="http://example.com/1",
     title="Two bills, two subjects",
     content="Assembly Bill 218 and Proposition 33.",

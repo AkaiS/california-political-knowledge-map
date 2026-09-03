@@ -25,13 +25,13 @@ from pydantic_ai.models.function import FunctionModel
 from knowledge_map.adapters.extraction import ExtractionError
 from knowledge_map.schemas import (
     AdherenceReport,
-    ArticleChunk,
+    StoryChunk,
     CoreferenceResolutionRun,
     DropCategory,
     DroppedItem,
     ExtractionResult,
     Node,
-    SourceArticle,
+    IngestionArticle,
 )
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.core.ingestion import BatchIngestionService
@@ -45,7 +45,7 @@ from knowledge_map.core.exceptions import (
 )
 from knowledge_map.cli.main import main
 from knowledge_map.schemas.stories import Story
-from knowledge_map.schemas import StoryLink
+from knowledge_map.schemas import ContentLink
 from test_pipeline import (
     EMPTY_ADHERENCE_REPORT,
     MockDatabaseAdapter,
@@ -158,7 +158,7 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
         title="Story A",
         url="http://example.com/a",
         content="Content of Story A",
-        links=[StoryLink(text="a bill", url="https://example.com/bill")],
+        links=[ContentLink(text="a bill", url="https://example.com/bill")],
     )
     story2 = Story(
         title="Story B",
@@ -183,14 +183,14 @@ def test_batch_ingestion_service_sequential_run(tmp_path):
     calls = mock_pipeline.run.call_args_list
     # First call
     called_article_1 = calls[0][0][0]
-    assert isinstance(called_article_1, SourceArticle)
+    assert isinstance(called_article_1, IngestionArticle)
     assert called_article_1.url == "http://example.com/a"
     assert called_article_1.content == "Content of Story A"
-    assert called_article_1.links == [StoryLink(text="a bill", url="https://example.com/bill")]
+    assert called_article_1.links == [ContentLink(text="a bill", url="https://example.com/bill")]
 
     # Second call
     called_article_2 = calls[1][0][0]
-    assert isinstance(called_article_2, SourceArticle)
+    assert isinstance(called_article_2, IngestionArticle)
     assert called_article_2.url == "http://example.com/b"
     assert called_article_2.content == "Content of Story B"
 
@@ -546,7 +546,7 @@ def test_exhausted_rate_limit_retry_surfaces_as_a_pipeline_rate_limit_error():
             ModelHTTPError(status_code=429, model_name="test-model", body=None)
         ),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/rate-limited",
         title="Rate Title",
         content="Gavin Newsom went home.",
@@ -570,7 +570,7 @@ def test_exhausted_transport_retry_surfaces_as_a_pipeline_connectivity_error():
             ModelAPIError(model_name="test-model", message="Connection error.")
         ),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/connection-reset",
         title="Conn Title",
         content="Gavin Newsom went home.",
@@ -594,7 +594,7 @@ def test_a_non_rate_limit_status_is_a_connectivity_error():
             ModelHTTPError(status_code=503, model_name="test-model", body=None)
         ),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/unavailable",
         title="Unavailable Title",
         content="Gavin Newsom went home.",
@@ -615,7 +615,7 @@ def test_an_exhausted_embedding_retry_names_the_embedding_component():
     pipeline = make_pipeline(
         status_tracker, embedding_adapter=FailingEmbeddingAdapter()
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/embedding-down",
         title="Embedding Title",
         content="Gavin Newsom went home.",
@@ -773,7 +773,7 @@ def test_a_coreference_socket_timeout_returns_the_article_to_unprocessed():
 
     status_tracker = MockStatusTracker()
     dlq = MockDeadLetterQueueAdapter()
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/coreference-timeout",
         title="Timeout Title",
         content="Gavin Newsom signed a bill. He was happy.",
@@ -816,7 +816,7 @@ def test_a_coreference_programming_error_leaves_the_article_a_system_error():
         ),
         dlq_adapter=dlq,
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/coreference-bug",
         title="Bug Title",
         content="Gavin Newsom went home.",

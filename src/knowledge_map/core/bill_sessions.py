@@ -8,7 +8,7 @@ from knowledge_map.schemas import (
     BillSessionResolution,
     BillSessionResolutions,
     ExtractionResult,
-    SourceArticle,
+    IngestionArticle,
 )
 
 _PATH_BILL = re.compile(r"/bills/ca_(\d{4})(\d{4})0([a-z]{2,3})(\d+)", re.IGNORECASE)
@@ -77,7 +77,7 @@ def _recover_bill_designation(
 
 
 def resolve_bill_sessions(
-    article: SourceArticle,
+    article: IngestionArticle,
     extractions: list[ExtractionResult],
 ) -> BillSessionResolutions:
     """Resolve every extracted Bill once for an entire Source Article."""

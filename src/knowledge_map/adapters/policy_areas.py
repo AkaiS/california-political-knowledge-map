@@ -23,7 +23,7 @@ from knowledge_map.schemas import (
     ModelDeployment,
     Node,
     PolicyAreaClassification,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
     TopicAssignments,
 )
@@ -128,7 +128,7 @@ the lists you were given.
 
 
 def render_assignment_request(
-    article: SourceArticle,
+    article: IngestionArticle,
     policy_areas: list[str],
     measures: list[Node],
 ) -> str:
@@ -257,7 +257,7 @@ class PydanticAIPolicyAreaAdapter:
 
     def assign(
         self,
-        article: SourceArticle,
+        article: IngestionArticle,
         policy_areas: list[str],
         measures: list[Node],
     ) -> list[TopicAssignment]:

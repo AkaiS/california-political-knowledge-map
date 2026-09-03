@@ -6,12 +6,12 @@ from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import (
-    ArticleChunk,
+    StoryChunk,
     BillSessionResolutions,
     ExtractionResult,
     LegislativeEventDates,
     Relationship,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
 )
 
@@ -129,7 +129,7 @@ def _write_relationship(
     tx.run(query, **parameters)
 
 
-def _topic_endpoint_resolver(article: SourceArticle, bill_sessions: BillSessionResolutions):
+def _topic_endpoint_resolver(article: IngestionArticle, bill_sessions: BillSessionResolutions):
     """Resolve an article-level topic edge's endpoint to a node primary key.
 
     The measure endpoints resolve exactly as the chunk extraction write
@@ -249,7 +249,7 @@ class Neo4jAdapter:
         except Exception as e:
             raise Neo4jConnectionError(f"Failed to create or verify vector index: {e}")
 
-    def ingest_article(self, article: SourceArticle) -> None:
+    def ingest_article(self, article: IngestionArticle) -> None:
         driver = self.connect()
         try:
             with driver.session() as session:
@@ -272,8 +272,8 @@ class Neo4jAdapter:
 
     def ingest_chunk(
         self,
-        article: SourceArticle,
-        chunk: ArticleChunk,
+        article: IngestionArticle,
+        chunk: StoryChunk,
         embedding: list[float]
     ) -> None:
         driver = self.connect()
@@ -375,7 +375,7 @@ class Neo4jAdapter:
 
     def ingest_article_topics(
         self,
-        article: SourceArticle,
+        article: IngestionArticle,
         policy_areas: list[str],
         assignments: list[TopicAssignment] | None = None,
         bill_sessions: BillSessionResolutions | None = None,

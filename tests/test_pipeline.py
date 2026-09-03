@@ -3,7 +3,7 @@ import logging
 import pytest
 from knowledge_map.schemas import (
     AdherenceReport,
-    ArticleChunk,
+    StoryChunk,
     CoreferenceResolutionRun,
     BillSessionResolution,
     BillSessionResolutions,
@@ -11,8 +11,8 @@ from knowledge_map.schemas import (
     LegislativeEventDates,
     Node,
     PipelineResult,
-    SourceArticle,
-    StoryLink,
+    IngestionArticle,
+    ContentLink,
     TopicAssignment,
 )
 from pydantic_ai.exceptions import ModelHTTPError
@@ -52,13 +52,13 @@ class MockDatabaseAdapter:
         self.extractions = []
         self.topics = []
 
-    def ingest_article(self, article: SourceArticle) -> None:
+    def ingest_article(self, article: IngestionArticle) -> None:
         self.articles.append(article)
 
     def ingest_chunk(
         self,
-        article: SourceArticle,
-        chunk: ArticleChunk,
+        article: IngestionArticle,
+        chunk: StoryChunk,
         embedding: list[float]
     ) -> None:
         self.chunks.append((article, chunk, embedding))
@@ -74,7 +74,7 @@ class MockDatabaseAdapter:
 
     def ingest_article_topics(
         self,
-        article: SourceArticle,
+        article: IngestionArticle,
         policy_areas: list[str],
         assignments=None,
         bill_sessions: BillSessionResolutions | None = None,
@@ -132,7 +132,7 @@ def test_bill_designation_parser_rejects_non_designations(name):
 
 
 class MockEmbeddingAdapter:
-    def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
+    def process_chunks(self, chunks: list[StoryChunk]) -> list[list[float]]:
         return [[0.1, 0.2, 0.3]] * len(chunks)
 
 class MockCoreferenceAdapter:
@@ -186,7 +186,7 @@ def test_pipeline_dry_run():
         status_tracker=MockStatusTracker(),
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com",
         title="Test Title",
         content="Test content for the political story."
@@ -222,7 +222,7 @@ def test_pipeline_persistence():
         status_tracker=MockStatusTracker(),
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/persist",
         title="Persist Title",
         content="This content should be saved."
@@ -258,7 +258,7 @@ def test_pipeline_extracts_owned_chunk_text_without_context():
     db = MockDatabaseAdapter()
     extraction = MockEntityExtractionAdapter()
     chunks = [
-        ArticleChunk(
+        StoryChunk(
             text="owned chunk text",
             start_index=10,
             end_index=26,
@@ -274,7 +274,7 @@ def test_pipeline_extracts_owned_chunk_text_without_context():
         policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/extraction-text",
         title="Extraction Text",
         content="article content",
@@ -308,21 +308,21 @@ def test_pipeline_resolves_bill_sessions_once_per_article():
         policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="https://example.com/story",
         title="Bills",
         published_date="2026-04-10T12:00:00Z",
         content="first chunk second chunk",
         links=[
-            StoryLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200SB623"),
-            StoryLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
-            StoryLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
-            StoryLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
+            ContentLink(text="June budget", url="https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=201920200SB623"),
+            ContentLink(text="sanctuary law", url="https://digitaldemocracy.calmatters.org/bills/ca_201720180sb54"),
+            ContentLink(text="with a bill", url="https://example.test/bills/ca_202320240ab1"),
+            ContentLink(text="AB 1", url="https://example.test/bills/ca_202520260ab1"),
         ],
     )
     chunks = [
-        ArticleChunk(text="first", start_index=0, end_index=5, index=0),
-        ArticleChunk(text="second", start_index=6, end_index=12, index=1),
+        StoryChunk(text="first", start_index=0, end_index=5, index=0),
+        StoryChunk(text="second", start_index=6, end_index=12, index=1),
     ]
 
     with patch("knowledge_map.core.pipeline.chunk_article", return_value=chunks), \
@@ -376,7 +376,7 @@ def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
         policy_area_adapter=MockPolicyAreaAdapter(),
         status_tracker=MockStatusTracker(),
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="https://example.com/ambiguous-bills",
         title="Ambiguous Bills",
         published_date="2026-04-10T12:00:00Z",
@@ -397,7 +397,7 @@ def test_pipeline_marks_ambiguous_bill_designation_recovery_for_review():
 
 
 def test_bill_designation_recovery_is_independent_of_extraction_order():
-    article = SourceArticle(
+    article = IngestionArticle(
         url="https://example.com/order-independent",
         title="Order Independent",
         published_date="2026-04-10T12:00:00Z",
@@ -438,7 +438,7 @@ def test_pipeline_logging(caplog):
         status_tracker=MockStatusTracker(),
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/log",
         title="Log Title",
         content="Log testing."
@@ -474,7 +474,7 @@ def test_pipeline_error_handling():
         status_tracker=MockStatusTracker(),
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/error",
         title="Error Title",
         content="Error testing."
@@ -572,7 +572,7 @@ def test_pipeline_with_concrete_adapters():
         status_tracker=MockStatusTracker(),
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/concrete",
         title="Concrete Title",
         content="Gavin Newsom signed a bill. He was happy."
@@ -634,7 +634,7 @@ def test_pipeline_with_neo4j_adapter():
         status_tracker=MockStatusTracker(),
     )
     
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://example.com/integration",
         title="Integration Title",
         content="This is integration test content."
@@ -706,7 +706,7 @@ def test_pipeline_coreference_failure_logs_to_dlq():
         dlq_adapter=dlq
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/failure-dlq",
         title="Failed Article",
         content="Gavin Newsom went home."
@@ -758,7 +758,7 @@ def test_pipeline_extraction_failure_logs_to_dlq():
         dlq_adapter=dlq
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/failure-dlq-extract",
         title="Failed Article Extract",
         content="Gavin Newsom went home."
@@ -808,7 +808,7 @@ def test_pipeline_status_extraction_failure():
         status_tracker=status_tracker,
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/extract-fail",
         title="Extract Fail Title",
         content="Extract fail content."
@@ -839,7 +839,7 @@ def test_pipeline_status_success():
         status_tracker=status_tracker,
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/success",
         title="Success Title",
         content="Success content."
@@ -878,7 +878,7 @@ def test_pipeline_status_coref_failure():
         status_tracker=status_tracker,
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/coref-fail",
         title="Coref Fail Title",
         content="Coref fail content."
@@ -913,7 +913,7 @@ def test_pipeline_status_unexpected_error():
         status_tracker=status_tracker,
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/unexpected-fail",
         title="Unexpected Fail Title",
         content="Unexpected fail content."
@@ -962,7 +962,7 @@ def test_pipeline_status_dlq_failure():
         dlq_adapter=dlq
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/dlq-fail",
         title="DLQ Fail Title",
         content="DLQ fail content."
@@ -993,7 +993,7 @@ def test_pipeline_status_dry_run():
         status_tracker=status_tracker,
     )
 
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://test.com/dry-run",
         title="Dry Run Title",
         content="Dry run content."
@@ -1034,7 +1034,7 @@ class OrderRecordingEmbeddingAdapter(MockEmbeddingAdapter):
         return super().process_chunks(chunks)
 
 
-POLICY_AREA_ARTICLE = SourceArticle(
+POLICY_AREA_ARTICLE = IngestionArticle(
     url="http://test.com/policy-areas",
     title="Rent and clinics",
     content="She signed it.",

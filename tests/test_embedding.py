@@ -9,7 +9,7 @@ from knowledge_map.core.exceptions import (
     PipelineConnectivityError,
     transport_failures_as_pipeline_errors,
 )
-from knowledge_map.schemas import ArticleChunk
+from knowledge_map.schemas import StoryChunk
 
 
 @pytest.fixture
@@ -81,8 +81,8 @@ def test_pydantic_ai_embedding_adapter_success():
 
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
     chunks = [
-        ArticleChunk(text="Chunk 1 text", start_index=0, end_index=12, index=0),
-        ArticleChunk(
+        StoryChunk(text="Chunk 1 text", start_index=0, end_index=12, index=0),
+        StoryChunk(
             text="Chunk 2 text",
             start_index=13,
             end_index=25,
@@ -146,7 +146,7 @@ def test_pydantic_ai_embedding_adapter_dimension_mismatch():
     mock_embedder.embed_documents.side_effect = fake_embed
 
     adapter = PydanticAIEmbeddingAdapter(embedder=mock_embedder)
-    chunks = [ArticleChunk(text="Some text", start_index=0, end_index=9, index=0)]
+    chunks = [StoryChunk(text="Some text", start_index=0, end_index=9, index=0)]
     
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         adapter.process_chunks(chunks)

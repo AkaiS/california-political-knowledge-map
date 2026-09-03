@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from .pipeline import StoryStatus, StoryLink
+from .pipeline import ContentLink, IngestionArticle, StoryStatus
 
 
 class Story(BaseModel):
@@ -17,7 +17,7 @@ class Story(BaseModel):
     status: StoryStatus = Field(
         StoryStatus.UNPROCESSED, description="How far this Story has progressed through ingestion"
     )
-    links: List[StoryLink] = Field(default_factory=list, description="The hyperlinks found in the body")
+    links: List[ContentLink] = Field(default_factory=list, description="The hyperlinks found in the body")
 
     @field_validator("url", "title", mode="before")
     @classmethod
@@ -28,3 +28,16 @@ class Story(BaseModel):
         if not cleaned:
             raise ValueError("Must be a non-empty string")
         return cleaned
+
+    def to_ingestion_article(
+        self, links: List[ContentLink] | None = None
+    ) -> IngestionArticle:
+        """Build the ingestion input for this Story and its links."""
+        return IngestionArticle(
+            url=self.url,
+            title=self.title,
+            author=self.author,
+            published_date=self.published_date,
+            content=self.content or "",
+            links=list(links) if links is not None else list(self.links),
+        )

@@ -11,7 +11,7 @@ from knowledge_map.core.validation import (
     count_words
 )
 from unittest.mock import patch
-from knowledge_map.schemas.stories import Story, StoryLink
+from knowledge_map.schemas.stories import Story, ContentLink
 from knowledge_map.schemas import ModelDeployment
 
 @pytest.fixture(autouse=True)
@@ -1240,10 +1240,10 @@ def test_extract_links_from_elements():
     links = extract_links_from_elements(elements, base_url)
     assert len(links) == 2
     # Verify relative URL resolved and deduplicated/normalized
-    assert links[0] == StoryLink(text="a relative link", url="https://calmatters.org/politics/news")
+    assert links[0] == ContentLink(text="a relative link", url="https://calmatters.org/politics/news")
 
     # Verify tracking parameter stripped
-    assert links[1] == StoryLink(
+    assert links[1] == ContentLink(
         text="an absolute link with tracking", url="https://example.com/target"
     )
 
@@ -1784,7 +1784,7 @@ async def test_newer_selector_reextracts_and_replaces_story(tmp_path):
             published_date="2026-08-02T12:00:00Z",
             content="Stale extracted body",
             status="COMPLETED",
-            links=[StoryLink(text="Old Link", url="https://example.com/old")],
+            links=[ContentLink(text="Old Link", url="https://example.com/old")],
         ),
         db_path=db_path,
     )

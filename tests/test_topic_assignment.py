@@ -26,11 +26,11 @@ from knowledge_map.schemas import (
     ModelDeployment,
     ModelRequestSettings,
     Node,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
 )
 
-ARTICLE = SourceArticle(
+ARTICLE = IngestionArticle(
     url="http://test.com/rent",
     title="Rent and clinics",
     content="SB 623 would cap rent increases.",
