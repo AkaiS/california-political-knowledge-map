@@ -73,7 +73,6 @@ source remain intentionally omitted from this queue.
   [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md)
   as "Removing Neo4j nodes for articles whose relevance is reversed after
   ingestion," so this is the capture point for the deferred decision.
-
 - **IG-10 · P3:** Decide whether the News Ontology needs a term for an enacted
   law. `ABOUT_TOPIC` admits only `Bill` and `Prop` as its source labels, so the
   Topic Assignment Gold Set annotates the National Alzheimer's Project Act — a
