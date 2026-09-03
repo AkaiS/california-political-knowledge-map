@@ -73,6 +73,48 @@ The returned `is_byok` value is the evidence for each request. A provider list
 or a configured BYOK preference is not evidence that BYOK actually served a
 request; use the report's observed value.
 
+## Before a command runs
+
+Commands whose agents reach a local llama.cpp server run a Model Reachability
+Check before they dispatch. The check asks each required endpoint for its model
+listing and refuses the command when nothing answers, so an unreachable server
+costs one immediate error rather than a half-finished run: no articles are
+scraped that cannot then be validated, and no Story changes status ahead of a
+model request that cannot be made.
+
+The check is a transport question only. Any HTTP response counts as reachable,
+because a served error still proves a server is accepting requests at that
+address. It does not confirm which GGUF is loaded, and it does not confirm that
+generation or embedding succeeds; the first real request remains the authority
+on both. A server left running with the wrong model loaded passes the check.
+
+| Command | Chat | Embedding |
+| --- | --- | --- |
+| `ingest` | yes (local deployment only) | yes |
+| `update-sources` | yes | yes |
+| `scrape-archive` | yes | yes |
+| `validate-articles` | yes | yes |
+| `heal-selectors` | yes | no |
+| `classifier backfill`, `classifier label` | no | yes |
+
+Selecting `--deployment openrouter` drops the chat endpoint from the check,
+because that command's chat requests no longer go to llama.cpp. Embedding is
+still checked: it remains local llama.cpp inference whichever chat deployment a
+command selects. OpenRouter reachability is not checked; its configuration is
+still validated during command setup, and the request itself surfaces an
+unreachable provider.
+
+Every other command -- `clear`, `analyze`, `janitor`, the publication commands,
+`review-selectors`, `refetch-html`, `purge-cache`, `classifier train`, and
+`classifier reevaluate` -- runs no agent and is never gated. `classifier
+reevaluate` classifies from stored embeddings, so it needs no server.
+
+Start the servers with `scripts/llama-server.sh` (chat) and
+`scripts/llama-embed.sh` (embedding). To run a gated command anyway, pass
+`--skip-model-check` or set `SKIP_MODEL_REACHABILITY_CHECK` to a non-empty
+value. The test suite sets that variable for every test, so no test depends on
+a local server being up.
+
 ## Reactive rate limits
 
 Rate control is reactive. A surfaced `429` closes one process-wide `OpenRouter

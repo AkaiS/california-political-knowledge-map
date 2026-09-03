@@ -277,6 +277,10 @@ _Avoid_: OpenRouter throttle, rate limiter
 The first request allowed after an OpenRouter Admission Gate's pause expires, used to establish whether waiting requests may resume.
 _Avoid_: Health check, test request
 
+**Model Reachability Check**:
+The confirmation, before a command dispatches, that every local llama.cpp endpoint the command's agents depend on answers over HTTP. It is a transport question only: an endpoint that answers proves a server is accepting requests at that address, not which GGUF it loaded or that generation will succeed. A command that fails the check does no work at all, so scraping never runs ahead of the Article Validator it requires and a Story never changes status ahead of a model request that cannot be made. Chat deployment selection narrows it -- embedding stays local llama.cpp whichever chat deployment a command selects -- and `--skip-model-check` or `SKIP_MODEL_REACHABILITY_CHECK` forces a run past it.
+_Avoid_: OpenRouter Probe, health check, ping, preflight
+
 **Evaluation Run**:
 One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Gold Set path and split, and each case's Model Route Summary. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record

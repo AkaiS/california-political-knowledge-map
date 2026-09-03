@@ -111,3 +111,34 @@ def test_operator_guide_uses_canonical_rate_control_terms() -> None:
     assert "OpenRouter Admission Gate" in guide
     assert "OpenRouter Probe" in guide
     assert "controller" not in guide
+
+
+def test_reachability_glossary_keeps_the_check_distinct_from_the_probe() -> None:
+    context = _read("CONTEXT.md")
+    definition_start = context.index("**Model Reachability Check**:")
+    definition_end = context.index("**Evaluation Run**:")
+    definition = context[definition_start:definition_end]
+
+    assert "before a command dispatches" in definition
+    assert "transport question only" in definition
+    # The check must not be read as promising the right model is loaded.
+    assert "not which GGUF it loaded" in definition
+    assert "does no work at all" in definition
+    # It borrows neither the OpenRouter Probe's name nor its meaning.
+    assert "_Avoid_: OpenRouter Probe" in definition
+
+
+def test_operator_guide_says_which_commands_are_gated_and_how_to_bypass() -> None:
+    guide = _read_normalized("docs/model-deployments.md")
+
+    for phrase in (
+        "Model Reachability Check before they dispatch",
+        "`--skip-model-check`",
+        "SKIP_MODEL_REACHABILITY_CHECK",
+        "Any HTTP response counts as reachable",
+        "does not confirm which GGUF is loaded",
+        "Selecting `--deployment openrouter` drops the chat endpoint",
+        "OpenRouter reachability is not checked",
+        "runs no agent and is never gated",
+    ):
+        assert phrase in guide, phrase
