@@ -102,28 +102,22 @@ structured selected Model Deployment. An exhausted or interrupted Evaluation
 Run writes no report; `--no-report` deliberately prints a completed report
 without creating a file. There is no remote run identity or resumption.
 
-Each request's Request Provenance is associated with its authored Evaluation
-Case and request order. Where the provider supplies the facts, inspect these
-fields:
+Each successful Evaluation Case contains a `model_routes` Model Route Summary.
+Each entry contains `response_model`, `downstream_provider`, and `request_count`;
+entries count requests grouped by effective response model and observed
+downstream provider, and are sorted deterministically. The response model
+follows Pydantic AI's telemetry semantics, including its fallback to the
+requested model when the provider omits one. A downstream provider is recorded
+only when OpenRouter supplies it; local responses and missing OpenRouter
+providers use `null`, and configured provider order is never substituted.
+Evaluator model calls and requests that produce no response are excluded.
 
-* `requested_model` and `returned_model` distinguish what was requested from
-  what the provider reported;
-* `downstream_provider`, `generation_id`, and `is_byok` describe the observed
-  route and BYOK result;
-* `input_tokens`, `output_tokens`, `reasoning_tokens`,
-  `cache_write_tokens`, `cache_read_tokens`, and `total_tokens` preserve the
-  separate token categories;
-* `charged_cost` and `upstream_cost` retain the distinct cost facts;
-* `route_attempts` is provider-reported route metadata when available, while
-  `attempts` and `retry_count` describe application request retries.
-
-The report also contains aggregates for available token and cost categories,
-attempts, retries, and request counts grouped by observed provider and
-BYOK status. Missing values are explicit `null`/unavailable values: the report
-does not infer a provider, BYOK result, token total, cost, route attempt count,
-or retry count. Local reports identify llama.cpp and may include applicable token
-usage, but remote provider, BYOK, and billed-cost facts are unavailable rather
-than fabricated.
+Pydantic Evals owns the report's request-count, token-usage, and calculated-cost
+metrics. Logfire/OpenTelemetry owns request-level diagnostics such as retries,
+errors, timing, BYOK use, generation identity, route attempts, and exact
+charged or upstream cost. Those diagnostics are operational telemetry rather
+than a second persisted report record. Historical reports may contain the
+retired Request Provenance shape, but new reports emit only `model_routes`.
 
 Do not read the route or a shared upstream model name as a deployment-equivalence
 claim. OpenRouter can use a different provider, runtime, quantization, and

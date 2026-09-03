@@ -51,6 +51,7 @@ class _EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
         ]
         return ctx
 
+
 def build_dataset(
     gold_set: EvaluationGoldSet[Any, Any, Any],
     *,

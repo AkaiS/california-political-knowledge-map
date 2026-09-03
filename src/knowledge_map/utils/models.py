@@ -233,25 +233,6 @@ _CURRENT_APPLICATION_ATTEMPTS: ContextVar[int | None] = ContextVar(
 )
 
 
-class _OpenRouterTelemetryMixin:
-    def _process_response(self, response: Any) -> ModelResponse:
-        application_attempts = _CURRENT_APPLICATION_ATTEMPTS.get() or 1
-        _CURRENT_APPLICATION_ATTEMPTS.set(None)
-        model_response = super()._process_response(response)  # type: ignore[misc]
-        downstream_provider = _observed_downstream_provider(model_response)
-        if downstream_provider is not None:
-            get_current_span().set_attribute(
-                "gen_ai.response.downstream_provider", downstream_provider
-            )
-        _log_openrouter_route(
-            self,
-            model_response,
-            response,
-            application_attempts,
-        )
-        return model_response
-
-
 def _log_openrouter_route(
     model: Any,
     response: ModelResponse,
@@ -310,8 +291,25 @@ class _LocalOpenAIChatModel(OpenAIChatModel):
             return result
 
 
-class _OpenRouterModel(_OpenRouterTelemetryMixin, OpenRouterModel):
+class _OpenRouterModel(OpenRouterModel):
     """Native OpenRouter model that exposes safe response route facts."""
+
+    def _process_response(self, response: Any) -> ModelResponse:
+        application_attempts = _CURRENT_APPLICATION_ATTEMPTS.get() or 1
+        _CURRENT_APPLICATION_ATTEMPTS.set(None)
+        model_response = super()._process_response(response)
+        downstream_provider = _observed_downstream_provider(model_response)
+        if downstream_provider is not None:
+            get_current_span().set_attribute(
+                "gen_ai.response.downstream_provider", downstream_provider
+            )
+        _log_openrouter_route(
+            self,
+            model_response,
+            response,
+            application_attempts,
+        )
+        return model_response
 
     def _validate_completion(self, response: Any) -> Any:
         """Keep a response usable when OpenRouter omits its provider field."""
@@ -856,15 +854,12 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         _CURRENT_APPLICATION_ATTEMPTS.set(0)
         admitted = False
+        defer_application_attempts_cleanup = False
         try:
             is_probe = await self._admission_gate.wait_until_open(
                 self._retry_hooks
             )
             admitted = True
-        except BaseException:
-            _CURRENT_APPLICATION_ATTEMPTS.set(None)
-            raise
-        try:
             for attempt in range(self._max_attempts):
                 _CURRENT_APPLICATION_ATTEMPTS.set(attempt + 1)
                 try:
@@ -891,7 +886,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                         )
                         admitted = True
                         continue
-                    _CURRENT_APPLICATION_ATTEMPTS.set(None)
                     return response
 
                 if (
@@ -908,14 +902,20 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     successful=200 <= response.status_code < 300,
                 )
                 admitted = False
-                if not 200 <= response.status_code < 300:
-                    _CURRENT_APPLICATION_ATTEMPTS.set(None)
+                # Completed responses keep this count until
+                # ``_OpenRouterModel._process_response`` consumes it; every
+                # other outcome is cleaned up at this boundary.
+                defer_application_attempts_cleanup = (
+                    200 <= response.status_code < 300
+                )
                 return response
         except BaseException:
-            _CURRENT_APPLICATION_ATTEMPTS.set(None)
             if admitted:
                 self._admission_gate.request_failed(is_probe=is_probe)
             raise
+        finally:
+            if not defer_application_attempts_cleanup:
+                _CURRENT_APPLICATION_ATTEMPTS.set(None)
 
         raise AssertionError("OpenRouter retry transport made no attempt")
 

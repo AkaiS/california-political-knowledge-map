@@ -77,29 +77,20 @@ def test_operator_guide_covers_selection_configuration_and_reactive_limits() -> 
         assert phrase in guide
 
 
-def test_report_guidance_preserves_fields_and_avoids_equivalence_claims() -> None:
+def test_report_guidance_describes_routes_and_telemetry_ownership() -> None:
     guide = _read_normalized("docs/model-deployments.md")
 
     for field in (
-        "requested_model",
-        "returned_model",
+        "model_routes",
+        "response_model",
         "downstream_provider",
-        "generation_id",
-        "is_byok",
-        "input_tokens",
-        "output_tokens",
-        "reasoning_tokens",
-        "cache_write_tokens",
-        "cache_read_tokens",
-        "total_tokens",
-        "charged_cost",
-        "upstream_cost",
-        "route_attempts",
-        "attempts",
-        "retry_count",
+        "request_count",
     ):
         assert field in guide
 
+    assert "Pydantic Evals owns" in guide
+    assert "Logfire/OpenTelemetry owns request-level diagnostics" in guide
+    assert "retired Request Provenance shape" in guide
     assert "OpenRouter Evaluation Run is directional evidence" in guide
     assert "not proof" in guide
     assert "deployment-equivalence claim" in guide

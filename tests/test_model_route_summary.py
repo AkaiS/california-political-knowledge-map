@@ -15,11 +15,16 @@ from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelAPIError
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
+import knowledge_map.adapters.coreference as coreference_adapter_module
+import knowledge_map.evaluation.tasks.coreference as coreference_task_module
 from knowledge_map.evaluation import (
     EvaluationCase,
     EvaluationGoldSet,
     run_gold_set,
     write_report,
+)
+from knowledge_map.evaluation.tasks.coreference import (
+    CoreferenceInput,
 )
 from knowledge_map.schemas import (
     DeploymentKind,
@@ -89,6 +94,21 @@ def _build_chat_completion_payload(
     }
     if provider is not None:
         response["provider"] = provider
+    return response
+
+
+def _build_structured_chat_completion_payload(
+    *, response_model: str, provider: str, payload: object
+) -> dict:
+    """Build the JSON envelope used by structured Coreference agents."""
+
+    response = _build_chat_completion_payload(
+        response_model=response_model,
+        provider=provider,
+    )
+    response["choices"][0]["message"]["content"] = json.dumps(
+        {"response": payload}
+    )
     return response
 
 
@@ -413,6 +433,124 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
             }
         ],
     }
+
+
+def test_completed_coreference_report_counts_sequential_resolution_rounds(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Count annotator, critic, and correction responses at the report seam."""
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-coreference")
+    deployment = _build_openrouter_model_route_deployment()
+    gold_set = EvaluationGoldSet(
+        task="coreference",
+        description="Sequential Coreference Resolution route cases.",
+        cases=(
+            EvaluationCase(
+                id="case-coreference-rounds",
+                description="Coreference Resolution with one correction round",
+                task_input=CoreferenceInput(
+                    url="https://example.test/alice",
+                    title="Alice story",
+                    content="Alice signed a bill. She celebrated.",
+                ),
+            ),
+        ),
+    )
+    stage_calls: dict[str, int] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if "Alice signed a bill" not in body:
+            raise AssertionError("the Coreference Resolution request lost its case")
+        if "Correct only the rejected Mention Spans" in body:
+            stage = "correction"
+        elif "Validated Mention Spans:" in body:
+            stage = "critic"
+        else:
+            stage = "annotator"
+        stage_call = stage_calls.get(stage, 0) + 1
+        stage_calls[stage] = stage_call
+
+        if stage == "annotator":
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "She",
+                    "canonical_entity_name": "Unclear Alice",
+                }
+            ]
+        elif stage == "critic":
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "She",
+                    "accepted": stage_call > 1,
+                    **(
+                        {"reason": "Use the author's name."}
+                        if stage_call == 1
+                        else {}
+                    ),
+                }
+            ]
+        else:
+            payload = [
+                {
+                    "sentence_label": "2",
+                    "mention_text": "She",
+                    "canonical_entity_name": "Alice",
+                }
+            ]
+
+        return httpx.Response(
+            200,
+            json=_build_structured_chat_completion_payload(
+                response_model=deployment.model,
+                provider=f"{stage}/provider",
+                payload=payload,
+            ),
+        )
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(
+        coreference_adapter_module,
+        "get_chat_model",
+        lambda requested: get_chat_model(requested, transport=transport),
+    )
+    resolve = coreference_task_module.build_task(deployment, gold_set)
+
+    report = run_gold_set(gold_set, task=resolve, evaluators=())
+
+    assert not report.failures
+    assert stage_calls == {"annotator": 1, "critic": 2, "correction": 1}
+    routes = {
+        (entry["response_model"], entry["downstream_provider"]): entry[
+            "request_count"
+        ]
+        for entry in report.cases[0].attributes["model_routes"]
+    }
+    assert routes == {
+        (deployment.model, "annotator/provider"): 1,
+        (deployment.model, "critic/provider"): 2,
+        (deployment.model, "correction/provider"): 1,
+    }
+
+    path = write_report(
+        report,
+        task="coreference",
+        deployment=deployment,
+        gold_set_path=tmp_path / "gold.yaml",
+        root=tmp_path / "reports",
+    )
+    serialized_routes = json.loads(path.read_text())["report"]["cases"][0][
+        "attributes"
+    ]["model_routes"]
+    assert {
+        (entry["response_model"], entry["downstream_provider"]): entry[
+            "request_count"
+        ]
+        for entry in serialized_routes
+    } == routes
 
 
 def test_request_without_a_response_does_not_contribute_a_route() -> None:
