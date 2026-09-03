@@ -24,9 +24,9 @@ from knowledge_map.adapters.sqlite_db import (
     count_stories_by_status,
     reset_stories_to_unprocessed,
 )
-from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.pipeline import StoryStatus
 
-_STATUS_NAMES = tuple(status.value for status in ArticleStatus)
+_STATUS_NAMES = tuple(status.value for status in StoryStatus)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
