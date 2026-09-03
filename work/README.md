@@ -27,7 +27,7 @@ have not yet been shaped into executable work.
   Removes the custom Request Provenance subsystem, derives one compact Model
   Route Summary per successful case from Pydantic Evals' span tree, and leaves
   request diagnostics with Pydantic AI and Logfire. Broken into three tickets
-  on 2026-09-03; issue 02 is now takeable.
+  on 2026-09-03; issue 03 is now takeable.
 - [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
   Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
   for a bill number it cannot supply, normalization rejects every spelled-out
@@ -109,11 +109,11 @@ declare their blockers.
 
 ### Pydantic-Native Evaluation Routing frontier
 
-A linear expand-contract chain. Issue 02 is takeable now.
+A linear expand-contract chain. Issue 03 is takeable now.
 
 - [01 Separate model telemetry from Request Provenance](projects/pydantic-native-evaluation-routing/issues/01-separate-model-telemetry-from-request-provenance.md), `completed` on 2026-09-03. Adds the missing provider span attribute and narrows HTTP capture while preserving the current report.
-- [02 Add Model Route Summaries to completed reports](projects/pydantic-native-evaluation-routing/issues/02-add-model-route-summaries-to-completed-reports.md), takeable. Derives the compact case summary from Pydantic Evals while the old report fields remain temporarily.
-- [03 Remove Request Provenance](projects/pydantic-native-evaluation-routing/issues/03-remove-request-provenance.md), blocked by 02. Deletes the parallel recorder and leaves the final report contract.
+- [02 Add Model Route Summaries to completed reports](projects/pydantic-native-evaluation-routing/issues/02-add-model-route-summaries-to-completed-reports.md), `completed` on 2026-09-03. Derives the compact case summary from Pydantic Evals while the old report fields remain temporarily.
+- [03 Remove Request Provenance](projects/pydantic-native-evaluation-routing/issues/03-remove-request-provenance.md), takeable. Deletes the parallel recorder and leaves the final report contract.
 
 ### Blocked initiative chain
 

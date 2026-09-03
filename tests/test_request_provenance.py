@@ -1330,6 +1330,24 @@ def test_coreference_task_orders_annotator_critic_and_correction_requests(
             (2, "bob-critic-1"),
         ],
     }
+    assert {
+        case.name: case.attributes["model_routes"] for case in report.cases
+    } == {
+        "case-alice": [
+            {
+                "response_model": deployment.model,
+                "downstream_provider": "google-ai-studio/vertex-test",
+                "request_count": 4,
+            }
+        ],
+        "case-bob": [
+            {
+                "response_model": deployment.model,
+                "downstream_provider": "google-ai-studio/vertex-test",
+                "request_count": 2,
+            }
+        ],
+    }
 
 
 def test_coreference_annotator_task_uses_case_ordered_provenance(

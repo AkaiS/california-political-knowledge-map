@@ -9,17 +9,19 @@ from __future__ import annotations
 import asyncio
 import inspect
 import threading
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar, Token
 from typing import Any
 
 from pydantic_evals import Case, Dataset
-from pydantic_evals.evaluators import Evaluator, ReportEvaluator
+from pydantic_evals.evaluators import Evaluator, EvaluatorContext, ReportEvaluator
 from pydantic_evals.lifecycle import CaseLifecycle
 from pydantic_evals.reporting import EvaluationReport
 
 from knowledge_map.schemas import ModelRequestProvenance
 from knowledge_map.utils.models import request_provenance_scope
+from knowledge_map.utils.telemetry import setup_telemetry
 
 from .gold_set import EvaluationCase, EvaluationGoldSet, EvaluationSplit
 
@@ -28,8 +30,8 @@ _CURRENT_EVALUATION_CASE_ID: ContextVar[str | None] = ContextVar(
 )
 
 
-class _RequestProvenanceLifecycle(CaseLifecycle[Any, Any, Any]):
-    """Expose each framework case id to its task execution context."""
+class _EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
+    """Attach case-scoped evidence at the framework lifecycle boundary."""
 
     def __init__(self, case: Any) -> None:
         super().__init__(case)
@@ -37,6 +39,32 @@ class _RequestProvenanceLifecycle(CaseLifecycle[Any, Any, Any]):
 
     async def setup(self) -> None:
         self._case_id_token = _CURRENT_EVALUATION_CASE_ID.set(self.case.name)
+
+    async def prepare_context(self, ctx: EvaluatorContext) -> EvaluatorContext:
+        routes: Counter[tuple[str, str | None]] = Counter()
+        for span in ctx.span_tree:
+            if span.attributes.get("gen_ai.operation.name") != "chat":
+                continue
+            response_model = span.attributes.get("gen_ai.response.model")
+            if not isinstance(response_model, str):
+                continue
+            downstream_provider = span.attributes.get(
+                "gen_ai.response.downstream_provider"
+            )
+            if not isinstance(downstream_provider, str):
+                downstream_provider = None
+            routes[(response_model, downstream_provider)] += 1
+        ctx.attributes["model_routes"] = [
+            {
+                "response_model": response_model,
+                "downstream_provider": downstream_provider,
+                "request_count": count,
+            }
+            for (response_model, downstream_provider), count in sorted(
+                routes.items(), key=lambda item: (item[0][0], item[0][1] or "")
+            )
+        ]
+        return ctx
 
     async def teardown(self, result: Any) -> None:
         del result
@@ -85,6 +113,7 @@ def run_gold_set(
     """
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be greater than 0")
+    setup_telemetry()
     dataset = build_dataset(
         gold_set,
         evaluators=evaluators,
@@ -120,7 +149,7 @@ def run_gold_set(
         metadata=dict(experiment_metadata) if experiment_metadata else None,
         progress=False,
         max_concurrency=max_concurrency,
-        lifecycle=_RequestProvenanceLifecycle,
+        lifecycle=_EvaluationCaseLifecycle,
     )
     for report_case in report.cases:
         with records_lock:

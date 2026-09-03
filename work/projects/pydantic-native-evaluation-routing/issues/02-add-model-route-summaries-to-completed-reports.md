@@ -11,29 +11,28 @@ removes it after the replacement has end-to-end coverage.
 
 **Blocked by:** 01, Separate model telemetry from Request Provenance.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] Every successful Evaluation Case serializes a deterministic
+- [x] Every successful Evaluation Case serializes a deterministic
   `model_routes` collection containing response model, downstream provider or
   null, and request count.
-- [ ] Repeated responses with the same route pair collapse into one count, and
+- [x] Repeated responses with the same route pair collapse into one count, and
   different pairs remain separate in stable order.
-- [ ] The effective response model follows Pydantic AI telemetry, including its
+- [x] The effective response model follows Pydantic AI telemetry, including its
   fallback to the requested model when the provider omits a response model.
-- [ ] Local responses and OpenRouter responses without an observed downstream
+- [x] Local responses and OpenRouter responses without an observed downstream
   provider serialize a null provider; configuration is never substituted.
-- [ ] Only completed task-model responses beneath the case task contribute.
+- [x] Only completed task-model responses beneath the case task contribute.
   Evaluator model calls and requests without a response do not contribute.
-- [ ] Sequential multi-round Coreference Resolution contributes each completed
+- [x] Sequential multi-round Coreference Resolution contributes each completed
   task response without introducing a request-order contract.
-- [ ] Concurrent Evaluation Cases receive only their own route counts.
-- [ ] The completed report retains Pydantic Evals request, token, and
+- [x] Concurrent Evaluation Cases receive only their own route counts.
+- [x] The completed report retains Pydantic Evals request, token, and
   calculated-cost metrics and the existing commit, dirty-worktree, Gold Set,
   split, and Model Deployment fields.
-- [ ] Historical reports are not rewritten, and failed, interrupted, or
+- [x] Historical reports are not rewritten, and failed, interrupted, or
   exhausted Evaluation Runs still write no report.
-- [ ] End-to-end report tests use deterministic mock transports and cover
+- [x] End-to-end report tests use deterministic mock transports and cover
   grouping, mixed routes, response-model fallback, missing providers,
   sequential task calls, concurrent cases, evaluator exclusion, and requests
   without responses.
-
