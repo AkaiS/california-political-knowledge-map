@@ -2,7 +2,7 @@
 
 import ast
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -116,6 +116,7 @@ def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
 
 def test_token_prefers_environment_then_keychain_then_credentials_file(monkeypatch):
     monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "_verified_project_url", lambda: None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.setattr(telemetry, "_credentials", lambda *a, **k: {"token": "file"})
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: "keychain")
@@ -138,6 +139,7 @@ def test_a_project_is_never_borrowed_from_a_source_that_did_not_supply_the_token
     so an unverifiable pairing yields no project at all.
     """
     monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "_verified_project_url", lambda: None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
     monkeypatch.setattr(
@@ -155,6 +157,7 @@ def test_a_project_is_never_borrowed_from_a_source_that_did_not_supply_the_token
 
 def test_the_credentials_file_names_the_project_for_its_own_token(monkeypatch):
     monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "_verified_project_url", lambda: None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: None)
@@ -169,6 +172,7 @@ def test_the_credentials_file_names_the_project_for_its_own_token(monkeypatch):
 
 def test_an_out_of_band_token_takes_its_project_from_the_declared_one(monkeypatch):
     monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "_verified_project_url", lambda: None)
     monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
     monkeypatch.setenv(telemetry.PROJECT_URL_ENV, "https://logfire/declared")
     monkeypatch.setattr(
@@ -209,6 +213,7 @@ def test_the_configured_project_survives_a_source_changing_mid_run(monkeypatch):
     monkeypatch.setattr(telemetry, "_configured", False)
     monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
+    monkeypatch.setattr(telemetry, "_verified_project_url", lambda: None)
     monkeypatch.setattr(
         telemetry,
         "resolve_credential",
@@ -232,3 +237,32 @@ def test_the_configured_project_survives_a_source_changing_mid_run(monkeypatch):
     )
 
     assert telemetry.project_url() == "https://logfire/reported-to"
+
+
+def test_the_token_own_project_settles_a_declared_one_that_disagrees(monkeypatch):
+    """LOGFIRE_PROJECT_URL is asserted by the operator, never checked.
+
+    Logfire validates the token against the API and learns the project it
+    actually belongs to, so that answer wins over a declaration naming another.
+    """
+    monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
+    monkeypatch.setenv(telemetry.PROJECT_URL_ENV, "https://logfire/declared-wrong")
+    monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(
+        telemetry, "_verified_project_url", lambda: "https://logfire/the-real-one"
+    )
+
+    assert telemetry.project_url() == "https://logfire/the-real-one"
+
+
+def test_a_logfire_that_stops_exposing_its_project_degrades_to_the_declaration():
+    """Internal state, read defensively: no project beats a raised exception."""
+
+    class Config:
+        pass
+
+    class Instance:
+        config = Config()
+
+    with patch.object(telemetry.logfire, "DEFAULT_LOGFIRE_INSTANCE", Instance()):
+        assert telemetry._verified_project_url() is None

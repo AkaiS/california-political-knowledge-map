@@ -121,8 +121,10 @@ class LogfireCredential:
 def resolve_credential() -> LogfireCredential | None:
     """Find the token and its project from one source: env, keychain, file."""
 
-    # A token supplied out of band carries no project of its own, so the
-    # operator declares the companion; nothing else may stand in for it.
+    # A token supplied out of band carries no project of its own.  The
+    # operator may declare the companion, which is asserted rather than
+    # checked and so is only ever a fallback for what Logfire resolves from
+    # the token; nothing else may stand in for it.
     declared_project = os.environ.get(PROJECT_URL_ENV)
 
     environment_token = os.environ.get(LOGFIRE_TOKEN_ENV)
@@ -162,15 +164,39 @@ def resolve_token() -> str | None:
     return credential.token if credential else None
 
 
-def project_url() -> str | None:
-    """The project this process reported to, when the pairing is known.
+def _verified_project_url() -> str | None:
+    """The project Logfire itself resolved from the token it was given.
 
-    Answers from the credential configure() was given rather than from the
-    sources as they stand now, so rotating a token or writing a credentials
-    file mid-run cannot redirect a finished run's link.  Falls back to a fresh
-    resolution only when nothing has been configured, which is also the case
-    where no trace was recorded for a link to mislead about.
+    Logfire validates a write token against the API and learns which project
+    it belongs to.  That answer comes from the token, so it is the only one
+    that cannot name a project the run did not report to.
+
+    Read defensively: it is Logfire's own internal state, and a version that
+    stops exposing it must leave this degrading to the declared project rather
+    than raising in the middle of writing a report.
     """
+
+    try:
+        url = getattr(logfire.DEFAULT_LOGFIRE_INSTANCE.config, "_project_url", None)
+    except AttributeError:
+        return None
+    return url if isinstance(url, str) and url else None
+
+
+def project_url() -> str | None:
+    """The project this process reported to, when it is known.
+
+    Prefers what Logfire established from the token itself, which settles a
+    declared LOGFIRE_PROJECT_URL that names somewhere else.  Otherwise answers
+    from the credential configure() was given, so that rotating a token or
+    writing a credentials file mid-run cannot redirect a finished run's link;
+    a fresh resolution is the last resort, for a process that configured
+    nothing and therefore recorded no trace for a link to mislead about.
+    """
+
+    verified = _verified_project_url()
+    if verified:
+        return verified
 
     credential = _credential or resolve_credential()
     return credential.project_url if credential else None

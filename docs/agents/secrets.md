@@ -55,10 +55,16 @@ an offline machine, and expect no trace to inspect afterwards.
 
 ### `LOGFIRE_PROJECT_URL`
 
-Not a secret, and belongs in `.env`. It names the project that goes with a
-token supplied from the environment or the keychain. Without it such a run is
-still traced, but a report records only the bare `trace_id` and nothing can
-turn that id into a link.
+Not a secret, and belongs in `.env`. It is a fallback, not the source of
+truth: Logfire validates the write token against the API and learns which
+project it belongs to, and that answer — being the token's own — wins over
+this one. The declaration only matters when Logfire could not establish the
+project, such as on a machine that cannot reach the API. It is asserted by
+whoever set it and is never checked, so a wrong value can only ever produce a
+link where Logfire itself supplied none.
+
+Without any of them a run is still traced, but a report records only the bare
+`trace_id` and nothing can turn that id into a link.
 
 `ca-map telemetry status` prints the project a run would link to, so a blank
 one is visible before a run rather than after.
