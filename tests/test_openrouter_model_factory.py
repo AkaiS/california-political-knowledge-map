@@ -4,7 +4,11 @@ import json
 
 import httpx
 import pytest
+from logfire.testing import TestExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from pydantic_ai import Agent
+from pydantic_ai.models.instrumented import InstrumentationSettings
 from pydantic_ai.models.openrouter import OpenRouterModel
 
 from knowledge_map.config import TransportSettings
@@ -15,6 +19,14 @@ from knowledge_map.schemas import (
     OpenRouterProviderPolicy,
 )
 from knowledge_map.utils.models import get_chat_model
+
+
+@pytest.fixture
+def span_exporter() -> tuple[TestExporter, TracerProvider]:
+    exporter = TestExporter()
+    tracer_provider = TracerProvider()
+    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
+    return exporter, tracer_provider
 
 
 def openrouter_deployment(**overrides) -> ModelDeployment:
@@ -126,6 +138,157 @@ def test_openrouter_route_is_emitted_as_structured_logfire_data(monkeypatch):
             },
         )
     ]
+
+
+def test_openrouter_completion_event_keeps_operational_route_and_cost_facts(
+    monkeypatch,
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
+    events: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        "knowledge_map.utils.models.logfire.info",
+        lambda message, **attributes: events.append((message, attributes)),
+    )
+    completion = chat_completion("resolved")
+    completion["usage"].update(
+        {
+            "is_byok": True,
+            "cost": 0.0012,
+            "cost_details": {"upstream_inference_cost": 0.0008},
+        }
+    )
+    completion["openrouter_metadata"] = {
+        "attempts": [
+            {"provider": "openai/first", "status": 429},
+            {"provider": "openai/test", "status": 200},
+        ]
+    }
+
+    model = get_chat_model(
+        openrouter_deployment(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=completion)
+        ),
+    )
+    Agent(
+        model,
+        name="openrouter_completion_event_test",
+        output_type=str,
+        defer_model_check=True,
+    ).run_sync("Resolve it.")
+
+    message, attributes = events[0]
+    assert message == "OpenRouter model request completed"
+    assert attributes["is_byok"] is True
+    assert attributes["generation_id"] == "chatcmpl-openrouter-test"
+    assert attributes["route_attempts"] == 2
+    assert attributes["application_attempts"] == 1
+    assert attributes["charged_cost"] == "0.0012"
+    assert attributes["upstream_cost"] == "0.0008"
+
+
+def test_observed_openrouter_provider_joins_standard_model_request_telemetry(
+    monkeypatch, span_exporter
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
+    exporter, tracer_provider = span_exporter
+
+    model = get_chat_model(
+        openrouter_deployment(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=chat_completion("resolved"))
+        ),
+    )
+    agent = Agent(
+        model,
+        name="openrouter_telemetry_test",
+        output_type=str,
+        defer_model_check=True,
+    )
+    agent.instrument = InstrumentationSettings(tracer_provider=tracer_provider)
+    agent.run_sync("Resolve it.")
+
+    model_request_span = next(
+        span
+        for span in exporter.exported_spans_as_dict(parse_json_attributes=True)
+        if span["name"] == "chat openai/gpt-4o-mini"
+    )
+    attributes = model_request_span["attributes"]
+    assert attributes["gen_ai.response.downstream_provider"] == "openai/test"
+    assert attributes["gen_ai.request.model"] == "openai/gpt-4o-mini"
+    assert attributes["gen_ai.response.model"] == "openai/gpt-4o-mini"
+    assert attributes["gen_ai.response.id"] == "chatcmpl-openrouter-test"
+    assert attributes["gen_ai.usage.input_tokens"] == 1
+    assert attributes["gen_ai.usage.output_tokens"] == 1
+    assert attributes["operation.cost"] > 0
+    assert attributes["gen_ai.input.messages"][0]["role"] == "user"
+    assert attributes["gen_ai.output.messages"][0]["role"] == "assistant"
+
+
+def test_missing_openrouter_provider_stays_absent_from_model_request_telemetry(
+    monkeypatch, span_exporter
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
+    exporter, tracer_provider = span_exporter
+    completion = chat_completion("resolved")
+    completion.pop("provider")
+
+    model = get_chat_model(
+        openrouter_deployment(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=completion)
+        ),
+    )
+    agent = Agent(
+        model,
+        name="openrouter_missing_provider_telemetry_test",
+        output_type=str,
+        defer_model_check=True,
+    )
+    agent.instrument = InstrumentationSettings(tracer_provider=tracer_provider)
+    agent.run_sync("Resolve it.")
+
+    model_request_span = next(
+        span
+        for span in exporter.exported_spans_as_dict()
+        if span["name"] == "chat openai/gpt-4o-mini"
+    )
+    assert "gen_ai.response.downstream_provider" not in model_request_span["attributes"]
+
+
+def test_local_model_request_telemetry_does_not_invent_a_downstream_provider(
+    span_exporter,
+):
+    exporter, tracer_provider = span_exporter
+    deployment = ModelDeployment(
+        kind=DeploymentKind.LOCAL,
+        model="local/test-model",
+        endpoint="http://llama.test/v1",
+        request_settings=ModelRequestSettings(max_attempts=1),
+    )
+
+    model = get_chat_model(
+        deployment,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=chat_completion("resolved"))
+        ),
+    )
+    agent = Agent(
+        model,
+        name="local_telemetry_test",
+        output_type=str,
+        defer_model_check=True,
+    )
+    agent.instrument = InstrumentationSettings(tracer_provider=tracer_provider)
+    agent.run_sync("Resolve it.")
+
+    model_request_span = next(
+        span
+        for span in exporter.exported_spans_as_dict()
+        if span["name"] == "chat local/test-model"
+    )
+    assert "gen_ai.response.downstream_provider" not in model_request_span["attributes"]
+    assert model_request_span["attributes"]["gen_ai.provider.name"] == "openai"
 
 
 def test_openrouter_request_has_one_model_and_shared_request_settings(

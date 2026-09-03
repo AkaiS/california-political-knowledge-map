@@ -102,6 +102,14 @@ declare their blockers.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
 - [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
 
+### Pydantic-Native Evaluation Routing
+
+The linear expand-contract chain completed on 2026-09-03.
+
+- [01 Separate model telemetry from Request Provenance](projects/pydantic-native-evaluation-routing/issues/01-separate-model-telemetry-from-request-provenance.md), `completed` on 2026-09-03. Adds the missing provider span attribute and narrows HTTP capture while preserving the current report.
+- [02 Add Model Route Summaries to completed reports](projects/pydantic-native-evaluation-routing/issues/02-add-model-route-summaries-to-completed-reports.md), `completed` on 2026-09-03. Derives the compact case summary from Pydantic Evals while the old report fields remain temporarily.
+- [03 Remove Request Provenance](projects/pydantic-native-evaluation-routing/issues/03-remove-request-provenance.md), `completed` on 2026-09-03. Deletes the parallel recorder and leaves the final report contract.
+
 ### Blocked initiative chain
 
 The [Model Evaluation map](initiatives/model-evaluation/MAP.md) is the current
@@ -124,7 +132,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record

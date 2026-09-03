@@ -10,32 +10,39 @@ from knowledge_map.utils import agents, telemetry
 
 
 def test_telemetry_configures_before_instrumenting_pydantic_ai(monkeypatch):
-    calls: list[str] = []
+    calls: list[tuple[str, dict]] = []
     monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setenv("LOGFIRE_HTTPX_CAPTURE_ALL", "true")
     monkeypatch.setattr(
         telemetry.logfire,
         "configure",
-        lambda **kwargs: calls.append("configure"),
+        lambda **kwargs: calls.append(("configure", kwargs)),
     )
     monkeypatch.setattr(
         telemetry.logfire,
         "instrument_pydantic_ai",
-        lambda: calls.append("pydantic_ai"),
+        lambda: calls.append(("pydantic_ai", {})),
     )
     monkeypatch.setattr(
         telemetry.logfire,
         "instrument_httpx",
-        lambda **kwargs: calls.append("httpx"),
+        lambda **kwargs: calls.append(("httpx", kwargs)),
     )
     monkeypatch.setattr(
         telemetry.logfire,
         "instrument_system_metrics",
-        lambda: calls.append("system_metrics"),
+        lambda: calls.append(("system_metrics", {})),
     )
 
     telemetry.setup_telemetry()
 
-    assert calls == ["configure", "pydantic_ai", "httpx", "system_metrics"]
+    assert [name for name, _ in calls] == [
+        "configure",
+        "pydantic_ai",
+        "httpx",
+        "system_metrics",
+    ]
+    assert dict(calls)["httpx"] == {"capture_all": False}
 
 
 def test_create_agent_sets_up_telemetry_before_construction(monkeypatch):

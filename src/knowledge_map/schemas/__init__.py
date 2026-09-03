@@ -38,4 +38,3 @@ from .model_deployment import (
     ModelRequestSettings,
     OpenRouterProviderPolicy,
 )
-from .request_provenance import ModelRequestProvenance

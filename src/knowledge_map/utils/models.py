@@ -7,7 +7,7 @@ import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC
 from decimal import Decimal, InvalidOperation
 from email.utils import parsedate_to_datetime
@@ -18,6 +18,7 @@ import httpx
 import logfire
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from opentelemetry.trace import get_current_span
 from pydantic_ai import ModelProfile, ModelResponse
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
@@ -38,7 +39,6 @@ from knowledge_map.config import (
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
-    ModelRequestProvenance,
     ModelRequestSettings,
 )
 from knowledge_map.utils.telemetry import setup_telemetry
@@ -46,136 +46,17 @@ from knowledge_map.utils.telemetry import setup_telemetry
 DEFAULT_LOCAL_CHAT_MODEL = "gemma4:26b"
 
 
-@dataclass
-class _RequestRetryState:
-    """Track one HTTP request across its bounded transport attempts."""
-
-    request_sequence: int | None = None
-    attempts: int = 0
-
-
-@dataclass
-class _RequestProvenanceCapture:
-    case_id: str
-    records: list[ModelRequestProvenance]
-    _next_request_sequence: int = field(default=1, init=False, repr=False)
-    _lock: threading.Lock = field(
-        default_factory=threading.Lock, init=False, repr=False
-    )
-
-    @classmethod
-    def for_case(cls, case_id: str) -> "_RequestProvenanceCapture":
-        return cls(case_id=case_id, records=[])
-
-    def start_request(self) -> int:
-        """Reserve the next case-local sequence at request initiation."""
-
-        with self._lock:
-            sequence = self._next_request_sequence
-            self._next_request_sequence += 1
-            return sequence
-
-    def _request_sequence(self, retry_state: _RequestRetryState) -> int:
-        """Return the sequence reserved when this request started."""
-
-        sequence = retry_state.request_sequence
-        if sequence is None:
-            raise RuntimeError(
-                "request provenance lost the sequence reserved at initiation"
-            )
-        return sequence
-
-    def _append_in_sequence_order(self, record: ModelRequestProvenance) -> None:
-        with self._lock:
-            self.records.append(record)
-            self.records.sort(key=lambda item: item.request_sequence)
-
-    def record(
-        self,
-        deployment: str,
-        requested_model: str,
-        response: ModelResponse,
-        raw_response: Any,
-        retry_state: _RequestRetryState,
-    ) -> None:
-        details = response.provider_details
-        downstream_provider = None
-        is_byok = None
-        if deployment == "openrouter" and isinstance(details, dict):
-            provider = details.get("downstream_provider")
-            if (
-                isinstance(provider, str)
-                and provider.strip()
-                and provider.casefold() not in {"unknown", "unavailable"}
-            ):
-                downstream_provider = provider
-            byok = details.get("is_byok")
-            if isinstance(byok, bool):
-                is_byok = byok
-
-        returned_model = response.model_name if response.model_name else None
-        generation_id = (
-            response.provider_response_id
-            if deployment == "openrouter" and response.provider_response_id
-            else None
-        )
-        usage_facts = _request_usage_facts(
-            response, raw_response, deployment=deployment
-        )
-        attempts = retry_state.attempts or 1
-        request_sequence = self._request_sequence(retry_state)
-        self._append_in_sequence_order(
-            ModelRequestProvenance(
-                case_id=self.case_id,
-                request_sequence=request_sequence,
-                deployment=deployment,
-                requested_model=requested_model,
-                returned_model=returned_model,
-                downstream_provider=downstream_provider,
-                generation_id=generation_id,
-                is_byok=is_byok,
-                **usage_facts,
-                route_attempts=(
-                    _raw_response_route_attempts(raw_response)
-                    if deployment == "openrouter"
-                    else None
-                ),
-                attempts=attempts,
-                retry_count=max(attempts - 1, 0),
-            )
-        )
-
-    def record_failure(
-        self,
-        deployment: str,
-        requested_model: str,
-        retry_state: _RequestRetryState,
-    ) -> None:
-        attempts = retry_state.attempts or 1
-        request_sequence = self._request_sequence(retry_state)
-        self._append_in_sequence_order(
-            ModelRequestProvenance(
-                case_id=self.case_id,
-                request_sequence=request_sequence,
-                deployment=deployment,
-                requested_model=requested_model,
-                returned_model=None,
-                downstream_provider=None,
-                generation_id=None,
-                is_byok=None,
-                input_tokens=None,
-                output_tokens=None,
-                reasoning_tokens=None,
-                cache_write_tokens=None,
-                cache_read_tokens=None,
-                total_tokens=None,
-                charged_cost=None,
-                upstream_cost=None,
-                route_attempts=None,
-                attempts=attempts,
-                retry_count=max(attempts - 1, 0),
-            )
-        )
+def _observed_downstream_provider(response: ModelResponse) -> str | None:
+    details = response.provider_details
+    if not isinstance(details, dict):
+        return None
+    provider = details.get("downstream_provider")
+    if not isinstance(provider, str):
+        return None
+    normalized = provider.strip()
+    if not normalized or normalized.casefold() in {"unknown", "unavailable"}:
+        return None
+    return provider
 
 
 def _raw_response_data(raw_response: Any) -> dict[str, Any] | None:
@@ -347,164 +228,21 @@ def _request_usage_facts(
     }
 
 
-_CURRENT_REQUEST_PROVENANCE: ContextVar[_RequestProvenanceCapture | None] = ContextVar(
-    "current_request_provenance", default=None
+_CURRENT_APPLICATION_ATTEMPTS: ContextVar[int | None] = ContextVar(
+    "current_application_attempts", default=None
 )
-_CURRENT_REQUEST_RETRY: ContextVar[_RequestRetryState | None] = ContextVar(
-    "current_request_retry", default=None
-)
-
-
-def _start_request_retry_state() -> _RequestRetryState:
-    """Reserve case order before a model request can await or complete."""
-
-    capture = _CURRENT_REQUEST_PROVENANCE.get()
-    request_sequence = capture.start_request() if capture is not None else None
-    retry_state = _RequestRetryState(request_sequence=request_sequence)
-    _CURRENT_REQUEST_RETRY.set(retry_state)
-    return retry_state
-
-
-@contextmanager
-def request_provenance_scope(
-    case_id: str,
-) -> Iterator[list[ModelRequestProvenance]]:
-    """Capture safe model-response route facts for one authored case."""
-
-    capture = _RequestProvenanceCapture.for_case(case_id)
-    token = _CURRENT_REQUEST_PROVENANCE.set(capture)
-    try:
-        yield capture.records
-    finally:
-        _CURRENT_REQUEST_PROVENANCE.reset(token)
-
-
-def _record_request_provenance(
-    deployment: str,
-    requested_model: str,
-    response: ModelResponse,
-    raw_response: Any,
-    retry_state: _RequestRetryState | None,
-) -> None:
-    capture = _CURRENT_REQUEST_PROVENANCE.get()
-    if capture is not None:
-        if retry_state is None:
-            raise RuntimeError(
-                "request provenance has no state reserved at request initiation"
-            )
-        capture.record(
-            deployment,
-            requested_model,
-            response,
-            raw_response,
-            retry_state,
-        )
-
-
-def _record_failed_request_provenance(
-    deployment: str,
-    requested_model: str,
-    retry_state: _RequestRetryState,
-) -> None:
-    if retry_state.attempts == 0:
-        return
-    capture = _CURRENT_REQUEST_PROVENANCE.get()
-    if capture is not None:
-        capture.record_failure(deployment, requested_model, retry_state)
-
-
-class _RequestAttemptTrackingTransport(httpx.AsyncBaseTransport):
-    """Count each underlying transport call within one logical request."""
-
-    def __init__(self, wrapped: httpx.AsyncBaseTransport | None) -> None:
-        self._wrapped = wrapped or httpx.AsyncHTTPTransport()
-
-    async def __aenter__(self) -> Self:
-        await self._wrapped.__aenter__()
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None = None,
-        exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
-    ) -> None:
-        await self._wrapped.__aexit__(exc_type, exc_value, traceback)
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        retry_state = _CURRENT_REQUEST_RETRY.get()
-        if retry_state is not None:
-            retry_state.attempts += 1
-        return await self._wrapped.handle_async_request(request)
-
-    async def aclose(self) -> None:
-        await self._wrapped.aclose()
-
-
-class _RequestTrackingAsyncTenacityTransport(AsyncTenacityTransport):
-    """Expose SDK transport retry state at the model response boundary."""
-
-    def __init__(
-        self,
-        config: RetryConfig,
-        *,
-        wrapped: httpx.AsyncBaseTransport,
-        validate_response: Callable[[httpx.Response], Any] | None,
-        deployment: str,
-        requested_model: str,
-    ) -> None:
-        super().__init__(config, wrapped=wrapped, validate_response=validate_response)
-        self._provenance_deployment = deployment
-        self._provenance_model = requested_model
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        retry_state = _start_request_retry_state()
-        try:
-            return await super().handle_async_request(request)
-        except BaseException:
-            _record_failed_request_provenance(
-                self._provenance_deployment,
-                self._provenance_model,
-                retry_state,
-            )
-            _CURRENT_REQUEST_RETRY.set(None)
-            raise
-
-
-class _RequestProvenanceModelMixin:
-    _provenance_deployment: str
-
-    def _process_response(self, response: Any) -> ModelResponse:
-        retry_state = _CURRENT_REQUEST_RETRY.get()
-        _CURRENT_REQUEST_RETRY.set(None)
-        model_response = super()._process_response(response)  # type: ignore[misc]
-        if self._provenance_deployment == "openrouter":
-            _log_openrouter_route(
-                self,
-                model_response,
-                response,
-                retry_state,
-            )
-        _record_request_provenance(
-            self._provenance_deployment,
-            self.model_name,
-            model_response,
-            response,
-            retry_state,
-        )
-        return model_response
 
 
 def _log_openrouter_route(
     model: Any,
     response: ModelResponse,
     raw_response: Any,
-    retry_state: _RequestRetryState | None,
+    application_attempts: int,
 ) -> None:
     """Attach OpenRouter's safe routing result to the active model trace."""
 
     details = response.provider_details or {}
-    downstream_provider = details.get("downstream_provider")
+    downstream_provider = _observed_downstream_provider(response)
     is_byok = details.get("is_byok")
     provider_policy = (getattr(model, "settings", None) or {}).get(
         "openrouter_provider", {}
@@ -523,7 +261,7 @@ def _log_openrouter_route(
         is_byok=is_byok if isinstance(is_byok, bool) else None,
         generation_id=response.provider_response_id or None,
         route_attempts=_raw_response_route_attempts(raw_response),
-        application_attempts=(retry_state.attempts if retry_state else 1),
+        application_attempts=application_attempts,
         provider_order=provider_policy.get("order"),
         allow_fallbacks=provider_policy.get("allow_fallbacks"),
         charged_cost=(
@@ -539,10 +277,8 @@ def _log_openrouter_route(
     )
 
 
-class _LocalOpenAIChatModel(_RequestProvenanceModelMixin, OpenAIChatModel):
+class _LocalOpenAIChatModel(OpenAIChatModel):
     """OpenAI-compatible model with llama.cpp's empty-content workaround."""
-
-    _provenance_deployment = "llama.cpp"
 
     @dataclass
     class _MapModelResponseContext(OpenAIChatModel._MapModelResponseContext):
@@ -555,10 +291,25 @@ class _LocalOpenAIChatModel(_RequestProvenanceModelMixin, OpenAIChatModel):
             return result
 
 
-class _OpenRouterModel(_RequestProvenanceModelMixin, OpenRouterModel):
+class _OpenRouterModel(OpenRouterModel):
     """Native OpenRouter model that exposes safe response route facts."""
 
-    _provenance_deployment = "openrouter"
+    def _process_response(self, response: Any) -> ModelResponse:
+        application_attempts = _CURRENT_APPLICATION_ATTEMPTS.get() or 1
+        _CURRENT_APPLICATION_ATTEMPTS.set(None)
+        model_response = super()._process_response(response)
+        downstream_provider = _observed_downstream_provider(model_response)
+        if downstream_provider is not None:
+            get_current_span().set_attribute(
+                "gen_ai.response.downstream_provider", downstream_provider
+            )
+        _log_openrouter_route(
+            self,
+            model_response,
+            response,
+            application_attempts,
+        )
+        return model_response
 
     def _validate_completion(self, response: Any) -> Any:
         """Keep a response usable when OpenRouter omits its provider field."""
@@ -567,14 +318,14 @@ class _OpenRouterModel(_RequestProvenanceModelMixin, OpenRouterModel):
         updates: dict[str, Any] = {}
         if not response_data.get("provider"):
             # The provider is optional in OpenRouter's response in practice;
-            # retain the successful completion while provenance marks it unknown.
+            # retain the successful completion while telemetry leaves it unavailable.
             updates["provider"] = "unknown"
 
         usage_data = _usage_for_validation(response_data.get("usage"))
         if usage_data is not None:
             # OpenAI's typed usage model requires these fields even when an
             # OpenRouter response omits one; zero is validation-only, while
-            # provenance reads the original response and records None.
+            # telemetry reads the original response and records None.
             usage_type = type(response.usage)
             usage_validate = getattr(usage_type, "model_validate", None)
             if callable(usage_validate):
@@ -600,9 +351,6 @@ class _OpenRouterModel(_RequestProvenanceModelMixin, OpenRouterModel):
 def build_retrying_client(
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
-    *,
-    provenance_deployment: str | None = None,
-    requested_model: str | None = None,
 ) -> httpx.AsyncClient:
     """Build the HTTP client used to retry failed local model requests.
 
@@ -619,20 +367,11 @@ def build_retrying_client(
         stop=stop_after_attempt(transport_settings.max_attempts),
         reraise=True,
     )
-    if provenance_deployment is not None and requested_model is not None:
-        retrying_transport = _RequestTrackingAsyncTenacityTransport(
-            retry_config,
-            wrapped=_RequestAttemptTrackingTransport(transport),
-            validate_response=lambda response: response.raise_for_status(),
-            deployment=provenance_deployment,
-            requested_model=requested_model,
-        )
-    else:
-        retrying_transport = AsyncTenacityTransport(
-            retry_config,
-            wrapped=transport,
-            validate_response=lambda response: response.raise_for_status(),
-        )
+    retrying_transport = AsyncTenacityTransport(
+        retry_config,
+        wrapped=transport,
+        validate_response=lambda response: response.raise_for_status(),
+    )
     return httpx.AsyncClient(
         transport=retrying_transport,
         timeout=transport_settings.request_timeout,
@@ -1064,7 +803,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         max_attempts: int,
         rate_limit_wait_cap: float,
         retry_hooks: OpenRouterRetryHooks | None = None,
-        requested_model: str = "",
     ) -> None:
         self._wrapped = (
             wrapped if wrapped is not None else httpx.AsyncHTTPTransport()
@@ -1075,7 +813,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         self._admission_gate = (
             self._retry_hooks.admission_gate or _DEFAULT_OPENROUTER_ADMISSION_GATE
         )
-        self._requested_model = requested_model
 
     def _bounded_wait(self, wait: float) -> float:
         return min(max(wait, 0.0), self._rate_limit_wait_cap)
@@ -1115,19 +852,16 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         await self._wrapped.__aexit__(exc_type, exc_value, traceback)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        retry_state = _start_request_retry_state()
+        _CURRENT_APPLICATION_ATTEMPTS.set(0)
         admitted = False
+        defer_application_attempts_cleanup = False
         try:
             is_probe = await self._admission_gate.wait_until_open(
                 self._retry_hooks
             )
             admitted = True
-        except BaseException:
-            _CURRENT_REQUEST_RETRY.set(None)
-            raise
-        try:
             for attempt in range(self._max_attempts):
-                retry_state.attempts += 1
+                _CURRENT_APPLICATION_ATTEMPTS.set(attempt + 1)
                 try:
                     response = await self._wrapped.handle_async_request(request)
                 except httpx.TransportError:
@@ -1152,10 +886,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                         )
                         admitted = True
                         continue
-                    _record_failed_request_provenance(
-                        "openrouter", self._requested_model, retry_state
-                    )
-                    _CURRENT_REQUEST_RETRY.set(None)
                     return response
 
                 if (
@@ -1172,20 +902,20 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                     successful=200 <= response.status_code < 300,
                 )
                 admitted = False
-                if not 200 <= response.status_code < 300:
-                    _record_failed_request_provenance(
-                        "openrouter", self._requested_model, retry_state
-                    )
-                    _CURRENT_REQUEST_RETRY.set(None)
+                # Completed responses keep this count until
+                # ``_OpenRouterModel._process_response`` consumes it; every
+                # other outcome is cleaned up at this boundary.
+                defer_application_attempts_cleanup = (
+                    200 <= response.status_code < 300
+                )
                 return response
         except BaseException:
-            _record_failed_request_provenance(
-                "openrouter", self._requested_model, retry_state
-            )
-            _CURRENT_REQUEST_RETRY.set(None)
             if admitted:
                 self._admission_gate.request_failed(is_probe=is_probe)
             raise
+        finally:
+            if not defer_application_attempts_cleanup:
+                _CURRENT_APPLICATION_ATTEMPTS.set(None)
 
         raise AssertionError("OpenRouter retry transport made no attempt")
 
@@ -1196,7 +926,6 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
 def _openrouter_retry_transport(
     transport_settings: TransportSettings,
     transport: httpx.AsyncBaseTransport | None,
-    requested_model: str,
     retry_hooks: OpenRouterRetryHooks | None = None,
 ) -> httpx.AsyncBaseTransport:
     """Apply bounded OpenRouter retries at the HTTP boundary."""
@@ -1206,7 +935,6 @@ def _openrouter_retry_transport(
         transport_settings.max_attempts,
         transport_settings.rate_limit_wait_cap,
         retry_hooks,
-        requested_model,
     )
 
 
@@ -1268,8 +996,6 @@ def _build_model(
         http_client=build_retrying_client(
             effective_transport_settings,
             transport,
-            provenance_deployment="llama.cpp",
-            requested_model=model_name,
         ),
         max_retries=0,
     )
@@ -1313,7 +1039,7 @@ def _build_openrouter_model(
 
     http_client = httpx.AsyncClient(
         transport=_openrouter_retry_transport(
-            effective_transport_settings, transport, deployment.model, retry_hooks
+            effective_transport_settings, transport, retry_hooks
         ),
         timeout=request_timeout,
     )

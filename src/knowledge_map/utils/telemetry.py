@@ -249,10 +249,9 @@ def setup_telemetry() -> None:
         # This must follow configure() and precede Agent construction.
         logfire.instrument_pydantic_ai()
 
-        # Model clients use HTTPX. Full capture exposes the OpenRouter request and
-        # response beneath the parent Pydantic AI run span; Logfire scrubs common
-        # credential fields before export.
-        logfire.instrument_httpx(capture_all=True)
+        # Model clients use HTTPX. Keep transport timing, status, and errors without
+        # copying every request and response payload into low-level telemetry.
+        logfire.instrument_httpx(capture_all=False)
         logfire.instrument_system_metrics()
 
         _credential = credential

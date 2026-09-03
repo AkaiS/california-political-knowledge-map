@@ -21,8 +21,6 @@ from pydantic_evals.reporting import EvaluationReport
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.utils.telemetry import project_url
 
-from .provenance import aggregate_request_provenance
-
 
 def trace_url(report: EvaluationReport[Any, Any, Any]) -> str | None:
     """Address the trace this run left in Logfire.
@@ -83,17 +81,6 @@ def write_report(
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized_report = dataclasses.asdict(report)
-    for failure_data, failure in zip(
-        serialized_report.get("failures", []),
-        getattr(report, "failures", []),
-        strict=True,
-    ):
-        failure_data["request_provenance"] = getattr(
-            failure, "request_provenance", []
-        )
-    serialized_report["request_provenance_aggregate"] = (
-        aggregate_request_provenance(report).as_dict()
-    )
     document = {
         "task": task,
         "trace_url": trace_url(report),

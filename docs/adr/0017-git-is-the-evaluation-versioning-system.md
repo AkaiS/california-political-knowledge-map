@@ -1,21 +1,33 @@
 # Git is the evaluation versioning system
 
-An Evaluation Gold Set is a YAML file under `evals/gold/`. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Gold Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and the request provenance recorded in its report; comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
+An Evaluation Gold Set is a YAML file under `evals/gold/`. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Gold Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and each successful Evaluation Case's Model Route Summary. Pydantic Evals report metrics and Logfire/OpenTelemetry cover the operational request details. Comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
 
 This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their entirety. It also restates the decision recorded as ADR 0018 on `feat/evaluations` — Gold Sets are authored as version-controlled files — so that decision survives without porting the branch it was written on.
 
 `pydantic-evals` remains the execution substrate, unchanged. It was never the problem: `engine.py` imports `Case`, `Dataset`, `Evaluator`, `ReportEvaluator`, and `EvaluationReport` from it and imports nothing from `store.py`. Everything this decision removes was built around `pydantic-evals`, not through it.
 
-## Model Deployment and request provenance
+## Model Deployment, model routes, and telemetry
 
 The report records a structured Model Deployment rather than a bare model
 string. It identifies the selected deployment kind, requested model, effective
 non-secret request settings, and, for OpenRouter, the ordered provider policy.
-It contains no API key. Each model request records its authored Evaluation Case
-and request order, the returned route and model facts, usage and cost when the
-provider supplies them, and application attempts. Missing
-provider facts remain unavailable; they are never inferred from the requested
-deployment or from a retry.
+It contains no API key.
+
+Each successful Evaluation Case records a Model Route Summary: deterministic
+counts grouped by the effective response model and observed downstream provider
+for task-model responses. The response model follows Pydantic AI's telemetry
+semantics, including its fallback to the requested model when the provider omits
+one. A downstream provider that OpenRouter does not identify remains
+unavailable; it is not inferred from the configured route. The summary is
+derived from the task execution's existing span tree. Evaluator model calls and
+requests that produce no response are excluded.
+
+Pydantic Evals owns the report's request-count, token-usage, and calculated-cost
+metrics. Logfire/OpenTelemetry owns request-level diagnostics such as retries,
+errors, timing, BYOK use, generation identity, route attempts, and exact charged
+or upstream cost. Those diagnostics are operational telemetry, not a second
+persisted evaluation record. The application adds only downstream-provider data
+that the standard model-request telemetry does not expose.
 
 This is evidence attached to the local report, not a second persistence system.
 There is no remote run identity, remote job, polling, resumption, or finalization.
@@ -65,5 +77,10 @@ An Evaluation Case carries a stable authored `id`, written by hand or derived fr
 Evaluation Split stops being derived by hashing a case's business identity and becomes an authored field on the case. Hand-balancing replaces pinning.
 
 A report is committed. This is what makes a past run recoverable, and a run whose report is not committed did not happen as far as the repository is concerned.
+
+The custom Request Provenance schema, capture context, request sequencing,
+aggregation, failure mutation, and serialization repair are removed. New reports
+keep Pydantic Evals' built-in metrics and add only the per-case Model Route
+Summary. Historical reports are not rewritten.
 
 The removed code stays in this branch's history and on `feat/evaluations`, which is not merged and not deleted. Recovering any part of it is a checkout, so nothing here is a decision that cannot be reversed by reading it back out.

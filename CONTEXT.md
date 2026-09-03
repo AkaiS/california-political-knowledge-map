@@ -265,9 +265,9 @@ _Avoid_: Prompt, grading scale, judge config
 The concrete chat execution target an Evaluation Run or Story Pipeline invokes. The local Model Deployment is a llama.cpp-served local GGUF, while the OpenRouter Model Deployment requests a named upstream model through OpenRouter's ordered provider policy; they remain distinct even when they refer to the same upstream release, so an OpenRouter run is directional evidence about the local deployment rather than proof of equivalent behavior.
 _Avoid_: Model, endpoint, provider, backend
 
-**Request Provenance**:
-The non-secret facts recorded for one model request in an Evaluation Run: its authored Evaluation Case and request order, deployment, returned route, usage and cost, attempts, and rate-limit wait. A fact the provider does not return remains explicitly unavailable rather than being inferred.
-_Avoid_: Request log, provider trace, billing record
+**Model Route Summary**:
+The counts of effective response-model and observed downstream-provider pairs for the requests made by one Evaluation Case. The response model follows Pydantic AI's telemetry semantics, including its fallback to the requested model, while a downstream provider that OpenRouter does not identify remains unavailable.
+_Avoid_: Request Provenance, request log, provider trace, billing record
 
 **OpenRouter Admission Gate**:
 The shared control that determines when new requests for OpenRouter Model Deployments may begin after a provider rate limit, while local requests remain outside it.
@@ -278,7 +278,7 @@ The first request allowed after an OpenRouter Admission Gate's pause expires, us
 _Avoid_: Health check, test request
 
 **Evaluation Run**:
-One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Gold Set path and split, and each request's Request Provenance. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
+One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Gold Set path and split, and each case's Model Route Summary. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
 
 ## Operational Constraints
