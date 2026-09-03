@@ -64,6 +64,7 @@ def _write_relationship(
     node_labels: dict,
     resolve_id,
     chunk_id: str | None = None,
+    article_id: str | None = None,
 ) -> None:
     """The one place a relationship reaches the graph.
 
@@ -71,12 +72,14 @@ def _write_relationship(
     came from an extractor or was composed from an article-level decision;
     ``resolve_id`` maps a label and a name to the node's primary key and is the
     only thing they do differently.  Pass ``chunk_id`` to accumulate the chunks
-    asserting the claim, which only a per-chunk write has.
+    asserting the claim, which only a per-chunk write has, or ``article_id``
+    to accumulate the Source Articles asserting it, which is what an edge
+    decided at article level has instead.
 
     Both endpoints are matched, never created: a relationship reaches the graph
     only once something has merged the nodes it connects.
 
-    An edge carries only its Claim Key, those chunks, and ``needs_review``.
+    An edge carries only its Claim Key, that provenance, and ``needs_review``.
     Everything else the article said stays in the Article Chunk.
     """
 
@@ -113,6 +116,15 @@ def _write_relationship(
             "THEN r.chunks ELSE coalesce(r.chunks, []) + $chunk_id END"
         )
         parameters["chunk_id"] = chunk_id
+    if article_id is not None:
+        # The Source Articles that assert *this* claim, appended the same way
+        # and for the same reason as the chunks above: it is what a later run
+        # reads to know whose decision an edge is when it retracts one.
+        query += (
+            " SET r.articles = CASE WHEN $article_id IN coalesce(r.articles, []) "
+            "THEN r.articles ELSE coalesce(r.articles, []) + $article_id END"
+        )
+        parameters["article_id"] = article_id
 
     tx.run(query, **parameters)
 
@@ -376,17 +388,64 @@ class Neo4jAdapter:
 
         Areas with no assignments is a normal call, not an empty case — it is
         what the pipeline hands over between classification and assignment.
+
+        The write replaces this article's topic decisions rather than adding
+        to them.  Reprocessing an article is the pipeline reaching a fresh
+        verdict over the same text, so what an earlier run recorded and this
+        one does not is retracted first; leaving it standing would answer a
+        graph query with a decision no run supports.
         """
 
         assignments = assignments or []
         bill_sessions = bill_sessions or BillSessionResolutions()
-        if not policy_areas and not assignments:
-            return
+        resolve = _topic_endpoint_resolver(article, bill_sessions)
+        # What this run decided, as node keys, so the retractions below can
+        # spare the edges it still supports.  Empty is a decision too: an
+        # article that classifies to nothing keeps none of what it wrote
+        # before, which is why there is no early return here.
+        area_ids = [derived_key("PolicyArea", name) for name in policy_areas]
+        pairs = [
+            [
+                resolve(assignment.measure_label, assignment.measure_name),
+                derived_key("PolicyArea", assignment.policy_area),
+            ]
+            for assignment in assignments
+        ]
 
         driver = self.connect()
         try:
             with driver.session() as session:
                 def _tx(tx):
+                    # The latest run is the whole of what this article says
+                    # about topics, so an area or an assignment it no longer
+                    # supports leaves the graph before the rest is merged.
+                    # Only this article's decisions are retracted: the same
+                    # area, classified by another article, is that article's
+                    # to withdraw.
+                    tx.run(
+                        "MATCH (:NewsArticle {id: $article_id})"
+                        "-[r:DISCUSSES_TOPIC]->(p:PolicyArea) "
+                        "WHERE NOT p.id IN $area_ids "
+                        "DELETE r",
+                        article_id=article.url,
+                        area_ids=area_ids,
+                    )
+                    # An ABOUT_TOPIC edge hangs between a measure and an area,
+                    # neither of which is the article, so what scopes this one
+                    # is the provenance the edge carries.  Withdrawing the
+                    # article's support deletes the edge only when it was the
+                    # last article asserting the claim.
+                    tx.run(
+                        "MATCH (m)-[r:ABOUT_TOPIC]->(p:PolicyArea) "
+                        "WHERE $article_id IN coalesce(r.articles, []) "
+                        "AND NOT [m.id, p.id] IN $pairs "
+                        "SET r.articles = [url IN r.articles WHERE url <> $article_id] "
+                        "WITH r WHERE size(r.articles) = 0 "
+                        "DELETE r",
+                        article_id=article.url,
+                        pairs=pairs,
+                    )
+
                     for name in policy_areas:
                         # Keyed like every non-Bill node, so the hub one
                         # article's classification writes is the node a later
@@ -415,7 +474,7 @@ class Neo4jAdapter:
                                 relationship_type="DISCUSSES_TOPIC",
                             ),
                             {},
-                            _topic_endpoint_resolver(article, bill_sessions),
+                            resolve,
                         )
 
                     for assignment in assignments:
@@ -432,7 +491,8 @@ class Neo4jAdapter:
                                 relationship_type="ABOUT_TOPIC",
                             ),
                             {},
-                            _topic_endpoint_resolver(article, bill_sessions),
+                            resolve,
+                            article_id=article.url,
                         )
                 session.execute_write(_tx)
         except Exception as e:
