@@ -7,7 +7,7 @@ from knowledge_map.core.topic_assignment import extracted_measures, supported_as
 from knowledge_map.schemas import (
     AdherenceReport,
     ArticleChunk,
-    ArticleStatus,
+    StoryStatus,
     BillSessionResolutions,
     CoreferenceResolutionRun,
     ExtractionResult,
@@ -202,7 +202,7 @@ class StoryPipeline:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
         
         if not dry_run:
-            self.status_tracker.update_status(article.url, ArticleStatus.PROCESSING)
+            self.status_tracker.update_status(article.url, StoryStatus.PROCESSING)
 
         try:
             # 1. Resolve coreferences
@@ -298,7 +298,7 @@ class StoryPipeline:
                 )
 
                 # 8. Update status to COMPLETED
-                self.status_tracker.update_status(article.url, ArticleStatus.COMPLETED)
+                self.status_tracker.update_status(article.url, StoryStatus.COMPLETED)
 
             return PipelineResult(
                 resolved_text=resolved_text,
@@ -311,7 +311,7 @@ class StoryPipeline:
             self._handle_pipeline_failure(e, article, dry_run)
             raise e
 
-    def _safe_update_status(self, url: str, status: ArticleStatus) -> None:
+    def _safe_update_status(self, url: str, status: StoryStatus) -> None:
         try:
             self.status_tracker.update_status(url, status)
         except Exception as status_err:
@@ -322,9 +322,9 @@ class StoryPipeline:
             if isinstance(e, PipelineRateLimitError) or (
                 isinstance(e, PipelineConnectivityError) and e.retryable
             ):
-                self._safe_update_status(article.url, ArticleStatus.UNPROCESSED)
+                self._safe_update_status(article.url, StoryStatus.UNPROCESSED)
             elif isinstance(e, PipelineException):
-                self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
+                self._safe_update_status(article.url, StoryStatus.SYSTEM_ERROR)
 
         error_cat = _error_category(e)
         if error_cat is not None:
@@ -350,7 +350,7 @@ class StoryPipeline:
                 except Exception as dlq_err:
                     logger.error(f"Failed to log {error_cat} failure to DLQ: {dlq_err}")
                     if not dry_run:
-                        self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
+                        self._safe_update_status(article.url, StoryStatus.SYSTEM_ERROR)
                     raise dlq_err
 
             logger.error(
@@ -359,10 +359,10 @@ class StoryPipeline:
                 f"Archived in DLQ: {dlq_id}"
             )
             if not dry_run:
-                self._safe_update_status(article.url, ArticleStatus.FAILED_DLQ)
+                self._safe_update_status(article.url, StoryStatus.FAILED_DLQ)
             e.logged_to_dlq = True
 
         elif not isinstance(e, PipelineException):
             logger.error(f"Unexpected pipeline error: {e}")
             if not dry_run:
-                self._safe_update_status(article.url, ArticleStatus.SYSTEM_ERROR)
+                self._safe_update_status(article.url, StoryStatus.SYSTEM_ERROR)

@@ -809,3 +809,9 @@ def test_get_machine_labeled_for_reevaluation_skips_human_and_relevant(tmp_path)
     }
     # Callers read the prior status off the last column
     assert {row[0]: row[4] for row in rows}["http://example.com/irrelevant"] == "IRRELEVANT"
+
+
+def test_article_status_remains_as_deprecated_alias_for_story_status():
+    from knowledge_map.schemas.pipeline import ArticleStatus, StoryStatus
+
+    assert ArticleStatus is StoryStatus
