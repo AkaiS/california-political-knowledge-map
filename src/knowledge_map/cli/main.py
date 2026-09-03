@@ -29,6 +29,7 @@ from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
 from knowledge_map.utils.deployments import deployment_from_environment
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
+from knowledge_map.utils.reachability import ModelEndpoint, check_endpoints
 
 
 CLI_COMMAND_HELP = {
@@ -53,6 +54,84 @@ CLI_COMMAND_HELP = {
     "eval": "Collect and run an Evaluation Gold Set",
     "telemetry": "Manage the Logfire credential this project runs on",
 }
+
+
+# Set to bypass the Model Reachability Check without editing a command line,
+# for the deterministic test suite and for an operator who knows better.
+SKIP_MODEL_CHECK_ENV = "SKIP_MODEL_REACHABILITY_CHECK"
+
+# The local endpoints each command's agents reach. Keyed like CLI_COMMAND_HELP,
+# so a command absent here is one that runs no agent at all.
+COMMAND_MODEL_ENDPOINTS: dict[str, frozenset[ModelEndpoint]] = {
+    # Coreference Resolution, Entity Extraction and Policy Area Classification
+    # chat; Article Chunk embedding.
+    "ingest": frozenset({ModelEndpoint.CHAT, ModelEndpoint.EMBEDDING}),
+    # Both scraping commands end in the Article Validator, which runs the
+    # Relevance Filter and can trigger the Selector Healing Pipeline.
+    "update-sources": frozenset({ModelEndpoint.CHAT, ModelEndpoint.EMBEDDING}),
+    "scrape-archive": frozenset({ModelEndpoint.CHAT, ModelEndpoint.EMBEDDING}),
+    "validate-articles": frozenset({ModelEndpoint.CHAT, ModelEndpoint.EMBEDDING}),
+    "heal-selectors": frozenset({ModelEndpoint.CHAT}),
+    "classifier backfill": frozenset({ModelEndpoint.EMBEDDING}),
+    "classifier label": frozenset({ModelEndpoint.EMBEDDING}),
+}
+
+
+def required_model_endpoints(parsed_args) -> frozenset[ModelEndpoint]:
+    """The endpoints one parsed command depends on being able to reach."""
+
+    command = parsed_args.action
+    if command == "classifier":
+        command = f"classifier {parsed_args.classifier_action}"
+    required = COMMAND_MODEL_ENDPOINTS.get(command, frozenset())
+
+    # Embedding stays local llama.cpp inference whichever chat deployment a
+    # command selects, so selecting OpenRouter drops only the chat endpoint.
+    # OpenRouter reachability is left to the request itself.
+    if getattr(parsed_args, "deployment", "local") != "local":
+        required = required - {ModelEndpoint.CHAT}
+    return required
+
+
+def enforce_model_reachability(parsed_args) -> None:
+    """Refuse a command whose agents cannot reach a local endpoint.
+
+    Runs before dispatch so a command cannot scrape articles it will not be
+    able to validate, or move a Story it will not be able to process.
+    """
+
+    if getattr(parsed_args, "skip_model_check", False):
+        return
+    if os.environ.get(SKIP_MODEL_CHECK_ENV, "").strip():
+        return
+
+    required = required_model_endpoints(parsed_args)
+    if not required:
+        return
+
+    unreachable = [
+        result for result in check_endpoints(required) if not result.reachable
+    ]
+    if not unreachable:
+        return
+
+    details = {
+        f"{result.endpoint.value} endpoint": f"{result.base_url} ({result.detail})"
+        for result in unreachable
+    }
+    details["Start the servers"] = (
+        "scripts/llama-server.sh (chat), scripts/llama-embed.sh (embedding)"
+    )
+    details["Run anyway"] = "--skip-model-check"
+    ConsoleNotifier.notify_critical_failure(
+        error_title="Model Endpoint Unreachable",
+        message=(
+            f"'{parsed_args.action}' needs a model endpoint that is not "
+            "answering, so it stopped before doing any work."
+        ),
+        details=details,
+    )
+    sys.exit(1)
 
 
 def select_story_deployment(
@@ -214,8 +293,19 @@ def main(args=None):
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
+    # Attached only to gated commands, so the flag never appears on a command
+    # that reaches no model and would silently ignore it.
+    model_check_parser = argparse.ArgumentParser(add_help=False)
+    model_check_parser.add_argument(
+        "--skip-model-check",
+        action="store_true",
+        help="Run even if a required local model endpoint is unreachable",
+    )
+
     # Ingest subcommand
-    ingest_parser = subparsers.add_parser("ingest", help=CLI_COMMAND_HELP["ingest"])
+    ingest_parser = subparsers.add_parser(
+        "ingest", help=CLI_COMMAND_HELP["ingest"], parents=[model_check_parser]
+    )
     ingest_parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without saving to Neo4j")
     ingest_parser.add_argument(
         "--deployment",
@@ -260,24 +350,40 @@ def main(args=None):
     update_pub_parser.add_argument("--categories", nargs="*", help="Space-separated list of valid categories (pass empty to clear)")
 
     # Update-sources subcommand
-    subparsers.add_parser("update-sources", help=CLI_COMMAND_HELP["update-sources"])
+    subparsers.add_parser(
+        "update-sources",
+        help=CLI_COMMAND_HELP["update-sources"],
+        parents=[model_check_parser],
+    )
 
     # Scrape-archive subcommand
-    archive_parser = subparsers.add_parser("scrape-archive", help=CLI_COMMAND_HELP["scrape-archive"])
+    archive_parser = subparsers.add_parser(
+        "scrape-archive",
+        help=CLI_COMMAND_HELP["scrape-archive"],
+        parents=[model_check_parser],
+    )
     archive_parser.add_argument("--publication-id", required=True, help="ID of the publication to crawl")
 
     # Refetch-html subcommand
     subparsers.add_parser("refetch-html", help=CLI_COMMAND_HELP["refetch-html"])
 
     # Validate-articles subcommand
-    subparsers.add_parser("validate-articles", help=CLI_COMMAND_HELP["validate-articles"])
+    subparsers.add_parser(
+        "validate-articles",
+        help=CLI_COMMAND_HELP["validate-articles"],
+        parents=[model_check_parser],
+    )
 
     # Review-selectors subcommand
     review_parser = subparsers.add_parser("review-selectors", help=CLI_COMMAND_HELP["review-selectors"])
     review_parser.add_argument("--manual", help="Path to JSON file containing manual selectors to promote")
 
     # Heal-selectors subcommand
-    heal_selectors_parser = subparsers.add_parser("heal-selectors", help=CLI_COMMAND_HELP["heal-selectors"])
+    heal_selectors_parser = subparsers.add_parser(
+        "heal-selectors",
+        help=CLI_COMMAND_HELP["heal-selectors"],
+        parents=[model_check_parser],
+    )
     heal_selectors_parser.add_argument("--publication", required=True, help="ID of the publication to heal")
     heal_selectors_parser.add_argument("--retry", action="store_true", help="Mark previous proposal rejected and retry healing with negative context")
     heal_selectors_parser.add_argument("--context", help="Developer-supplied guidance/hint to append to the Generator prompt")
@@ -288,9 +394,17 @@ def main(args=None):
     # Classifier subcommand
     classifier_parser = subparsers.add_parser("classifier", help=CLI_COMMAND_HELP["classifier"])
     classifier_sub = classifier_parser.add_subparsers(dest="classifier_action", required=True)
-    label_parser = classifier_sub.add_parser("label", help=CLI_COMMAND_HELP["classifier label"])
+    label_parser = classifier_sub.add_parser(
+        "label",
+        help=CLI_COMMAND_HELP["classifier label"],
+        parents=[model_check_parser],
+    )
     label_parser.add_argument("--review-all", action="store_true", help=f"Query all cached articles with relevance_label_source != '{LabelSource.HUMAN}'")
-    classifier_sub.add_parser("backfill", help=CLI_COMMAND_HELP["classifier backfill"])
+    classifier_sub.add_parser(
+        "backfill",
+        help=CLI_COMMAND_HELP["classifier backfill"],
+        parents=[model_check_parser],
+    )
     classifier_sub.add_parser("train", help=CLI_COMMAND_HELP["classifier train"])
     classifier_sub.add_parser("reevaluate", help=CLI_COMMAND_HELP["classifier reevaluate"])
 
@@ -314,6 +428,8 @@ def main(args=None):
     # records to a Logfire that must already be configured.
     setup_telemetry()
     setup_logging()
+
+    enforce_model_reachability(parsed_args)
 
     if parsed_args.action == "ingest":
         try:
