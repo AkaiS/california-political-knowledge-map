@@ -233,10 +233,10 @@ _RELATIONSHIP_ENDPOINTS = {
         frozenset({"Politician", "Committee", "Bill", "LegislativeEvent", "Prop", "Campaign", "Organization"}),
         frozenset({"Chunk"}),
     ),
-    # The Article Chunk half the primary ontology permits is retired: a Policy
-    # Area is decided once per Source Article, and hanging that one decision off
-    # every chunk of the article would assert that every chunk is equally about
-    # it.  A Policy Area still reaches an Article Chunk, through the article.
+    # One source, where the primary ontology permits a Chunk as well: a Policy
+    # Area is decided once per Source Article, and a Policy Area still reaches
+    # an Article Chunk through the article.  ADR 0020 is why the other half is
+    # retired.
     "DISCUSSES_TOPIC": RelationshipShape(frozenset({"NewsArticle"}), frozenset({"PolicyArea"})),
 }
 
