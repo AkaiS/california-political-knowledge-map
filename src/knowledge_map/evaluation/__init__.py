@@ -13,7 +13,7 @@ from .provenance import (
     RequestProvenanceCount,
     aggregate_request_provenance,
 )
-from .report_file import report_path, write_report
+from .report_file import report_path, run_commit, trace_url, write_report
 
 __all__ = [
     "EvaluationCase",
@@ -26,6 +26,8 @@ __all__ = [
     "gold_set_path",
     "load_gold_set",
     "report_path",
+    "run_commit",
     "run_gold_set",
+    "trace_url",
     "write_report",
 ]

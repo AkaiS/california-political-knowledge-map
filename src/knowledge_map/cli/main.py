@@ -51,6 +51,7 @@ CLI_COMMAND_HELP = {
     "classifier train": "Train the classifier using scikit-learn LogisticRegression",
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
     "eval": "Collect and run an Evaluation Gold Set",
+    "telemetry": "Manage the Logfire credential this project runs on",
 }
 
 
@@ -199,8 +200,6 @@ def setup_logging(log_file_path: str = ".scratch/pipeline.log", log_level: int =
 
 def main(args=None):
     load_dotenv()
-    setup_telemetry()
-    setup_logging()
 
     parser = argparse.ArgumentParser(
         description="California Political Influence GraphRAG Engine - Production CLI",
@@ -299,7 +298,22 @@ def main(args=None):
     from knowledge_map.cli import evaluate as evaluate_cli
     evaluate_cli.add_parser(subparsers)
 
+    # --- telemetry ---
+    from knowledge_map.cli import telemetry as telemetry_cli
+    telemetry_cli.add_parser(subparsers)
+
     parsed_args = parser.parse_args(args)
+
+    if parsed_args.action == telemetry_cli.BOOTSTRAP_ACTION:
+        telemetry_cli.dispatch(parsed_args)
+        return
+
+    # Every other command runs a model or writes data that a trace must
+    # explain, so an unobservable process stops here rather than at its end.
+    # This precedes setup_logging() because the handler it installs forwards
+    # records to a Logfire that must already be configured.
+    setup_telemetry()
+    setup_logging()
 
     if parsed_args.action == "ingest":
         try:
