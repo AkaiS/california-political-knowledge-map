@@ -65,13 +65,6 @@ def _failed_report(error_message: str) -> EvaluationReport:
         error_message=error_message,
         error_stacktrace="traceback",
     )
-    failure.request_provenance = [
-        {
-            "case_id": "case",
-            "attempts": 3,
-            "retry_count": 2,
-        }
-    ]
     return EvaluationReport(name="relevance", cases=[], failures=[failure])
 
 
@@ -116,13 +109,6 @@ def test_exhausted_evaluation_fails_before_report_write(
         evaluate.dispatch(_arguments(gold_set))
 
     assert error_message in capsys.readouterr().out
-    assert report.failures[0].request_provenance == [
-        {
-            "case_id": "case",
-            "attempts": 3,
-            "retry_count": 2,
-        }
-    ]
     assert list(report_root.rglob("*.json")) == []
 
 

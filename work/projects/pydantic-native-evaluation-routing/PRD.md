@@ -1,6 +1,6 @@
 # Product requirements: Pydantic-native evaluation routing
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

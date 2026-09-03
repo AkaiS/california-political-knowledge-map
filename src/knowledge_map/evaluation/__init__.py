@@ -8,20 +8,12 @@ from .gold_set import (
     gold_set_path,
     load_gold_set,
 )
-from .provenance import (
-    RequestProvenanceAggregate,
-    RequestProvenanceCount,
-    aggregate_request_provenance,
-)
 from .report_file import report_path, run_commit, trace_url, write_report
 
 __all__ = [
     "EvaluationCase",
     "EvaluationGoldSet",
     "EvaluationSplit",
-    "RequestProvenanceAggregate",
-    "RequestProvenanceCount",
-    "aggregate_request_provenance",
     "build_dataset",
     "gold_set_path",
     "load_gold_set",

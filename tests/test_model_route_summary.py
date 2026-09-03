@@ -478,7 +478,15 @@ def test_serialized_route_summary_preserves_metrics_and_run_provenance(
     assert serialized_case["metrics"]["input_tokens"] == 2
     assert serialized_case["metrics"]["output_tokens"] == 3
     assert serialized_case["metrics"]["cost"] > 0
-    assert serialized_case["attributes"]["request_provenance"]
+    assert serialized_case["attributes"]["model_routes"] == [
+        {
+            "response_model": "openai/gpt-4o-mini",
+            "downstream_provider": "openai/hosted",
+            "request_count": 1,
+        }
+    ]
+    assert "request_provenance" not in serialized_case["attributes"]
+    assert "request_provenance_aggregate" not in document["report"]
     assert document["task"] == "model-routes"
     assert document["model"] == deployment.model
     assert document["deployment"] == deployment.model_dump(mode="json")

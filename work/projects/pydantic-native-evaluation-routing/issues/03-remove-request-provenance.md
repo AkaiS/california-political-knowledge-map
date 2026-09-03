@@ -7,27 +7,26 @@ serialization machinery once no report behavior depends on it.
 
 **Blocked by:** 02, Add Model Route Summaries to completed reports.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] New reports contain neither per-request provenance nor a run-level
+- [x] New reports contain neither per-request provenance nor a run-level
   provenance aggregate.
-- [ ] The custom request provenance schema, capture context, request sequence,
+- [x] The custom request provenance schema, capture context, request sequence,
   retry-state recorder, aggregate builder, and public exports are deleted.
-- [ ] Evaluation execution no longer opens a provenance capture scope or stores
+- [x] Evaluation execution no longer opens a provenance capture scope or stores
   request records by case.
-- [ ] Failure objects are no longer mutated with request records, and report
+- [x] Failure objects are no longer mutated with request records, and report
   serialization no longer repairs those dynamic attributes.
-- [ ] Model Route Summaries remain limited to successful Evaluation Cases.
-- [ ] Pydantic Evals metrics, evaluator output, and the Evaluation Run's outer
+- [x] Model Route Summaries remain limited to successful Evaluation Cases.
+- [x] Pydantic Evals metrics, evaluator output, and the Evaluation Run's outer
   provenance remain unchanged.
-- [ ] Model-request telemetry and the structured OpenRouter completion event
+- [x] Model-request telemetry and the structured OpenRouter completion event
   introduced or preserved by ticket 01 remain intact.
-- [ ] Failed, interrupted, and exhausted Evaluation Runs continue to write no
+- [x] Failed, interrupted, and exhausted Evaluation Runs continue to write no
   report.
-- [ ] Historical reports and completed project records are not rewritten.
-- [ ] Tests of capture scopes, request sequencing, custom aggregation, failure
+- [x] Historical reports and completed project records are not rewritten.
+- [x] Tests of capture scopes, request sequencing, custom aggregation, failure
   mutation, and synthetic same-case parallel ordering are removed with the
   implementation they covered.
-- [ ] The completed-report tests prove the final public contract contains
+- [x] The completed-report tests prove the final public contract contains
   `model_routes` and no retired provenance fields.
-
