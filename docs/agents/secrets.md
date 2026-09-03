@@ -39,6 +39,13 @@ you run when the check has stopped everything else.
 The resolved token is passed to `logfire.configure()` explicitly, so the
 directory a command runs from cannot change whether it is observed.
 
+The token and the project it reports to are resolved together, from one
+source. A credentials file names the project for its own token; a token from
+the environment or the keychain has no project of its own and takes the one
+`LOGFIRE_PROJECT_URL` declares, or none. They are never mixed: a stale
+credentials file naming a different project would otherwise make reports
+advertise a trace under a project it was never sent to.
+
 ### Running without observability
 
 `KNOWLEDGE_MAP_ALLOW_UNTRACED=1` skips the check for a single run. Use it for
@@ -46,8 +53,13 @@ an offline machine, and expect no trace to inspect afterwards.
 
 ### `LOGFIRE_PROJECT_URL`
 
-Not a secret, and belongs in `.env`. Without it a report still records the
-`trace_id` of the run, but nothing can turn that id into a link.
+Not a secret, and belongs in `.env`. It names the project that goes with a
+token supplied from the environment or the keychain. Without it such a run is
+still traced, but a report records only the bare `trace_id` and nothing can
+turn that id into a link.
+
+`ca-map telemetry status` prints the project a run would link to, so a blank
+one is visible before a run rather than after.
 
 ## OpenRouter
 

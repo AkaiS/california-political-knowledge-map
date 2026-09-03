@@ -113,6 +113,7 @@ def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
 
 
 def test_token_prefers_environment_then_keychain_then_credentials_file(monkeypatch):
+    monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.setattr(telemetry, "_credentials", lambda *a, **k: {"token": "file"})
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: "keychain")
     monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
@@ -123,6 +124,54 @@ def test_token_prefers_environment_then_keychain_then_credentials_file(monkeypat
 
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: None)
     assert telemetry.resolve_token() == "file"
+
+
+def test_a_project_is_never_borrowed_from_a_source_that_did_not_supply_the_token(
+    monkeypatch,
+):
+    """A stale credentials file must not name the project for another token.
+
+    Pairing them would advertise a trace under a project it was never sent to,
+    so an unverifiable pairing yields no project at all.
+    """
+    monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
+    monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
+    monkeypatch.setattr(
+        telemetry,
+        "_credentials",
+        lambda *a, **k: {"token": "file", "project_url": "https://logfire/other"},
+    )
+    monkeypatch.setattr(telemetry, "_keychain_token", lambda: "keychain")
+
+    credential = telemetry.resolve_credential()
+
+    assert credential.token == "keychain"
+    assert credential.project_url is None
+
+
+def test_the_credentials_file_names_the_project_for_its_own_token(monkeypatch):
+    monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
+    monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
+    monkeypatch.setattr(telemetry, "_keychain_token", lambda: None)
+    monkeypatch.setattr(
+        telemetry,
+        "_credentials",
+        lambda *a, **k: {"token": "file", "project_url": "https://logfire/mine"},
+    )
+
+    assert telemetry.project_url() == "https://logfire/mine"
+
+
+def test_an_out_of_band_token_takes_its_project_from_the_declared_one(monkeypatch):
+    monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
+    monkeypatch.setenv(telemetry.PROJECT_URL_ENV, "https://logfire/declared")
+    monkeypatch.setattr(
+        telemetry,
+        "_credentials",
+        lambda *a, **k: {"token": "file", "project_url": "https://logfire/other"},
+    )
+
+    assert telemetry.project_url() == "https://logfire/declared"
 
 
 def test_resolved_token_is_passed_to_configure(monkeypatch):

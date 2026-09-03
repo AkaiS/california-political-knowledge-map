@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 
 import logfire
@@ -21,6 +22,7 @@ _CONFIGURATION_LOCK = threading.Lock()
 _configured = False
 
 LOGFIRE_TOKEN_ENV = "LOGFIRE_TOKEN"
+PROJECT_URL_ENV = "LOGFIRE_PROJECT_URL"
 
 # Where `keyring set logfire dev-telemetry` puts the write token.
 KEYRING_SERVICE = "logfire"
@@ -94,20 +96,72 @@ def _credentials(directory: Path | None = None) -> dict[str, str]:
     return loaded if isinstance(loaded, dict) else {}
 
 
-def resolve_token() -> str | None:
-    """Find the Logfire write token: environment, then keychain, then file."""
+@dataclass(frozen=True)
+class LogfireCredential:
+    """A write token together with the project it reports to.
 
-    return (
-        os.environ.get(LOGFIRE_TOKEN_ENV)
-        or _keychain_token()
-        or _credentials().get("token")
-    )
+    The two travel as one value because resolving them separately lets a token
+    from one source pair with a project named by another: a trace recorded
+    under the keychain's project would then be advertised under whichever
+    project a stale credentials file happened to name, and the link would go
+    somewhere the run never reported to.  ``project_url`` is None when no
+    source can vouch for the pairing.
+    """
+
+    token: str
+    project_url: str | None
+    source: str
+
+
+def resolve_credential() -> LogfireCredential | None:
+    """Find the token and its project from one source: env, keychain, file."""
+
+    # A token supplied out of band carries no project of its own, so the
+    # operator declares the companion; nothing else may stand in for it.
+    declared_project = os.environ.get(PROJECT_URL_ENV)
+
+    environment_token = os.environ.get(LOGFIRE_TOKEN_ENV)
+    if environment_token:
+        return LogfireCredential(
+            environment_token,
+            declared_project,
+            f"the {LOGFIRE_TOKEN_ENV} environment variable",
+        )
+
+    keychain_token = _keychain_token()
+    if keychain_token:
+        return LogfireCredential(
+            keychain_token,
+            declared_project,
+            f"the keychain ({KEYRING_SERVICE}/{KEYRING_USERNAME})",
+        )
+
+    credentials = _credentials()
+    file_token = credentials.get("token")
+    if file_token:
+        # This file names the project its own token belongs to, which is the
+        # one pairing this process can verify rather than assume.
+        return LogfireCredential(
+            file_token,
+            credentials.get("project_url"),
+            ".logfire/logfire_credentials.json in this directory",
+        )
+
+    return None
+
+
+def resolve_token() -> str | None:
+    """The Logfire write token this run will report with, if there is one."""
+
+    credential = resolve_credential()
+    return credential.token if credential else None
 
 
 def project_url() -> str | None:
-    """The Logfire project a trace id can be linked into, when it is known."""
+    """The project a trace id can be linked into, when the pairing is known."""
 
-    return os.environ.get("LOGFIRE_PROJECT_URL") or _credentials().get("project_url")
+    credential = resolve_credential()
+    return credential.project_url if credential else None
 
 
 def setup_telemetry() -> None:

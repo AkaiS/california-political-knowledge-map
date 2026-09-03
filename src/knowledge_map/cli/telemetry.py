@@ -10,7 +10,6 @@ job, not this project's:
 from __future__ import annotations
 
 import argparse
-import os
 from typing import Any
 
 from knowledge_map.utils import telemetry
@@ -32,19 +31,16 @@ def dispatch(args: argparse.Namespace) -> None:
 
 
 def _status() -> None:
-    if os.environ.get(telemetry.LOGFIRE_TOKEN_ENV):
-        source = f"the {telemetry.LOGFIRE_TOKEN_ENV} environment variable"
-    elif telemetry._keychain_token():
-        source = (
-            f"the keychain ({telemetry.KEYRING_SERVICE}/{telemetry.KEYRING_USERNAME})"
-        )
-    elif telemetry._credentials().get("token"):
-        source = ".logfire/logfire_credentials.json in this directory"
-    else:
+    credential = telemetry.resolve_credential()
+    if credential is None:
         raise SystemExit(telemetry._MISSING_TOKEN_MESSAGE)
 
-    print(f"Logfire token found in {source}.")
+    print(f"Logfire token found in {credential.source}.")
     print(
         "Project: "
-        + (telemetry.project_url() or "unknown (set LOGFIRE_PROJECT_URL)")
+        + (
+            credential.project_url
+            or f"unknown to this source (set {telemetry.PROJECT_URL_ENV}); "
+            "runs are still traced, but reports cannot link the trace"
+        )
     )
