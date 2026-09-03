@@ -4,12 +4,11 @@ A Source Article's Policy Areas are decided once, for the article, over the
 coreference-resolved text and before it is cut into chunks.  Which of those
 areas each measure is about is decided once too, after extraction has
 discovered the measures.  Both halves of the article-level topic judgement sit
-behind this one adapter, so the Story Pipeline gains one collaborator rather
-than two.
+behind this one adapter.
 
-The stage owns the vocabulary.  The agent's output type admits the canonical
-names the News Ontology declares and nothing else, so a model cannot answer
-with an id where the write path keys on a name.
+The stage owns the vocabulary.  The agent is asked for the canonical names the
+News Ontology declares, and its output type keeps only those, so a model cannot
+answer with an id where the write path keys on a name.
 """
 
 import logging
@@ -63,29 +62,50 @@ does not cover returns an empty list.
 """
 
 
+def _get_stage_agent(
+    deployment: ModelDeployment | None,
+    *,
+    name: str,
+    output_type: type,
+    instructions: str,
+    defer_check: bool,
+    retries: int,
+) -> Agent:
+    """Build one of the two stages' agents from one explicit deployment.
+
+    The stages differ only in name, output type and instructions; they are
+    built alike so a change to how either reaches its model reaches both.
+    Callers without a deployment use the configured local chat deployment.
+    """
+
+    model = get_chat_model(
+        deployment if deployment is not None else DEFAULT_LOCAL_CHAT_MODEL
+    )
+
+    return create_agent(
+        model,
+        name=name,
+        output_type=output_type,
+        instructions=instructions,
+        defer_model_check=defer_check,
+        retries=retries,
+    )
+
+
 def get_classification_agent(
     deployment: ModelDeployment | None = None,
     *,
     defer_check: bool = True,
     retries: int = 3,
 ) -> Agent:
-    """Build the Policy Area Classification agent from one explicit deployment.
+    """Build the Policy Area Classification agent from one explicit deployment."""
 
-    Callers without a deployment use the configured local chat deployment.
-    """
-
-    model = (
-        get_chat_model(deployment)
-        if deployment is not None
-        else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
-    )
-
-    return create_agent(
-        model,
+    return _get_stage_agent(
+        deployment,
         name="policy_area_classifier",
         output_type=PolicyAreaClassification,
         instructions=CLASSIFICATION_INSTRUCTIONS,
-        defer_model_check=defer_check,
+        defer_check=defer_check,
         retries=retries,
     )
 
@@ -136,72 +156,60 @@ def get_assignment_agent(
     defer_check: bool = True,
     retries: int = 3,
 ) -> Agent:
-    """Build the Topic Assignment agent from one explicit deployment.
+    """Build the Topic Assignment agent from one explicit deployment."""
 
-    Callers without a deployment use the configured local chat deployment.
-    """
-
-    model = (
-        get_chat_model(deployment)
-        if deployment is not None
-        else get_chat_model(DEFAULT_LOCAL_CHAT_MODEL)
-    )
-
-    return create_agent(
-        model,
+    return _get_stage_agent(
+        deployment,
         name="topic_assigner",
         output_type=TopicAssignments,
         instructions=ASSIGNMENT_INSTRUCTIONS,
-        defer_model_check=defer_check,
+        defer_check=defer_check,
         retries=retries,
     )
 
 
-class PolicyAreaClassificationError(Exception):
-    """One Source Article's classification could not be used.
+class ArticleStageError(Exception):
+    """One article-level stage's answer could not be used.
 
     Carries what the Dead Letter Queue records, as the coreference and
-    extraction failures beside it do.
+    extraction failures beside it do.  The two stages behind this adapter run
+    at different points in the pipeline, so each raises its own subclass: a
+    Dead Letter Queue record has to say which stage the article did not
+    survive.
     """
+
+    #: Names the stage in the record and in the raised message.
+    stage: str = "article stage"
+    default_failure_type: str = "article_stage_failure"
 
     def __init__(
         self,
         original_text: str,
         validation_issues: list[str] | None = None,
-        failure_type: str = "policy_area_classification_failure",
+        failure_type: str | None = None,
         retry_count: int = 0,
         metadata: dict | None = None,
     ) -> None:
         self.original_text = original_text
         self.validation_issues = validation_issues or []
-        self.failure_type = failure_type
+        self.failure_type = failure_type or self.default_failure_type
         self.retry_count = retry_count
         self.metadata = metadata or {}
-        super().__init__(f"Policy Area classification failed: {failure_type}")
+        super().__init__(f"{self.stage} failed: {self.failure_type}")
 
 
-class TopicAssignmentError(Exception):
-    """One Source Article's Topic Assignment could not be used.
+class PolicyAreaClassificationError(ArticleStageError):
+    """One Source Article's classification could not be used."""
 
-    Its own failure, separate from classification's: the two stages run at
-    different points in the pipeline and a Dead Letter Queue record has to say
-    which one the article did not survive.
-    """
+    stage = "Policy Area classification"
+    default_failure_type = "policy_area_classification_failure"
 
-    def __init__(
-        self,
-        original_text: str,
-        validation_issues: list[str] | None = None,
-        failure_type: str = "topic_assignment_failure",
-        retry_count: int = 0,
-        metadata: dict | None = None,
-    ) -> None:
-        self.original_text = original_text
-        self.validation_issues = validation_issues or []
-        self.failure_type = failure_type
-        self.retry_count = retry_count
-        self.metadata = metadata or {}
-        super().__init__(f"Topic Assignment failed: {failure_type}")
+
+class TopicAssignmentError(ArticleStageError):
+    """One Source Article's Topic Assignment could not be used."""
+
+    stage = "Topic Assignment"
+    default_failure_type = "topic_assignment_failure"
 
 
 def _validation_issues_from_error(error: Exception) -> list[str]:

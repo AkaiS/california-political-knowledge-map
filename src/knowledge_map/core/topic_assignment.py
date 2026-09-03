@@ -4,21 +4,21 @@ Assignment is an article-level pass over the extractions, like Bill Session
 Resolution beside it: it runs once, after the chunk loop, because extraction is
 what discovers the measures.
 
-The two drops here are what makes the write path safe.  An assignment names its
-measure by the surface string extraction produced, and the write path matches
-both of its endpoints rather than merging them, so an assignment naming a
-measure or an area that is not there would write nothing at all — silently.
-Dropping both cases before persistence turns that silence into a rule the
-pipeline states and a test can hold it to.
+An assignment names its measure by the surface string extraction produced, and
+the write path matches both of its endpoints rather than merging them, so an
+assignment naming a measure or an area that is not there would write nothing at
+all — silently.  The two drops here are what stands between that silence and
+the graph.
 """
 
-from knowledge_map.ontology import news
 from knowledge_map.schemas import ExtractionResult, Node, TopicAssignment
+from knowledge_map.schemas.policy_areas import MEASURE_LABELS
 
-#: The `ABOUT_TOPIC` source labels the News Ontology permits: the measures a
-#: Policy Area can be the topic of.  Read from the ontology rather than
-#: restated, so a measure label added there is one this stage already collects.
-MEASURE_LABELS = news.RELATIONSHIPS["ABOUT_TOPIC"].source_labels
+__all__ = [
+    "MEASURE_LABELS",
+    "extracted_measures",
+    "supported_assignments",
+]
 
 
 def extracted_measures(extractions: list[ExtractionResult]) -> list[Node]:

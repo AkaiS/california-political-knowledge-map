@@ -6,6 +6,7 @@ the stage is asserted in ``test_pipeline.py`` and ``test_article_topics.py``.
 """
 
 import inspect
+import logging
 
 import pytest
 from pydantic import ValidationError
@@ -41,19 +42,50 @@ def test_the_classification_schema_admits_a_vocabulary_member():
     ]
 
 
-def test_the_classification_schema_refuses_an_answer_outside_the_vocabulary():
-    """An area the vocabulary does not declare never becomes an area."""
-
-    with pytest.raises(ValidationError):
-        PolicyAreaClassification(policy_areas=["Interstellar Affairs"])
+def test_a_name_outside_the_vocabulary_never_becomes_an_area():
+    assert PolicyAreaClassification(policy_areas=["Interstellar Affairs"]).policy_areas == []
 
 
-def test_the_classification_schema_refuses_a_vocabulary_id():
+def test_a_vocabulary_id_never_becomes_an_area():
     """The stage owns the vocabulary, so an id and its canonical name are not
     two answers a model can pick between."""
 
+    assert PolicyAreaClassification(policy_areas=["housing"]).policy_areas == []
+
+
+def test_an_off_vocabulary_name_is_dropped_and_the_rest_of_the_answer_stands():
+    """An article needs no Policy Area, so one unusable name does not cost the
+    article the areas the model named correctly beside it."""
+
+    classification = PolicyAreaClassification(
+        policy_areas=["Health", "Interstellar Affairs", "Housing & Community Development"]
+    )
+
+    assert classification.policy_areas == ["Health", "Housing & Community Development"]
+
+
+def test_a_dropped_name_is_logged_by_name(caplog):
+    """A silent drop reads as a model finding fewer areas.  The name it
+    actually answered with is what says otherwise."""
+
+    with caplog.at_level(logging.WARNING):
+        PolicyAreaClassification(policy_areas=["Health", "Interstellar Affairs"])
+
+    assert "Interstellar Affairs" in caplog.text
+    assert "Health" not in caplog.text
+
+
+def test_a_repeated_area_is_kept_once():
+    classification = PolicyAreaClassification(policy_areas=["Health", "Health"])
+
+    assert classification.policy_areas == ["Health"]
+
+
+def test_an_answer_that_is_not_a_list_of_names_is_a_failure():
+    """Only the off-vocabulary name is forgiven; malformed structure is not."""
+
     with pytest.raises(ValidationError):
-        PolicyAreaClassification(policy_areas=["housing"])
+        PolicyAreaClassification(policy_areas="Health")
 
 
 def test_an_article_the_vocabulary_does_not_cover_classifies_to_nothing():
@@ -102,14 +134,29 @@ def test_an_unusable_answer_raises_the_stage_specific_failure():
         agent=get_classification_agent(retries=0)
     )
 
-    with adapter.agent.override(
-        model=_classifier({"policy_areas": ["Interstellar Affairs"]})
-    ):
+    with adapter.agent.override(model=_classifier({"policy_areas": "Health"})):
         with pytest.raises(PolicyAreaClassificationError) as failure:
             adapter.classify("An article about rent.")
 
     assert failure.value.original_text == "An article about rent."
     assert failure.value.validation_issues
+
+
+def test_an_off_vocabulary_answer_does_not_fail_the_article():
+    """The article completes with the areas that were vocabulary members, and
+    with none at all when nothing the model named was one."""
+
+    adapter = PydanticAIPolicyAreaAdapter(agent=get_classification_agent(retries=0))
+
+    with adapter.agent.override(
+        model=_classifier({"policy_areas": ["Interstellar Affairs", "Health"]})
+    ):
+        assert adapter.classify("An article about clinics.") == ["Health"]
+
+    with adapter.agent.override(
+        model=_classifier({"policy_areas": ["Interstellar Affairs"]})
+    ):
+        assert adapter.classify("An article about clinics.") == []
 
 
 def test_a_transport_failure_reaches_the_pipeline_untouched():
