@@ -18,6 +18,7 @@ import httpx
 import logfire
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from opentelemetry.trace import get_current_span
 from pydantic_ai import ModelProfile, ModelResponse
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
@@ -479,6 +480,17 @@ class _RequestProvenanceModelMixin:
         _CURRENT_REQUEST_RETRY.set(None)
         model_response = super()._process_response(response)  # type: ignore[misc]
         if self._provenance_deployment == "openrouter":
+            downstream_provider = (model_response.provider_details or {}).get(
+                "downstream_provider"
+            )
+            if (
+                isinstance(downstream_provider, str)
+                and downstream_provider.strip()
+                and downstream_provider.casefold() not in {"unknown", "unavailable"}
+            ):
+                get_current_span().set_attribute(
+                    "gen_ai.response.downstream_provider", downstream_provider
+                )
             _log_openrouter_route(
                 self,
                 model_response,

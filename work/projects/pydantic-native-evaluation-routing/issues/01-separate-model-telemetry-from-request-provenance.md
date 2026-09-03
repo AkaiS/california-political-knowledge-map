@@ -11,23 +11,22 @@ until the replacement report contract is proven.
 
 **Blocked by:** None. Can start immediately.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] A successful OpenRouter model request adds its observed, non-empty
+- [x] A successful OpenRouter model request adds its observed, non-empty
   downstream provider to the model-request span.
-- [ ] A missing downstream provider remains unavailable and is not inferred
+- [x] A missing downstream provider remains unavailable and is not inferred
   from the configured provider order.
-- [ ] Local model requests use the same telemetry path without inventing a
+- [x] Local model requests use the same telemetry path without inventing a
   downstream provider.
-- [ ] Standard Pydantic AI request-model, response-model, response-identity,
+- [x] Standard Pydantic AI request-model, response-model, response-identity,
   usage, calculated-cost, and model-content telemetry remains intact.
-- [ ] The structured OpenRouter completion event retains BYOK use, generation
+- [x] The structured OpenRouter completion event retains BYOK use, generation
   identity, route attempts, application attempts, and exact charged and
   upstream costs.
-- [ ] HTTPX instrumentation remains enabled for ordinary request timing,
+- [x] HTTPX instrumentation remains enabled for ordinary request timing,
   status, and errors, but blanket capture of bodies and headers is disabled.
-- [ ] Request Provenance and current report output remain unchanged during this
+- [x] Request Provenance and current report output remain unchanged during this
   expansion ticket.
-- [ ] Focused tests exercise local and OpenRouter model calls through
+- [x] Focused tests exercise local and OpenRouter model calls through
   deterministic mock transports without a live provider or Logfire project.
-

@@ -109,10 +109,10 @@ declare their blockers.
 
 ### Pydantic-Native Evaluation Routing frontier
 
-A linear expand-contract chain. Only issue 01 is takeable now.
+A linear expand-contract chain. Issue 02 is takeable now.
 
-- [01 Separate model telemetry from Request Provenance](projects/pydantic-native-evaluation-routing/issues/01-separate-model-telemetry-from-request-provenance.md), takeable. Adds the missing provider span attribute and narrows HTTP capture while preserving the current report.
-- [02 Add Model Route Summaries to completed reports](projects/pydantic-native-evaluation-routing/issues/02-add-model-route-summaries-to-completed-reports.md), blocked by 01. Derives the compact case summary from Pydantic Evals while the old report fields remain temporarily.
+- [01 Separate model telemetry from Request Provenance](projects/pydantic-native-evaluation-routing/issues/01-separate-model-telemetry-from-request-provenance.md), `completed` on 2026-09-03. Adds the missing provider span attribute and narrows HTTP capture while preserving the current report.
+- [02 Add Model Route Summaries to completed reports](projects/pydantic-native-evaluation-routing/issues/02-add-model-route-summaries-to-completed-reports.md), takeable. Derives the compact case summary from Pydantic Evals while the old report fields remain temporarily.
 - [03 Remove Request Provenance](projects/pydantic-native-evaluation-routing/issues/03-remove-request-provenance.md), blocked by 02. Deletes the parallel recorder and leaves the final report contract.
 
 ### Blocked initiative chain
