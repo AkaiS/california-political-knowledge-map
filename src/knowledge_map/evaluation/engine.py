@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar, Token
 from typing import Any
 
@@ -75,8 +75,14 @@ def run_gold_set(
     report_evaluators: Sequence[ReportEvaluator] = (),
     split: EvaluationSplit | None = None,
     max_concurrency: int = 1,
+    experiment_metadata: Mapping[str, Any] | None = None,
 ) -> EvaluationReport[Any, Any, Any]:
-    """Execute every case in ``gold_set`` against ``task``."""
+    """Execute every case in ``gold_set`` against ``task``.
+
+    ``experiment_metadata`` names what the run cannot infer from the Gold Set
+    alone — the Model Deployment and the commit — and reaches the trace and the
+    report by the same route, so the two agree by construction.
+    """
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be greater than 0")
     dataset = build_dataset(
@@ -101,8 +107,17 @@ def run_gold_set(
                 with records_lock:
                     records_by_case[case_id] = list(records)
 
+    # pydantic-evals names the per-case `execute` span after the callable it is
+    # handed, which here is this module's wrapper rather than the task under test.
+    run_case.__name__ = gold_set.task
+
     report = dataset.evaluate_sync(
         run_case,
+        # Without these the experiment is named after this module's wrapper, and
+        # every task's runs pile up in Logfire under one meaningless `run_case`.
+        name=gold_set.task,
+        task_name=gold_set.task,
+        metadata=dict(experiment_metadata) if experiment_metadata else None,
         progress=False,
         max_concurrency=max_concurrency,
         lifecycle=_RequestProvenanceLifecycle,

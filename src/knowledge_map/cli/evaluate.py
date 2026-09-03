@@ -20,7 +20,9 @@ from knowledge_map.evaluation import (
     EvaluationSplit,
     gold_set_path,
     load_gold_set,
+    run_commit,
     run_gold_set,
+    trace_url,
     write_report,
 )
 from knowledge_map.evaluation.tasks import task_named, task_names
@@ -211,8 +213,21 @@ def _run(args: argparse.Namespace) -> None:
             evaluators=task.evaluators,
             split=split,
             max_concurrency=args.max_concurrency,
+            experiment_metadata={
+                "task": task.name,
+                "deployment": deployment.model_dump(mode="json"),
+                "commit": run_commit(),
+                "gold_set": str(path),
+                "split": split.value if split else None,
+            },
         )
     report.print(include_input=False, include_output=False)
+
+    # Printed before the failure check below: a run that failed is exactly the
+    # one whose trace the author needs.
+    trace = trace_url(report)
+    if trace:
+        print(f"\nTrace: {trace}")
 
     if report.failures:
         # A failed case is not a completed Evaluation Run; do not persist a

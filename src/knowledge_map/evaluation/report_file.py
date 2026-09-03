@@ -13,13 +13,32 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from pydantic_core import to_jsonable_python
 from pydantic_evals.reporting import EvaluationReport
 
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.utils.telemetry import project_url
 
 from .provenance import aggregate_request_provenance
+
+
+def trace_url(report: EvaluationReport[Any, Any, Any]) -> str | None:
+    """Address the trace this run left in Logfire.
+
+    A report already carries the trace id, which is unusable on its own: the
+    reader needs the project it belongs to.  Returns ``None`` when the run was
+    not attached to a known project, rather than inventing a dead link.
+    """
+
+    trace_id = getattr(report, "trace_id", None)
+    project = project_url()
+    # An all-zero id is OpenTelemetry's way of saying nothing recorded the run,
+    # which is the one case a link must not paper over.
+    if not trace_id or not project or not trace_id.strip("0"):
+        return None
+    return f"{project}?q=" + quote(f"trace_id='{trace_id}'")
 
 
 def report_path(
@@ -39,7 +58,7 @@ def report_path(
         filename_slug = _slug(selected.model)
     else:
         filename_slug = _deployment_slug(selected)
-    return (root or Path("evals/reports")) / task / f"{stamp}-{_commit()}-{filename_slug}.json"
+    return (root or Path("evals/reports")) / task / f"{stamp}-{run_commit()}-{filename_slug}.json"
 
 
 def write_report(
@@ -77,9 +96,10 @@ def write_report(
     )
     document = {
         "task": task,
+        "trace_url": trace_url(report),
         "model": selected.model,
         "deployment": selected.model_dump(mode="json"),
-        "commit": _commit(),
+        "commit": run_commit(),
         "dirty": _worktree_is_dirty(),
         "gold_set": str(gold_set_path),
         "split": split,
@@ -113,7 +133,7 @@ def _deployment_slug(deployment: ModelDeployment) -> str:
     return f"{readable}-{identity_digest}"
 
 
-def _commit() -> str:
+def run_commit() -> str:
     """Return the short commit the run executed at, or `nogit`."""
     return _git("rev-parse", "--short", "HEAD") or "nogit"
 
