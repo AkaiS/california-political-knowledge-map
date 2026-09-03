@@ -1,6 +1,6 @@
 # 02 — Policy Area Classification, once per Source Article
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -42,24 +42,24 @@ untested threshold blocks ingestion before there is data to set it from.
 
 ## Acceptance criteria
 
-- [ ] The Story Pipeline declares one new adapter Protocol exposing
+- [x] The Story Pipeline declares one new adapter Protocol exposing
       classification over an article's resolved text and a health check.
-- [ ] A Pydantic AI adapter implements it, building its agent from an explicit
+- [x] A Pydantic AI adapter implements it, building its agent from an explicit
       Model Deployment and returning structured output.
-- [ ] The output schema admits only members of the Policy Area vocabulary, and
+- [x] The output schema admits only members of the Policy Area vocabulary, and
       an answer naming anything else does not become an area.
-- [ ] The pipeline runs classification after Coreference Resolution and before
+- [x] The pipeline runs classification after Coreference Resolution and before
       chunking, on the resolved text.
-- [ ] The classified areas reach the database through the article-level topic
+- [x] The classified areas reach the database through the article-level topic
       method from 01, with no assignments.
-- [ ] An article classified with no areas completes, is persisted, and reaches
+- [x] An article classified with no areas completes, is persisted, and reaches
       `COMPLETED`.
-- [ ] A classification failure raises one stage-specific exception; the pipeline
+- [x] A classification failure raises one stage-specific exception; the pipeline
       logs it to the Dead Letter Queue under its own error category and sets
       Article Status as a coreference failure does.
-- [ ] A transport failure in the stage is classified by the same connectivity and
+- [x] A transport failure in the stage is classified by the same connectivity and
       rate-limit handling every other stage call uses.
-- [ ] Pipeline tests drive a fake classification adapter and assert what reached
+- [x] Pipeline tests drive a fake classification adapter and assert what reached
       the database, not how the stage arrived there.
 
 ## Blocked by

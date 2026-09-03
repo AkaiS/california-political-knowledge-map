@@ -1,6 +1,6 @@
 # 05 — Policy Area Classification Gold Set and evaluation task
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -32,19 +32,19 @@ distribution we measured rather than from a guess.
 
 ## Acceptance criteria
 
-- [ ] An annotation guideline for Policy Area Classification is written and lives
+- [x] An annotation guideline for Policy Area Classification is written and lives
       beside the existing coreference and extraction guidelines.
-- [ ] A Gold Set file holds twenty article-level cases, each addressing a Source
+- [x] A Gold Set file holds twenty article-level cases, each addressing a Source
       Article from the coreference Silver Set, with held-out and training splits
       and silver metadata naming the annotator model and the guideline.
-- [ ] The task is registered with its own input, output, and metadata types and
+- [x] The task is registered with its own input, output, and metadata types and
       the classification adapter as the callable under test.
-- [ ] Evaluators score multi-label precision, recall, and F1 over an article's
+- [x] Evaluators score multi-label precision, recall, and F1 over an article's
       areas; a case with no expected and no returned areas scores a pass.
-- [ ] A test loads the Gold Set through the registered task's own types and
+- [x] A test loads the Gold Set through the registered task's own types and
       asserts the case count, the splits, and that every case id addresses a
       Source Article.
-- [ ] The observed areas-per-article distribution is recorded, and no maximum is
+- [x] The observed areas-per-article distribution is recorded, and no maximum is
       introduced.
 
 ## Blocked by

@@ -1,6 +1,6 @@
 # 03 — Policy Area leaves Entity Extraction
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -39,22 +39,22 @@ and topic edges are removed; its case counts stay as they are. The guideline's
 
 ## Acceptance criteria
 
-- [ ] `PolicyArea` is no longer a label Entity Extraction is responsible for, and
+- [x] `PolicyArea` is no longer a label Entity Extraction is responsible for, and
       is still a label the News Ontology declares.
-- [ ] The topic relationship from a measure to an area, and the chunk half of the
+- [x] The topic relationship from a measure to an area, and the chunk half of the
       article-or-chunk topic relationship, are no longer offered to the chunk
       extractor.
-- [ ] The rendered extraction prompt contains no Policy Area vocabulary section.
-- [ ] Conformance drops a `PolicyArea` node arriving from the chunk extractor,
+- [x] The rendered extraction prompt contains no Policy Area vocabulary section.
+- [x] Conformance drops a `PolicyArea` node arriving from the chunk extractor,
       records it in the Adherence Report, and keeps the other nodes in the same
       result.
-- [ ] Conformance drops a topic relationship arriving from the chunk extractor
+- [x] Conformance drops a topic relationship arriving from the chunk extractor
       and records it in the Adherence Report.
-- [ ] The Neo4j chunk extraction write no longer writes a chunk-level topic edge.
-- [ ] The extraction Silver Set holds no `PolicyArea` node and no topic edge; its
+- [x] The Neo4j chunk extraction write no longer writes a chunk-level topic edge.
+- [x] The extraction Silver Set holds no `PolicyArea` node and no topic edge; its
       case count assertions are unchanged and its conformance assertion over
       every silver label passes.
-- [ ] The extraction annotation guideline no longer has a `PolicyArea` section or
+- [x] The extraction annotation guideline no longer has a `PolicyArea` section or
       a bare-`PolicyArea` open call, and points at the stage that now owns the
       question.
 

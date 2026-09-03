@@ -1,6 +1,6 @@
 # 06 — Topic Assignment Gold Set and evaluation task
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -27,16 +27,16 @@ contains, so a case cannot ask for an assignment the stage could never make.
 
 ## Acceptance criteria
 
-- [ ] An annotation guideline for Topic Assignment is written and lives beside
+- [x] An annotation guideline for Topic Assignment is written and lives beside
       the other guidelines.
-- [ ] A Gold Set file holds twenty article-level cases over the same twenty
+- [x] A Gold Set file holds twenty article-level cases over the same twenty
       Stories as the classification set, with held-out and training splits and
       silver metadata naming the annotator model and the guideline.
-- [ ] The task is registered with its own input, output, and metadata types and
+- [x] The task is registered with its own input, output, and metadata types and
       the assignment adapter as the callable under test.
-- [ ] Evaluators score precision, recall, and F1 over measure-to-area pairs; a
+- [x] Evaluators score precision, recall, and F1 over measure-to-area pairs; a
       case expecting no pairs and returning none scores a pass.
-- [ ] A test loads the Gold Set through the registered task's own types and
+- [x] A test loads the Gold Set through the registered task's own types and
       asserts the case count, the splits, ids that address a Source Article, and
       that every measure a case names is one the extraction Silver Set or the
       article contains.

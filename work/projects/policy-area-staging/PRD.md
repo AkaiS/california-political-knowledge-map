@@ -1,6 +1,6 @@
 # Policy Area Staging
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

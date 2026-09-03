@@ -1,6 +1,6 @@
 # 04 — Topic Assignment, measures to areas
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -44,25 +44,25 @@ topic edge is the Source Article rather than a chunk.
 
 ## Acceptance criteria
 
-- [ ] The adapter Protocol introduced in 02 gains assignment over a Source
+- [x] The adapter Protocol introduced in 02 gains assignment over a Source
       Article, its Policy Areas, and its extractions, and the Pydantic AI adapter
       implements it with its own agent and Model Deployment.
-- [ ] The pipeline runs assignment after the extraction loop, in the position
+- [x] The pipeline runs assignment after the extraction loop, in the position
       Bill Session Resolution occupies, and passes it every Bill and Prop the
       article's extractions produced.
-- [ ] Assignments reach the database through the article-level topic method from
+- [x] Assignments reach the database through the article-level topic method from
       01, alongside the article's areas.
-- [ ] An assignment naming a measure no extraction produced is dropped before
+- [x] An assignment naming a measure no extraction produced is dropped before
       persistence.
-- [ ] An assignment naming an area outside the article's classified set is
+- [x] An assignment naming an area outside the article's classified set is
       dropped before persistence.
-- [ ] An article with no areas, or with no extracted measures, completes without
+- [x] An article with no areas, or with no extracted measures, completes without
       calling the assignment stage or with an empty result, and reaches
       `COMPLETED`.
-- [ ] An assignment failure raises one stage-specific exception; the pipeline
+- [x] An assignment failure raises one stage-specific exception; the pipeline
       logs it to the Dead Letter Queue and sets Article Status as a coreference
       failure does.
-- [ ] Pipeline tests extend the fake from 02 to cover both stages and assert what
+- [x] Pipeline tests extend the fake from 02 to cover both stages and assert what
       reached the database.
 
 ## Blocked by

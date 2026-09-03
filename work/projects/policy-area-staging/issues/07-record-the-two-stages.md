@@ -1,6 +1,6 @@
 # 07 — Record both stages in the domain vocabulary
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -29,16 +29,16 @@ reversal of a decision `docs/adr/` holds.
 
 ## Acceptance criteria
 
-- [ ] `CONTEXT.md` defines Policy Area Classification and Topic Assignment, each
+- [x] `CONTEXT.md` defines Policy Area Classification and Topic Assignment, each
       with an _Avoid_ line separating it from the other and from Entity
       Extraction.
-- [ ] The Policy Area entry names the stage that writes the node and the level its
+- [x] The Policy Area entry names the stage that writes the node and the level its
       article edge sits at.
-- [ ] The Entity Extraction and News Ontology entries no longer attribute Policy
+- [x] The Entity Extraction and News Ontology entries no longer attribute Policy
       Areas to the chunk extractor.
-- [ ] The Grounding Evidence entry records that a topic edge is grounded in the
+- [x] The Grounding Evidence entry records that a topic edge is grounded in the
       Source Article.
-- [ ] Either no ADR is added, or one is added and names the decision it
+- [x] Either no ADR is added, or one is added and names the decision it
       supersedes.
 
 ## Blocked by

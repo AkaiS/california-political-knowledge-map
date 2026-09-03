@@ -1,6 +1,6 @@
 # 01 — The article-level topic write path
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -29,22 +29,22 @@ per-chunk write beside it.
 
 ## Acceptance criteria
 
-- [ ] The database adapter Protocol declares one method taking a Source Article,
+- [x] The database adapter Protocol declares one method taking a Source Article,
       its Policy Areas, and its topic assignments.
-- [ ] The Neo4j adapter merges a `PolicyArea` node per area, keyed from label and
+- [x] The Neo4j adapter merges a `PolicyArea` node per area, keyed from label and
       name by the same derivation every non-Bill node uses, and merges
       `(:NewsArticle)-[:DISCUSSES_TOPIC]->(:PolicyArea)`.
-- [ ] Each assignment merges `ABOUT_TOPIC` from the named `Bill` or `Prop` to the
+- [x] Each assignment merges `ABOUT_TOPIC` from the named `Bill` or `Prop` to the
       named `PolicyArea`, resolving the measure's node the same way the chunk
       extraction write resolves an endpoint, including a Bill whose Bill Session
       Resolution supplied its key.
-- [ ] A call with areas and no assignments writes the article edges and nothing
+- [x] A call with areas and no assignments writes the article edges and nothing
       else.
-- [ ] A call with neither writes nothing and does not fail.
-- [ ] Writing the same article's topics twice leaves one node per area and one
+- [x] A call with neither writes nothing and does not fail.
+- [x] Writing the same article's topics twice leaves one node per area and one
       edge per pair.
 - [ ] The SQLite adapter satisfies the Protocol.
-- [ ] Nothing in the pipeline calls the new method yet, and the existing suite
+- [x] Nothing in the pipeline calls the new method yet, and the existing suite
       passes unchanged.
 
 ## Blocked by
