@@ -251,7 +251,7 @@ def setup_telemetry() -> None:
 
         # Model clients use HTTPX. Keep transport timing, status, and errors without
         # copying every request and response payload into low-level telemetry.
-        logfire.instrument_httpx()
+        logfire.instrument_httpx(capture_all=False)
         logfire.instrument_system_metrics()
 
         _credential = credential

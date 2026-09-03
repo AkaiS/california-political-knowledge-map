@@ -21,6 +21,14 @@ from knowledge_map.schemas import (
 from knowledge_map.utils.models import get_chat_model
 
 
+@pytest.fixture
+def span_exporter() -> tuple[TestExporter, TracerProvider]:
+    exporter = TestExporter()
+    tracer_provider = TracerProvider()
+    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
+    return exporter, tracer_provider
+
+
 def openrouter_deployment(**overrides) -> ModelDeployment:
     values = {
         "kind": DeploymentKind.OPENROUTER,
@@ -180,12 +188,10 @@ def test_openrouter_completion_event_keeps_operational_route_and_cost_facts(
 
 
 def test_observed_openrouter_provider_joins_standard_model_request_telemetry(
-    monkeypatch,
+    monkeypatch, span_exporter
 ):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
-    exporter = TestExporter()
-    tracer_provider = TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
+    exporter, tracer_provider = span_exporter
 
     model = get_chat_model(
         openrouter_deployment(),
@@ -220,12 +226,10 @@ def test_observed_openrouter_provider_joins_standard_model_request_telemetry(
 
 
 def test_missing_openrouter_provider_stays_absent_from_model_request_telemetry(
-    monkeypatch,
+    monkeypatch, span_exporter
 ):
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test")
-    exporter = TestExporter()
-    tracer_provider = TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
+    exporter, tracer_provider = span_exporter
     completion = chat_completion("resolved")
     completion.pop("provider")
 
@@ -252,10 +256,10 @@ def test_missing_openrouter_provider_stays_absent_from_model_request_telemetry(
     assert "gen_ai.response.downstream_provider" not in model_request_span["attributes"]
 
 
-def test_local_model_request_telemetry_does_not_invent_a_downstream_provider():
-    exporter = TestExporter()
-    tracer_provider = TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
+def test_local_model_request_telemetry_does_not_invent_a_downstream_provider(
+    span_exporter,
+):
+    exporter, tracer_provider = span_exporter
     deployment = ModelDeployment(
         kind=DeploymentKind.LOCAL,
         model="local/test-model",

@@ -27,7 +27,7 @@ have not yet been shaped into executable work.
   Removes the custom Request Provenance subsystem, derives one compact Model
   Route Summary per successful case from Pydantic Evals' span tree, and leaves
   request diagnostics with Pydantic AI and Logfire. Broken into three tickets
-  on 2026-09-03; only the first is takeable now.
+  on 2026-09-03; issue 02 is now takeable.
 - [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
   Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
   for a bill number it cannot supply, normalization rejects every spelled-out

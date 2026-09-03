@@ -47,6 +47,19 @@ from knowledge_map.utils.telemetry import setup_telemetry
 DEFAULT_LOCAL_CHAT_MODEL = "gemma4:26b"
 
 
+def _observed_downstream_provider(response: ModelResponse) -> str | None:
+    details = response.provider_details
+    if not isinstance(details, dict):
+        return None
+    provider = details.get("downstream_provider")
+    if not isinstance(provider, str):
+        return None
+    normalized = provider.strip()
+    if not normalized or normalized.casefold() in {"unknown", "unavailable"}:
+        return None
+    return provider
+
+
 @dataclass
 class _RequestRetryState:
     """Track one HTTP request across its bounded transport attempts."""
@@ -480,14 +493,8 @@ class _RequestProvenanceModelMixin:
         _CURRENT_REQUEST_RETRY.set(None)
         model_response = super()._process_response(response)  # type: ignore[misc]
         if self._provenance_deployment == "openrouter":
-            downstream_provider = (model_response.provider_details or {}).get(
-                "downstream_provider"
-            )
-            if (
-                isinstance(downstream_provider, str)
-                and downstream_provider.strip()
-                and downstream_provider.casefold() not in {"unknown", "unavailable"}
-            ):
+            downstream_provider = _observed_downstream_provider(model_response)
+            if downstream_provider is not None:
                 get_current_span().set_attribute(
                     "gen_ai.response.downstream_provider", downstream_provider
                 )
@@ -516,7 +523,7 @@ def _log_openrouter_route(
     """Attach OpenRouter's safe routing result to the active model trace."""
 
     details = response.provider_details or {}
-    downstream_provider = details.get("downstream_provider")
+    downstream_provider = _observed_downstream_provider(response)
     is_byok = details.get("is_byok")
     provider_policy = (getattr(model, "settings", None) or {}).get(
         "openrouter_provider", {}

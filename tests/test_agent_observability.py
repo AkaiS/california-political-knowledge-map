@@ -12,6 +12,7 @@ from knowledge_map.utils import agents, telemetry
 def test_telemetry_configures_before_instrumenting_pydantic_ai(monkeypatch):
     calls: list[tuple[str, dict]] = []
     monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setenv("LOGFIRE_HTTPX_CAPTURE_ALL", "true")
     monkeypatch.setattr(
         telemetry.logfire,
         "configure",
@@ -41,7 +42,7 @@ def test_telemetry_configures_before_instrumenting_pydantic_ai(monkeypatch):
         "httpx",
         "system_metrics",
     ]
-    assert dict(calls)["httpx"] == {}
+    assert dict(calls)["httpx"] == {"capture_all": False}
 
 
 def test_create_agent_sets_up_telemetry_before_construction(monkeypatch):
