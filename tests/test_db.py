@@ -2,7 +2,7 @@ import os
 import sqlite3
 import pytest
 from knowledge_map.adapters.sqlite_db import init_db, save_story, get_all_stories
-from knowledge_map.schemas.stories import Story, StoryLink
+from knowledge_map.schemas.stories import Story, ContentLink
 
 def test_get_all_stories(tmp_path):
     db_file = tmp_path / "test_stories.db"
@@ -96,8 +96,8 @@ def test_save_story_with_links(tmp_path):
         summary="Summary",
         content="Content here.",
         links=[
-            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
-            StoryLink(text="Link Text 2", url="http://example.com/target-2")
+            ContentLink(text="Link Text 1", url="http://example.com/target-1"),
+            ContentLink(text="Link Text 2", url="http://example.com/target-2")
         ]
     )
     
@@ -132,9 +132,9 @@ def test_save_story_links_uniqueness(tmp_path):
         category="Politics",
         content="Content here.",
         links=[
-            StoryLink(text="Link Text 1", url="http://example.com/target-1"),
-            StoryLink(text="Duplicate Link Text 1", url="http://example.com/target-1"),  # same URL
-            StoryLink(text="Link Text 2", url="http://example.com/target-2")
+            ContentLink(text="Link Text 1", url="http://example.com/target-1"),
+            ContentLink(text="Duplicate Link Text 1", url="http://example.com/target-1"),  # same URL
+            ContentLink(text="Link Text 2", url="http://example.com/target-2")
         ]
     )
     

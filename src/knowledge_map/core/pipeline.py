@@ -6,7 +6,7 @@ from knowledge_map.core.legislative_events import resolve_legislative_event_date
 from knowledge_map.core.topic_assignment import extracted_measures, supported_assignments
 from knowledge_map.schemas import (
     AdherenceReport,
-    ArticleChunk,
+    StoryChunk,
     StoryStatus,
     BillSessionResolutions,
     CoreferenceResolutionRun,
@@ -14,7 +14,7 @@ from knowledge_map.schemas import (
     LegislativeEventDates,
     Node,
     PipelineResult,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
 )
 from knowledge_map.utils.chunking import chunk_article
@@ -22,13 +22,13 @@ from knowledge_map.utils.chunking import chunk_article
 logger = logging.getLogger(__name__)
 
 class DatabaseAdapter(Protocol):
-    def ingest_article(self, article: SourceArticle) -> None:
+    def ingest_article(self, article: IngestionArticle) -> None:
         ...
 
     def ingest_chunk(
         self,
-        article: SourceArticle,
-        chunk: ArticleChunk,
+        article: IngestionArticle,
+        chunk: StoryChunk,
         embedding: List[float]
     ) -> None:
         ...
@@ -44,7 +44,7 @@ class DatabaseAdapter(Protocol):
 
     def ingest_article_topics(
         self,
-        article: SourceArticle,
+        article: IngestionArticle,
         policy_areas: List[str],
         assignments: List[TopicAssignment] | None = None,
         bill_sessions: BillSessionResolutions | None = None,
@@ -60,7 +60,7 @@ class DatabaseAdapter(Protocol):
         ...
 
 class EmbeddingAdapter(Protocol):
-    def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
+    def process_chunks(self, chunks: List[StoryChunk]) -> List[List[float]]:
         ...
 
     def health_check(self) -> bool:
@@ -102,7 +102,7 @@ class PolicyAreaAdapter(Protocol):
 
     def assign(
         self,
-        article: SourceArticle,
+        article: IngestionArticle,
         policy_areas: List[str],
         measures: List[Node],
     ) -> List[TopicAssignment]:
@@ -198,7 +198,7 @@ class StoryPipeline:
         self.status_tracker = status_tracker
         self.dlq_adapter = dlq_adapter
 
-    def run(self, article: SourceArticle, dry_run: bool = False) -> PipelineResult:
+    def run(self, article: IngestionArticle, dry_run: bool = False) -> PipelineResult:
         logger.info(f"Starting pipeline run for article: {article.title or article.url}")
         
         if not dry_run:
@@ -317,7 +317,7 @@ class StoryPipeline:
         except Exception as status_err:
             logger.error(f"Failed to update status to {status}: {status_err}")
 
-    def _handle_pipeline_failure(self, e: Exception, article: SourceArticle, dry_run: bool) -> None:
+    def _handle_pipeline_failure(self, e: Exception, article: IngestionArticle, dry_run: bool) -> None:
         if not dry_run:
             if isinstance(e, PipelineRateLimitError) or (
                 isinstance(e, PipelineConnectivityError) and e.retryable

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from chonkie import RecursiveChunker, OverlapRefinery
-from knowledge_map.schemas import ArticleChunk
+from knowledge_map.schemas import StoryChunk
 from knowledge_map.config import settings
 
 
@@ -18,7 +18,7 @@ def chunk_article(
     text: str,
     chunk_size: Optional[int] = None,
     chunk_overlap_pct: Optional[float] = None
-) -> List[ArticleChunk]:
+) -> List[StoryChunk]:
     if chunk_size is None:
         chunk_size = settings.chunking.size
             
@@ -63,7 +63,7 @@ def chunk_article(
             context = text[context_start:c.start_index]
 
         article_chunks.append(
-            ArticleChunk(
+            StoryChunk(
                 text=c.text,
                 start_index=c.start_index,
                 end_index=c.end_index,

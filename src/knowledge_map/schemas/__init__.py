@@ -14,7 +14,7 @@ from .policy_areas import (
     TopicAssignment,
     TopicAssignments,
 )
-from .chunking import ArticleChunk
+from .chunking import ArticleChunk, StoryChunk
 from .coreference import (
     CoreferenceResolutionRun,
     CriticVerdict,
@@ -23,7 +23,7 @@ from .coreference import (
     MentionSpanOutcome,
     NumberedSentenceRecord,
 )
-from .pipeline import SourceArticle, PipelineResult, StoryStatus, ArticleStatus, StoryLink
+from .pipeline import SourceArticle, IngestionArticle, PipelineResult, StoryStatus, ArticleStatus, StoryLink, ContentLink
 from .stories import Story
 from .relevance import (
     RelevanceStatus,

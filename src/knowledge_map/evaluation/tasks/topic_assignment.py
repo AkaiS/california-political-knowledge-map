@@ -36,7 +36,7 @@ from knowledge_map.schemas import (
     ModelDeployment,
     Node,
     PolicyAreaName,
-    SourceArticle,
+    IngestionArticle,
     TopicAssignment,
 )
 
@@ -185,7 +185,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
         if not case_input.policy_areas or not case_input.measures:
             return AssignmentOutput()
 
-        article = SourceArticle(
+        article = IngestionArticle(
             url=case_input.url,
             title=case_input.title,
             content=case_input.resolved_text,

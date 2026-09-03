@@ -10,7 +10,8 @@ from knowledge_map.schemas.relevance import (
     ValidationStatus,
     sql_check_values,
 )
-from knowledge_map.schemas.stories import Story, StoryLink
+from knowledge_map.schemas.stories import Story
+from knowledge_map.schemas.pipeline import ContentLink
 
 DEFAULT_DB_PATH = "document_store.db"
 
@@ -396,7 +397,7 @@ def _story_columns(story: Story) -> Tuple[Any, ...]:
     )
 
 
-def _save_story_links(cursor: sqlite3.Cursor, story_id: int, links: List[StoryLink]) -> None:
+def _save_story_links(cursor: sqlite3.Cursor, story_id: int, links: List[ContentLink]) -> None:
     for link in links:
         cursor.execute("""
             INSERT OR IGNORE INTO story_links (story_id, text, url)

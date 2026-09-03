@@ -117,15 +117,15 @@ An automatic validation check run on the specific article that triggered a Selec
 _Avoid_: Cache retry, selector sweep
 
 **Story**:
-A strongly-typed domain model holding the content extracted from one validated article — title, author, published date, body, and the hyperlinks found in that body — persisted in the SQLite database (the `stories` table). A Story row exists exactly when the article's Validation Status is `VALIDATED`, and only the validation stage writes it. It is the record of what was extracted; the Source Article is the ingestion input built from it.
+A strongly-typed domain model holding the content extracted from one validated article — title, author, published date, body, and the hyperlinks found in that body — persisted in the SQLite database (the `stories` table). A Story row exists exactly when the article's Validation Status is `VALIDATED`, and only the validation stage writes it. It is the record of what was extracted; the Source Article is the ingestion input built from it. (Its status is StoryStatus.)
 _Avoid_: Article, extracted article, document, story dict
 
 **Source Article**:
-A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data.
+A strongly-typed domain model representing a scraped news story or report containing political coverage and influence data. (Canonical type is now IngestionArticle; SourceArticle alias deprecated.)
 _Avoid_: News piece, document, post, feed
 
 **Article Chunk**:
-A structured segment of a Source Article's text, representing a smaller, contiguous block used to optimize Entity Extraction and store vector embeddings.
+A structured segment of a Source Article's text, representing a smaller, contiguous block used to optimize Entity Extraction and store vector embeddings. (Canonical type StoryChunk; ArticleChunk alias deprecated.)
 _Avoid_: Fragment, snippet, text slice, part
 
 **Extraction Prompt**:

@@ -1,6 +1,6 @@
 import pytest
 from knowledge_map.utils.chunking import chunk_article
-from knowledge_map.schemas import ArticleChunk
+from knowledge_map.schemas import StoryChunk
 
 def test_default_chunking_behavior():
     # A text of about 3000 characters (3x the default chunk size of 1000)
@@ -9,9 +9,9 @@ def test_default_chunking_behavior():
     
     chunks = chunk_article(text)
     
-    # Check that chunks are returned and are ArticleChunk models
+    # Check that chunks are returned and are StoryChunk models
     assert len(chunks) > 1
-    assert all(isinstance(c, ArticleChunk) for c in chunks)
+    assert all(isinstance(c, StoryChunk) for c in chunks)
     
     # Check that indices and start/end boundaries align
     for idx, c in enumerate(chunks):

@@ -11,7 +11,7 @@ from pydantic_ai.embeddings import EmbeddingSettings
 from knowledge_map.config import TransportSettings, settings
 from knowledge_map.utils.models import build_retrying_client, resolve_embedding_base_url
 from typing import List
-from knowledge_map.schemas import ArticleChunk
+from knowledge_map.schemas import StoryChunk
 
 def cosine_similarity(v1: list[float], v2: list[float]) -> float:
     if len(v1) != len(v2):
@@ -107,7 +107,7 @@ class PydanticAIEmbeddingAdapter:
 
         return self._validate_embedding(result.embeddings[0])
 
-    def process_chunks(self, chunks: List[ArticleChunk]) -> List[List[float]]:
+    def process_chunks(self, chunks: List[StoryChunk]) -> List[List[float]]:
         if not chunks:
             return []
             

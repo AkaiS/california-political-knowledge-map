@@ -38,7 +38,8 @@ from knowledge_map.schemas.relevance import (
     RelevanceStatus,
     ValidationStatus,
 )
-from knowledge_map.schemas.stories import Story, StoryLink
+from knowledge_map.schemas.stories import Story
+from knowledge_map.schemas.pipeline import ContentLink
 from knowledge_map.utils.console import ConsoleNotifier
 from knowledge_map.utils.urls import clean_and_resolve_url
 
@@ -888,7 +889,7 @@ def extract_fields(html: str, selectors) -> Dict[str, Any]:
     }
 
 
-def extract_links_from_elements(elements: List[Any], base_url: str) -> List[StoryLink]:
+def extract_links_from_elements(elements: List[Any], base_url: str) -> List[ContentLink]:
     """
     Extracts, resolves, and deduplicates all hyperlinks from body elements.
     Only keeps links in the body that are not self-links and have valid http/https schemes.
@@ -901,7 +902,7 @@ def extract_links_from_elements(elements: List[Any], base_url: str) -> List[Stor
             resolved = clean_and_resolve_url(base_url, href)
             if resolved and resolved not in seen:
                 seen.add(resolved)
-                links.append(StoryLink(text=a.get_text().strip(), url=resolved))
+                links.append(ContentLink(text=a.get_text().strip(), url=resolved))
     return links
 
 

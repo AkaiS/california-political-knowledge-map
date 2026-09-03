@@ -1,7 +1,7 @@
 from typing import Optional, List
 from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from .chunking import ArticleChunk
+from .chunking import StoryChunk
 from .extraction import ExtractionResult
 
 class StoryStatus(StrEnum):
@@ -16,7 +16,7 @@ class StoryStatus(StrEnum):
 ArticleStatus = StoryStatus
 
 
-class StoryLink(BaseModel):
+class ContentLink(BaseModel):
     """A hyperlink extracted from an article body."""
     model_config = ConfigDict(extra="forbid")
 
@@ -31,17 +31,25 @@ class StoryLink(BaseModel):
         return value.strip()
 
 
-class SourceArticle(BaseModel):
+class IngestionArticle(BaseModel):
     url: str = Field(..., description="The URL of the source article")
     title: Optional[str] = Field(None, description="The title of the article")
     author: Optional[str] = Field(None, description="The author(s) of the article")
     published_date: Optional[str] = Field(None, description="The published date of the article")
     content: str = Field(..., description="The full raw text content of the article")
-    links: List[StoryLink] = Field(default_factory=list, description="The hyperlinks found in the article body")
+    links: List[ContentLink] = Field(default_factory=list, description="The hyperlinks found in the article body")
+
+
+# Deprecated alias for backward compatibility; use IngestionArticle.
+SourceArticle = IngestionArticle
+
+
+# Deprecated alias for backward compatibility; use ContentLink.
+StoryLink = ContentLink
 
 class PipelineResult(BaseModel):
     resolved_text: str = Field(..., description="The coreference-resolved text of the article")
-    chunks: List[ArticleChunk] = Field(..., description="The list of chunks generated from the resolved text")
+    chunks: List[StoryChunk] = Field(..., description="The list of chunks generated from the resolved text")
     embeddings: List[List[float]] = Field(..., description="The vector embeddings corresponding to each chunk")
     extractions: List[ExtractionResult] = Field(..., description="The list of extracted entities and relationships per chunk")
     policy_areas: List[str] = Field(default_factory=list, description="The Policy Areas the article discusses, decided once for the article")

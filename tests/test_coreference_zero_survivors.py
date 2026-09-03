@@ -14,10 +14,10 @@ from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.schemas import (
     AdherenceReport,
-    ArticleChunk,
+    StoryChunk,
     ExtractionResult,
     Node,
-    SourceArticle,
+    IngestionArticle,
 )
 
 
@@ -261,7 +261,7 @@ class _PolicyAreas:
 
 
 class _Embedding:
-    def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
+    def process_chunks(self, chunks: list[StoryChunk]) -> list[list[float]]:
         return [[0.1] for _ in chunks]
 
 
@@ -332,7 +332,7 @@ def test_zero_survivor_failures_reach_failed_dlq_with_replayable_payload(
     status = _Status()
     adapter = make_adapter(mentions, verdicts)
     dlq = LocalFileDLQAdapter(directory=str(tmp_path / "dlq"))
-    article = SourceArticle(
+    article = IngestionArticle(
         url=f"https://example.com/{failure_type}",
         title="A coreference failure",
         content="Gavin Newsom signed a bill. He was happy.",
@@ -398,7 +398,7 @@ def test_an_exhausted_correction_is_visible_in_the_dead_letter_queue_record(tmp_
         annotator_retries=3,
     )
     dlq = LocalFileDLQAdapter(directory=str(tmp_path / "dlq"))
-    article = SourceArticle(
+    article = IngestionArticle(
         url="https://example.com/exhausted-correction",
         title="An annotator that could not be corrected",
         content="Gavin Newsom signed a bill. He was happy.",

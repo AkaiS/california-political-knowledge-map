@@ -5,13 +5,13 @@ from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
 from knowledge_map.ontology import news
 from knowledge_map.schemas import (
-    ArticleChunk,
+    StoryChunk,
     BillSessionResolution,
     BillSessionResolutions,
     ExtractionResult,
     Node,
     Relationship,
-    SourceArticle,
+    IngestionArticle,
 )
 
 @pytest.fixture(autouse=True)
@@ -380,7 +380,7 @@ def test_ingest_article():
         driver=mock_driver
     )
     
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://example.com/1",
         title="Breaking News",
         author="John Doe",
@@ -417,13 +417,13 @@ def test_ingest_chunk():
         driver=mock_driver
     )
     
-    article = SourceArticle(
+    article = IngestionArticle(
         url="http://example.com/1",
         title="Breaking News",
         content="Article content"
     )
     
-    chunk = ArticleChunk(
+    chunk = StoryChunk(
         text="Gavin Newsom did something.",
         start_index=0,
         end_index=27,
@@ -745,7 +745,7 @@ def test_ingest_article_topics_refuses_a_policy_area_the_ontology_does_not_admit
 
     monkeypatch.setattr(news, "STAGE_DECIDED_LABELS", frozenset())
 
-    article = SourceArticle(url="http://example.com/1", title="A", content="B")
+    article = IngestionArticle(url="http://example.com/1", title="A", content="B")
     with pytest.raises(Neo4jConnectionError, match="Invalid node label for this write path: PolicyArea"):
         manager.ingest_article_topics(article, ["Housing & Community Development"])
     assert not any("MERGE (n:PolicyArea" in call[0][0] for call in mock_tx.run.call_args_list)
@@ -867,7 +867,7 @@ def test_bill_names_with_the_same_resolution_share_one_primary_key():
         Node(name="ll 623", label="Bill"),
     ])
     resolution_map = resolve_bill_sessions(
-        SourceArticle(
+        IngestionArticle(
             url="https://example.com/uber-ballot-measures",
             title="Uber Ballot Measures",
             published_date="2020-04-10T12:00:00Z",

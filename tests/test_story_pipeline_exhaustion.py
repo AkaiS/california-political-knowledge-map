@@ -19,7 +19,7 @@ from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.schemas import (
     AdherenceReport,
     ExtractionResult,
-    SourceArticle,
+    IngestionArticle,
     Story,
 )
 
@@ -132,7 +132,7 @@ def test_nonretryable_model_http_error_is_translated_to_system_error():
         policy_area_adapter=NoopPolicyAreas(),
         status_tracker=status_tracker,
     )
-    article = SourceArticle(
+    article = IngestionArticle(
         url="https://example.com/unauthorized",
         title="Unauthorized",
         content="The provider rejected this request.",

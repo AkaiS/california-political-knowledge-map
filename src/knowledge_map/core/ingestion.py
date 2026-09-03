@@ -13,7 +13,9 @@ from knowledge_map.core.exceptions import (
     classify_exception,
 )
 from knowledge_map.core.pipeline import StoryPipeline
-from knowledge_map.schemas import StoryStatus, SourceArticle, StoryLink
+from knowledge_map.schemas import StoryStatus
+from knowledge_map.schemas.pipeline import ContentLink
+from knowledge_map.schemas.stories import Story
 from knowledge_map.utils.console import ConsoleNotifier
 
 logger = logging.getLogger(__name__)
@@ -70,17 +72,21 @@ class BatchIngestionService:
             logger.info(f"[{idx}/{len(unprocessed)}] Processing story: {title}")
 
             try:
-                article = SourceArticle(
+                links = [
+                    ContentLink(url=link["url"], text=link.get("text"))
+                    for link in get_story_links(story_dict["id"], self.settings.db_path)
+                ]
+                story = Story(
                     url=url,
-                    title=story_dict.get("title"),
+                    title=story_dict.get("title") or url,
+                    category=story_dict.get("category"),
                     author=story_dict.get("author"),
                     published_date=story_dict.get("published_date"),
-                    content=story_dict.get("content") or "",
-                    links=[
-                        StoryLink(url=link["url"], text=link.get("text"))
-                        for link in get_story_links(story_dict["id"], self.settings.db_path)
-                    ],
+                    summary=story_dict.get("summary"),
+                    content=story_dict.get("content"),
+                    links=links,
                 )
+                article = story.to_ingestion_article()
 
                 self.pipeline.run(article)
                 # Success: reset consecutive failures
