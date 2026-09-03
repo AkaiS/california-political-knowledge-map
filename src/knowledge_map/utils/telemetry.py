@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 _CONFIGURATION_LOCK = threading.Lock()
 _configured = False
 
+# The credential this process configured Logfire with.  Held because a report
+# is written long after the run began, and the sources are mutable: re-reading
+# them then can name a project this process never reported to.
+_credential: "LogfireCredential | None" = None
+
 LOGFIRE_TOKEN_ENV = "LOGFIRE_TOKEN"
 PROJECT_URL_ENV = "LOGFIRE_PROJECT_URL"
 
@@ -158,9 +163,16 @@ def resolve_token() -> str | None:
 
 
 def project_url() -> str | None:
-    """The project a trace id can be linked into, when the pairing is known."""
+    """The project this process reported to, when the pairing is known.
 
-    credential = resolve_credential()
+    Answers from the credential configure() was given rather than from the
+    sources as they stand now, so rotating a token or writing a credentials
+    file mid-run cannot redirect a finished run's link.  Falls back to a fresh
+    resolution only when nothing has been configured, which is also the case
+    where no trace was recorded for a link to mislead about.
+    """
+
+    credential = _credential or resolve_credential()
     return credential.project_url if credential else None
 
 
@@ -171,7 +183,7 @@ def setup_telemetry() -> None:
     run which would vanish unrecorded fails at its start instead of at its end.
     """
 
-    global _configured
+    global _configured, _credential
     if _configured:
         return
 
@@ -184,8 +196,11 @@ def setup_telemetry() -> None:
         load_dotenv()
 
         is_testing = _is_testing()
-        token = None if is_testing else resolve_token()
-        if not is_testing and token is None:
+        # Resolved once and kept: every later reader must answer about the run
+        # that happened, not about the credential sources as they stand then.
+        credential = None if is_testing else resolve_credential()
+        token = credential.token if credential else None
+        if not is_testing and credential is None:
             if os.environ.get(ALLOW_UNTRACED, "").lower() not in ("1", "true", "yes"):
                 raise TelemetryNotConfiguredError(_MISSING_TOKEN_MESSAGE)
             logger.warning("%s is set; this run will not be observable", ALLOW_UNTRACED)
@@ -214,5 +229,6 @@ def setup_telemetry() -> None:
         logfire.instrument_httpx(capture_all=True)
         logfire.instrument_system_metrics()
 
+        _credential = credential
         _configured = True
         logger.debug("Logfire telemetry initialized successfully")

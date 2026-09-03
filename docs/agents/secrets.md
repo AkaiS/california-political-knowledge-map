@@ -39,8 +39,10 @@ you run when the check has stopped everything else.
 The resolved token is passed to `logfire.configure()` explicitly, so the
 directory a command runs from cannot change whether it is observed.
 
-The token and the project it reports to are resolved together, from one
-source. A credentials file names the project for its own token; a token from
+The token and the project it reports to are resolved once, at startup, and
+kept for the life of the process — a report is written long after the run
+began, and re-reading the sources then could name a project the run never
+reported to. They are resolved together, from one source. A credentials file names the project for its own token; a token from
 the environment or the keychain has no project of its own and takes the one
 `LOGFIRE_PROJECT_URL` declares, or none. They are never mixed: a stale
 credentials file naming a different project would otherwise make reports

@@ -84,7 +84,8 @@ def test_missing_token_blocks_the_run(monkeypatch):
     """An unobservable run must fail at its start, not run and teach nothing."""
     monkeypatch.setattr(telemetry, "_configured", False)
     monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
-    monkeypatch.setattr(telemetry, "resolve_token", lambda: None)
+    monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "resolve_credential", lambda: None)
     monkeypatch.delenv(telemetry.ALLOW_UNTRACED, raising=False)
     configured: list[str] = []
     monkeypatch.setattr(
@@ -101,7 +102,8 @@ def test_missing_token_blocks_the_run(monkeypatch):
 def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
     monkeypatch.setattr(telemetry, "_configured", False)
     monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
-    monkeypatch.setattr(telemetry, "resolve_token", lambda: None)
+    monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "resolve_credential", lambda: None)
     monkeypatch.setenv(telemetry.ALLOW_UNTRACED, "1")
     for name in ("configure", "instrument_pydantic_ai", "instrument_httpx",
                  "instrument_system_metrics"):
@@ -113,6 +115,7 @@ def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
 
 
 def test_token_prefers_environment_then_keychain_then_credentials_file(monkeypatch):
+    monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.setattr(telemetry, "_credentials", lambda *a, **k: {"token": "file"})
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: "keychain")
@@ -134,6 +137,7 @@ def test_a_project_is_never_borrowed_from_a_source_that_did_not_supply_the_token
     Pairing them would advertise a trace under a project it was never sent to,
     so an unverifiable pairing yields no project at all.
     """
+    monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
     monkeypatch.setattr(
@@ -150,6 +154,7 @@ def test_a_project_is_never_borrowed_from_a_source_that_did_not_supply_the_token
 
 
 def test_the_credentials_file_names_the_project_for_its_own_token(monkeypatch):
+    monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.delenv(telemetry.PROJECT_URL_ENV, raising=False)
     monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV, raising=False)
     monkeypatch.setattr(telemetry, "_keychain_token", lambda: None)
@@ -163,6 +168,7 @@ def test_the_credentials_file_names_the_project_for_its_own_token(monkeypatch):
 
 
 def test_an_out_of_band_token_takes_its_project_from_the_declared_one(monkeypatch):
+    monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
     monkeypatch.setenv(telemetry.PROJECT_URL_ENV, "https://logfire/declared")
     monkeypatch.setattr(
@@ -178,7 +184,12 @@ def test_resolved_token_is_passed_to_configure(monkeypatch):
     """The token must not depend on the directory the command was run from."""
     monkeypatch.setattr(telemetry, "_configured", False)
     monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
-    monkeypatch.setattr(telemetry, "resolve_token", lambda: "from-the-keychain")
+    monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(
+        telemetry,
+        "resolve_credential",
+        lambda: telemetry.LogfireCredential("from-the-keychain", None, "keychain"),
+    )
     seen: dict[str, object] = {}
     monkeypatch.setattr(telemetry.logfire, "configure", lambda **kwargs: seen.update(kwargs))
     for name in ("instrument_pydantic_ai", "instrument_httpx", "instrument_system_metrics"):
@@ -187,3 +198,37 @@ def test_resolved_token_is_passed_to_configure(monkeypatch):
     telemetry.setup_telemetry()
 
     assert seen["token"] == "from-the-keychain"
+
+
+def test_the_configured_project_survives_a_source_changing_mid_run(monkeypatch):
+    """A report is written long after the run began, and sources are mutable.
+
+    Re-reading them at report time could name a project this process never
+    reported to, so the credential configure() was given is the one that answers.
+    """
+    monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setattr(telemetry, "_credential", None)
+    monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
+    monkeypatch.setattr(
+        telemetry,
+        "resolve_credential",
+        lambda: telemetry.LogfireCredential(
+            "token-at-startup", "https://logfire/reported-to", "keychain"
+        ),
+    )
+    for name in ("configure", "instrument_pydantic_ai", "instrument_httpx",
+                 "instrument_system_metrics"):
+        monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
+
+    telemetry.setup_telemetry()
+
+    # The sources move on: a rotated token, a credentials file for elsewhere.
+    monkeypatch.setattr(
+        telemetry,
+        "resolve_credential",
+        lambda: telemetry.LogfireCredential(
+            "token-rotated", "https://logfire/somewhere-else", "file"
+        ),
+    )
+
+    assert telemetry.project_url() == "https://logfire/reported-to"
