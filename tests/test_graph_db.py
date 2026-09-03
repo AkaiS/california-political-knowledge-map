@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
+from knowledge_map.ontology import news
 from knowledge_map.schemas import (
     ArticleChunk,
     BillSessionResolution,
@@ -719,11 +720,35 @@ def test_ingest_chunk_extraction_refuses_a_policy_area_and_writes_no_topic_edge(
 
     extraction = ExtractionResult(nodes=[Node(name="Housing & Community Development", label="PolicyArea")])
 
-    with pytest.raises(Neo4jConnectionError, match="Invalid extracted node label: PolicyArea"):
+    with pytest.raises(Neo4jConnectionError, match="Invalid node label for this write path: PolicyArea"):
         manager.ingest_chunk_extraction("article#chunk_0", extraction)
     assert not any(
         "DISCUSSES_TOPIC" in call[0][0] for call in mock_tx.run.call_args_list
     )
+
+
+def test_ingest_article_topics_refuses_a_policy_area_the_ontology_does_not_admit(monkeypatch):
+    """The topic write asserts the same label invariant the chunk write does.
+
+    The label it merges is fixed, so what this catches is the ontology moving
+    underneath it: were `PolicyArea` to stop being a label a stage decides,
+    this write would be minting a node nothing declares, and it refuses instead
+    of writing it.
+    """
+
+    mock_driver = MagicMock()
+    mock_session = MagicMock()
+    mock_tx = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_session.execute_write.side_effect = lambda func: func(mock_tx)
+    manager = Neo4jAdapter("bolt://localhost:7687", "neo4j", "password", driver=mock_driver)
+
+    monkeypatch.setattr(news, "STAGE_DECIDED_LABELS", frozenset())
+
+    article = SourceArticle(url="http://example.com/1", title="A", content="B")
+    with pytest.raises(Neo4jConnectionError, match="Invalid node label for this write path: PolicyArea"):
+        manager.ingest_article_topics(article, ["Housing & Community Development"])
+    assert not any("MERGE (n:PolicyArea" in call[0][0] for call in mock_tx.run.call_args_list)
 
 
 def test_bill_session_participates_in_node_primary_key():

@@ -117,7 +117,7 @@ def _write_relationship(
     tx.run(query, **parameters)
 
 
-def _topic_endpoint_id(article: SourceArticle, bill_sessions: BillSessionResolutions):
+def _topic_endpoint_resolver(article: SourceArticle, bill_sessions: BillSessionResolutions):
     """Resolve an article-level topic edge's endpoint to a node primary key.
 
     The measure endpoints resolve exactly as the chunk extraction write
@@ -136,14 +136,24 @@ def _topic_endpoint_id(article: SourceArticle, bill_sessions: BillSessionResolut
     return resolve
 
 
-def _validated_labels(label: str, sub_labels: list[str]) -> str:
+def _validated_labels(
+    label: str,
+    sub_labels: list[str],
+    admitted: frozenset[str] = news.EXTRACTED_LABELS,
+) -> str:
     """Assert the write path's own invariant on labels reaching the graph.
 
     Cannot fire on a conformed result; it catches an ingester that skipped
     conformance.
+
+    ``admitted`` is the set of labels the calling write is entitled to produce,
+    which is the extractor's own labels unless a stage decided the node
+    instead.  Passing the whole label set would let either write mint the
+    other's nodes, and the refusal of a ``PolicyArea`` from a chunk is exactly
+    that distinction.
     """
-    if label not in news.EXTRACTED_LABELS:
-        raise ValueError(f"Invalid extracted node label: {label}")
+    if label not in admitted:
+        raise ValueError(f"Invalid node label for this write path: {label}")
     allowed = news.SUB_LABELS.get(label, frozenset())
     invalid = set(sub_labels) - allowed
     if invalid:
@@ -382,8 +392,15 @@ class Neo4jAdapter:
                         # article's classification writes is the node a later
                         # article reaches.
                         node_id = derived_key("PolicyArea", name)
+                        # The same invariant the chunk write asserts, against
+                        # the labels a stage decides rather than the ones the
+                        # extractor produces.  A Policy Area declares no
+                        # sub-labels, so it offers none.
+                        labels = _validated_labels(
+                            "PolicyArea", [], news.STAGE_DECIDED_LABELS
+                        )
                         tx.run(
-                            "MERGE (n:PolicyArea {id: $node_id}) "
+                            f"MERGE (n:{labels} {{id: $node_id}}) "
                             "SET n += $properties, n.id = $node_id",
                             node_id=node_id,
                             properties={"name": name},
@@ -398,7 +415,7 @@ class Neo4jAdapter:
                                 relationship_type="DISCUSSES_TOPIC",
                             ),
                             {},
-                            _topic_endpoint_id(article, bill_sessions),
+                            _topic_endpoint_resolver(article, bill_sessions),
                         )
 
                     for assignment in assignments:
@@ -415,7 +432,7 @@ class Neo4jAdapter:
                                 relationship_type="ABOUT_TOPIC",
                             ),
                             {},
-                            _topic_endpoint_id(article, bill_sessions),
+                            _topic_endpoint_resolver(article, bill_sessions),
                         )
                 session.execute_write(_tx)
         except Exception as e:
