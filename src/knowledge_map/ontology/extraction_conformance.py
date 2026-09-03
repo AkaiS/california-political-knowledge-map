@@ -5,10 +5,12 @@ result: it never logs, never mutates its input, and never raises.  Everything
 it refuses comes back as a drop for the caller to record.
 
 Node labels are gated on :data:`knowledge_map.ontology.news.EXTRACTED_LABELS`
-rather than the full label set, so an emitted ``NewsArticle`` or ``Chunk`` is
-dropped and the entities beside it survive.  Undeclared relationship
-properties are dropped under their own Adherence Report category and the
-relationship survives them.
+and relationship types on
+:data:`knowledge_map.ontology.news.EXTRACTED_RELATIONSHIPS`, rather than on
+the full ontology, so a label or relationship another stage owns -- an emitted
+``NewsArticle``, or a ``PolicyArea`` and its topic edge -- is dropped and the
+entities beside it survive.  Undeclared relationship properties are dropped
+under their own Adherence Report category and the relationship survives them.
 """
 
 from pydantic import BaseModel, ConfigDict
@@ -56,6 +58,23 @@ def _resolve_endpoint(admitted: set[str], claimed: str | None) -> str | None:
     return claimed if claimed in admitted else None
 
 
+def _unextracted_relationship_reason(relationship_type: str) -> str:
+    """Why a declared relationship is still not one a chunk may claim.
+
+    A relationship leaves the extractor's list by touching a label the
+    extractor does not produce, so the reason is read off the endpoint that
+    took it out rather than restated per type.
+    """
+
+    shape = news.RELATIONSHIPS.get(relationship_type)
+    if shape is None:
+        return "unknown relationship type"
+    endpoints = shape.source_labels | shape.target_labels
+    if endpoints & news.STAGE_DECIDED_LABELS:
+        return "relationship is decided once per article, not extracted from a chunk"
+    return "relationship is written from the article, not extracted"
+
+
 def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> ConformanceOutcome:
     """Return ``result`` reduced to what the News Ontology admits, plus its drops."""
 
@@ -67,11 +86,12 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
     nodes: list[Node] = []
     for node in result.nodes:
         if node.label not in news.EXTRACTED_LABELS:
-            reason = (
-                "label is written from the article, not extracted"
-                if node.label in news.WRITE_PATH_LABELS
-                else "unknown label"
-            )
+            if node.label in news.WRITE_PATH_LABELS:
+                reason = "label is written from the article, not extracted"
+            elif node.label in news.STAGE_DECIDED_LABELS:
+                reason = "label is decided once per article, not extracted from a chunk"
+            else:
+                reason = "unknown label"
             drop(DropCategory.REJECTED_LABELS, node.label, reason)
             continue
 
@@ -103,9 +123,13 @@ def conform_extraction_result(result: ExtractionResult, chunk_id: str) -> Confor
     relationships: list[Relationship] = []
     for relationship in result.relationships:
         relationship_type = relationship.relationship_type
-        shape = news.RELATIONSHIPS.get(relationship_type)
+        shape = news.EXTRACTED_RELATIONSHIPS.get(relationship_type)
         if shape is None:
-            drop(DropCategory.REJECTED_RELATIONSHIP_TYPES, relationship_type, "unknown relationship type")
+            drop(
+                DropCategory.REJECTED_RELATIONSHIP_TYPES,
+                relationship_type,
+                _unextracted_relationship_reason(relationship_type),
+            )
             continue
 
         sources = nodes_by_name.get(relationship.source, [])

@@ -73,6 +73,17 @@ source remain intentionally omitted from this queue.
   [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md)
   as "Removing Neo4j nodes for articles whose relevance is reversed after
   ingestion," so this is the capture point for the deferred decision.
+- **IG-10 · P3:** Decide whether the News Ontology needs a term for an enacted
+  law. `ABOUT_TOPIC` admits only `Bill` and `Prop` as its source labels, so the
+  Topic Assignment Gold Set annotates the National Alzheimer's Project Act — a
+  federal statute enacted in 2011 — as a `Bill` to make the topic edge
+  expressible at all. That is a modelling gap rather than an annotation error:
+  the vocabulary has no way to say "a law that already passed", and federal
+  statutes are the case that exposes it. Surfaced while recording both topic
+  stages in `CONTEXT.md`
+  ([issue 07](projects/policy-area-staging/issues/07-record-the-two-stages.md)),
+  and deliberately left out of that vocabulary ticket, which describes the
+  pipeline that shipped rather than redesigning the ontology.
 
 ## Model reliability and evaluation
 

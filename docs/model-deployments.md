@@ -20,8 +20,9 @@ selected deployment's configured model verbatim, so an empty or mistyped value
 is not replaced by another environment setting.
 
 `ca-map ingest` runs the Story Pipeline with the local deployment by default.
-Use `--deployment openrouter` to select one OpenRouter chat deployment for both
-Coreference Resolution and Entity Extraction in that command. The Story
+Use `--deployment openrouter` to select one OpenRouter chat deployment for
+Coreference Resolution, Policy Area Classification, and Entity Extraction in
+that command. The Story
 Pipeline command has no `--model` option; configure `OPENROUTER_MODEL` or
 `LLAMA_CPP_MODEL` for the selected deployment instead.
 

@@ -251,6 +251,14 @@ class _Database:
     def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, event_dates=None):
         pass
 
+    def ingest_article_topics(self, article, policy_areas, assignments=None, bill_sessions=None):
+        pass
+
+
+class _PolicyAreas:
+    def classify(self, resolved_text: str) -> list[str]:
+        return []
+
 
 class _Embedding:
     def process_chunks(self, chunks: list[ArticleChunk]) -> list[list[float]]:
@@ -334,6 +342,7 @@ def test_zero_survivor_failures_reach_failed_dlq_with_replayable_payload(
         embedding_adapter=_Embedding(),
         coreference_adapter=adapter,
         extraction_adapter=_Extraction(),
+        policy_area_adapter=_PolicyAreas(),
         status_tracker=status,
         dlq_adapter=dlq,
     )
@@ -399,6 +408,7 @@ def test_an_exhausted_correction_is_visible_in_the_dead_letter_queue_record(tmp_
         embedding_adapter=_Embedding(),
         coreference_adapter=adapter,
         extraction_adapter=_Extraction(),
+        policy_area_adapter=_PolicyAreas(),
         status_tracker=status,
         dlq_adapter=dlq,
     )

@@ -18,6 +18,7 @@ from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4
 from knowledge_map.adapters.embedding import PydanticAIEmbeddingAdapter, get_embedding_embedder, cosine_similarity
 from knowledge_map.adapters.coreference import PydanticAICoreferenceAdapter
 from knowledge_map.adapters.extraction import PydanticAIEntityExtractionAdapter
+from knowledge_map.adapters.policy_areas import PydanticAIPolicyAreaAdapter
 from knowledge_map.adapters.dlq import LocalFileDLQAdapter
 from knowledge_map.core.pipeline import StoryPipeline
 from knowledge_map.schemas.relevance import LabelSource, RelevanceStatus, ValidationStatus
@@ -80,6 +81,7 @@ def build_story_pipeline(
     embedding_adapter=None,
     coreference_adapter=None,
     extraction_adapter=None,
+    policy_area_adapter=None,
     dlq_adapter=None,
 ) -> StoryPipeline:
     """Assemble a Story Pipeline while preserving adapter injection seams."""
@@ -100,6 +102,11 @@ def build_story_pipeline(
             extraction_adapter
             if extraction_adapter is not None
             else PydanticAIEntityExtractionAdapter(deployment=deployment)
+        ),
+        policy_area_adapter=(
+            policy_area_adapter
+            if policy_area_adapter is not None
+            else PydanticAIPolicyAreaAdapter(deployment=deployment)
         ),
         status_tracker=status_tracker,
         dlq_adapter=dlq_adapter,
@@ -508,6 +515,10 @@ def main(args=None):
             adapter = PydanticAICoreferenceAdapter()
         elif component == "extraction":
             adapter = PydanticAIEntityExtractionAdapter()
+        elif component in ("policy_area_classification", "topic_assignment"):
+            # Both article-level topic stages sit behind one adapter, so one
+            # health check answers for either lock.
+            adapter = PydanticAIPolicyAreaAdapter()
         elif component == "database":
             uri = os.environ.get("NEO4J_URI")
             username = os.environ.get("NEO4J_USERNAME")

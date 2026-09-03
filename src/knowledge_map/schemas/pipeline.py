@@ -40,3 +40,4 @@ class PipelineResult(BaseModel):
     chunks: List[ArticleChunk] = Field(..., description="The list of chunks generated from the resolved text")
     embeddings: List[List[float]] = Field(..., description="The vector embeddings corresponding to each chunk")
     extractions: List[ExtractionResult] = Field(..., description="The list of extracted entities and relationships per chunk")
+    policy_areas: List[str] = Field(default_factory=list, description="The Policy Areas the article discusses, decided once for the article")

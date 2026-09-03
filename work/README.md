@@ -17,6 +17,12 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [Reprocessing an article leaves its old chunk extractions in the graph](issues/02-chunk-extraction-retains-stale-decisions.md), `ready-for-agent` as of 2026-09-03.
+  A standalone defect, found while fixing the article-level topic write. The
+  chunk write path is merge-only, so a re-run strands the tail chunks of a
+  shorter article, keeps relationship claims no extraction still makes, and
+  leaves entity nodes nothing mentions. Carries the orphan decision the topic
+  fix did not have to make.
 - [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md), `ready-for-agent` as of 2026-08-17.
   Two of thirteen `Bill` nodes in the graph carry a session. Extraction is asked
   for a bill number it cannot supply, normalization rejects every spelled-out
@@ -118,7 +124,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
@@ -183,6 +189,30 @@ removed the Evaluation Ledger:
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
   is unblocked and is now the whole of the evaluation work: a YAML file of
   hand-labeled headlines.
+
+On 2026-09-02, Policy Area Staging was built and closed:
+
+- All seven issues are `completed`, and the project with them. Each was
+  implemented test-first and then reviewed on the standards and spec axes by a
+  reader who had not written it; five of the seven reviews found something to
+  fix.
+- The deterministic suite went from `733 passed` to `850 passed`.
+- One acceptance criterion is left unchecked rather than ticked. Issue 01's "The
+  SQLite adapter satisfies the Protocol" has no target: `sqlite_db.py` provides
+  `SQLiteStatusTracker`, which implements `StatusTracker`, and `Neo4jAdapter` is
+  the only `DatabaseAdapter` in the repository. Its intent is covered by a test
+  that walks every Protocol method and compares parameter names.
+- Topic Assignment shipped reading the Source Article's raw content while both
+  of its other inputs were derived from the coreference-resolved text. Two
+  reviews of the stage missed it; building the Gold Set in 06 surfaced it,
+  because a case cannot record what a stage is given without saying which text
+  that is. Fixed in `d5bbfeb`.
+- The areas-per-article distribution issue 02 deferred was measured over the
+  twenty silver cases: 57 labels across 20 articles, mean 2.85, maximum 5. No
+  cap was introduced, which is what the measurement was for.
+- [IG-10](inbox.md) records what the Topic Assignment Gold Set surfaced and did
+  not settle: `ABOUT_TOPIC` admits only `Bill` and `Prop`, so an enacted federal
+  statute is annotated as a `Bill`. A modelling gap, not an annotation error.
 
 ## Information model
 

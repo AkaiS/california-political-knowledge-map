@@ -46,11 +46,7 @@ def _relationship_property_lines(relationships: dict) -> list[str]:
 def render_extraction_ontology() -> str:
     """Render ontology facts that the extraction model is responsible for."""
     labels = news.EXTRACTED_LABELS
-    relationships = {
-        relationship_type: shape
-        for relationship_type, shape in news.RELATIONSHIPS.items()
-        if shape.source_labels <= labels and shape.target_labels <= labels
-    }
+    relationships = news.EXTRACTED_RELATIONSHIPS
 
     lines = [
         "## Closed ontology",
@@ -89,14 +85,4 @@ def render_extraction_ontology() -> str:
         lines.append(f"- `{relationship_type}`: {sources} -> {targets}")
 
     lines.extend(_relationship_property_lines(relationships))
-
-    lines.extend(
-        [
-            "",
-            "### Policy Area vocabulary",
-            "",
-            "A `PolicyArea` must use one of these IDs and its corresponding canonical name:",
-        ]
-    )
-    lines.extend(f"- `{area.id}`: {area.name}" for area in news.POLICY_AREAS)
     return "\n".join(lines)

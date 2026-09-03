@@ -102,3 +102,61 @@ def test_cli_janitor_unknown_component(tmp_path, capsys):
         
         captured = capsys.readouterr()
         assert "Unknown component 'unknown_component_name' in lock file" in (captured.err + captured.out)
+
+
+def test_cli_janitor_probes_the_policy_area_classification_component(tmp_path, capsys):
+    """A rate limit in classification locks the pipeline under its own component
+    name, so the janitor must know how to probe that stage back open."""
+
+    lock_file = tmp_path / "pipeline.lock"
+    lock_data = {
+        "timestamp": "2026-06-30T12:00:00Z",
+        "component": "policy_area_classification",
+        "error_message": "Rate limit hit",
+    }
+    with open(lock_file, "w") as f:
+        json.dump(lock_data, f)
+
+    with patch("knowledge_map.config.settings.batch_ingestion.lock_file_path", str(lock_file)), \
+         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as MockPolicyAreas:
+
+        MockPolicyAreas.return_value.health_check.return_value = True
+
+        try:
+            main(["janitor"])
+        except SystemExit as e:
+            assert e.code == 0
+
+        MockPolicyAreas.return_value.health_check.assert_called_once()
+        assert not os.path.exists(str(lock_file))
+        captured = capsys.readouterr()
+        assert "Component 'policy_area_classification' health check passed" in captured.out
+
+
+def test_cli_janitor_probes_the_topic_assignment_component(tmp_path, capsys):
+    """Assignment locks the pipeline under its own component name, and the one
+    adapter behind both article-level topic stages answers for it."""
+
+    lock_file = tmp_path / "pipeline.lock"
+    lock_data = {
+        "timestamp": "2026-06-30T12:00:00Z",
+        "component": "topic_assignment",
+        "error_message": "Rate limit hit",
+    }
+    with open(lock_file, "w") as f:
+        json.dump(lock_data, f)
+
+    with patch("knowledge_map.config.settings.batch_ingestion.lock_file_path", str(lock_file)), \
+         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as MockPolicyAreas:
+
+        MockPolicyAreas.return_value.health_check.return_value = True
+
+        try:
+            main(["janitor"])
+        except SystemExit as e:
+            assert e.code == 0
+
+        MockPolicyAreas.return_value.health_check.assert_called_once()
+        assert not os.path.exists(str(lock_file))
+        captured = capsys.readouterr()
+        assert "Component 'topic_assignment' health check passed" in captured.out

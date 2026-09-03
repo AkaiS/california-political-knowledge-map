@@ -1,0 +1,1581 @@
+task: extraction
+description: Silver-labeled Article Chunk cases for Entity Extraction. Each chunk is cut by `chunk_article` from a Source Article whose accepted silver Mention Spans have already been substituted, so a case is the text extraction actually sees. Annotated one chunk at a time against docs/evaluation/extraction-annotation.md.
+cases:
+- id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/#chunk-13
+  description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times — chunk 13
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
+    title: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
+    chunk_index: 13
+    text: |+
+      Steve Hilton also occasionally criticized key conservative figures and in 2019 endorsed “asset reparations” in the form of business and home loans for African Americans to make up for the generational economic harm of racist policies, a position anathema to Republicans.
+
+  expected_output:
+    nodes: []
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 32
+    chunk_index: 13
+    chunk_count: 51
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/#chunk-28
+  description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times — chunk 28
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
+    title: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
+    chunk_index: 28
+    text: |+
+      In that vein, Steve Hilton said, Steve Hilton still calls Steve Hilton an environmentalist, with a California policy proposal that calls for planting trees and preserving wetlands, but opposes California’s greenhouse gas reduction rules because Steve Hilton says California greenhouse gas reduction rules are mandates that increase costs for consumers.
+
+  expected_output:
+    nodes: []
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 32
+    chunk_index: 28
+    chunk_count: 51
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/#chunk-41
+  description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times — chunk 41
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
+    title: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
+    chunk_index: 41
+    text: 'Steve Hilton held on to populism during Steve Hilton years in Silicon Valley and at the Stanford design thinking school, pouring Steve Hilton ideas into Steve Hilton 2015 book, More Human includes rare praise for outgoing Democratic Gov. Gavin Newsom. '
+  expected_output:
+    nodes:
+    - name: Gavin Newsom
+      label: Politician
+      sub_labels: []
+      properties:
+        current_party: Democrat
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 32
+    chunk_index: 41
+    chunk_count: 51
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-10
+  description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 10
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+    title: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
+    chunk_index: 10
+    text: |+
+      “For a project this scale in this location, it is what the (law) was designed for,” said Sen. Christopher Cabaldon, a Napa Democrat Christopher Cabaldon represents the area. “A central question for the people of Solano County is: Is California Forever development project going to be for the people of Solano County or is California Forever development project a conversion project that leaves the people of Solano County behind?”
+
+  expected_output:
+    nodes:
+    - name: Christopher Cabaldon
+      label: Politician
+      sub_labels: []
+      properties:
+        current_party: Democrat
+    - name: California Forever
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 26
+    chunk_index: 10
+    chunk_count: 42
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-23
+  description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 23
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+    title: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
+    chunk_index: 23
+    text: |+
+      State law requires government agencies to prepare a report for any project that might have a significant impact on the environment. Instead of assessing the impact of Solano Shipyard, Steinberg and Hertzberg’s proposal would use a 2008 report, the 2008 environmental impact report designated the area where Solano Shipyard would go as “water-dependent industrial usage.” Most of California Forever’s 7,500-acre planned footprint does not have that designation.
+
+  expected_output:
+    nodes:
+    - name: California Forever
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 26
+    chunk_index: 23
+    chunk_count: 42
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-34
+  description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 34
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+    title: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
+    chunk_index: 34
+    text: |+
+      Jim Wunderman said by pursuing expansion within Suisun City, California Forever is following Suisun City preferences by channeling new growth into existing cities.
+
+      An ongoing presence in the Capitol
+
+      Since 2024, California Forever has spent at least $330,000 lobbying the Legislature and governor’s office on bills and other actions, according to campaign finance records.
+
+  expected_output:
+    nodes:
+    - name: California Forever
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 26
+    chunk_index: 34
+    chunk_count: 42
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-11
+  description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    title: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
+    chunk_index: 11
+    text: 'Backer of bond is also co-founder of immunology instituteThe billionaire co-founder of the California Institute for Immunology and Immunotherapy, Gary K. Michelson, is one of the two ultrawealthy chief backers of Proposition 38. California Institute for Immunology and Immunotherapy first became a nonprofit in 2022. Michelson has given California Institute for Immunology and Immunotherapy at least $120 million since then. '
+  expected_output:
+    nodes:
+    - name: California Institute for Immunology and Immunotherapy
+      label: Organization
+      sub_labels:
+      - NonProfit
+      properties: {}
+    - name: Proposition 38
+      label: Prop
+      sub_labels: []
+      properties:
+        number: '38'
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 60
+    chunk_index: 11
+    chunk_count: 44
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-24
+  description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 24
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    title: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
+    chunk_index: 24
+    text: Claudia Briggs explained that the eligibility criteria were crafted to “ensure California Institute for Immunology and Immunotherapy is primarily focused on immunology and immunotherapy research, already has significant resources before receiving bond funds, has an adequate physical facility to accommodate multiple labs and research programs, and has an existing close working relationship with at least one UC campus in order to establish the foundation for the cross-
+  expected_output:
+    nodes:
+    - name: California Institute for Immunology and Immunotherapy
+      label: Organization
+      sub_labels:
+      - NonProfit
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 60
+    chunk_index: 24
+    chunk_count: 44
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-35
+  description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 35
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    title: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
+    chunk_index: 35
+    text: 'California Institute for Immunology and Immunotherapy’s webpage, labeled “Board of Directors,” lists the four top UCLA administrators as “UCLA Board of Directors.” At least four UCLA officials must sit on California Institute for Immunology and Immunotherapy’s fiduciary board, according to a 2023 term sheet of the affiliation agreement between UCLA and California Institute for Immunology and Immunotherapy. '
+  expected_output:
+    nodes:
+    - name: California Institute for Immunology and Immunotherapy
+      label: Organization
+      sub_labels:
+      - NonProfit
+      properties: {}
+    - name: UCLA
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 60
+    chunk_index: 35
+    chunk_count: 44
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-11
+  description: California gave every student in prison a laptop. How community colleges are using them — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+    title: California gave every student in prison a laptop. How community colleges are using them
+    chunk_index: 11
+    text: |+
+      Today, the California Department of Corrections and Rehabilitation gives priority to students working toward students pursuing a first degree first associate degree and students students missing classes needed for bachelor's degree transfer are missing classes needed for bachelor’s degree transfer, according to a California Department of Corrections and Rehabilitation statement.
+
+  expected_output:
+    nodes:
+    - name: California Department of Corrections and Rehabilitation
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 20
+    chunk_index: 11
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-24
+  description: California gave every student in prison a laptop. How community colleges are using them — chunk 24
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+    title: California gave every student in prison a laptop. How community colleges are using them
+    chunk_index: 24
+    text: |+
+      Ocegueda says Canvas-supported correspondence allows instructors to offer more creative assignments and thorough feedback. Isela Ocegueda first assignment to Isela Ocegueda English class last semester was a journal entry, in the journal entry assignment Isela Ocegueda asked students to introduce incarcerated students and tell Isela Ocegueda how Isela Ocegueda can help incarcerated students throughout Isela Ocegueda's online English course.
+
+  expected_output:
+    nodes: []
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 20
+    chunk_index: 24
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-34
+  description: California gave every student in prison a laptop. How community colleges are using them — chunk 34
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+    title: California gave every student in prison a laptop. How community colleges are using them
+    chunk_index: 34
+    text: |+
+      “​​The bulk of Garret Eiferman interaction with professors during the degree completion was very minimal. It’s distance learning, so that means distance learning’s all done with an envelope and a stamp, and feedback was never a thing,” Eiferman said. “It was extremely challenging to transfer out here to Cal State Northridge, thinking that Garret Eiferman knew stuff that Garret Eiferman didn’t or stuff that Garret Eiferman knew that needed to be retaught and relearned correctly.”
+
+  expected_output:
+    nodes:
+    - name: Cal State Northridge
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 20
+    chunk_index: 34
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-11
+  description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/
+    title: Would you trust your boss with data about your brain? California moves to regulate neurotech
+    chunk_index: 11
+    text: |+
+      In California, Assemblymember Isaac Bryan, Isaac Bryan, is pushing Assembly Bill 1883, Assembly Bill 1883 seeks to regulate the use of what’s known as bossware in the workplace and prohibits the collection of brain data by employers unless brain data is used for safety. Another bill would expand state privacy law to prohibit the sale of sensitive personal information, which includes neural data.
+
+  expected_output:
+    nodes:
+    - name: Isaac Bryan
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Assembly Bill 1883
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships:
+    - source: Isaac Bryan
+      source_label: Politician
+      relationship_type: DECLARED_STANCE
+      target: Assembly Bill 1883
+      target_label: Bill
+      properties:
+        alignment: POSITIVE
+  metadata:
+    source_table: stories
+    story_id: 70
+    chunk_index: 11
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-24
+  description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 24
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/
+    title: Would you trust your boss with data about your brain? California moves to regulate neurotech
+    chunk_index: 24
+    text: 'Cognixion, Cognixion is based in Santa Barbara, makes headsets Cognixion headsets can overlay useful information on top of a view of a user’s surroundings, technology known as augmented reality. Cognixion’s headset is also packed with brain data sensors, allowing people with neurological disorders like ALS to use people with neurological disorders like ALS head movement, mind and eyes to interact with apps like Slack to communicate with coworkers or Outlook to send emails. '
+  expected_output:
+    nodes:
+    - name: Cognixion
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 70
+    chunk_index: 24
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-34
+  description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 34
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/
+    title: Would you trust your boss with data about your brain? California moves to regulate neurotech
+    chunk_index: 34
+    text: |+
+      Though California lawmakers have been pioneers in regulating the use of neural data, last year there was a retreat. A bill regulating the use of automated decision systems in the workplace was amended to remove references to neural data in order to garner enough votes to pass. Senate Bill 7 was ultimately vetoed by Gov. Gavin Newsom, Gavin Newsom said Senate Bill 7 would have placed overly broad restrictions on businesses.
+
+  expected_output:
+    nodes:
+    - name: Senate Bill 7
+      label: Bill
+      sub_labels: []
+      properties: {}
+    - name: Gavin Newsom
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Amendment to Senate Bill 7
+      label: LegislativeEvent
+      sub_labels:
+      - Amendment
+      properties: {}
+    relationships:
+    - source: Gavin Newsom
+      source_label: Politician
+      relationship_type: DECLARED_STANCE
+      target: Senate Bill 7
+      target_label: Bill
+      properties:
+        alignment: NEGATIVE
+    - source: Amendment to Senate Bill 7
+      source_label: LegislativeEvent
+      relationship_type: ACTION_ON
+      target: Senate Bill 7
+      target_label: Bill
+      properties: {}
+  metadata:
+    source_table: stories
+    story_id: 70
+    chunk_index: 34
+    chunk_count: 43
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-10
+  description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 10
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    title: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
+    chunk_index: 10
+    text: |+
+      the block grant carrot and stick provision’s likely to have “real implications for cities like Los Angeles and San Francisco Los Angeles and San Francisco have traditionally lagged behind” in adding housing supply, said David Garcia, the deputy director of policy at UC Berkeley’s Terner Center for Housing Innovation.
+
+  expected_output:
+    nodes:
+    - name: Terner Center for Housing Innovation
+      label: Organization
+      sub_labels: []
+      properties: {}
+    - name: UC Berkeley
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 41
+    chunk_index: 10
+    chunk_count: 41
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-23
+  description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 23
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    title: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
+    chunk_index: 23
+    text: 'In the months after a natural disaster, long after emergency federal dollars have come and gone, Congress has provided communities with long-term rebuilding grants through the Community Development Block Grant – Disaster Recovery program. Over the last three decades, Community Development Block Grant - Disaster Recovery program has spent more than $100 billion on the long-term work of recovery, like home construction, infrastructure repair, and rental and relocation assistance. '
+  expected_output:
+    nodes:
+    - name: Congress
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 41
+    chunk_index: 23
+    chunk_count: 41
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-33
+  description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 33
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    title: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
+    chunk_index: 33
+    text: 'Caveats apply in the final version of the federal housing bill. the federal housing bill defines “large” as any of a number of business structures with control over more than 350 single family homes. the federal housing bill doesn’t apply retrospectively, so current investors with portfolios brimming with houses need not divest. Exemptions exist for new construction, renovations and senior housing. '
+  expected_output:
+    nodes:
+    - name: federal housing bill
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 41
+    chunk_index: 33
+    chunk_count: 41
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-9
+  description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 9
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+    title: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
+    chunk_index: 9
+    text: |+
+      the federal class-action lawsuit over California gas prices taps into a longstanding theory: Severin Borenstein, an energy economist at UC Berkeley, has pointed to what Severin Borenstein calls a “mystery gasoline surcharge” — the part of California’s high prices left unexplained after taxes, environmental programs and production costs are accounted for — the mystery gasoline surcharge shows up after gas leaves the refinery.
+
+  expected_output:
+    nodes:
+    - name: UC Berkeley
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 24
+    chunk_index: 9
+    chunk_count: 37
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-20
+  description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 20
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+    title: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
+    chunk_index: 20
+    text: |+
+      But the special session gas-price laws also authorized more aggressive steps that have not taken effect: a possible penalty on excessive refinery margins, a requirement that refiners keep more gasoline in storage, and a rule requiring refiners to line up replacement fuel before shutting down for maintenance.
+
+  expected_output:
+    nodes: []
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 24
+    chunk_index: 20
+    chunk_count: 37
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-30
+  description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 30
+  split: held-out
+  task_input:
+    url: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+    title: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
+    chunk_index: 30
+    text: |+
+      Anthony Martinez, a spokesman for Newsom, called Western Gateway “a promising opportunity to bring additional gasoline supply into the state and bolster resilience.”
+
+      Other proposals look at the structure of the retail market. A bill by Sen. Henry Stern, SB 1245, could give California more authority to change California unique gasoline blend, a cleaner-burning formula California's unique gasoline blend is difficult to produce out of state, to make it easier to bring in fuel from elsewhere.
+
+  expected_output:
+    nodes:
+    - name: Henry Stern
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: SB 1245
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships:
+    - source: Henry Stern
+      source_label: Politician
+      relationship_type: DECLARED_STANCE
+      target: SB 1245
+      target_label: Bill
+      properties:
+        alignment: POSITIVE
+  metadata:
+    source_table: stories
+    story_id: 24
+    chunk_index: 30
+    chunk_count: 37
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/#chunk-10
+  description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says — chunk 10
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/
+    title: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says
+    chunk_index: 10
+    text: |+
+      CalMatters also contacted the offices of seven other state lawmakers besides Alvarez seven other state lawmakers were among those involved in discussing Senate Bill 371 before Senate Bill 371 passed. seven other state lawmakers did not respond. seven other state lawmakers would agree to talk about whether seven other state lawmakers knew that Uber largely self-insures, or whether seven other state lawmakers plan to ask Uber questions based on Consumer Watchdog report.
+
+  expected_output:
+    nodes:
+    - name: CalMatters
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    - name: Senate Bill 371
+      label: Bill
+      sub_labels: []
+      properties: {}
+    - name: Uber
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    - name: Consumer Watchdog
+      label: Organization
+      sub_labels:
+      - AdvocacyGroup
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 27
+    chunk_index: 10
+    chunk_count: 33
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/#chunk-23
+  description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says — chunk 23
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/
+    title: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says
+    chunk_index: 23
+    text: |+
+      Opponents of the change said it will drastically reduce protection for riders and drivers if an Uber is hit by an uninsured or underinsured motorist. Robert Herrell, executive director of another consumer advocacy group, Consumer Federation of California, and a former deputy commissioner in state Insurance Department, was among those Robert Herrell voiced Robert Herrell opposition to Senate Bill 371 at that July hearing.
+
+  expected_output:
+    nodes:
+    - name: Consumer Federation of California
+      label: Organization
+      sub_labels:
+      - AdvocacyGroup
+      properties: {}
+    - name: Senate Bill 371
+      label: Bill
+      sub_labels: []
+      properties: {}
+    - name: Hearing on Senate Bill 371
+      label: LegislativeEvent
+      sub_labels:
+      - Hearing
+      properties: {}
+    relationships:
+    - source: Consumer Federation of California
+      source_label: Organization
+      relationship_type: DECLARED_STANCE
+      target: Senate Bill 371
+      target_label: Bill
+      properties:
+        alignment: NEGATIVE
+    - source: Hearing on Senate Bill 371
+      source_label: LegislativeEvent
+      relationship_type: ACTION_ON
+      target: Senate Bill 371
+      target_label: Bill
+      properties: {}
+  metadata:
+    source_table: stories
+    story_id: 27
+    chunk_index: 23
+    chunk_count: 33
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk-10
+  description: Their town burned to the ground. Should they get a pass from California’s new housing laws? — chunk 10
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    title: Their town burned to the ground. Should they get a pass from California’s new housing laws?
+    chunk_index: 10
+    text: |+
+      The debate over Senate Bill 1090 pits California’s longstanding efforts to turbocharge housing construction against the interests of many Altadenans Altadenans want to rebuild Altadena as Altadena was. the debate over Senate Bill 1090 also raises questions about who and what gets prioritized when a community is rebuilt after a natural disaster in California.
+
+  expected_output:
+    nodes:
+    - name: Senate Bill 1090
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 11
+    chunk_index: 10
+    chunk_count: 35
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk-24
+  description: Their town burned to the ground. Should they get a pass from California’s new housing laws? — chunk 24
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    title: Their town burned to the ground. Should they get a pass from California’s new housing laws?
+    chunk_index: 24
+    text: |+
+      John Chan, a Los Angeles architect John Chan has pushed for redeveloping Altadena to be more pedestrian-oriented and John Chan supports the use of density-boosting state laws, said a handful of poorly designed SB 9 projects — “sardine cans for rent extraction,” John Chan said — have soured many locals on the possible upsides of density.
+
+      “poorly designed Senate Bill 9 projects’s creating a backlash to SB 9 that John Chan think is really going to hurt Altadena,” John Chan said.
+
+      “Altadena not for sale”
+
+  expected_output:
+    nodes:
+    - name: SB 9
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 11
+    chunk_index: 24
+    chunk_count: 35
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk-11
+  description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’ — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+    title: For the lone woman left in the California governor’s race, it’s all about ‘temperament’
+    chunk_index: 11
+    text: |+
+      “One thing that has hurt Katie Porter is evidence of Katie Porter anger coming out,” said Sacramento State University professor Kimberly Nalder, Kimberly Nalder researches gender and politics. “There’s this perception that women should not exhibit anger, but it’s perceived as strong when men do it.”
+
+      Porter tries calculated restraint
+
+  expected_output:
+    nodes:
+    - name: Sacramento State University
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 30
+    chunk_index: 11
+    chunk_count: 36
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk-25
+  description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’ — chunk 25
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+    title: For the lone woman left in the California governor’s race, it’s all about ‘temperament’
+    chunk_index: 25
+    text: |+
+      Lorena Gonzalez, president of the California Labor Federation, California Labor Federation has jointly endorsed Porter, Steyer and former Los Angeles Mayor Antonio Villaraigosa, said Porter had previously given California Labor Federation a different answer about farmworker rights.
+
+      Katie Porter's remarks criticizing California's agricultural overtime law prompted a flurry of weekend phone calls with union leaders before Porter clarified on social media that Katie Porter supports the eight-hour workday.
+
+  expected_output:
+    nodes:
+    - name: California Labor Federation
+      label: Organization
+      sub_labels:
+      - LaborUnion
+      properties: {}
+    - name: Katie Porter
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Katie Porter campaign
+      label: Campaign
+      sub_labels:
+      - CandidateCampaign
+      properties: {}
+    - name: Antonio Villaraigosa
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Antonio Villaraigosa campaign
+      label: Campaign
+      sub_labels:
+      - CandidateCampaign
+      properties: {}
+    relationships:
+    - source: Katie Porter campaign
+      source_label: Campaign
+      relationship_type: CAMPAIGN_FOR
+      target: Katie Porter
+      target_label: Politician
+      properties: {}
+    - source: Antonio Villaraigosa campaign
+      source_label: Campaign
+      relationship_type: CAMPAIGN_FOR
+      target: Antonio Villaraigosa
+      target_label: Politician
+      properties: {}
+    - source: California Labor Federation
+      source_label: Organization
+      relationship_type: ENDORSED
+      target: Katie Porter campaign
+      target_label: Campaign
+      properties: {}
+    - source: California Labor Federation
+      source_label: Organization
+      relationship_type: ENDORSED
+      target: Antonio Villaraigosa campaign
+      target_label: Campaign
+      properties: {}
+  metadata:
+    source_table: stories
+    story_id: 30
+    chunk_index: 25
+    chunk_count: 36
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-18
+  description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 18
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    title: Kaiser nurses say technology is making their jobs — and patient care — worse
+    chunk_index: 18
+    text: 'It’s not clear how patient care is affected by algorithmic management, nor is the impact of limiting the length of triage and advice calls on patients. Kaiser call center nurses can’t say for certain whether the pressures Kaiser Permanente call center nurses face results in adverse outcomes for patients because Kaiser Permanente call center nurses contact with patients ends after Kaiser Permanente call center nurses hang up the phone. '
+  expected_output:
+    nodes:
+    - name: Kaiser Permanente
+      label: Organization
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 78
+    chunk_index: 18
+    chunk_count: 71
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-39
+  description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 39
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    title: Kaiser nurses say technology is making their jobs — and patient care — worse
+    chunk_index: 39
+    text: |+
+      A prior study by Virginia Dolleghast and Sean O'Brady, Virginia Dolleghast of Cornell University and Sean O’Brady of McMaster University found that performance monitoring leads to higher rates of emotional exhaustion.
+
+  expected_output:
+    nodes:
+    - name: Cornell University
+      label: Organization
+      sub_labels: []
+      properties: {}
+    - name: McMaster University
+      label: Organization
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 78
+    chunk_index: 39
+    chunk_count: 71
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-57
+  description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 57
+  split: held-out
+  task_input:
+    url: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    title: Kaiser nurses say technology is making their jobs — and patient care — worse
+    chunk_index: 57
+    text: |+
+      This paves the way for CNA to push back as California Nurses Association did with the empathy and tone AI last summer or as California Nurses Association did when California Nurses Association stopped a pilot program that would have replaced nurses that sit at the bedside of confused patients with cameras.
+
+  expected_output:
+    nodes:
+    - name: California Nurses Association
+      label: Organization
+      sub_labels:
+      - LaborUnion
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 78
+    chunk_index: 57
+    chunk_count: 71
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-14
+  description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 14
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+    title: California colleges reveal their military weapons stockpile after CalMatters investigation
+    chunk_index: 14
+    text: 'The Cal State Board of Trustees has not reviewed the systemwide equipment policy at a public meeting since 2022, though Cal State systemwide military equipment policy is supposed to be renewed at least annually. Under Cal State systemwide military equipment policy Cal State Board of Trustees adopted, Cal State Board of Trustees only need to check Cal State systemwide military equipment policy again if California State University wants to authorize new types of equipment, Bentley-Smith told CalMatters. '
+  expected_output:
+    nodes:
+    - name: Cal State Board of Trustees
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    - name: California State University
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    - name: CalMatters
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 37
+    chunk_index: 14
+    chunk_count: 58
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-32
+  description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 32
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+    title: California colleges reveal their military weapons stockpile after CalMatters investigation
+    chunk_index: 32
+    text: |+
+      A promotional website for San Jose State’s 2025 community forum says San Jose State 2025 community forum covers current police initiatives without specifically mentioning military equipment, but Thomas said military equipment was indeed discussed.
+
+  expected_output:
+    nodes:
+    - name: San Jose State
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 37
+    chunk_index: 32
+    chunk_count: 58
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-46
+  description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 46
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+    title: California colleges reveal their military weapons stockpile after CalMatters investigation
+    chunk_index: 46
+    text: |+
+      As of June 2026, Mt. San Antonio College does not own semi-automatic rifles. “The discussion is still ongoing” on whether Mt. San Antonio College will seek semi-automatic rifles in the future, according to campus police chief Kelli Florman.
+
+      Still, Tlatoāni Alvarado considers Mt. San Antonio College students work a success.
+
+  expected_output:
+    nodes:
+    - name: Mt. San Antonio College
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 37
+    chunk_index: 46
+    chunk_count: 58
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-11
+  description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+    title: California craft liquor delivery is about to go away thanks to big money lobbying
+    chunk_index: 11
+    text: |+
+      Teamsters lobbyist Matt Broad said Teamsters’s truck drivers aren’t opposed to allowing craft distillers to ship California craft distillers product. Teamsters just want California craft distillers to use established shipping companies established shipping companies have actual employees, including established shipping companies established shipping companies employ Teamsters, such as UPS.
+
+  expected_output:
+    nodes:
+    - name: Teamsters
+      label: Organization
+      sub_labels:
+      - LaborUnion
+      properties: {}
+    - name: UPS
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 63
+    chunk_index: 11
+    chunk_count: 45
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-25
+  description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 25
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+    title: California craft liquor delivery is about to go away thanks to big money lobbying
+    chunk_index: 25
+    text: |+
+      Hoover said Josh Hoover has been trying since last year to add language to Josh Hoover bill the craft distiller direct-shipping proposal would allow craft distillers to permanently keep shipping. Josh Hoover succeeded last year in getting the latest craft distiller shipping extension the latest craft distiller shipping extension expires Dec. 31, but this year Josh Hoover’s been unable to overcome the groups blocking the direct-shipping proposal to expanding Assembly Bill 2211.
+
+  expected_output:
+    nodes:
+    - name: Josh Hoover
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Assembly Bill 2211
+      label: Bill
+      sub_labels: []
+      properties: {}
+    relationships:
+    - source: Josh Hoover
+      source_label: Politician
+      relationship_type: DECLARED_STANCE
+      target: Assembly Bill 2211
+      target_label: Bill
+      properties:
+        alignment: POSITIVE
+  metadata:
+    source_table: stories
+    story_id: 63
+    chunk_index: 25
+    chunk_count: 45
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-36
+  description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 36
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+    title: California craft liquor delivery is about to go away thanks to big money lobbying
+    chunk_index: 36
+    text: |+
+      “Wine & Spirits Wholesalers of America and California Beer & Beverage Distributors and California Family Beer Distributors oppose any effort to make DTC (direct to consumer) permanent,” the Wine & Spirits Wholesalers of America, the California Beer & Beverage Distributors and the California Family Beer Distributors wrote in a joint statement to CalMatters.
+
+  expected_output:
+    nodes:
+    - name: Wine & Spirits Wholesalers of America
+      label: Organization
+      sub_labels:
+      - TradeAssociation
+      properties: {}
+    - name: California Beer & Beverage Distributors
+      label: Organization
+      sub_labels:
+      - TradeAssociation
+      properties: {}
+    - name: California Family Beer Distributors
+      label: Organization
+      sub_labels:
+      - TradeAssociation
+      properties: {}
+    - name: CalMatters
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 63
+    chunk_index: 36
+    chunk_count: 45
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk-10
+  description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one — chunk 10'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    title: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one'
+    chunk_index: 10
+    text: |+
+      Voters approved California's higher income tax rates temporarily in 2012 at the behest of then-Gov. Jerry Brown, and extended California's higher income tax rates again in 2016. If California's higher income tax rates expire as planned in 2030, California stands to lose between $5 and $15 billion a year in revenue.
+
+  expected_output:
+    nodes:
+    - name: Jerry Brown
+      label: Politician
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 46
+    chunk_index: 10
+    chunk_count: 34
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk-24
+  description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one — chunk 24'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    title: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one'
+    chunk_index: 24
+    text: |+
+      Rob Stutzman, a Sacramento Republican strategist, said Newsom risks being seen as inauthentic in a primary campaign.
+
+      “Gavin Newsom’s never banged this drum … Gavin Newsom’s a big spender but not a big taxer,” Stutzman said. “This whole jiu-jitsu Gavin Newsom has to do to oppose the (billionaire) tax in Gavin Newsom state and then support it federally, it doesn’t sound as authentic as others might sound on the soapbox at the Iowa State Fair.”
+
+      Voters are anxious about AI
+
+  expected_output:
+    nodes:
+    - name: Gavin Newsom
+      label: Politician
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 46
+    chunk_index: 24
+    chunk_count: 34
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk-9
+  description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time? — chunk 9
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+    title: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?
+    chunk_index: 9
+    text: |+
+      Just a few years after immigrating to California, Eduardo and Eduardo Valadao wife Maria purchased Eduardo Valadao and Maria Valadao first cows, and several years later, Eduardo Valadao and Maria Valadao own farmland. Raised on David Valadao family’s farm in Hanford, a teenage David Valadao was expected to buck hay and feed the dairy cows every morning before school, David Valadao previously told the Los Angeles Times.
+
+  expected_output:
+    nodes:
+    - name: Los Angeles Times
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 59
+    chunk_index: 9
+    chunk_count: 29
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk-20
+  description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time? — chunk 20
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+    title: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?
+    chunk_index: 20
+    text: |+
+      The American Farm Bureau Federation, the country’s primary advocate for farmers and ranchers, wrote a letter begging Trump to send the U.S. Navy to escort crucial fertilizer shipments out of the Middle East.
+
+      “American Farm Bureau Federation are deeply concerned that failure to act could lead to disruptions to the food supply chain not seen since 2022 when food price inflation reached 40-year highs,” wrote Zippy Duvall, American Farm Bureau Federation’s president.
+
+  expected_output:
+    nodes:
+    - name: American Farm Bureau Federation
+      label: Organization
+      sub_labels:
+      - AdvocacyGroup
+      properties: {}
+    - name: U.S. Navy
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 59
+    chunk_index: 20
+    chunk_count: 29
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk-8
+  description: California Republicans tried to cut him off. Then he beat them from the right — chunk 8
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/
+    title: California Republicans tried to cut him off. Then he beat them from the right
+    chunk_index: 8
+    text: |+
+      Kristie Bruce-Lane and Ed Musgrove are similar on policy, but not on temperament. DeMaio and others call Bruce-Lane a “fighter” Kristie Bruce-Lane will tussle with Democrats on the chamber floor, something DeMaio is known for in the Democratic-controlled Legislature, where Carl DeMaio caucus is outnumbered three-to-one.
+
+  expected_output:
+    nodes:
+    - name: Carl DeMaio
+      label: Politician
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 64
+    chunk_index: 8
+    chunk_count: 28
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk-20
+  description: California Republicans tried to cut him off. Then he beat them from the right — chunk 20
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/
+    title: California Republicans tried to cut him off. Then he beat them from the right
+    chunk_index: 20
+    text: |+
+      “The primary base in each party often does not pick the most competitive candidate in a swing seat in a general election. But it also doesn’t mean Senate District 40 should be written off.”
+
+      Bruce-Lane did not return multiple calls from CalMatters seeking an interview.
+
+  expected_output:
+    nodes:
+    - name: CalMatters
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 64
+    chunk_index: 20
+    chunk_count: 28
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/#chunk-8
+  description: Most California lawmakers never buck their party. These few do — chunk 8
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/
+    title: Most California lawmakers never buck their party. These few do
+    chunk_index: 8
+    text: |+
+      Jasmeet Bains has Digital Democracy’s second-highest maverick ranking among Democrats, voting against the majority of Jasmeet Bains party just under 2% of the time since Jasmeet Bains was elected to the Legislature in 2022.
+
+      Jasmeet Bains moderate, nuanced views and votes, particularly on fossil fuels and healthcare, gave Villegas lines of attack that appealed to more left-leaning voters.
+
+  expected_output:
+    nodes:
+    - name: Jasmeet Bains
+      label: Politician
+      sub_labels: []
+      properties:
+        current_party: Democrat
+    - name: Digital Democracy
+      label: Organization
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 48
+    chunk_index: 8
+    chunk_count: 27
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/#chunk-19
+  description: Most California lawmakers never buck their party. These few do — chunk 19
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/
+    title: Most California lawmakers never buck their party. These few do
+    chunk_index: 19
+    text: |+
+      “Carl DeMaio’m simply not going to be swayed by how powerful a group is,” DeMaio said. “If they’re backing a bill that is bad policy, Carl DeMaio’m going to vote ‘no.’”It also helps that DeMaio runs a massive grassroots conservative fundraising machine Carl DeMaio's grassroots fundraising machine insulates Carl DeMaio from needing campaign donations from wealthy special interests.
+
+      Anamarie Avila Farias
+
+      Democrat, State Assembly, District 15 (Concord)
+
+      Juan Alanis
+
+  expected_output:
+    nodes:
+    - name: Carl DeMaio
+      label: Politician
+      sub_labels: []
+      properties: {}
+    - name: Anamarie Avila Farias
+      label: Politician
+      sub_labels: []
+      properties:
+        current_party: Democrat
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 48
+    chunk_index: 19
+    chunk_count: 27
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk-8
+  description: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future — chunk 8'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+    title: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future'
+    chunk_index: 8
+    text: |+
+      A Common Sense push to restrict social media use for children under 16 has united many Democrats, including Newsom. Common Sense Media's proposal to restrict social media use for children under 16 amid findings that the platforms are harmful to youth mental health and are designed to be addictive. Tom Steyer supports an age ban, along with several of Tom Steyer Democratic competitors.
+
+  expected_output:
+    nodes:
+    - name: Common Sense Media
+      label: Organization
+      sub_labels:
+      - AdvocacyGroup
+      properties: {}
+    - name: Tom Steyer
+      label: Politician
+      sub_labels: []
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 31
+    chunk_index: 8
+    chunk_count: 28
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk-20
+  description: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future — chunk 20'
+  split: held-out
+  task_input:
+    url: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+    title: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future'
+    chunk_index: 20
+    text: |+
+      Last fall, Newsom vetoed a Common Sense bill that would have created an effective ban on AI chatbots for minors. Lawmakers passed the Common Sense Media bill banning AI chatbots for minors in the wake of a rash of reports of teenagers dying by suicide after developing relationships with ChatGPT, ChatGPT is made by OpenAI. Some parents, in lawsuits, have alleged that ChatGPT encouraged or coached children to harm themselves.
+
+  expected_output:
+    nodes:
+    - name: Common Sense Media
+      label: Organization
+      sub_labels:
+      - AdvocacyGroup
+      properties: {}
+    - name: OpenAI
+      label: Organization
+      sub_labels:
+      - Corporation
+      properties: {}
+    - name: Common Sense Media bill banning AI chatbots for minors
+      label: Bill
+      sub_labels: []
+      properties: {}
+    - name: Vote on Common Sense Media bill banning AI chatbots for minors
+      label: LegislativeEvent
+      sub_labels:
+      - Vote
+      properties: {}
+    relationships:
+    - source: Common Sense Media
+      source_label: Organization
+      relationship_type: DECLARED_STANCE
+      target: Common Sense Media bill banning AI chatbots for minors
+      target_label: Bill
+      properties:
+        alignment: POSITIVE
+    - source: Vote on Common Sense Media bill banning AI chatbots for minors
+      source_label: LegislativeEvent
+      relationship_type: ACTION_ON
+      target: Common Sense Media bill banning AI chatbots for minors
+      target_label: Bill
+      properties: {}
+  metadata:
+    source_table: stories
+    story_id: 31
+    chunk_index: 20
+    chunk_count: 28
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk-9
+  description: A California housing bill would raise wages to $28. Why do some unions hate it? — chunk 9
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+    title: A California housing bill would raise wages to $28. Why do some unions hate it?
+    chunk_index: 9
+    text: |+
+      Assembly Bill 1751 introduces a new standard: a minimum wage far lower than what most trades members already make.
+
+      Making a meager minimum wage hike the new bone that pro-housing bills throw to construction workers would “signify the new norm,” said Chris Hannan, president of State Building and Construction Trades Council. “When you start a trend of doing a minimum wage, then that becomes the new go-to.”
+
+      State Building and Construction Trades Council and carpenters, at it again
+
+  expected_output:
+    nodes:
+    - name: Assembly Bill 1751
+      label: Bill
+      sub_labels: []
+      properties: {}
+    - name: State Building and Construction Trades Council
+      label: Organization
+      sub_labels:
+      - LaborUnion
+      properties: {}
+    relationships:
+    - source: State Building and Construction Trades Council
+      source_label: Organization
+      relationship_type: DECLARED_STANCE
+      target: Assembly Bill 1751
+      target_label: Bill
+      properties:
+        alignment: NEGATIVE
+  metadata:
+    source_table: stories
+    story_id: 16
+    chunk_index: 9
+    chunk_count: 31
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk-22
+  description: A California housing bill would raise wages to $28. Why do some unions hate it? — chunk 22
+  split: held-out
+  task_input:
+    url: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+    title: A California housing bill would raise wages to $28. Why do some unions hate it?
+    chunk_index: 22
+    text: |+
+      Prevailing wages are required of publicly funded works, including many affordable housing projects. prevailing wages are set by the California Department of Industrial Relations, California Department of Industrial Relations sets California Department of Industrial Relations rates based on the most common wage for each job type in each region of California.
+
+  expected_output:
+    nodes:
+    - name: California Department of Industrial Relations
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 16
+    chunk_index: 22
+    chunk_count: 31
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/higher-education/2025/04/health-research/#chunk-11
+  description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more — chunk 11
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2025/04/health-research/
+    title: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more
+    chunk_index: 11
+    text: 'Charles DeCarli''s research project was to treat all Americans suffering from dementia. “Dr. Charles DeCarli’m trying to take care of people, and just because they have different colors of their skin, should not in any way affect what Dr. Charles DeCarli’m trying to do,” DeCarli said.About 5 million Americans suffer from dementia, dementia is a loss in the ability to think, remember and reason. Advanced dementia means a person is reliant on others for basic tasks, such as eating and bathing. '
+  expected_output:
+    nodes: []
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 74
+    chunk_index: 11
+    chunk_count: 36
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml
+- id: https://calmatters.org/education/higher-education/2025/04/health-research/#chunk-25
+  description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more — chunk 25
+  split: held-out
+  task_input:
+    url: https://calmatters.org/education/higher-education/2025/04/health-research/
+    title: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more
+    chunk_index: 25
+    text: 'DeCarli and UC Davis are appealing to the NIH National Institutes of Health decision to terminate Dr. Charles DeCarli grant. Dr. Charles DeCarli shared with CalMatters portions of Dr. Charles DeCarli appeal Dr. Charles DeCarli''s appeal seeks to refute National Institutes of Health’s assertion that Dr. '
+  expected_output:
+    nodes:
+    - name: UC Davis
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    - name: National Institutes of Health
+      label: Organization
+      sub_labels:
+      - GovernmentAgency
+      properties: {}
+    - name: CalMatters
+      label: Organization
+      sub_labels:
+      - MediaOrganization
+      properties: {}
+    relationships: []
+  metadata:
+    source_table: stories
+    story_id: 74
+    chunk_index: 25
+    chunk_count: 36
+    label_quality: silver
+    annotator_model: claude-opus-5
+    annotation_guideline: docs/evaluation/extraction-annotation.md
+    coreference_gold_set: evals/gold/coreference.yaml

@@ -34,6 +34,14 @@ class NoopDatabase:
     def ingest_chunk_extraction(self, chunk_id, extraction, bill_sessions=None, event_dates=None):
         pass
 
+    def ingest_article_topics(self, article, policy_areas, assignments=None, bill_sessions=None):
+        pass
+
+
+class NoopPolicyAreas:
+    def classify(self, resolved_text: str) -> list[str]:
+        return []
+
 
 class NoopEmbedding:
     def process_chunks(self, chunks):
@@ -90,6 +98,7 @@ def test_exhausted_retryable_pipeline_error_leaves_story_selectable_for_later_ba
             )
         ),
         extraction_adapter=NoopExtraction(),
+        policy_area_adapter=NoopPolicyAreas(),
         status_tracker=SQLiteStatusTracker(db_path=db_path),
     )
     service = BatchIngestionService(
@@ -120,6 +129,7 @@ def test_nonretryable_model_http_error_is_translated_to_system_error():
             ModelHTTPError(status_code=401, model_name="remote-model", body=None)
         ),
         extraction_adapter=NoopExtraction(),
+        policy_area_adapter=NoopPolicyAreas(),
         status_tracker=status_tracker,
     )
     article = SourceArticle(
@@ -156,6 +166,7 @@ def test_exhausted_pipeline_connectivity_error_returns_story_to_unprocessed(tmp_
             httpx.ConnectError("connection reset")
         ),
         extraction_adapter=NoopExtraction(),
+        policy_area_adapter=NoopPolicyAreas(),
         status_tracker=SQLiteStatusTracker(db_path=db_path),
     )
     BatchIngestionService(

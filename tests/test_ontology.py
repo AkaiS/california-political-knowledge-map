@@ -394,6 +394,41 @@ def test_the_prompt_never_asks_the_model_for_a_label_the_write_path_owns():
         assert f"- `{label}`" not in section
 
 
+def test_policy_area_is_declared_by_the_ontology_and_owned_by_another_stage():
+    # The graph still holds the node; a Source Article stage writes it, so the
+    # chunk extractor is neither asked for it nor allowed to supply one.
+    assert "PolicyArea" in news.LABELS
+    assert "PolicyArea" not in news.EXTRACTED_LABELS
+
+
+def test_the_prompt_never_asks_the_model_for_a_label_another_stage_decides():
+    section = render_extraction_ontology()
+
+    for label in news.STAGE_DECIDED_LABELS:
+        assert f"- `{label}`" not in section
+
+
+def test_the_prompt_carries_no_policy_area_vocabulary():
+    # Twenty-seven lines a chunk cannot use, preceding a chunk that usually
+    # supports one entity.
+    section = render_extraction_ontology()
+
+    assert "Policy Area vocabulary" not in section
+    for area in news.POLICY_AREAS:
+        assert area.id not in section
+
+
+def test_the_topic_relationships_are_not_offered_to_the_chunk_extractor():
+    # A measure's topic is assigned once per Source Article, and the Article
+    # Chunk topic edge is retired, so neither is a claim a chunk can make.
+    section = render_extraction_ontology()
+
+    assert "ABOUT_TOPIC" not in news.EXTRACTED_RELATIONSHIPS
+    assert "DISCUSSES_TOPIC" not in news.EXTRACTED_RELATIONSHIPS
+    assert "`ABOUT_TOPIC`" not in section
+    assert "`DISCUSSES_TOPIC`" not in section
+
+
 def test_the_stance_enum_cannot_drift_from_what_the_prompt_advertises():
     spec = primary.RELATIONSHIPS["DECLARED_STANCE"].spec("alignment")
 
@@ -428,6 +463,64 @@ def test_extraction_conformance_rejects_write_path_labels():
         ("rejected_labels", "NewsArticle", "sha256:abc"),
         ("rejected_labels", "Chunk", "sha256:abc"),
         ("rejected_labels", "PoliticalActor", "sha256:abc"),
+    ]
+
+
+def test_extraction_conformance_rejects_a_label_another_stage_decides():
+    # Removing Policy Area from the chunk prompt asks a model to stop; conformance
+    # is what makes it so, and what counts a model that keeps reaching for it.
+    result = ExtractionResult(
+        nodes=[
+            Node(name="Housing & Community Development", label="PolicyArea"),
+            Node(name="AB 1", label="Bill"),
+            Node(name="Alex Lee", label="Politician"),
+        ],
+        relationships=[
+            Relationship(
+                source="AB 1",
+                target="Housing & Community Development",
+                relationship_type="ABOUT_TOPIC",
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert [node.name for node in outcome.result.nodes] == ["AB 1", "Alex Lee"]
+    assert outcome.result.relationships == []
+    assert [(drop.category, drop.value, drop.chunk_id) for drop in outcome.drops] == [
+        ("rejected_labels", "PolicyArea", "sha256:abc"),
+        ("rejected_relationship_types", "ABOUT_TOPIC", "sha256:abc"),
+    ]
+    assert [drop.reason for drop in outcome.drops] == [
+        "label is decided once per article, not extracted from a chunk",
+        "relationship is decided once per article, not extracted from a chunk",
+    ]
+
+
+def test_extraction_conformance_rejects_the_retired_chunk_topic_edge():
+    # The Article Chunk topic edge is retired, so a model emitting one is
+    # counted rather than obeyed, even where its endpoints look sound.
+    result = ExtractionResult(
+        nodes=[Node(name="AB 1", label="Bill")],
+        relationships=[
+            Relationship(
+                source="AB 1",
+                target="Housing & Community Development",
+                relationship_type="DISCUSSES_TOPIC",
+            ),
+        ],
+    )
+
+    outcome = conform_extraction_result(result, "sha256:abc")
+
+    assert outcome.result.relationships == []
+    assert [(drop.category, drop.value, drop.reason) for drop in outcome.drops] == [
+        (
+            "rejected_relationship_types",
+            "DISCUSSES_TOPIC",
+            "relationship is decided once per article, not extracted from a chunk",
+        ),
     ]
 
 

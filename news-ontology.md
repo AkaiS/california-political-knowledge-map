@@ -39,7 +39,7 @@ arrives without one is written and carries `needs_review`.
 | `CHAIRS` | `Politician` | `Committee` | — |
 | `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |
 | `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
-| `DISCUSSES_TOPIC` | `Chunk` / `NewsArticle` | `PolicyArea` | — |
+| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | — |
 | `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | — |
 | `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |
 | `HAS_CHUNK` | `NewsArticle` | `Chunk` | — |
