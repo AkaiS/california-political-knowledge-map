@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from knowledge_map.utils import agents, telemetry
 
 
@@ -76,3 +78,63 @@ def test_project_agents_use_the_observable_construction_seam_and_have_names():
 
     assert direct_agent_calls == []
     assert unnamed_agent_calls == []
+
+
+def test_missing_token_blocks_the_run(monkeypatch):
+    """An unobservable run must fail at its start, not run and teach nothing."""
+    monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
+    monkeypatch.setattr(telemetry, "resolve_token", lambda: None)
+    monkeypatch.delenv(telemetry.ALLOW_UNTRACED, raising=False)
+    configured: list[str] = []
+    monkeypatch.setattr(
+        telemetry.logfire, "configure", lambda **kwargs: configured.append("configure")
+    )
+
+    with pytest.raises(telemetry.TelemetryNotConfiguredError) as error:
+        telemetry.setup_telemetry()
+
+    assert "keyring set logfire dev-telemetry" in str(error.value)
+    assert configured == []
+
+
+def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
+    monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
+    monkeypatch.setattr(telemetry, "resolve_token", lambda: None)
+    monkeypatch.setenv(telemetry.ALLOW_UNTRACED, "1")
+    for name in ("configure", "instrument_pydantic_ai", "instrument_httpx",
+                 "instrument_system_metrics"):
+        monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
+
+    telemetry.setup_telemetry()
+
+    assert telemetry._configured is True
+
+
+def test_token_prefers_environment_then_keychain_then_credentials_file(monkeypatch):
+    monkeypatch.setattr(telemetry, "_credentials", lambda *a, **k: {"token": "file"})
+    monkeypatch.setattr(telemetry, "_keychain_token", lambda: "keychain")
+    monkeypatch.setenv(telemetry.LOGFIRE_TOKEN_ENV, "environment")
+    assert telemetry.resolve_token() == "environment"
+
+    monkeypatch.delenv(telemetry.LOGFIRE_TOKEN_ENV)
+    assert telemetry.resolve_token() == "keychain"
+
+    monkeypatch.setattr(telemetry, "_keychain_token", lambda: None)
+    assert telemetry.resolve_token() == "file"
+
+
+def test_resolved_token_is_passed_to_configure(monkeypatch):
+    """The token must not depend on the directory the command was run from."""
+    monkeypatch.setattr(telemetry, "_configured", False)
+    monkeypatch.setattr(telemetry, "_is_testing", lambda: False)
+    monkeypatch.setattr(telemetry, "resolve_token", lambda: "from-the-keychain")
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(telemetry.logfire, "configure", lambda **kwargs: seen.update(kwargs))
+    for name in ("instrument_pydantic_ai", "instrument_httpx", "instrument_system_metrics"):
+        monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
+
+    telemetry.setup_telemetry()
+
+    assert seen["token"] == "from-the-keychain"
