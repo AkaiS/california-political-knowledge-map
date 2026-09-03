@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from .pipeline import ArticleStatus, StoryLink
+from .pipeline import StoryStatus, StoryLink
 
 
 class Story(BaseModel):
@@ -14,8 +14,8 @@ class Story(BaseModel):
     published_date: Optional[str] = Field(None, description="The publication date, UTC-formatted when it could be parsed")
     summary: Optional[str] = Field(None, description="The publication's own summary or standfirst")
     content: Optional[str] = Field(None, description="The extracted body text of the article")
-    status: ArticleStatus = Field(
-        ArticleStatus.UNPROCESSED, description="How far this Story has progressed through ingestion"
+    status: StoryStatus = Field(
+        StoryStatus.UNPROCESSED, description="How far this Story has progressed through ingestion"
     )
     links: List[StoryLink] = Field(default_factory=list, description="The hyperlinks found in the body")
 

@@ -3,7 +3,7 @@ import os
 import json
 from typing import List, Dict, Any, NamedTuple, Optional, Sequence, Tuple
 
-from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.pipeline import StoryStatus
 from knowledge_map.schemas.relevance import (
     LabelSource,
     RelevanceStatus,
@@ -16,7 +16,7 @@ DEFAULT_DB_PATH = "document_store.db"
 
 # Rendered from the domain enums so the table constraints cannot drift from the
 # vocabularies the pipeline writes.
-STORY_STATUS_CHECK = sql_check_values(ArticleStatus)
+STORY_STATUS_CHECK = sql_check_values(StoryStatus)
 VALIDATION_CHECK = sql_check_values(ValidationStatus)
 RELEVANCE_STATUS_CHECK = sql_check_values(RelevanceStatus)
 LABEL_SOURCE_CHECK = sql_check_values(LabelSource)
@@ -76,7 +76,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 published_date TEXT,
                 summary TEXT,
                 content TEXT,
-                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
+                status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{StoryStatus.UNPROCESSED}',
                 completed_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -278,7 +278,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                     published_date TEXT,
                     summary TEXT,
                     content TEXT,
-                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{ArticleStatus.UNPROCESSED}',
+                    status TEXT CHECK(status IN ({STORY_STATUS_CHECK})) DEFAULT '{StoryStatus.UNPROCESSED}',
                     completed_at DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -469,12 +469,12 @@ def delete_uningested_story(url: str, db_path: str = DEFAULT_DB_PATH) -> bool:
             WHERE story_id = (
                 SELECT id
                 FROM stories
-                WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
+                WHERE url = ? AND status IS NOT '{StoryStatus.COMPLETED}'
             )
         """, (url,))
         cursor.execute(f"""
             DELETE FROM stories
-            WHERE url = ? AND status IS NOT '{ArticleStatus.COMPLETED}'
+            WHERE url = ? AND status IS NOT '{StoryStatus.COMPLETED}'
         """, (url,))
         deleted = cursor.rowcount > 0
         conn.commit()

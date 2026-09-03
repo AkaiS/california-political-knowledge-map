@@ -4,12 +4,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .chunking import ArticleChunk
 from .extraction import ExtractionResult
 
-class ArticleStatus(StrEnum):
+class StoryStatus(StrEnum):
     UNPROCESSED = "UNPROCESSED"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED_DLQ = "FAILED_DLQ"
     SYSTEM_ERROR = "SYSTEM_ERROR"
+
+
+# Deprecated alias for backward compatibility; use StoryStatus.
+ArticleStatus = StoryStatus
 
 
 class StoryLink(BaseModel):

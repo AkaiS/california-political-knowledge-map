@@ -13,7 +13,7 @@ from knowledge_map.core.exceptions import (
     classify_exception,
 )
 from knowledge_map.core.pipeline import StoryPipeline
-from knowledge_map.schemas import ArticleStatus, SourceArticle, StoryLink
+from knowledge_map.schemas import StoryStatus, SourceArticle, StoryLink
 from knowledge_map.utils.console import ConsoleNotifier
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class BatchIngestionService:
                     f"(consecutive rate limit failures: {self.consecutive_rate_limit_failures}): {e}"
                 )
                 try:
-                    self.pipeline.status_tracker.update_status(url, ArticleStatus.UNPROCESSED)
+                    self.pipeline.status_tracker.update_status(url, StoryStatus.UNPROCESSED)
                 except Exception as status_err:
                     logger.error(f"Failed to reset status to UNPROCESSED: {status_err}")
                 if self.consecutive_rate_limit_failures >= 3:
@@ -131,7 +131,7 @@ class BatchIngestionService:
                     )
                     try:
                         self.pipeline.status_tracker.update_status(
-                            url, ArticleStatus.UNPROCESSED
+                            url, StoryStatus.UNPROCESSED
                         )
                     except Exception as status_err:
                         logger.error(
@@ -144,7 +144,7 @@ class BatchIngestionService:
                     self.consecutive_failures += 1
                     logger.error(f"System error processing story {title} (consecutive: {self.consecutive_failures}): {e}")
                     try:
-                        self.pipeline.status_tracker.update_status(url, ArticleStatus.SYSTEM_ERROR)
+                        self.pipeline.status_tracker.update_status(url, StoryStatus.SYSTEM_ERROR)
                     except Exception as status_err:
                         logger.error(f"Failed to update status to SYSTEM_ERROR: {status_err}")
                     

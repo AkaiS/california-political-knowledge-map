@@ -4,13 +4,13 @@ California Political Knowledge Map is a web application that reduces voting fric
 ## Tech Stack and Architecture
 - Language: Python 3.13.5
 - Data validation: Pydantic v2
-- LLM Providers: 
+- LLM Providers: local llama.cpp-served GGUF + OpenRouter (see `docs/model-deployments.md`)
 - Agent Framework: Pydantic AI
 - Evals Framework: pydantic-evals
-- Orchestration: 
-- DB: neo4j (Graph Database)
-- LLM Tooling:
-- CI/CD: 
+- Orchestration: synchronous Story Pipeline (`src/knowledge_map/core/pipeline.py:182`) + CLI `ca-map scrape-archive` / `ca-map update-sources` via external cron/launchd (`CONTEXT.md:48-53,170-172`)
+- DB: SQLite document store (`document_store.db`, `src/knowledge_map/adapters/sqlite_db.py:15`) + Neo4j graph
+- LLM Tooling: logfire + pydantic-evals + chonkie + crawl4ai (see `pyproject.toml`)
+- CI/CD: none — local deterministic pytest suite
 
 ## A note from me
 We have a shared vocabulary that we have defined in our domain docs. We should be working with this domain language in mind, not as a frozen vocabulary but as an agreed upon source of meaning.
@@ -29,15 +29,15 @@ We should avoid building anything that is already solved by libraries we are usi
 
 Issues and PRDs live as local Markdown under `work/`; `work/README.md` is the
 authoritative entry point. `.scratch/` is reserved for disposable runtime
-output. See [issue-tracker.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/main/docs/agents/issue-tracker.md).
+output. See [issue-tracker.md](docs/agents/issue-tracker.md).
 
 ### Triage labels
 
-Triage roles map to default label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See [triage-labels.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/main/docs/agents/triage-labels.md).
+Triage roles map to default label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See [triage-labels.md](docs/agents/triage-labels.md).
 
 ### Domain docs
 
-Uses the "single-context" layout, with a single `CONTEXT.md` and `docs/adr/` at the repository root. See [domain.md](file:///Users/akaisenghor/Projects/california-political-knowledge-map/main/docs/agents/domain.md).
+Uses the "single-context" layout, with a single `CONTEXT.md` and `docs/adr/` at the repository root. See [domain.md](docs/agents/domain.md).
 
 ## Documentation
 - Comments exist to describe the problem the code is solving. When a function is moved, so should the comments.

@@ -32,7 +32,7 @@ from knowledge_map.core.relevance_agent import classify_article_with_llm
 from knowledge_map.core.relevance_classification import populate_article_metadata
 
 logger = logging.getLogger(__name__)
-from knowledge_map.schemas.pipeline import ArticleStatus
+from knowledge_map.schemas.pipeline import StoryStatus
 from knowledge_map.schemas.relevance import (
     LabelSource,
     RelevanceStatus,
@@ -744,7 +744,7 @@ class ArticleValidatorService:
                                 author=author_field,
                                 published_date=pub_date_str,
                                 content=extracted["body"],
-                                status=ArticleStatus.UNPROCESSED,
+                                status=StoryStatus.UNPROCESSED,
                                 links=extract_links_from_elements(extracted.get("body_elements", []), url),
                             )
                             replace_story(story, db_path=self.db_path)
