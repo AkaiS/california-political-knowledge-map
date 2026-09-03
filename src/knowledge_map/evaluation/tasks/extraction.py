@@ -25,31 +25,15 @@ from knowledge_map.adapters.extraction import (
     get_extraction_agent,
 )
 from knowledge_map.schemas import (
-    DeploymentKind,
     ExtractionResult,
     ModelDeployment,
     Node,
     Relationship,
 )
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    resolve_local_chat_model,
-)
 
-from ..scoring import UNSCORED, f1
+from ..deployment import as_deployment, default_model
+from ..scoring import UNSCORED, detection_scores
 from .registry import EvaluationTask, register
-
-FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
-
-
-def default_model() -> str:
-    """The model Entity Extraction runs in production, per `.env`.
-
-    Supplies the default a run records when `--model` is not given.  Called
-    at import, so it loads `.env` itself.
-    """
-
-    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class ExtractionInput(BaseModel):
@@ -118,14 +102,6 @@ class ExtractionSilverMetadata(BaseModel):
     coreference_gold_set: str
 
 
-def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
-    """Turn a legacy model argument into an explicit local deployment."""
-
-    if isinstance(model, ModelDeployment):
-        return model
-    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
-
-
 def _dropped_item_count(adapter: PydanticAIEntityExtractionAdapter) -> int:
     """Total drops the adapter recorded for the one chunk it just ran."""
 
@@ -147,7 +123,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
 
     del gold_set
 
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     agent = get_extraction_agent(deployment)
 
     def extract(case_input: ExtractionInput) -> ExtractionOutput:
@@ -207,23 +183,10 @@ def relationship_identity(relationship: Relationship) -> RelationshipIdentity:
     )
 
 
-def _by_identity(
-    items: Sequence[Any], identity: Any
-) -> dict[Any, Any]:
+def _by_identity(items: Sequence[Any], identity: Any) -> dict[Any, Any]:
     """Index items by identity, last one winning, as persistence merges them."""
 
     return {identity(item): item for item in items}
-
-
-def _detection_scores(expected: set[Any], found: set[Any], prefix: str) -> dict[str, float]:
-    matched = len(expected & found)
-    precision = matched / len(found) if found else 0.0
-    recall = matched / len(expected) if expected else 0.0
-    return {
-        f"{prefix}_precision": precision,
-        f"{prefix}_recall": recall,
-        f"{prefix}_f1": f1(precision, recall),
-    }
 
 
 class FoundTheSilverNodes(Evaluator):
@@ -240,7 +203,7 @@ class FoundTheSilverNodes(Evaluator):
         found = {node_identity(node) for node in ctx.output.nodes}
         if not expected and not found:
             return {"node_precision": 1.0, "node_recall": 1.0, "node_f1": 1.0}
-        return _detection_scores(expected, found, "node")
+        return detection_scores(expected, found, "node")
 
 
 class AgreedOnTheNodeDetail(Evaluator):
@@ -300,7 +263,7 @@ class FoundTheSilverRelationships(Evaluator):
                 "relationship_recall": 1.0,
                 "relationship_f1": 1.0,
             }
-        return _detection_scores(expected, found, "relationship")
+        return detection_scores(expected, found, "relationship")
 
 
 class AgreedOnTheClaimProperties(Evaluator):
@@ -318,9 +281,7 @@ class AgreedOnTheClaimProperties(Evaluator):
         )
         found = _by_identity(ctx.output.relationships, relationship_identity)
         shared = [
-            key
-            for key in expected.keys() & found.keys()
-            if expected[key].properties
+            key for key in expected.keys() & found.keys() if expected[key].properties
         ]
         if not shared:
             return UNSCORED

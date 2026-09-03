@@ -22,28 +22,13 @@ from knowledge_map.core.relevance_agent import (
     RelevanceClassification,
     get_relevance_agent_prompt,
 )
-from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.schemas import ModelDeployment
 from knowledge_map.utils.agents import create_agent
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    get_chat_model,
-    resolve_local_chat_model,
-)
+from knowledge_map.utils.models import get_chat_model
 
+from ..deployment import as_deployment, default_model
 from ..scoring import UNSCORED
 from .registry import EvaluationTask, register
-
-FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
-
-
-def default_model() -> str:
-    """The model the Relevance Filter runs in production, per `.env`.
-
-    Supplies the default a run records when `--model` is not given.  Called
-    at import, so it loads `.env` itself.
-    """
-
-    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class RelevanceInput(BaseModel):
@@ -65,20 +50,12 @@ class RelevanceMetadata(BaseModel):
     label_source: str | None = None
 
 
-def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
-    """Turn a legacy model argument into an explicit local deployment."""
-
-    if isinstance(model, ModelDeployment):
-        return model
-    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
-
-
 def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
     Few-shots come from the Gold Set's own `training` split.
     """
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     agent = create_agent(
         get_chat_model(deployment),
         name="relevance_evaluation",

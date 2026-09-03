@@ -31,26 +31,11 @@ from knowledge_map.adapters.policy_areas import (
     PydanticAIPolicyAreaAdapter,
     get_classification_agent,
 )
-from knowledge_map.schemas import DeploymentKind, ModelDeployment, PolicyAreaName
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    resolve_local_chat_model,
-)
+from knowledge_map.schemas import ModelDeployment, PolicyAreaName
 
-from ..scoring import f1
+from ..deployment import as_deployment, default_model
+from ..scoring import detection_scores
 from .registry import EvaluationTask, register
-
-FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
-
-
-def default_model() -> str:
-    """The model Policy Area Classification runs in production, per `.env`.
-
-    Supplies the default a run records when `--model` is not given.  Called
-    at import, so it loads `.env` itself.
-    """
-
-    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class ClassificationInput(BaseModel):
@@ -116,14 +101,6 @@ class ClassificationSilverMetadata(BaseModel):
     coreference_gold_set: str
 
 
-def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
-    """Turn a legacy model argument into an explicit local deployment."""
-
-    if isinstance(model, ModelDeployment):
-        return model
-    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
-
-
 def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
@@ -135,7 +112,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
 
     del gold_set
 
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     adapter = PydanticAIPolicyAreaAdapter(
         agent=get_classification_agent(deployment), deployment=deployment
     )
@@ -175,14 +152,7 @@ class AgreedOnThePolicyAreas(Evaluator):
                 "policy_area_recall": 1.0,
                 "policy_area_f1": 1.0,
             }
-        matched = len(expected & found)
-        precision = matched / len(found) if found else 0.0
-        recall = matched / len(expected) if expected else 0.0
-        return {
-            "policy_area_precision": precision,
-            "policy_area_recall": recall,
-            "policy_area_f1": f1(precision, recall),
-        }
+        return detection_scores(expected, found, "policy_area")
 
 
 class ClassifiedWithoutFailing(Evaluator):

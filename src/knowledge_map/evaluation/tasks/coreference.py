@@ -29,30 +29,14 @@ from knowledge_map.adapters.coreference import (
 from knowledge_map.config import settings
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
-    DeploymentKind,
     MentionSpan,
     MentionSpanOutcome,
     ModelDeployment,
 )
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    resolve_local_chat_model,
-)
 
-from ..scoring import UNSCORED, f1
+from ..deployment import as_deployment, default_model
+from ..scoring import UNSCORED, detection_scores, f1
 from .registry import EvaluationTask, register
-
-FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
-
-
-def default_model() -> str:
-    """The model Coreference Resolution runs in production, per `.env`.
-
-    Supplies the default a run records when `--model` is not given.  Called
-    at import, so it loads `.env` itself.
-    """
-
-    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class CoreferenceInput(BaseModel):
@@ -144,14 +128,6 @@ def _output_from_failure(error: CoreferenceResolutionError) -> CoreferenceOutput
     )
 
 
-def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
-    """Turn a legacy model argument into an explicit local deployment."""
-
-    if isinstance(model, ModelDeployment):
-        return model
-    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
-
-
 def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
@@ -163,7 +139,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
 
     del gold_set
 
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     annotator_agent = get_annotator_agent(deployment)
     critic_agent = get_critic_agent(deployment)
 
@@ -188,7 +164,7 @@ def build_annotator_task(model: str | ModelDeployment, gold_set: Any) -> Any:
 
     del gold_set
 
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     annotator_agent = get_annotator_agent(deployment)
 
     def annotate(case_input: CoreferenceInput) -> CoreferenceOutput:
@@ -241,15 +217,7 @@ class FoundTheSilverMentionSpans(Evaluator):
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
         expected = set(entity_by_identity(ctx.expected_output.mention_spans))
         found = set(entity_by_identity(ctx.output.mention_spans))
-        matched = len(expected & found)
-
-        precision = matched / len(found) if found else 0.0
-        recall = matched / len(expected) if expected else 0.0
-        return {
-            "span_precision": precision,
-            "span_recall": recall,
-            "span_f1": f1(precision, recall),
-        }
+        return detection_scores(expected, found, "span")
 
 
 class AgreedOnTheCanonicalEntity(Evaluator):

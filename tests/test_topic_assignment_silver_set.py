@@ -9,10 +9,11 @@ assignment no model could ever make and every run loses the case.
 from collections import Counter
 from pathlib import Path
 
+from silver_sets import load_silver_set
+
 from knowledge_map.adapters.coreference import CoreferenceDeps, substitute_mention_spans
 from knowledge_map.core.topic_assignment import MEASURE_LABELS
-from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_gold_set
-from knowledge_map.evaluation.tasks import task_named
+from knowledge_map.evaluation import EvaluationSplit, build_dataset
 
 SILVER_SET_PATH = Path("evals/gold/topic_assignment.yaml")
 COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
@@ -24,25 +25,8 @@ ANNOTATION_GUIDELINE_PATH = Path("docs/evaluation/topic-assignment-annotation.md
 RECORDED_DISTRIBUTION = {0: 7, 1: 2, 2: 4, 3: 3, 4: 4}
 
 
-def _load_silver_set(path: Path, task_name: str):
-    """Load the file through the registered task's own types.
-
-    Declaring a second set of types here would let the file drift from what
-    `ca-map eval run topic_assignment` validates it against, which is the one
-    thing this test exists to prevent.
-    """
-
-    task = task_named(task_name)
-    return load_gold_set(
-        path,
-        input_type=task.input_type,
-        output_type=task.output_type,
-        metadata_type=task.metadata_type,
-    )
-
-
 def _assignment_silver_set():
-    return _load_silver_set(SILVER_SET_PATH, "topic_assignment")
+    return load_silver_set(SILVER_SET_PATH, "topic_assignment")
 
 
 def test_the_silver_set_is_a_twenty_case_pydantic_evals_dataset() -> None:
@@ -89,7 +73,7 @@ def test_the_cases_are_the_twenty_stories_of_the_coreference_silver_set() -> Non
     """
 
     silver_set = _assignment_silver_set()
-    coreference_set = _load_silver_set(COREFERENCE_SILVER_SET_PATH, "coreference")
+    coreference_set = load_silver_set(COREFERENCE_SILVER_SET_PATH, "coreference")
     stories = {case.task_input.url: case for case in coreference_set.cases}
 
     assert len(silver_set.cases) == len(coreference_set.cases)
@@ -115,7 +99,7 @@ def test_every_case_is_given_the_areas_classification_found_for_it() -> None:
     """
 
     silver_set = _assignment_silver_set()
-    classification_set = _load_silver_set(
+    classification_set = load_silver_set(
         CLASSIFICATION_SILVER_SET_PATH, "policy_area_classification"
     )
     classified = {
@@ -136,7 +120,7 @@ def test_every_measure_a_case_names_is_one_the_stage_could_be_given() -> None:
     """
 
     silver_set = _assignment_silver_set()
-    extraction_set = _load_silver_set(EXTRACTION_SILVER_SET_PATH, "extraction")
+    extraction_set = load_silver_set(EXTRACTION_SILVER_SET_PATH, "extraction")
 
     extracted: dict[str, set[tuple[str, str]]] = {}
     for case in extraction_set.cases:
@@ -167,7 +151,7 @@ def test_every_measure_the_extraction_silver_set_produced_is_in_its_case() -> No
     """
 
     silver_set = _assignment_silver_set()
-    extraction_set = _load_silver_set(EXTRACTION_SILVER_SET_PATH, "extraction")
+    extraction_set = load_silver_set(EXTRACTION_SILVER_SET_PATH, "extraction")
 
     given = {
         case.id: {(measure.name, measure.label) for measure in case.task_input.measures}

@@ -10,8 +10,9 @@ which scores nothing and fails nothing.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Mapping
+from typing import Any
 
 #: An empty score mapping: this case was not judgeable, and that is not a failure.
 UNSCORED: Mapping[str, float] = MappingProxyType({})
@@ -30,3 +31,24 @@ def f1(precision: float, recall: float) -> float:
     if precision + recall == 0.0:
         return 0.0
     return 2 * precision * recall / (precision + recall)
+
+
+def detection_scores(
+    expected: set[Any], found: set[Any], prefix: str
+) -> dict[str, float]:
+    """Precision, recall and F1 over what was expected against what was found.
+
+    The three scores a set-agreement task reports, named for the thing being
+    agreed on -- nodes, relationships, Policy Areas, Topic Assignments.  A
+    case where both sides are empty is the caller's to answer, because
+    agreeing on nothing is a pass in some tasks and unscoreable in others.
+    """
+
+    matched = len(expected & found)
+    precision = matched / len(found) if found else 0.0
+    recall = matched / len(expected) if expected else 0.0
+    return {
+        f"{prefix}_precision": precision,
+        f"{prefix}_recall": recall,
+        f"{prefix}_f1": f1(precision, recall),
+    }

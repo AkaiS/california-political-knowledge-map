@@ -3,9 +3,10 @@
 from collections import Counter
 from pathlib import Path
 
+from silver_sets import load_silver_set
+
 from knowledge_map.adapters.coreference import CoreferenceDeps, substitute_mention_spans
-from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_gold_set
-from knowledge_map.evaluation.tasks import task_named
+from knowledge_map.evaluation import EvaluationSplit, build_dataset
 from knowledge_map.ontology.news import POLICY_AREAS
 from knowledge_map.schemas import PolicyAreaClassification
 
@@ -14,30 +15,12 @@ COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
 ANNOTATION_GUIDELINE_PATH = Path(
     "docs/evaluation/policy-area-classification-annotation.md"
 )
-
 #: The distribution the guideline records, as `areas in one article: articles`.
 RECORDED_DISTRIBUTION = {0: 1, 1: 1, 2: 4, 3: 10, 4: 2, 5: 2}
 
 
-def _load_silver_set(path: Path, task_name: str):
-    """Load the file through the registered task's own types.
-
-    Declaring a second set of types here would let the file drift from what
-    `ca-map eval run policy_area_classification` validates it against, which
-    is the one thing this test exists to prevent.
-    """
-
-    task = task_named(task_name)
-    return load_gold_set(
-        path,
-        input_type=task.input_type,
-        output_type=task.output_type,
-        metadata_type=task.metadata_type,
-    )
-
-
 def test_the_silver_set_is_a_twenty_case_pydantic_evals_dataset() -> None:
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
 
     assert silver_set.task == "policy_area_classification"
     assert len(silver_set.cases) == 20
@@ -53,7 +36,7 @@ def test_the_silver_set_is_a_twenty_case_pydantic_evals_dataset() -> None:
 def test_every_case_id_addresses_one_source_article() -> None:
     """A case is a whole article, so its id is the article's own address."""
 
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
 
     assert all(case.id == case.task_input.url for case in silver_set.cases)
     assert len({case.id for case in silver_set.cases}) == 20
@@ -61,7 +44,7 @@ def test_every_case_id_addresses_one_source_article() -> None:
 
 
 def test_the_cases_are_split_into_held_out_and_training() -> None:
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
 
     held_out = silver_set.split(EvaluationSplit.HELD_OUT)
     training = silver_set.split(EvaluationSplit.TRAINING)
@@ -79,8 +62,8 @@ def test_every_case_is_the_resolved_text_of_its_coreference_story() -> None:
     than quietly re-aim all twenty cases.
     """
 
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
-    coreference_set = _load_silver_set(COREFERENCE_SILVER_SET_PATH, "coreference")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    coreference_set = load_silver_set(COREFERENCE_SILVER_SET_PATH, "coreference")
     stories = {case.task_input.url: case for case in coreference_set.cases}
 
     assert len(silver_set.cases) == len(coreference_set.cases)
@@ -100,7 +83,7 @@ def test_every_case_is_the_resolved_text_of_its_coreference_story() -> None:
 def test_every_silver_area_is_a_canonical_name_the_stage_can_return() -> None:
     """Silver the stage's output type could not express is silver no model can match."""
 
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
     canonical = {area.name for area in POLICY_AREAS}
 
     for case in silver_set.cases:
@@ -113,7 +96,7 @@ def test_every_silver_area_is_a_canonical_name_the_stage_can_return() -> None:
 
 
 def test_every_case_names_the_guideline_it_was_annotated_against() -> None:
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
 
     assert ANNOTATION_GUIDELINE_PATH.exists()
     for case in silver_set.cases:
@@ -126,7 +109,7 @@ def test_every_case_names_the_guideline_it_was_annotated_against() -> None:
 def test_an_article_the_vocabulary_does_not_cover_is_annotated_as_no_areas() -> None:
     """An empty expectation is an answer the set deliberately holds."""
 
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
 
     empty = [case for case in silver_set.cases if not case.expected_output.policy_areas]
 
@@ -140,7 +123,7 @@ def test_the_recorded_areas_per_article_distribution_matches_the_set() -> None:
     so a later cap can be argued from it.
     """
 
-    silver_set = _load_silver_set(SILVER_SET_PATH, "policy_area_classification")
+    silver_set = load_silver_set(SILVER_SET_PATH, "policy_area_classification")
     observed = Counter(
         len(case.expected_output.policy_areas) for case in silver_set.cases
     )

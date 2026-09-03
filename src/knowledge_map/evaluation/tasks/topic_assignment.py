@@ -33,39 +33,23 @@ from knowledge_map.adapters.policy_areas import (
 )
 from knowledge_map.core.topic_assignment import MEASURE_LABELS
 from knowledge_map.schemas import (
-    DeploymentKind,
     ModelDeployment,
     Node,
     PolicyAreaName,
     SourceArticle,
     TopicAssignment,
 )
-from knowledge_map.utils.models import (
-    DEFAULT_LOCAL_CHAT_MODEL,
-    resolve_local_chat_model,
-)
 
-from ..scoring import f1
+from ..deployment import as_deployment, default_model
+from ..scoring import detection_scores
 from .extraction import normalize_name
 from .registry import EvaluationTask, register
-
-FALLBACK_MODEL = DEFAULT_LOCAL_CHAT_MODEL
 
 #: The measure labels an `ABOUT_TOPIC` edge may start from, as the silver side
 #: is allowed to write them.  Read from the ontology through the stage that
 #: collects the measures, so a label the graph could never hold fails when the
 #: Gold Set is read rather than scoring a silent zero on every run.
 MeasureLabel = Literal[tuple(sorted(MEASURE_LABELS))]  # type: ignore[valid-type]
-
-
-def default_model() -> str:
-    """The model Topic Assignment runs in production, per `.env`.
-
-    Supplies the default a run records when `--model` is not given.  Called
-    at import, so it loads `.env` itself.
-    """
-
-    return resolve_local_chat_model(FALLBACK_MODEL)
 
 
 class AssignmentMeasure(BaseModel):
@@ -173,14 +157,6 @@ class AssignmentSilverMetadata(BaseModel):
     extraction_gold_set: str
 
 
-def _as_deployment(model: str | ModelDeployment) -> ModelDeployment:
-    """Turn a legacy model argument into an explicit local deployment."""
-
-    if isinstance(model, ModelDeployment):
-        return model
-    return ModelDeployment(kind=DeploymentKind.LOCAL, model=model)
-
-
 def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
@@ -198,7 +174,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
 
     del gold_set
 
-    deployment = _as_deployment(model)
+    deployment = as_deployment(model)
     adapter = PydanticAIPolicyAreaAdapter(
         assignment_agent=get_assignment_agent(deployment), deployment=deployment
     )
@@ -277,14 +253,7 @@ class AgreedOnTheTopicAssignments(Evaluator):
                 "assignment_recall": 1.0,
                 "assignment_f1": 1.0,
             }
-        matched = len(expected & found)
-        precision = matched / len(found) if found else 0.0
-        recall = matched / len(expected) if expected else 0.0
-        return {
-            "assignment_precision": precision,
-            "assignment_recall": recall,
-            "assignment_f1": f1(precision, recall),
-        }
+        return detection_scores(expected, found, "assignment")
 
 
 class AssignedWithoutFailing(Evaluator):
