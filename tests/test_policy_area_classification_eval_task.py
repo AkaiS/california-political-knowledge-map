@@ -158,4 +158,4 @@ def test_the_task_is_registered_with_its_own_types() -> None:
 
     assert task.input_type is ClassificationInput
     assert task.output_type is ClassificationExpectation
-    assert task.gold_set_stem == "policy_area_classification"
+    assert task.data_set_stem == "policy_area_classification"

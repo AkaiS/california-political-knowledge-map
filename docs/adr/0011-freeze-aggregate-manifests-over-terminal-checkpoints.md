@@ -1,6 +1,6 @@
 # Freeze aggregate manifests over terminal checkpoints
 
-Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+Superseded by ADR 0017. Its use of "Gold Set" is retired too: four of the five sets were model-labeled and are now Silver Sets under `evals/silver/` — see the amendment to ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
 
 This decision supersedes the aggregate-report-blob portion of ADR 0005. Immutable authored definitions and terminal Evaluation Checkpoints remain authoritative evidence. After every manifested case has matching terminal evidence, the Evaluation Ledger canonically serializes a Frozen Aggregate Manifest containing the exact Evaluation Run, Suite, Resolved Evaluation Plan, Evaluation Task Contract hash, evidence-contract version, report-level provenance, and ordered manifest-entry, case-result, and checkpoint identities and content hashes. The manifest contains no copied task inputs, expected outputs, actual outputs, metadata, evaluator results, or complete ReportCase values.
 

@@ -1,4 +1,4 @@
-# 06 — Topic Assignment Gold Set and evaluation task
+# 06 — Topic Assignment Silver Set and evaluation task
 
 Labels: completed
 
@@ -8,7 +8,7 @@ Labels: completed
 
 ## What to build
 
-Assignment is measured rather than assumed. A second Gold Set of twenty
+Assignment is measured rather than assumed. A second Silver Set of twenty
 article-level cases joins the registry as its own task, over the same twenty
 Stories as every other stage, so a run reports whether a model connects the right
 measures to the right areas.
@@ -29,14 +29,14 @@ contains, so a case cannot ask for an assignment the stage could never make.
 
 - [x] An annotation guideline for Topic Assignment is written and lives beside
       the other guidelines.
-- [x] A Gold Set file holds twenty article-level cases over the same twenty
+- [x] A Silver Set file holds twenty article-level cases over the same twenty
       Stories as the classification set, with held-out and training splits and
       silver metadata naming the annotator model and the guideline.
 - [x] The task is registered with its own input, output, and metadata types and
       the assignment adapter as the callable under test.
 - [x] Evaluators score precision, recall, and F1 over measure-to-area pairs; a
       case expecting no pairs and returning none scores a pass.
-- [x] A test loads the Gold Set through the registered task's own types and
+- [x] A test loads the Silver Set through the registered task's own types and
       asserts the case count, the splits, ids that address a Source Article, and
       that every measure a case names is one the extraction Silver Set or the
       article contains.

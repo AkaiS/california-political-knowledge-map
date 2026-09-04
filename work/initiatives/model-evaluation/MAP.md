@@ -11,7 +11,7 @@ Reach a decision-ready, repository-wide evaluation strategy and implementation r
 - Use `/grilling` and `/domain-modeling` when resolving decisions; read `CONTEXT.md` before exploration.
 - The shared standard must cover all model-backed components, with task-specific scoring on top of common contracts, provenance, run recording, artifacts, and CI integration.
 - Evaluation is for regression detection first and model comparison second. Run affected deterministic checks on pull requests; require broad non-deterministic suites before releases.
-- Human-labeled, versioned Evaluation Gold Sets are authoritative. Promote reviewed production failures, ambiguous inputs, and model-disagreement cases into versioned training, calibration, or held-out test splits.
+- Human-labeled, versioned Gold Sets are authoritative. Promote reviewed production failures, ambiguous inputs, and model-disagreement cases into versioned training, calibration, or held-out test splits.
 - Relevance human labels are binary. `INCONCLUSIVE` is an automated review-routing status, and relevance release gates prioritize recall of `RELEVANT` articles.
 - Evaluation records use relational links between datasets, cases, runs, and controlled artifacts. Raw inputs/outputs stay outside the evaluation database, subject to retention controls.
 - Component order: Relevance Filter; selector healing; coreference; Entity Extraction. Embedding and GraphRAG evaluation are in scope but await a defined retrieval/answering contract.

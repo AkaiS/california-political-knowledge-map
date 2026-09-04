@@ -11,8 +11,8 @@ from knowledge_map.ontology.extraction_conformance import conform_extraction_res
 from knowledge_map.ontology.news import EXTRACTED_LABELS
 from knowledge_map.utils.chunking import chunk_article
 
-SILVER_SET_PATH = Path("evals/gold/extraction.yaml")
-COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
+SILVER_SET_PATH = Path("evals/silver/extraction.yaml")
+COREFERENCE_SILVER_SET_PATH = Path("evals/silver/coreference.yaml")
 ANNOTATION_GUIDELINE_PATH = Path("docs/evaluation/extraction-annotation.md")
 
 

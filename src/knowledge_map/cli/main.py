@@ -51,7 +51,7 @@ CLI_COMMAND_HELP = {
     "classifier backfill": "Backfill cached relevance metadata and embeddings",
     "classifier train": "Train the classifier using scikit-learn LogisticRegression",
     "classifier reevaluate": "Reevaluate inconclusive/rejected records with the trained model",
-    "eval": "Collect and run an Evaluation Gold Set",
+    "eval": "Collect and run an Evaluation Data Set",
     "telemetry": "Manage the Logfire credential this project runs on",
 }
 

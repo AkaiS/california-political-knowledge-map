@@ -1,6 +1,6 @@
 """Entity Extraction as an evaluated task.
 
-Cases come from `evals/gold/extraction.yaml`, authored elsewhere and only
+Cases come from `evals/silver/extraction.yaml`, authored elsewhere and only
 read here.  It is silver, not gold: labeled by `claude-opus-5` against
 `docs/evaluation/extraction-annotation.md`, so a run measures agreement with
 that annotator and a claim both it and the model miss scores as a pass.
@@ -86,7 +86,7 @@ class ExtractionOutput(BaseModel):
 class ExtractionSilverMetadata(BaseModel):
     """Source and model provenance for one silver-labeled Article Chunk.
 
-    ``coreference_gold_set`` names the file the chunk's resolved text came
+    ``coreference_silver_set`` names the file the chunk's resolved text came
     from, because re-cutting these chunks from a later revision of that file
     would silently change what every case is asking about.
     """
@@ -100,7 +100,7 @@ class ExtractionSilverMetadata(BaseModel):
     label_quality: Literal["silver"]
     annotator_model: str
     annotation_guideline: str
-    coreference_gold_set: str
+    coreference_silver_set: str
 
 
 def _dropped_item_count(adapter: PydanticAIEntityExtractionAdapter) -> int:
@@ -113,16 +113,16 @@ def _dropped_item_count(adapter: PydanticAIEntityExtractionAdapter) -> int:
     )
 
 
-def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
-    `gold_set` is in the signature for the registry's uniform call and goes
+    `data_set` is in the signature for the registry's uniform call and goes
     unused; nothing here few-shots.  The agent is built once and each case
     gets its own adapter, because the Adherence Report is per-chunk state
     and `--max-concurrency` runs cases side by side.
     """
 
-    del gold_set
+    del data_set
 
     deployment = as_deployment(model)
     agent = get_extraction_agent(deployment)

@@ -191,7 +191,7 @@ def test_coreference_is_a_registered_task_with_its_five_evaluators() -> None:
 
     assert task.name == "coreference"
     assert task.collect is None
-    assert task.gold_set_stem == "coreference"
+    assert task.data_set_stem == "coreference"
     assert [type(evaluator).__name__ for evaluator in task.evaluators] == [
         "FoundTheSilverMentionSpans",
         "AgreedOnTheCanonicalEntity",
@@ -201,13 +201,13 @@ def test_coreference_is_a_registered_task_with_its_five_evaluators() -> None:
     ]
 
 
-def test_the_annotator_task_reads_the_same_gold_set_and_omits_the_critic() -> None:
+def test_the_annotator_task_reads_the_same_silver_set_and_omits_the_critic() -> None:
     """The baseline has to be the same cases, or it is not a baseline."""
 
     pipeline = task_named("coreference")
     annotator = task_named("coreference_annotator")
 
-    assert annotator.gold_set_stem == "coreference"
+    assert annotator.data_set_stem == "coreference"
     assert annotator.input_type is pipeline.input_type
     assert annotator.output_type is pipeline.output_type
     assert annotator.metadata_type is pipeline.metadata_type

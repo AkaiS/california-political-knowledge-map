@@ -72,7 +72,7 @@ be rerun, preserving ADR 0017.
 1. As an AI engineer, I want Evaluation Runs to use OpenRouter by default, so
    that I can test prompt and task-decomposition changes without waiting on one
    local GPU.
-2. As an AI engineer, I want to run the same Evaluation Gold Set against the
+2. As an AI engineer, I want to run the same Evaluation Data Set against the
    local Model Deployment, so that I can compare the proxy with the deployment
    used by the Story Pipeline.
 3. As an AI engineer, I want OpenRouter and local reports to name different
@@ -82,7 +82,7 @@ be rerun, preserving ADR 0017.
    Evaluation Cases, Evaluation Split, task, evaluators, and report format, so
    that changing inference capacity does not create a second evaluation system.
 5. As an AI engineer, I want remote inference to remain inside the local
-   `pydantic-evals` run, so that Gold Set loading, scoring, and report writing
+   `pydantic-evals` run, so that Data Set loading, scoring, and report writing
    stay versioned by git.
 6. As an operator, I want the Story Pipeline to keep local chat inference as its
    default, so that an unattended batch does not begin spending remote capacity
@@ -227,7 +227,7 @@ be rerun, preserving ADR 0017.
   26B A4B IT release served locally.
 - OpenRouter configuration also supplies its API key and one non-empty ordered
   provider list. Selecting OpenRouter without any required value fails during
-  command setup, before Gold Set loading begins execution or a Story changes
+  command setup, before Data Set loading begins execution or a Story changes
   status.
 - All `OLLAMA_MODEL` and stage-specific `OLLAMA_MODEL_*` names are removed from
   runtime configuration, the example environment, documentation, tests, and
@@ -312,7 +312,7 @@ be rerun, preserving ADR 0017.
   unavailable rather than fabricated as remote values.
 - API keys and authorization headers never enter the report, logs, exceptions,
   cache keys, or Model Deployment value.
-- Report provenance continues to include commit, dirty-worktree flag, Gold Set,
+- Report provenance continues to include commit, dirty-worktree flag, Data Set,
   Evaluation Split, task, and run timestamp. The report remains one committed
   JSON file under ADR 0017.
 - An Evaluation Run that exhausts a task or transport retry writes no report.
@@ -373,7 +373,7 @@ be rerun, preserving ADR 0017.
   agents or inject adapters. They do not acquire real OpenRouter credentials or
   make live provider calls.
 - Prior art is the model-factory test suite, which already runs real Agents
-  against mock transports to observe retry behavior; the Evaluation Gold Set
+  against mock transports to observe retry behavior; the Evaluation Data Set
   suite, which already tests report provenance; and the command and Story
   Pipeline suites, which already test command assembly and adapter injection.
 
@@ -400,7 +400,7 @@ be rerun, preserving ADR 0017.
   before a prompt or task change reaches the Story Pipeline.
 - Per-stage model or provider configuration. One command selects one chat Model
   Deployment for all of its chat-backed components.
-- Reworking Evaluation Gold Sets, Evaluation Suites, rubrics, or task-specific
+- Reworking Evaluation Data Sets, Evaluation Suites, rubrics, or task-specific
   metrics.
 
 ## Further Notes

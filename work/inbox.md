@@ -75,7 +75,7 @@ source remain intentionally omitted from this queue.
   ingestion," so this is the capture point for the deferred decision.
 - **IG-10 · P3:** Decide whether the News Ontology needs a term for an enacted
   law. `ABOUT_TOPIC` admits only `Bill` and `Prop` as its source labels, so the
-  Topic Assignment Gold Set annotates the National Alzheimer's Project Act — a
+  Topic Assignment Data Set annotates the National Alzheimer's Project Act — a
   federal statute enacted in 2011 — as a `Bill` to make the topic edge
   expressible at all. That is a modelling gap rather than an annotation error:
   the vocabulary has no way to say "a law that already passed", and federal
@@ -89,7 +89,7 @@ source remain intentionally omitted from this queue.
 
 - **ME-01 · P0:** Define a common retry policy for transport errors, timeouts,
   malformed output, and rate limits across model-backed workflows.
-- **ME-02 · P0:** Establish trustworthy Evaluation Gold Sets backed by real
+- **ME-02 · P0:** Establish trustworthy Evaluation Data Sets backed by real
   labeled examples.
 - **ME-03 · P1:** Complete component-specific evaluations for Relevance Filter,
   Selector Healing, Coreference Resolution, Entity Extraction, and fallbacks.
@@ -109,7 +109,7 @@ will not modify that initiative.
 ## Evaluation population integrity
 
 - **EG-01 · P1:** Replace destructive removal of Evaluation Cases from later
-  Evaluation Gold Set revisions with an explicit retirement or invalidation
+  Evaluation Data Set revisions with an explicit retirement or invalidation
   state. Preserve each retired case's business identity, exact revision, prior
   split, and reason while excluding it from future Evaluation Runs. Define
   reintroduction semantics at the business-identity level so a formerly
@@ -117,7 +117,7 @@ will not modify that initiative.
   evaluations merely because its intervening membership was retired. Retirement
   is recorded through the Evaluation Ledger transaction facade
   ([ADR 0010](../docs/adr/0010-keep-one-evaluation-ledger-transaction-facade.md)),
-  so this spans the Gold Set revision API and the ledger together.
+  so this spans the Data Set revision API and the ledger together.
 
 ## Scraping and validation
 
@@ -175,7 +175,7 @@ will not modify that initiative.
 - **RC-06 · P3:** Add classification rationales only if review or evaluation
   needs them.
 - **RC-07 · P4:** Compare heuristics and logistic regression only after the
-  Evaluation Gold Set and protocol are stable.
+  Evaluation Data Set and protocol are stable.
 
 ## Evaluation contract and schema integrity
 

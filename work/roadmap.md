@@ -56,7 +56,7 @@ persistence, complete-before-write semantics, and Entity Resolution.
 
 ### 3. Measurable model quality
 
-Evaluate every model-backed component against versioned Evaluation Gold Sets,
+Evaluate every model-backed component against versioned Evaluation Data Sets,
 retain exact execution evidence, and distinguish workflow completion from model
 quality and release policy.
 

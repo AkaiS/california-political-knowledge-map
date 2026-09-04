@@ -2,16 +2,16 @@
 
 from unittest.mock import patch
 
-from knowledge_map.evaluation import run_gold_set, trace_url
-from knowledge_map.evaluation.gold_set import (
+from knowledge_map.evaluation import run_data_set, trace_url
+from knowledge_map.evaluation.data_set import (
     EvaluationCase,
-    EvaluationGoldSet,
+    EvaluationDataSet,
     EvaluationSplit,
 )
 
 
-def _gold_set(task: str = "relevance") -> EvaluationGoldSet:
-    return EvaluationGoldSet(
+def _data_set(task: str = "relevance") -> EvaluationDataSet:
+    return EvaluationDataSet(
         task=task,
         description="one case",
         cases=[
@@ -27,15 +27,15 @@ def _gold_set(task: str = "relevance") -> EvaluationGoldSet:
 
 
 def test_the_experiment_is_named_for_the_task_not_the_wrapper():
-    """`run_case` names this module's plumbing; the Gold Set names the run."""
-    report = run_gold_set(_gold_set(), task=lambda _: "out", evaluators=())
+    """`run_case` names this module's plumbing; the Data Set names the run."""
+    report = run_data_set(_data_set(), task=lambda _: "out", evaluators=())
 
     assert report.name == "relevance"
 
 
 def test_experiment_metadata_reaches_the_report():
-    report = run_gold_set(
-        _gold_set(),
+    report = run_data_set(
+        _data_set(),
         task=lambda _: "out",
         evaluators=(),
         experiment_metadata={"commit": "abc1234", "split": "held-out"},
@@ -45,13 +45,13 @@ def test_experiment_metadata_reaches_the_report():
 
 
 def test_every_case_records_the_trace_it_ran_in():
-    report = run_gold_set(_gold_set(), task=lambda _: "out", evaluators=())
+    report = run_data_set(_data_set(), task=lambda _: "out", evaluators=())
 
     assert all(case.trace_id for case in report.cases)
 
 
 def test_trace_url_addresses_the_project_the_run_reported_to():
-    report = run_gold_set(_gold_set(), task=lambda _: "out", evaluators=())
+    report = run_data_set(_data_set(), task=lambda _: "out", evaluators=())
 
     with patch(
         "knowledge_map.evaluation.report_file.project_url",
@@ -66,7 +66,7 @@ def test_trace_url_addresses_the_project_the_run_reported_to():
 
 def test_no_trace_url_is_better_than_a_dead_one():
     """A run with no known project yields nothing, not a link that 404s."""
-    report = run_gold_set(_gold_set(), task=lambda _: "out", evaluators=())
+    report = run_data_set(_data_set(), task=lambda _: "out", evaluators=())
 
     with patch(
         "knowledge_map.evaluation.report_file.project_url", return_value=None
@@ -76,7 +76,7 @@ def test_no_trace_url_is_better_than_a_dead_one():
 
 def test_an_unrecorded_run_yields_no_trace_url():
     """OpenTelemetry's all-zero id means nothing traced this; say so."""
-    report = run_gold_set(_gold_set(), task=lambda _: "out", evaluators=())
+    report = run_data_set(_data_set(), task=lambda _: "out", evaluators=())
     report.trace_id = "0" * 32
 
     with patch(

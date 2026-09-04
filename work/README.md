@@ -166,7 +166,7 @@ files and the code:
 
 - The four issues listed under "Ready for agent" were already labeled
   `completed` in their own files; the README listing was stale, as were both
-  "gated" paragraphs — Pipeline Stage Ownership 04–10 and Gold Set Construction
+  "gated" paragraphs — Pipeline Stage Ownership 04–10 and Data Set Construction
   01–03 are all `completed`.
 - [Bound transient renewal contention](projects/renewable-evaluation-finalization-authority/issues/01-bound-transient-renewal-contention-by-confirmed-authority.md)
   was implemented but never relabeled. The heartbeat compares the ledger clock
@@ -175,7 +175,7 @@ files and the code:
   `test_transient_renewal_and_ownership_contention_stop_at_confirmed_expiry`
   covers the contended-through-expiry case. Relabeled `completed`, and the
   parent PRD with it.
-- Pipeline Stage Ownership and Evaluation Gold Set Construction were relabeled
+- Pipeline Stage Ownership and Evaluation Data Set Construction were relabeled
   `completed`; every child of both is complete. No project is `ready-for-agent`.
 - The only remaining agent-takeable ticket is the Useful Graph Retrieval survey,
   which has produced no `research/` output yet.
@@ -212,13 +212,13 @@ On 2026-09-02, Policy Area Staging was built and closed:
   that walks every Protocol method and compares parameter names.
 - Topic Assignment shipped reading the Source Article's raw content while both
   of its other inputs were derived from the coreference-resolved text. Two
-  reviews of the stage missed it; building the Gold Set in 06 surfaced it,
+  reviews of the stage missed it; building the Data Set in 06 surfaced it,
   because a case cannot record what a stage is given without saying which text
   that is. Fixed in `d5bbfeb`.
 - The areas-per-article distribution issue 02 deferred was measured over the
   twenty silver cases: 57 labels across 20 articles, mean 2.85, maximum 5. No
   cap was introduced, which is what the measurement was for.
-- [IG-10](inbox.md) records what the Topic Assignment Gold Set surfaced and did
+- [IG-10](inbox.md) records what the Topic Assignment Data Set surfaced and did
   not settle: `ABOUT_TOPIC` admits only `Bill` and `Prop`, so an enacted federal
   statute is annotated as a `Bill`. A modelling gap, not an annotation error.
 

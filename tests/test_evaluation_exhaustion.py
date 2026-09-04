@@ -10,13 +10,14 @@ import pytest
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from knowledge_map.cli import evaluate
+from knowledge_map.evaluation import LabelQuality
 
 
-def _arguments(gold_set: Path, *, no_report: bool = False) -> argparse.Namespace:
+def _arguments(data_set: Path, *, no_report: bool = False) -> argparse.Namespace:
     return argparse.Namespace(
         eval_action="run",
         task="relevance",
-        gold_set=gold_set,
+        data_set=data_set,
         deployment="openrouter",
         model=None,
         split=None,
@@ -28,21 +29,22 @@ def _arguments(gold_set: Path, *, no_report: bool = False) -> argparse.Namespace
 def _task() -> SimpleNamespace:
     return SimpleNamespace(
         name="relevance",
-        gold_set_stem="relevance",
+        data_set_stem="relevance",
+        label_quality=LabelQuality.GOLD,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,
         metadata_type=dict,
         default_model="local/model",
-        build=lambda deployment, gold_set: lambda case_input: {"label": "ok"},
+        build=lambda deployment, data_set: lambda case_input: {"label": "ok"},
         evaluators=(),
     )
 
 
 @pytest.fixture
 def command_context(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
-    gold_set = tmp_path / "relevance.yaml"
-    gold_set.write_text("placeholder")
+    data_set = tmp_path / "relevance.yaml"
+    data_set.write_text("placeholder")
     report_root = tmp_path / "evals" / "reports"
     report_root.mkdir(parents=True)
     monkeypatch.chdir(tmp_path)
@@ -50,11 +52,11 @@ def command_context(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
     task = _task()
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
     monkeypatch.setattr(evaluate, "load_dotenv", lambda: None)
-    monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-evaluation-test")
     monkeypatch.setenv("OPENROUTER_MODEL", "configured/model")
     monkeypatch.setenv("OPENROUTER_PROVIDERS", "google-ai-studio")
-    return gold_set, report_root
+    return data_set, report_root
 
 
 def _failed_report(error_message: str) -> EvaluationReport:
@@ -102,12 +104,12 @@ def _successful_report() -> EvaluationReport:
 def test_exhausted_evaluation_fails_before_report_write(
     command_context: tuple[Path, Path], monkeypatch, capsys, error_message: str
 ) -> None:
-    gold_set, report_root = command_context
+    data_set, report_root = command_context
     report = _failed_report(error_message)
-    monkeypatch.setattr(evaluate, "run_gold_set", lambda *args, **kwargs: report)
+    monkeypatch.setattr(evaluate, "run_data_set", lambda *args, **kwargs: report)
 
     with pytest.raises(SystemExit, match="no report was written"):
-        evaluate.dispatch(_arguments(gold_set))
+        evaluate.dispatch(_arguments(data_set))
 
     assert error_message in capsys.readouterr().out
     assert list(report_root.rglob("*.json")) == []
@@ -116,11 +118,11 @@ def test_exhausted_evaluation_fails_before_report_write(
 def test_no_report_prints_a_successful_evaluation_without_writing(
     command_context: tuple[Path, Path], monkeypatch, capsys
 ) -> None:
-    gold_set, report_root = command_context
+    data_set, report_root = command_context
     report = _successful_report()
-    monkeypatch.setattr(evaluate, "run_gold_set", lambda *args, **kwargs: report)
+    monkeypatch.setattr(evaluate, "run_data_set", lambda *args, **kwargs: report)
 
-    evaluate.dispatch(_arguments(gold_set, no_report=True))
+    evaluate.dispatch(_arguments(data_set, no_report=True))
 
     assert "Evaluation Summary" in capsys.readouterr().out
     assert list(report_root.rglob("*.json")) == []

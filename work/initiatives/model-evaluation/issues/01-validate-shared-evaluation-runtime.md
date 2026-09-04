@@ -39,7 +39,7 @@ This preserves provider independence: suites depend on a task protocol and typed
 ### Proposed shared runtime shape
 
 ```text
-versioned gold set + suite config
+versioned data set + suite config
             |
             v
   pydantic-evals Dataset.evaluate(task)

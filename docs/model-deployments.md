@@ -56,7 +56,7 @@ Selecting OpenRouter requires all three of these non-empty values:
   request parameter must be supported by the selected provider.
 
 Missing or blank OpenRouter values are rejected during command setup, before an
-Evaluation Gold Set begins executing or a Story changes status. The application
+Evaluation Data Set begins executing or a Story changes status. The application
 does not accept a direct Google AI Studio key.
 
 ## BYOK and funded fallbacks
@@ -139,7 +139,8 @@ provider quota, or add an application spending ceiling.
 ## Read an Evaluation Run report
 
 Completed reports are JSON files under `evals/reports/<task>/`. They retain the
-Git commit, dirty-worktree flag, Gold Set, split, task, timestamp, and the
+Git commit, dirty-worktree flag, Data Set, its Label Quality, split, task,
+timestamp, and the
 structured selected Model Deployment. An exhausted or interrupted Evaluation
 Run writes no report; `--no-report` deliberately prints a completed report
 without creating a file. There is no remote run identity or resumption.

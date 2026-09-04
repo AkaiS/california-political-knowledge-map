@@ -1,5 +1,6 @@
 {
   "commit": "bbaa22b",
+  "data_set": "evals/silver/extraction.yaml",
   "deployment": {
     "endpoint": "http://localhost:8080/v1",
     "kind": "local",
@@ -18,7 +19,7 @@
     }
   },
   "dirty": true,
-  "gold_set": "evals/gold/extraction.yaml",
+  "label_quality": "silver",
   "model": "gemma4:26b",
   "ran_at": "2026-09-04T00:29:37.114283+00:00",
   "report": {
@@ -73,7 +74,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 51,
           "chunk_index": 13,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 32
@@ -207,7 +208,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 51,
           "chunk_index": 28,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 32
@@ -350,7 +351,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 51,
           "chunk_index": 41,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 32
@@ -501,7 +502,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 42,
           "chunk_index": 10,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 26
@@ -673,7 +674,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 42,
           "chunk_index": 23,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 26
@@ -818,7 +819,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 42,
           "chunk_index": 34,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 26
@@ -971,7 +972,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 44,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 60
@@ -1151,7 +1152,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 44,
           "chunk_index": 24,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 60
@@ -1304,7 +1305,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 44,
           "chunk_index": 35,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 60
@@ -1474,7 +1475,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 20
@@ -1629,7 +1630,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 24,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 20
@@ -1774,7 +1775,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 34,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 20
@@ -1934,7 +1935,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 70
@@ -2126,7 +2127,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 24,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 70
@@ -2302,7 +2303,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 43,
           "chunk_index": 34,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 70
@@ -2513,7 +2514,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 41,
           "chunk_index": 10,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 41
@@ -2658,7 +2659,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 41,
           "chunk_index": 23,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 41
@@ -2801,7 +2802,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 41,
           "chunk_index": 33,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 41
@@ -2963,7 +2964,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 37,
           "chunk_index": 9,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 24
@@ -3099,7 +3100,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 37,
           "chunk_index": 20,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 24
@@ -3259,7 +3260,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 37,
           "chunk_index": 30,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 24
@@ -3443,7 +3444,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 33,
           "chunk_index": 10,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 27
@@ -3621,7 +3622,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 33,
           "chunk_index": 23,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 27
@@ -3824,7 +3825,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 35,
           "chunk_index": 10,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 11
@@ -3984,7 +3985,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 35,
           "chunk_index": 24,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 11
@@ -4146,7 +4147,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 36,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 30
@@ -4352,7 +4353,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 36,
           "chunk_index": 25,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 30
@@ -4550,7 +4551,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 71,
           "chunk_index": 18,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 78
@@ -4699,7 +4700,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 71,
           "chunk_index": 39,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 78
@@ -4844,7 +4845,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 71,
           "chunk_index": 57,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 78
@@ -5024,7 +5025,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 58,
           "chunk_index": 14,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 37
@@ -5169,7 +5170,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 58,
           "chunk_index": 32,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 37
@@ -5314,7 +5315,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 58,
           "chunk_index": 46,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 37
@@ -5467,7 +5468,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 45,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 63
@@ -5627,7 +5628,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 45,
           "chunk_index": 25,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 63
@@ -5838,7 +5839,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 45,
           "chunk_index": 36,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 63
@@ -6016,7 +6017,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 34,
           "chunk_index": 10,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 46
@@ -6159,7 +6160,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 34,
           "chunk_index": 24,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 46
@@ -6304,7 +6305,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 29,
           "chunk_index": 9,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 59
@@ -6457,7 +6458,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 29,
           "chunk_index": 20,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 59
@@ -6619,7 +6620,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 28,
           "chunk_index": 8,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 64
@@ -6764,7 +6765,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 28,
           "chunk_index": 20,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 64
@@ -6915,7 +6916,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 27,
           "chunk_index": 8,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 48
@@ -7095,7 +7096,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 27,
           "chunk_index": 19,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 48
@@ -7240,7 +7241,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 28,
           "chunk_index": 8,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 31
@@ -7416,7 +7417,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 28,
           "chunk_index": 20,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 31
@@ -7574,7 +7575,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 31,
           "chunk_index": 9,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 16
@@ -7763,7 +7764,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 31,
           "chunk_index": 22,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 16
@@ -7918,7 +7919,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 36,
           "chunk_index": 11,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 74
@@ -8079,7 +8080,7 @@
           "annotator_model": "claude-opus-5",
           "chunk_count": 36,
           "chunk_index": 25,
-          "coreference_gold_set": "evals/gold/coreference.yaml",
+          "coreference_silver_set": "evals/silver/coreference.yaml",
           "label_quality": "silver",
           "source_table": "stories",
           "story_id": 74
@@ -8169,6 +8170,7 @@
     ],
     "experiment_metadata": {
       "commit": "bbaa22b",
+      "data_set": "evals/silver/extraction.yaml",
       "deployment": {
         "endpoint": "http://localhost:8080/v1",
         "kind": "local",
@@ -8186,7 +8188,7 @@
           "top_p": null
         }
       },
-      "gold_set": "evals/gold/extraction.yaml",
+      "label_quality": "silver",
       "prompts": {
         "extraction": "sha256:b8238763274e"
       },

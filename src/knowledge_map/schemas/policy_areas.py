@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 #: keys the node.
 POLICY_AREA_NAMES: tuple[str, ...] = tuple(area.name for area in news.POLICY_AREAS)
 
-#: The vocabulary as a type, for the Gold Sets and reports that must fail on a
+#: The vocabulary as a type, for the Data Sets and reports that must fail on a
 #: name the write path could never key rather than score a silent zero.
 PolicyAreaName = Literal[POLICY_AREA_NAMES]  # type: ignore[valid-type]
 
@@ -46,7 +46,7 @@ class PolicyAreaClassification(BaseModel):
     classifies to nothing rather than to a nearest miss, and one whose answer
     was partly off-vocabulary keeps the part that was not.
 
-    No maximum is set: the Gold Set records the distribution before any limit
+    No maximum is set: the Silver Set records the distribution before any limit
     is drawn from it.
     """
 

@@ -46,7 +46,7 @@ upstream cost. Stop full HTTPX capture while retaining normal HTTP timing,
 status, and error spans and Pydantic AI model-content instrumentation.
 
 Preserve the Evaluation Run's existing outer provenance: commit, dirty-worktree
-state, Gold Set, split, and structured Model Deployment. An interrupted or
+state, Data Set, split, and structured Model Deployment. An interrupted or
 exhausted run still writes no report. Historical reports remain unchanged.
 
 ## User Stories
@@ -170,7 +170,7 @@ exhausted run still writes no report. Historical reports remain unchanged.
   recorder, per-case request sequencing, aggregate builder, failure-object
   mutation, and failure serialization repair.
 - New reports contain neither `request_provenance` nor its run aggregate.
-- Preserve report fields for commit identity, dirty-worktree state, Gold Set,
+- Preserve report fields for commit identity, dirty-worktree state, Data Set,
   split, structured Model Deployment, cases, evaluator outputs, and Pydantic
   Evals metrics.
 - Do not migrate or rewrite historical reports. Readers may encounter the old
@@ -197,7 +197,7 @@ exhausted run still writes no report. Historical reports remain unchanged.
 - Include a request that produces no response and prove that it contributes no
   route. Preserve the separate assertion that a failed run writes no report.
 - Assert that the completed report retains Pydantic Evals' request, token, and
-  calculated-cost metrics and the existing commit, worktree, Gold Set, split,
+  calculated-cost metrics and the existing commit, worktree, Data Set, split,
   and Model Deployment fields.
 - Assert that new reports contain neither request-level provenance nor a
   provenance aggregate.
@@ -226,7 +226,7 @@ exhausted run still writes no report. Historical reports remain unchanged.
   run identity, polling, resumption, or finalization.
 - Recording evaluator-model routes in the task's Model Route Summary.
 - Writing reports for failed, interrupted, or exhausted runs.
-- Changing Evaluation Gold Sets, Evaluation Splits, evaluators, task behavior,
+- Changing Evaluation Data Sets, Evaluation Splits, evaluators, task behavior,
   case concurrency, OpenRouter routing, retry policy, or admission control.
 - A general observability redesign beyond the missing provider attribute and
   removal of blanket HTTPX capture.

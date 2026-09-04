@@ -1,6 +1,6 @@
 """Coreference Resolution as an evaluated task.
 
-Cases come from `evals/gold/coreference.yaml`, authored elsewhere and only
+Cases come from `evals/silver/coreference.yaml`, authored elsewhere and only
 read here.  It is silver, not gold: labeled by `gpt-5.6-sol`, so a run
 measures agreement with that model and a case both models get wrong scores
 as a pass.
@@ -130,16 +130,16 @@ def _output_from_failure(error: CoreferenceResolutionError) -> CoreferenceOutput
     )
 
 
-def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
-    `gold_set` is in the signature for the registry's uniform call and goes
+    `data_set` is in the signature for the registry's uniform call and goes
     unused; nothing here few-shots.  The callable is synchronous, which
     Pydantic Evals runs in a worker thread, so `--max-concurrency` still
     parallelizes.
     """
 
-    del gold_set
+    del data_set
 
     deployment = as_deployment(model)
     annotator_agent = get_annotator_agent(deployment)
@@ -161,10 +161,10 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     return resolve
 
 
-def build_annotator_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_annotator_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable for one annotator-only case, bound to a deployment."""
 
-    del gold_set
+    del data_set
 
     deployment = as_deployment(model)
     annotator_agent = get_annotator_agent(deployment)
@@ -265,11 +265,11 @@ class MatchedTheSilverClustering(Evaluator):
         precision = 0.0
         recall = 0.0
         for key in shared:
-            gold = expected_clusters[expected[key]]
+            expected_cluster = expected_clusters[expected[key]]
             predicted = found_clusters[found[key]]
-            overlap = len(gold & predicted)
+            overlap = len(expected_cluster & predicted)
             precision += overlap / len(predicted)
-            recall += overlap / len(gold)
+            recall += overlap / len(expected_cluster)
         precision /= len(shared)
         recall /= len(shared)
 
@@ -384,7 +384,7 @@ COREFERENCE_TASK = register(
         default_model=default_model(),
         # Both agents, because a loop is not the same loop when either half
         # changed.  The numbered article each also receives is rendered per
-        # case, so it belongs to the Gold Set rather than to the prompt.
+        # case, so it belongs to the Silver Set rather than to the prompt.
         prompts=lambda: {
             "annotator": ANNOTATOR_INSTRUCTIONS,
             "critic": CRITIC_INSTRUCTIONS,
@@ -397,7 +397,7 @@ COREFERENCE_TASK = register(
 COREFERENCE_ANNOTATOR_TASK = register(
     EvaluationTask(
         name="coreference_annotator",
-        gold_set_name="coreference",
+        data_set_name="coreference",
         input_type=CoreferenceInput,
         output_type=CoreferenceExpectation,
         metadata_type=CoreferenceSilverMetadata,

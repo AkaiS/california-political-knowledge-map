@@ -5,7 +5,16 @@ archived as superseded rather than closed as completed: the work in them was
 built and, in most cases, finished, and then removed by
 [ADR 0017](../../../docs/adr/0017-git-is-the-evaluation-versioning-system.md),
 which replaced relational persistence of evaluation records with two committed
-file types — a Gold Set YAML and a run report JSON.
+file types — an Evaluation Data Set YAML and a run report JSON.
+
+> **On the word "Gold Set" below and throughout this archive.** These projects
+> used it for every evaluation file. Only `evals/gold/relevance.yaml` was ever
+> gold: a person labeled it. Coreference, extraction, Policy Area Classification
+> and Topic Assignment were labeled by a model against a written guideline,
+> which makes them Silver Sets, and they now live under `evals/silver/`. The
+> umbrella term is Evaluation Data Set. See the amendment to
+> [ADR 0017](../../../docs/adr/0017-git-is-the-evaluation-versioning-system.md).
+> The text below is left as it was written.
 
 - **Case Evaluation Requirements** — semantic requirements on cases, satisfied
   by suite-owned evaluators, resolved into a plan before execution.

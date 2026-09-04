@@ -19,8 +19,8 @@ import knowledge_map.adapters.coreference as coreference_adapter_module
 import knowledge_map.evaluation.tasks.coreference as coreference_task_module
 from knowledge_map.evaluation import (
     EvaluationCase,
-    EvaluationGoldSet,
-    run_gold_set,
+    EvaluationDataSet,
+    run_data_set,
     write_report,
 )
 from knowledge_map.evaluation.tasks.coreference import (
@@ -51,8 +51,8 @@ class _ModelOutputAcceptanceEvaluator(Evaluator):
         return (await self.agent.run(f"Judge {ctx.output}")).output == "accepted"
 
 
-def _build_model_route_gold_set(case_id: str = "case-route") -> EvaluationGoldSet:
-    return EvaluationGoldSet(
+def _build_model_route_data_set(case_id: str = "case-route") -> EvaluationDataSet:
+    return EvaluationDataSet(
         task="model-routes",
         description="Model route summary cases.",
         cases=(
@@ -147,8 +147,8 @@ def test_completed_report_serializes_one_observed_model_route(
         deployment,
         lambda request: httpx.Response(200, json=_build_chat_completion_payload()),
     )
-    report = run_gold_set(
-        _build_model_route_gold_set(),
+    report = run_data_set(
+        _build_model_route_data_set(),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -165,7 +165,7 @@ def test_completed_report_serializes_one_observed_model_route(
         report,
         task="model-routes",
         deployment=deployment,
-        gold_set_path=tmp_path / "gold.yaml",
+        data_set_path=tmp_path / "relevance.yaml",
         root=tmp_path / "reports",
     )
     document = json.loads(path.read_text())
@@ -179,8 +179,8 @@ def test_completed_report_serializes_one_observed_model_route(
 
 
 def test_successful_case_without_a_model_response_has_no_routes() -> None:
-    report = run_gold_set(
-        _build_model_route_gold_set("case-without-response"),
+    report = run_data_set(
+        _build_model_route_data_set("case-without-response"),
         task=lambda case_input: case_input.prompt,
         evaluators=(),
     )
@@ -214,8 +214,8 @@ def test_repeated_and_mixed_routes_are_grouped_in_stable_order(monkeypatch) -> N
         outputs = [agent.run_sync(case_input.prompt).output for _ in range(3)]
         return " ".join(outputs)
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-grouped"), task=task, evaluators=()
+    report = run_data_set(
+        _build_model_route_data_set("case-grouped"), task=task, evaluators=()
     )
 
     assert report.cases[0].attributes["model_routes"] == [
@@ -245,8 +245,8 @@ def test_missing_response_model_uses_pydantic_ai_fallback(monkeypatch) -> None:
         ),
     )
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-model-fallback"),
+    report = run_data_set(
+        _build_model_route_data_set("case-model-fallback"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -272,8 +272,8 @@ def test_missing_openrouter_provider_is_not_inferred_from_configuration(
         ),
     )
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-no-provider"),
+    report = run_data_set(
+        _build_model_route_data_set("case-no-provider"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -300,8 +300,8 @@ def test_local_response_has_no_downstream_provider() -> None:
         ),
     )
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-local"),
+    report = run_data_set(
+        _build_model_route_data_set("case-local"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
@@ -351,8 +351,8 @@ def test_evaluator_model_request_is_excluded_but_its_result_remains(
         ),
     )
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-evaluator"),
+    report = run_data_set(
+        _build_model_route_data_set("case-evaluator"),
         task=lambda case_input: task_agent.run_sync(case_input.prompt).output,
         evaluators=(_ModelOutputAcceptanceEvaluator(agent=judge_agent),),
     )
@@ -370,7 +370,7 @@ def test_evaluator_model_request_is_excluded_but_its_result_remains(
 def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-concurrency")
     deployment = _build_openrouter_model_route_deployment()
-    gold_set = EvaluationGoldSet(
+    data_set = EvaluationDataSet(
         task="model-routes",
         description="Concurrent route cases.",
         cases=(
@@ -410,8 +410,8 @@ def test_concurrent_cases_receive_only_their_own_route(monkeypatch) -> None:
         ),
     )
 
-    report = run_gold_set(
-        gold_set,
+    report = run_data_set(
+        data_set,
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
         max_concurrency=2,
@@ -442,7 +442,7 @@ def test_completed_coreference_report_counts_sequential_resolution_rounds(
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-model-route-coreference")
     deployment = _build_openrouter_model_route_deployment()
-    gold_set = EvaluationGoldSet(
+    data_set = EvaluationDataSet(
         task="coreference",
         description="Sequential Coreference Resolution route cases.",
         cases=(
@@ -517,9 +517,9 @@ def test_completed_coreference_report_counts_sequential_resolution_rounds(
         "get_chat_model",
         lambda requested: get_chat_model(requested, transport=transport),
     )
-    resolve = coreference_task_module.build_task(deployment, gold_set)
+    resolve = coreference_task_module.build_task(deployment, data_set)
 
-    report = run_gold_set(gold_set, task=resolve, evaluators=())
+    report = run_data_set(data_set, task=resolve, evaluators=())
 
     assert not report.failures
     assert stage_calls == {"annotator": 1, "critic": 2, "correction": 1}
@@ -539,7 +539,7 @@ def test_completed_coreference_report_counts_sequential_resolution_rounds(
         report,
         task="coreference",
         deployment=deployment,
-        gold_set_path=tmp_path / "gold.yaml",
+        data_set_path=tmp_path / "relevance.yaml",
         root=tmp_path / "reports",
     )
     serialized_routes = json.loads(path.read_text())["report"]["cases"][0][
@@ -566,8 +566,8 @@ def test_request_without_a_response_does_not_contribute_a_route() -> None:
         except ModelAPIError:
             return "task fallback"
 
-    report = run_gold_set(
-        _build_model_route_gold_set("case-request-without-response"),
+    report = run_data_set(
+        _build_model_route_data_set("case-request-without-response"),
         task=task,
         evaluators=(),
     )
@@ -594,18 +594,18 @@ def test_serialized_route_summary_preserves_metrics_and_run_provenance(
             ),
         ),
     )
-    report = run_gold_set(
-        _build_model_route_gold_set("case-complete-report"),
+    report = run_data_set(
+        _build_model_route_data_set("case-complete-report"),
         task=lambda case_input: agent.run_sync(case_input.prompt).output,
         evaluators=(),
     )
-    gold_set_path = tmp_path / "gold.yaml"
+    data_set_path = tmp_path / "relevance.yaml"
 
     path = write_report(
         report,
         task="model-routes",
         deployment=deployment,
-        gold_set_path=gold_set_path,
+        data_set_path=data_set_path,
         split="held-out",
         root=tmp_path / "reports",
     )
@@ -630,5 +630,5 @@ def test_serialized_route_summary_preserves_metrics_and_run_provenance(
     assert document["deployment"] == deployment.model_dump(mode="json")
     assert document["commit"]
     assert isinstance(document["dirty"], bool)
-    assert document["gold_set"] == str(gold_set_path)
+    assert document["data_set"] == str(data_set_path)
     assert document["split"] == "held-out"

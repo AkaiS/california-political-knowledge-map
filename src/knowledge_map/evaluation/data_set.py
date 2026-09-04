@@ -1,8 +1,11 @@
-"""Evaluation Gold Sets authored as version-controlled YAML files.
+"""Evaluation Data Sets authored as version-controlled YAML files.
 
-A Gold Set is one file under ``evals/gold/``. Its revision is a commit; see
-ADR 0017. Nothing here persists to a database, and nothing here computes an
-identity: a case's ``id`` and ``split`` are authored by hand.
+A Data Set is one file under ``evals/gold/`` or ``evals/silver/``, and which
+of the two it is says who wrote the labels: a human for a Gold Set, a model
+working to an annotation guideline for a Silver Set. The directory carries
+that, so no reader has to infer it from a description. Its revision is a
+commit; see ADR 0017. Nothing here persists to a database, and nothing here
+computes an identity: a case's ``id`` and ``split`` are authored by hand.
 """
 
 from __future__ import annotations
@@ -18,6 +21,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 InputT = TypeVar("InputT")
 OutputT = TypeVar("OutputT")
 MetadataT = TypeVar("MetadataT")
+
+
+class LabelQuality(str, Enum):
+    """Who wrote a Data Set's labels, which is how far a score can be read.
+
+    A `GOLD` score is agreement with a person. A `SILVER` score is agreement
+    with another model's reading of a guideline, so a case the annotator got
+    wrong scores a correct answer as a miss, and the two must never be
+    compared as though they measured the same thing.
+    """
+
+    GOLD = "gold"
+    SILVER = "silver"
 
 
 class EvaluationSplit(str, Enum):
@@ -44,7 +60,7 @@ class EvaluationCase(BaseModel, Generic[InputT, OutputT, MetadataT]):
     tags: tuple[str, ...] = ()
 
 
-class EvaluationGoldSet(BaseModel, Generic[InputT, OutputT, MetadataT]):
+class EvaluationDataSet(BaseModel, Generic[InputT, OutputT, MetadataT]):
     """Every authored case for one task, as read from one YAML file."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -54,12 +70,12 @@ class EvaluationGoldSet(BaseModel, Generic[InputT, OutputT, MetadataT]):
     cases: tuple[EvaluationCase[InputT, OutputT, MetadataT], ...] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def case_ids_are_unique(self) -> EvaluationGoldSet[InputT, OutputT, MetadataT]:
+    def case_ids_are_unique(self) -> EvaluationDataSet[InputT, OutputT, MetadataT]:
         seen: set[str] = set()
         repeated = sorted({c.id for c in self.cases if c.id in seen or seen.add(c.id)})
         if repeated:
             raise ValueError(
-                "an Evaluation Gold Set cannot repeat a case id: " + ", ".join(repeated)
+                "an Evaluation Data Set cannot repeat a case id: " + ", ".join(repeated)
             )
         return self
 
@@ -70,19 +86,26 @@ class EvaluationGoldSet(BaseModel, Generic[InputT, OutputT, MetadataT]):
         return tuple(case for case in self.cases if case.split is split)
 
 
-def gold_set_path(task: str, *, root: Path | None = None) -> Path:
-    """Locate the Gold Set file for ``task``."""
-    return (root or Path("evals/gold")) / f"{task}.yaml"
+def data_set_path(
+    task: str, label_quality: LabelQuality, *, root: Path | None = None
+) -> Path:
+    """Locate the Data Set file for ``task``.
+
+    ``label_quality`` selects the directory rather than defaulting to one,
+    because a file's directory is the project's record of who labeled it and
+    a wrong guess would file a model's labels among a person's.
+    """
+    return (root or Path("evals")) / label_quality.value / f"{task}.yaml"
 
 
-def load_gold_set(
+def load_data_set(
     path: Path | str,
     *,
     input_type: type[Any] = Any,
     output_type: type[Any] = Any,
     metadata_type: type[Any] = Any,
-) -> EvaluationGoldSet[Any, Any, Any]:
-    """Read and validate one Gold Set file.
+) -> EvaluationDataSet[Any, Any, Any]:
+    """Read and validate one Data Set file.
 
     Pass the task's own types to validate every case's ``task_input`` and
     ``expected_output`` as the file is read.
@@ -90,6 +113,6 @@ def load_gold_set(
     path = Path(path)
     document = yaml.safe_load(path.read_text())
     if not isinstance(document, Mapping):
-        raise ValueError(f"{path} does not contain a Gold Set mapping")
-    model = EvaluationGoldSet[input_type, output_type, metadata_type]  # type: ignore[valid-type]
+        raise ValueError(f"{path} does not contain an Evaluation Data Set mapping")
+    model = EvaluationDataSet[input_type, output_type, metadata_type]  # type: ignore[valid-type]
     return model.model_validate(document)

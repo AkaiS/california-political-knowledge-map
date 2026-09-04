@@ -10,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from knowledge_map.cli import evaluate
+from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.tasks import EvaluationTask, task_named, task_names
 
 
@@ -18,7 +19,7 @@ def _task(prompts) -> EvaluationTask:
         name="fixture",
         input_type=dict,
         output_type=dict,
-        build=lambda deployment, gold_set: lambda case_input: {},
+        build=lambda deployment, data_set: lambda case_input: {},
         evaluators=(),
         default_model="fixture/model",
         prompts=prompts,
@@ -75,16 +76,17 @@ def test_the_run_command_carries_the_digests_into_experiment_metadata(
     tmp_path: Path, monkeypatch
 ) -> None:
     captured: dict[str, object] = {}
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text("placeholder")
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text("placeholder")
 
     task = SimpleNamespace(
         name="relevance",
-        gold_set_stem="relevance",
+        data_set_stem="relevance",
+        label_quality=LabelQuality.GOLD,
         input_type=dict,
         output_type=dict,
         metadata_type=dict,
-        build=lambda deployment, gold_set: lambda case_input: {},
+        build=lambda deployment, data_set: lambda case_input: {},
         evaluators=(),
         prompt_digests=lambda: {"relevance": "sha256:0123456789ab"},
     )
@@ -95,15 +97,15 @@ def test_the_run_command_carries_the_digests_into_experiment_metadata(
         return report
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())
-    monkeypatch.setattr(evaluate, "run_gold_set", capture)
+    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(evaluate, "run_data_set", capture)
     monkeypatch.setattr(evaluate, "write_report", lambda *a, **k: tmp_path / "r.json")
 
     evaluate.dispatch(
         argparse.Namespace(
             eval_action="run",
             task="relevance",
-            gold_set=gold_set_path,
+            data_set=data_set_path,
             deployment="local",
             model="local/model",
             split=None,

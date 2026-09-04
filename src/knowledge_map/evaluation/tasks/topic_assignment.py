@@ -1,6 +1,6 @@
 """Topic Assignment as an evaluated task.
 
-Cases come from `evals/gold/topic_assignment.yaml`, authored elsewhere and only
+Cases come from `evals/silver/topic_assignment.yaml`, authored elsewhere and only
 read here.  It is silver, not gold: labeled by `claude-opus-5` against
 `docs/evaluation/topic-assignment-annotation.md`, so a run measures agreement
 with that annotator and a pair both it and the model miss scores as a pass.
@@ -9,7 +9,7 @@ A case is one whole Source Article together with the two things the stage is
 given beside it: the Policy Areas classification found, and every Bill and Prop
 the article's extractions produced.  That is the stage's whole input in
 production, so it is what a case holds.  The twenty articles are the twenty
-Stories of `evals/gold/coreference.yaml`, so every stage is measured over one
+Stories of `evals/silver/coreference.yaml`, so every stage is measured over one
 population.
 
 Scoring is on measure-to-area **pairs**, with the measure named by extraction's
@@ -49,7 +49,7 @@ from .registry import EvaluationTask, register
 #: The measure labels an `ABOUT_TOPIC` edge may start from, as the silver side
 #: is allowed to write them.  Read from the ontology through the stage that
 #: collects the measures, so a label the graph could never hold fails when the
-#: Gold Set is read rather than scoring a silent zero on every run.
+#: Silver Set is read rather than scoring a silent zero on every run.
 MeasureLabel = Literal[tuple(sorted(MEASURE_LABELS))]  # type: ignore[valid-type]
 
 
@@ -95,11 +95,11 @@ class SilverTopicAssignment(BaseModel):
     `PolicyAreaName` because an area outside the closed vocabulary is one the
     classified set could never contain and the write path could never key;
     `measure_label` is a `MeasureLabel` because an `ABOUT_TOPIC` edge starts
-    nowhere else.  Either mistake fails when the Gold Set is read rather than
+    nowhere else.  Either mistake fails when the Silver Set is read rather than
     scoring a silent zero against every model on every run.
 
     The one half no type can guard is the measure's surface string, which is
-    free text by construction.  Its guard is the Gold Set's loading test:
+    free text by construction.  Its guard is the Silver Set's loading test:
     every measure a case names is one the extraction Silver Set or the article
     itself contains.
     """
@@ -142,7 +142,7 @@ class AssignmentOutput(BaseModel):
 class AssignmentSilverMetadata(BaseModel):
     """Source and model provenance for one silver-labeled Source Article.
 
-    `coreference_gold_set` and `extraction_gold_set` name the files a case's
+    `coreference_silver_set` and `extraction_silver_set` name the files a case's
     text and measures were taken from, because re-deriving either from a later
     revision would silently change what the case is asking about.
     """
@@ -154,14 +154,14 @@ class AssignmentSilverMetadata(BaseModel):
     label_quality: Literal["silver"]
     annotator_model: str
     annotation_guideline: str
-    coreference_gold_set: str
-    extraction_gold_set: str
+    coreference_silver_set: str
+    extraction_silver_set: str
 
 
-def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
-    `gold_set` is in the signature for the registry's uniform call and goes
+    `data_set` is in the signature for the registry's uniform call and goes
     unused; nothing here few-shots.  The stage under test is the adapter's
     `assign`, so a run measures the judgement the stage owns rather than a
     prompt this file would otherwise restate.
@@ -173,7 +173,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     not given costs precision in the report instead.
     """
 
-    del gold_set
+    del data_set
 
     deployment = as_deployment(model)
     adapter = PydanticAIPolicyAreaAdapter(

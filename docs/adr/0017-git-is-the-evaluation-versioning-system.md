@@ -1,8 +1,8 @@
 # Git is the evaluation versioning system
 
-An Evaluation Gold Set is a YAML file under `evals/gold/`. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Gold Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and each successful Evaluation Case's Model Route Summary. Pydantic Evals report metrics and Logfire/OpenTelemetry cover the operational request details. Comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
+An Evaluation Data Set is a YAML file under `evals/gold/` or `evals/silver/`, according to whether a person or a model wrote its labels. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Data Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and each successful Evaluation Case's Model Route Summary. Pydantic Evals report metrics and Logfire/OpenTelemetry cover the operational request details. Comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
 
-This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their entirety. It also restates the decision recorded as ADR 0018 on `feat/evaluations` — Gold Sets are authored as version-controlled files — so that decision survives without porting the branch it was written on.
+This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their entirety. It also restates the decision recorded as ADR 0018 on `feat/evaluations` — Evaluation Data Sets are authored as version-controlled files — so that decision survives without porting the branch it was written on.
 
 `pydantic-evals` remains the execution substrate, unchanged. It was never the problem: `engine.py` imports `Case`, `Dataset`, `Evaluator`, `ReportEvaluator`, and `EvaluationReport` from it and imports nothing from `store.py`. Everything this decision removes was built around `pydantic-evals`, not through it.
 
@@ -54,25 +54,25 @@ Two properties do not survive, and both are deliberate. Automated Release Gate e
 
 ## Considered options
 
-Keeping the ledger and writing the first Gold Set against it was rejected. The obstacle to writing a Gold Set has never been a missing mechanism — it is that every attempt to author one first required deciding how the authoring itself would be versioned, and that question has consumed three weeks and produced no cases. The mechanism is what stands between the author and the work.
+Keeping the ledger and writing the first Data Set against it was rejected. The obstacle to writing a Data Set has never been a missing mechanism — it is that every attempt to author one first required deciding how the authoring itself would be versioned, and that question has consumed three weeks and produced no cases. The mechanism is what stands between the author and the work.
 
 Keeping the ledger dormant and unused, deleting nothing, was rejected. Nine thousand lines that no execution path reaches still cost every reading of `CONTEXT.md`, every schema change that must stay consistent with a table nobody writes to, and every future decision that must be checked against eight ADRs describing a system that does not run.
 
-Deleting evaluation entirely, including `pydantic-evals` and the Gold Set format, was rejected. The goal that motivated all of this — knowing how well each non-deterministic component performs — is correct and unmet. What failed was the persistence layer, not the intent. `engine.py` and a YAML file are enough to start measuring this week.
+Deleting evaluation entirely, including `pydantic-evals` and the Data Set format, was rejected. The goal that motivated all of this — knowing how well each non-deterministic component performs — is correct and unmet. What failed was the persistence layer, not the intent. `engine.py` and a YAML file are enough to start measuring this week.
 
-Calibrating the ledger against real runs before deciding was rejected as circular. Calibration requires runs; runs require a Gold Set; the Gold Set has been blocked on the ledger.
+Calibrating the ledger against real runs before deciding was rejected as circular. Calibration requires runs; runs require a Data Set; the Data Set has been blocked on the ledger.
 
 ## Consequences
 
 `store.py`, `runs.py`, `preflight.py`, `bindings.py`, and `compatibility.py` are removed. `definitions.py` is reduced to the `EvaluationCase` shape `engine.py` imports. `suites.py` keeps evaluator configuration and loses ledger binding. `runner.py` loses its ledger half. `__init__.py` and `runner.py` are the only files importing `store.py`, so the largest removal touches two call sites.
 
-Thirteen test files covering ledger behavior are removed with the code they cover: the 11 `tests/test_evaluation_*.py` files, `tests/test_metric_observation_ownership.py`, and `tests/conftest.py`, whose only contents were Gold Set construction helpers.
+Thirteen test files covering ledger behavior are removed with the code they cover: the 11 `tests/test_evaluation_*.py` files, `tests/test_metric_observation_ownership.py`, and `tests/conftest.py`, whose only contents were Data Set construction helpers.
 
-`CONTEXT.md` loses roughly 35 evaluation terms, among them Evaluation Ledger, Evaluation Finalization, Evaluation Finalization Attempt, Frozen Aggregate Manifest, Evidence Contract Version, Evaluation Checkpoint, Schema Reference, Resolved Schema Binding, Structured Metric Observation Materialization, Evaluation Artifact, Artifact Location, and Release Gate. Evaluation Gold Set, Evaluation Case, Evaluation Split, Evaluation Suite, and Evaluation Rubric survive with their definitions narrowed to what a file and a report can carry.
+`CONTEXT.md` loses roughly 35 evaluation terms, among them Evaluation Ledger, Evaluation Finalization, Evaluation Finalization Attempt, Frozen Aggregate Manifest, Evidence Contract Version, Evaluation Checkpoint, Schema Reference, Resolved Schema Binding, Structured Metric Observation Materialization, Evaluation Artifact, Artifact Location, and Release Gate. Evaluation Data Set, Evaluation Case, Evaluation Split, Evaluation Suite, and Evaluation Rubric survive with their definitions narrowed to what a file and a report can carry.
 
 Every `work/projects/` entry specifying the removed contract is closed as superseded rather than completed, including `shared-evaluation-contract`, `unified-evaluation-execution`, `evaluation-contract-hardening`, `case-evaluation-requirements`, `report-case-evidence-contract`, `structured-metric-observation-materialization`, `renewable-evaluation-finalization-authority`, and `gold-set-construction-factory`.
 
-An Evaluation Case carries a stable authored `id`, written by hand or derived from the Source Article URL. This is the one guarantee the construction factory provided that a plain file does not get for free, and without it a regenerated Gold Set silently breaks comparison against every earlier report. It is a required field, not a generated identity.
+An Evaluation Case carries a stable authored `id`, written by hand or derived from the Source Article URL. This is the one guarantee the construction factory provided that a plain file does not get for free, and without it a regenerated Data Set silently breaks comparison against every earlier report. It is a required field, not a generated identity.
 
 Evaluation Split stops being derived by hashing a case's business identity and becomes an authored field on the case. Hand-balancing replaces pinning.
 
@@ -84,3 +84,24 @@ keep Pydantic Evals' built-in metrics and add only the per-case Model Route
 Summary. Historical reports are not rewritten.
 
 The removed code stays in this branch's history and on `feat/evaluations`, which is not merged and not deleted. Recovering any part of it is a checkout, so nothing here is a decision that cannot be reversed by reading it back out.
+
+## Amendment: Gold Set was the wrong name for four of the five files
+
+Recorded after the fact, because the original text of this ADR called every
+evaluation file a Gold Set and only one of them ever was.
+
+`evals/gold/relevance.yaml` is human-labeled and is the project's only Gold
+Set. Coreference, extraction, Policy Area Classification and Topic Assignment
+were all labeled by a model working to a written annotation guideline, which
+makes them Silver Sets: a score against one is agreement with another model's
+reading of that guideline, not with a person, and a case the annotator got
+wrong scores a correct answer as a miss. Reading those numbers as though they
+were human agreement overstates every one of them.
+
+The umbrella term is now Evaluation Data Set; Gold Set and Silver Set are the
+two kinds, and no term covers them loosely. The four silver files moved to
+`evals/silver/`, `label_quality` is declared on the task and written into
+every report, and reports written before this amendment were rewritten to
+name the file they actually ran against. Earlier `evals/gold/` paths in
+committed history are the old layout, not a claim that those labels were
+human.

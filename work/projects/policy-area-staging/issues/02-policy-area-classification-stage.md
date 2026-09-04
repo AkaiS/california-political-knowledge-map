@@ -36,7 +36,7 @@ graph with its entities. A failure routes to the Dead Letter Queue and sets
 Article Status the way a coreference failure does, so the pipeline keeps one
 vocabulary of failure.
 
-No maximum number of areas is set. The Gold Set in 05 records the distribution
+No maximum number of areas is set. The Silver Set in 05 records the distribution
 first, following the precedent set for the coreference discard threshold: no
 untested threshold blocks ingestion before there is data to set it from.
 

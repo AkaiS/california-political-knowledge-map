@@ -1,11 +1,11 @@
 # Topic Assignment annotation guideline
 
 The standard the Topic Assignment Silver Set is annotated against. Every case in
-`evals/gold/topic_assignment.yaml` names this file in its `annotation_guideline`
+`evals/silver/topic_assignment.yaml` names this file in its `annotation_guideline`
 metadata, because a judgment call made one way in one article and the other way
 in the next produces a Silver Set that no score can be read against.
 
-You are producing a **gold-quality** annotation of the measure-to-area pairs one
+You are producing a **careful, guideline-faithful** annotation of the measure-to-area pairs one
 Source Article supports, given the areas and the measures the stage is given.
 
 ## What a case is
@@ -13,7 +13,7 @@ Source Article supports, given the areas and the measures the stage is given.
 One Source Article as its **coreference-resolved** text, together with the two
 things the stage receives beside it:
 
-- **the Policy Areas** `evals/gold/policy_area_classification.yaml` holds for the
+- **the Policy Areas** `evals/silver/policy_area_classification.yaml` holds for the
   same article, which is the classified set the stage is handed; and
 - **the measures** the article's extractions produced: every Bill and Prop, named
   by the surface string extraction reports.
@@ -85,12 +85,12 @@ before persistence, and the loading test holds the file to both:
 
 An area the article genuinely connects to a measure but classification did not
 find is not an answer here. It is a classification miss, it is scored as one in
-that Gold Set, and asking for it here would score the same mistake twice and
+that Silver Set, and asking for it here would score the same mistake twice and
 ask a model for an edge the pipeline would drop.
 
 ## Observed pairs per article
 
-Measured from the twenty cases of `evals/gold/topic_assignment.yaml`.
+Measured from the twenty cases of `evals/silver/topic_assignment.yaml`.
 
 | Pairs in one article | Articles |
 | --- | --- |

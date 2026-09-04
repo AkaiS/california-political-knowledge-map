@@ -89,7 +89,7 @@ def test_every_evaluator_returns_a_type_pydantic_evals_accepts() -> None:
 def test_extraction_is_a_registered_task_with_its_six_evaluators() -> None:
     task = task_named("extraction")
 
-    assert task.gold_set_stem == "extraction"
+    assert task.data_set_stem == "extraction"
     assert task.input_type is ExtractionInput
     assert task.output_type is ExtractionExpectation
     assert [type(evaluator).__name__ for evaluator in task.evaluators] == [

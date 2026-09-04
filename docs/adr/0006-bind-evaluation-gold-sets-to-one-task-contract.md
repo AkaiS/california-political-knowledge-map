@@ -1,6 +1,6 @@
 # Bind Evaluation Gold Sets to one task contract
 
-Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+Superseded by ADR 0017. Its term "Evaluation Gold Set" is also retired: see the amendment to ADR 0017. Four of the five sets it covered were labeled by a model, not a person, and are now Silver Sets under `evals/silver/`; only `evals/gold/relevance.yaml` was ever gold. The decision text below is left as it was taken. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
 
 The membership portion of this decision is amended below: an expected output is optional, and compatibility is enforced at the construction factory rather than by the aggregate's own validators.
 

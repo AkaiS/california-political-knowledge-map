@@ -24,7 +24,7 @@ Larger context makes the Critic's judgement worse, not better.
 
 Third, the Coreference Critic returns a single `is_valid` boolean for the whole
 article. There is no way to keep the correct annotations and discard only the
-wrong ones, and no per-annotation signal to measure against a gold set.
+wrong ones, and no per-annotation signal to measure against a silver set.
 
 Articles that exhaust the retry budget are written to the Dead Letter Queue with
 `failure_type="structural_mismatch"` and their Article Status set to
@@ -93,7 +93,7 @@ chunk, embed, and extract from.
 29. As a system operator, I want no article to reach `FAILED_DLQ` for a transcription defect, so that the queue holds only annotation, matching, and transport failures worth reading.
 30. As an AI engineer, I want the Dead Letter Queue record for a coreference failure to carry the Mention Spans and their validation outcomes rather than a failed annotated article, so that a failure record is directly replayable against a new prompt.
 31. As an AI engineer, I want the `structural_mismatch` failure type retired, so that the failure vocabulary describes failures that can still occur.
-32. As an AI engineer, I want per-Mention-Span outcomes available from the resolution run, so that the future Coreference Resolution evaluation can score references individually against a gold set.
+32. As an AI engineer, I want per-Mention-Span outcomes available from the resolution run, so that the future Coreference Resolution evaluation can score references individually against a silver set.
 33. As a developer, I want the Article Chunk's text to remain the resolved text, so that embeddings carry the canonical entity names that make a chunk retrievable.
 34. As a developer, I want no Mention Span provenance written to the graph, so that the write path gains no new schema and the Source Article remains the source for quotation.
 35. As a developer, I want abbreviations and other splitter artefacts to degrade to a mis-numbered line rather than to lost text, so that a splitter weakness costs at most one Mention Span.
@@ -266,7 +266,7 @@ the functions.
 - Marking substituted text in the Article Chunk, whether by brackets or otherwise.
 - Embedding the original text instead of the resolved text; the resolved text stays the embedding input.
 - Changing `chunk_article`, the overlap refinery, or the Article Chunk schema.
-- Building the Coreference Resolution evaluation or its gold set; this work only makes per-reference scoring possible.
+- Building the Coreference Resolution evaluation or its silver set; this work only makes per-reference scoring possible.
 - Automatic replay of Dead Letter Queue records.
 - Setting a discard-proportion threshold that fails an article on partial discard.
 - Splitting the annotator call across sentence ranges for long articles.
@@ -301,7 +301,7 @@ How this rework gets judged, given that evaluation work is deliberately paused:
 - **Do not unpause the evaluation framework for this.** The Coreference
   evaluation in the
   [Model Evaluation initiative](../../initiatives/model-evaluation/MAP.md) stays
-  frozen; the hand-check is a one-time judgment, not an Evaluation Gold Set.
+  frozen; the hand-check is a one-time judgment, not an Evaluation Silver Set.
 - Related: the bracketed rendering of substitutions in retrieval answers doubles
   as an ongoing visibility check on coreference quality, since a reader sees every
   alteration. See

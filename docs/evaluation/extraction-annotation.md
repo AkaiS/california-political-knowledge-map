@@ -1,17 +1,17 @@
 # Extraction annotation guideline
 
 The standard the extraction Silver Set is annotated against. Every case in
-`evals/gold/extraction.yaml` names this file in its `annotation_guideline`
+`evals/silver/extraction.yaml` names this file in its `annotation_guideline`
 metadata, because a judgment call made one way in one chunk and the other way
 in the next produces a Silver Set that no score can be read against.
 
-You are producing a **gold-quality** extraction annotation of one Article
+You are producing a **careful, guideline-faithful** extraction annotation of one Article
 Chunk against the News Ontology.
 
 ## What a case is
 
 One Article Chunk, and nothing else. The chunks were cut by `chunk_article`
-from the 20 Stories of `evals/gold/coreference.yaml` **after** their accepted
+from the 20 Stories of `evals/silver/coreference.yaml` **after** their accepted
 silver Mention Spans were substituted, so the text reads the way extraction
 sees it in production: repetitive, with canonical names standing where
 pronouns were. Annotate that text as it is.
