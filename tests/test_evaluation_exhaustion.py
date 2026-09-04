@@ -29,6 +29,7 @@ def _task() -> SimpleNamespace:
     return SimpleNamespace(
         name="relevance",
         gold_set_stem="relevance",
+        prompt_digests=dict,
         input_type=dict,
         output_type=dict,
         metadata_type=dict,

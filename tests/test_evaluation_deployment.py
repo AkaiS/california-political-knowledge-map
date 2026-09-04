@@ -57,6 +57,7 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
     task = SimpleNamespace(
         name="relevance",
         gold_set_stem="relevance",
+        prompt_digests=dict,
         input_type=dict,
         output_type=dict,
         metadata_type=dict,
@@ -215,6 +216,7 @@ def test_incomplete_openrouter_configuration_fails_before_gold_set_execution(
     task = SimpleNamespace(
         name="relevance",
         gold_set_stem="relevance",
+        prompt_digests=dict,
         default_model="local/model",
     )
 

@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.adapters.policy_areas import (
+    ASSIGNMENT_INSTRUCTIONS,
     PydanticAIPolicyAreaAdapter,
     TopicAssignmentError,
     get_assignment_agent,
@@ -279,6 +280,7 @@ TOPIC_ASSIGNMENT_TASK = register(
             AssignedWithoutFailing(),
         ),
         default_model=default_model(),
+        prompts=lambda: {"assignment": ASSIGNMENT_INSTRUCTIONS},
         collect=None,
     )
 )

@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.adapters.policy_areas import (
+    CLASSIFICATION_INSTRUCTIONS,
     PolicyAreaClassificationError,
     PydanticAIPolicyAreaAdapter,
     get_classification_agent,
@@ -178,6 +179,7 @@ POLICY_AREA_CLASSIFICATION_TASK = register(
             ClassifiedWithoutFailing(),
         ),
         default_model=default_model(),
+        prompts=lambda: {"classification": CLASSIFICATION_INSTRUCTIONS},
         collect=None,
     )
 )

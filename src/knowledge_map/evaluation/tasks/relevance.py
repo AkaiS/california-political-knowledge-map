@@ -192,6 +192,10 @@ RELEVANCE_TASK = register(
         build=build_task,
         evaluators=(MatchesTheAuthorsLabel(), RecalledARelevantArticle()),
         default_model=default_model(),
+        # The instructions only.  The few-shot examples wrapped around them
+        # are drawn from the Gold Set's `training` split, which the report
+        # already names by path and commit.
+        prompts=lambda: {"relevance": RELEVANCE_AGENT_INSTRUCTIONS},
         collect=collect_candidates,
     )
 )

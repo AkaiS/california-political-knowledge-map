@@ -23,6 +23,7 @@ from knowledge_map.adapters.extraction import (
     ExtractionError,
     PydanticAIEntityExtractionAdapter,
     get_extraction_agent,
+    load_instructions,
 )
 from knowledge_map.schemas import (
     ExtractionResult,
@@ -331,6 +332,9 @@ EXTRACTION_TASK = register(
         ),
         default_model=default_model(),
         collect=None,
+        # Digested after the ontology is rendered into it, because a run
+        # whose ontology changed is not a run of the same prompt.
+        prompts=lambda: {"extraction": load_instructions()},
     )
 )
 

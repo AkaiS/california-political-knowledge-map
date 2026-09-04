@@ -19,6 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.adapters.coreference import (
+    ANNOTATOR_INSTRUCTIONS,
+    CRITIC_INSTRUCTIONS,
     CoreferenceResolutionError,
     MentionSpanIdentity,
     annotate_coreferences_run,
@@ -380,6 +382,13 @@ COREFERENCE_TASK = register(
         build=build_task,
         evaluators=(*AGREEMENT_EVALUATORS, RejectedOnlyTheWrongMentionSpans()),
         default_model=default_model(),
+        # Both agents, because a loop is not the same loop when either half
+        # changed.  The numbered article each also receives is rendered per
+        # case, so it belongs to the Gold Set rather than to the prompt.
+        prompts=lambda: {
+            "annotator": ANNOTATOR_INSTRUCTIONS,
+            "critic": CRITIC_INSTRUCTIONS,
+        },
         collect=None,
     )
 )
@@ -395,6 +404,7 @@ COREFERENCE_ANNOTATOR_TASK = register(
         build=build_annotator_task,
         evaluators=AGREEMENT_EVALUATORS,
         default_model=default_model(),
+        prompts=lambda: {"annotator": ANNOTATOR_INSTRUCTIONS},
         collect=None,
     )
 )

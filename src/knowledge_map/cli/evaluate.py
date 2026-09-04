@@ -217,6 +217,7 @@ def _run(args: argparse.Namespace) -> None:
                 "task": task.name,
                 "deployment": deployment.model_dump(mode="json"),
                 "commit": run_commit(),
+                "prompts": task.prompt_digests(),
                 "gold_set": str(path),
                 "split": split.value if split else None,
             },

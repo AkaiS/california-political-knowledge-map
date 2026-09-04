@@ -6,7 +6,8 @@ a database path, an agent — is not something a case author supplies.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+import hashlib
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -44,12 +45,34 @@ class EvaluationTask:
     and the other borrows it, rather than the author maintaining the same
     twenty Stories twice and letting them drift.
     """
+    prompts: Callable[[], Mapping[str, str]] = dict
+    """The instruction text of each agent this task runs, keyed by agent.
+
+    Called at run time, not at import: a task whose prompt is read from a
+    file or rendered from the ontology must be digested as the run will
+    actually send it. Only the part that is constant across cases belongs
+    here -- instructions rendered per case vary by input, and what varies
+    with them is the Gold Set, which a report already names.
+    """
 
     @property
     def gold_set_stem(self) -> str:
         """The stem of the Gold Set file, defaulting to the task's own name."""
 
         return self.gold_set_name or self.name
+
+    def prompt_digests(self) -> dict[str, str]:
+        """Digest each agent's instructions, naming what the commit cannot.
+
+        A commit moves for every change in the repository and says nothing
+        at all when the worktree is dirty, so it cannot tell two runs of the
+        same prompt from two runs of different ones. These digests can.
+        """
+
+        return {
+            agent: "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+            for agent, text in sorted(self.prompts().items())
+        }
 
 
 _TASKS: dict[str, EvaluationTask] = {}
