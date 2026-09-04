@@ -178,3 +178,55 @@ Two things are worth keeping regardless of that:
   anything reads it in two passes, and it wants a line in the domain docs.
 - **The extras trace to prose, not to the ontology block.** Trimming the
   `ENDORSED`/`Campaign` rule is a 1x-cost experiment that this run motivates.
+
+## Retired: rerun against the claimless-entity baseline
+
+Added after the fact. The measurement above compares `8567ee5` to baseline `0997321`,
+a tree that no longer exists: PR #19 (`d3f43fc`) put the claimless-entity rule in the
+extraction prompt, and `main`'s baseline moved to node_f1 **0.7208**
+(`20260904T075316Z-e7e34be-…json`). The branch was rebased onto `c70a6dd` and rerun on
+the same local `gemma4:26b` deployment, one run, report
+`20260904T181210Z-573a681-local-gemma4-26b-1499ceec2201.json`.
+
+| metric | baseline `e7e34be` | subgraph `573a681` |
+| --- | --- | --- |
+| node_f1 | 0.7208 | **0.6475** |
+| node_recall | 0.7300 | 0.6450 |
+| node_precision | 0.7393 | 0.6808 |
+| relationship_f1 | 0.9714 | 0.9545 |
+| sub_label_accuracy | 0.9405 (n=35) | 0.9427 (n=32) |
+| claim_property_accuracy | 0.0000 (n=6) | 0.0000 (n=6) |
+
+**The direction reversed.** Against the old baseline the split measured +0.030 node_f1
+at 1.8x inference; against the current one it measures **−0.073 at 2x inference**. It is
+not an inconclusive result any more. It is a regression, and the +0.030 was the split
+recovering nodes the prompt rule now recovers for free — while the split's own cost,
+previously hidden under that gain, is what remains.
+
+Seven cases move and every one of them moves down or sideways. Six silver nodes are lost,
+all `Organization`, and all of the claimless kind — named in the chunk, connected to
+nothing:
+
+- `Uber`, `Consumer Watchdog`, `CalMatters` on `uber-california-insurance#chunk-10`
+- `UC Berkeley` on `california-gas-prices-july#chunk-9`
+- `San Jose State` on `california-campus-police#chunk-32`
+- `Digital Democracy` on `california-legislature-mapping#chunk-8`
+- `Cognixion` on `california-moves-to-regulate#chunk-24`
+
+The precision loss is the same mechanism seen from the other side: the pass shown the
+`political-contest` component invents a campaign to put in it, adding `Porter campaign`
+and `Carl DeMaio campaign` as extras on two chunks where silver has none.
+
+**This is the fourth experiment supporting the open hypothesis, and the first with a
+mechanism.** `f4addf2`, `8567ee5` and `b69ea54` each lost claimless nodes after a prompt
+narrowed toward claims; here the narrowing is structural rather than verbal — each pass
+is literally shown a claim-shaped fragment of the ontology and nothing else — and the
+loss is larger and concentrated in exactly that class. A pass that cannot see why an
+entity would matter does not name it, and a pass handed a relationship vocabulary with
+no matching claim in the chunk fills it anyway. The hypothesis now has a reading:
+**narrowing the ontology block trades claimless recall for claim-shaped invention, in
+both directions at once.**
+
+Retire the subgraph split. Its measured value against the current tree is negative on
+every detection metric at twice the inference, and its original gain has been absorbed
+by a one-line prompt rule.
