@@ -1,7 +1,8 @@
 {
   "commit": "d97374b",
+  "data_set": "evals/silver/coreference.yaml",
   "dirty": false,
-  "gold_set": "evals/gold/coreference.yaml",
+  "label_quality": "silver",
   "model": "gemma4:26b",
   "ran_at": "2026-08-25T23:49:00.486507+00:00",
   "report": {

@@ -15,10 +15,10 @@ from knowledge_map.adapters.coreference import CoreferenceDeps, substitute_menti
 from knowledge_map.core.topic_assignment import MEASURE_LABELS
 from knowledge_map.evaluation import EvaluationSplit, build_dataset
 
-SILVER_SET_PATH = Path("evals/gold/topic_assignment.yaml")
-COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
-EXTRACTION_SILVER_SET_PATH = Path("evals/gold/extraction.yaml")
-CLASSIFICATION_SILVER_SET_PATH = Path("evals/gold/policy_area_classification.yaml")
+SILVER_SET_PATH = Path("evals/silver/topic_assignment.yaml")
+COREFERENCE_SILVER_SET_PATH = Path("evals/silver/coreference.yaml")
+EXTRACTION_SILVER_SET_PATH = Path("evals/silver/extraction.yaml")
+CLASSIFICATION_SILVER_SET_PATH = Path("evals/silver/policy_area_classification.yaml")
 ANNOTATION_GUIDELINE_PATH = Path("docs/evaluation/topic-assignment-annotation.md")
 
 #: The distribution the guideline records, as `pairs in one article: articles`.
@@ -95,7 +95,7 @@ def test_every_case_is_given_the_areas_classification_found_for_it() -> None:
 
     Assignment is given the classified set, and an assignment outside it is
     dropped before persistence.  Deciding the areas a second time here would
-    let the two Gold Sets disagree about one article.
+    let the two Silver Sets disagree about one article.
     """
 
     silver_set = _assignment_silver_set()
@@ -204,8 +204,8 @@ def test_every_case_names_the_guideline_it_was_annotated_against() -> None:
         assert case.metadata.label_quality == "silver", case.id
         assert case.metadata.annotator_model == "claude-opus-5", case.id
         assert case.metadata.annotation_guideline == str(ANNOTATION_GUIDELINE_PATH)
-        assert case.metadata.coreference_gold_set == str(COREFERENCE_SILVER_SET_PATH)
-        assert case.metadata.extraction_gold_set == str(EXTRACTION_SILVER_SET_PATH)
+        assert case.metadata.coreference_silver_set == str(COREFERENCE_SILVER_SET_PATH)
+        assert case.metadata.extraction_silver_set == str(EXTRACTION_SILVER_SET_PATH)
 
 
 def test_an_article_supporting_no_pairs_is_annotated_as_no_assignments() -> None:

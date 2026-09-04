@@ -6,4 +6,4 @@ Blocked by: [Specify coreference evaluation](06-specify-coreference-evaluation.m
 
 ## Question
 
-What gold cases, ontology-aware matching rules, and task-specific metrics should evaluate Entity Extraction from Article Chunks, including entity and relationship precision/recall and downstream graph usefulness?
+What cases, ontology-aware matching rules, and task-specific metrics should evaluate Entity Extraction from Article Chunks, including entity and relationship precision/recall and downstream graph usefulness?

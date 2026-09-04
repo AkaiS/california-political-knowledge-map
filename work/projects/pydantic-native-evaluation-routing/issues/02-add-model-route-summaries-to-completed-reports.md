@@ -28,7 +28,7 @@ Labels: completed
   task response without introducing a request-order contract.
 - [x] Concurrent Evaluation Cases receive only their own route counts.
 - [x] The completed report retains Pydantic Evals request, token, and
-  calculated-cost metrics and the existing commit, dirty-worktree, Gold Set,
+  calculated-cost metrics and the existing commit, dirty-worktree, Data Set,
   split, and Model Deployment fields.
 - [x] Historical reports are not rewritten, and failed, interrupted, or
   exhausted Evaluation Runs still write no report.

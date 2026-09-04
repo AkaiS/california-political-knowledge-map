@@ -1,4 +1,4 @@
-"""The Gold Set file is the authored artifact; these guard what it promises."""
+"""The Data Set file is the authored artifact; these guard what it promises."""
 
 from __future__ import annotations
 
@@ -14,9 +14,10 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.evaluation import (
     EvaluationSplit,
-    load_gold_set,
+    LabelQuality,
+    load_data_set,
     report_path,
-    run_gold_set,
+    run_data_set,
     write_report,
 )
 from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
@@ -30,7 +31,7 @@ class RelevanceLabel(BaseModel):
     relevant: bool
 
 
-GOLD_SET_YAML = """
+DATA_SET_YAML = """
 task: relevance
 description: Hand-labeled headlines for the Relevance Filter.
 cases:
@@ -52,56 +53,56 @@ cases:
 
 
 @pytest.fixture
-def gold_set_file(tmp_path: Path) -> Path:
+def data_set_file(tmp_path: Path) -> Path:
     path = tmp_path / "relevance.yaml"
-    path.write_text(GOLD_SET_YAML)
+    path.write_text(DATA_SET_YAML)
     return path
 
 
 def load(path: Path):
-    return load_gold_set(
+    return load_data_set(
         path, input_type=RelevanceInput, output_type=RelevanceLabel
     )
 
 
-def test_a_gold_set_file_validates_against_the_task_types(gold_set_file: Path) -> None:
-    gold_set = load(gold_set_file)
+def test_a_data_set_file_validates_against_the_task_types(data_set_file: Path) -> None:
+    data_set = load(data_set_file)
 
-    assert gold_set.task == "relevance"
-    assert tuple(case.id for case in gold_set.cases) == ("sb-1047-veto", "dodgers-trade")
-    assert gold_set.cases[0].task_input == RelevanceInput(headline="Newsom vetoes SB 1047")
-    assert gold_set.cases[0].expected_output == RelevanceLabel(relevant=True)
+    assert data_set.task == "relevance"
+    assert tuple(case.id for case in data_set.cases) == ("sb-1047-veto", "dodgers-trade")
+    assert data_set.cases[0].task_input == RelevanceInput(headline="Newsom vetoes SB 1047")
+    assert data_set.cases[0].expected_output == RelevanceLabel(relevant=True)
 
 
 def test_a_case_typo_is_caught_when_the_file_is_read(tmp_path: Path) -> None:
     path = tmp_path / "relevance.yaml"
-    path.write_text(GOLD_SET_YAML.replace("headline: Newsom vetoes SB 1047", "headlin: x"))
+    path.write_text(DATA_SET_YAML.replace("headline: Newsom vetoes SB 1047", "headlin: x"))
 
     with pytest.raises(ValidationError):
         load(path)
 
 
-def test_a_gold_set_cannot_repeat_a_case_id(tmp_path: Path) -> None:
+def test_a_data_set_cannot_repeat_a_case_id(tmp_path: Path) -> None:
     path = tmp_path / "relevance.yaml"
-    path.write_text(GOLD_SET_YAML.replace("dodgers-trade", "sb-1047-veto"))
+    path.write_text(DATA_SET_YAML.replace("dodgers-trade", "sb-1047-veto"))
 
     with pytest.raises(ValidationError, match="cannot repeat a case id"):
         load(path)
 
 
-def test_split_selects_only_the_cases_the_author_assigned(gold_set_file: Path) -> None:
-    gold_set = load(gold_set_file)
+def test_split_selects_only_the_cases_the_author_assigned(data_set_file: Path) -> None:
+    data_set = load(data_set_file)
 
-    held_out = gold_set.split(EvaluationSplit.HELD_OUT)
+    held_out = data_set.split(EvaluationSplit.HELD_OUT)
 
     assert tuple(case.id for case in held_out) == ("sb-1047-veto",)
 
 
-def test_running_one_split_reports_the_authored_case_ids(gold_set_file: Path) -> None:
-    gold_set = load(gold_set_file)
+def test_running_one_split_reports_the_authored_case_ids(data_set_file: Path) -> None:
+    data_set = load(data_set_file)
 
-    report = run_gold_set(
-        gold_set,
+    report = run_data_set(
+        data_set,
         task=lambda case_input: RelevanceLabel(relevant=True),
         evaluators=[MatchesExpectedOutput()],
         split=EvaluationSplit.HELD_OUT,
@@ -113,10 +114,10 @@ def test_running_one_split_reports_the_authored_case_ids(gold_set_file: Path) ->
 
 def test_running_a_split_with_no_cases_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "relevance.yaml"
-    path.write_text(GOLD_SET_YAML.replace("split: held-out", "split: training"))
+    path.write_text(DATA_SET_YAML.replace("split: held-out", "split: training"))
 
     with pytest.raises(ValueError, match="no cases in the held-out split"):
-        run_gold_set(
+        run_data_set(
             load(path),
             task=lambda case_input: RelevanceLabel(relevant=True),
             evaluators=[MatchesExpectedOutput()],
@@ -125,11 +126,11 @@ def test_running_a_split_with_no_cases_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_written_report_carries_the_commit_and_model_it_ran_at(
-    gold_set_file: Path, tmp_path: Path
+    data_set_file: Path, tmp_path: Path
 ) -> None:
-    gold_set = load(gold_set_file)
-    report = run_gold_set(
-        gold_set,
+    data_set = load(data_set_file)
+    report = run_data_set(
+        data_set,
         task=lambda case_input: RelevanceLabel(relevant=True),
         evaluators=[MatchesExpectedOutput()],
     )
@@ -138,7 +139,8 @@ def test_a_written_report_carries_the_commit_and_model_it_ran_at(
         report,
         task="relevance",
         model="claude-sonnet-5",
-        gold_set_path=gold_set_file,
+        data_set_path=data_set_file,
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     document = json.loads(path.read_text())
@@ -146,7 +148,7 @@ def test_a_written_report_carries_the_commit_and_model_it_ran_at(
     assert path.parent.name == "relevance"
     assert document["model"] == "claude-sonnet-5"
     assert document["commit"]
-    assert document["gold_set"] == str(gold_set_file)
+    assert document["data_set"] == str(data_set_file)
     assert {case["name"] for case in document["report"]["cases"]} == {
         "sb-1047-veto",
         "dodgers-trade",
@@ -212,10 +214,10 @@ def test_few_shot_examples_come_only_from_the_training_split(tmp_path: Path) -> 
     from knowledge_map.evaluation.tasks.relevance import _few_shot_examples
 
     path = tmp_path / "relevance.yaml"
-    path.write_text(RELEVANCE_GOLD_SET_YAML)
-    gold_set = _load_relevance(path)
+    path.write_text(RELEVANCE_DATA_SET_YAML)
+    data_set = _load_relevance(path)
 
-    positives, negatives = _few_shot_examples(gold_set)
+    positives, negatives = _few_shot_examples(data_set)
 
     assert [example["title"] for example in positives] == ["A training positive"]
     assert [example["title"] for example in negatives] == ["A training negative"]
@@ -226,7 +228,7 @@ def test_a_gold_set_with_no_training_cases_few_shots_with_nothing(tmp_path: Path
     from knowledge_map.evaluation.tasks.relevance import _few_shot_examples
 
     path = tmp_path / "relevance.yaml"
-    path.write_text(RELEVANCE_GOLD_SET_YAML.replace("split: training", "split: held-out"))
+    path.write_text(RELEVANCE_DATA_SET_YAML.replace("split: training", "split: held-out"))
 
     positives, negatives = _few_shot_examples(_load_relevance(path))
 
@@ -234,7 +236,7 @@ def test_a_gold_set_with_no_training_cases_few_shots_with_nothing(tmp_path: Path
     assert negatives == []
 
 
-RELEVANCE_GOLD_SET_YAML = """
+RELEVANCE_DATA_SET_YAML = """
 task: relevance
 description: Two training examples and one held-out case.
 cases:
@@ -272,7 +274,7 @@ def _load_relevance(path: Path):
     from knowledge_map.evaluation.tasks import task_named
 
     task = task_named("relevance")
-    return load_gold_set(
+    return load_data_set(
         path,
         input_type=task.input_type,
         output_type=task.output_type,
@@ -315,10 +317,10 @@ async def test_relevance_task_binds_explicit_deployment_and_keeps_training_few_s
     monkeypatch.setenv("LLAMA_CPP_MODEL", "ambient-local-model")
     monkeypatch.setattr(relevance_task_module, "get_chat_model", model_factory)
 
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text(RELEVANCE_GOLD_SET_YAML)
-    gold_set = _load_relevance(gold_set_path)
-    classify = relevance_task_module.build_task(deployment, gold_set)
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text(RELEVANCE_DATA_SET_YAML)
+    data_set = _load_relevance(data_set_path)
+    classify = relevance_task_module.build_task(deployment, data_set)
     result = await classify(
         relevance_task_module.RelevanceInput(
             url="https://example.test/held-out",
@@ -338,9 +340,9 @@ def test_relevance_task_converts_legacy_model_name_to_local_deployment(
 ) -> None:
     import knowledge_map.evaluation.tasks.relevance as relevance_task_module
 
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text(RELEVANCE_GOLD_SET_YAML)
-    gold_set = _load_relevance(gold_set_path)
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text(RELEVANCE_DATA_SET_YAML)
+    data_set = _load_relevance(data_set_path)
     seen: list[object] = []
 
     def model_factory(requested):
@@ -349,7 +351,7 @@ def test_relevance_task_converts_legacy_model_name_to_local_deployment(
 
     monkeypatch.setattr(relevance_task_module, "get_chat_model", model_factory)
 
-    relevance_task_module.build_task("legacy-relevance-model", gold_set)
+    relevance_task_module.build_task("legacy-relevance-model", data_set)
 
     assert seen == [
         ModelDeployment(

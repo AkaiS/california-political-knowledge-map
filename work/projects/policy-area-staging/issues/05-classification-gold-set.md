@@ -1,4 +1,4 @@
-# 05 — Policy Area Classification Gold Set and evaluation task
+# 05 — Policy Area Classification Silver Set and evaluation task
 
 Labels: completed
 
@@ -8,7 +8,7 @@ Labels: completed
 
 ## What to build
 
-Classification is measured rather than assumed. A Gold Set of twenty
+Classification is measured rather than assumed. A Silver Set of twenty
 article-level cases joins the evaluation registry as its own task, so a run
 reports how well a model chooses an article's Policy Areas from the closed
 vocabulary — the same way Coreference Resolution, the Relevance Filter, and
@@ -34,14 +34,14 @@ distribution we measured rather than from a guess.
 
 - [x] An annotation guideline for Policy Area Classification is written and lives
       beside the existing coreference and extraction guidelines.
-- [x] A Gold Set file holds twenty article-level cases, each addressing a Source
+- [x] A Silver Set file holds twenty article-level cases, each addressing a Source
       Article from the coreference Silver Set, with held-out and training splits
       and silver metadata naming the annotator model and the guideline.
 - [x] The task is registered with its own input, output, and metadata types and
       the classification adapter as the callable under test.
 - [x] Evaluators score multi-label precision, recall, and F1 over an article's
       areas; a case with no expected and no returned areas scores a pass.
-- [x] A test loads the Gold Set through the registered task's own types and
+- [x] A test loads the Silver Set through the registered task's own types and
       asserts the case count, the splits, and that every case id addresses a
       Source Article.
 - [x] The observed areas-per-article distribution is recorded, and no maximum is

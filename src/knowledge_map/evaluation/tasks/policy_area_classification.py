@@ -1,6 +1,6 @@
 """Policy Area Classification as an evaluated task.
 
-Cases come from `evals/gold/policy_area_classification.yaml`, authored
+Cases come from `evals/silver/policy_area_classification.yaml`, authored
 elsewhere and only read here.  It is silver, not gold: labeled by
 `claude-opus-5` against
 `docs/evaluation/policy-area-classification-annotation.md`, so a run measures
@@ -10,7 +10,7 @@ a pass.
 A case is one whole Source Article, as its coreference-resolved text.  That is
 what the stage sees in production -- it runs between Coreference Resolution and
 chunking -- so it is what a case holds.  The twenty articles are the twenty
-Stories of `evals/gold/coreference.yaml`, so every stage is measured over one
+Stories of `evals/silver/coreference.yaml`, so every stage is measured over one
 population.
 
 Scoring is multi-label agreement over the closed vocabulary: precision, recall
@@ -34,6 +34,7 @@ from knowledge_map.adapters.policy_areas import (
 )
 from knowledge_map.schemas import ModelDeployment, PolicyAreaName
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import detection_scores
 from .registry import EvaluationTask, register
@@ -60,7 +61,7 @@ class ClassificationExpectation(BaseModel):
 
     Typed by `PolicyAreaName` rather than by `str` so that a silver label
     outside the closed vocabulary -- a stale name, or an id where the name
-    belongs -- fails when the Gold Set is read rather than scoring a silent
+    belongs -- fails when the Silver Set is read rather than scoring a silent
     zero against every model on every run.
     """
 
@@ -87,7 +88,7 @@ class ClassificationOutput(BaseModel):
 class ClassificationSilverMetadata(BaseModel):
     """Source and model provenance for one silver-labeled Source Article.
 
-    ``coreference_gold_set`` names the file the article's resolved text came
+    ``coreference_silver_set`` names the file the article's resolved text came
     from, because re-resolving these articles from a later revision of that
     file would silently change what every case is asking about.
     """
@@ -99,19 +100,19 @@ class ClassificationSilverMetadata(BaseModel):
     label_quality: Literal["silver"]
     annotator_model: str
     annotation_guideline: str
-    coreference_gold_set: str
+    coreference_silver_set: str
 
 
-def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
-    `gold_set` is in the signature for the registry's uniform call and goes
+    `data_set` is in the signature for the registry's uniform call and goes
     unused; nothing here few-shots.  The stage under test is the adapter's
     `classify`, so a run measures the vocabulary the stage owns rather than a
     prompt this file would otherwise restate.
     """
 
-    del gold_set
+    del data_set
 
     deployment = as_deployment(model)
     adapter = PydanticAIPolicyAreaAdapter(
@@ -170,6 +171,7 @@ class ClassifiedWithoutFailing(Evaluator):
 POLICY_AREA_CLASSIFICATION_TASK = register(
     EvaluationTask(
         name="policy_area_classification",
+        label_quality=LabelQuality.SILVER,
         input_type=ClassificationInput,
         output_type=ClassificationExpectation,
         metadata_type=ClassificationSilverMetadata,

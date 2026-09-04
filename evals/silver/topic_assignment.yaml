@@ -1,8 +1,9 @@
-task: policy_area_classification
-description: Silver-labeled Source Article cases for Policy Area Classification. Each case is one whole
-  article as its coreference-resolved text, the text the stage reads between Coreference Resolution and
-  chunking, drawn from the twenty Stories of evals/gold/coreference.yaml so that every stage is measured
-  over one population. Annotated one article at a time against docs/evaluation/policy-area-classification-annotation.md.
+task: topic_assignment
+description: Silver-labeled Source Article cases for Topic Assignment. Each case is one whole article as its coreference-resolved
+  text, together with the Policy Areas evals/silver/policy_area_classification.yaml holds for it and the Bill and
+  Prop measures the article names, which is the stage's whole input after the extraction loop. Drawn from the twenty
+  Stories of evals/silver/coreference.yaml so that every stage is measured over one population. Annotated one article
+  at a time against docs/evaluation/topic-assignment-annotation.md.
 cases:
 - id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/
   description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times
@@ -116,19 +117,22 @@ cases:
       Steve Hilton answer, instead, is what Steve Hilton calls “positive populism,” positive populism ultimately means relying on the market.
 
       “You need businesses to be successful and the aim of every small business is to become a big business,” Steve Hilton said. “Steve Hilton like to be constructive … Steve Hilton think market-based solutions, less government, is the answer.”
-  expected_output:
     policy_areas:
     - Economic Development
     - Environment & Natural Resources
     - Government Operations
     - Labor & Employment
+    measures: []
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 32
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
   description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city
   split: held-out
@@ -253,20 +257,23 @@ cases:
       “We have to negotiate with our eyes open.”
 
       For the record: This story was corrected to reflect that Joshua Arce is executive director of the California Alliance for Jobs. It was also updated to add that GO-Biz says Governor's Office of Business and Economic Development does not offer incentive packages to specific companies.
-  expected_output:
     policy_areas:
     - Economic Development
     - Environment & Natural Resources
     - Housing & Community Development
     - Labor & Employment
     - Local Government
+    measures: []
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 26
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
   description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it?
   split: held-out
@@ -349,18 +356,34 @@ cases:
       Asked why UCLA has a privileged role in conducting research funded by Proposition 38 money, Briggs, Claudia Briggs, cited UCLA’s status as the largest health facility network in University of California UCLA “provides more than 3.5 million outpatient clinical visits each year.”
 
       And by being in Los Angeles, “UCLA has immediate access to California’s largest and most diverse population center and potential medical patient base.”
-  expected_output:
     policy_areas:
     - Government Operations
     - Health
     - Higher Education
+    measures:
+    - name: Proposition 38
+      label: Prop
+    - name: Proposition 34
+      label: Prop
+  expected_output:
+    assignments:
+    - measure_name: Proposition 38
+      measure_label: Prop
+      policy_area: Health
+    - measure_name: Proposition 38
+      measure_label: Prop
+      policy_area: Higher Education
+    - measure_name: Proposition 34
+      measure_label: Prop
+      policy_area: Health
   metadata:
     source_table: stories
     story_id: 60
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
   description: California gave every student in prison a laptop. How community colleges are using them
   split: held-out
@@ -465,18 +488,21 @@ cases:
       Joe Garcia contributed to this story.
 
       Ella Carter-Klauschie is a contributor with the College Journalism Network, a collaboration between CalMatters and student journalists from across California. CalMatters higher education coverage is supported by a grant from the College Futures Foundation.
-  expected_output:
     policy_areas:
     - Higher Education
     - Public Safety
     - Technology & Communications
+    measures: []
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 20
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/
   description: Would you trust your boss with data about your brain? California moves to regulate neurotech
   split: held-out
@@ -561,18 +587,37 @@ cases:
       What’s at stake, Nita Farahany said, is not just the invasion of your privacy or the possibility that AI deployed by your employer may predict how often you have negative thoughts about your boss. Without privacy protections, neurotechnology technology can undermine cognitive freedom and your ability to function as an autonomous, independent person.
 
       “There’s an urgent need to protect mental privacy and self determination,” Nita Farahany told CalMatters. “It’s part of a bigger picture that needs to be addressed.”
-  expected_output:
     policy_areas:
     - Labor & Employment
     - Privacy & Consumer Protection
     - Technology & Communications
+    measures:
+    - name: Assembly Bill 1883
+      label: Bill
+    - name: Senate Bill 7
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Assembly Bill 1883
+      measure_label: Bill
+      policy_area: Labor & Employment
+    - measure_name: Assembly Bill 1883
+      measure_label: Bill
+      policy_area: Privacy & Consumer Protection
+    - measure_name: Senate Bill 7
+      measure_label: Bill
+      policy_area: Labor & Employment
+    - measure_name: Senate Bill 7
+      measure_label: Bill
+      policy_area: Privacy & Consumer Protection
   metadata:
     source_table: stories
     story_id: 70
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/housing/2026/07/road-housing-california-federal/
   description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California
   split: held-out
@@ -671,18 +716,37 @@ cases:
       After the build-to-rent provision was left on the cutting room floor of Congress, state Sen. Aisha Wahab, Aisha Wahab Aisha Wahab is now running for Congress, introduced a bill SB 880 picked the build-to-rent provision back up again. SB 880 would have banned the bundled sale of multiple single-family homes, striking at the heart of the build-to-rent business model. SB 880 died in the Assembly Judiciary committee in late June.
 
       For the record: An earlier version of this article misstated the enactment date of the federal housing bill. the federal housing bill is set to go into effect at midnight Saturday.
-  expected_output:
     policy_areas:
     - Emergency Management
     - Housing & Community Development
     - Local Government
+    measures:
+    - name: federal housing bill
+      label: Bill
+    - name: SB 880
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: federal housing bill
+      measure_label: Bill
+      policy_area: Housing & Community Development
+    - measure_name: federal housing bill
+      measure_label: Bill
+      policy_area: Local Government
+    - measure_name: federal housing bill
+      measure_label: Bill
+      policy_area: Emergency Management
+    - measure_name: SB 880
+      measure_label: Bill
+      policy_area: Housing & Community Development
   metadata:
     source_table: stories
     story_id: 41
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
   description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf
   split: held-out
@@ -783,17 +847,33 @@ cases:
       Becker rejected that comparison, saying SB 493 targets a wartime emergency, not the regulation of refinery margins.
 
       But even Becker, Josh Becker is proposing a new way to crack down on the industry, stopped short of calling for California to revisit the refinery-margin penalty California has already set aside. Asked whether the Energy Commission should revisit California Energy Commission decision to delay the refinery-margin penalty, Becker called that “a separate process,” and “a separate decision,” one that is in the hands of the Newsom Administration.
-  expected_output:
     policy_areas:
     - Energy & Utilities
     - Privacy & Consumer Protection
+    measures:
+    - name: SB 1245
+      label: Bill
+    - name: SB 493
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: SB 1245
+      measure_label: Bill
+      policy_area: Energy & Utilities
+    - measure_name: SB 493
+      measure_label: Bill
+      policy_area: Energy & Utilities
+    - measure_name: SB 493
+      measure_label: Bill
+      policy_area: Privacy & Consumer Protection
   metadata:
     source_table: stories
     story_id: 24
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/
   description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says
   split: held-out
@@ -878,20 +958,39 @@ cases:
       Third-party data shows that each month so far this year, average customer fares in California were slightly higher or about the same year over year, except for in May, when the average fare per mile was $4.67 compared with $4.70 last May, according to Gridwise. Gridwise makes an app that ride-hailing drivers use to track ride-hailing drivers earnings and expenses, and says Gridwise data is based on hundreds of millions of trips.
 
       Senate Bill 371 also requires state Insurance Department to collaborate with the Public Utilities Commission on a study of the effects of reducing the required insurance coverage. study of the effects of reducing the required insurance coverage is due by Dec. 31, 2030.
-  expected_output:
     policy_areas:
     - Insurance
     - Judiciary
     - Labor & Employment
     - Privacy & Consumer Protection
     - Transportation
+    measures:
+    - name: Senate Bill 371
+      label: Bill
+    - name: transportation and infrastructure bill
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Senate Bill 371
+      measure_label: Bill
+      policy_area: Insurance
+    - measure_name: Senate Bill 371
+      measure_label: Bill
+      policy_area: Transportation
+    - measure_name: transportation and infrastructure bill
+      measure_label: Bill
+      policy_area: Transportation
+    - measure_name: transportation and infrastructure bill
+      measure_label: Bill
+      policy_area: Judiciary
   metadata:
     source_table: stories
     story_id: 27
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
   description: Their town burned to the ground. Should they get a pass from California’s new housing laws?
   split: held-out
@@ -996,18 +1095,39 @@ cases:
       After losing Nic Arnzen and his husband home to Eaton Fire, Nic Arnzen and Nic Arnzen husband are now in the process of relocating to an accessory dwelling unit on Nic Arnzen and his husband property, which Nic Arnzen and his husband’ll live in while Nic Arnzen and his husband rebuild. When construction wraps up, Nic Arnzen and his husband plan to move into the new house and rent out the smaller one “to push back on the housing crisis in California,” Nic Arnzen said. “Because Nic Arnzen think we should all do our part.”
 
       Jeremia Kimelman contributed the data visualization to this story.
-  expected_output:
     policy_areas:
     - Emergency Management
     - Housing & Community Development
     - Local Government
+    measures:
+    - name: SB 9
+      label: Bill
+    - name: Senate Bill 1123
+      label: Bill
+    - name: Senate Bill 1090
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: SB 9
+      measure_label: Bill
+      policy_area: Housing & Community Development
+    - measure_name: Senate Bill 1123
+      measure_label: Bill
+      policy_area: Housing & Community Development
+    - measure_name: Senate Bill 1090
+      measure_label: Bill
+      policy_area: Housing & Community Development
+    - measure_name: Senate Bill 1090
+      measure_label: Bill
+      policy_area: Emergency Management
   metadata:
     source_table: stories
     story_id: 11
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
   description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’
   split: training
@@ -1106,17 +1226,20 @@ cases:
       Rosselli said Sal Rosselli anticipated some of Porter’s perceived weaknesses and said it’s good that “Katie Porter’s not so tight in Sacramento.” Sal Rosselli said Sal Rosselli hopes Porter’s new ad addressing the video of Katie Porter yelling at a staffer would help turn things around.
 
       “If a guy did that, this would not be happening, in terms of that reaction,” Sal Rosselli said.
-  expected_output:
     policy_areas:
     - Health
     - Labor & Employment
+    measures: []
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 30
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
   description: Kaiser nurses say technology is making their jobs — and patient care — worse
   split: held-out
@@ -1229,18 +1352,36 @@ cases:
       “the anonymous nurse with the terminal cancer patient used to use humor as a way to help patients heal, and the anonymous nurse with the terminal cancer patient don’t feel comfortable doing that here because the anonymous nurse with the terminal cancer patient know the calls are being recorded. You can always tell when a patient appreciates the humor or your personal compassion, but the anonymous nurse with the terminal cancer patient don’t feel like call centers have tolerance for that because that’s not part of the script,” the anonymous nurse with the terminal cancer patient said. “That really takes away from the whole point of being a nurse and what patients come to know from nurses.”
 
       This story was reported with contributions from Lam Thuy Vo and Ana Ibarra.
-  expected_output:
     policy_areas:
     - Health
     - Labor & Employment
     - Technology & Communications
+    measures:
+    - name: Assembly Bill 1018
+      label: Bill
+    - name: Senate Bill 7
+      label: Bill
+    - name: Senate Bill 947
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Assembly Bill 1018
+      measure_label: Bill
+      policy_area: Labor & Employment
+    - measure_name: Senate Bill 7
+      measure_label: Bill
+      policy_area: Labor & Employment
+    - measure_name: Senate Bill 947
+      measure_label: Bill
+      policy_area: Labor & Employment
   metadata:
     source_table: stories
     story_id: 78
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
   description: California colleges reveal their military weapons stockpile after CalMatters investigation
   split: held-out
@@ -1353,18 +1494,21 @@ cases:
       “College campuses are a focal point for where our activism can translate into real-world change,” César Tlatoāni Alvarado said. “Colleges are trying to quash that dissent. But what colleges need to know, and colleges need to be made aware of, is that there’s many more of us than there are of colleges.”
 
       Phoebe Huss is a contributor with the College Journalism Network, a collaboration between CalMatters and student journalists from across California. CalMatters higher education coverage is supported by a grant from the College Futures Foundation.
-  expected_output:
     policy_areas:
     - Government Operations
     - Higher Education
     - Public Safety
+    measures: []
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 37
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
   description: California craft liquor delivery is about to go away thanks to big money lobbying
   split: training
@@ -1475,18 +1619,26 @@ cases:
       In the meantime, Steller, Cris Steller, has already started pulling back on shipping bottles to Cris Steller customers because the Legislature won’t budge.
 
       “Cris Steller don’t want to keep putting money into a program craft distiller direct shipping’s going to get yanked,” Cris Steller said.
-  expected_output:
     policy_areas:
     - Business & Professions
     - Government Operations
     - Labor & Employment
+    measures:
+    - name: Assembly Bill 2211
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Assembly Bill 2211
+      measure_label: Bill
+      policy_area: Business & Professions
   metadata:
     source_table: stories
     story_id: 63
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
   description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one'
   split: held-out
@@ -1591,18 +1743,31 @@ cases:
       Flanked by labor leaders in important presidential primary states earlier this year, Gonzalez warned Gavin Newsom that unions could withhold unions political support if Newsom does not rein in use of artificial intelligence.
 
       “It’s not enough to say, ‘I feel your pain,’” Gonzalez said. “California Labor Federation don’t think that catastrophic job loss is inevitable.”
-  expected_output:
     policy_areas:
     - Labor & Employment
     - Revenue & Taxation
     - Technology & Communications
+    measures:
+    - name: Proposition 40
+      label: Prop
+    - name: Proposition 3
+      label: Prop
+  expected_output:
+    assignments:
+    - measure_name: Proposition 40
+      measure_label: Prop
+      policy_area: Revenue & Taxation
+    - measure_name: Proposition 3
+      measure_label: Prop
+      policy_area: Revenue & Taxation
   metadata:
     source_table: stories
     story_id: 46
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
   description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time?
   split: held-out
@@ -1693,19 +1858,30 @@ cases:
       Villegas and Democrats hope Valadao’s continued denial of the impacts of tariffs and the Iran war strikes constituents as wildly out of touch. That would be enough to overcome any cross-party appeal, argues Republican political consultant Mike Madrid.
 
       “Mike Madrid think David Valadao’s very likely to lose this year,” Madrid said. “The fundamentals are too anti-Republican, too anti-Trump for anyone to care.”
-  expected_output:
     policy_areas:
     - Agriculture
     - Energy & Utilities
     - Health
     - Human Services
+    measures:
+    - name: Donald Trump's budget bill
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Donald Trump's budget bill
+      measure_label: Bill
+      policy_area: Health
+    - measure_name: Donald Trump's budget bill
+      measure_label: Bill
+      policy_area: Human Services
   metadata:
     source_table: stories
     story_id: 59
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/
   description: California Republicans tried to cut him off. Then he beat them from the right
   split: held-out
@@ -1806,15 +1982,20 @@ cases:
       “Jon Fleischman happen to be on the side of more voices like Carl would be better, because Jon Fleischman don’t think there should be a free pass on the floor of the Legislature,” Fleischman said. “What’s the point of a minority party if you’re not expressing the minority view?”
 
       For the record: This story has been updated to remove a reference to a Reform candidate who prevailed in the 40th District Central Valley Senate race. The candidate faced two Democrats in that contest.
-  expected_output:
     policy_areas: []
+    measures:
+    - name: Proposition 39
+      label: Prop
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 64
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/
   description: Most California lawmakers never buck their party. These few do
   split: training
@@ -1917,16 +2098,21 @@ cases:
       CalMatters methodology: To determine how often lawmakers voted against California lawmakers party, CalMatters analyzed each lawmaker’s votes since 2023 and compared them with California lawmakers party’s majority position. When the majority voted yes, CalMatters noted if a lawmaker voted no. When members of the majority voted no or abstained, CalMatters noted if they voted yes. CalMatters averaged how often each lawmaker voted against California lawmakers party across all years since 2023.
 
       Digital Democracy’s Foaad Khosmood, Forbes professor of computer engineering at Cal Poly San Luis Obispo, contributed to this story.
-  expected_output:
     policy_areas:
     - Government Operations
+    measures:
+    - name: Gavin Newsom's 2023 oil profits bill
+      label: Bill
+  expected_output:
+    assignments: []
   metadata:
     source_table: stories
     story_id: 48
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
   description: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future'
   split: held-out
@@ -2001,17 +2187,28 @@ cases:
       Jamie Court, president of the advocacy group Consumer Watchdog, has worked with Tom Steyer and Jim Steyer on policy and is among those who want more stringent restrictions on tech platforms. Jamie Court said it “bothers” Jamie Court that Common Sense, Common Sense Media, may partner with Big Tech, but Jamie Court doesn’t begrudge Jim Steyer.
 
       “Jim might have a harder audience with Tom than another governor” on tech policy, Court joked. “Jim’s a little bit more accommodating to Big Tech because Jim Steyer has to work with Big Tech. Tom shoots more from the hip. Tom might be a little more radical.”
-  expected_output:
     policy_areas:
     - Privacy & Consumer Protection
     - Technology & Communications
+    measures:
+    - name: Common Sense Media bill banning AI chatbots for minors
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Common Sense Media bill banning AI chatbots for minors
+      measure_label: Bill
+      policy_area: Technology & Communications
+    - measure_name: Common Sense Media bill banning AI chatbots for minors
+      measure_label: Bill
+      policy_area: Privacy & Consumer Protection
   metadata:
     source_table: stories
     story_id: 31
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
   description: A California housing bill would raise wages to $28. Why do some unions hate it?
   split: held-out
@@ -2092,17 +2289,28 @@ cases:
       Backers of Assembly Bill 1751 dispute that, saying such a specific outcome is unlikely given how many contractors are likely to use Assembly Bill 1751. backers of Assembly Bill 1751 also argue that vanishingly few residential roofers do federal public works jobs in Sacramento — or anywhere in California — so changes in the federal prevailing wage for residential projects aren’t likely to affect many workers anyway. Instead, most roofers are non-union on privately-funded projects and many are being paid less than $28 per hour, said Danny Curtin, Danny Curtin.
 
       To say that raising those wages “will actually bring everybody else’s wages down, defies comprehension,” Danny Curtin said at the April hearing on Assembly Bill 1751.
-  expected_output:
     policy_areas:
     - Housing & Community Development
     - Labor & Employment
+    measures:
+    - name: Assembly Bill 1751
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: Assembly Bill 1751
+      measure_label: Bill
+      policy_area: Housing & Community Development
+    - measure_name: Assembly Bill 1751
+      measure_label: Bill
+      policy_area: Labor & Employment
   metadata:
     source_table: stories
     story_id: 16
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml
 - id: https://calmatters.org/education/higher-education/2025/04/health-research/
   description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more
   split: held-out
@@ -2147,15 +2355,23 @@ cases:
       “Dementia affects many Americans and many Americans loved ones,” Dr. Charles DeCarli said. “dementia is an epidemic. dementia is a huge public health problem. Dr. Charles DeCarli's research project addresses one aspect of dementia, and is trying to improve the health of all Americans.”
 
       Read More
-  expected_output:
     policy_areas:
     - Health
     - Higher Education
     - Judiciary
+    measures:
+    - name: National Alzheimer’s Project Act
+      label: Bill
+  expected_output:
+    assignments:
+    - measure_name: National Alzheimer’s Project Act
+      measure_label: Bill
+      policy_area: Health
   metadata:
     source_table: stories
     story_id: 74
     label_quality: silver
     annotator_model: claude-opus-5
-    annotation_guideline: docs/evaluation/policy-area-classification-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    annotation_guideline: docs/evaluation/topic-assignment-annotation.md
+    coreference_silver_set: evals/silver/coreference.yaml
+    extraction_silver_set: evals/silver/extraction.yaml

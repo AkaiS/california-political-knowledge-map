@@ -56,6 +56,15 @@
 <body>
 <header class="hero">
   <h1>Agent-Traversability Audit — <code>audit-project</code> worktree</h1>
+  <div class="finding f-low"><span class="fid">Note added after the fact.</span>
+  This audit quotes the code as it stood, and is left unedited. Two things it
+  names have since been renamed: <code>evaluation/gold_set.py</code> is now
+  <code>evaluation/data_set.py</code>, and "Gold Set" is now "Evaluation Data
+  Set". Only <code>evals/gold/relevance.yaml</code> was ever gold — a person
+  labeled it. The coreference, extraction, Policy Area Classification and Topic
+  Assignment sets were labeled by a model against a written guideline, are
+  Silver Sets, and moved to <code>evals/silver/</code>. The line counts under
+  <code>evals/gold/</code> below cover all five.</div>
   <p>Why agents get lost in this codebase: stale language polluting context, unenforced rules that keep getting dropped (Logfire in evals, reuse-before-build), and no progressive disclosure (one 66-term <code>CONTEXT.md</code>, ~2,200 lines of preload before code). Findings below are cited <code>file:line</code> and paired with 2025–2026 industry patterns.</p>
   <div class="meta">
     <span class="pill">Root <b>audit-project</b></span>

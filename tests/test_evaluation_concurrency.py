@@ -11,6 +11,7 @@ import httpx
 from pydantic_ai import Agent
 
 from knowledge_map.cli import evaluate
+from knowledge_map.evaluation import LabelQuality
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -42,18 +43,19 @@ class _RecordingCeiling:
 def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
     tmp_path: Path, monkeypatch
 ) -> None:
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text("placeholder")
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text("placeholder")
     calls: dict[str, object] = {}
     events: list[tuple[str, int]] = []
 
-    def build(deployment: ModelDeployment, gold_set: object):
+    def build(deployment: ModelDeployment, data_set: object):
         calls["deployment"] = deployment
         return lambda case_input: {"classification": "RELEVANT"}
 
     task = SimpleNamespace(
         name="relevance",
-        gold_set_stem="relevance",
+        data_set_stem="relevance",
+        label_quality=LabelQuality.GOLD,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,
@@ -65,10 +67,10 @@ def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
     report = SimpleNamespace(print=lambda **kwargs: None, failures=())
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
     monkeypatch.setattr(
         evaluate,
-        "run_gold_set",
+        "run_data_set",
         lambda *args, **kwargs: calls.update(run_kwargs=kwargs) or report,
     )
     monkeypatch.setattr(
@@ -91,7 +93,7 @@ def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
         argparse.Namespace(
             eval_action="run",
             task="relevance",
-            gold_set=gold_set_path,
+            data_set=data_set_path,
             deployment="openrouter",
             model=None,
             split=None,

@@ -22,7 +22,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/#chunk-28
   description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times — chunk 28
   split: held-out
@@ -44,7 +44,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/california-governor-hilton-profile/#chunk-41
   description: Who is Steve Hilton? Here’s how he has rebranded himself multiple times — chunk 41
   split: held-out
@@ -69,7 +69,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-10
   description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 10
   split: held-out
@@ -101,7 +101,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-23
   description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 23
   split: held-out
@@ -128,7 +128,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk-34
   description: Tech billionaires hire Democratic dealmakers in renewed push to build a Bay Area city — chunk 34
   split: held-out
@@ -159,7 +159,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-11
   description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 11
   split: held-out
@@ -189,7 +189,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-24
   description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 24
   split: held-out
@@ -214,7 +214,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk-35
   description: This CA proposition will send $4 billion to a single nonprofit. Who’s behind it? — chunk 35
   split: held-out
@@ -244,7 +244,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-11
   description: California gave every student in prison a laptop. How community colleges are using them — chunk 11
   split: held-out
@@ -271,7 +271,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-24
   description: California gave every student in prison a laptop. How community colleges are using them — chunk 24
   split: held-out
@@ -293,7 +293,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk-34
   description: California gave every student in prison a laptop. How community colleges are using them — chunk 34
   split: held-out
@@ -320,7 +320,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-11
   description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 11
   split: held-out
@@ -357,7 +357,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-24
   description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 24
   split: held-out
@@ -382,7 +382,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/08/california-moves-to-regulate-neurotechnology/#chunk-34
   description: Would you trust your boss with data about your brain? California moves to regulate neurotech — chunk 34
   split: held-out
@@ -430,7 +430,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-10
   description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 10
   split: held-out
@@ -461,7 +461,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-23
   description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 23
   split: held-out
@@ -486,7 +486,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk-33
   description: Here’s what the ‘once-in-a-lifetime’ federal housing bill means for California — chunk 33
   split: held-out
@@ -510,7 +510,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-9
   description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 9
   split: held-out
@@ -537,7 +537,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-20
   description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 20
   split: held-out
@@ -559,7 +559,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk-30
   description: Gas prices are high for July 4. California’s price-gouging fixes are still on the shelf — chunk 30
   split: held-out
@@ -598,7 +598,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/#chunk-10
   description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says — chunk 10
   split: held-out
@@ -639,7 +639,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/2026/06/uber-california-insurance-liability/#chunk-23
   description: Uber passed an insurance law in California. It did not disclose key info, a lawmaker says — chunk 23
   split: held-out
@@ -688,7 +688,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk-10
   description: Their town burned to the ground. Should they get a pass from California’s new housing laws? — chunk 10
   split: held-out
@@ -714,7 +714,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk-24
   description: Their town burned to the ground. Should they get a pass from California’s new housing laws? — chunk 24
   split: held-out
@@ -744,7 +744,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk-11
   description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’ — chunk 11
   split: held-out
@@ -773,7 +773,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk-25
   description: For the lone woman left in the California governor’s race, it’s all about ‘temperament’ — chunk 25
   split: held-out
@@ -844,7 +844,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-18
   description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 18
   split: held-out
@@ -868,7 +868,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-39
   description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 39
   split: held-out
@@ -898,7 +898,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk-57
   description: Kaiser nurses say technology is making their jobs — and patient care — worse — chunk 57
   split: held-out
@@ -925,7 +925,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-14
   description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 14
   split: held-out
@@ -960,7 +960,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-32
   description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 32
   split: held-out
@@ -987,7 +987,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk-46
   description: California colleges reveal their military weapons stockpile after CalMatters investigation — chunk 46
   split: held-out
@@ -1016,7 +1016,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-11
   description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 11
   split: held-out
@@ -1048,7 +1048,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-25
   description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 25
   split: held-out
@@ -1085,7 +1085,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk-36
   description: California craft liquor delivery is about to go away thanks to big money lobbying — chunk 36
   split: held-out
@@ -1127,7 +1127,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk-10
   description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one — chunk 10'
   split: held-out
@@ -1153,7 +1153,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk-24
   description: 'Newsom’s populist act: Oppose state billionaire tax, embrace federal one — chunk 24'
   split: held-out
@@ -1183,7 +1183,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk-9
   description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time? — chunk 9
   split: held-out
@@ -1210,7 +1210,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk-20
   description: David Valadao lost in the last anti-Trump blue wave. Will farmers help him win this time? — chunk 20
   split: held-out
@@ -1244,7 +1244,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk-8
   description: California Republicans tried to cut him off. Then he beat them from the right — chunk 8
   split: held-out
@@ -1270,7 +1270,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk-20
   description: California Republicans tried to cut him off. Then he beat them from the right — chunk 20
   split: held-out
@@ -1299,7 +1299,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/#chunk-8
   description: Most California lawmakers never buck their party. These few do — chunk 8
   split: held-out
@@ -1332,7 +1332,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/07/california-legislature-maverick-lawmakers/#chunk-19
   description: Most California lawmakers never buck their party. These few do — chunk 19
   split: held-out
@@ -1369,7 +1369,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk-8
   description: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future — chunk 8'
   split: held-out
@@ -1400,7 +1400,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk-20
   description: 'Tech regulation gets personal: How Tom Steyer’s brother could shape California’s AI future — chunk 20'
   split: held-out
@@ -1454,7 +1454,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk-9
   description: A California housing bill would raise wages to $28. Why do some unions hate it? — chunk 9
   split: held-out
@@ -1496,7 +1496,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk-22
   description: A California housing bill would raise wages to $28. Why do some unions hate it? — chunk 22
   split: held-out
@@ -1523,7 +1523,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/higher-education/2025/04/health-research/#chunk-11
   description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more — chunk 11
   split: held-out
@@ -1543,7 +1543,7 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml
 - id: https://calmatters.org/education/higher-education/2025/04/health-research/#chunk-25
   description: He spent decades researching dementia. Trump’s DEI purge killed his grant, and dozens more — chunk 25
   split: held-out
@@ -1578,4 +1578,4 @@ cases:
     label_quality: silver
     annotator_model: claude-opus-5
     annotation_guideline: docs/evaluation/extraction-annotation.md
-    coreference_gold_set: evals/gold/coreference.yaml
+    coreference_silver_set: evals/silver/coreference.yaml

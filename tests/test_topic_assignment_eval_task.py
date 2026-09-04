@@ -320,4 +320,4 @@ def test_the_task_is_registered_with_its_own_types() -> None:
 
     assert task.input_type is AssignmentInput
     assert task.output_type is AssignmentExpectation
-    assert task.gold_set_stem == "topic_assignment"
+    assert task.data_set_stem == "topic_assignment"

@@ -1,4 +1,4 @@
-"""`ca-map eval` — collect a Gold Set's candidates, and run it.
+"""`ca-map eval` — collect an Evaluation Data Set's candidates, and run it.
 
 `collect` writes the file the author then edits; `run` reads that file and
 writes one report.  Neither touches a database — see ADR 0017.
@@ -18,10 +18,10 @@ from dotenv import load_dotenv
 
 from knowledge_map.evaluation import (
     EvaluationSplit,
-    gold_set_path,
-    load_gold_set,
+    data_set_path,
+    load_data_set,
     run_commit,
-    run_gold_set,
+    run_data_set,
     trace_url,
     write_report,
 )
@@ -43,7 +43,7 @@ def select_deployment(
     """Build the command-selected chat deployment before evaluation starts.
 
     OpenRouter configuration is deliberately checked at this boundary so a
-    malformed command cannot execute part of a Gold Set before it fails.
+    malformed command cannot execute part of a Data Set before it fails.
     ``model_override`` is kept verbatim when supplied; an empty override is
     therefore rejected as an invalid requested model rather than replaced by
     an ambient setting.
@@ -62,23 +62,23 @@ def select_deployment(
 
 def add_parser(subparsers: Any) -> None:
     """Register `eval` and its two subcommands on the top-level parser."""
-    parser = subparsers.add_parser("eval", help="Run an Evaluation Gold Set")
+    parser = subparsers.add_parser("eval", help="Run an Evaluation Data Set")
     actions = parser.add_subparsers(dest="eval_action", required=True)
 
     collect = actions.add_parser(
-        "collect", help="Write a Gold Set file from the project's own labeled data"
+        "collect", help="Write a Data Set file from the project's own labeled data"
     )
     collect.add_argument("task", choices=task_names())
-    collect.add_argument("--gold-set", type=Path, default=None)
+    collect.add_argument("--data-set", type=Path, default=None)
     collect.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite an existing Gold Set file, discarding hand edits",
+        help="Overwrite an existing Data Set file, discarding hand edits",
     )
 
-    run = actions.add_parser("run", help="Run a Gold Set and write one report")
+    run = actions.add_parser("run", help="Run a Data Set and write one report")
     run.add_argument("task", choices=task_names())
-    run.add_argument("--gold-set", type=Path, default=None)
+    run.add_argument("--data-set", type=Path, default=None)
     run.add_argument(
         "--deployment",
         choices=("local", "openrouter"),
@@ -126,7 +126,7 @@ def _collect(args: argparse.Namespace) -> None:
     if task.collect is None:
         sys.exit(f"{task.name} has no labeled data to collect from; author the file by hand")
 
-    path = args.gold_set or gold_set_path(task.gold_set_stem)
+    path = args.data_set or data_set_path(task.data_set_stem, task.label_quality)
     if path.exists() and not args.force:
         sys.exit(
             f"{path} already exists. Editing it is the authoring step; pass --force "
@@ -172,7 +172,7 @@ def _warn_if_one_label_dominates(labels: Counter) -> None:
         return
     print(
         f"\nWarning: {count} of {total} cases are {label}. Always answering "
-        f"{label} scores {count / total:.0%} on this Gold Set, so agreement "
+        f"{label} scores {count / total:.0%} on this Data Set, so agreement "
         "will not tell you whether the classifier works. Label more of the "
         "other class before trusting a run."
     )
@@ -189,11 +189,11 @@ def _run(args: argparse.Namespace) -> None:
     except ValueError as error:
         sys.exit(str(error))
 
-    path = args.gold_set or gold_set_path(task.gold_set_stem)
+    path = args.data_set or data_set_path(task.data_set_stem, task.label_quality)
     if not path.exists():
         sys.exit(f"{path} does not exist. Run `ca-map eval collect {task.name}` first.")
 
-    gold_set = load_gold_set(
+    data_set = load_data_set(
         path,
         input_type=task.input_type,
         output_type=task.output_type,
@@ -207,9 +207,9 @@ def _run(args: argparse.Namespace) -> None:
         else nullcontext()
     )
     with admission_scope:
-        report = run_gold_set(
-            gold_set,
-            task=task.build(deployment, gold_set),
+        report = run_data_set(
+            data_set,
+            task=task.build(deployment, data_set),
             evaluators=task.evaluators,
             split=split,
             max_concurrency=args.max_concurrency,
@@ -218,7 +218,8 @@ def _run(args: argparse.Namespace) -> None:
                 "deployment": deployment.model_dump(mode="json"),
                 "commit": run_commit(),
                 "prompts": task.prompt_digests(),
-                "gold_set": str(path),
+                "data_set": str(path),
+                "label_quality": task.label_quality.value,
                 "split": split.value if split else None,
             },
         )
@@ -232,7 +233,7 @@ def _run(args: argparse.Namespace) -> None:
 
     if report.failures:
         # A failed case is not a completed Evaluation Run; do not persist a
-        # report whose cases would be mistaken for a complete Gold Set result.
+        # report whose cases would be mistaken for a complete Data Set result.
         raise SystemExit("Evaluation Run failed; no report was written.")
 
     if args.no_report:
@@ -241,7 +242,8 @@ def _run(args: argparse.Namespace) -> None:
         report,
         task=task.name,
         deployment=deployment,
-        gold_set_path=path,
+        data_set_path=path,
+        label_quality=task.label_quality,
         split=split.value if split else None,
     )
     print(f"\nWrote {written}")

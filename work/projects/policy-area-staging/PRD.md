@@ -67,7 +67,7 @@ measures. It has direct prior art: Bill Session Resolution and Legislative Event
 dating are already article-level passes that run after chunk extraction and hand
 their results to the write path.
 
-Each stage is separately evaluable against its own Gold Set, as Coreference
+Each stage is separately evaluable against its own Silver Set, as Coreference
 Resolution, the Relevance Filter, and Entity Extraction already are.
 
 ## User Stories
@@ -89,14 +89,14 @@ Resolution, the Relevance Filter, and Entity Extraction already are.
 15. As a system operator, I want a Source Article with no Policy Areas to complete normally, so that an article the vocabulary does not cover still reaches the graph with its entities.
 16. As a system operator, I want a failure in either new stage to route the article the way a coreference or extraction failure does, so that the Dead Letter Queue and Article Status keep one vocabulary of failure.
 17. As an AI engineer, I want both stages behind one adapter Protocol on the Story Pipeline, so that the pipeline gains one seam rather than two and one fake covers both in tests.
-18. As an AI engineer, I want a Policy Area Gold Set of twenty article-level cases, so that classification is measured rather than assumed.
-19. As an AI engineer, I want a Topic Assignment Gold Set of twenty article-level cases, so that assignment is measured rather than assumed.
-20. As an AI engineer, I want both Gold Sets drawn from the twenty Stories already in the coreference Silver Set, so that all four stages are measured over one population.
+18. As an AI engineer, I want a Policy Area Silver Set of twenty article-level cases, so that classification is measured rather than assumed.
+19. As an AI engineer, I want a Topic Assignment Silver Set of twenty article-level cases, so that assignment is measured rather than assumed.
+20. As an AI engineer, I want both Silver Sets drawn from the twenty Stories already in the coreference Silver Set, so that all four stages are measured over one population.
 21. As an AI engineer, I want classification scored as multi-label agreement over the vocabulary, so that a report distinguishes an article labelled with too much from one labelled with too little.
 22. As an AI engineer, I want assignment scored on the measure-to-area pairs, so that an article whose areas are right but whose bills are mismatched cannot score as a pass.
 23. As an AI engineer, I want the extraction Silver Set's Policy Area nodes and topic edges re-annotated under the new contract, so that the extraction report stops scoring a stage that no longer owns the question.
 24. As a maintainer, I want the Policy Area open questions retired from the extraction annotation guideline, so that the guideline stops recording a question answered elsewhere.
-25. As a maintainer, I want the number of Policy Areas per article recorded from the Gold Set rather than capped by a guess, so that any future limit is set from the distribution we measured.
+25. As a maintainer, I want the number of Policy Areas per article recorded from the Silver Set rather than capped by a guess, so that any future limit is set from the distribution we measured.
 26. As a maintainer, I want `CONTEXT.md` to name both stages, so that the domain vocabulary describes the pipeline that exists.
 
 ## Implementation Decisions
@@ -160,7 +160,7 @@ pair.
 
 ### No cap on areas per article
 
-The classification schema sets no maximum. The Gold Set records the distribution
+The classification schema sets no maximum. The Silver Set records the distribution
 first, and any limit is set from it. This follows the precedent already set for
 the coreference discard threshold: no untested threshold blocks ingestion before
 there is data to set it from.
@@ -176,14 +176,14 @@ later article reaches.
 
 ### Evaluation
 
-Two tasks join the registry, each with its own Gold Set file named for it, both
+Two tasks join the registry, each with its own Silver Set file named for it, both
 drawn from the twenty Stories in the coreference Silver Set so that every stage
 is measured over one population. Classification is scored as multi-label
 agreement over the vocabulary — precision, recall, and F1 across an article's
 areas. Assignment is scored on measure-to-area pairs, with the measure named by
 extraction's surface string.
 
-Both Gold Sets are silver: labelled by `claude-opus-5` against a written
+Both Silver Sets are silver: labelled by `claude-opus-5` against a written
 annotation guideline, as the coreference and extraction sets are, and each case
 naming that guideline in its metadata.
 
@@ -208,10 +208,10 @@ existing extraction conformance tests. Extended to prove a Policy Area node and 
 topic relationship arriving from the chunk extractor are dropped and counted in
 the Adherence Report, and that the entities beside them survive.
 
-**Gold Set loading.** Prior art is the coreference and extraction Silver Set
+**Silver Set loading.** Prior art is the coreference and extraction Silver Set
 tests, which load each file through its registered task's own types so the file
 cannot drift from what the runner validates it against. One equivalent per new
-Gold Set, asserting twenty cases, held-out splits, ids that address a Source
+Silver Set, asserting twenty cases, held-out splits, ids that address a Source
 Article, and — for assignment — that every measure it names is one the extraction
 Silver Set or the article actually contains.
 

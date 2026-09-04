@@ -6,7 +6,7 @@ Parent: [Useful Graph Retrieval](../MAP.md)
 ## Question
 
 What questions must this retrieval layer answer, expressed concretely enough to
-choose retrieval modes against and to build an Evaluation Gold Set from later?
+choose retrieval modes against and to build an Evaluation Data Set from later?
 
 The roadmap named four orientations — entity, edge, neighborhood, and community.
 This ticket turns them into an authored set of representative questions over the

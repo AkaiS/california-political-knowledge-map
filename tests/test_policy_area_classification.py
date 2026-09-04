@@ -93,7 +93,7 @@ def test_an_article_the_vocabulary_does_not_cover_classifies_to_nothing():
 
 
 def test_the_schema_sets_no_maximum_number_of_areas():
-    """No cap is introduced before the Gold Set records the distribution."""
+    """No cap is introduced before the Silver Set records the distribution."""
 
     every_area = [area.name for area in news.POLICY_AREAS]
 

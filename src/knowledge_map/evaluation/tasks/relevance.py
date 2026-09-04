@@ -1,6 +1,7 @@
 """The Relevance Filter as an evaluated task.
 
-The Gold Set for this task is `evals/gold/relevance.yaml`. Its cases come
+The Gold Set for this task is `evals/gold/relevance.yaml`, the project's
+only one: a person wrote every label. Its cases come
 from the 92 rows in `scraped_html_cache` the author already labeled by
 hand, which is why `collect_candidates` exists and why it writes the
 author's own label as the expected output rather than leaving it blank.
@@ -26,6 +27,7 @@ from knowledge_map.schemas import ModelDeployment
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import get_chat_model
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import UNSCORED
 from .registry import EvaluationTask, register
@@ -50,7 +52,7 @@ class RelevanceMetadata(BaseModel):
     label_source: str | None = None
 
 
-def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
+def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     """Return the callable one case is run through, bound to a deployment.
 
     Few-shots come from the Gold Set's own `training` split.
@@ -63,7 +65,7 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
         instructions=RELEVANCE_AGENT_INSTRUCTIONS,
         defer_model_check=True,
     )
-    positives, negatives = _few_shot_examples(gold_set)
+    positives, negatives = _few_shot_examples(data_set)
 
     async def classify(case_input: RelevanceInput) -> RelevanceExpectation:
         prompt = get_relevance_agent_prompt(
@@ -78,14 +80,14 @@ def build_task(model: str | ModelDeployment, gold_set: Any) -> Any:
     return classify
 
 
-def _few_shot_examples(gold_set: Any) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+def _few_shot_examples(data_set: Any) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     """Draw up to three examples per class from the `training` split only.
 
     A Gold Set with no `training` cases few-shots with nothing.
     """
     from knowledge_map.evaluation import EvaluationSplit
 
-    training = gold_set.split(EvaluationSplit.TRAINING)
+    training = data_set.split(EvaluationSplit.TRAINING)
     by_label: dict[str, list[dict[str, str]]] = {"RELEVANT": [], "IRRELEVANT": []}
     for case in training:
         label = case.expected_output.classification
@@ -186,6 +188,7 @@ def _raw_metadata(metadata_json: str | None) -> dict[str, Any]:
 RELEVANCE_TASK = register(
     EvaluationTask(
         name="relevance",
+        label_quality=LabelQuality.GOLD,
         input_type=RelevanceInput,
         output_type=RelevanceExpectation,
         metadata_type=RelevanceMetadata,

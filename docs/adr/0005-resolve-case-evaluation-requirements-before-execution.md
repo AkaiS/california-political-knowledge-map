@@ -1,6 +1,6 @@
 # Resolve case evaluation requirements before execution
 
-Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+Superseded by ADR 0017. Its use of "Gold Set" is retired too: four of the five sets were model-labeled and are now Silver Sets under `evals/silver/` — see the amendment to ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
 
 The aggregate-report persistence portion of this decision is superseded by ADR 0011; Evaluation Reports are now derived from Frozen Aggregate Manifests over terminal checkpoints.
 

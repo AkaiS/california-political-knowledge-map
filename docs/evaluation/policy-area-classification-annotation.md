@@ -1,19 +1,19 @@
 # Policy Area Classification annotation guideline
 
 The standard the Policy Area Classification Silver Set is annotated against.
-Every case in `evals/gold/policy_area_classification.yaml` names this file in
+Every case in `evals/silver/policy_area_classification.yaml` names this file in
 its `annotation_guideline` metadata, because a judgment call made one way in one
 article and the other way in the next produces a Silver Set that no score can be
 read against.
 
-You are producing a **gold-quality** Policy Area annotation of one Source
+You are producing a **careful, guideline-faithful** Policy Area annotation of one Source
 Article against the closed vocabulary the News Ontology declares.
 
 ## What a case is
 
 One Source Article, whole, as its **coreference-resolved** text — the same text
 the classification stage reads in production, after the accepted silver Mention
-Spans of `evals/gold/coreference.yaml` have been substituted and before the
+Spans of `evals/silver/coreference.yaml` have been substituted and before the
 article is cut into chunks.
 
 - The article is the whole world, and all of it. Unlike the extraction Silver
@@ -112,7 +112,7 @@ standard as any other passage: sustained discussion counts, a clause does not.
 
 ## Observed areas per article
 
-Measured from the twenty cases of `evals/gold/policy_area_classification.yaml`,
+Measured from the twenty cases of `evals/silver/policy_area_classification.yaml`,
 recorded here because the classification schema deliberately sets **no maximum**:
 any future cap belongs to a distribution we measured rather than to a guess.
 

@@ -241,20 +241,32 @@ _Avoid_: Tag, category, subject, theme; "a topic" as a name for the node
 The Article Chunks loaded into context to support a retrieval answer. The graph is what reaches them — a query assembles a subgraph, and the Chunks attached to its nodes and edges are the evidence — rather than what supplies them: a relationship asserts existence and identity only, so the detail an answer needs lives in the Chunk the edge points back to. An answer derived from graph structure alone still carries the Chunks behind each element it counted. A topic edge names no Article Chunk, because it is decided for the whole article: what grounds it is the Source Article, and the Chunks reached through it are the ones that article attaches.
 _Avoid_: Context, retrieved documents, source text, supporting chunks
 
-**Evaluation Gold Set**:
-Every human-labeled example for one component operation, authored as one YAML file under `evals/gold/`. The file is the Gold Set; there is no database copy, no construction factory, and no immutable revision beyond the commit the file is read at. Revising it is editing the file and committing; reviewing a revision is reading the diff. Reading it validates every case against the task's own Pydantic types, so a mislabeled field is caught at read time rather than at run time.
-_Avoid_: Test fixtures, benchmark data, model labels, dataset
+**Evaluation Data Set**:
+Every labeled example for one component operation, authored as one YAML file under `evals/`. The file is the Data Set; there is no database copy, no construction factory, and no immutable revision beyond the commit the file is read at. Revising it is editing the file and committing; reviewing a revision is reading the diff. Reading it validates every case against the task's own Pydantic types, so a mislabeled field is caught at read time rather than at run time. Every Data Set is a Gold Set or a Silver Set, and the two are never one population: the umbrella names what they have in common and nothing more.
+_Avoid_: Test fixtures, benchmark data, dataset, "the gold set" as a catch-all
+
+**Gold Set**:
+An Evaluation Data Set a person labeled, under `evals/gold/`. A score against one is agreement with a human judgement, which is the thing a component is ultimately for. The project holds exactly one — `evals/gold/relevance.yaml`, labeled by hand from its own scraped rows — and calling anything else gold overstates what a number means.
+_Avoid_: Ground truth, the gold standard, reference set
+
+**Silver Set**:
+An Evaluation Data Set a model labeled against a written annotation guideline, under `evals/silver/`, with a human reviewing rather than authoring the labels. A score against one is agreement with another model's reading of that guideline: a case the annotator got wrong scores a correct answer as a miss, and a ceiling below 1.0 is expected rather than a defect. Coreference, extraction, Policy Area Classification and Topic Assignment are all measured this way, so a Silver Set score is read as a direction of travel and never compared against a Gold Set score as though the two measured the same thing.
+_Avoid_: Gold set, ground truth, weak labels, pseudo-labels
+
+**Label Quality**:
+Which of the two a Data Set is, recorded in three places that must agree: the directory the file sits in, the `label_quality` its cases carry, and the `label_quality` written into every Evaluation Report. Declared rather than inferred, because a report read a year later has only what it says.
+_Avoid_: Confidence, label source, annotation tier
 
 **Evaluation Case**:
-One authored example in a Gold Set, carrying a hand-written `id`, a description, a task input, an optional expected output, and an authored Evaluation Split. The `id` is stable across revisions of the file and is what makes a report comparable to an earlier report, so it is authored rather than derived — regenerating the file cannot silently renumber the population.
-_Avoid_: Test case, sample, fixture, gold-set row
+One authored example in a Data Set, carrying a hand-written `id`, a description, a task input, an optional expected output, and an authored Evaluation Split. The `id` is stable across revisions of the file and is what makes a report comparable to an earlier report, so it is authored rather than derived — regenerating the file cannot silently renumber the population.
+_Avoid_: Test case, sample, fixture, data-set row
 
 **Evaluation Split**:
 Exactly one role the author assigns to each Evaluation Case: `training` supplies material for tuning agent behaviour; `calibration` reserves cases from the agent-tuning loop so judge behaviour can be observed without those cases feeding agent iteration; `held-out` reserves evidence for confirming that tuned behaviour generalizes. A case cannot participate in a tuning loop and the held-out evidence set at the same time. The split is a written field, and an imbalanced population is rebalanced by editing the file.
 _Avoid_: Dataset partition, fold, case label, hashed assignment
 
 **Evaluation Suite**:
-The evaluators run against one Gold Set: the `pydantic_evals` case evaluators every case is scored by, and the report evaluators applied to the aggregate. A suite is assembled in the code that runs the task, not declared as a stored definition.
+The evaluators run against one Data Set: the `pydantic_evals` case evaluators every case is scored by, and the report evaluators applied to the aggregate. A suite is assembled in the code that runs the task, not declared as a stored definition.
 _Avoid_: Test suite, evaluator registry, suite definition
 
 **Evaluation Rubric**:
@@ -282,7 +294,7 @@ The confirmation, before a command dispatches, that every local llama.cpp endpoi
 _Avoid_: OpenRouter Probe, health check, ping, preflight
 
 **Evaluation Run**:
-One execution of a Gold Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Gold Set path and split, and each case's Model Route Summary. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
+One execution of an Evaluation Data Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Data Set path, its Label Quality and split, and each case's Model Route Summary. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
 _Avoid_: Experiment, job, trial, evaluation record
 
 ## Operational Constraints

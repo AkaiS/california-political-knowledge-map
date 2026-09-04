@@ -1,12 +1,12 @@
 # Coreference annotation guideline
 
 The standard the coreference Silver Set is annotated against. Every case in
-`evals/gold/coreference.yaml` names this file in its `annotation_guideline`
+`evals/silver/coreference.yaml` names this file in its `annotation_guideline`
 metadata, because a judgment call made one way in one article and the other
 way in the next produces a Silver Set that no score can be read against.
 
 
-You are producing a **gold-quality, exhaustive** coreference annotation of one
+You are producing an **exhaustive, guideline-faithful** coreference annotation of one
 news article, to replace a thin machine-generated "silver" annotation.
 
 ## What a Mention Span is

@@ -1,6 +1,6 @@
 # Renew and fence Evaluation Finalization authority
 
-Superseded by ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
+Superseded by ADR 0017. Its use of "Gold Set" is retired too: four of the five sets were model-labeled and are now Silver Sets under `evals/silver/` — see the amendment to ADR 0017. The Evaluation Ledger and every mechanism this decision specifies for persisting, versioning, or finalizing evaluation records are removed; Gold Sets are YAML files and run reports are JSON files, both versioned by git.
 
 This decision refines the execution-lease portion of ADR 0005. Each Evaluation Finalization Attempt must continuously hold one renewable, expiring authority claim. The Evaluation Ledger owns time and atomically permits renewal, report checkpointing, and completion only for the matching, still-live claim. Expiry irreversibly ends an attempt; it cannot reacquire authority, while a new attempt may replace the expired claim and resume from terminal evidence.
 

@@ -6,10 +6,10 @@ from knowledge_map.adapters.coreference import (
     CoreferenceDeps,
     validate_mention_spans,
 )
-from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_gold_set
+from knowledge_map.evaluation import EvaluationSplit, build_dataset, load_data_set
 from knowledge_map.evaluation.tasks import task_named
 
-SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
+SILVER_SET_PATH = Path("evals/silver/coreference.yaml")
 
 
 def _load_silver_set():
@@ -21,7 +21,7 @@ def _load_silver_set():
     """
 
     task = task_named("coreference")
-    return load_gold_set(
+    return load_data_set(
         SILVER_SET_PATH,
         input_type=task.input_type,
         output_type=task.output_type,

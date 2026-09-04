@@ -1,6 +1,6 @@
-"""Run an Evaluation Gold Set through ``pydantic-evals``.
+"""Run an Evaluation Data Set through ``pydantic-evals``.
 
-The Gold Set is a file and the report is a file; this module is what runs
+The Data Set is a file and the report is a file; this module is what runs
 between them. It holds no persistence and resolves no plan — see ADR 0017.
 """
 
@@ -19,7 +19,7 @@ from pydantic_evals.reporting import EvaluationReport
 
 from knowledge_map.utils.telemetry import setup_telemetry
 
-from .gold_set import EvaluationCase, EvaluationGoldSet, EvaluationSplit
+from .data_set import EvaluationCase, EvaluationDataSet, EvaluationSplit
 
 
 class _EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
@@ -53,29 +53,29 @@ class _EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
 
 
 def build_dataset(
-    gold_set: EvaluationGoldSet[Any, Any, Any],
+    data_set: EvaluationDataSet[Any, Any, Any],
     *,
     evaluators: Sequence[Evaluator],
     report_evaluators: Sequence[ReportEvaluator] = (),
     split: EvaluationSplit | None = None,
 ) -> Dataset[Any, Any, Any]:
-    """Project a Gold Set into one multi-case Pydantic Evals Dataset."""
-    cases = gold_set.split(split) if split is not None else gold_set.cases
+    """Project a Data Set into one multi-case Pydantic Evals Dataset."""
+    cases = data_set.split(split) if split is not None else data_set.cases
     if not cases:
         raise ValueError(
-            f"{gold_set.task} has no cases"
+            f"{data_set.task} has no cases"
             + (f" in the {split.value} split" if split is not None else "")
         )
     return Dataset(
-        name=gold_set.task,
+        name=data_set.task,
         cases=[_framework_case(case) for case in cases],
         evaluators=tuple(evaluators),
         report_evaluators=tuple(report_evaluators),
     )
 
 
-def run_gold_set(
-    gold_set: EvaluationGoldSet[Any, Any, Any],
+def run_data_set(
+    data_set: EvaluationDataSet[Any, Any, Any],
     *,
     task: Callable[[Any], Any],
     evaluators: Sequence[Evaluator],
@@ -84,9 +84,9 @@ def run_gold_set(
     max_concurrency: int = 1,
     experiment_metadata: Mapping[str, Any] | None = None,
 ) -> EvaluationReport[Any, Any, Any]:
-    """Execute every case in ``gold_set`` against ``task``.
+    """Execute every case in ``data_set`` against ``task``.
 
-    ``experiment_metadata`` names what the run cannot infer from the Gold Set
+    ``experiment_metadata`` names what the run cannot infer from the Data Set
     alone — the Model Deployment and the commit — and reaches the trace and the
     report by the same route, so the two agree by construction.
     """
@@ -94,7 +94,7 @@ def run_gold_set(
         raise ValueError("max_concurrency must be greater than 0")
     setup_telemetry()
     dataset = build_dataset(
-        gold_set,
+        data_set,
         evaluators=evaluators,
         report_evaluators=report_evaluators,
         split=split,
@@ -102,8 +102,8 @@ def run_gold_set(
     synchronous_task = _synchronous(task)
     return dataset.evaluate_sync(
         synchronous_task,
-        name=gold_set.task,
-        task_name=gold_set.task,
+        name=data_set.task,
+        task_name=data_set.task,
         metadata=dict(experiment_metadata) if experiment_metadata else None,
         progress=False,
         max_concurrency=max_concurrency,

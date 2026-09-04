@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from knowledge_map.cli import evaluate
-from knowledge_map.evaluation import report_path, write_report
+from knowledge_map.evaluation import LabelQuality, report_path, write_report
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -46,17 +46,18 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
     tmp_path: Path, monkeypatch
 ) -> None:
     calls: dict[str, object] = {}
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text("placeholder")
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text("placeholder")
 
-    def build(deployment: ModelDeployment, gold_set: object):
+    def build(deployment: ModelDeployment, data_set: object):
         calls["task_deployment"] = deployment
-        calls["gold_set"] = gold_set
+        calls["data_set"] = data_set
         return lambda case_input: {"classification": "RELEVANT"}
 
     task = SimpleNamespace(
         name="relevance",
-        gold_set_stem="relevance",
+        data_set_stem="relevance",
+        label_quality=LabelQuality.GOLD,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,
@@ -67,8 +68,8 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
     report = SimpleNamespace(print=lambda **kwargs: None, failures=())
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_gold_set", lambda *args, **kwargs: object())
-    monkeypatch.setattr(evaluate, "run_gold_set", lambda *args, **kwargs: report)
+    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(evaluate, "run_data_set", lambda *args, **kwargs: report)
 
     def capture_report(*args, **kwargs):
         calls["report_deployment"] = kwargs["deployment"]
@@ -92,7 +93,7 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
         argparse.Namespace(
             eval_action="run",
             task="relevance",
-            gold_set=gold_set_path,
+            data_set=data_set_path,
             deployment="openrouter",
             model="override/model:verbatim",
             split=None,
@@ -157,7 +158,8 @@ def test_reports_serialize_deployment_and_separate_local_and_openrouter_runs(
         _Report(),
         task="relevance",
         deployment=openrouter,
-        gold_set_path=tmp_path / "gold.yaml",
+        data_set_path=tmp_path / "relevance.yaml",
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     document = json.loads(written.read_text())
@@ -207,15 +209,16 @@ def test_openrouter_provider_list_rejects_empty_entries(monkeypatch) -> None:
         )
 
 
-def test_incomplete_openrouter_configuration_fails_before_gold_set_execution(
+def test_incomplete_openrouter_configuration_fails_before_data_set_execution(
     tmp_path: Path, monkeypatch
 ) -> None:
-    gold_set_path = tmp_path / "relevance.yaml"
-    gold_set_path.write_text("placeholder")
+    data_set_path = tmp_path / "relevance.yaml"
+    data_set_path.write_text("placeholder")
     calls: list[str] = []
     task = SimpleNamespace(
         name="relevance",
-        gold_set_stem="relevance",
+        data_set_stem="relevance",
+        label_quality=LabelQuality.GOLD,
         prompt_digests=dict,
         default_model="local/model",
     )
@@ -223,12 +226,12 @@ def test_incomplete_openrouter_configuration_fails_before_gold_set_execution(
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
     monkeypatch.setattr(
         evaluate,
-        "load_gold_set",
-        lambda *args, **kwargs: calls.append("gold-set") or object(),
+        "load_data_set",
+        lambda *args, **kwargs: calls.append("data-set") or object(),
     )
     monkeypatch.setattr(
         evaluate,
-        "run_gold_set",
+        "run_data_set",
         lambda *args, **kwargs: calls.append("run") or object(),
     )
     monkeypatch.setattr(evaluate, "load_dotenv", lambda: None)
@@ -241,7 +244,7 @@ def test_incomplete_openrouter_configuration_fails_before_gold_set_execution(
             argparse.Namespace(
                 eval_action="run",
                 task="relevance",
-                gold_set=gold_set_path,
+                data_set=data_set_path,
                 deployment="openrouter",
                 model=None,
                 split=None,

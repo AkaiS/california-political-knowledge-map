@@ -1,6 +1,6 @@
 # Attempt: two prompt contradictions in Entity Extraction
 
-Not tied to a numbered issue. Written from three runs of `evals/gold/extraction.yaml`
+Not tied to a numbered issue. Written from three runs of `evals/silver/extraction.yaml`
 against local `gemma4:26b`, committed alongside this note: one before the change
 (`25e803d`) and two after it (`bbaa22b`, prompt digest `sha256:b8238763274e`). Every
 figure below is read off those report files. Where a claim is a hypothesis rather than

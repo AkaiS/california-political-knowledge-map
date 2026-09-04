@@ -10,8 +10,8 @@ from knowledge_map.evaluation import EvaluationSplit, build_dataset
 from knowledge_map.ontology.news import POLICY_AREAS
 from knowledge_map.schemas import PolicyAreaClassification
 
-SILVER_SET_PATH = Path("evals/gold/policy_area_classification.yaml")
-COREFERENCE_SILVER_SET_PATH = Path("evals/gold/coreference.yaml")
+SILVER_SET_PATH = Path("evals/silver/policy_area_classification.yaml")
+COREFERENCE_SILVER_SET_PATH = Path("evals/silver/coreference.yaml")
 ANNOTATION_GUIDELINE_PATH = Path(
     "docs/evaluation/policy-area-classification-annotation.md"
 )
@@ -103,7 +103,7 @@ def test_every_case_names_the_guideline_it_was_annotated_against() -> None:
         assert case.metadata.label_quality == "silver", case.id
         assert case.metadata.annotator_model == "claude-opus-5", case.id
         assert case.metadata.annotation_guideline == str(ANNOTATION_GUIDELINE_PATH)
-        assert case.metadata.coreference_gold_set == str(COREFERENCE_SILVER_SET_PATH)
+        assert case.metadata.coreference_silver_set == str(COREFERENCE_SILVER_SET_PATH)
 
 
 def test_an_article_the_vocabulary_does_not_cover_is_annotated_as_no_areas() -> None:

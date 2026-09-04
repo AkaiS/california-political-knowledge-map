@@ -21,6 +21,8 @@ from pydantic_evals.reporting import EvaluationReport
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.utils.telemetry import project_url
 
+from .data_set import LabelQuality
+
 
 def trace_url(report: EvaluationReport[Any, Any, Any]) -> str | None:
     """Address the trace this run left in Logfire.
@@ -65,7 +67,8 @@ def write_report(
     task: str,
     deployment: ModelDeployment | None = None,
     model: str | None = None,
-    gold_set_path: Path | str,
+    data_set_path: Path | str,
+    label_quality: LabelQuality,
     split: str | None = None,
     root: Path | None = None,
 ) -> Path:
@@ -88,7 +91,12 @@ def write_report(
         "deployment": selected.model_dump(mode="json"),
         "commit": run_commit(),
         "dirty": _worktree_is_dirty(),
-        "gold_set": str(gold_set_path),
+        "data_set": str(data_set_path),
+        # Recorded beside the path rather than left to be inferred from it: a
+        # score against a model's labels and a score against a person's are
+        # not the same measurement, and a reader of an old report has only
+        # what the report says.
+        "label_quality": label_quality.value,
         "split": split,
         "ran_at": ran_at.isoformat(),
         "report": to_jsonable_python(serialized_report, fallback=str),

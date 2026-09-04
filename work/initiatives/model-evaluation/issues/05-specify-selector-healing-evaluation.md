@@ -6,7 +6,7 @@ Blocked by: [Specify the Relevance Filter evaluation and comparison report](04-s
 
 ## Question
 
-What gold cases and task-specific metrics should evaluate the selector-healing Generator/Critic pipeline, including whether proposed Article Selectors extract the correct source-article fields and when a proposal deserves human review?
+What cases and task-specific metrics should evaluate the selector-healing Generator/Critic pipeline, including whether proposed Article Selectors extract the correct source-article fields and when a proposal deserves human review?
 
 ## Blocking
 
