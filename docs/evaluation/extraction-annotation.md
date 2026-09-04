@@ -70,12 +70,13 @@ unions, trade groups, nonprofits, advocacy groups, news outlets, colleges.
 - A **descriptive reference** is not a name. "the Stanford design thinking
   school", "state Insurance Department", "another consumer advocacy group"
   are skipped unless the chunk also gives the organization's own name.
-- Apply a sub-label only where the chunk supports it. Public colleges,
-  university systems, and state and federal bodies take `GovernmentAgency`;
-  private companies `Corporation`; unions `LaborUnion`; industry groups
-  `TradeAssociation`; news outlets `MediaOrganization`. Where the chunk says
-  nothing about what kind of organization it is, emit **no** sub-label rather
-  than one you know from elsewhere.
+- Apply a sub-label only where the chunk supports it. Colleges, universities
+  and university systems take `EducationalInstitution`; state and federal
+  bodies `GovernmentAgency`; private companies `Corporation`; unions
+  `LaborUnion`; industry groups `TradeAssociation`; news outlets
+  `MediaOrganization`. Where the chunk says nothing about what kind of
+  organization it is, emit **no** sub-label rather than one you know from
+  elsewhere.
 
 ### Bill
 
@@ -156,9 +157,15 @@ future pass makes the same choice rather than rediscovering the question.
   Bill nodes because the ontology says a surface string stands in where no
   designation was recovered. Where the handle gets long, the fullest form was
   taken, and no rule says how long is too long.
-- **Public universities as `GovernmentAgency`.** UCLA, UC Davis, Cal State
-  Northridge and Mt. San Antonio College carry it; Cornell and McMaster carry
-  no sub-label. The line is public-vs-private, which the chunk rarely states.
+- **Campuses as `EducationalInstitution`.** UCLA, UC Davis, Cal State
+  Northridge, Mt. San Antonio College, Cornell and McMaster all carry it. The
+  earlier rule split them on public-vs-private — `GovernmentAgency` for the
+  California campuses, no sub-label for the out-of-state ones — and that line
+  is one the chunk rarely states. `EducationalInstitution` is what every
+  passage naming a campus does support. `Cal State Board of Trustees` carries
+  it too: the chunk names it only as the body governing the CSU system, and a
+  separate sub-label for a governing board would say more than the passage
+  does.
 - **`Congress`, `U.S. Navy` and other bodies as `Organization`.** They are
   actors the chunk names, so they are annotated, but nothing else in a case
   ever connects to them.

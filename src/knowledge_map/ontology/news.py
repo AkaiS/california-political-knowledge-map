@@ -40,7 +40,7 @@ SUB_LABELS = {
             "PAC", "IE_Committee", "Corporation", "LaborUnion",
             "TradeAssociation", "NonProfit", "AdvocacyGroup",
             "GrassrootsMovement", "TribalNation", "GovernmentAgency",
-            "MediaOrganization",
+            "MediaOrganization", "EducationalInstitution",
         }
     ),
 }
