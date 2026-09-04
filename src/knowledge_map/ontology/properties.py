@@ -30,12 +30,19 @@ class PropertySpec:
     ``form`` is how the extraction prompt asks for the value, and ``example`` is a
     value written that way. A test normalizes every ``example``, so the prompt cannot
     ask for a form the write path would then throw away.
+
+    ``entailed`` says the claim cannot be recognized without the value: an article
+    that states the claim has already stated it, so there is nothing left to invent
+    by asking.  It is false for almost every property, because an article naming a
+    contribution routinely withholds the amount, and a prompt that demanded one
+    would be asking the model to make it up.
     """
 
     name: str
     normalize: Callable[[object], object | None]
     form: str
     example: str
+    entailed: bool = False
 
 
 def normalize_amount(value: object) -> float | None:
@@ -100,7 +107,7 @@ def enum_of(*allowed: str) -> Callable[[object], str | None]:
     return normalize
 
 
-def enum_spec(name: str, *allowed: str) -> PropertySpec:
+def enum_spec(name: str, *allowed: str, entailed: bool = False) -> PropertySpec:
     """A property restricted to a fixed vocabulary.
 
     The normalizer and the prompt wording are built from one list, so the prompt
@@ -112,6 +119,7 @@ def enum_spec(name: str, *allowed: str) -> PropertySpec:
         normalize=enum_of(*allowed),
         form="exactly one of " + ", ".join(f"`{item}`" for item in allowed),
         example=allowed[0],
+        entailed=entailed,
     )
 
 

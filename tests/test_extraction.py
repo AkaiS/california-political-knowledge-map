@@ -400,7 +400,7 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
     responses = [
         {
             "nodes": [
-                {"name": "Alex Lee", "label": "Politician", "properties": {"first_name": "Alex", "nickname": "Al"}},
+                {"name": "Alex Lee", "label": "Politician", "properties": {"current_party": "D", "first_name": "Alex", "nickname": "Al"}},
                 {"name": "AB 1", "label": "Bill", "properties": {"number": "AB 1"}},
                 {"name": "Vote on AB 1", "label": "LegislativeEvent"},
                 {"name": "Good Vote", "label": "LegislativeEvent", "sub_labels": ["Vote"]},
@@ -441,7 +441,9 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
     assert [(node.name, node.sub_labels) for node in first.nodes] == [
         ("Alex Lee", []), ("AB 1", []), ("Good Vote", ["Vote"]), ("Coalition", [])
     ]
-    assert first.nodes[0].properties == {"first_name": "Alex"}
+    # `first_name` is a declared gap: a chunk names a person, it does not parse
+    # them, so the split is resolution's to make and conformance drops the guess.
+    assert first.nodes[0].properties == {"current_party": "D"}
     assert first.nodes[1].properties == {}
     assert [relationship.relationship_type for relationship in first.relationships] == ["ACTION_ON"]
     report = adapter.adherence_report
@@ -453,8 +455,9 @@ def test_adapter_conforms_scripted_model_output_and_accumulates_adherence(caplog
     assert report["rejected_relationship_types"]["VOTED_AYE"].count == 1
     assert report["rejected_property_names"]["number"].count == 1
     assert report["rejected_property_names"]["nickname"].count == 2
+    assert report["rejected_property_names"]["first_name"].count == 1
     assert report["rejected_property_names"]["nickname"].example_chunk_id.startswith("sha256:")
-    assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 11
+    assert len([record for record in caplog.records if "Dropped extraction item" in record.message]) == 12
 
 def test_pydantic_ai_entity_extraction_adapter_health_check_success():
     def mock_model(messages, info):

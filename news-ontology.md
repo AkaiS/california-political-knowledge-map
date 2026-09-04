@@ -8,16 +8,16 @@ of the primary ontology plus the declared shortcuts below.
 
 | Label | Property names | Sub-labels |
 | --- | --- | --- |
-| `Bill` | `current_status`, `id`, `session` | — |
-| `Campaign` | `election_cycle`, `id`, `name`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |
+| `Bill` | `current_status`, `session` | — |
+| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |
 | `Chunk` | `embedding`, `id`, `index`, `text` | — |
-| `Committee` | `chamber`, `id`, `name` | — |
-| `LegislativeEvent` | `date`, `description`, `id`, `type` | `Amendment`, `Hearing`, `Vote` |
+| `Committee` | `chamber` | — |
+| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |
 | `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | — |
-| `Organization` | `fppc_id`, `id`, `industry_sector`, `name` | `AdvocacyGroup`, `Corporation`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |
+| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |
 | `PolicyArea` | `embedding`, `id`, `name` | — |
-| `Politician` | `birth_date`, `current_party`, `first_name`, `id`, `last_name` | — |
-| `Prop` | `election_date`, `id`, `number`, `official_title`, `summary` | — |
+| `Politician` | `birth_date`, `current_party` | — |
+| `Prop` | `election_date`, `number`, `official_title`, `summary` | — |
 
 ## Relationships
 
@@ -86,6 +86,10 @@ path stamps. Nothing records the direction twice.
 
 | Property | Applies to | Gap | Why it diverges |
 | --- | --- | --- | --- |
+| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |
+| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |
+| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |
+| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |
 | `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |
 | `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |
 | `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |

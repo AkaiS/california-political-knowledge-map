@@ -45,7 +45,12 @@ _FUNDED_PROPERTIES = (
         form="the filing identifier exactly as printed", example="FPPC-2024-0198",
     ),
 )
-_STANCE_PROPERTIES = (enum_spec("alignment", "POSITIVE", "NEGATIVE", "NEUTRAL"),)
+#: A stance's direction is entailed by the stance: prose that states support or
+#: opposition has stated which, and `NEUTRAL` covers the hedged case, so the
+#: vocabulary is total and nothing is left for the model to invent.
+_STANCE_PROPERTIES = (
+    enum_spec("alignment", "POSITIVE", "NEGATIVE", "NEUTRAL", entailed=True),
+)
 
 
 LABELS = frozenset(

@@ -4,10 +4,14 @@ from knowledge_map.ontology import news, primary
 
 
 def _relationship_property_lines(relationships: dict) -> list[str]:
-    """Fix the form of declared properties, without asking for any of them.
+    """Fix the form of declared properties, and ask only for the entailed ones.
 
     The lines it renders say how to write a value.  The write path flags a
-    missing Claim Key property; an invented one it cannot catch.
+    missing Claim Key property; an invented one it cannot catch, which is why
+    a property the article can withhold is never asked for.  An entailed
+    property is the exception the asymmetry does not reach: the passage that
+    states the claim has already stated the value, so requesting it invites
+    nothing.
     """
 
     described = {
@@ -22,22 +26,31 @@ def _relationship_property_lines(relationships: dict) -> list[str]:
         "",
         "### Relationship properties",
         "",
-        "Attach any property the text supports. None are required. The properties below "
-        "have a fixed form: when you do supply one, write it exactly this way, so the "
-        "same value reported by two articles is recognisably the same value.",
+        "Attach any property the text supports. The properties below have a fixed "
+        "form: when you do supply one, write it exactly this way, so the same value "
+        "reported by two articles is recognisably the same value.",
         "",
     ]
     for relationship_type, specs in described.items():
         lines.append(f"- `{relationship_type}`:")
         for spec in specs:
-            lines.append(f"  - `{spec.name}`: {spec.form}. Example: `{spec.example}`.")
+            entailed = (
+                " Always write this one: a passage that states the claim has already "
+                "stated this value."
+                if spec.entailed
+                else ""
+            )
+            lines.append(
+                f"  - `{spec.name}`: {spec.form}. Example: `{spec.example}`.{entailed}"
+            )
 
     lines.extend(
         [
             "",
-            "Write a value only where the article states one. Never estimate, round, "
-            "convert, or carry a value over from elsewhere in the text. An omitted value "
-            "is recorded as unknown; an invented one is recorded as fact.",
+            "Apart from those, write a value only where the article states one. Never "
+            "estimate, round, convert, or carry a value over from elsewhere in the "
+            "text. An omitted value is recorded as unknown; an invented one is "
+            "recorded as fact.",
         ]
     )
     return lines

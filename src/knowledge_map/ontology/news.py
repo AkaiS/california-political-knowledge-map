@@ -61,6 +61,46 @@ EXTRACTED_LABELS = LABELS - WRITE_PATH_LABELS - STAGE_DECIDED_LABELS
 
 NODE_DIVERGENCES = (
     Divergence(
+        property_name="id",
+        applies_to=EXTRACTED_LABELS,
+        reason=(
+            "A node's key is minted by the write path from its label and the name the "
+            "article used, so that two articles naming one entity reach one node. A "
+            "single article cannot see that agreement, so an extractor supplying an "
+            "`id` would be keying the graph off prose it alone read."
+        ),
+    ),
+    Divergence(
+        property_name="name",
+        applies_to=frozenset(
+            label
+            for label in EXTRACTED_LABELS
+            if "name" in PRIMARY_PROPERTIES[label] and label != "Bill"
+        ),
+        reason=(
+            "The extractor already reports the surface string as the entity's name, and "
+            "the write path copies it into the properties itself. Asking for it twice "
+            "invites a second, different spelling of the same name."
+        ),
+    ),
+    Divergence(
+        property_name="first_name",
+        applies_to=frozenset({"Politician"}),
+        reason=(
+            "Splitting a person's name is entity resolution, not extraction. Whether "
+            "`Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not "
+            "something the chunk states, and only an authoritative roster settles it."
+        ),
+    ),
+    Divergence(
+        property_name="last_name",
+        applies_to=frozenset({"Politician"}),
+        reason=(
+            "The other half of the same split, and unresolvable for the same reason: a "
+            "chunk names a person, it does not parse them."
+        ),
+    ),
+    Divergence(
         property_name="name",
         applies_to=frozenset(
             label for label in EXTRACTED_LABELS if "name" not in PRIMARY_PROPERTIES[label]

@@ -166,8 +166,12 @@ def test_conformance_rejects_a_divergence_that_applies_to_nothing(monkeypatch):
 def test_conformance_rejects_properties_that_were_hand_written_past_a_divergence(monkeypatch):
     # The subtraction in `PROPERTIES` is what makes a declared gap real. Restore the
     # property by hand and the ontology claims news both supplies it and cannot.
+    # Restore the one property rather than the whole primary set: several gaps are
+    # declared on this label, and the assertion that trips first is not the subject.
     hand_written = dict(news.PROPERTIES)
-    hand_written["LegislativeEvent"] = primary.PROPERTIES["LegislativeEvent"]
+    hand_written["LegislativeEvent"] = news.PROPERTIES["LegislativeEvent"] | {
+        "sequence_number"
+    }
     monkeypatch.setattr(news, "PROPERTIES", hand_written)
 
     assert "sequence_number" in _conformance_error("a hand-written property set")
@@ -369,20 +373,54 @@ def test_the_prompt_fixes_the_form_of_every_property_it_will_accept():
             assert f"`{spec.example}`" in section
 
 
-def test_the_prompt_never_ranks_a_relationship_property_as_required():
+def test_the_prompt_asks_for_a_withholdable_relationship_property_no_harder_than_that():
     """Asking for a value the article withheld is an invitation to invent one.
 
     An absent amount is already handled deterministically — the write path flags the
-    edge. A fabricated amount is not: it keys a confident, wrong edge. So the model is
-    told how to write a value, never that it owes one.
+    edge. A fabricated amount is not: it keys a confident, wrong edge. So for every
+    property an article can state the claim without, the model is told how to write a
+    value, never that it owes one.
     """
 
     section = render_extraction_ontology()
 
     assert "(required)" not in section
     assert "(optional)" not in section
-    assert "None are required." in section
-    assert "Write a value only where the article states one." in section
+    assert "write a value only where the article states one." in section
+
+    for shape in news.RELATIONSHIPS.values():
+        for spec in shape.properties:
+            if spec.entailed:
+                continue
+            asked = next(
+                (line for line in section.splitlines() if line.startswith(f"  `{spec.name}`")),
+                None,
+            ) or next(
+                line for line in section.splitlines()
+                if line.strip().startswith(f"- `{spec.name}`:")
+            )
+            assert "Always write this one" not in asked, (
+                f"{spec.name} can be withheld by an article and is still demanded"
+            )
+
+
+def test_the_prompt_demands_the_one_property_the_claim_entails():
+    """A stance the passage states is a stance whose direction it stated.
+
+    `alignment` is the exception to the rule above, and the reason is that the
+    asymmetry the rule rests on does not reach it: there is no value here for the
+    model to invent, because reading the claim is reading the value. Left unasked,
+    it went unwritten on every stance edge of the 2facafb and 25e803d runs, and each
+    of those edges reached the graph flagged `needs_review`.
+    """
+
+    section = render_extraction_ontology()
+    alignment = next(
+        line for line in section.splitlines() if line.strip().startswith("- `alignment`:")
+    )
+
+    assert "Always write this one" in alignment
+    assert news.RELATIONSHIPS["DECLARED_STANCE"].spec("alignment").entailed
 
 
 def test_the_prompt_never_asks_the_model_for_a_label_the_write_path_owns():
