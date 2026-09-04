@@ -68,6 +68,10 @@ inferred relationship when the article does not state the connection.
   carry that entity's label.
 - Do not infer endorsement from mere quotation, coverage, sponsorship, employment,
   funding, or mention.
+- An entity is extracted because the passage names it, not because it takes part in a
+  claim. A passage that names entities and states no connection between them is
+  ordinary: emit those entities in `nodes` and leave `relationships` empty. Never drop
+  an entity for having no relationship to appear in.
 - If no supported entities or relationships exist, return empty arrays. A passage that
   supports nothing is common and correct.
 
