@@ -184,11 +184,12 @@ Two things are worth keeping regardless of that:
 Added after the fact. The measurement above compares `8567ee5` to baseline `0997321`,
 a tree that no longer exists: PR #19 (`d3f43fc`) put the claimless-entity rule in the
 extraction prompt, and `main`'s baseline moved to node_f1 **0.7208**
-(`20260904T075316Z-e7e34be-…json`). The branch was rebased onto `c70a6dd` and rerun on
-the same local `gemma4:26b` deployment, one run, report
-`20260904T181210Z-573a681-local-gemma4-26b-1499ceec2201.json`.
+(`20260904T075316Z-e7e34be-…json`). The branch was rebased onto that baseline's tree and
+rerun on the same local `gemma4:26b` deployment, one run, report
+`20260904T181210Z-573a681-local-gemma4-26b-1499ceec2201.json`. Both trees are cited by
+report filename because the rerun's branch is local-only.
 
-| metric | baseline `e7e34be` | subgraph `573a681` |
+| metric | baseline `…075316Z-e7e34be…` | subgraph `…181210Z-573a681…` |
 | --- | --- | --- |
 | node_f1 | 0.7208 | **0.6475** |
 | node_recall | 0.7300 | 0.6450 |
