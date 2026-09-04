@@ -25,6 +25,13 @@ from knowledge_map.adapters.extraction import (
     get_extraction_agent,
     load_instructions,
 )
+from knowledge_map.adapters.stance_alignment import (
+    ALIGNMENT_PROPERTY,
+    CRITIC_INSTRUCTIONS,
+    STANCE_RELATIONSHIP_TYPE,
+    apply_stance_alignment,
+    get_alignment_critic_agent,
+)
 from knowledge_map.schemas import (
     ExtractionResult,
     ModelDeployment,
@@ -82,6 +89,13 @@ class ExtractionOutput(BaseModel):
     into it.
     """
     failure_type: str | None = None
+    critic_call_count: int = 0
+    """How many extra inferences the Stance Alignment Critic made for this case.
+
+    0 or 1.  The critic is skipped outright on a chunk whose extraction
+    produced no stance claim, and the whole cost of the second pass is the
+    number of cases where this is 1.
+    """
 
 
 class ExtractionSilverMetadata(BaseModel):
@@ -127,6 +141,11 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
 
     deployment = as_deployment(model)
     agent = get_extraction_agent(deployment)
+    # A second pass over what the extractor already produced.  It runs here
+    # rather than inside the adapter so the producer's own behaviour is
+    # untouched: the extraction call, its prompt, and its output are the same
+    # ones every earlier report measured.
+    critic = get_alignment_critic_agent(deployment)
 
     def extract(case_input: ExtractionInput) -> ExtractionOutput:
         adapter = PydanticAIEntityExtractionAdapter(agent=agent)
@@ -137,10 +156,14 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 dropped_item_count=_dropped_item_count(adapter),
                 failure_type=error.failure_type,
             )
+        aligned = apply_stance_alignment(
+            case_input.text, result.relationships, agent=critic
+        )
         return ExtractionOutput(
             nodes=result.nodes,
-            relationships=result.relationships,
+            relationships=aligned.relationships,
             dropped_item_count=_dropped_item_count(adapter),
+            critic_call_count=aligned.call_count,
         )
 
     return extract
@@ -293,6 +316,37 @@ class AgreedOnTheClaimProperties(Evaluator):
         return {"claim_property_accuracy": agreed / len(shared)}
 
 
+class AgreedOnTheStanceAlignment(Evaluator):
+    """Of the stances both claimed, how many carry the alignment silver wanted.
+
+    Its own score because `relationship_f1` cannot be evidence about it:
+    `relationship_identity` keys on endpoints and type alone, so a stance is
+    counted found whether it carries an alignment, the wrong alignment, or no
+    properties at all.  Scored only over shared `DECLARED_STANCE` claims silver
+    gave an alignment, which is a handful of cases and is read as such.
+    """
+
+    def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
+        expected = _by_identity(
+            ctx.expected_output.relationships, relationship_identity
+        )
+        found = _by_identity(ctx.output.relationships, relationship_identity)
+        shared = [
+            key
+            for key in expected.keys() & found.keys()
+            if key[1] == STANCE_RELATIONSHIP_TYPE
+            and expected[key].properties.get(ALIGNMENT_PROPERTY)
+        ]
+        if not shared:
+            return UNSCORED
+        agreed = sum(
+            expected[key].properties.get(ALIGNMENT_PROPERTY)
+            == found[key].properties.get(ALIGNMENT_PROPERTY)
+            for key in shared
+        )
+        return {"stance_alignment_accuracy": agreed / len(shared)}
+
+
 class StayedInsideTheNewsOntology(Evaluator):
     """Nothing the model emitted had to be conformed away.
 
@@ -329,6 +383,7 @@ EXTRACTION_TASK = register(
             AgreedOnTheNodeDetail(),
             FoundTheSilverRelationships(),
             AgreedOnTheClaimProperties(),
+            AgreedOnTheStanceAlignment(),
             StayedInsideTheNewsOntology(),
             ExtractedWithoutFailing(),
         ),
@@ -336,7 +391,10 @@ EXTRACTION_TASK = register(
         collect=None,
         # Digested after the ontology is rendered into it, because a run
         # whose ontology changed is not a run of the same prompt.
-        prompts=lambda: {"extraction": load_instructions()},
+        prompts=lambda: {
+            "extraction": load_instructions(),
+            "stance_alignment_critic": CRITIC_INSTRUCTIONS,
+        },
     )
 )
 

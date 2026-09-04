@@ -1,8 +1,8 @@
 import re
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, RootModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 
 class Node(BaseModel):
@@ -75,6 +75,34 @@ class Relationship(BaseModel):
         if not re.match(r"^[A-Za-z0-9_]+$", v):
             raise ValueError(f"Invalid character in relationship type: {v}")
         return v
+
+class StanceAlignmentVerdict(BaseModel):
+    """The Stance Alignment Critic's decision for one `DECLARED_STANCE` claim.
+
+    Carries the claim's two endpoint names so a verdict can be matched back to
+    the claim it was asked about, and nothing else: the critic supplies the one
+    property the ontology says a stance entails, and is not permitted to
+    restate, move, or invent the claim itself.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: str = Field(..., description="Source node name, copied from the claim.")
+    target: str = Field(..., description="Target node name, copied from the claim.")
+    alignment: Literal["POSITIVE", "NEGATIVE", "NEUTRAL"] = Field(
+        ..., description="The direction of the stance the passage states."
+    )
+
+    @field_validator("source", "target", mode="before")
+    @classmethod
+    def clean_endpoint_names(cls, v: Any) -> str:
+        if not isinstance(v, str):
+            raise ValueError("Must be a string")
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Must be a non-empty string")
+        return cleaned
+
 
 class ExtractionResult(BaseModel):
     nodes: list[Node] = Field(default_factory=list, description="Extracted entities")
