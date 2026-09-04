@@ -156,5 +156,6 @@ turned down by reference to this note.
 
 ## What was kept
 
-Nothing from `b69ea54`. The reports are committed at `d2c59fc` and `d903d2f`; the branch
-holds the change.
+Nothing from `b69ea54`. The two reports are committed on `main` as
+`20260904T100649Z-b69ea54-…` and `20260904T100843Z-2edd47d-…`; the change itself lives
+only on its branch, and `b69ea54` is unreachable if that branch is deleted.
