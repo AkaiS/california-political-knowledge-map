@@ -22,6 +22,7 @@ def _task(prompts) -> EvaluationTask:
         build=lambda deployment, data_set: lambda case_input: {},
         evaluators=(),
         default_model="fixture/model",
+        label_quality=LabelQuality.SILVER,
         prompts=prompts,
     )
 

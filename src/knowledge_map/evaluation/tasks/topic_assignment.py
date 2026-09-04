@@ -41,6 +41,7 @@ from knowledge_map.schemas import (
     TopicAssignment,
 )
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import detection_scores
 from .extraction import normalize_name
@@ -271,6 +272,7 @@ class AssignedWithoutFailing(Evaluator):
 TOPIC_ASSIGNMENT_TASK = register(
     EvaluationTask(
         name="topic_assignment",
+        label_quality=LabelQuality.SILVER,
         input_type=AssignmentInput,
         output_type=AssignmentExpectation,
         metadata_type=AssignmentSilverMetadata,

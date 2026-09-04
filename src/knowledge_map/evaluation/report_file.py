@@ -68,7 +68,7 @@ def write_report(
     deployment: ModelDeployment | None = None,
     model: str | None = None,
     data_set_path: Path | str,
-    label_quality: LabelQuality = LabelQuality.SILVER,
+    label_quality: LabelQuality,
     split: str | None = None,
     root: Path | None = None,
 ) -> Path:

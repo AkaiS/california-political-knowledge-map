@@ -12,8 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from knowledge_map.cli import evaluate
-from knowledge_map.evaluation import report_path, write_report
-from knowledge_map.evaluation import LabelQuality
+from knowledge_map.evaluation import LabelQuality, report_path, write_report
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -160,6 +159,7 @@ def test_reports_serialize_deployment_and_separate_local_and_openrouter_runs(
         task="relevance",
         deployment=openrouter,
         data_set_path=tmp_path / "relevance.yaml",
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     document = json.loads(written.read_text())

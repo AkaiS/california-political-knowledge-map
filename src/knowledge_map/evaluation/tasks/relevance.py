@@ -27,9 +27,9 @@ from knowledge_map.schemas import ModelDeployment
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import get_chat_model
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import UNSCORED
-from ..data_set import LabelQuality
 from .registry import EvaluationTask, register
 
 

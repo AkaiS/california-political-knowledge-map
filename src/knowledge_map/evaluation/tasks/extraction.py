@@ -32,6 +32,7 @@ from knowledge_map.schemas import (
     Relationship,
 )
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import UNSCORED, detection_scores
 from .registry import EvaluationTask, register
@@ -318,6 +319,7 @@ class ExtractedWithoutFailing(Evaluator):
 EXTRACTION_TASK = register(
     EvaluationTask(
         name="extraction",
+        label_quality=LabelQuality.SILVER,
         input_type=ExtractionInput,
         output_type=ExtractionExpectation,
         metadata_type=ExtractionSilverMetadata,

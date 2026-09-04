@@ -35,17 +35,20 @@ class EvaluationTask:
     """
     evaluators: Sequence[Evaluator]
     default_model: str
-    metadata_type: type[Any] = dict
-    collect: Callable[[], Any] | None = None
-    """Read labeled candidates out of the project's own data, if it has any."""
-    label_quality: LabelQuality = LabelQuality.SILVER
+    label_quality: LabelQuality
     """Who wrote the labels this task is scored against.
 
     Declared per task rather than read off the file, because it decides
     which directory the file is looked for in -- and because it is the one
-    fact a reader needs before comparing two tasks' numbers. Silver is the
-    default: a set is silver until a person has actually written its labels.
+    fact a reader needs before comparing two tasks' numbers. It carries no
+    default: silver is the common case, and a default would quietly file a
+    person's labels as a model's on the day someone registers a gold task
+    and forgets. Wrong provenance in a committed report cannot be spotted
+    by reading the report.
     """
+    metadata_type: type[Any] = dict
+    collect: Callable[[], Any] | None = None
+    """Read labeled candidates out of the project's own data, if it has any."""
     data_set_name: str | None = None
     """The Data Set file this task reads, when it is not the task's own name.
 

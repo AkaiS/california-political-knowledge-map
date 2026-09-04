@@ -20,6 +20,7 @@ import knowledge_map.evaluation.tasks.coreference as coreference_task_module
 from knowledge_map.evaluation import (
     EvaluationCase,
     EvaluationDataSet,
+    LabelQuality,
     run_data_set,
     write_report,
 )
@@ -166,6 +167,7 @@ def test_completed_report_serializes_one_observed_model_route(
         task="model-routes",
         deployment=deployment,
         data_set_path=tmp_path / "relevance.yaml",
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     document = json.loads(path.read_text())
@@ -540,6 +542,7 @@ def test_completed_coreference_report_counts_sequential_resolution_rounds(
         task="coreference",
         deployment=deployment,
         data_set_path=tmp_path / "relevance.yaml",
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     serialized_routes = json.loads(path.read_text())["report"]["cases"][0][
@@ -606,6 +609,7 @@ def test_serialized_route_summary_preserves_metrics_and_run_provenance(
         task="model-routes",
         deployment=deployment,
         data_set_path=data_set_path,
+        label_quality=LabelQuality.GOLD,
         split="held-out",
         root=tmp_path / "reports",
     )

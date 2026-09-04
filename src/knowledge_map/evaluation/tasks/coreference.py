@@ -36,6 +36,7 @@ from knowledge_map.schemas import (
     ModelDeployment,
 )
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import UNSCORED, detection_scores, f1
 from .registry import EvaluationTask, register
@@ -376,6 +377,7 @@ AGREEMENT_EVALUATORS: tuple[Evaluator, ...] = (
 COREFERENCE_TASK = register(
     EvaluationTask(
         name="coreference",
+        label_quality=LabelQuality.SILVER,
         input_type=CoreferenceInput,
         output_type=CoreferenceExpectation,
         metadata_type=CoreferenceSilverMetadata,
@@ -397,6 +399,7 @@ COREFERENCE_TASK = register(
 COREFERENCE_ANNOTATOR_TASK = register(
     EvaluationTask(
         name="coreference_annotator",
+        label_quality=LabelQuality.SILVER,
         data_set_name="coreference",
         input_type=CoreferenceInput,
         output_type=CoreferenceExpectation,

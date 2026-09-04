@@ -14,6 +14,7 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from knowledge_map.evaluation import (
     EvaluationSplit,
+    LabelQuality,
     load_data_set,
     report_path,
     run_data_set,
@@ -139,6 +140,7 @@ def test_a_written_report_carries_the_commit_and_model_it_ran_at(
         task="relevance",
         model="claude-sonnet-5",
         data_set_path=data_set_file,
+        label_quality=LabelQuality.GOLD,
         root=tmp_path / "reports",
     )
     document = json.loads(path.read_text())

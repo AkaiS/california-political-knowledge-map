@@ -34,6 +34,7 @@ from knowledge_map.adapters.policy_areas import (
 )
 from knowledge_map.schemas import ModelDeployment, PolicyAreaName
 
+from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..scoring import detection_scores
 from .registry import EvaluationTask, register
@@ -170,6 +171,7 @@ class ClassifiedWithoutFailing(Evaluator):
 POLICY_AREA_CLASSIFICATION_TASK = register(
     EvaluationTask(
         name="policy_area_classification",
+        label_quality=LabelQuality.SILVER,
         input_type=ClassificationInput,
         output_type=ClassificationExpectation,
         metadata_type=ClassificationSilverMetadata,
