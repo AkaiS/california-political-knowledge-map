@@ -233,7 +233,7 @@ cases:
     - name: UCLA
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -309,7 +309,7 @@ cases:
     - name: Cal State Northridge
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -450,7 +450,7 @@ cases:
     - name: UC Berkeley
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -526,7 +526,7 @@ cases:
     - name: UC Berkeley
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -762,7 +762,7 @@ cases:
     - name: Sacramento State University
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -883,11 +883,13 @@ cases:
     nodes:
     - name: Cornell University
       label: Organization
-      sub_labels: []
+      sub_labels:
+      - EducationalInstitution
       properties: {}
     - name: McMaster University
       label: Organization
-      sub_labels: []
+      sub_labels:
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -939,12 +941,12 @@ cases:
     - name: Cal State Board of Trustees
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     - name: California State University
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     - name: CalMatters
       label: Organization
@@ -976,7 +978,7 @@ cases:
     - name: San Jose State
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -1005,7 +1007,7 @@ cases:
     - name: Mt. San Antonio College
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     relationships: []
   metadata:
@@ -1557,7 +1559,7 @@ cases:
     - name: UC Davis
       label: Organization
       sub_labels:
-      - GovernmentAgency
+      - EducationalInstitution
       properties: {}
     - name: National Institutes of Health
       label: Organization

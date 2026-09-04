@@ -14,7 +14,7 @@ of the primary ontology plus the declared shortcuts below.
 | `Committee` | `chamber` | — |
 | `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |
 | `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | — |
-| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |
+| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |
 | `PolicyArea` | `embedding`, `id`, `name` | — |
 | `Politician` | `birth_date`, `current_party` | — |
 | `Prop` | `election_date`, `number`, `official_title`, `summary` | — |

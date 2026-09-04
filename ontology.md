@@ -169,7 +169,7 @@
 
 - _Note: This node always carries `:Organization` plus one or more specific structural sub-labels:_
     
-    - `:PAC` | `:IE_Committee` | `:Corporation` | `:LaborUnion` | `:TradeAssociation` | `:NonProfit` | `:AdvocacyGroup` | `:GrassrootsMovement` | `:TribalNation` | `:GovernmentAgency` | `:MediaOrganization`
+    - `:PAC` | `:IE_Committee` | `:Corporation` | `:LaborUnion` | `:TradeAssociation` | `:NonProfit` | `:AdvocacyGroup` | `:GrassrootsMovement` | `:TribalNation` | `:GovernmentAgency` | `:MediaOrganization` | `:EducationalInstitution`
         
 - `id`: `STRING`
     
