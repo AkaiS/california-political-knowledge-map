@@ -10,6 +10,7 @@ from knowledge_map.core.exceptions import (
     transport_failures_as_pipeline_errors,
 )
 from knowledge_map.schemas import ArticleChunk
+from knowledge_map.utils.event_loop import thread_event_loop
 
 
 @pytest.fixture
@@ -255,3 +256,25 @@ class TestTheEmbeddingStageRetriesItsOwnRequests:
                 adapter.embed_text("The Governor signed the bill.")
 
         assert exc_info.value.component == "embedding"
+
+
+def test_embedding_leaves_the_thread_loop_installed_for_the_next_caller():
+    """Model clients outlive one call, so they need the loop to outlive it too.
+
+    A loop that is closed and uninstalled after each embed leaves the next
+    blocking model call to build a fresh one, and the connection pools bound
+    to the old loop then refuse the request as a bare connection error.
+    """
+
+    mock_embedder = MagicMock()
+
+    async def fake_embed(documents):
+        return MockResult([[0.1] * 768] * len(documents))
+
+    mock_embedder.embed_documents.side_effect = fake_embed
+
+    loop_before = thread_event_loop()
+    PydanticAIEmbeddingAdapter(embedder=mock_embedder).embed_text("Chunk text")
+
+    assert asyncio.get_event_loop() is loop_before
+    assert not loop_before.is_closed()

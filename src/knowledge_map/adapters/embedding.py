@@ -9,6 +9,7 @@ from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.embeddings import EmbeddingSettings
 from knowledge_map.config import TransportSettings, settings
+from knowledge_map.utils.event_loop import run_on_thread_loop
 from knowledge_map.utils.models import build_retrying_client, resolve_embedding_base_url
 from typing import List
 from knowledge_map.schemas import ArticleChunk
@@ -69,12 +70,22 @@ class PydanticAIEmbeddingAdapter:
         self.embedder = embedder or get_embedding_embedder()
 
     def _run_async(self, func, *args, **kwargs):
+        """Await one embedder call from synchronous code.
+
+        The embedder holds its HTTP client for the adapter's lifetime, so the
+        call has to reach it on the loop that client is bound to rather than
+        on a loop of this call's own.
+        """
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
-            
+
         if loop is not None and loop.is_running():
+            # Blocking here would deadlock the loop already running on this
+            # thread, so the call goes to a thread of its own.  That thread
+            # ends with the call, and its loop with it.
             import concurrent.futures
             def runner():
                 return asyncio.run(func(*args, **kwargs))
@@ -82,7 +93,7 @@ class PydanticAIEmbeddingAdapter:
                 future = executor.submit(runner)
                 return future.result()
         else:
-            return asyncio.run(func(*args, **kwargs))
+            return run_on_thread_loop(func(*args, **kwargs))
 
     def _validate_embedding(self, embedding: list[float], context: str = "") -> list[float]:
         expected_dim = settings.embedding.dimension
