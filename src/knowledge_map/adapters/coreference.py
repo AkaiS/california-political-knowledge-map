@@ -283,15 +283,8 @@ def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
 def annotator_span_budget(content: str) -> int:
     """The most Mention Spans the annotator may return for ``content``.
 
-    Mentions scale with the article, so the budget is a rate. Measured over
-    104 annotator runs the observed rate is stable -- median 8.2 spans per
-    100 words, worst 14.8, and no relationship to article size -- while a
-    runaway answer reaches 60 to 93 and fills its context. The configured
-    rate sits above every observed article and far below any runaway, so it
-    separates the two without judging how dense an article is allowed to be.
-
-    The floor keeps a short article from being held to a budget too small to
-    resolve it; it binds below roughly 240 words.
+    Mentions scale with the article, so the budget is a rate rather than a
+    constant, with a floor for articles too short to earn a usable one.
     """
 
     words = len(content.split())
@@ -305,11 +298,8 @@ def annotator_span_budget(content: str) -> int:
 def annotator_output_tokens(content: str) -> int:
     """The annotator's output-token ceiling for ``content``.
 
-    The span budget is the limit worth reasoning about, but the model can
-    only be told a token count, and only a token count stops a runaway while
-    it is still generating rather than after it returns. One Mention Span
-    serialises to about 27 tokens; the configured allowance rounds up from
-    there so the ceiling binds on span count and not on serialisation.
+    The span budget is the limit worth reasoning about; a token count is what
+    the model can be told.
     """
 
     return annotator_span_budget(content) * settings.coreference.tokens_per_span
@@ -420,9 +410,7 @@ def validate_annotator_output(
 class AnnotatorBudgetExceeded(UnexpectedModelBehavior):
     """The annotator was still writing spans when its budget ran out.
 
-    Carries what the article was allowed so the Dead Letter Queue record
-    says which limit was reached and on what size of article, rather than
-    reporting a truncated answer as unparseable output.
+    Carries what the article was allowed, for the Dead Letter Queue record.
     """
 
     def __init__(self, word_count: int, span_budget: int, max_tokens: int) -> None:
@@ -446,12 +434,9 @@ annotator_hooks = Hooks()
 async def fail_on_exhausted_budget(ctx, *, request_context, response):
     """Fail the run on the first truncated answer instead of retrying it.
 
-    Pydantic AI diagnoses a truncated tool call only after the output-retry
-    budget is spent, so an answer cut off at ``max_tokens`` is re-generated
-    three more times at the same ceiling before it raises. Every one of
-    those repeats the truncation, because nothing about the request changed.
-
-    The response is refused here, one call in, and the run ends.
+    Pydantic AI would otherwise re-ask until the retry budget is gone, and
+    every attempt truncates at the same ceiling. See the engineering log,
+    2026-09-08.
     """
 
     if response.finish_reason != "length":
@@ -579,10 +564,8 @@ def _structured_output_failure(
 ) -> CoreferenceResolutionError:
     """Build the adapter error for invalid structured model output.
 
-    An exhausted output budget is named apart from unparseable output. Both
-    arrive as truncated answers, but one is a limit this system chose and can
-    raise, and the Dead Letter Queue names the failure type in every record
-    and filename it writes.
+    An exhausted output budget is named apart from unparseable output; the
+    Dead Letter Queue writes the failure type into every record and filename.
     """
 
     metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
@@ -1157,8 +1140,8 @@ def resolve_coreferences_run(
             request_limit=settings.coreference.request_limit,
             total_tokens_limit=settings.coreference.total_tokens_limit,
         )
-        # A correction round answers with a subset of the spans the first
-        # pass returned, so the article's budget bounds it too.
+        # A correction round answers with a subset of the first pass, so the
+        # article's budget bounds it too.
         annotator_settings = {"max_tokens": annotator_output_tokens(text)}
 
         run_result = annotator_agent.run_sync(

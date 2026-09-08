@@ -1,8 +1,6 @@
 """The one event loop a thread's blocking model calls share.
 
-Model clients cache an httpx connection pool, and a pool's synchronisation
-primitives bind to the loop that first drove them. A client outlives any one
-call, so it has to be reached on that same loop every time.
+A cached connection pool has to be reached on the loop it bound to.
 """
 
 import asyncio
@@ -17,9 +15,8 @@ def thread_event_loop() -> asyncio.AbstractEventLoop:
     """This thread's usable loop, installing one when there is none.
 
     Left installed, so the clients bound to it can be reached again and so
-    Pydantic AI's ``run_sync`` resolves the same one. A loop someone else
-    already closed is replaced rather than handed back, since a closed loop
-    runs nothing.
+    Pydantic AI's ``run_sync`` resolves the same one. A closed loop is
+    replaced rather than handed back, since it runs nothing.
     """
 
     try:

@@ -85,11 +85,9 @@ class CoreferenceSettings(BaseModel):
     ``max_critic_rounds`` counts correction rounds after the annotator's first
     pass, separately from the agents' own structured-output retry budgets.
 
-    The span budget bounds what the annotator may return for one article.
-    It is a rate rather than a constant because the thing being counted --
-    mentions -- scales with the article, and the observed rate is stable
-    across article sizes where a constant would be slack on short articles
-    and a real limit on long ones.
+    The span budget bounds what the annotator may return for one article,
+    as a rate rather than a constant. See the engineering log, 2026-09-08,
+    for the measurements the rate was chosen from.
     """
 
     max_critic_rounds: int = Field(
