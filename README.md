@@ -17,11 +17,11 @@ After creating and entering a new worktree, run:
 ```
 
 The script finds the primary worktree automatically, copies local configuration
-that should remain independent (`.env`, `.agents`, and Logfire credentials),
-symlinks the shared `document_store.db`, creates fresh scratch directories, and
-runs `uv sync --frozen`. It never overwrites files already present in the new
-worktree and deliberately excludes `.venv`, caches, logs, and dead-letter queue
-data.
+that should remain independent (`.env`, `.agents`, `.claude/settings.local.json`,
+and Logfire credentials), symlinks the shared `document_store.db`, creates fresh
+scratch directories, and runs `uv sync --frozen`. It never overwrites files
+already present in the new worktree and deliberately excludes `.venv`, caches,
+logs, dead-letter queue data, and Claude worktrees.
 
 Use `--dry-run` to preview the setup, `--source PATH` to transfer local state
 from a different worktree, or `--skip-sync` when dependencies are already set
