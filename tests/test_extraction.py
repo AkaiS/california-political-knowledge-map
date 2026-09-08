@@ -5,10 +5,16 @@ import httpx
 import pytest
 from pydantic import ValidationError
 from pydantic_ai import Agent, ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.exceptions import ModelAPIError
 from pydantic_ai.models.function import FunctionModel
 
 import knowledge_map.adapters.extraction as extraction_adapter_module
+from knowledge_map.core.exceptions import (
+    PipelineConnectivityError,
+    transport_failures_as_pipeline_errors,
+)
 from knowledge_map.adapters.extraction import (
+    ExtractionError,
     PydanticAIEntityExtractionAdapter,
     extract_entities,
     get_extraction_agent,
@@ -610,3 +616,38 @@ def test_the_adherence_report_counts_repeats_and_keeps_the_first_chunk():
     assert report.as_json_dict()["rejected_labels"]["Club"] == {
         "count": 2, "example_chunk_id": "sha256:first"
     }
+
+
+def test_a_transport_failure_is_not_dead_lettered_as_a_validation_failure():
+    """A model that could not be reached said nothing to validate.
+
+    Labelling the reach failure as bad model output sends a Story to the Dead
+    Letter Queue that the pipeline's connectivity handling would have retried.
+    """
+
+    def unreachable_model(messages, info):
+        raise ModelAPIError("gemma4:26b", "Connection error.")
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(unreachable_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        with pytest.raises(PipelineConnectivityError) as caught:
+            with transport_failures_as_pipeline_errors("extraction"):
+                adapter.extract("A federal judge rejected the funding shift.")
+
+    assert caught.value.retryable is True
+    assert isinstance(caught.value.original_exception, ModelAPIError)
+
+
+def test_unusable_model_output_is_still_dead_lettered_as_a_validation_failure():
+    def unparseable_model(messages, info):
+        return ModelResponse(parts=[TextPart(content="not the output contract")])
+
+    agent = get_extraction_agent(defer_check=True)
+    with agent.override(model=FunctionModel(unparseable_model)):
+        adapter = PydanticAIEntityExtractionAdapter(agent=agent)
+        with pytest.raises(ExtractionError) as caught:
+            adapter.extract("A federal judge rejected the funding shift.")
+
+    assert caught.value.failure_type == "extraction_validation_failure"
+    assert caught.value.validation_issues

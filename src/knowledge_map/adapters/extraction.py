@@ -4,8 +4,10 @@ import logging
 import os
 from typing import Any
 
+from pydantic import ValidationError
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import Hooks
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from knowledge_map.adapters.coreference import get_agent_metadata
 from knowledge_map.ontology.extraction_conformance import (
@@ -25,6 +27,14 @@ PROMPT_PATH = os.path.join(
     "extraction_prompt.txt"
 )
 ONTOLOGY_PLACEHOLDER = "{{NEWS_ONTOLOGY}}"
+
+#: Caught by the adapter and reported as an extraction failure.  Transport
+#: failures are deliberately not among them: the pipeline classifies those by
+#: the same connectivity and rate-limit handling every other stage call uses.
+MODEL_OUTPUT_FAILURES: tuple[type[Exception], ...] = (
+    ValidationError,
+    UnexpectedModelBehavior,
+)
 
 hooks = Hooks()
 
@@ -151,7 +161,7 @@ class PydanticAIEntityExtractionAdapter:
         try:
             result = extract_entities(chunk_text, agent=self.agent)
             return self._conform(result, chunk_text)
-        except Exception as e:
+        except MODEL_OUTPUT_FAILURES as e:
             validation_issues = []
             if hasattr(e, "errors") and callable(e.errors):
                 try:
@@ -178,7 +188,7 @@ class PydanticAIEntityExtractionAdapter:
                 failure_type="extraction_validation_failure",
                 retry_count=getattr(self.agent, "retries", 0),
                 metadata=metadata
-            )
+            ) from e
 
     def health_check(self) -> bool:
         try:
