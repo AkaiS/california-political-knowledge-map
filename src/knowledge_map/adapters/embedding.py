@@ -73,8 +73,7 @@ class PydanticAIEmbeddingAdapter:
         """Await one embedder call from synchronous code.
 
         The embedder holds its HTTP client for the adapter's lifetime, so the
-        call has to reach it on the loop that client is bound to rather than
-        on a loop of this call's own.
+        call has to reach it on the loop that client is bound to.
         """
 
         try:

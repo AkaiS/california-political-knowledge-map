@@ -11,10 +11,14 @@ from knowledge_map.adapters.coreference import (
     ANNOTATOR_INSTRUCTIONS,
     CoreferenceDeps,
     CoreferenceResolutionError,
+    AnnotatorBudgetExceeded,
     PydanticAICoreferenceAdapter,
+    annotator_output_tokens,
+    annotator_span_budget,
     get_annotator_agent,
     get_critic_agent,
 )
+from knowledge_map.config import settings
 from knowledge_map.schemas import (
     CriticVerdict,
     DeploymentKind,
@@ -1374,3 +1378,198 @@ def test_a_bracketed_label_from_the_annotator_still_substitutes():
 
     assert run.resolved_text == "Gavin Newsom signed a bill. Gavin Newsom was happy."
     assert run.discarded_count == 0
+
+
+class TestTheAnnotatorSpanBudgetScalesWithTheArticle:
+    """What the annotator may return is a rate, not a constant.
+
+    Mentions scale with the article, so a constant budget is slack on a
+    short article and a real limit on a long one.  A runaway answer sits
+    far above the rate at any size, which is what the budget separates.
+    """
+
+    def test_the_budget_grows_with_the_article(self):
+        short = annotator_span_budget(" ".join(["word"] * 400))
+        long = annotator_span_budget(" ".join(["word"] * 1600))
+
+        assert long == 4 * short
+
+    def test_a_short_article_still_gets_the_floor(self):
+        """A budget below the floor would fail an article for being brief."""
+
+        budget = annotator_span_budget("Gavin Newsom signed it.")
+
+        assert budget == settings.coreference.min_span_budget
+
+    def test_the_budget_clears_the_densest_article_observed(self):
+        """14.83 spans per 100 words is the worst of 104 observed runs."""
+
+        content = " ".join(["word"] * 1000)
+
+        assert annotator_span_budget(content) > 149
+
+    def test_the_budget_refuses_a_runaway_answer(self):
+        """The runaways returned ~1000 spans on articles this size."""
+
+        assert annotator_span_budget(" ".join(["word"] * 1083)) < 1003
+        assert annotator_span_budget(" ".join(["word"] * 1644)) < 1007
+
+    def test_the_token_ceiling_carries_the_span_budget(self):
+        content = " ".join(["word"] * 1200)
+
+        assert annotator_output_tokens(content) == (
+            annotator_span_budget(content) * settings.coreference.tokens_per_span
+        )
+
+
+def test_the_annotator_is_told_the_articles_output_ceiling():
+    """Only a token ceiling stops a runaway while it is still generating.
+
+    A span count checked after the answer arrives has already paid for the
+    tokens; this is the limit the model itself enforces.
+    """
+
+    content = "Gavin Newsom signed a bill. " + " ".join(["word"] * 1200)
+    annotator_agent = get_annotator_agent(defer_check=True)
+    critic_agent = get_critic_agent(defer_check=True)
+    seen: list[dict] = []
+
+    def mock_annotator(messages, info):
+        seen.append(dict(info.model_settings or {}))
+        return mention_response(
+            info,
+            [
+                {
+                    "sentence_label": "1",
+                    "mention_text": "Gavin Newsom",
+                    "canonical_entity_name": "Gavin Newsom",
+                }
+            ],
+        )
+
+    def mock_critic(messages, info):
+        return critic_response(
+            info,
+            [
+                {
+                    "sentence_label": "1",
+                    "mention_text": "Gavin Newsom",
+                    "accepted": True,
+                }
+            ],
+        )
+
+    with (
+        annotator_agent.override(model=FunctionModel(mock_annotator)),
+        critic_agent.override(model=FunctionModel(mock_critic)),
+    ):
+        PydanticAICoreferenceAdapter(
+            annotator_agent=annotator_agent,
+            critic_agent=critic_agent,
+        ).resolve(content)
+
+    assert seen
+    assert seen[0]["max_tokens"] == annotator_output_tokens(content)
+
+
+def truncated_annotator_response(info):
+    """A tool call cut off mid-arguments, as max_tokens leaves it."""
+
+    return ModelResponse(
+        parts=[
+            ToolCallPart(
+                tool_name=info.output_tools[0].name,
+                args='{"response":[{"sentence_label":"1","mention_text":"He","occ',
+            )
+        ],
+        finish_reason="length",
+    )
+
+
+class TestAnExhaustedBudgetFailsOnTheFirstAnswer:
+    """Truncation is not a mistake the annotator can correct.
+
+    Pydantic AI treats a truncated tool call as unparseable arguments and
+    spends the whole output-retry budget re-asking before it diagnoses the
+    truncation.  Nothing about the request changes between those attempts,
+    so each one truncates again at the same ceiling.
+    """
+
+    def test_the_run_ends_after_one_truncated_answer(self):
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content("Gavin Newsom signed a bill. He was happy.")
+        calls = []
+
+        def truncating_model(messages, info):
+            calls.append(1)
+            return truncated_annotator_response(info)
+
+        with agent.override(model=FunctionModel(truncating_model)):
+            with pytest.raises(AnnotatorBudgetExceeded):
+                agent.run_sync("Resolve the references.", deps=deps)
+
+        assert len(calls) == 1
+
+    def test_the_failure_carries_the_budget_that_was_reached(self):
+        content = " ".join(["word"] * 800)
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content(content)
+
+        with agent.override(model=FunctionModel(lambda m, i: truncated_annotator_response(i))):
+            with pytest.raises(AnnotatorBudgetExceeded) as caught:
+                agent.run_sync("Resolve the references.", deps=deps)
+
+        assert caught.value.word_count == 800
+        assert caught.value.span_budget == annotator_span_budget(content)
+        assert caught.value.max_tokens == annotator_output_tokens(content)
+
+    def test_it_is_dead_lettered_under_its_own_failure_type(self):
+        """The Dead Letter Queue names the failure in the record and filename.
+
+        A budget this system set and can raise is a different thing to
+        diagnose than output the annotator simply malformed.
+        """
+
+        annotator_agent = get_annotator_agent(defer_check=True)
+        critic_agent = get_critic_agent(defer_check=True)
+
+        with (
+            annotator_agent.override(
+                model=FunctionModel(lambda m, i: truncated_annotator_response(i))
+            ),
+            critic_agent.override(
+                model=FunctionModel(lambda m, i: truncated_annotator_response(i))
+            ),
+        ):
+            with pytest.raises(CoreferenceResolutionError) as caught:
+                PydanticAICoreferenceAdapter(
+                    annotator_agent=annotator_agent,
+                    critic_agent=critic_agent,
+                ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+        assert caught.value.failure_type == "coreference_budget_exceeded"
+        assert caught.value.metadata["span_budget"] == settings.coreference.min_span_budget
+        assert isinstance(caught.value.__cause__, AnnotatorBudgetExceeded)
+
+    def test_a_complete_answer_is_untouched_by_the_hook(self):
+        """Only a truncated answer is refused; a finished one passes through."""
+
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content("Gavin Newsom signed a bill. He was happy.")
+
+        def complete_model(messages, info):
+            return mention_response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "He",
+                        "canonical_entity_name": "Gavin Newsom",
+                    }
+                ],
+            )
+
+        with agent.override(model=FunctionModel(complete_model)):
+            result = agent.run_sync("Resolve the references.", deps=deps)
+
+        assert result.output[0].canonical_entity_name == "Gavin Newsom"

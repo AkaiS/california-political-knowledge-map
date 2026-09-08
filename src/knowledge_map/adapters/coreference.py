@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -6,6 +7,7 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.capabilities import Hooks
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.usage import RunUsage, UsageLimits
@@ -278,6 +280,31 @@ def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
     )
 
 
+def annotator_span_budget(content: str) -> int:
+    """The most Mention Spans the annotator may return for ``content``.
+
+    Mentions scale with the article, so the budget is a rate rather than a
+    constant, with a floor for articles too short to earn a usable one.
+    """
+
+    words = len(content.split())
+    rate = settings.coreference.spans_per_hundred_words
+    return max(
+        settings.coreference.min_span_budget,
+        math.ceil(rate * words / 100),
+    )
+
+
+def annotator_output_tokens(content: str) -> int:
+    """The annotator's output-token ceiling for ``content``.
+
+    The span budget is the limit worth reasoning about; a token count is what
+    the model can be told.
+    """
+
+    return annotator_span_budget(content) * settings.coreference.tokens_per_span
+
+
 ANNOTATOR_INSTRUCTIONS = (
     "You are an expert Coreference Resolution annotator."
     "Identify ambiguous pronouns and referring expressions in the numbered Source Article and map each one to its canonical entity name.\n\n"
@@ -380,6 +407,49 @@ def validate_annotator_output(
     raise ModelRetry(_unlocatable_retry_message(validation.discards))
 
 
+class AnnotatorBudgetExceeded(UnexpectedModelBehavior):
+    """The annotator was still writing spans when its budget ran out.
+
+    Carries what the article was allowed, for the Dead Letter Queue record.
+    """
+
+    def __init__(self, word_count: int, span_budget: int, max_tokens: int) -> None:
+        self.word_count = word_count
+        self.span_budget = span_budget
+        self.max_tokens = max_tokens
+        super().__init__(
+            f"Annotator exhausted its output budget of {span_budget} Mention "
+            f"Span(s) ({max_tokens} tokens) for a {word_count}-word article. "
+            "The answer was truncated, so no Mention Span from it can be "
+            "trusted. Re-run the Story once the cause is understood; raise "
+            "COREFERENCE_SPANS_PER_HUNDRED_WORDS only if the article really "
+            "is denser than the budget allows."
+        )
+
+
+annotator_hooks = Hooks()
+
+
+@annotator_hooks.on.after_model_request
+async def fail_on_exhausted_budget(ctx, *, request_context, response):
+    """Fail the run on the first truncated answer instead of retrying it.
+
+    Pydantic AI would otherwise re-ask until the retry budget is gone, and
+    every attempt truncates at the same ceiling. See the engineering log,
+    2026-09-08.
+    """
+
+    if response.finish_reason != "length":
+        return response
+
+    content = ctx.deps.content
+    raise AnnotatorBudgetExceeded(
+        word_count=len(content.split()),
+        span_budget=annotator_span_budget(content),
+        max_tokens=annotator_output_tokens(content),
+    )
+
+
 def get_annotator_agent(
     deployment: ModelDeployment | None = None,
     *,
@@ -394,6 +464,7 @@ def get_annotator_agent(
         instructions=[ANNOTATOR_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
         retries=retries,
+        capabilities=[annotator_hooks],
     )
     agent.output_validator(validate_annotator_output)
     return agent
@@ -491,14 +562,27 @@ def _structured_output_failure(
     error: Exception,
     resolution_run: CoreferenceResolutionRun | None = None,
 ) -> CoreferenceResolutionError:
-    """Build the adapter error for invalid structured model output."""
+    """Build the adapter error for invalid structured model output.
+
+    An exhausted output budget is named apart from unparseable output; the
+    Dead Letter Queue writes the failure type into every record and filename.
+    """
 
     metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
+    if isinstance(error, AnnotatorBudgetExceeded):
+        failure_type = "coreference_budget_exceeded"
+        metadata = metadata | {
+            "word_count": error.word_count,
+            "span_budget": error.span_budget,
+            "max_tokens": error.max_tokens,
+        }
+    else:
+        failure_type = "coreference_validation_failure"
 
     return CoreferenceResolutionError(
         original_text=content,
         validation_issues=_validation_issues_from_error(error),
-        failure_type="coreference_validation_failure",
+        failure_type=failure_type,
         retry_count=0 if resolution_run is None else resolution_run.retry_count,
         metadata=metadata,
         resolution_run=resolution_run,
@@ -980,6 +1064,7 @@ def annotate_coreferences_run(
             deps=deps,
             usage=usage,
             usage_limits=usage_limits,
+            model_settings={"max_tokens": annotator_output_tokens(text)},
         )
         state.record_annotator_corrections(run_result.all_messages())
         located_spans = state.record_annotation(run_result.output)
@@ -1055,12 +1140,16 @@ def resolve_coreferences_run(
             request_limit=settings.coreference.request_limit,
             total_tokens_limit=settings.coreference.total_tokens_limit,
         )
+        # A correction round answers with a subset of the first pass, so the
+        # article's budget bounds it too.
+        annotator_settings = {"max_tokens": annotator_output_tokens(text)}
 
         run_result = annotator_agent.run_sync(
             ANNOTATION_PROMPT,
             deps=deps,
             usage=usage,
             usage_limits=usage_limits,
+            model_settings=annotator_settings,
         )
         # Carried into correction rounds so the annotator sees what it is
         # being asked to correct.
@@ -1143,6 +1232,7 @@ def resolve_coreferences_run(
                 message_history=annotator_messages,
                 usage=usage,
                 usage_limits=usage_limits,
+                model_settings=annotator_settings,
             )
             annotator_messages = retry_result.all_messages()
             state.record_annotator_corrections(annotator_messages)
