@@ -7,6 +7,7 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.capabilities import Hooks
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.usage import RunUsage, UsageLimits
@@ -416,6 +417,54 @@ def validate_annotator_output(
     raise ModelRetry(_unlocatable_retry_message(validation.discards))
 
 
+class AnnotatorBudgetExceeded(UnexpectedModelBehavior):
+    """The annotator was still writing spans when its budget ran out.
+
+    Carries what the article was allowed so the Dead Letter Queue record
+    says which limit was reached and on what size of article, rather than
+    reporting a truncated answer as unparseable output.
+    """
+
+    def __init__(self, word_count: int, span_budget: int, max_tokens: int) -> None:
+        self.word_count = word_count
+        self.span_budget = span_budget
+        self.max_tokens = max_tokens
+        super().__init__(
+            f"Annotator exhausted its output budget of {span_budget} Mention "
+            f"Span(s) ({max_tokens} tokens) for a {word_count}-word article. "
+            "The answer was truncated, so no Mention Span from it can be "
+            "trusted. Re-run the Story once the cause is understood; raise "
+            "COREFERENCE_SPANS_PER_HUNDRED_WORDS only if the article really "
+            "is denser than the budget allows."
+        )
+
+
+annotator_hooks = Hooks()
+
+
+@annotator_hooks.on.after_model_request
+async def fail_on_exhausted_budget(ctx, *, request_context, response):
+    """Fail the run on the first truncated answer instead of retrying it.
+
+    Pydantic AI diagnoses a truncated tool call only after the output-retry
+    budget is spent, so an answer cut off at ``max_tokens`` is re-generated
+    three more times at the same ceiling before it raises. Every one of
+    those repeats the truncation, because nothing about the request changed.
+
+    The response is refused here, one call in, and the run ends.
+    """
+
+    if response.finish_reason != "length":
+        return response
+
+    content = ctx.deps.content
+    raise AnnotatorBudgetExceeded(
+        word_count=len(content.split()),
+        span_budget=annotator_span_budget(content),
+        max_tokens=annotator_output_tokens(content),
+    )
+
+
 def get_annotator_agent(
     deployment: ModelDeployment | None = None,
     *,
@@ -430,6 +479,7 @@ def get_annotator_agent(
         instructions=[ANNOTATOR_INSTRUCTIONS, numbered_article_instructions],
         defer_model_check=defer_check,
         retries=retries,
+        capabilities=[annotator_hooks],
     )
     agent.output_validator(validate_annotator_output)
     return agent
@@ -527,14 +577,29 @@ def _structured_output_failure(
     error: Exception,
     resolution_run: CoreferenceResolutionRun | None = None,
 ) -> CoreferenceResolutionError:
-    """Build the adapter error for invalid structured model output."""
+    """Build the adapter error for invalid structured model output.
+
+    An exhausted output budget is named apart from unparseable output. Both
+    arrive as truncated answers, but one is a limit this system chose and can
+    raise, and the Dead Letter Queue names the failure type in every record
+    and filename it writes.
+    """
 
     metadata = get_agent_metadata(annotator_agent, ANNOTATOR_INSTRUCTIONS)
+    if isinstance(error, AnnotatorBudgetExceeded):
+        failure_type = "coreference_budget_exceeded"
+        metadata = metadata | {
+            "word_count": error.word_count,
+            "span_budget": error.span_budget,
+            "max_tokens": error.max_tokens,
+        }
+    else:
+        failure_type = "coreference_validation_failure"
 
     return CoreferenceResolutionError(
         original_text=content,
         validation_issues=_validation_issues_from_error(error),
-        failure_type="coreference_validation_failure",
+        failure_type=failure_type,
         retry_count=0 if resolution_run is None else resolution_run.retry_count,
         metadata=metadata,
         resolution_run=resolution_run,

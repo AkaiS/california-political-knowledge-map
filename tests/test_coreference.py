@@ -11,6 +11,7 @@ from knowledge_map.adapters.coreference import (
     ANNOTATOR_INSTRUCTIONS,
     CoreferenceDeps,
     CoreferenceResolutionError,
+    AnnotatorBudgetExceeded,
     PydanticAICoreferenceAdapter,
     annotator_output_tokens,
     annotator_span_budget,
@@ -1469,3 +1470,106 @@ def test_the_annotator_is_told_the_articles_output_ceiling():
 
     assert seen
     assert seen[0]["max_tokens"] == annotator_output_tokens(content)
+
+
+def truncated_annotator_response(info):
+    """A tool call cut off mid-arguments, as max_tokens leaves it."""
+
+    return ModelResponse(
+        parts=[
+            ToolCallPart(
+                tool_name=info.output_tools[0].name,
+                args='{"response":[{"sentence_label":"1","mention_text":"He","occ',
+            )
+        ],
+        finish_reason="length",
+    )
+
+
+class TestAnExhaustedBudgetFailsOnTheFirstAnswer:
+    """Truncation is not a mistake the annotator can correct.
+
+    Pydantic AI treats a truncated tool call as unparseable arguments and
+    spends the whole output-retry budget re-asking before it diagnoses the
+    truncation.  Nothing about the request changes between those attempts,
+    so each one truncates again at the same ceiling.
+    """
+
+    def test_the_run_ends_after_one_truncated_answer(self):
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content("Gavin Newsom signed a bill. He was happy.")
+        calls = []
+
+        def truncating_model(messages, info):
+            calls.append(1)
+            return truncated_annotator_response(info)
+
+        with agent.override(model=FunctionModel(truncating_model)):
+            with pytest.raises(AnnotatorBudgetExceeded):
+                agent.run_sync("Resolve the references.", deps=deps)
+
+        assert len(calls) == 1
+
+    def test_the_failure_carries_the_budget_that_was_reached(self):
+        content = " ".join(["word"] * 800)
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content(content)
+
+        with agent.override(model=FunctionModel(lambda m, i: truncated_annotator_response(i))):
+            with pytest.raises(AnnotatorBudgetExceeded) as caught:
+                agent.run_sync("Resolve the references.", deps=deps)
+
+        assert caught.value.word_count == 800
+        assert caught.value.span_budget == annotator_span_budget(content)
+        assert caught.value.max_tokens == annotator_output_tokens(content)
+
+    def test_it_is_dead_lettered_under_its_own_failure_type(self):
+        """The Dead Letter Queue names the failure in the record and filename.
+
+        A budget this system set and can raise is a different thing to
+        diagnose than output the annotator simply malformed.
+        """
+
+        annotator_agent = get_annotator_agent(defer_check=True)
+        critic_agent = get_critic_agent(defer_check=True)
+
+        with (
+            annotator_agent.override(
+                model=FunctionModel(lambda m, i: truncated_annotator_response(i))
+            ),
+            critic_agent.override(
+                model=FunctionModel(lambda m, i: truncated_annotator_response(i))
+            ),
+        ):
+            with pytest.raises(CoreferenceResolutionError) as caught:
+                PydanticAICoreferenceAdapter(
+                    annotator_agent=annotator_agent,
+                    critic_agent=critic_agent,
+                ).resolve("Gavin Newsom signed a bill. He was happy.")
+
+        assert caught.value.failure_type == "coreference_budget_exceeded"
+        assert caught.value.metadata["span_budget"] == settings.coreference.min_span_budget
+        assert isinstance(caught.value.__cause__, AnnotatorBudgetExceeded)
+
+    def test_a_complete_answer_is_untouched_by_the_hook(self):
+        """Only a truncated answer is refused; a finished one passes through."""
+
+        agent = get_annotator_agent(defer_check=True)
+        deps = CoreferenceDeps.for_content("Gavin Newsom signed a bill. He was happy.")
+
+        def complete_model(messages, info):
+            return mention_response(
+                info,
+                [
+                    {
+                        "sentence_label": "2",
+                        "mention_text": "He",
+                        "canonical_entity_name": "Gavin Newsom",
+                    }
+                ],
+            )
+
+        with agent.override(model=FunctionModel(complete_model)):
+            result = agent.run_sync("Resolve the references.", deps=deps)
+
+        assert result.output[0].canonical_entity_name == "Gavin Newsom"
