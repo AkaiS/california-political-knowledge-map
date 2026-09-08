@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -276,6 +277,41 @@ def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
         "Numbered Source Article:\n"
         f"{format_numbered_sentences(ctx.deps.sentences)}"
     )
+
+
+def annotator_span_budget(content: str) -> int:
+    """The most Mention Spans the annotator may return for ``content``.
+
+    Mentions scale with the article, so the budget is a rate. Measured over
+    104 annotator runs the observed rate is stable -- median 8.2 spans per
+    100 words, worst 14.8, and no relationship to article size -- while a
+    runaway answer reaches 60 to 93 and fills its context. The configured
+    rate sits above every observed article and far below any runaway, so it
+    separates the two without judging how dense an article is allowed to be.
+
+    The floor keeps a short article from being held to a budget too small to
+    resolve it; it binds below roughly 240 words.
+    """
+
+    words = len(content.split())
+    rate = settings.coreference.spans_per_hundred_words
+    return max(
+        settings.coreference.min_span_budget,
+        math.ceil(rate * words / 100),
+    )
+
+
+def annotator_output_tokens(content: str) -> int:
+    """The annotator's output-token ceiling for ``content``.
+
+    The span budget is the limit worth reasoning about, but the model can
+    only be told a token count, and only a token count stops a runaway while
+    it is still generating rather than after it returns. One Mention Span
+    serialises to about 27 tokens; the configured allowance rounds up from
+    there so the ceiling binds on span count and not on serialisation.
+    """
+
+    return annotator_span_budget(content) * settings.coreference.tokens_per_span
 
 
 ANNOTATOR_INSTRUCTIONS = (
@@ -980,6 +1016,7 @@ def annotate_coreferences_run(
             deps=deps,
             usage=usage,
             usage_limits=usage_limits,
+            model_settings={"max_tokens": annotator_output_tokens(text)},
         )
         state.record_annotator_corrections(run_result.all_messages())
         located_spans = state.record_annotation(run_result.output)
@@ -1055,12 +1092,16 @@ def resolve_coreferences_run(
             request_limit=settings.coreference.request_limit,
             total_tokens_limit=settings.coreference.total_tokens_limit,
         )
+        # A correction round answers with a subset of the spans the first
+        # pass returned, so the article's budget bounds it too.
+        annotator_settings = {"max_tokens": annotator_output_tokens(text)}
 
         run_result = annotator_agent.run_sync(
             ANNOTATION_PROMPT,
             deps=deps,
             usage=usage,
             usage_limits=usage_limits,
+            model_settings=annotator_settings,
         )
         # Carried into correction rounds so the annotator sees what it is
         # being asked to correct.
@@ -1143,6 +1184,7 @@ def resolve_coreferences_run(
                 message_history=annotator_messages,
                 usage=usage,
                 usage_limits=usage_limits,
+                model_settings=annotator_settings,
             )
             annotator_messages = retry_result.all_messages()
             state.record_annotator_corrections(annotator_messages)

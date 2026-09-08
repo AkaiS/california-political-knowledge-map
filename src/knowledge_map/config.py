@@ -84,6 +84,12 @@ class CoreferenceSettings(BaseModel):
 
     ``max_critic_rounds`` counts correction rounds after the annotator's first
     pass, separately from the agents' own structured-output retry budgets.
+
+    The span budget bounds what the annotator may return for one article.
+    It is a rate rather than a constant because the thing being counted --
+    mentions -- scales with the article, and the observed rate is stable
+    across article sizes where a constant would be slack on short articles
+    and a real limit on long ones.
     """
 
     max_critic_rounds: int = Field(
@@ -101,6 +107,24 @@ class CoreferenceSettings(BaseModel):
             os.environ.get("COREFERENCE_TOTAL_TOKENS_LIMIT", 500_000)
         ),
         description="Total tokens allowed across one resolution",
+    )
+    spans_per_hundred_words: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_SPANS_PER_HUNDRED_WORDS", 25)
+        ),
+        description="Mention Spans the annotator may return per 100 words",
+    )
+    min_span_budget: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_MIN_SPAN_BUDGET", 60)
+        ),
+        description="Span budget floor, for articles too short to earn one",
+    )
+    tokens_per_span: int = Field(
+        default_factory=lambda: int(
+            os.environ.get("COREFERENCE_TOKENS_PER_SPAN", 32)
+        ),
+        description="Output tokens budgeted per Mention Span",
     )
 
 
