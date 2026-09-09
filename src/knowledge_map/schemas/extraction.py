@@ -83,14 +83,24 @@ class StanceAlignmentVerdict(BaseModel):
     the claim it was asked about, and nothing else: the critic supplies the one
     property the ontology says a stance entails, and is not permitted to
     restate, move, or invent the claim itself.
+
+    ``NO_STANCE_STATED`` is the abstention, and is not an alignment: a passage
+    can name both endpoints without saying what the source thinks of the
+    target, and a critic offered only the three directions answers such a
+    passage by inventing one.  It is deliberately outside the ontology's
+    vocabulary so the write path cannot store it.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     source: str = Field(..., description="Source node name, copied from the claim.")
     target: str = Field(..., description="Target node name, copied from the claim.")
-    alignment: Literal["POSITIVE", "NEGATIVE", "NEUTRAL"] = Field(
-        ..., description="The direction of the stance the passage states."
+    alignment: Literal["POSITIVE", "NEGATIVE", "NEUTRAL", "NO_STANCE_STATED"] = Field(
+        ...,
+        description=(
+            "The direction of the stance the passage states, or "
+            "NO_STANCE_STATED where it states none."
+        ),
     )
 
     @field_validator("source", "target", mode="before")

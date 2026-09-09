@@ -5,7 +5,7 @@ and type are right and whose `properties` is always `{}`.  Four separate
 wordings of the extraction prompt were measured against that and every one was
 inert, so the alignment is asked for after the fact instead: the critic is shown
 one Article Chunk and only the stance claims already extracted from it, and
-returns the direction of each.
+returns the direction of each, or abstains where the passage states none.
 
 Shaped after the Coreference Critic in `knowledge_map.adapters.coreference` --
 one agent, one verdict per listed item, identity fields copied so a verdict can
@@ -38,20 +38,37 @@ CRITIC_INSTRUCTIONS = (
     "You are shown one Article Chunk and the DECLARED_STANCE claims another "
     "agent already extracted from it. Each claim records that the source "
     "entity took a position on the target. Your only job is to say which "
-    "direction that position runs.\n\n"
+    "direction that position runs, or that the passage does not say.\n\n"
     "You must:\n"
     "1. Return one verdict for every listed claim;\n"
     "2. copy its `source` and `target` exactly as listed; and\n"
-    "3. set `alignment` to exactly one of POSITIVE, NEGATIVE, or NEUTRAL.\n\n"
+    "3. set `alignment` to exactly one of POSITIVE, NEGATIVE, NEUTRAL, or "
+    "NO_STANCE_STATED.\n\n"
     "POSITIVE is the source supporting, endorsing, authoring, sponsoring, "
     "voting for, or praising the target. NEGATIVE is the source opposing, "
     "criticising, vetoing, voting against, or working to block it. NEUTRAL is "
-    "for a position the passage states but leaves genuinely undecided or "
-    "hedged -- not for a position you are unsure about.\n\n"
+    "for a position the passage states and leaves genuinely undecided or "
+    "hedged -- the source has a stated position and it sits between the two "
+    "directions.\n\n"
+    "NO_STANCE_STATED is for everything you cannot read off the passage. Use "
+    "it when the chunk names both entities but never says what the source "
+    "thinks of the target; when the source's position appears elsewhere in the "
+    "article but not here; when the passage reports something about the target "
+    "rather than a position on it, such as what a bill would do, who it "
+    "affects, or an analysis of its cost; and when the source is connected to "
+    "the target only by adjacency, such as authoring a different bill. Prefer "
+    "NO_STANCE_STATED to a direction you had to infer.\n\n"
+    "Judge the source's position on the target, not the mood of the passage. "
+    "An author who is angry that their own bill was blocked still supports it, "
+    "and a critic who welcomes a bill's defeat still opposes it.\n\n"
     "Judge only from the Article Chunk shown. Do not add claims, drop claims, "
     "rewrite endpoints, or comment on whether a claim should have been "
     "extracted. Return only the structured list of per-claim verdicts."
 )
+
+#: The verdict that supplies no alignment.  Kept out of the ontology's
+#: vocabulary so nothing downstream can mistake it for a direction.
+ABSTENTION = "NO_STANCE_STATED"
 
 
 def stance_claims(relationships: Sequence[Relationship]) -> list[Relationship]:
@@ -134,6 +151,10 @@ def _matching_verdicts(
     matching: dict[ClaimIdentity, StanceAlignmentVerdict] = {}
     for verdict in verdicts:
         identity = _claim_identity(verdict.source, verdict.target)
+        if verdict.alignment == ABSTENTION:
+            # An abstention is a verdict, but not an alignment: dropping it
+            # here is what leaves the claim exactly as the producer wrote it.
+            continue
         if identity in asked:
             matching[identity] = verdict
         else:
@@ -152,19 +173,25 @@ class StanceAlignmentResult:
     ``call_count`` is 0 or 1 and is carried because the whole cost of this pass
     is the extra inference it makes: a chunk with no stance claim must not pay
     for one.
+
+    ``abstained_count`` is how many stances the critic declined to align.  It
+    is reported rather than inferred from the difference between the claims and
+    ``aligned_count``, which also absorbs verdicts dropped for not matching.
     """
 
-    __slots__ = ("relationships", "call_count", "aligned_count")
+    __slots__ = ("relationships", "call_count", "aligned_count", "abstained_count")
 
     def __init__(
         self,
         relationships: list[Relationship],
         call_count: int,
         aligned_count: int,
+        abstained_count: int = 0,
     ) -> None:
         self.relationships = relationships
         self.call_count = call_count
         self.aligned_count = aligned_count
+        self.abstained_count = abstained_count
 
 
 def apply_stance_alignment(
@@ -176,9 +203,11 @@ def apply_stance_alignment(
 ) -> StanceAlignmentResult:
     """Return the relationships with `alignment` written onto their stances.
 
-    Every non-stance relationship, and every stance the critic returned no
-    usable verdict for, is passed through untouched -- this pass adds a
-    property and is never allowed to subtract a claim.
+    Every non-stance relationship, and every stance the critic abstained on or
+    returned no usable verdict for, is passed through untouched -- this pass
+    adds a property and is never allowed to subtract a claim.  A stance left
+    unaligned keeps the incomplete Claim Key it arrived with, which is the
+    honest record of a passage that never stated a direction.
     """
 
     claims = stance_claims(relationships)
@@ -190,6 +219,7 @@ def apply_stance_alignment(
 
     result = agent.run_sync(critic_prompt(chunk_text, claims))
     matching = _matching_verdicts(claims, result.output)
+    abstained = sum(1 for v in result.output if v.alignment == ABSTENTION)
 
     aligned = 0
     updated: list[Relationship] = []
@@ -213,4 +243,4 @@ def apply_stance_alignment(
                 }
             )
         )
-    return StanceAlignmentResult(updated, 1, aligned)
+    return StanceAlignmentResult(updated, 1, aligned, abstained)
