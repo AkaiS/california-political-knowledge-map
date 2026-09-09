@@ -17,9 +17,10 @@ The contract must cover:
 - The answer, with citations and evidence as first-class typed output rather
   than prose the caller must parse. Provenance runs from every asserted claim
   back to a Source Article or public record.
-- Explicit failure states, drawn from the topology decision and the retrievable
-  subgraph decision: no evidence found, question reaches an unpopulated region,
-  query could not be constructed or validated, orchestration bound exhausted.
+- Coverage and retrieval outcomes, drawn from the retrievable subgraph decision:
+  Deferred coverage and no matching evidence found are distinct.
+- Execution failures, drawn from the topology decision: query could not be
+  constructed or validated, orchestration bound exhausted.
 - The distinction between a declined question and a failed one.
 
 This is the artifact that graduates the parked fog on the
@@ -35,3 +36,55 @@ retrieval layer beneath it.
 
 - Blocks: Prototype graph-aware reranking.
 - Blocks: Decide the developer retrieval surface.
+
+## Input from the retrievable subgraph decision
+
+[Ticket 04](04-retrievable-subgraph-now.md)'s grilling rounds on 2026-09-08
+settled the following policy requirements. Its
+[subsequent inventory](../research/04-graph-inventory-2026-09-08.md) qualifies the
+intended scope with observed path availability and claim/identity limitations;
+the parent population task remains open.
+
+- A Retrieval Answer presents relevant sources for the reader to consult.
+  Brief introductions and connections to the question support that selection;
+  summarization must not replace the sources.
+- Return supported partial evidence automatically while stating the original
+  question's unmet coverage requirement. The answering agent needs explicit
+  context about relevant coverage limits alongside the evidence. A succinct
+  Coverage Description goes to the orchestration agent, and the relevant limits
+  must reach the answering agent. Ticket 04 settles the description's
+  semantics; this ticket owns its concrete representation in the contract.
+- Incomplete graph elements remain eligible for discovery. Their connected
+  Grounding Evidence may supply information missing from graph properties.
+  Claims still require support for the specific identity, amount, date, or
+  other value they depend on.
+- Preserve ticket 02's Deferred coverage state. A search finding no matching
+  evidence is a separate outcome and does not establish a coverage gap or a
+  non-event. Deferred questions may still return useful sources; this ticket
+  chooses how to represent both coverage and search outcomes.
+- Each selected source includes its title, publication date when available,
+  link, a short passage verified against the original extracted wording, and
+  a relevance note where useful. Transformed graph chunk text must not be
+  silently presented as a verbatim quotation.
+- Highlight disagreements between sources without adjudicating them.
+- Organize the Coverage Description by Publication or distinct public-record
+  collection. Its account of what each collection provides is authored;
+  ingestion updates measured availability. A coverage percentage requires a
+  known, bounded expected set; otherwise completeness remains unknown and
+  observed available-material counts are reported.
+- News dates describe Story publication dates supplied by Publications, not
+  temporal coverage of events. Event coverage belongs to sources that explicitly
+  claim it. Wider temporal reasoning is deferred beyond this decision.
+- Reuse discovery and stored article metadata as the basis for observed counts.
+  The archive already records candidate-list progress, which includes failed
+  fetches and must not be represented as completed ingestion or exhaustive
+  Publication coverage.
+- Reflect verified currently available material after ingestion, including
+  additions from a partially successful refresh. Do not include refresh status,
+  retries, or incomplete-refresh warnings in orchestrator context. The primary
+  description concerns overall collection coverage.
+- Include access to a separate monthly coverage breakdown in the initial
+  contract, loaded when the question needs it rather than in every orchestrator
+  prompt. Month-specific percentages require month-specific known expected
+  totals; otherwise return the month's verified available count and unknown
+  completeness. News months use Story publication dates.

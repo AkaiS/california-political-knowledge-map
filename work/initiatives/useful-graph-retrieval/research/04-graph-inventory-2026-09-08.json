@@ -1,0 +1,1931 @@
+{
+  "started_at_utc": "2026-09-08T19:15:18.775848+00:00",
+  "queries": {
+    "nodes": "MATCH (n) RETURN count(n) AS count",
+    "relationships": "MATCH ()-[r]->() RETURN count(r) AS count",
+    "labels": "MATCH (n) UNWIND labels(n) AS label RETURN label, count(*) AS count ORDER BY label",
+    "label_sets": "MATCH (n) RETURN labels(n) AS labels, count(*) AS count ORDER BY count DESC",
+    "relationship_types": "MATCH ()-[r]->() RETURN type(r) AS type, count(*) AS count ORDER BY type",
+    "relationship_shapes": "MATCH (a)-[r]->(b) RETURN labels(a) AS source_labels, type(r) AS type, labels(b) AS target_labels, count(*) AS count ORDER BY type, count DESC",
+    "article_records": "MATCH (a:NewsArticle) RETURN a.id AS id, toString(a.published_date) AS published_date",
+    "article_chunk_counts": "MATCH (a:NewsArticle) OPTIONAL MATCH (a)-[:HAS_CHUNK]->(c:Chunk) WITH a, count(c) AS chunks RETURN count(*) AS articles, sum(chunks) AS attached_chunks, min(chunks) AS minimum, max(chunks) AS maximum, sum(CASE WHEN chunks=0 THEN 1 ELSE 0 END) AS without_chunks",
+    "chunks": "MATCH (c:Chunk) RETURN count(*) AS count, sum(CASE WHEN c.text IS NULL OR c.text=\"\" THEN 1 ELSE 0 END) AS without_text, sum(CASE WHEN c.embedding IS NULL THEN 1 ELSE 0 END) AS without_embedding, sum(CASE WHEN NOT EXISTS { MATCH (:NewsArticle)-[:HAS_CHUNK]->(c) } THEN 1 ELSE 0 END) AS without_article",
+    "embedding_dimensions": "MATCH (c:Chunk) RETURN size(c.embedding) AS dimensions, count(*) AS count ORDER BY count DESC",
+    "entities_without_chunks": "MATCH (n) WHERE any(label IN labels(n) WHERE label IN $entity_labels) RETURN count(n) AS entities, sum(CASE WHEN NOT EXISTS { MATCH (n)-[:MENTIONED_IN]->(:Chunk) } THEN 1 ELSE 0 END) AS without_chunks",
+    "claim_provenance": "MATCH ()-[r]->() WHERE type(r) IN $claim_types RETURN type(r) AS type, count(*) AS count, sum(CASE WHEN size(coalesce(r.chunks, []))=0 AND size(coalesce(r.articles, []))=0 THEN 1 ELSE 0 END) AS without_provenance, sum(CASE WHEN r.needs_review=true THEN 1 ELSE 0 END) AS needs_review, sum(CASE WHEN size(coalesce(r.chunks, []))>0 THEN 1 ELSE 0 END) AS with_chunks, sum(CASE WHEN size(coalesce(r.articles, []))>0 THEN 1 ELSE 0 END) AS with_articles ORDER BY type",
+    "dangling_chunk_provenance": "MATCH ()-[r]->() WHERE type(r) IN $claim_types UNWIND coalesce(r.chunks, []) AS id WITH r, id WHERE NOT EXISTS { MATCH (c:Chunk) WHERE c.id=id } RETURN count(*) AS missing_references, count(DISTINCT r) AS affected_relationships",
+    "dangling_article_provenance": "MATCH ()-[r]->() WHERE type(r) IN $claim_types UNWIND coalesce(r.articles, []) AS id WITH r, id WHERE NOT EXISTS { MATCH (a:NewsArticle) WHERE a.id=id } RETURN count(*) AS missing_references, count(DISTINCT r) AS affected_relationships",
+    "review_nodes": "MATCH (n) WHERE n.needs_review=true RETURN labels(n) AS labels, count(*) AS count",
+    "bill_resolution": "MATCH (n:Bill) RETURN count(*) AS count, sum(CASE WHEN n.session IS NULL THEN 1 ELSE 0 END) AS without_session, sum(CASE WHEN n.needs_review=true THEN 1 ELSE 0 END) AS needs_review",
+    "topic_sources": "MATCH (n)-[:DISCUSSES_TOPIC]->(:PolicyArea) RETURN labels(n) AS labels, count(*) AS count",
+    "duplicate_ids": "MATCH (n) UNWIND labels(n) AS label WITH label, n.id AS id, count(*) AS count WHERE id IS NOT NULL AND count>1 RETURN label, count(*) AS duplicated_id_groups, sum(count) AS affected_nodes ORDER BY label"
+  },
+  "graph": {
+    "server": [
+      {
+        "name": "Neo4j Kernel",
+        "versions": [
+          "2026.07.1"
+        ],
+        "edition": "community"
+      },
+      {
+        "name": "Cypher",
+        "versions": [
+          "5",
+          "25"
+        ],
+        "edition": ""
+      }
+    ],
+    "indexes": [
+      {
+        "name": "chunk_vector_index",
+        "type": "VECTOR",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "entityType": "NODE",
+        "labelsOrTypes": [
+          "Chunk"
+        ],
+        "properties": [
+          "embedding"
+        ],
+        "options": {
+          "indexConfig": {
+            "vector.dimensions": 768,
+            "vector.default_search_expansion_factor": 1.5,
+            "vector.hnsw.m": 16,
+            "vector.quantization.type": "SCALAR",
+            "vector.similarity_function": "COSINE",
+            "vector.hnsw.ef_construction": 100
+          }
+        }
+      },
+      {
+        "name": "index_1b9dcc97",
+        "type": "LOOKUP",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "entityType": "RELATIONSHIP",
+        "labelsOrTypes": null,
+        "properties": null,
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "index_460996c0",
+        "type": "LOOKUP",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "entityType": "NODE",
+        "labelsOrTypes": null,
+        "properties": null,
+        "options": {
+          "indexConfig": {}
+        }
+      }
+    ],
+    "constraints": [],
+    "nodes": [
+      {
+        "count": 3668
+      }
+    ],
+    "relationships": [
+      {
+        "count": 6061
+      }
+    ],
+    "labels": [
+      {
+        "label": "AdvocacyGroup",
+        "count": 42
+      },
+      {
+        "label": "Amendment",
+        "count": 2
+      },
+      {
+        "label": "BallotMeasureCampaign",
+        "count": 8
+      },
+      {
+        "label": "Bill",
+        "count": 84
+      },
+      {
+        "label": "Campaign",
+        "count": 41
+      },
+      {
+        "label": "CandidateCampaign",
+        "count": 33
+      },
+      {
+        "label": "Chunk",
+        "count": 2407
+      },
+      {
+        "label": "Committee",
+        "count": 22
+      },
+      {
+        "label": "Corporation",
+        "count": 90
+      },
+      {
+        "label": "EducationalInstitution",
+        "count": 81
+      },
+      {
+        "label": "GovernmentAgency",
+        "count": 202
+      },
+      {
+        "label": "GrassrootsMovement",
+        "count": 9
+      },
+      {
+        "label": "Hearing",
+        "count": 18
+      },
+      {
+        "label": "LaborUnion",
+        "count": 36
+      },
+      {
+        "label": "LegislativeEvent",
+        "count": 37
+      },
+      {
+        "label": "MediaOrganization",
+        "count": 16
+      },
+      {
+        "label": "NewsArticle",
+        "count": 98
+      },
+      {
+        "label": "NonProfit",
+        "count": 134
+      },
+      {
+        "label": "Organization",
+        "count": 679
+      },
+      {
+        "label": "PAC",
+        "count": 9
+      },
+      {
+        "label": "PolicyArea",
+        "count": 26
+      },
+      {
+        "label": "Politician",
+        "count": 241
+      },
+      {
+        "label": "Prop",
+        "count": 33
+      },
+      {
+        "label": "TradeAssociation",
+        "count": 31
+      },
+      {
+        "label": "TribalNation",
+        "count": 3
+      },
+      {
+        "label": "Vote",
+        "count": 17
+      }
+    ],
+    "label_sets": [
+      {
+        "labels": [
+          "Chunk"
+        ],
+        "count": 2407
+      },
+      {
+        "labels": [
+          "Politician"
+        ],
+        "count": 241
+      },
+      {
+        "labels": [
+          "Organization",
+          "GovernmentAgency"
+        ],
+        "count": 202
+      },
+      {
+        "labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "count": 125
+      },
+      {
+        "labels": [
+          "NewsArticle"
+        ],
+        "count": 98
+      },
+      {
+        "labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "count": 90
+      },
+      {
+        "labels": [
+          "Bill"
+        ],
+        "count": 84
+      },
+      {
+        "labels": [
+          "Organization",
+          "EducationalInstitution"
+        ],
+        "count": 81
+      },
+      {
+        "labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "count": 36
+      },
+      {
+        "labels": [
+          "Organization"
+        ],
+        "count": 35
+      },
+      {
+        "labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "count": 34
+      },
+      {
+        "labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 33
+      },
+      {
+        "labels": [
+          "Prop"
+        ],
+        "count": 33
+      },
+      {
+        "labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "count": 30
+      },
+      {
+        "labels": [
+          "PolicyArea"
+        ],
+        "count": 26
+      },
+      {
+        "labels": [
+          "Committee"
+        ],
+        "count": 22
+      },
+      {
+        "labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "count": 18
+      },
+      {
+        "labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "count": 17
+      },
+      {
+        "labels": [
+          "Organization",
+          "MediaOrganization"
+        ],
+        "count": 16
+      },
+      {
+        "labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "count": 9
+      },
+      {
+        "labels": [
+          "Organization",
+          "PAC"
+        ],
+        "count": 9
+      },
+      {
+        "labels": [
+          "Organization",
+          "NonProfit",
+          "AdvocacyGroup"
+        ],
+        "count": 8
+      },
+      {
+        "labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "count": 8
+      },
+      {
+        "labels": [
+          "Organization",
+          "TribalNation"
+        ],
+        "count": 3
+      },
+      {
+        "labels": [
+          "LegislativeEvent",
+          "Amendment"
+        ],
+        "count": 2
+      },
+      {
+        "labels": [
+          "Organization",
+          "NonProfit",
+          "TradeAssociation"
+        ],
+        "count": 1
+      }
+    ],
+    "relationship_types": [
+      {
+        "type": "ABOUT_TOPIC",
+        "count": 24
+      },
+      {
+        "type": "ABSTAINED",
+        "count": 1
+      },
+      {
+        "type": "ACTION_ON",
+        "count": 26
+      },
+      {
+        "type": "CAMPAIGN_FOR",
+        "count": 22
+      },
+      {
+        "type": "CHAIRS",
+        "count": 11
+      },
+      {
+        "type": "DECLARED_STANCE",
+        "count": 174
+      },
+      {
+        "type": "DENOUNCED",
+        "count": 3
+      },
+      {
+        "type": "DISCUSSES_TOPIC",
+        "count": 278
+      },
+      {
+        "type": "ENDORSED",
+        "count": 24
+      },
+      {
+        "type": "FUNDED",
+        "count": 12
+      },
+      {
+        "type": "HAS_CHUNK",
+        "count": 2407
+      },
+      {
+        "type": "HELD_BY",
+        "count": 2
+      },
+      {
+        "type": "LOBBIED_AGAINST",
+        "count": 28
+      },
+      {
+        "type": "LOBBIED_FOR",
+        "count": 11
+      },
+      {
+        "type": "MENTIONED_IN",
+        "count": 3026
+      },
+      {
+        "type": "REFERRED_TO",
+        "count": 2
+      },
+      {
+        "type": "SERVES_ON",
+        "count": 3
+      },
+      {
+        "type": "VOTED_AYE",
+        "count": 3
+      },
+      {
+        "type": "VOTED_NO",
+        "count": 4
+      }
+    ],
+    "relationship_shapes": [
+      {
+        "source_labels": [
+          "Bill"
+        ],
+        "type": "ABOUT_TOPIC",
+        "target_labels": [
+          "PolicyArea"
+        ],
+        "count": 23
+      },
+      {
+        "source_labels": [
+          "Prop"
+        ],
+        "type": "ABOUT_TOPIC",
+        "target_labels": [
+          "PolicyArea"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "ABSTAINED",
+        "target_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "type": "ACTION_ON",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 16
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "type": "ACTION_ON",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 9
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Amendment"
+        ],
+        "type": "ACTION_ON",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "type": "CAMPAIGN_FOR",
+        "target_labels": [
+          "Politician"
+        ],
+        "count": 19
+      },
+      {
+        "source_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "type": "CAMPAIGN_FOR",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 3
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "CHAIRS",
+        "target_labels": [
+          "Committee"
+        ],
+        "count": 11
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 79
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 21
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 12
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 11
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 10
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GovernmentAgency"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 9
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 6
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 6
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 5
+      },
+      {
+        "source_labels": [
+          "Organization"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 5
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "EducationalInstitution"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 4
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GovernmentAgency"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit",
+          "AdvocacyGroup"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "type": "DECLARED_STANCE",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "DENOUNCED",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "DENOUNCED",
+        "target_labels": [
+          "Prop"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "NewsArticle"
+        ],
+        "type": "DISCUSSES_TOPIC",
+        "target_labels": [
+          "PolicyArea"
+        ],
+        "count": 278
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 7
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 7
+      },
+      {
+        "source_labels": [
+          "Organization"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 4
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "MediaOrganization"
+        ],
+        "type": "ENDORSED",
+        "target_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "PAC"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "FUNDED",
+        "target_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "NewsArticle"
+        ],
+        "type": "HAS_CHUNK",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 2407
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "type": "HELD_BY",
+        "target_labels": [
+          "Committee"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "type": "HELD_BY",
+        "target_labels": [
+          "Committee"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 9
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 7
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 6
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GovernmentAgency"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "type": "LOBBIED_AGAINST",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "type": "LOBBIED_FOR",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 4
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "LOBBIED_FOR",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "LOBBIED_FOR",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "type": "LOBBIED_FOR",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "LOBBIED_FOR",
+        "target_labels": [
+          "Bill"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 772
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GovernmentAgency"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 467
+      },
+      {
+        "source_labels": [
+          "Bill"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 431
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 269
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "EducationalInstitution"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 232
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "Corporation"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 210
+      },
+      {
+        "source_labels": [
+          "Prop"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 122
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "LaborUnion"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 99
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "MediaOrganization"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 67
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "AdvocacyGroup"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 62
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TradeAssociation"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 61
+      },
+      {
+        "source_labels": [
+          "Organization"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 48
+      },
+      {
+        "source_labels": [
+          "Campaign",
+          "CandidateCampaign"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 43
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "GrassrootsMovement"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 39
+      },
+      {
+        "source_labels": [
+          "Committee"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 28
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 19
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 18
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "PAC"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 12
+      },
+      {
+        "source_labels": [
+          "Campaign",
+          "BallotMeasureCampaign"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 10
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit",
+          "AdvocacyGroup"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 9
+      },
+      {
+        "source_labels": [
+          "LegislativeEvent",
+          "Amendment"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 4
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "TribalNation"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 3
+      },
+      {
+        "source_labels": [
+          "Organization",
+          "NonProfit",
+          "TradeAssociation"
+        ],
+        "type": "MENTIONED_IN",
+        "target_labels": [
+          "Chunk"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Bill"
+        ],
+        "type": "REFERRED_TO",
+        "target_labels": [
+          "Committee"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "SERVES_ON",
+        "target_labels": [
+          "Committee"
+        ],
+        "count": 3
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "VOTED_AYE",
+        "target_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "count": 2
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "VOTED_AYE",
+        "target_labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "count": 1
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "VOTED_NO",
+        "target_labels": [
+          "LegislativeEvent",
+          "Vote"
+        ],
+        "count": 3
+      },
+      {
+        "source_labels": [
+          "Politician"
+        ],
+        "type": "VOTED_NO",
+        "target_labels": [
+          "LegislativeEvent",
+          "Hearing"
+        ],
+        "count": 1
+      }
+    ],
+    "article_chunk_counts": [
+      {
+        "articles": 98,
+        "attached_chunks": 2407,
+        "minimum": 6,
+        "maximum": 63,
+        "without_chunks": 0
+      }
+    ],
+    "chunks": [
+      {
+        "count": 2407,
+        "without_text": 0,
+        "without_embedding": 0,
+        "without_article": 0
+      }
+    ],
+    "embedding_dimensions": [
+      {
+        "dimensions": 768,
+        "count": 2407
+      }
+    ],
+    "entities_without_chunks": [
+      {
+        "entities": 1137,
+        "without_chunks": 0
+      }
+    ],
+    "claim_provenance": [
+      {
+        "type": "ABOUT_TOPIC",
+        "count": 24,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 0,
+        "with_articles": 24
+      },
+      {
+        "type": "ABSTAINED",
+        "count": 1,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 1,
+        "with_articles": 0
+      },
+      {
+        "type": "ACTION_ON",
+        "count": 26,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 26,
+        "with_articles": 0
+      },
+      {
+        "type": "CAMPAIGN_FOR",
+        "count": 22,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 22,
+        "with_articles": 0
+      },
+      {
+        "type": "CHAIRS",
+        "count": 11,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 11,
+        "with_articles": 0
+      },
+      {
+        "type": "DECLARED_STANCE",
+        "count": 174,
+        "without_provenance": 0,
+        "needs_review": 174,
+        "with_chunks": 174,
+        "with_articles": 0
+      },
+      {
+        "type": "DENOUNCED",
+        "count": 3,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 3,
+        "with_articles": 0
+      },
+      {
+        "type": "DISCUSSES_TOPIC",
+        "count": 278,
+        "without_provenance": 278,
+        "needs_review": 0,
+        "with_chunks": 0,
+        "with_articles": 0
+      },
+      {
+        "type": "ENDORSED",
+        "count": 24,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 24,
+        "with_articles": 0
+      },
+      {
+        "type": "FUNDED",
+        "count": 12,
+        "without_provenance": 0,
+        "needs_review": 12,
+        "with_chunks": 12,
+        "with_articles": 0
+      },
+      {
+        "type": "HELD_BY",
+        "count": 2,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 2,
+        "with_articles": 0
+      },
+      {
+        "type": "LOBBIED_AGAINST",
+        "count": 28,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 28,
+        "with_articles": 0
+      },
+      {
+        "type": "LOBBIED_FOR",
+        "count": 11,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 11,
+        "with_articles": 0
+      },
+      {
+        "type": "REFERRED_TO",
+        "count": 2,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 2,
+        "with_articles": 0
+      },
+      {
+        "type": "SERVES_ON",
+        "count": 3,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 3,
+        "with_articles": 0
+      },
+      {
+        "type": "VOTED_AYE",
+        "count": 3,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 3,
+        "with_articles": 0
+      },
+      {
+        "type": "VOTED_NO",
+        "count": 4,
+        "without_provenance": 0,
+        "needs_review": 0,
+        "with_chunks": 4,
+        "with_articles": 0
+      }
+    ],
+    "dangling_chunk_provenance": [
+      {
+        "missing_references": 0,
+        "affected_relationships": 0
+      }
+    ],
+    "dangling_article_provenance": [
+      {
+        "missing_references": 0,
+        "affected_relationships": 0
+      }
+    ],
+    "review_nodes": [
+      {
+        "labels": [
+          "Bill"
+        ],
+        "count": 22
+      }
+    ],
+    "bill_resolution": [
+      {
+        "count": 84,
+        "without_session": 22,
+        "needs_review": 22
+      }
+    ],
+    "topic_sources": [
+      {
+        "labels": [
+          "NewsArticle"
+        ],
+        "count": 278
+      }
+    ],
+    "duplicate_ids": [
+      {
+        "label": "NonProfit",
+        "duplicated_id_groups": 2,
+        "affected_nodes": 4
+      },
+      {
+        "label": "Organization",
+        "duplicated_id_groups": 34,
+        "affected_nodes": 70
+      }
+    ],
+    "article_hosts": {
+      "calmatters.org": 98
+    }
+  },
+  "ontology": {
+    "news_labels": [
+      "Bill",
+      "Campaign",
+      "Chunk",
+      "Committee",
+      "LegislativeEvent",
+      "NewsArticle",
+      "Organization",
+      "PolicyArea",
+      "Politician",
+      "Prop"
+    ],
+    "news_sub_labels": {
+      "LegislativeEvent": [
+        "Amendment",
+        "Hearing",
+        "Vote"
+      ],
+      "Campaign": [
+        "BallotMeasureCampaign",
+        "CandidateCampaign"
+      ],
+      "Organization": [
+        "AdvocacyGroup",
+        "Corporation",
+        "EducationalInstitution",
+        "GovernmentAgency",
+        "GrassrootsMovement",
+        "IE_Committee",
+        "LaborUnion",
+        "MediaOrganization",
+        "NonProfit",
+        "PAC",
+        "TradeAssociation",
+        "TribalNation"
+      ]
+    },
+    "news_relationship_types": [
+      "ABOUT_TOPIC",
+      "ABSTAINED",
+      "ACTION_ON",
+      "CAMPAIGN_FOR",
+      "CHAIRS",
+      "DECLARED_STANCE",
+      "DENOUNCED",
+      "DISCUSSES_TOPIC",
+      "ENDORSED",
+      "FUNDED",
+      "HAS_CHUNK",
+      "HELD_BY",
+      "LOBBIED_AGAINST",
+      "LOBBIED_FOR",
+      "MENTIONED_IN",
+      "REFERRED_TO",
+      "SERVES_ON",
+      "VICE_CHAIRS",
+      "VOTED_AYE",
+      "VOTED_NO"
+    ],
+    "primary_excluded_labels": [
+      "District",
+      "ExternalIdentifier",
+      "LegislativeTenure",
+      "RedistrictingCycle"
+    ],
+    "primary_excluded_relationship_types": [
+      "EVOLVED_INTO",
+      "HAS_IDENTIFIER",
+      "HELD_TENURE",
+      "REPRESENTS_DISTRICT",
+      "TRANSITIONED_BY"
+    ]
+  },
+  "sqlite": {
+    "path": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/document_store.db",
+    "stories": [
+      {
+        "status": "COMPLETED",
+        "count": 98,
+        "earliest_publication": "2023-06-15T12:30:00Z",
+        "latest_publication": "2026-09-05T12:00:00Z"
+      },
+      {
+        "status": "UNPROCESSED",
+        "count": 5,
+        "earliest_publication": "2026-06-24T12:00:00Z",
+        "latest_publication": "2026-08-10T12:05:00Z"
+      }
+    ],
+    "reconciliation": {
+      "story_count": 103,
+      "graph_articles_matching_stories": 98,
+      "graph_articles_not_in_stories": 0,
+      "stories_not_in_graph": 5
+    },
+    "matched_statuses": {
+      "COMPLETED": 98,
+      "UNPROCESSED": 0
+    },
+    "publication_columns": [
+      "id",
+      "name",
+      "base_url",
+      "crawl_delay",
+      "max_concurrency",
+      "use_robots_txt",
+      "discovery_config_json",
+      "archive_cutoff_years",
+      "validation_paused",
+      "failure_points",
+      "healing_in_progress",
+      "created_at",
+      "tripping_article_url"
+    ],
+    "cache_columns": [
+      "url",
+      "publication_id",
+      "raw_html",
+      "validation",
+      "validation_date",
+      "scraped_at",
+      "headline",
+      "description",
+      "embedding",
+      "relevance_status",
+      "relevance_label_source",
+      "fetch_status",
+      "raw_metadata_json"
+    ]
+  },
+  "completed_at_utc": "2026-09-08T19:15:19.938335+00:00",
+  "details_started_at_utc": "2026-09-08T19:16:37.109824+00:00",
+  "detail_queries": {
+    "graph_publication_dates": "MATCH (a:NewsArticle) RETURN min(toString(a.published_date)) AS earliest, max(toString(a.published_date)) AS latest, sum(CASE WHEN a.published_date IS NULL THEN 1 ELSE 0 END) AS missing",
+    "stance_keys": "MATCH ()-[r:DECLARED_STANCE]->() RETURN r.alignment AS alignment, keys(r) AS properties, count(*) AS count ORDER BY count DESC",
+    "funding_keys": "MATCH ()-[r:FUNDED]->() RETURN r.amount IS NOT NULL AS has_amount, r.date IS NOT NULL AS has_date, keys(r) AS properties, count(*) AS count ORDER BY count DESC",
+    "multiple_base_labels": "MATCH (n) WITH n, [x IN labels(n) WHERE x IN $base_labels] AS base_labels WHERE size(base_labels)<>1 RETURN base_labels, count(*) AS count",
+    "E1": "MATCH (n:Politician)-[:MENTIONED_IN]->(c:Chunk) RETURN count(*) AS paths, count(DISTINCT n) AS seeds, count(DISTINCT c) AS chunks",
+    "E2": "MATCH (n)-[:MENTIONED_IN]->(c:Chunk) WHERE n:Bill OR n:Prop RETURN count(*) AS paths, count(DISTINCT n) AS seeds, count(DISTINCT c) AS chunks",
+    "E3": "MATCH (p:PolicyArea)<-[:DISCUSSES_TOPIC]-(a:NewsArticle)-[:HAS_CHUNK]->(c:Chunk) RETURN count(*) AS paths, count(DISTINCT p) AS seeds, count(DISTINCT a) AS articles, count(DISTINCT c) AS chunks",
+    "R1": "MATCH (a)-[r:DECLARED_STANCE|ENDORSED|DENOUNCED]->(b) WHERE (a:Politician OR a:Organization) AND (b:Bill OR b:Prop OR b:Campaign) RETURN count(r) AS relationships, count(DISTINCT a) AS actors, count(DISTINCT b) AS targets",
+    "R2": "MATCH (o:Organization)-[r:LOBBIED_FOR|LOBBIED_AGAINST]->(b:Bill) RETURN count(r) AS relationships, count(DISTINCT o) AS actors, count(DISTINCT b) AS measures",
+    "R3": "MATCH (o:Organization)-[r:FUNDED]->(c:Campaign) RETURN count(r) AS relationships, count(DISTINCT o) AS actors, count(DISTINCT c) AS campaigns",
+    "M1": "MATCH (o:Organization)-[:LOBBIED_FOR|LOBBIED_AGAINST|DECLARED_STANCE]->(b:Bill)-[:ABOUT_TOPIC]->(p:PolicyArea) RETURN count(*) AS paths, count(DISTINCT o) AS actors, count(DISTINCT b) AS measures, count(DISTINCT p) AS areas",
+    "M2_topology_only": "MATCH (a:Organization)-[r:DECLARED_STANCE]->(b:Bill)<-[s:DECLARED_STANCE]-(other) WHERE a<>other AND (other:Organization OR other:Politician) RETURN count(*) AS ordered_paths, sum(CASE WHEN r.alignment IS NOT NULL AND r.alignment=s.alignment THEN 1 ELSE 0 END) AS same_alignment_paths",
+    "M3": "MATCH (p:Politician)-[:MENTIONED_IN]->(c:Chunk)<-[:MENTIONED_IN]-(o:Organization) RETURN count(*) AS paths, count(DISTINCT c) AS chunks",
+    "M4": "MATCH (o:Organization)-[:FUNDED]->(c:Campaign)-[:CAMPAIGN_FOR]->(p:Politician)-[:DECLARED_STANCE]->(b:Bill) RETURN count(*) AS paths",
+    "M5": "MATCH (p:Politician)-[:VOTED_AYE|VOTED_NO|ABSTAINED]->(e:LegislativeEvent)-[:ACTION_ON]->(b:Bill) RETURN count(*) AS paths, count(DISTINCT p) AS politicians, count(DISTINCT e) AS events, count(DISTINCT b) AS bills",
+    "committee_hearings": "MATCH (b:Bill)<-[:ACTION_ON]-(e:LegislativeEvent)-[:HELD_BY]->(c:Committee) RETURN count(*) AS paths",
+    "committee_referrals": "MATCH (:Bill)-[r:REFERRED_TO]->(:Committee) RETURN count(r) AS relationships",
+    "final_totals": "MATCH (n) WITH count(n) AS nodes MATCH ()-[r]->() RETURN nodes, count(r) AS relationships"
+  },
+  "details": {
+    "graph_publication_dates": [
+      {
+        "earliest": "2023-06-15T12:30:00Z",
+        "latest": "2026-09-05T12:00:00Z",
+        "missing": 0
+      }
+    ],
+    "stance_keys": [
+      {
+        "alignment": null,
+        "properties": [
+          "chunks",
+          "needs_review"
+        ],
+        "count": 174
+      }
+    ],
+    "funding_keys": [
+      {
+        "has_amount": false,
+        "has_date": false,
+        "properties": [
+          "chunks",
+          "needs_review"
+        ],
+        "count": 12
+      }
+    ],
+    "multiple_base_labels": [],
+    "E1": [
+      {
+        "paths": 772,
+        "seeds": 241,
+        "chunks": 607
+      }
+    ],
+    "E2": [
+      {
+        "paths": 553,
+        "seeds": 117,
+        "chunks": 493
+      }
+    ],
+    "E3": [
+      {
+        "paths": 7319,
+        "seeds": 26,
+        "articles": 94,
+        "chunks": 2335
+      }
+    ],
+    "R1": [
+      {
+        "relationships": 201,
+        "actors": 135,
+        "targets": 83
+      }
+    ],
+    "R2": [
+      {
+        "relationships": 39,
+        "actors": 36,
+        "measures": 20
+      }
+    ],
+    "R3": [
+      {
+        "relationships": 12,
+        "actors": 11,
+        "campaigns": 9
+      }
+    ],
+    "M1": [
+      {
+        "paths": 32,
+        "actors": 11,
+        "measures": 5,
+        "areas": 8
+      }
+    ],
+    "M2_topology_only": [
+      {
+        "ordered_paths": 245,
+        "same_alignment_paths": 0
+      }
+    ],
+    "M3": [
+      {
+        "paths": 436,
+        "chunks": 223
+      }
+    ],
+    "M4": [
+      {
+        "paths": 0
+      }
+    ],
+    "M5": [
+      {
+        "paths": 7,
+        "politicians": 7,
+        "events": 7,
+        "bills": 7
+      }
+    ],
+    "committee_hearings": [
+      {
+        "paths": 0
+      }
+    ],
+    "committee_referrals": [
+      {
+        "relationships": 2
+      }
+    ],
+    "final_totals": [
+      {
+        "nodes": 3668,
+        "relationships": 6061
+      }
+    ]
+  },
+  "details_completed_at_utc": "2026-09-08T19:16:37.727488+00:00",
+  "adherence_file": {
+    "relative_to_shared_store": ".scratch/extraction-adherence-report.json",
+    "modified_at_utc": "2026-09-08T17:31:57.005946+00:00",
+    "content": {
+      "rejected_labels": {},
+      "rejected_property_names": {},
+      "rejected_relationship_property_names": {},
+      "rejected_relationship_types": {}
+    },
+    "limitation": "No run identifier or corpus total; cannot attribute this file to the full current graph."
+  },
+  "checkout_commit": "9c13484a17405c13509d6caf42f564c88b3be928",
+  "checkout_dirty": true
+}

@@ -95,12 +95,15 @@ blockers.
 ### Useful Graph Retrieval frontier
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
-charted on 2026-07-29 and holds ten tickets. Two are takeable now; the rest
-declare their blockers.
+charted on 2026-07-29 and holds ten tickets. Issue 04 closed on 2026-09-08;
+issue 05 is ready to prototype against the measured graph. Remaining issues
+declare their own prerequisites.
 
-- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Every other retrieval decision waits on it.
-- [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
+- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
+- [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md): the authored question set is available as an input to the prototype.
 - [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
+- [Decide which subgraph is retrievable now and which is deferred](initiatives/useful-graph-retrieval/issues/04-retrievable-subgraph-now.md), `completed` on 2026-09-08. Scope, librarian presentation, and coverage policy are settled against the live inventory.
+- [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `ready-for-agent` on 2026-09-08. Compare generated Cypher with typed parameterized retrieval against the current graph, separating construction errors from documented coverage and data limitations.
 
 ### Pydantic-Native Evaluation Routing
 
