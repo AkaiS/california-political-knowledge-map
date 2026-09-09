@@ -1,25 +1,23 @@
 """Supply `alignment` to `DECLARED_STANCE` edges already in the graph.
 
 Every stored stance edge reached the graph without the one property the
-ontology says a stance entails, because the extraction call never emitted it.
-The Stance Alignment Critic recovers that property after the fact, and this
-module points it at the graph instead of at an extraction result: it reads the
-stances that lack an alignment, gives the critic back the Article Chunk each
-one was asserted from, and reports what the critic would write.
+ontology says a stance entails.  The Stance Alignment Critic recovers that
+property from an Article Chunk, and this module points it at the graph instead
+of at an extraction result: it reads the stances that lack an alignment, gives
+the critic back the Article Chunk each one was asserted from, and reports what
+the critic would write.
 
-The unit of inference is the Article Chunk, not the edge, for the same reason
-it is in the pipeline -- the critic is shown a chunk and every stance claimed
-from it at once, so a chunk asserting four stances costs one inference rather
-than four.
+The unit of inference is the Article Chunk, not the edge: the critic is shown a
+chunk and every stance claimed from it at once, so a chunk asserting four
+stances costs one inference rather than four.
 
-An edge asserted by several chunks is judged from each of them.  Those verdicts
-can disagree, and a disagreement is reported rather than resolved: the critic
-supplies a property and is not the thing that decides which chunk to believe.
+An edge asserted by several chunks is judged from each of them, and a
+disagreement between them is reported rather than resolved.  A stance the critic
+abstained on, and one whose asserting chunks were not all read, are both left
+carrying the incomplete Claim Key they arrived with.
 
-A stance the critic abstains on is left exactly as it is, still carrying the
-incomplete Claim Key it arrived with.  A passage that never stated a direction
-is not evidence of one, and an edge the graph records as unsettled is worth
-more than an edge carrying an invented alignment.
+What the runs against the stored graph measured is in
+`work/initiatives/model-evaluation/research/stance-edges-a-critic-cannot-fix.md`.
 """
 
 import logging
@@ -96,14 +94,15 @@ class ProposedAlignment:
 
     ``alignment`` is the value after the write path's own normalization, so a
     proposal that reads `POSITIVE` here is the string the graph would hold.  It
-    is ``None`` when the critic returned nothing usable, or when the chunks
-    asserting the edge disagreed.
+    is ``None`` when the critic returned nothing usable, when the chunks
+    asserting the edge disagreed, or when some of them were never read.
     """
 
     stance: StoredStance
     alignment: str | None = None
     by_chunk: dict[str, str] = field(default_factory=dict)
     conflicted: bool = False
+    unexamined_chunks: tuple[str, ...] = ()
 
     @property
     def settled(self) -> bool:
@@ -132,6 +131,10 @@ class BackfillPlan:
     @property
     def conflicted(self) -> list[ProposedAlignment]:
         return [p for p in self.proposals if p.conflicted]
+
+    @property
+    def incomplete(self) -> list[ProposedAlignment]:
+        return [p for p in self.proposals if p.unexamined_chunks]
 
 
 def read_unaligned_stances(session) -> list[StoredStance]:
@@ -233,6 +236,7 @@ def plan_stance_alignment(
     if agent is None and by_chunk:
         agent = get_alignment_critic_agent(deployment)
 
+    examined: set[str] = set()
     for chunk_id in sorted(by_chunk)[: limit if limit is not None else None]:
         text = _chunk_text(session, chunk_id)
         if not text:
@@ -240,6 +244,7 @@ def plan_stance_alignment(
             logger.warning("Stance backfill: chunk %s has no text in the graph", chunk_id)
             continue
         plan.chunks_read += 1
+        examined.add(chunk_id)
         verdicts, calls, abstained = _verdicts_for_chunk(
             text, by_chunk[chunk_id], agent, deployment
         )
@@ -249,12 +254,24 @@ def plan_stance_alignment(
             proposals[edge_id].by_chunk[chunk_id] = alignment
 
     for proposal in plan.proposals:
-        _settle(proposal)
+        _settle(proposal, examined)
     return plan
 
 
-def _settle(proposal: ProposedAlignment) -> None:
-    """Reduce a stance's per-chunk verdicts to the one value that would be written."""
+def _settle(proposal: ProposedAlignment, examined: set[str]) -> None:
+    """Reduce a stance's per-chunk verdicts to the one value that would be written.
+
+    A chunk that was never read is not evidence that agrees; it is evidence
+    nobody looked at, and settling on the rest would write an alignment the run
+    never checked against the passages it skipped.  A chunk the critic abstained
+    on is different and does not block settlement: it was read, and declining to
+    answer is not the same as disagreeing.
+    """
+
+    unexamined = tuple(c for c in proposal.stance.chunks if c not in examined)
+    if unexamined:
+        proposal.unexamined_chunks = unexamined
+        return
 
     distinct = set(proposal.by_chunk.values())
     if len(distinct) == 1:
@@ -315,5 +332,12 @@ def format_plan(plan: BackfillPlan) -> Iterator[str]:
 
     for proposal in plan.proposals:
         stance = proposal.stance
-        verdict = proposal.alignment or ("CONFLICT" if proposal.conflicted else "NONE")
+        if proposal.alignment:
+            verdict = proposal.alignment
+        elif proposal.conflicted:
+            verdict = "CONFLICT"
+        elif proposal.unexamined_chunks:
+            verdict = "PARTIAL"
+        else:
+            verdict = "NONE"
         yield f"{verdict:<8} {stance.source} -> {stance.target}"

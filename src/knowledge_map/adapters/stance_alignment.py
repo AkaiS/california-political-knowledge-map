@@ -1,17 +1,19 @@
 """The Stance Alignment Critic: a second pass that supplies a stance's direction.
 
 The Entity Extraction agent produces `DECLARED_STANCE` claims whose endpoints
-and type are right and whose `properties` is always `{}`.  Four separate
-wordings of the extraction prompt were measured against that and every one was
-inert, so the alignment is asked for after the fact instead: the critic is shown
-one Article Chunk and only the stance claims already extracted from it, and
-returns the direction of each, or abstains where the passage states none.
+and type are right and whose `properties` is always `{}`, so the alignment is
+asked for after the fact instead: the critic is shown one Article Chunk and only
+the stance claims already extracted from it, and returns the direction of each,
+or abstains where the passage states none.
 
-Shaped after the Coreference Critic in `knowledge_map.adapters.coreference` --
-one agent, one verdict per listed item, identity fields copied so a verdict can
+One agent, one verdict per listed item, identity fields copied so a verdict can
 be matched back to what it was asked about, and anything unmatched discarded
 rather than trusted.  It never sees the extraction prompt, the ontology, or the
-non-stance claims: keeping the ask small is the hypothesis under test.
+non-stance claims.
+
+Why the extraction prompt is not the lever here, and what this pass was measured
+to recover and to miss, is in
+`work/initiatives/model-evaluation/research/stance-edges-a-critic-cannot-fix.md`.
 """
 
 import logging

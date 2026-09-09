@@ -250,6 +250,78 @@ def test_limit_caps_the_chunks_read() -> None:
     assert len(plan.settled) == 1
 
 
+def test_limit_leaving_a_chunk_unread_does_not_settle_that_stance() -> None:
+    """An unread chunk is evidence nobody looked at, not evidence that agrees.
+
+    Settling on the chunks a capped run happened to reach would write an
+    alignment the run never checked against the passages it skipped.
+    """
+
+    stances = [_stance("Newsom", "SB 7", "chunk-1", "chunk-2", edge_id="edge-2")]
+    session = FakeSession(
+        stances,
+        {"chunk-1": "Newsom vetoed SB 7.", "chunk-2": "Newsom praised SB 7."},
+    )
+
+    plan = plan_stance_alignment(
+        session, agent=_critic({("Newsom", "SB 7"): "NEGATIVE"}), limit=1
+    )
+
+    assert plan.chunks_read == 1
+    assert plan.settled == []
+    assert plan.incomplete[0].unexamined_chunks == ("chunk-2",)
+
+    apply_plan(session, plan)
+    assert session.writes == []
+
+
+def test_a_chunk_missing_from_the_graph_blocks_settlement_of_its_stance() -> None:
+    """Text the run could not read is unexamined for the same reason."""
+
+    stances = [_stance("Newsom", "SB 7", "chunk-1", "chunk-gone")]
+    session = FakeSession(stances, {"chunk-1": "Newsom vetoed SB 7."})
+
+    plan = plan_stance_alignment(
+        session, agent=_critic({("Newsom", "SB 7"): "NEGATIVE"})
+    )
+
+    assert plan.missing_chunk_ids == ["chunk-gone"]
+    assert plan.settled == []
+    assert plan.incomplete[0].unexamined_chunks == ("chunk-gone",)
+
+
+def test_every_chunk_read_settles_even_where_one_abstained() -> None:
+    """Abstention is not unexamined evidence: the chunk was read and declined."""
+
+    stances = [_stance("Newsom", "SB 7", "chunk-1", "chunk-2")]
+    session = FakeSession(
+        stances,
+        {"chunk-1": "Newsom vetoed SB 7.", "chunk-2": "SB 7 reached the governor."},
+    )
+
+    def respond(messages, info):
+        prompt = messages[-1].parts[-1].content
+        alignment = "NEGATIVE" if "vetoed" in prompt else "NO_STANCE_STATED"
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    tool_name="final_result",
+                    args={
+                        "response": [
+                            {"source": "Newsom", "target": "SB 7", "alignment": alignment}
+                        ]
+                    },
+                )
+            ]
+        )
+
+    agent = Agent(FunctionModel(respond), output_type=list[StanceAlignmentVerdict])
+    plan = plan_stance_alignment(session, agent=agent)
+
+    assert plan.incomplete == []
+    assert plan.settled[0].alignment == "NEGATIVE"
+
+
 def test_an_alignment_the_write_path_would_refuse_is_not_proposed() -> None:
     """The proposal is normalized the way the graph would store it, or dropped."""
 
