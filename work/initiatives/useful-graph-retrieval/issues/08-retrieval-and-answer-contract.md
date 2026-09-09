@@ -88,3 +88,21 @@ the parent population task remains open.
   prompt. Month-specific percentages require month-specific known expected
   totals; otherwise return the month's verified available count and unknown
   completeness. News months use Story publication dates.
+
+## Input from the retrieval modes decision
+
+[Issue 06](06-retrieval-modes-and-index-inventory.md) closed on 2026-09-08 and
+settles the following requirements for this contract:
+
+- Full-text search over entity names, Source Article titles, and Article Chunk
+  text; Article Chunk vector search; and typed traversal supply candidates.
+  Issue 07 decides when and in what order those modes run.
+- Combine and deduplicate Article Chunks while retaining every retrieval route
+  and supporting graph claim. Name and title hits lead to candidate passages;
+  retain which field matched without treating that match alone as grounding.
+- Issue 09 determines shared ranking. This contract must represent ranking
+  without presupposing a particular fusion formula or structural preference.
+- Group selected passages by Source Article for presentation, preserving useful
+  passages from different parts of an article while presenting the source once.
+- Deduplicating chunks does not merge graph entities or resolve duplicate
+  internal IDs. External-identifier lookup and Policy Area vectors are deferred.
