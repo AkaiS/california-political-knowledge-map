@@ -175,6 +175,58 @@ pointers. The experiment supports small required binding schemas and
 deterministic composition, while malformed pattern references and campaign-name
 resolution remain obstacles. No production architecture was selected.
 
+### 2026-09-09: Test simpler pattern selection and candidate resolution separately
+
+At the maintainer's request, two Sol agents at medium reasoning ran independent
+experiments in separate throwaway worktrees. Both started from the corrected
+composable-triples prototype. References were rechecked against the live graph,
+and model calls ran sequentially on the local deployment.
+
+Compiler-assigned pattern identifiers produced two complete model-selected
+retrievals out of 25, with 18 plans rejected and five executed empty queries.
+The supplied-pattern control retained its 22 complete retrievals. Unnecessary
+aggregates, incorrect date constraints, and self-inequalities remained despite
+moving identifier assignment into code.
+
+Graph-backed candidate resolution produced 20 complete retrievals against 22
+for its paired literal-binding control. It recovered two Campaign misses but
+lost four previously successful cases through slot mapping errors, confusion
+between the entity being bound and the requested answer, and alias ambiguity.
+Its separate no-match, ambiguity, and wrong-session checks passed.
+
+Both experiments failed the criteria recorded before inference, so no combined
+experiment was launched. The [comparison](../query-construction/pattern-resolution-comparison.md)
+records methods, independent coordinator checks, failure distinctions, costs,
+and preserved artifacts. No production implementation or architectural decision
+was made.
+
+### 2026-09-09: Separate keyed selection, composition, and binding
+
+At the maintainer's request, a Sol agent at medium reasoning built a separate
+throwaway experiment with a key-only selector, a composer restricted to
+code-enumerated arrangements, and the original required-slot binder. Code
+bypasses the composer model only when exactly one complete compilable
+arrangement remains. The catalog includes atomic filters and outputs alongside
+ontology triples, so selected keys specify the required operations while
+composition decides their attachment nodes.
+
+The primary 25-question batch produced two complete retrievals, both Committee
+referral questions. Eight selections executed through deterministic composition;
+sixteen could not be composed, and one exceeded the explicit composer-option
+limit. No primary case reached the composer model. A current-graph evidence
+match that omitted the lobbying predicate alternative was excluded from success.
+
+The [comparison](../query-construction/selector-composer-binder-comparison.md)
+separates the primary results from a subsequent supplied-key composer diagnostic,
+includes three concrete examples, and records the catalog, uniqueness checks,
+costs, and limitations. The 22/25 historical result remains a supplied-structure
+binding control, not the baseline for model-selected end-to-end retrieval.
+
+The separate diagnostic supplied correct keys for the two shared-lobbying
+questions. The composer chose the distinct peer in both, and both retrieved the
+expected three peers with per-claim evidence. These two supplied-selection
+successes are excluded from the primary 2/25 result.
+
 ### 2026-09-09: Preserve the experiment history
 
 The [report archive](../query-construction/reports/README.md) imports the three
@@ -188,3 +240,13 @@ compiler-assigned pattern identifiers and read-only candidate resolution for
 bindings. This continues issue 05 and respects the modes and index inventory
 settled in issue 06. It does not select a production architecture or authorize
 merging graph identities.
+
+### 2026-09-09 — Aggregate all six experiment histories
+
+[Consolidated findings](../query-construction/findings.md) now separate
+end-to-end results, supplied-structure binding controls, and the supplied-key
+composer diagnostic. The [archive](../query-construction/reports/README.md)
+preserves the three later attempts alongside the original three, with exact
+source blobs and checksums. The later findings each include three worked
+examples. No production implementation is adopted and the two failed-gate
+experiments were not combined.

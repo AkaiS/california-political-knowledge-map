@@ -1,0 +1,1676 @@
+{
+  "diagnostic": "supplied correct keys, ambiguous composer, binder, retrieval",
+  "primary_score_exclusion": "This bypasses selector and is not an end-to-end result or rescue of the frozen batch.",
+  "started_at": "2026-09-09T16:02:08.555636+00:00",
+  "finished_at": "2026-09-09T16:02:16.884759+00:00",
+  "duration_seconds": 8.329123,
+  "model": "gemma4:26b",
+  "composer_instructions": "Choose one offered complete wiring of the already-selected semantic pieces. The question tells you which offered role attachment is intended. Return only the offered candidate id. You cannot add or remove pieces, invent nodes or joins, alter predicates, supply values, or write Cypher. Pay close attention to which same-label role is filtered and which is returned.",
+  "composer_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "candidate_id": {
+        "enum": [
+          "C001",
+          "C002"
+        ],
+        "title": "Candidate Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "candidate_id"
+    ],
+    "title": "OfferedCompositionChoice",
+    "type": "object"
+  },
+  "binder_instructions": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n",
+  "fresh_reference_hash": "9494ab3f14808a632a82f77a3e8f024f04bf9126d76fe9c8ba9cf06bad485059",
+  "records": [
+    {
+      "case_id": "C-M2-01",
+      "opaque_model_id": "Q16",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+      "privileged_input": "evaluator-authored correct piece keys; selector bypassed",
+      "piece_keys": [
+        1068,
+        1068,
+        1023,
+        1014,
+        1015,
+        1009,
+        1038,
+        1028
+      ],
+      "candidate_count": 2,
+      "offered_candidates": [
+        {
+          "candidate_id": "C001",
+          "nodes": [
+            {
+              "handle": "_Organization_0",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Organization_1",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Bill_0",
+              "label": "Bill"
+            }
+          ],
+          "triples": [
+            {
+              "occurrence": "K1068_1",
+              "piece_key": 1068,
+              "source_handle": "_Organization_0",
+              "target_handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1068_2",
+              "piece_key": 1068,
+              "source_handle": "_Organization_1",
+              "target_handle": "_Bill_0"
+            }
+          ],
+          "filters": [
+            {
+              "occurrence": "K1023_1",
+              "piece_key": 1023,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1014_1",
+              "piece_key": 1014,
+              "handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1015_1",
+              "piece_key": 1015,
+              "handle": "_Bill_0"
+            }
+          ],
+          "outputs": [
+            {
+              "occurrence": "K1038_1",
+              "piece_key": 1038,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1028_1",
+              "piece_key": 1028,
+              "handle": "_Bill_0"
+            }
+          ],
+          "distincts": [
+            {
+              "occurrence": "K1009_1",
+              "piece_key": 1009,
+              "left": "_Organization_0",
+              "right": "_Organization_1"
+            }
+          ],
+          "aggregates": []
+        },
+        {
+          "candidate_id": "C002",
+          "nodes": [
+            {
+              "handle": "_Organization_0",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Organization_1",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Bill_0",
+              "label": "Bill"
+            }
+          ],
+          "triples": [
+            {
+              "occurrence": "K1068_1",
+              "piece_key": 1068,
+              "source_handle": "_Organization_0",
+              "target_handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1068_2",
+              "piece_key": 1068,
+              "source_handle": "_Organization_1",
+              "target_handle": "_Bill_0"
+            }
+          ],
+          "filters": [
+            {
+              "occurrence": "K1023_1",
+              "piece_key": 1023,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1014_1",
+              "piece_key": 1014,
+              "handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1015_1",
+              "piece_key": 1015,
+              "handle": "_Bill_0"
+            }
+          ],
+          "outputs": [
+            {
+              "occurrence": "K1038_1",
+              "piece_key": 1038,
+              "handle": "_Organization_1"
+            },
+            {
+              "occurrence": "K1028_1",
+              "piece_key": 1028,
+              "handle": "_Bill_0"
+            }
+          ],
+          "distincts": [
+            {
+              "occurrence": "K1009_1",
+              "piece_key": 1009,
+              "left": "_Organization_0",
+              "right": "_Organization_1"
+            }
+          ],
+          "aggregates": []
+        }
+      ],
+      "authored_matching_candidates": [
+        "C002"
+      ],
+      "composer_stage": {
+        "status": "valid",
+        "output": {
+          "candidate_id": "C002"
+        },
+        "usage": {
+          "input_tokens": 1192,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 17,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 3335.6,
+        "transport_attempts": [
+          {
+            "stage": "supplied_key_composer_diagnostic",
+            "opaque_id": "Q16",
+            "status_code": 200,
+            "latency_ms": 3117.7,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Choose one offered complete wiring of the already-selected semantic pieces. The question tells you which offered role attachment is intended. Return only the offered candidate id. You cannot add or remove pieces, invent nodes or joins, alter predicates, supply values, or write Cypher. Pay close attention to which same-label role is filtered and which is returned."
+                },
+                {
+                  "role": "user",
+                  "content": "Question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nSelected resolved pieces: [{\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_1\", \"piece_key\": 1068}, {\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_2\", \"piece_key\": 1068}, {\"description\": \"filter Organization.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1023_1\", \"piece_key\": 1023}, {\"description\": \"filter Bill.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1014_1\", \"piece_key\": 1014}, {\"description\": \"filter Bill.session eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1015_1\", \"piece_key\": 1015}, {\"description\": \"require two Organization roles to have distinct ids\", \"kind\": \"distinct\", \"occurrence_id\": \"K1009_1\", \"piece_key\": 1009}, {\"description\": \"return Organization identity\", \"kind\": \"output\", \"occurrence_id\": \"K1038_1\", \"piece_key\": 1038}, {\"description\": \"return Bill identity\", \"kind\": \"output\", \"occurrence_id\": \"K1028_1\", \"piece_key\": 1028}]\nOffered complete wirings: [{\"aggregates\": [], \"candidate_id\": \"C001\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}, {\"aggregates\": [], \"candidate_id\": \"C002\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_1\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}]"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 250,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "OfferedCompositionChoice",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "candidate_id": {
+                        "enum": [
+                          "C001",
+                          "C002"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "candidate_id"
+                    ],
+                    "title": "OfferedCompositionChoice",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\"candidate_id\": \"C002\"}"
+                  }
+                }
+              ],
+              "created": 1788969731,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 17,
+                "prompt_tokens": 1192,
+                "total_tokens": 1209,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              },
+              "id": "chatcmpl-2S62bYXON3iMXyzFkyIb541A7xAVkpfM",
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 1192,
+                "prompt_ms": 2745.582,
+                "prompt_per_token_ms": 2.3033406040268454,
+                "prompt_per_second": 434.1520304256074,
+                "predicted_n": 17,
+                "predicted_ms": 272.983,
+                "predicted_per_token_ms": 16.057823529411763,
+                "predicted_per_second": 62.274940197741245
+              }
+            }
+          }
+        ]
+      },
+      "chosen_candidate_id": "C002",
+      "composition_correct": true,
+      "binding_stage": {
+        "status": "valid",
+        "output": {
+          "slot_0": "Walt Disney",
+          "slot_1": "AB 186",
+          "slot_2": "2025-2026"
+        },
+        "usage": {
+          "input_tokens": 3500,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 3405,
+          "output_tokens": 43,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 1156.8,
+        "transport_attempts": [
+          {
+            "stage": "supplied_key_diagnostic_binder",
+            "opaque_id": "Q16",
+            "status_code": 200,
+            "latency_ms": 1150.9,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+                },
+                {
+                  "role": "user",
+                  "content": "Opaque question id: Q16\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nValidated required bindings: {\"slot_0\": \"Question value for Organization.name with eq\", \"slot_1\": \"Question value for Bill.name with eq\", \"slot_2\": \"Question value for Bill.session with eq\"}"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 700,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "PatternBindings",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "slot_0": {
+                        "description": "Question value for Organization.name with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "slot_1": {
+                        "description": "Question value for Bill.name with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "slot_2": {
+                        "description": "Question value for Bill.session with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "slot_0",
+                      "slot_1",
+                      "slot_2"
+                    ],
+                    "title": "PatternBindings",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\"slot_0\": \"Walt Disney\", \"slot_1\": \"AB 186\", \"slot_2\": \"2025-2026\"}"
+                  }
+                }
+              ],
+              "created": 1788969733,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 43,
+                "prompt_tokens": 3500,
+                "total_tokens": 3543,
+                "prompt_tokens_details": {
+                  "cached_tokens": 3405
+                }
+              },
+              "id": "chatcmpl-C03BH2U4nFZuEg6A3HJIaFpAMgyiRlJ2",
+              "timings": {
+                "cache_n": 3405,
+                "prompt_n": 95,
+                "prompt_ms": 405.553,
+                "prompt_per_token_ms": 4.268978947368421,
+                "prompt_per_second": 234.2480514260775,
+                "predicted_n": 43,
+                "predicted_ms": 672.406,
+                "predicted_per_token_ms": 15.6373488372093,
+                "predicted_per_second": 63.9494591065517
+              }
+            }
+          }
+        ]
+      },
+      "compiled": {
+        "pattern": {
+          "nodes": [
+            {
+              "name": "n0",
+              "label": "Organization"
+            },
+            {
+              "name": "n1",
+              "label": "Bill"
+            },
+            {
+              "name": "n2",
+              "label": "Organization"
+            }
+          ],
+          "triples": [
+            {
+              "subject": "n0",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "n1",
+              "claim_name": "claim_0"
+            },
+            {
+              "subject": "n2",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "n1",
+              "claim_name": "claim_1"
+            }
+          ],
+          "constraints": [
+            {
+              "variable": "n0",
+              "property": "name",
+              "operator": "eq",
+              "slot": "slot_0",
+              "description": "Question value for Organization.name with eq"
+            },
+            {
+              "variable": "n1",
+              "property": "name",
+              "operator": "eq",
+              "slot": "slot_1",
+              "description": "Question value for Bill.name with eq"
+            },
+            {
+              "variable": "n1",
+              "property": "session",
+              "operator": "eq",
+              "slot": "slot_2",
+              "description": "Question value for Bill.session with eq"
+            }
+          ],
+          "inequalities": [
+            {
+              "left_variable": "n0",
+              "right_variable": "n2",
+              "property": "id"
+            }
+          ],
+          "return_targets": [
+            {
+              "variable": "n2",
+              "fields": [
+                "id",
+                "name"
+              ]
+            },
+            {
+              "variable": "n1",
+              "fields": [
+                "id",
+                "name"
+              ]
+            }
+          ],
+          "aggregate": null,
+          "rationale": "Compiler materialization of selected keyed pieces and one complete wiring."
+        },
+        "cypher": "MATCH (n0:Organization)-[_rel_0:LOBBIED_FOR]->(n1:Bill),\n      (n2:Organization)-[_rel_1:LOBBIED_FOR]->(n1:Bill)\nWHERE n0.name = $slot_0 AND n1.name = $slot_1 AND n1.session = $slot_2 AND n0.id <> n2.id\nRETURN DISTINCT n2.id AS n2_id,\n       n2.name AS n2_name,\n       n1.id AS n1_id,\n       n1.name AS n1_name,\n       [{kind:'claim_0',ids:_rel_0.chunks},{kind:'claim_1',ids:_rel_1.chunks}] AS evidence_groups",
+        "required_slots": [
+          "slot_0",
+          "slot_1",
+          "slot_2"
+        ],
+        "slot_descriptions": {
+          "slot_0": "Question value for Organization.name with eq",
+          "slot_1": "Question value for Bill.name with eq",
+          "slot_2": "Question value for Bill.session with eq"
+        }
+      },
+      "bindings": {
+        "slot_0": "Walt Disney",
+        "slot_1": "AB 186",
+        "slot_2": "2025-2026"
+      },
+      "execution_stage": {
+        "status": "executed",
+        "explain_query_type": "r",
+        "query_type": "r",
+        "explain_latency_ms": 12.2,
+        "query_latency_ms": 6.2,
+        "row_count": 3,
+        "rows": [
+          {
+            "n2_id": "Organization:creative-artists-agency",
+            "n2_name": "Creative Artists Agency",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ]
+              }
+            ]
+          },
+          {
+            "n2_id": "Organization:skydance",
+            "n2_name": "SkyDance",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          },
+          {
+            "n2_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+            "n2_name": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          }
+        ],
+        "stage_latency_ms": 20.5
+      },
+      "resolved_evidence": [
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "text": "off the refund within two years, instead of five.\n\nIf approved, Assembly Bill 186 would cost the state up to $170 million in annual tax revenue, according to a legislative analysis of Assembly Bill 186.\n\nA slew of lobbyists representing motion picture studios, such as SkyDance and Walt Disney, as well as labor unions, such as the Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA), supported Assembly Bill 186 during a budget hearing Sunday.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        },
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7",
+          "text": "pressure to make billionaires and corporations pay more.\n\nHollywood advocates were infuriated, arguing corporate tax credit cap threatened to hamstring film tax credit. Bryan Lourd, CEO of the Creative Artists Agency, urged lawmakers earlier this month to exempt motion picture companies from the cap.\n\n\u201cWithout Assembly Bill 186, we risk destabilizing film tax credit that is critical to keeping film and television production in California and the thousands of jobs film tax credit supports,\u201d Bryan Lourd said in a letter.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        }
+      ],
+      "evaluator_reference": {
+        "id": "C-M2-01",
+        "family": "M2",
+        "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+        "row_count": 3,
+        "rows": [
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "SkyDance",
+            "peer_id": "Organization:skydance"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "peer_support"
+              }
+            ],
+            "peer": "Creative Artists Agency",
+            "peer_id": "Organization:creative-artists-agency"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M2-02",
+      "opaque_model_id": "Q17",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?",
+      "privileged_input": "evaluator-authored correct piece keys; selector bypassed",
+      "piece_keys": [
+        1068,
+        1068,
+        1023,
+        1014,
+        1015,
+        1009,
+        1038,
+        1028
+      ],
+      "candidate_count": 2,
+      "offered_candidates": [
+        {
+          "candidate_id": "C001",
+          "nodes": [
+            {
+              "handle": "_Organization_0",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Organization_1",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Bill_0",
+              "label": "Bill"
+            }
+          ],
+          "triples": [
+            {
+              "occurrence": "K1068_1",
+              "piece_key": 1068,
+              "source_handle": "_Organization_0",
+              "target_handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1068_2",
+              "piece_key": 1068,
+              "source_handle": "_Organization_1",
+              "target_handle": "_Bill_0"
+            }
+          ],
+          "filters": [
+            {
+              "occurrence": "K1023_1",
+              "piece_key": 1023,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1014_1",
+              "piece_key": 1014,
+              "handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1015_1",
+              "piece_key": 1015,
+              "handle": "_Bill_0"
+            }
+          ],
+          "outputs": [
+            {
+              "occurrence": "K1038_1",
+              "piece_key": 1038,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1028_1",
+              "piece_key": 1028,
+              "handle": "_Bill_0"
+            }
+          ],
+          "distincts": [
+            {
+              "occurrence": "K1009_1",
+              "piece_key": 1009,
+              "left": "_Organization_0",
+              "right": "_Organization_1"
+            }
+          ],
+          "aggregates": []
+        },
+        {
+          "candidate_id": "C002",
+          "nodes": [
+            {
+              "handle": "_Organization_0",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Organization_1",
+              "label": "Organization"
+            },
+            {
+              "handle": "_Bill_0",
+              "label": "Bill"
+            }
+          ],
+          "triples": [
+            {
+              "occurrence": "K1068_1",
+              "piece_key": 1068,
+              "source_handle": "_Organization_0",
+              "target_handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1068_2",
+              "piece_key": 1068,
+              "source_handle": "_Organization_1",
+              "target_handle": "_Bill_0"
+            }
+          ],
+          "filters": [
+            {
+              "occurrence": "K1023_1",
+              "piece_key": 1023,
+              "handle": "_Organization_0"
+            },
+            {
+              "occurrence": "K1014_1",
+              "piece_key": 1014,
+              "handle": "_Bill_0"
+            },
+            {
+              "occurrence": "K1015_1",
+              "piece_key": 1015,
+              "handle": "_Bill_0"
+            }
+          ],
+          "outputs": [
+            {
+              "occurrence": "K1038_1",
+              "piece_key": 1038,
+              "handle": "_Organization_1"
+            },
+            {
+              "occurrence": "K1028_1",
+              "piece_key": 1028,
+              "handle": "_Bill_0"
+            }
+          ],
+          "distincts": [
+            {
+              "occurrence": "K1009_1",
+              "piece_key": 1009,
+              "left": "_Organization_0",
+              "right": "_Organization_1"
+            }
+          ],
+          "aggregates": []
+        }
+      ],
+      "authored_matching_candidates": [
+        "C002"
+      ],
+      "composer_stage": {
+        "status": "valid",
+        "output": {
+          "candidate_id": "C002"
+        },
+        "usage": {
+          "input_tokens": 1193,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 17,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 2569.2,
+        "transport_attempts": [
+          {
+            "stage": "supplied_key_composer_diagnostic",
+            "opaque_id": "Q17",
+            "status_code": 200,
+            "latency_ms": 2563.8,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Choose one offered complete wiring of the already-selected semantic pieces. The question tells you which offered role attachment is intended. Return only the offered candidate id. You cannot add or remove pieces, invent nodes or joins, alter predicates, supply values, or write Cypher. Pay close attention to which same-label role is filtered and which is returned."
+                },
+                {
+                  "role": "user",
+                  "content": "Question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?\nSelected resolved pieces: [{\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_1\", \"piece_key\": 1068}, {\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_2\", \"piece_key\": 1068}, {\"description\": \"filter Organization.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1023_1\", \"piece_key\": 1023}, {\"description\": \"filter Bill.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1014_1\", \"piece_key\": 1014}, {\"description\": \"filter Bill.session eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1015_1\", \"piece_key\": 1015}, {\"description\": \"require two Organization roles to have distinct ids\", \"kind\": \"distinct\", \"occurrence_id\": \"K1009_1\", \"piece_key\": 1009}, {\"description\": \"return Organization identity\", \"kind\": \"output\", \"occurrence_id\": \"K1038_1\", \"piece_key\": 1038}, {\"description\": \"return Bill identity\", \"kind\": \"output\", \"occurrence_id\": \"K1028_1\", \"piece_key\": 1028}]\nOffered complete wirings: [{\"aggregates\": [], \"candidate_id\": \"C001\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}, {\"aggregates\": [], \"candidate_id\": \"C002\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_1\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}]"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 250,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "OfferedCompositionChoice",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "candidate_id": {
+                        "enum": [
+                          "C001",
+                          "C002"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "candidate_id"
+                    ],
+                    "title": "OfferedCompositionChoice",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\"candidate_id\": \"C002\"}"
+                  }
+                }
+              ],
+              "created": 1788969735,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 17,
+                "prompt_tokens": 1193,
+                "total_tokens": 1210,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              },
+              "id": "chatcmpl-I3ZKrnSZzahWVnkBrgzCk8MKBpEl6UzV",
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 1193,
+                "prompt_ms": 2228.449,
+                "prompt_per_token_ms": 1.867937133277452,
+                "prompt_per_second": 535.3499227489613,
+                "predicted_n": 17,
+                "predicted_ms": 281.592,
+                "predicted_per_token_ms": 16.564235294117648,
+                "predicted_per_second": 60.37103326799057
+              }
+            }
+          }
+        ]
+      },
+      "chosen_candidate_id": "C002",
+      "composition_correct": true,
+      "binding_stage": {
+        "status": "valid",
+        "output": {
+          "slot_0": "Creative Artists Agency",
+          "slot_1": "AB 186",
+          "slot_2": "2025-2026"
+        },
+        "usage": {
+          "input_tokens": 3501,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 3406,
+          "output_tokens": 44,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 1125.0,
+        "transport_attempts": [
+          {
+            "stage": "supplied_key_diagnostic_binder",
+            "opaque_id": "Q17",
+            "status_code": 200,
+            "latency_ms": 1118.3,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+                },
+                {
+                  "role": "user",
+                  "content": "Opaque question id: Q17\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?\nValidated required bindings: {\"slot_0\": \"Question value for Organization.name with eq\", \"slot_1\": \"Question value for Bill.name with eq\", \"slot_2\": \"Question value for Bill.session with eq\"}"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 700,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "PatternBindings",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "slot_0": {
+                        "description": "Question value for Organization.name with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "slot_1": {
+                        "description": "Question value for Bill.name with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "slot_2": {
+                        "description": "Question value for Bill.session with eq",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "slot_0",
+                      "slot_1",
+                      "slot_2"
+                    ],
+                    "title": "PatternBindings",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\"slot_0\": \"Creative Artists Agency\", \"slot_1\": \"AB 186\", \"slot_2\": \"2025-2026\"}"
+                  }
+                }
+              ],
+              "created": 1788969736,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 44,
+                "prompt_tokens": 3501,
+                "total_tokens": 3545,
+                "prompt_tokens_details": {
+                  "cached_tokens": 3406
+                }
+              },
+              "id": "chatcmpl-KG0fMK2sHvZVXpeRbwtJbca1xFGmoH2K",
+              "timings": {
+                "cache_n": 3406,
+                "prompt_n": 95,
+                "prompt_ms": 388.171,
+                "prompt_per_token_ms": 4.086010526315789,
+                "prompt_per_second": 244.7374997101793,
+                "predicted_n": 44,
+                "predicted_ms": 699.45,
+                "predicted_per_token_ms": 15.89659090909091,
+                "predicted_per_second": 62.90656944742297
+              }
+            }
+          }
+        ]
+      },
+      "compiled": {
+        "pattern": {
+          "nodes": [
+            {
+              "name": "n0",
+              "label": "Organization"
+            },
+            {
+              "name": "n1",
+              "label": "Bill"
+            },
+            {
+              "name": "n2",
+              "label": "Organization"
+            }
+          ],
+          "triples": [
+            {
+              "subject": "n0",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "n1",
+              "claim_name": "claim_0"
+            },
+            {
+              "subject": "n2",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "n1",
+              "claim_name": "claim_1"
+            }
+          ],
+          "constraints": [
+            {
+              "variable": "n0",
+              "property": "name",
+              "operator": "eq",
+              "slot": "slot_0",
+              "description": "Question value for Organization.name with eq"
+            },
+            {
+              "variable": "n1",
+              "property": "name",
+              "operator": "eq",
+              "slot": "slot_1",
+              "description": "Question value for Bill.name with eq"
+            },
+            {
+              "variable": "n1",
+              "property": "session",
+              "operator": "eq",
+              "slot": "slot_2",
+              "description": "Question value for Bill.session with eq"
+            }
+          ],
+          "inequalities": [
+            {
+              "left_variable": "n0",
+              "right_variable": "n2",
+              "property": "id"
+            }
+          ],
+          "return_targets": [
+            {
+              "variable": "n2",
+              "fields": [
+                "id",
+                "name"
+              ]
+            },
+            {
+              "variable": "n1",
+              "fields": [
+                "id",
+                "name"
+              ]
+            }
+          ],
+          "aggregate": null,
+          "rationale": "Compiler materialization of selected keyed pieces and one complete wiring."
+        },
+        "cypher": "MATCH (n0:Organization)-[_rel_0:LOBBIED_FOR]->(n1:Bill),\n      (n2:Organization)-[_rel_1:LOBBIED_FOR]->(n1:Bill)\nWHERE n0.name = $slot_0 AND n1.name = $slot_1 AND n1.session = $slot_2 AND n0.id <> n2.id\nRETURN DISTINCT n2.id AS n2_id,\n       n2.name AS n2_name,\n       n1.id AS n1_id,\n       n1.name AS n1_name,\n       [{kind:'claim_0',ids:_rel_0.chunks},{kind:'claim_1',ids:_rel_1.chunks}] AS evidence_groups",
+        "required_slots": [
+          "slot_0",
+          "slot_1",
+          "slot_2"
+        ],
+        "slot_descriptions": {
+          "slot_0": "Question value for Organization.name with eq",
+          "slot_1": "Question value for Bill.name with eq",
+          "slot_2": "Question value for Bill.session with eq"
+        }
+      },
+      "bindings": {
+        "slot_0": "Creative Artists Agency",
+        "slot_1": "AB 186",
+        "slot_2": "2025-2026"
+      },
+      "execution_stage": {
+        "status": "executed",
+        "explain_query_type": "r",
+        "query_type": "r",
+        "explain_latency_ms": 10.3,
+        "query_latency_ms": 6.9,
+        "row_count": 3,
+        "rows": [
+          {
+            "n2_id": "Organization:skydance",
+            "n2_name": "SkyDance",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          },
+          {
+            "n2_id": "Organization:walt-disney",
+            "n2_name": "Walt Disney",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          },
+          {
+            "n2_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+            "n2_name": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "n1_id": "Bill:2025-2026:ab-186",
+            "n1_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "claim_0",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ]
+              },
+              {
+                "kind": "claim_1",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          }
+        ],
+        "stage_latency_ms": 19.0
+      },
+      "resolved_evidence": [
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "text": "off the refund within two years, instead of five.\n\nIf approved, Assembly Bill 186 would cost the state up to $170 million in annual tax revenue, according to a legislative analysis of Assembly Bill 186.\n\nA slew of lobbyists representing motion picture studios, such as SkyDance and Walt Disney, as well as labor unions, such as the Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA), supported Assembly Bill 186 during a budget hearing Sunday.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        },
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7",
+          "text": "pressure to make billionaires and corporations pay more.\n\nHollywood advocates were infuriated, arguing corporate tax credit cap threatened to hamstring film tax credit. Bryan Lourd, CEO of the Creative Artists Agency, urged lawmakers earlier this month to exempt motion picture companies from the cap.\n\n\u201cWithout Assembly Bill 186, we risk destabilizing film tax credit that is critical to keeping film and television production in California and the thousands of jobs film tax credit supports,\u201d Bryan Lourd said in a letter.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        }
+      ],
+      "evaluator_reference": {
+        "id": "C-M2-02",
+        "family": "M2",
+        "question": "Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?",
+        "row_count": 3,
+        "rows": [
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "SkyDance",
+            "peer_id": "Organization:skydance"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Walt Disney",
+            "peer_id": "Organization:walt-disney"
+          }
+        ]
+      }
+    }
+  ],
+  "transport_attempt_count": 4,
+  "transport_attempts": [
+    {
+      "stage": "supplied_key_composer_diagnostic",
+      "opaque_id": "Q16",
+      "status_code": 200,
+      "latency_ms": 3117.7,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Choose one offered complete wiring of the already-selected semantic pieces. The question tells you which offered role attachment is intended. Return only the offered candidate id. You cannot add or remove pieces, invent nodes or joins, alter predicates, supply values, or write Cypher. Pay close attention to which same-label role is filtered and which is returned."
+          },
+          {
+            "role": "user",
+            "content": "Question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nSelected resolved pieces: [{\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_1\", \"piece_key\": 1068}, {\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_2\", \"piece_key\": 1068}, {\"description\": \"filter Organization.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1023_1\", \"piece_key\": 1023}, {\"description\": \"filter Bill.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1014_1\", \"piece_key\": 1014}, {\"description\": \"filter Bill.session eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1015_1\", \"piece_key\": 1015}, {\"description\": \"require two Organization roles to have distinct ids\", \"kind\": \"distinct\", \"occurrence_id\": \"K1009_1\", \"piece_key\": 1009}, {\"description\": \"return Organization identity\", \"kind\": \"output\", \"occurrence_id\": \"K1038_1\", \"piece_key\": 1038}, {\"description\": \"return Bill identity\", \"kind\": \"output\", \"occurrence_id\": \"K1028_1\", \"piece_key\": 1028}]\nOffered complete wirings: [{\"aggregates\": [], \"candidate_id\": \"C001\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}, {\"aggregates\": [], \"candidate_id\": \"C002\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_1\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}]"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 250,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "OfferedCompositionChoice",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "candidate_id": {
+                  "enum": [
+                    "C001",
+                    "C002"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "candidate_id"
+              ],
+              "title": "OfferedCompositionChoice",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"candidate_id\": \"C002\"}"
+            }
+          }
+        ],
+        "created": 1788969731,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 17,
+          "prompt_tokens": 1192,
+          "total_tokens": 1209,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-2S62bYXON3iMXyzFkyIb541A7xAVkpfM",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 1192,
+          "prompt_ms": 2745.582,
+          "prompt_per_token_ms": 2.3033406040268454,
+          "prompt_per_second": 434.1520304256074,
+          "predicted_n": 17,
+          "predicted_ms": 272.983,
+          "predicted_per_token_ms": 16.057823529411763,
+          "predicted_per_second": 62.274940197741245
+        }
+      }
+    },
+    {
+      "stage": "supplied_key_diagnostic_binder",
+      "opaque_id": "Q16",
+      "status_code": 200,
+      "latency_ms": 1150.9,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+          },
+          {
+            "role": "user",
+            "content": "Opaque question id: Q16\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nValidated required bindings: {\"slot_0\": \"Question value for Organization.name with eq\", \"slot_1\": \"Question value for Bill.name with eq\", \"slot_2\": \"Question value for Bill.session with eq\"}"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 700,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "PatternBindings",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "slot_0": {
+                  "description": "Question value for Organization.name with eq",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "slot_1": {
+                  "description": "Question value for Bill.name with eq",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "slot_2": {
+                  "description": "Question value for Bill.session with eq",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "slot_0",
+                "slot_1",
+                "slot_2"
+              ],
+              "title": "PatternBindings",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"slot_0\": \"Walt Disney\", \"slot_1\": \"AB 186\", \"slot_2\": \"2025-2026\"}"
+            }
+          }
+        ],
+        "created": 1788969733,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 43,
+          "prompt_tokens": 3500,
+          "total_tokens": 3543,
+          "prompt_tokens_details": {
+            "cached_tokens": 3405
+          }
+        },
+        "id": "chatcmpl-C03BH2U4nFZuEg6A3HJIaFpAMgyiRlJ2",
+        "timings": {
+          "cache_n": 3405,
+          "prompt_n": 95,
+          "prompt_ms": 405.553,
+          "prompt_per_token_ms": 4.268978947368421,
+          "prompt_per_second": 234.2480514260775,
+          "predicted_n": 43,
+          "predicted_ms": 672.406,
+          "predicted_per_token_ms": 15.6373488372093,
+          "predicted_per_second": 63.9494591065517
+        }
+      }
+    },
+    {
+      "stage": "supplied_key_composer_diagnostic",
+      "opaque_id": "Q17",
+      "status_code": 200,
+      "latency_ms": 2563.8,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Choose one offered complete wiring of the already-selected semantic pieces. The question tells you which offered role attachment is intended. Return only the offered candidate id. You cannot add or remove pieces, invent nodes or joins, alter predicates, supply values, or write Cypher. Pay close attention to which same-label role is filtered and which is returned."
+          },
+          {
+            "role": "user",
+            "content": "Question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?\nSelected resolved pieces: [{\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_1\", \"piece_key\": 1068}, {\"description\": \"Organization -LOBBIED_FOR-> Bill\", \"kind\": \"triple\", \"occurrence_id\": \"K1068_2\", \"piece_key\": 1068}, {\"description\": \"filter Organization.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1023_1\", \"piece_key\": 1023}, {\"description\": \"filter Bill.name eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1014_1\", \"piece_key\": 1014}, {\"description\": \"filter Bill.session eq unbound slot\", \"kind\": \"filter\", \"occurrence_id\": \"K1015_1\", \"piece_key\": 1015}, {\"description\": \"require two Organization roles to have distinct ids\", \"kind\": \"distinct\", \"occurrence_id\": \"K1009_1\", \"piece_key\": 1009}, {\"description\": \"return Organization identity\", \"kind\": \"output\", \"occurrence_id\": \"K1038_1\", \"piece_key\": 1038}, {\"description\": \"return Bill identity\", \"kind\": \"output\", \"occurrence_id\": \"K1028_1\", \"piece_key\": 1028}]\nOffered complete wirings: [{\"aggregates\": [], \"candidate_id\": \"C001\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}, {\"aggregates\": [], \"candidate_id\": \"C002\", \"distincts\": [{\"left\": \"_Organization_0\", \"occurrence\": \"K1009_1\", \"piece_key\": 1009, \"right\": \"_Organization_1\"}], \"filters\": [{\"handle\": \"_Organization_0\", \"occurrence\": \"K1023_1\", \"piece_key\": 1023}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1014_1\", \"piece_key\": 1014}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1015_1\", \"piece_key\": 1015}], \"nodes\": [{\"handle\": \"_Organization_0\", \"label\": \"Organization\"}, {\"handle\": \"_Organization_1\", \"label\": \"Organization\"}, {\"handle\": \"_Bill_0\", \"label\": \"Bill\"}], \"outputs\": [{\"handle\": \"_Organization_1\", \"occurrence\": \"K1038_1\", \"piece_key\": 1038}, {\"handle\": \"_Bill_0\", \"occurrence\": \"K1028_1\", \"piece_key\": 1028}], \"triples\": [{\"occurrence\": \"K1068_1\", \"piece_key\": 1068, \"source_handle\": \"_Organization_0\", \"target_handle\": \"_Bill_0\"}, {\"occurrence\": \"K1068_2\", \"piece_key\": 1068, \"source_handle\": \"_Organization_1\", \"target_handle\": \"_Bill_0\"}]}]"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 250,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "OfferedCompositionChoice",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "candidate_id": {
+                  "enum": [
+                    "C001",
+                    "C002"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "candidate_id"
+              ],
+              "title": "OfferedCompositionChoice",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"candidate_id\": \"C002\"}"
+            }
+          }
+        ],
+        "created": 1788969735,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 17,
+          "prompt_tokens": 1193,
+          "total_tokens": 1210,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-I3ZKrnSZzahWVnkBrgzCk8MKBpEl6UzV",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 1193,
+          "prompt_ms": 2228.449,
+          "prompt_per_token_ms": 1.867937133277452,
+          "prompt_per_second": 535.3499227489613,
+          "predicted_n": 17,
+          "predicted_ms": 281.592,
+          "predicted_per_token_ms": 16.564235294117648,
+          "predicted_per_second": 60.37103326799057
+        }
+      }
+    },
+    {
+      "stage": "supplied_key_diagnostic_binder",
+      "opaque_id": "Q17",
+      "status_code": 200,
+      "latency_ms": 1118.3,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+          },
+          {
+            "role": "user",
+            "content": "Opaque question id: Q17\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?\nValidated required bindings: {\"slot_0\": \"Question value for Organization.name with eq\", \"slot_1\": \"Question value for Bill.name with eq\", \"slot_2\": \"Question value for Bill.session with eq\"}"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 700,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "PatternBindings",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "slot_0": {
+                  "description": "Question value for Organization.name with eq",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "slot_1": {
+                  "description": "Question value for Bill.name with eq",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "slot_2": {
+                  "description": "Question value for Bill.session with eq",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "slot_0",
+                "slot_1",
+                "slot_2"
+              ],
+              "title": "PatternBindings",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"slot_0\": \"Creative Artists Agency\", \"slot_1\": \"AB 186\", \"slot_2\": \"2025-2026\"}"
+            }
+          }
+        ],
+        "created": 1788969736,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 44,
+          "prompt_tokens": 3501,
+          "total_tokens": 3545,
+          "prompt_tokens_details": {
+            "cached_tokens": 3406
+          }
+        },
+        "id": "chatcmpl-KG0fMK2sHvZVXpeRbwtJbca1xFGmoH2K",
+        "timings": {
+          "cache_n": 3406,
+          "prompt_n": 95,
+          "prompt_ms": 388.171,
+          "prompt_per_token_ms": 4.086010526315789,
+          "prompt_per_second": 244.7374997101793,
+          "predicted_n": 44,
+          "predicted_ms": 699.45,
+          "predicted_per_token_ms": 15.89659090909091,
+          "predicted_per_second": 62.90656944742297
+        }
+      }
+    }
+  ]
+}

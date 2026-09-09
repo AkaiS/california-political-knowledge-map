@@ -193,6 +193,126 @@
       "source_blob": "c35ab243c310602faf9de715bbb58e99d505cf97",
       "sha256": "36d535383cf8bf1b6a00df4a03d19a50236d37b4f920b1abf578d523d3d492cb",
       "bytes": 167335
+    },
+    {
+      "path": "pattern-selection/README.md",
+      "source_commit": "034ba5e76ce1322edaff4295496202b160e54146",
+      "source_path": "src/knowledge_map/prototypes/pattern_selection/README.md",
+      "source_blob": "b0d8cbd73526c2bd7c9a9d764e79445783b29757",
+      "sha256": "20c105cd961560c8a7f5ff75e85588b8bc7d4e72fb77b6138af91d8d42228d66",
+      "bytes": 1564
+    },
+    {
+      "path": "pattern-selection/findings.md",
+      "source_commit": "034ba5e76ce1322edaff4295496202b160e54146",
+      "source_path": "src/knowledge_map/prototypes/pattern_selection/findings.md",
+      "source_blob": "cde2e73eeaa941202cbeeeb9ddf2684ef4c3f980",
+      "sha256": "1b3aa616230ba54e7ed03a82620ab3ec10bda4c04ffef6363f9ab8eea8aad6d8",
+      "bytes": 15073
+    },
+    {
+      "path": "pattern-selection/results/assessment.json",
+      "source_commit": "034ba5e76ce1322edaff4295496202b160e54146",
+      "source_path": "src/knowledge_map/prototypes/pattern_selection/results/assessment.json",
+      "source_blob": "1930e6cdec16d7ac2186121e6e6890a05438ab86",
+      "sha256": "58c3b6fc897b3ea3cfe195f301da72525d861bca0121b133b24ec9d1a89994a4",
+      "bytes": 15045
+    },
+    {
+      "path": "pattern-selection/results/full-report.json",
+      "source_commit": "034ba5e76ce1322edaff4295496202b160e54146",
+      "source_path": "src/knowledge_map/prototypes/pattern_selection/results/full-report.json",
+      "source_blob": "35e667350a0a39c900810685e877ca5afb35b62d",
+      "sha256": "b4790eebc38777921fc2401d6c4d0603377b449594966f28e8a644a8d456df54",
+      "bytes": 3603522
+    },
+    {
+      "path": "entity-resolution/README.md",
+      "source_commit": "08602d15bfc52ed219f35999b3c2ff6469b81e40",
+      "source_path": "src/knowledge_map/prototypes/entity_resolution/README.md",
+      "source_blob": "d5ea08d86f0eba72bbad47b5c7efa2b64ab4390b",
+      "sha256": "f29cc9ce6e65d6cc684cfc4d6c5ffa234811d10a2863f8d7d8c33a8dc15a6a0b",
+      "bytes": 2387
+    },
+    {
+      "path": "entity-resolution/findings.md",
+      "source_commit": "08602d15bfc52ed219f35999b3c2ff6469b81e40",
+      "source_path": "src/knowledge_map/prototypes/entity_resolution/findings.md",
+      "source_blob": "fcb363d27412c78213af007b0f102001f07683fa",
+      "sha256": "a9730f6b445ff4e6fa6c6b8bdb25cd879b5cf0072eb5ea8cb749d516b29a6a31",
+      "bytes": 13553
+    },
+    {
+      "path": "entity-resolution/results/fresh-audit.json",
+      "source_commit": "08602d15bfc52ed219f35999b3c2ff6469b81e40",
+      "source_path": "src/knowledge_map/prototypes/entity_resolution/results/fresh-audit.json",
+      "source_blob": "e2c63d77cfb4379463fd6ade1538d5f3c756da11",
+      "sha256": "1f1b77e1dc79c08d694a14f95751ec6ac85ec52ecd515f72b6c070efd37ad2bc",
+      "bytes": 158517
+    },
+    {
+      "path": "entity-resolution/results/fresh-report.json",
+      "source_commit": "08602d15bfc52ed219f35999b3c2ff6469b81e40",
+      "source_path": "src/knowledge_map/prototypes/entity_resolution/results/fresh-report.json",
+      "source_blob": "fde187a2016b1462ad3f4b315c92bb731b7d8e76",
+      "sha256": "57952e2a0ae90ddd1f8c83b9b49a36f543f3bf5de959ecd93710b5bbf1928d1d",
+      "bytes": 3764262
+    },
+    {
+      "path": "entity-resolution/results/reference-recheck.json",
+      "source_commit": "08602d15bfc52ed219f35999b3c2ff6469b81e40",
+      "source_path": "src/knowledge_map/prototypes/entity_resolution/results/reference-recheck.json",
+      "source_blob": "d4b48788ba63e7c33da078d808c50dede64d7a6a",
+      "sha256": "4f9307c9b29c040088ed8fe03e92c7fa9a9e35227aca4e0d20736b14dfeaa945",
+      "bytes": 662247
+    },
+    {
+      "path": "selector-composer-binder/README.md",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/README.md",
+      "source_blob": "5d715ce94261190350f1bbe3d67b941279191d9c",
+      "sha256": "28ae1630dbd737a2885c8cf1b35381dd1b020f8c5c4e56bb0eeb710f733b7fb1",
+      "bytes": 2879
+    },
+    {
+      "path": "selector-composer-binder/findings.md",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/findings.md",
+      "source_blob": "00317e3c0d62926e9aa03abf116136c78fd7299f",
+      "sha256": "4b62f19f5f54708d8ddfa47e84c9b452ea556072d60ea38ae629ccbc4ccdce94",
+      "bytes": 10655
+    },
+    {
+      "path": "selector-composer-binder/results/assessment.json",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/results/assessment.json",
+      "source_blob": "1f891882b9245269aa6a3960e4e2348fcfa1fa20",
+      "sha256": "eb13cbc8e650c549806f7ea639b23ab2c6f0c36a5ea44018f21b7d4c0c2bdb3d",
+      "bytes": 28175
+    },
+    {
+      "path": "selector-composer-binder/results/full-report.json",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/results/full-report.json",
+      "source_blob": "b7fe7b6ad1c3ec82e30a67182286d6cd35a9fc2e",
+      "sha256": "46b8f29921891418ab73e213d69584b3f12c77127ef7e4e74a6cff9b5d59d395",
+      "bytes": 1644230
+    },
+    {
+      "path": "selector-composer-binder/results/interface-smoke.json",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/results/interface-smoke.json",
+      "source_blob": "a863c9f60c8a0392473b77fc1adfcc7604ce47ea",
+      "sha256": "f749d4d6dae48454d8c06e0882427323fb3ede4f415a3fc07c2b61aec2807c44",
+      "bytes": 20241
+    },
+    {
+      "path": "selector-composer-binder/results/supplied-key-composer-diagnostic.json",
+      "source_commit": "86c52fe5aaf17d81cbb6ddbcc8d93f16643f33b8",
+      "source_path": "src/knowledge_map/prototypes/selector_composer_binder/results/supplied-key-composer-diagnostic.json",
+      "source_blob": "1695672dbd750508792715816b8fd2fd2de3c30d",
+      "sha256": "f0efff078cb2e091d606b5de685453ed822e00941f361b1959835da992cc8a9b",
+      "bytes": 123903
     }
   ]
 }

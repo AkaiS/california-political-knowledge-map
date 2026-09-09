@@ -1,0 +1,943 @@
+{
+  "entity_reporting": {
+    "keys": [
+      1084,
+      1061,
+      1026,
+      1036
+    ],
+    "pieces": [
+      "Politician -MENTIONED_IN-> Chunk",
+      "NewsArticle -HAS_CHUNK-> Chunk",
+      "filter Politician.name eq unbound slot",
+      "return NewsArticle identity"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_Politician_0",
+            "label": "Politician"
+          },
+          {
+            "handle": "_Chunk_0",
+            "label": "Chunk"
+          },
+          {
+            "handle": "_NewsArticle_0",
+            "label": "NewsArticle"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1084_1",
+            "piece_key": 1084,
+            "source_handle": "_Politician_0",
+            "target_handle": "_Chunk_0"
+          },
+          {
+            "occurrence": "K1061_1",
+            "piece_key": 1061,
+            "source_handle": "_NewsArticle_0",
+            "target_handle": "_Chunk_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1026_1",
+            "piece_key": 1026,
+            "handle": "_Politician_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1036_1",
+            "piece_key": 1036,
+            "handle": "_NewsArticle_0"
+          }
+        ],
+        "distincts": [],
+        "aggregates": []
+      }
+    ]
+  },
+  "july_topic": {
+    "keys": [
+      1060,
+      1025,
+      1020,
+      1021,
+      1036,
+      1037
+    ],
+    "pieces": [
+      "NewsArticle -DISCUSSES_TOPIC-> PolicyArea",
+      "filter PolicyArea.name eq unbound slot",
+      "filter NewsArticle.published_date date_gte unbound slot",
+      "filter NewsArticle.published_date date_lt unbound slot",
+      "return NewsArticle identity",
+      "return NewsArticle.published_date"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_NewsArticle_0",
+            "label": "NewsArticle"
+          },
+          {
+            "handle": "_PolicyArea_0",
+            "label": "PolicyArea"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1060_1",
+            "piece_key": 1060,
+            "source_handle": "_NewsArticle_0",
+            "target_handle": "_PolicyArea_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1025_1",
+            "piece_key": 1025,
+            "handle": "_PolicyArea_0"
+          },
+          {
+            "occurrence": "K1020_1",
+            "piece_key": 1020,
+            "handle": "_NewsArticle_0"
+          },
+          {
+            "occurrence": "K1021_1",
+            "piece_key": 1021,
+            "handle": "_NewsArticle_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1036_1",
+            "piece_key": 1036,
+            "handle": "_NewsArticle_0"
+          },
+          {
+            "occurrence": "K1037_1",
+            "piece_key": 1037,
+            "handle": "_NewsArticle_0"
+          }
+        ],
+        "distincts": [],
+        "aggregates": []
+      }
+    ]
+  },
+  "same_bill_anchor_peer": {
+    "keys": [
+      1068,
+      1068,
+      1023,
+      1014,
+      1015,
+      1009,
+      1038,
+      1028
+    ],
+    "pieces": [
+      "Organization -LOBBIED_FOR-> Bill",
+      "Organization -LOBBIED_FOR-> Bill",
+      "filter Organization.name eq unbound slot",
+      "filter Bill.name eq unbound slot",
+      "filter Bill.session eq unbound slot",
+      "require two Organization roles to have distinct ids",
+      "return Organization identity",
+      "return Bill identity"
+    ],
+    "typed_wiring_count": 2,
+    "compiler_rejections": {},
+    "valid_candidate_count": 2,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_Organization_0",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Organization_1",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Bill_0",
+            "label": "Bill"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1068_1",
+            "piece_key": 1068,
+            "source_handle": "_Organization_0",
+            "target_handle": "_Bill_0"
+          },
+          {
+            "occurrence": "K1068_2",
+            "piece_key": 1068,
+            "source_handle": "_Organization_1",
+            "target_handle": "_Bill_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1023_1",
+            "piece_key": 1023,
+            "handle": "_Organization_0"
+          },
+          {
+            "occurrence": "K1014_1",
+            "piece_key": 1014,
+            "handle": "_Bill_0"
+          },
+          {
+            "occurrence": "K1015_1",
+            "piece_key": 1015,
+            "handle": "_Bill_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1038_1",
+            "piece_key": 1038,
+            "handle": "_Organization_0"
+          },
+          {
+            "occurrence": "K1028_1",
+            "piece_key": 1028,
+            "handle": "_Bill_0"
+          }
+        ],
+        "distincts": [
+          {
+            "occurrence": "K1009_1",
+            "piece_key": 1009,
+            "left": "_Organization_0",
+            "right": "_Organization_1"
+          }
+        ],
+        "aggregates": []
+      },
+      {
+        "candidate_id": "C002",
+        "nodes": [
+          {
+            "handle": "_Organization_0",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Organization_1",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Bill_0",
+            "label": "Bill"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1068_1",
+            "piece_key": 1068,
+            "source_handle": "_Organization_0",
+            "target_handle": "_Bill_0"
+          },
+          {
+            "occurrence": "K1068_2",
+            "piece_key": 1068,
+            "source_handle": "_Organization_1",
+            "target_handle": "_Bill_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1023_1",
+            "piece_key": 1023,
+            "handle": "_Organization_0"
+          },
+          {
+            "occurrence": "K1014_1",
+            "piece_key": 1014,
+            "handle": "_Bill_0"
+          },
+          {
+            "occurrence": "K1015_1",
+            "piece_key": 1015,
+            "handle": "_Bill_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1038_1",
+            "piece_key": 1038,
+            "handle": "_Organization_1"
+          },
+          {
+            "occurrence": "K1028_1",
+            "piece_key": 1028,
+            "handle": "_Bill_0"
+          }
+        ],
+        "distincts": [
+          {
+            "occurrence": "K1009_1",
+            "piece_key": 1009,
+            "left": "_Organization_0",
+            "right": "_Organization_1"
+          }
+        ],
+        "aggregates": []
+      }
+    ]
+  },
+  "topic_count": {
+    "keys": [
+      1060,
+      1001
+    ],
+    "pieces": [
+      "NewsArticle -DISCUSSES_TOPIC-> PolicyArea",
+      "group by PolicyArea identity; count and collect distinct NewsArticle ids"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_NewsArticle_0",
+            "label": "NewsArticle"
+          },
+          {
+            "handle": "_PolicyArea_0",
+            "label": "PolicyArea"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1060_1",
+            "piece_key": 1060,
+            "source_handle": "_NewsArticle_0",
+            "target_handle": "_PolicyArea_0"
+          }
+        ],
+        "filters": [],
+        "outputs": [],
+        "distincts": [],
+        "aggregates": [
+          {
+            "occurrence": "K1001_1",
+            "piece_key": 1001,
+            "group": "_PolicyArea_0",
+            "count": "_NewsArticle_0"
+          }
+        ]
+      }
+    ]
+  },
+  "vote_union": {
+    "keys": [
+      1087,
+      1058,
+      1026,
+      1014,
+      1015,
+      1041,
+      1034,
+      1028
+    ],
+    "pieces": [
+      "Politician -{VOTED_AYE|VOTED_NO|ABSTAINED}-> LegislativeEvent",
+      "LegislativeEvent -ACTION_ON-> Bill",
+      "filter Politician.name eq unbound slot",
+      "filter Bill.name eq unbound slot",
+      "filter Bill.session eq unbound slot",
+      "return Politician identity",
+      "return LegislativeEvent identity",
+      "return Bill identity"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_Politician_0",
+            "label": "Politician"
+          },
+          {
+            "handle": "_LegislativeEvent_0",
+            "label": "LegislativeEvent"
+          },
+          {
+            "handle": "_Bill_0",
+            "label": "Bill"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1087_1",
+            "piece_key": 1087,
+            "source_handle": "_Politician_0",
+            "target_handle": "_LegislativeEvent_0"
+          },
+          {
+            "occurrence": "K1058_1",
+            "piece_key": 1058,
+            "source_handle": "_LegislativeEvent_0",
+            "target_handle": "_Bill_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1026_1",
+            "piece_key": 1026,
+            "handle": "_Politician_0"
+          },
+          {
+            "occurrence": "K1014_1",
+            "piece_key": 1014,
+            "handle": "_Bill_0"
+          },
+          {
+            "occurrence": "K1015_1",
+            "piece_key": 1015,
+            "handle": "_Bill_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1041_1",
+            "piece_key": 1041,
+            "handle": "_Politician_0"
+          },
+          {
+            "occurrence": "K1034_1",
+            "piece_key": 1034,
+            "handle": "_LegislativeEvent_0"
+          },
+          {
+            "occurrence": "K1028_1",
+            "piece_key": 1028,
+            "handle": "_Bill_0"
+          }
+        ],
+        "distincts": [],
+        "aggregates": []
+      }
+    ]
+  },
+  "campaign_target_politician": {
+    "keys": [
+      1066,
+      1046,
+      1023,
+      1030,
+      1041
+    ],
+    "pieces": [
+      "Organization -FUNDED-> Campaign",
+      "Campaign -CAMPAIGN_FOR-> Politician",
+      "filter Organization.name eq unbound slot",
+      "return Campaign identity",
+      "return Politician identity"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_Organization_0",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Campaign_0",
+            "label": "Campaign"
+          },
+          {
+            "handle": "_Politician_0",
+            "label": "Politician"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1066_1",
+            "piece_key": 1066,
+            "source_handle": "_Organization_0",
+            "target_handle": "_Campaign_0"
+          },
+          {
+            "occurrence": "K1046_1",
+            "piece_key": 1046,
+            "source_handle": "_Campaign_0",
+            "target_handle": "_Politician_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1023_1",
+            "piece_key": 1023,
+            "handle": "_Organization_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1030_1",
+            "piece_key": 1030,
+            "handle": "_Campaign_0"
+          },
+          {
+            "occurrence": "K1041_1",
+            "piece_key": 1041,
+            "handle": "_Politician_0"
+          }
+        ],
+        "distincts": [],
+        "aggregates": []
+      }
+    ]
+  },
+  "campaign_target_prop": {
+    "keys": [
+      1066,
+      1047,
+      1023,
+      1030,
+      1042
+    ],
+    "pieces": [
+      "Organization -FUNDED-> Campaign",
+      "Campaign -CAMPAIGN_FOR-> Prop",
+      "filter Organization.name eq unbound slot",
+      "return Campaign identity",
+      "return Prop identity"
+    ],
+    "typed_wiring_count": 1,
+    "compiler_rejections": {},
+    "valid_candidate_count": 1,
+    "candidates": [
+      {
+        "candidate_id": "C001",
+        "nodes": [
+          {
+            "handle": "_Organization_0",
+            "label": "Organization"
+          },
+          {
+            "handle": "_Campaign_0",
+            "label": "Campaign"
+          },
+          {
+            "handle": "_Prop_0",
+            "label": "Prop"
+          }
+        ],
+        "triples": [
+          {
+            "occurrence": "K1066_1",
+            "piece_key": 1066,
+            "source_handle": "_Organization_0",
+            "target_handle": "_Campaign_0"
+          },
+          {
+            "occurrence": "K1047_1",
+            "piece_key": 1047,
+            "source_handle": "_Campaign_0",
+            "target_handle": "_Prop_0"
+          }
+        ],
+        "filters": [
+          {
+            "occurrence": "K1023_1",
+            "piece_key": 1023,
+            "handle": "_Organization_0"
+          }
+        ],
+        "outputs": [
+          {
+            "occurrence": "K1030_1",
+            "piece_key": 1030,
+            "handle": "_Campaign_0"
+          },
+          {
+            "occurrence": "K1042_1",
+            "piece_key": 1042,
+            "handle": "_Prop_0"
+          }
+        ],
+        "distincts": [],
+        "aggregates": []
+      }
+    ]
+  },
+  "authored_piece_coverage": {
+    "all_25_covered": true,
+    "cases": {
+      "C-E1-01": {
+        "keys": [
+          1084,
+          1061,
+          1026,
+          1041,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E1-02": {
+        "keys": [
+          1084,
+          1061,
+          1026,
+          1041,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E2-01": {
+        "keys": [
+          1044,
+          1061,
+          1014,
+          1015,
+          1028,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E2-02": {
+        "keys": [
+          1089,
+          1061,
+          1027,
+          1042,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E3-01": {
+        "keys": [
+          1060,
+          1061,
+          1025,
+          1020,
+          1021,
+          1036,
+          1037
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E3-02": {
+        "keys": [
+          1060,
+          1061,
+          1025,
+          1020,
+          1021,
+          1036,
+          1037
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-E3-03": {
+        "keys": [
+          1060,
+          1001
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R1-01": {
+        "keys": [
+          1050,
+          1014,
+          1015,
+          1033,
+          1028
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R1-02": {
+        "keys": [
+          1064,
+          1016,
+          1038,
+          1030
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R2-01": {
+        "keys": [
+          1068,
+          1014,
+          1015,
+          1038,
+          1028
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R2-02": {
+        "keys": [
+          1067,
+          1014,
+          1015,
+          1038,
+          1028
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R3-01": {
+        "keys": [
+          1066,
+          1016,
+          1038,
+          1030
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-R3-02": {
+        "keys": [
+          1075,
+          1016,
+          1039,
+          1030
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M1-01": {
+        "keys": [
+          1070,
+          1043,
+          1023,
+          1038,
+          1028,
+          1029,
+          1040
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M1-02": {
+        "keys": [
+          1070,
+          1043,
+          1023,
+          1038,
+          1028,
+          1029,
+          1040
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M2-01": {
+        "keys": [
+          1068,
+          1068,
+          1023,
+          1014,
+          1015,
+          1009,
+          1038,
+          1028
+        ],
+        "candidate_count": 2,
+        "matching_candidates": [
+          "C002"
+        ]
+      },
+      "C-M2-02": {
+        "keys": [
+          1068,
+          1068,
+          1023,
+          1014,
+          1015,
+          1009,
+          1038,
+          1028
+        ],
+        "candidate_count": 2,
+        "matching_candidates": [
+          "C002"
+        ]
+      },
+      "C-M3-01": {
+        "keys": [
+          1084,
+          1069,
+          1061,
+          1026,
+          1038,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M3-02": {
+        "keys": [
+          1084,
+          1069,
+          1061,
+          1026,
+          1022,
+          1038,
+          1036
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M4-01": {
+        "keys": [
+          1066,
+          1046,
+          1023,
+          1030,
+          1041
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M4-02": {
+        "keys": [
+          1066,
+          1047,
+          1023,
+          1030,
+          1042
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M5-01": {
+        "keys": [
+          1087,
+          1058,
+          1026,
+          1014,
+          1015,
+          1041,
+          1034,
+          1028
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-M5-02": {
+        "keys": [
+          1087,
+          1058,
+          1026,
+          1014,
+          1015,
+          1041,
+          1034,
+          1028
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-C1-01": {
+        "keys": [
+          1045,
+          1015,
+          1017,
+          1028,
+          1032
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      },
+      "C-C1-02": {
+        "keys": [
+          1045,
+          1015,
+          1014,
+          1028,
+          1032
+        ],
+        "candidate_count": 1,
+        "matching_candidates": [
+          "C001"
+        ]
+      }
+    }
+  }
+}

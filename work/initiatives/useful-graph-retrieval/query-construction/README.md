@@ -1,5 +1,8 @@
 # Questions grounded in the populated graph
 
+Read the [consolidated experiment findings](findings.md) for all six attempts,
+with end-to-end scores separated from binding controls and diagnostics.
+
 Use these questions for the next [query-construction experiment](../issues/05-prototype-query-construction-and-validation.md). All 25 have an executed reference query with nonempty results and resolvable Grounding Evidence, checked on 2026-09-08 against the local graph of 98 NewsArticles and 2,407 Chunks.
 
 The questions preserve all eleven families in the [target question set](../question-set.md), plus its later committee category. They make the subjects, session, and reporting scope concrete. The original target set still records the broader product ambitions and its Declined and Deferred examples. Those examples do not belong in this positive construction batch.

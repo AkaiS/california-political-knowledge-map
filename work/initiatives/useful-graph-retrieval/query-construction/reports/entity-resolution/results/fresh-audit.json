@@ -1,0 +1,2151 @@
+{
+  "source_report": "src/knowledge_map/prototypes/entity_resolution/results/fresh-report.json",
+  "method": "Compare project/source ids, the union of evidence ids, and grouped counts. The supplied pattern fixes claim structure; claim-name aliases therefore do not change correctness. Alias evidence with the exact same source Article set is flagged for review rather than counted complete.",
+  "summary": {
+    "control": {
+      "complete_reference_match": 22,
+      "alias_evidence_review": 0,
+      "failed": 3
+    },
+    "resolver": {
+      "complete_reference_match": 20,
+      "alias_evidence_review": 0,
+      "failed": 5
+    }
+  },
+  "records": [
+    {
+      "case_id": "C-E1-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Politician:steve-hilton",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Politician:steve-hilton",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "entity_name",
+            "outcome": "selected",
+            "project_id": "Politician:steve-hilton",
+            "reason": "The candidate 'Steve Hilton' (project_id: 'Politician:steve-hilton') is an exact match for the name provided in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-E1-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Politician:gail-pellerin",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Politician:gail-pellerin",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "entity_name",
+            "outcome": "selected",
+            "project_id": "Politician:gail-pellerin",
+            "reason": "The candidate 'Gail Pellerin' (project_id: 'Politician:gail-pellerin') is an exact match for the entity name specified in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-E2-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-9",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_14",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_15",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_17",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_19",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_21",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_22",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_24",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_4",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_2",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_4",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_5",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-9",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_14",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_15",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_17",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_19",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_21",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_22",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_24",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_4",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_2",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_4",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_5",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "entity_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:sb-9",
+            "reason": "The candidate 'SB 9' (project_id: 'Bill:2025-2026:sb-9') is an exact match for the entity 'SB 9' specified in the question for the 2025-2026 legislative session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-E2-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Prop:proposition-38",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_17",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_12",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_15",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_17",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_2",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_22",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_23",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_25",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_27",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_30",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_38",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_6",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_7",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_8"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Prop:proposition-38",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_17",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_12",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_15",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_17",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_2",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_22",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_23",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_25",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_27",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_30",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_38",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_6",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_7",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_8"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "entity_name",
+            "outcome": "selected",
+            "project_id": "Prop:proposition-38",
+            "reason": "The candidate 'Proposition 38' (project_id: 'Prop:proposition-38') is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-E3-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_0",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_1",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_10",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_11",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_12",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_13",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_14",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_15",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_16",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_17",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_18",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_19",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_2",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_20",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_21",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_22",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_23",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_24",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_3",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_4",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_5",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_6",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_7",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_8",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_9",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_1",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_10",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_11",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_12",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_13",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_14",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_15",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_16",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_17",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_18",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_19",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_2",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_20",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_21",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_22",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_23",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_24",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_25",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_26",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_3",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_4",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_5",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_6",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_7",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_8",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_9",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_1",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_10",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_11",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_12",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_13",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_14",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_15",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_16",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_17",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_18",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_19",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_2",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_20",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_21",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_22",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_23",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_24",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_25",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_26",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_27",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_28",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_29",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_3",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_30",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_31",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_32",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_33",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_34",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_35",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_36",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_37",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_38",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_4",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_5",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_6",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_7",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_8",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_9",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_0",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_10",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_11",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_12",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_13",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_14",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_15",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_16",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_17",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_19",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_2",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_20",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_21",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_22",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_23",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_24",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_25",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_27",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_28",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_29",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_3",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_30",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_31",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_32",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_4",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_5",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_6",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_7",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_8",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_9",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_0",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_1",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_10",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_11",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_12",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_13",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_14",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_15",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_16",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_17",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_18",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_19",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_2",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_20",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_21",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_22",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_23",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_24",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_25",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_26",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_27",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_28",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_29",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_3",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_30",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_31",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_32",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_33",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_34",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_35",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_36",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_37",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_38",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_39",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_4",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_40",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_41",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_42",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_43",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_44",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_5",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_6",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_7",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_8",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_9",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_0",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_1",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_2",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_4",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_5",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_9",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_1",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_2",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_3",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_4",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_5",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_6",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_7",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_0",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_1",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_10",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_11",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_12",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_13",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_14",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_15",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_16",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_17",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_18",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_19",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_2",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_20",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_21",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_22",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_23",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_24",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_25",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_26",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_27",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_28",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_29",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_3",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_30",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_4",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_5",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_6",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_7",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_9",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_0",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_1",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_10",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_11",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_12",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_13",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_14",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_15",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_16",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_17",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_18",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_19",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_2",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_20",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_21",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_22",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_3",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_4",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_5",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_6",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_7",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_8",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_9"
+        ]
+      },
+      "resolver": {
+        "status": "failed",
+        "reason": "not_reached"
+      },
+      "resolution_decisions": null
+    },
+    {
+      "case_id": "C-E3-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_1",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_10",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_11",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_12",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_13",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_14",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_15",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_16",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_17",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_18",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_19",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_2",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_20",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_21",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_22",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_23",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_24",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_25",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_26",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_3",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_4",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_5",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_6",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_7",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_8",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_9",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_1",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_10",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_11",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_12",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_13",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_14",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_15",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_16",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_17",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_18",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_19",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_2",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_20",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_21",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_22",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_23",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_24",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_25",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_26",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_27",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_28",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_29",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_3",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_30",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_31",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_32",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_33",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_34",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_35",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_36",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_37",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_38",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_39",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_4",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_40",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_41",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_42",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_43",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_44",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_45",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_46",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_47",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_48",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_49",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_5",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_50",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_51",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_52",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_53",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_55",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_56",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_57",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_58",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_59",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_6",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_60",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_61",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_62",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_7",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_8",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_9",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_1",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_10",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_11",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_12",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_13",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_14",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_15",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_16",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_17",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_18",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_19",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_2",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_20",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_21",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_22",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_23",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_24",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_25",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_26",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_27",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_28",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_29",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_3",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_30",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_31",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_32",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_33",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_34",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_35",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_36",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_37",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_38",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_4",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_5",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_6",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_7",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_8",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_9",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_1",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_10",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_11",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_12",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_13",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_14",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_15",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_16",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_17",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_18",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_19",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_2",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_3",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_4",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_5",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_6",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_7",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_8",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_9",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_1",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_10",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_11",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_12",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_13",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_14",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_15",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_16",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_17",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_18",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_19",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_2",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_20",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_21",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_22",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_23",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_24",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_25",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_26",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_27",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_28",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_29",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_3",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_30",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_31",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_32",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_33",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_4",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_5",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_6",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_7",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_8",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_9",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_1",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_10",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_11",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_12",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_13",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_14",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_15",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_16",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_17",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_18",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_19",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_2",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_20",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_21",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_22",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_23",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_24",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_3",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_4",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_5",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_6",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_7",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_8",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_9"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_1",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_10",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_11",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_12",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_13",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_14",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_15",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_16",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_17",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_18",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_19",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_2",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_20",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_21",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_22",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_23",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_24",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_25",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_26",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_3",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_4",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_5",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_6",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_7",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_8",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_9",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_1",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_10",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_11",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_12",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_13",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_14",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_15",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_16",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_17",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_18",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_19",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_2",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_20",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_21",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_22",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_23",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_24",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_25",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_26",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_27",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_28",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_29",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_3",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_30",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_31",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_32",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_33",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_34",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_35",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_36",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_37",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_38",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_39",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_4",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_40",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_41",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_42",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_43",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_44",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_45",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_46",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_47",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_48",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_49",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_5",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_50",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_51",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_52",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_53",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_55",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_56",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_57",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_58",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_59",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_6",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_60",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_61",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_62",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_7",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_8",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_9",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_1",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_10",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_11",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_12",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_13",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_14",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_15",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_16",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_17",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_18",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_19",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_2",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_20",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_21",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_22",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_23",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_24",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_25",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_26",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_27",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_28",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_29",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_3",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_30",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_31",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_32",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_33",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_34",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_35",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_36",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_37",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_38",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_4",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_5",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_6",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_7",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_8",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_9",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_1",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_10",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_11",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_12",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_13",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_14",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_15",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_16",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_17",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_18",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_19",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_2",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_3",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_4",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_5",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_6",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_7",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_8",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_9",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_1",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_10",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_11",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_12",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_13",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_14",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_15",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_16",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_17",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_18",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_19",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_2",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_20",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_21",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_22",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_23",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_24",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_25",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_26",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_27",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_28",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_29",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_3",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_30",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_31",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_32",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_33",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_4",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_5",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_6",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_7",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_8",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_9",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_1",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_10",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_11",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_12",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_13",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_14",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_15",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_16",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_17",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_18",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_19",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_2",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_20",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_21",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_22",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_23",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_24",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_3",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_4",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_5",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_6",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_7",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_8",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_9"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "area_name",
+            "outcome": "selected",
+            "project_id": "PolicyArea:labor-employment",
+            "reason": "The candidate 'Labor & Employment' (project_id: 'PolicyArea:labor-employment') is an exact match for the 'labor and employment' topic mentioned in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-E3-03",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "PolicyArea:aging-long-term-care",
+          "PolicyArea:agriculture",
+          "PolicyArea:arts-entertainment-tourism",
+          "PolicyArea:business-professions",
+          "PolicyArea:economic-development",
+          "PolicyArea:education-k12",
+          "PolicyArea:emergency-management",
+          "PolicyArea:energy-utilities",
+          "PolicyArea:environment-natural-resources",
+          "PolicyArea:government-operations",
+          "PolicyArea:health",
+          "PolicyArea:higher-education",
+          "PolicyArea:housing-community-development",
+          "PolicyArea:human-services",
+          "PolicyArea:insurance",
+          "PolicyArea:judiciary",
+          "PolicyArea:labor-employment",
+          "PolicyArea:local-government",
+          "PolicyArea:privacy-consumer-protection",
+          "PolicyArea:public-employment-pensions",
+          "PolicyArea:public-safety",
+          "PolicyArea:revenue-taxation",
+          "PolicyArea:technology-communications",
+          "PolicyArea:transportation",
+          "PolicyArea:veterans-military-affairs",
+          "PolicyArea:water",
+          "https://calmatters.org/economy/2023/06/california-home-insurance/",
+          "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+          "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/",
+          "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/",
+          "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/",
+          "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+          "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/",
+          "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/",
+          "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/",
+          "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/",
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/",
+          "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/",
+          "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/",
+          "https://calmatters.org/education/2026/08/head-start-california-2/",
+          "https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/",
+          "https://calmatters.org/education/higher-education/2025/04/health-research/",
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/",
+          "https://calmatters.org/education/higher-education/2026/06/workforce-funding/",
+          "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/",
+          "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+          "https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/",
+          "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/",
+          "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/",
+          "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/",
+          "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/",
+          "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/",
+          "https://calmatters.org/education/k-12-education/2026/07/literacy-california/",
+          "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+          "https://calmatters.org/environment/2026/06/imperial-county-data-center/",
+          "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/",
+          "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/",
+          "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/",
+          "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/",
+          "https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/",
+          "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/",
+          "https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/",
+          "https://calmatters.org/environment/2026/09/tijuana-river-pollution/",
+          "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/",
+          "https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/",
+          "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/",
+          "https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/",
+          "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/",
+          "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/",
+          "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/",
+          "https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/",
+          "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/",
+          "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/",
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/",
+          "https://calmatters.org/politics/2026/06/driver-license-sharing/",
+          "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/",
+          "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/",
+          "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/",
+          "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+          "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/",
+          "https://calmatters.org/politics/2026/07/calpers-investment-return/",
+          "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/",
+          "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/",
+          "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/",
+          "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/",
+          "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/",
+          "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/",
+          "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/",
+          "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/",
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/",
+          "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/",
+          "https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/",
+          "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/",
+          "https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/",
+          "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/2023/06/california-home-insurance/#chunk_0",
+          "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_0",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_0",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+          "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_0",
+          "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/#chunk_0",
+          "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_0",
+          "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/#chunk_0",
+          "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk_0",
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_0",
+          "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_0",
+          "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_0",
+          "https://calmatters.org/education/2026/08/head-start-california-2/#chunk_0",
+          "https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/#chunk_0",
+          "https://calmatters.org/education/higher-education/2025/04/health-research/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/07/literacy-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_0",
+          "https://calmatters.org/environment/2026/06/imperial-county-data-center/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/#chunk_0",
+          "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_0",
+          "https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/#chunk_0",
+          "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/#chunk_0",
+          "https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/#chunk_0",
+          "https://calmatters.org/environment/2026/09/tijuana-river-pollution/#chunk_0",
+          "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_0",
+          "https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/#chunk_0",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_0",
+          "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_0",
+          "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_0",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_0",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_0",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_0",
+          "https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/#chunk_0",
+          "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/#chunk_0",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_0",
+          "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk_0",
+          "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_0",
+          "https://calmatters.org/politics/2026/06/driver-license-sharing/#chunk_0",
+          "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/#chunk_0",
+          "https://calmatters.org/politics/2026/07/calpers-investment-return/#chunk_0",
+          "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk_0",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_0",
+          "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_0",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_0",
+          "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_0",
+          "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/#chunk_0",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_0",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0",
+          "https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/#chunk_0",
+          "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0",
+          "https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_0",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "PolicyArea:aging-long-term-care",
+          "PolicyArea:agriculture",
+          "PolicyArea:arts-entertainment-tourism",
+          "PolicyArea:business-professions",
+          "PolicyArea:economic-development",
+          "PolicyArea:education-k12",
+          "PolicyArea:emergency-management",
+          "PolicyArea:energy-utilities",
+          "PolicyArea:environment-natural-resources",
+          "PolicyArea:government-operations",
+          "PolicyArea:health",
+          "PolicyArea:higher-education",
+          "PolicyArea:housing-community-development",
+          "PolicyArea:human-services",
+          "PolicyArea:insurance",
+          "PolicyArea:judiciary",
+          "PolicyArea:labor-employment",
+          "PolicyArea:local-government",
+          "PolicyArea:privacy-consumer-protection",
+          "PolicyArea:public-employment-pensions",
+          "PolicyArea:public-safety",
+          "PolicyArea:revenue-taxation",
+          "PolicyArea:technology-communications",
+          "PolicyArea:transportation",
+          "PolicyArea:veterans-military-affairs",
+          "PolicyArea:water",
+          "https://calmatters.org/economy/2023/06/california-home-insurance/",
+          "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+          "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/",
+          "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/",
+          "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/",
+          "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+          "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/",
+          "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/",
+          "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/",
+          "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/",
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/",
+          "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/",
+          "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/",
+          "https://calmatters.org/education/2026/08/head-start-california-2/",
+          "https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/",
+          "https://calmatters.org/education/higher-education/2025/04/health-research/",
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/",
+          "https://calmatters.org/education/higher-education/2026/06/workforce-funding/",
+          "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/",
+          "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/",
+          "https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/",
+          "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/",
+          "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/",
+          "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/",
+          "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/",
+          "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/",
+          "https://calmatters.org/education/k-12-education/2026/07/literacy-california/",
+          "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+          "https://calmatters.org/environment/2026/06/imperial-county-data-center/",
+          "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/",
+          "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/",
+          "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/",
+          "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/",
+          "https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/",
+          "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/",
+          "https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/",
+          "https://calmatters.org/environment/2026/09/tijuana-river-pollution/",
+          "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/",
+          "https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/",
+          "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/",
+          "https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/",
+          "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/",
+          "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/",
+          "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/",
+          "https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/",
+          "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/",
+          "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/",
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/",
+          "https://calmatters.org/politics/2026/06/driver-license-sharing/",
+          "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/",
+          "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/",
+          "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/",
+          "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+          "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/",
+          "https://calmatters.org/politics/2026/07/calpers-investment-return/",
+          "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/",
+          "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/",
+          "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/",
+          "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/",
+          "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/",
+          "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/",
+          "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/",
+          "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/",
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/",
+          "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/",
+          "https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/",
+          "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/",
+          "https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/",
+          "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/2023/06/california-home-insurance/#chunk_0",
+          "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_0",
+          "https://calmatters.org/economy/2026/07/california-insurance-myths/#chunk_0",
+          "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+          "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_0",
+          "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/#chunk_0",
+          "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_0",
+          "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/#chunk_0",
+          "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/#chunk_0",
+          "https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/#chunk_0",
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_0",
+          "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_0",
+          "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_0",
+          "https://calmatters.org/education/2026/08/head-start-california-2/#chunk_0",
+          "https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/#chunk_0",
+          "https://calmatters.org/education/higher-education/2025/04/health-research/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_0",
+          "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/07/literacy-california/#chunk_0",
+          "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_0",
+          "https://calmatters.org/environment/2026/06/imperial-county-data-center/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_0",
+          "https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/#chunk_0",
+          "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_0",
+          "https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/#chunk_0",
+          "https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/#chunk_0",
+          "https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/#chunk_0",
+          "https://calmatters.org/environment/2026/09/tijuana-river-pollution/#chunk_0",
+          "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_0",
+          "https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/#chunk_0",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_0",
+          "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_0",
+          "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_0",
+          "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_0",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_0",
+          "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_0",
+          "https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/#chunk_0",
+          "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/#chunk_0",
+          "https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/#chunk_0",
+          "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_0",
+          "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk_0",
+          "https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_0",
+          "https://calmatters.org/politics/2026/06/driver-license-sharing/#chunk_0",
+          "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_0",
+          "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/#chunk_0",
+          "https://calmatters.org/politics/2026/07/calpers-investment-return/#chunk_0",
+          "https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/#chunk_0",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_0",
+          "https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_0",
+          "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_0",
+          "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_0",
+          "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_0",
+          "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_0",
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/#chunk_0",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_0",
+          "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0",
+          "https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/#chunk_0",
+          "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0",
+          "https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/#chunk_0",
+          "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_0",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0"
+        ]
+      },
+      "resolution_decisions": null
+    },
+    {
+      "case_id": "C-R1-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-1018",
+          "Organization:california-nurses-association"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-1018",
+          "Organization:california-nurses-association"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "target_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:ab-1018",
+            "reason": "The candidate 'AB 1018' is an exact match for the bill named in the question and belongs to the specified 2025-2026 session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-R1-02",
+      "control": {
+        "status": "failed",
+        "expected_identity_values": [
+          "Campaign:steve-hilton-campaign",
+          "Organization:reform-california"
+        ],
+        "actual_identity_values": [],
+        "missing_identity_values": [
+          "Campaign:steve-hilton-campaign",
+          "Organization:reform-california"
+        ],
+        "extra_identity_values": [],
+        "expected_evidence": {
+          "relationship_claim": [
+            "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5"
+          ]
+        },
+        "actual_evidence": {},
+        "expected_source_articles": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/"
+        ],
+        "actual_source_articles": [],
+        "expected_counts": {},
+        "actual_counts": {}
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:steve-hilton-campaign",
+          "Organization:reform-california"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "target_name",
+            "outcome": "selected",
+            "project_id": "Campaign:steve-hilton-campaign",
+            "reason": "The candidate 'Steve Hilton campaign' (project_id: 'Campaign:steve-hilton-campaign') is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-R2-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:creative-artists-agency",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance",
+          "Organization:walt-disney"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:creative-artists-agency",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance",
+          "Organization:walt-disney"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "target_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:ab-186",
+            "reason": "The candidate 'AB 186' (project_id: 'Bill:2025-2026:ab-186') is an exact match for the bill named in the question for the specified session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-R2-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-947",
+          "Organization:california-chamber-of-commerce",
+          "Organization:lyft"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-947",
+          "Organization:california-chamber-of-commerce",
+          "Organization:lyft"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "target_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:sb-947",
+            "reason": "The candidate 'SB 947' with project_id 'Bill:2025-2026:sb-947' is an exact match for the bill named in the question within the specified session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-R3-01",
+      "control": {
+        "status": "failed",
+        "expected_identity_values": [
+          "Campaign:yes-on-proposition-38-campaign",
+          "Organization:michelson-center-for-public-policy"
+        ],
+        "actual_identity_values": [],
+        "missing_identity_values": [
+          "Campaign:yes-on-proposition-38-campaign",
+          "Organization:michelson-center-for-public-policy"
+        ],
+        "extra_identity_values": [],
+        "expected_evidence": {
+          "relationship_claim": [
+            "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13"
+          ]
+        },
+        "actual_evidence": {},
+        "expected_source_articles": [
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/"
+        ],
+        "actual_source_articles": [],
+        "expected_counts": {},
+        "actual_counts": {}
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:yes-on-proposition-38-campaign",
+          "Organization:michelson-center-for-public-policy"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "target_name",
+            "outcome": "selected",
+            "project_id": "Campaign:yes-on-proposition-38-campaign",
+            "reason": "The candidate 'Yes on Proposition 38 campaign' (project_id: Campaign:yes-on-proposition-38-campaign) is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-R3-02",
+      "control": {
+        "status": "failed",
+        "expected_identity_values": [
+          "Campaign:ed-musgrove-campaign",
+          "Organization:california-leads"
+        ],
+        "actual_identity_values": [],
+        "missing_identity_values": [
+          "Campaign:ed-musgrove-campaign",
+          "Organization:california-leads"
+        ],
+        "extra_identity_values": [],
+        "expected_evidence": {
+          "relationship_claim": [
+            "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10"
+          ]
+        },
+        "actual_evidence": {},
+        "expected_source_articles": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/"
+        ],
+        "actual_source_articles": [],
+        "expected_counts": {},
+        "actual_counts": {}
+      },
+      "resolver": {
+        "status": "failed",
+        "reason": "not_reached"
+      },
+      "resolution_decisions": null
+    },
+    {
+      "case_id": "C-M1-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-1740",
+          "Organization:catalina-media-development-llc",
+          "PolicyArea:housing-community-development",
+          "PolicyArea:local-government"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_11",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_15",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_16",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_17",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_19",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_21",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_22",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_23",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_24",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_26",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_3",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_4",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_5",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-1740",
+          "Organization:catalina-media-development-llc",
+          "PolicyArea:housing-community-development",
+          "PolicyArea:local-government"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_11",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_15",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_16",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_17",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_19",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_21",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_22",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_23",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_24",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_26",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_3",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_4",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_5",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "actor_name",
+            "outcome": "selected",
+            "project_id": "Organization:catalina-media-development-llc",
+            "reason": "The candidate 'Catalina Media Development LLC' is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M1-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-577",
+          "Organization:stand-with-survivors",
+          "PolicyArea:judiciary",
+          "PolicyArea:local-government",
+          "PolicyArea:public-safety"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-577",
+          "Organization:stand-with-survivors",
+          "PolicyArea:judiciary",
+          "PolicyArea:local-government",
+          "PolicyArea:public-safety"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8",
+          "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "actor_name",
+            "outcome": "selected",
+            "project_id": "Organization:stand-with-survivors",
+            "reason": "The candidate 'Stand With Survivors' (project_id: 'Organization:stand-with-survivors') is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M2-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:creative-artists-agency",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:creative-artists-agency",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "anchor_name",
+            "outcome": "selected",
+            "project_id": "Organization:walt-disney",
+            "reason": "The candidate 'Walt Disney' (project_id: Organization:walt-disney) is an exact match for the organization named in the question."
+          },
+          {
+            "slot": "bill_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:ab-186",
+            "reason": "The candidate 'AB 186' (project_id: Bill:2025-2026:ab-186) is an exact match for the bill named in the question and belongs to the specified 2025-2026 session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M2-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance",
+          "Organization:walt-disney"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-186",
+          "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+          "Organization:skydance",
+          "Organization:walt-disney"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "anchor_name",
+            "outcome": "selected",
+            "project_id": "Organization:creative-artists-agency",
+            "reason": "The candidate 'Creative Artists Agency' is an exact match for the organization named in the question."
+          },
+          {
+            "slot": "bill_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:ab-186",
+            "reason": "The candidate 'AB 186' is an exact match for the bill named in the question and belongs to the specified 2025-2026 session."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M3-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Organization:reform-california",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5"
+        ]
+      },
+      "resolver": {
+        "status": "failed",
+        "reason": "explicitly_unresolved"
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "politician_name",
+            "outcome": "ambiguous",
+            "project_id": null,
+            "reason": "The candidate 'Steve Hilton' (project_id: 'Politician:steve-hilton') is the best match for the name provided in the question. However, the prompt asks for 'organizations' that appear in the same reporting chunks as Steve Hilton, but the provided candidate inventory only contains 'Politician' entities. Since no 'Organization' candidates are provided in the inventory to resolve the question's target, and the only available candidate is the subject of the query rather than the answer, the request cannot be fulfilled with the provided data. However, strictly following the instruction to resolve the slot: 'Steve Hilton' is the only direct match for the name, but the question asks for organizations, making the relationship between the subject and the requested output unresolvable with the current inventory."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M3-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Organization:azul",
+          "Organization:california-coastal-commission",
+          "Organization:california-coastal-protection-network",
+          "Organization:california-high-speed-rail-authority",
+          "Organization:california-privacy-protection-agency-board",
+          "Organization:coastal-commission",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6",
+          "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8"
+        ]
+      },
+      "resolver": {
+        "status": "failed",
+        "reason": "explicitly_unresolved"
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "politician_name",
+            "outcome": "ambiguous",
+            "project_id": null,
+            "reason": "The candidate 'Gavin Newsom' (Politician:gavin-newsom) is the most direct match for the name in the question. However, 'Newsom' (Politician:newsom) is also a valid candidate representing the same person. While 'Gavin Newsom' is the best match, the presence of 'Newsom' as a separate candidate for the same entity can create ambiguity in strict identity resolution tasks, though 'Gavin Newsom' is the primary target."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M4-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:ed-musgrove-campaign",
+          "Politician:ed-musgrove"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_8"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:ed-musgrove-campaign",
+          "Politician:ed-musgrove"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10",
+          "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_8"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "funder_name",
+            "outcome": "selected",
+            "project_id": "Organization:california-leads",
+            "reason": "The candidate 'California Leads' (project_id: 'Organization:california-leads') is an exact match for the funder name specified in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M4-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:yes-on-proposition-38-campaign",
+          "Prop:proposition-38"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Campaign:yes-on-proposition-38-campaign",
+          "Prop:proposition-38"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13",
+          "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "funder_name",
+            "outcome": "selected",
+            "project_id": "Organization:michelson-center-for-public-policy",
+            "reason": "The candidate 'Michelson Center For Public Policy' (project_id: Organization:michelson-center-for-public-policy) is an exact match for the entity named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M5-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-1007",
+          "LegislativeEvent:vote-on-senate-bill-1007",
+          "Politician:catherine-blakespear"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-1007",
+          "LegislativeEvent:vote-on-senate-bill-1007",
+          "Politician:catherine-blakespear"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "bill_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:sb-1007",
+            "reason": "The candidate 'SB 1007' matches the bill name 'SB 1007' in the question and belongs to the specified 2025-2026 session."
+          },
+          {
+            "slot": "politician_name",
+            "outcome": "selected",
+            "project_id": "Politician:catherine-blakespear",
+            "reason": "The candidate 'Catherine Blakespear' is an exact match for the politician named in the question."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M5-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-1229",
+          "LegislativeEvent:hearing-on-senate-bill-1229",
+          "Politician:scott-wiener"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:sb-1229",
+          "LegislativeEvent:hearing-on-senate-bill-1229",
+          "Politician:scott-wiener"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "bill_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:sb-1229",
+            "reason": "The candidate 'SB 1229' with project_id 'Bill:2025-2026:sb-1229' is an exact match for the bill name 'SB 1229' in the specified 2025-2026 session."
+          },
+          {
+            "slot": "politician_name",
+            "outcome": "selected",
+            "project_id": "Politician:scott-wiener",
+            "reason": "The candidate 'Scott Wiener' with project_id 'Politician:scott-wiener' is an exact match for the politician name 'Scott Wiener'."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-C1-01",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-2540",
+          "Committee:senate-appropriations-committee"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24"
+        ]
+      },
+      "resolver": {
+        "status": "failed",
+        "reason": "not_reached"
+      },
+      "resolution_decisions": null
+    },
+    {
+      "case_id": "C-C1-02",
+      "control": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-2540",
+          "Committee:senate-appropriations-committee",
+          "Committee:senate-health-and-education-committees"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24"
+        ]
+      },
+      "resolver": {
+        "status": "complete_reference_match",
+        "identity_values": [
+          "Bill:2025-2026:ab-2540",
+          "Committee:senate-appropriations-committee",
+          "Committee:senate-health-and-education-committees"
+        ],
+        "evidence_ids": [
+          "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24"
+        ]
+      },
+      "resolution_decisions": {
+        "decisions": [
+          {
+            "slot": "seed_name",
+            "outcome": "selected",
+            "project_id": "Bill:2025-2026:ab-2540",
+            "reason": "The candidate 'AB 2540' (project_id: 'Bill:2025-2026:ab-2540') is an exact match for the bill name and session specified in the question."
+          }
+        ]
+      }
+    }
+  ]
+}

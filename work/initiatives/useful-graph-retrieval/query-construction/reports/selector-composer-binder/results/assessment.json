@@ -1,0 +1,899 @@
+{
+  "audit_kind": "offline; no model or graph calls",
+  "selector": {
+    "valid_structured_responses": 25,
+    "semantically_sufficient": 2
+  },
+  "composition": {
+    "deterministic_unique_bypasses": 8,
+    "model_composer_calls": 0,
+    "composer_option_overflow": 1,
+    "no_valid_complete_wiring": 8,
+    "selection_or_enumeration_error": 8,
+    "interpretation": "The model-selected batch did not present 2-50 alternatives, so composer-model accuracy is unmeasured. The authored-piece smoke separately proves the same-Bill case has two role-distinct candidates."
+  },
+  "binder": {
+    "calls": 8,
+    "valid": 8
+  },
+  "retrieval": {
+    "executed": 8,
+    "executed_empty": 2,
+    "exact_reference_evidence": 3,
+    "semantically_complete": 2
+  },
+  "usage_by_stage": {
+    "selector": {
+      "responses": 25,
+      "prompt_tokens": 41511,
+      "completion_tokens": 929,
+      "total_tokens": 42440,
+      "http_ms": 31817.799999999996
+    },
+    "binder": {
+      "responses": 8,
+      "prompt_tokens": 27657,
+      "completion_tokens": 176,
+      "total_tokens": 27833,
+      "http_ms": 7113.3
+    }
+  },
+  "usage_total": {
+    "responses": 33,
+    "prompt_tokens": 69168,
+    "completion_tokens": 1105,
+    "total_tokens": 70273,
+    "http_ms": 38931.1
+  },
+  "comparison": {
+    "previous_composable_two_stage_corrected": 11,
+    "previous_compiler_assigned_selection": 2,
+    "new_selector_composer_binder": 2,
+    "supplied_pattern_binding_diagnostic_historical": 22,
+    "verdict": "The keyed selector remains the bottleneck. The full result equals the latest 2/25 and does not recover the corrected 11/25 composable-triples baseline. Composer-model quality was not exercised."
+  },
+  "details": [
+    {
+      "case_id": "C-E1-01",
+      "opaque_id": "Q01",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted the Article-HAS_CHUNK connection, so the selected pieces cannot return stored reporting.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1041,
+            "description": "return Politician identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E1-02",
+      "opaque_id": "Q02",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted the Article-HAS_CHUNK connection, so the selected pieces cannot return stored reporting.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1041,
+            "description": "return Politician identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E2-01",
+      "opaque_id": "Q03",
+      "selector_sufficient": false,
+      "selector_audit": "Selected Bill filters and output but no ontology triple or reporting output.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1044,
+            "description": "Bill -MENTIONED_IN-> Chunk"
+          },
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E2-02",
+      "opaque_id": "Q04",
+      "selector_sufficient": false,
+      "selector_audit": "Selected both Prop mention reporting and an extra Prop-ABOUT_TOPIC-PolicyArea edge, but omitted the Prop-name filter and reporting output.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1027,
+            "description": "filter Prop.name eq unbound slot"
+          },
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1088,
+            "description": "Prop -ABOUT_TOPIC-> PolicyArea"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 3,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E3-01",
+      "opaque_id": "Q05",
+      "selector_sufficient": false,
+      "selector_audit": "Selected the date and topic filters but omitted NewsArticle-DISCUSSES_TOPIC-PolicyArea.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1060,
+            "description": "NewsArticle -DISCUSSES_TOPIC-> PolicyArea"
+          },
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1037,
+            "description": "return NewsArticle.published_date"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E3-02",
+      "opaque_id": "Q06",
+      "selector_sufficient": false,
+      "selector_audit": "Selected the date and topic filters but omitted NewsArticle-DISCUSSES_TOPIC-PolicyArea.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1060,
+            "description": "NewsArticle -DISCUSSES_TOPIC-> PolicyArea"
+          },
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1037,
+            "description": "return NewsArticle.published_date"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1040,
+            "description": "return PolicyArea identity"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-E3-03",
+      "opaque_id": "Q07",
+      "selector_sufficient": false,
+      "selector_audit": "Selected the grouped count but omitted NewsArticle-DISCUSSES_TOPIC-PolicyArea.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1060,
+            "description": "NewsArticle -DISCUSSES_TOPIC-> PolicyArea"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          },
+          {
+            "key": 1040,
+            "description": "return PolicyArea identity"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R1-01",
+      "opaque_id": "Q08",
+      "selector_sufficient": false,
+      "selector_audit": "Selected five relationship pieces, including the relevant stance plus four extras, omitted the Bill-name filter, and produced 331 valid wirings.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1014,
+            "description": "filter Bill.name eq unbound slot"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1018,
+            "description": "filter LaborUnion.name eq unbound slot"
+          },
+          {
+            "key": 1051,
+            "description": "LaborUnion -DECLARED_STANCE-> Prop"
+          },
+          {
+            "key": 1055,
+            "description": "LaborUnion -LOBBIED_AGAINST-> Bill"
+          },
+          {
+            "key": 1056,
+            "description": "LaborUnion -LOBBIED_FOR-> Bill"
+          },
+          {
+            "key": 1057,
+            "description": "LaborUnion -MENTIONED_IN-> Chunk"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 331,
+      "composition_status": "composer_option_overflow",
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R1-02",
+      "opaque_id": "Q09",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted the Campaign-name filter, broadening the query to all endorsements.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1016,
+            "description": "filter Campaign.name eq unbound slot"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 15,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R2-01",
+      "opaque_id": "Q10",
+      "selector_sufficient": false,
+      "selector_audit": "Added an anchor Organization filter and distinctness but omitted all requested outputs.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1009,
+            "description": "require two Organization roles to have distinct ids"
+          },
+          {
+            "key": 1023,
+            "description": "filter Organization.name eq unbound slot"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R2-02",
+      "opaque_id": "Q11",
+      "selector_sufficient": false,
+      "selector_audit": "Added an anchor Organization filter and distinctness but omitted all requested outputs.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1009,
+            "description": "require two Organization roles to have distinct ids"
+          },
+          {
+            "key": 1023,
+            "description": "filter Organization.name eq unbound slot"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R3-01",
+      "opaque_id": "Q12",
+      "selector_sufficient": false,
+      "selector_audit": "Mixed Organization and PAC funding triples, filtered the wrong endpoint types, and omitted the Organization output.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1016,
+            "description": "filter Campaign.name eq unbound slot"
+          },
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1024,
+            "description": "filter PAC.name eq unbound slot"
+          },
+          {
+            "key": 1075,
+            "description": "PAC -FUNDED-> Campaign"
+          },
+          {
+            "key": 1027,
+            "description": "filter Prop.name eq unbound slot"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-R3-02",
+      "opaque_id": "Q13",
+      "selector_sufficient": false,
+      "selector_audit": "Filtered the PAC instead of the named Campaign and returned the Campaign instead of the requested PACs.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1016,
+            "description": "filter Campaign.name eq unbound slot"
+          },
+          {
+            "key": 1039,
+            "description": "return PAC identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1024,
+            "description": "filter PAC.name eq unbound slot"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 0,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M1-01",
+      "opaque_id": "Q14",
+      "selector_sufficient": false,
+      "selector_audit": "Selected only LOBBIED_FOR, so the apparently exact current result is under-scoped versus the requested lobbying-relationship union.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1070,
+            "description": "Organization -{LOBBIED_FOR|LOBBIED_AGAINST}-> Bill"
+          },
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          },
+          {
+            "key": 1029,
+            "description": "return Bill.session"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1068,
+            "description": "Organization -LOBBIED_FOR-> Bill"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 2,
+      "exact_reference_evidence": true,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M1-02",
+      "opaque_id": "Q15",
+      "selector_sufficient": false,
+      "selector_audit": "Selected only LOBBIED_FOR, omitting LOBBIED_AGAINST from the requested lobbying-relationship union.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1070,
+            "description": "Organization -{LOBBIED_FOR|LOBBIED_AGAINST}-> Bill"
+          },
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          },
+          {
+            "key": 1029,
+            "description": "return Bill.session"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1068,
+            "description": "Organization -LOBBIED_FOR-> Bill"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 0,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M2-01",
+      "opaque_id": "Q16",
+      "selector_sufficient": false,
+      "selector_audit": "Selected one lobbying occurrence and no outputs; duplicating distinctness cannot create the missing peer role.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1068,
+            "description": "Organization -LOBBIED_FOR-> Bill"
+          },
+          {
+            "key": 1014,
+            "description": "filter Bill.name eq unbound slot"
+          },
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1009,
+            "description": "require two Organization roles to have distinct ids"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M2-02",
+      "opaque_id": "Q17",
+      "selector_sufficient": false,
+      "selector_audit": "Selected one lobbying occurrence and no outputs; duplicating distinctness cannot create the missing peer role.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1068,
+            "description": "Organization -LOBBIED_FOR-> Bill"
+          },
+          {
+            "key": 1014,
+            "description": "filter Bill.name eq unbound slot"
+          },
+          {
+            "key": 1038,
+            "description": "return Organization identity"
+          },
+          {
+            "key": 1028,
+            "description": "return Bill identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1009,
+            "description": "require two Organization roles to have distinct ids"
+          }
+        ]
+      },
+      "enumeration_status": "selection_or_enumeration_error",
+      "valid_candidate_count": null,
+      "composition_status": null,
+      "composition_source": null,
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M3-01",
+      "opaque_id": "Q18",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted the Steve Hilton name filter, broadening to every Politician/Organization co-mention.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1026,
+            "description": "filter Politician.name eq unbound slot"
+          },
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 295,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M3-02",
+      "opaque_id": "Q19",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted the Article-HAS_CHUNK connection, leaving the article-title filter unattached.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1061,
+            "description": "NewsArticle -HAS_CHUNK-> Chunk"
+          },
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M4-01",
+      "opaque_id": "Q20",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted Campaign-CAMPAIGN_FOR-Politician, so the selected pieces cannot reach candidates.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1046,
+            "description": "Campaign -CAMPAIGN_FOR-> Politician"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M4-02",
+      "opaque_id": "Q21",
+      "selector_sufficient": false,
+      "selector_audit": "Omitted Campaign-CAMPAIGN_FOR-Prop and added an incompatible PAC funding occurrence.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1047,
+            "description": "Campaign -CAMPAIGN_FOR-> Prop"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1075,
+            "description": "PAC -FUNDED-> Campaign"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M5-01",
+      "opaque_id": "Q22",
+      "selector_sufficient": false,
+      "selector_audit": "Selected the vote union but omitted LegislativeEvent-ACTION_ON-Bill and the Bill-name filter.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1058,
+            "description": "LegislativeEvent -ACTION_ON-> Bill"
+          },
+          {
+            "key": 1014,
+            "description": "filter Bill.name eq unbound slot"
+          },
+          {
+            "key": 1041,
+            "description": "return Politician identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-M5-02",
+      "opaque_id": "Q23",
+      "selector_sufficient": false,
+      "selector_audit": "Selected the vote union but omitted LegislativeEvent-ACTION_ON-Bill and the Bill-name filter.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1058,
+            "description": "LegislativeEvent -ACTION_ON-> Bill"
+          },
+          {
+            "key": 1014,
+            "description": "filter Bill.name eq unbound slot"
+          },
+          {
+            "key": 1041,
+            "description": "return Politician identity"
+          }
+        ],
+        "extra": [
+          {
+            "key": 1036,
+            "description": "return NewsArticle identity"
+          }
+        ]
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 0,
+      "composition_status": "no_valid_complete_wiring",
+      "composition_source": "deterministic_enumerator",
+      "binding_status": null,
+      "execution_status": "not_reached",
+      "row_count": null,
+      "exact_reference_evidence": false,
+      "complete_retrieval": false
+    },
+    {
+      "case_id": "C-C1-01",
+      "opaque_id": "Q24",
+      "selector_sufficient": true,
+      "selector_audit": "The referral, Committee-name and Bill-session filters, and Bill output fully express the requested answer; Committee output is optional context.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [
+          {
+            "key": 1032,
+            "description": "return Committee identity"
+          }
+        ],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 1,
+      "exact_reference_evidence": true,
+      "complete_retrieval": true
+    },
+    {
+      "case_id": "C-C1-02",
+      "opaque_id": "Q25",
+      "selector_sufficient": true,
+      "selector_audit": "The referral, Bill-name/session filters, and Bill/Committee outputs fully express the requested answer.",
+      "authored_key_difference_is_diagnostic_only": {
+        "missing": [],
+        "extra": []
+      },
+      "enumeration_status": "valid",
+      "valid_candidate_count": 1,
+      "composition_status": "valid",
+      "composition_source": "deterministic_unique_complete_wiring",
+      "binding_status": "valid",
+      "execution_status": "executed",
+      "row_count": 2,
+      "exact_reference_evidence": true,
+      "complete_retrieval": true
+    }
+  ]
+}

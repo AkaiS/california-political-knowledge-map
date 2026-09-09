@@ -1,0 +1,432 @@
+{
+  "report": "src/knowledge_map/prototypes/pattern_selection/results/full-report.json",
+  "audit_kind": "offline; no model or graph calls",
+  "selection": {
+    "case_count": 25,
+    "compiler_valid": 7,
+    "compiler_rejected": 18,
+    "semantic_complete": 2,
+    "complete_exact_evidence": 2,
+    "details": [
+      {
+        "case_id": "C-E1-01",
+        "opaque_id": "Q01",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 2,
+        "semantic_complete": true,
+        "exact_reference_evidence": true,
+        "audit": "Direct Politician mention retrieval; exact requested evidence despite a chunk-only row layout."
+      },
+      {
+        "case_id": "C-E1-02",
+        "opaque_id": "Q02",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Correct mention edge, but a self-inequality and unsupported aggregate make the plan invalid."
+      },
+      {
+        "case_id": "C-E2-01",
+        "opaque_id": "Q03",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 0,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Uses LegislativeEvent reporting instead of the Bill's direct MENTIONED_IN path."
+      },
+      {
+        "case_id": "C-E2-02",
+        "opaque_id": "Q04",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Correct mention edge, but a self-inequality and unsupported aggregate make the plan invalid."
+      },
+      {
+        "case_id": "C-E3-01",
+        "opaque_id": "Q05",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 0,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Uses published_date equality with 2026-07 instead of the required half-open July range."
+      },
+      {
+        "case_id": "C-E3-02",
+        "opaque_id": "Q06",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 0,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Uses published_date equality with 2026-07 instead of the required half-open July range."
+      },
+      {
+        "case_id": "C-E3-03",
+        "opaque_id": "Q07",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Requests the right grouping but omits HAS_CHUNK evidence and adds a disallowed article projection."
+      },
+      {
+        "case_id": "C-R1-01",
+        "opaque_id": "Q08",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps LaborUnion, Bill, session, stance, and its claim evidence, but adds a Bill-mention join, an unrelated inequality, and an invalid aggregate."
+      },
+      {
+        "case_id": "C-R1-02",
+        "opaque_id": "Q09",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 0,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Selects ENDORSED and the Campaign filter, then adds Organization.id <> itself; the binder also drops 'campaign'."
+      },
+      {
+        "case_id": "C-R2-01",
+        "opaque_id": "Q10",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Selects the right claim and Bill scope, then adds a self-inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-R2-02",
+        "opaque_id": "Q11",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Selects the right claim and Bill scope, then adds a self-inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-R3-01",
+        "opaque_id": "Q12",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Retains funding-claim evidence but overconstrains both Prop and Campaign names, adds a Campaign-mention join, and misuses distinctness and aggregation."
+      },
+      {
+        "case_id": "C-R3-02",
+        "opaque_id": "Q13",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 0,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Retains funding-claim evidence but uses Organization instead of PAC, adds an Organization-name filter, self-inequality, and mention join; binder drops 'campaign'."
+      },
+      {
+        "case_id": "C-M1-01",
+        "opaque_id": "Q14",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps the lobbying union and shared Bill-to-topic join, then adds a self-inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-M1-02",
+        "opaque_id": "Q15",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps the lobbying union and shared Bill-to-topic join, then adds a self-inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-M2-01",
+        "opaque_id": "Q16",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Uses only one Organization handle, so it cannot represent distinct anchor and peer roles sharing one Bill."
+      },
+      {
+        "case_id": "C-M2-02",
+        "opaque_id": "Q17",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Uses only one Organization handle, so it cannot represent distinct anchor and peer roles sharing one Bill."
+      },
+      {
+        "case_id": "C-M3-01",
+        "opaque_id": "Q18",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps the shared Chunk join but adds a cross-label inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-M3-02",
+        "opaque_id": "Q19",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Omits NewsArticle/HAS_CHUNK and applies the requested article title to Chunk.title, which does not exist."
+      },
+      {
+        "case_id": "C-M4-01",
+        "opaque_id": "Q20",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps the funding-to-candidate chain and target label, then adds a cross-label inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-M4-02",
+        "opaque_id": "Q21",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps the funding-to-Prop chain and target label, then adds a cross-label inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-M5-01",
+        "opaque_id": "Q22",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Omits ABSTAINED from the vote union and asks unsupported names from LegislativeEvent and Chunk; it also adds mention and aggregate structure."
+      },
+      {
+        "case_id": "C-M5-02",
+        "opaque_id": "Q23",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Omits ABSTAINED from the vote union and asks unsupported names from LegislativeEvent and Chunk; it also adds a mention edge."
+      },
+      {
+        "case_id": "C-C1-01",
+        "opaque_id": "Q24",
+        "pattern_status": "compiler_unsupported",
+        "binding_status": null,
+        "execution_status": "not_reached",
+        "row_count": null,
+        "semantic_complete": false,
+        "exact_reference_evidence": false,
+        "audit": "Keeps referral and both scope filters, then adds a cross-label inequality and unsupported aggregate."
+      },
+      {
+        "case_id": "C-C1-02",
+        "opaque_id": "Q25",
+        "pattern_status": "valid",
+        "binding_status": "valid",
+        "execution_status": "executed",
+        "row_count": 2,
+        "semantic_complete": true,
+        "exact_reference_evidence": true,
+        "audit": "Correct referral relationship, Bill designation/session scope, Committee projection, and claim evidence."
+      }
+    ]
+  },
+  "control": {
+    "case_count": 25,
+    "equal_prior_oracle_after_assigned_id_normalization": 25,
+    "details": [
+      {
+        "case_id": "C-E1-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E1-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E2-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E2-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E3-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E3-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-E3-03",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R1-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R1-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R2-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R2-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R3-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-R3-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M1-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M1-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M2-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M2-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M3-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M3-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M4-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M4-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M5-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-M5-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-C1-01",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      },
+      {
+        "case_id": "C-C1-02",
+        "equal_prior_oracle_after_assigned_id_normalization": true
+      }
+    ]
+  },
+  "usage_by_stage": {
+    "pattern_selection": {
+      "responses": 25,
+      "prompt_tokens": 25261,
+      "completion_tokens": 9429,
+      "total_tokens": 34690,
+      "http_ms": 176887.1
+    },
+    "pattern_selection_binding": {
+      "responses": 7,
+      "prompt_tokens": 24358,
+      "completion_tokens": 182,
+      "total_tokens": 24540,
+      "http_ms": 6448.6
+    },
+    "control_binding": {
+      "responses": 25,
+      "prompt_tokens": 87159,
+      "completion_tokens": 722,
+      "total_tokens": 87881,
+      "http_ms": 20838.8
+    }
+  },
+  "usage_total": {
+    "responses": 57,
+    "prompt_tokens": 136778,
+    "completion_tokens": 10333,
+    "total_tokens": 147111,
+    "http_ms": 204174.5
+  },
+  "gate": {
+    "prior_corrected_two_stage_complete": 11,
+    "new_complete": 2,
+    "prior_compiler_rejected": 13,
+    "new_compiler_rejected": 18,
+    "passed": false,
+    "verdict": "Do not combine. Correctly scoped retrieval fell from 11/25 to 2/25 and compiler rejection rose from 13/25 to 18/25."
+  }
+}

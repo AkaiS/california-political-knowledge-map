@@ -1,9 +1,16 @@
-# Next experiment: constrained patterns and entity binding
+# Constrained patterns and entity binding: plan and outcome
 
 Continue [issue 05](../issues/05-prototype-query-construction-and-validation.md)
 from the [composable-triples findings](composable-triples-comparison.md).
-This is proposed work, not an accepted production architecture or a record of
-an implemented feature.
+The plan below is retained as the pre-experiment rationale. Both independent
+experiments have now run: compiler-assigned identifiers completed 2/25
+end-to-end cases, and entity resolution completed 20/25 with correct patterns
+supplied versus 22/25 for its paired control. Neither met its gate, so they
+were not combined. A later separate selector/composer/binder experiment also
+completed 2/25. Its supplied-key composer diagnostic passed 2/2 and is excluded
+from the primary score. See the [consolidated findings](findings.md) and
+[archived reports](reports/README.md). No production architecture was accepted
+and no further experiment is authorized by this historical plan.
 
 ## Reduce pattern bookkeeping
 
