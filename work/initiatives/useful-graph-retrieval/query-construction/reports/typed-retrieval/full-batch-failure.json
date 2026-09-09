@@ -1,0 +1,15 @@
+{
+  "prototype": "typed_parameterized_retrieval",
+  "mode": "live",
+  "attempt": "corrected full batch",
+  "question_count": 42,
+  "request_shape": "one structured SelectionBatch request containing 42 opaque question IDs",
+  "deployment": "local gemma4:26b",
+  "model_requests": 3,
+  "elapsed_ms": 102700,
+  "outcome": "Exceeded maximum output retries",
+  "final_validation_error_count": 37,
+  "dominant_error": "The model often selected a compatible query name but omitted its required typed parameter.",
+  "graph_queries_executed": 0,
+  "note": "The runner then changed only its request protocol to one question per bounded run. Query definitions and selector instructions were not tuned from these outputs."
+}

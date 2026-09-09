@@ -1,0 +1,119 @@
+{
+  "prototype": "typed_parameterized_retrieval",
+  "mode": "live",
+  "question_set": "work/initiatives/useful-graph-retrieval/question-set.md",
+  "question_count": 2,
+  "anchor_date": "2026-09-08",
+  "deployment": {
+    "kind": "local",
+    "configured_model": "gemma4:26b",
+    "external_telemetry_export": false
+  },
+  "model_latency_ms": 8582.00641599251,
+  "model_usage": {
+    "requests": 2,
+    "input_tokens": 1030,
+    "output_tokens": 129
+  },
+  "total_latency_ms": 8667.498167022131,
+  "schema_stress_probes": [
+    {
+      "probe": "legislative_tenure_vote",
+      "valid": true,
+      "note": "Politician must traverse HELD_TENURE first"
+    },
+    {
+      "probe": "organization_sub_label",
+      "valid": true,
+      "note": "sub-label refines Organization"
+    },
+    {
+      "probe": "campaign_for_prop",
+      "valid": true,
+      "note": "target union arm 1"
+    },
+    {
+      "probe": "campaign_for_politician",
+      "valid": true,
+      "note": "target union arm 2"
+    },
+    {
+      "probe": "district_cycle",
+      "valid": true,
+      "note": "District identity requires cycle_year"
+    }
+  ],
+  "selection_score": {
+    "compatible": 1,
+    "incompatible_or_missing": 1,
+    "interpretation": "Heuristic family agreement only. Outcome-5 disposition remains unsettled and this is not a Gold Set score."
+  },
+  "records": [
+    {
+      "case_id": "E1-2",
+      "question": "Who is Steve Hilton?",
+      "selection": "entity_dossier",
+      "parameters": {
+        "seed": "Steve Hilton"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": 1,
+      "model": {
+        "latency_ms": 3422.3517079954036,
+        "usage": {
+          "input_tokens": 1030,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 794,
+          "output_tokens": 129,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 2,
+          "tool_calls": 0
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q001\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for information about a specific person, which is best addressed by an entity dossier.\", \"parameters\": {\"seed\": \"Steve Hilton\"}}]}')], usage=RequestUsage(input_tokens=613, cache_read_tokens=412, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 59, 4, 945615, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 59, 4, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-w6dAxppdHhmltd3vFxsQ0G9PhwXLeVAA', finish_reason='stop', run_id='01a082d1-2c16-769c-af75-cae96d19f8bd', conversation_id='01a082d1-2c16-769c-af75-cae8e88f4ef4')"
+      },
+      "query": "\nMATCH (entity:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:HAS_CHUNK]-(article:NewsArticle)\nWHERE toLower(entity.name) CONTAINS toLower($seed)\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN entity.name AS subject, labels(entity) AS labels, article.title AS article,\n       article.published_date AS published_date, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 20\n",
+      "row_count": 2,
+      "grounding_evidence_count": 2,
+      "sample_rows": [
+        {
+          "subject": "Steve Hilton",
+          "labels": [
+            "Politician"
+          ],
+          "article": "California Republicans tried to cut him off. Then he beat them from the right",
+          "published_date": "2026-08-05T12:15:00Z",
+          "evidence_id": "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5",
+          "evidence": " Diego County supervisor race establishment pick.\n\nRepublican gubernatorial candidate Steve Hilton\u00a0also has a friend in Carl DeMaio, according to Hilton spokesperson Hector Barajas. Steve Hilton appeared on Carl DeMaio daily podcast in the run-up to the June primary.\n\n\u201cSteve Hilton is proud to have the support of Reform California and values Steve Hilton relationship with Carl DeMaio,\u201d Barajas said in a statement. Carl DeMaio group had endorsed Steve Hilton and Chad Bianco Steve Hilton and River"
+        },
+        {
+          "subject": "Steve Hilton",
+          "labels": [
+            "Politician"
+          ],
+          "article": "For the lone woman left in the California governor\u2019s race, it\u2019s all about \u2018temperament\u2019",
+          "published_date": "2026-05-07T12:00:00Z",
+          "evidence_id": "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18",
+          "evidence": "herself again and resumed her support for single-payer.\n\nShe also raised eyebrows by courting the support of billionaire crypto executive Chris Larsen, who is spending his money this year fighting proposals to raise taxes on the wealthy. He donated to Porter\u2019s campaign last year before revoking his support in March when she endorsed a San Francisco ballot measure to raise taxes on corporations with highly paid CEOs. Larsen, who supports Republican Steve Hilton, declined to comment through a spok"
+        }
+      ],
+      "query_latency_ms": 12.91433401638642,
+      "status": "executed",
+      "limitations": null
+    },
+    {
+      "case_id": "E3-3",
+      "question": "Which policy areas has coverage concentrated on?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5159.654707997106,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q002\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The user is asking for a distribution of coverage across policy areas. Per instructions, \\'*\\' is the topic for a coverage distribution.\"}]}')], usage=RequestUsage(input_tokens=860, cache_read_tokens=637, output_tokens=64), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 59, 10, 89919, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 59, 10, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-LqTKSLRTvPyMPLEIEnFAHGRE7atEMtWu', finish_reason='stop', run_id='01a082d1-3975-71e5-8326-c3020a9d5e3c', conversation_id='01a082d1-3975-71e5-8326-c3015c84e11e')"
+      }
+    }
+  ]
+}

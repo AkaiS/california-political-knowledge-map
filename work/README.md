@@ -11,6 +11,7 @@ have not yet been shaped into executable work.
 
 ### Ready for human
 
+- [Review query-construction prototypes and graph-backed questions](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md). Two prototype branches are preserved; 25 new construction questions have executed references against the populated graph. The architectural choice remains open.
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
 - [Review Relevance Filter evaluations](projects/scraping-pipeline/issues/13-relevance-evals.md)
 - [Review Selector Healing evaluations](projects/scraping-pipeline/issues/14-healer-evals.md)

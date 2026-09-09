@@ -1,0 +1,473 @@
+{
+  "prototype": "typed_parameterized_retrieval",
+  "mode": "live",
+  "question_set": "work/initiatives/useful-graph-retrieval/question-set.md",
+  "question_count": 42,
+  "anchor_date": "2026-09-08",
+  "deployment": {
+    "kind": "local",
+    "configured_model": "gemma4:26b",
+    "external_telemetry_export": false
+  },
+  "model_latency_ms": 151871.3001680444,
+  "model_usage": {
+    "requests": 0,
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "total_latency_ms": 151940.48533402383,
+  "schema_stress_probes": [
+    {
+      "probe": "legislative_tenure_vote",
+      "valid": true,
+      "note": "Politician must traverse HELD_TENURE first"
+    },
+    {
+      "probe": "organization_sub_label",
+      "valid": true,
+      "note": "sub-label refines Organization"
+    },
+    {
+      "probe": "campaign_for_prop",
+      "valid": true,
+      "note": "target union arm 1"
+    },
+    {
+      "probe": "campaign_for_politician",
+      "valid": true,
+      "note": "target union arm 2"
+    },
+    {
+      "probe": "district_cycle",
+      "valid": true,
+      "note": "District identity requires cycle_year"
+    }
+  ],
+  "selection_score": {
+    "compatible": 0,
+    "incompatible_or_missing": 42,
+    "interpretation": "Heuristic family agreement only. Outcome-5 disposition remains unsettled and this is not a Gold Set score."
+  },
+  "records": [
+    {
+      "case_id": "E1-1",
+      "question": "What has been reported about Gavin Newsom's position on the climate deal?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 6013.049917004537,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q001\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for information about Gavin Newsom\\'s (actor) position/activity regarding a climate deal (policy topic).\", \"parameters\": {\"actor\": \"Gavin Newsom\"}}]}')], usage=RequestUsage(input_tokens=844, cache_read_tokens=616, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 9, 317655, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 9, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-l0uxtCCMtECFqHtN9V2AT9a1XpOLfS2o', finish_reason='stop', run_id='01a082cc-9f2b-7000-bfec-3b5ddf5e0ed9', conversation_id='01a082cc-9f2b-7000-bfec-3b5cc15c8a2a')"
+      }
+    },
+    {
+      "case_id": "E1-2",
+      "question": "Who is Steve Hilton?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3249.372416990809,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q002\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for information about a specific person, which is best addressed by an entity dossier.\", \"parameters\": {\"seed\": \"Steve Hilton\"}}]}')], usage=RequestUsage(input_tokens=613, cache_read_tokens=412, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 12, 567517, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 12, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JZQq175dVPEar4PNLtELDIxWZrB1OgDv', finish_reason='stop', run_id='01a082cc-b6a8-7028-85a4-060af77cd89d', conversation_id='01a082cc-b6a8-7028-85a4-06099cb2bf31')"
+      }
+    },
+    {
+      "case_id": "E1-3",
+      "question": "What has been reported about Tom Steyer's brother and California AI policy?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 5425.242625002284,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q003\", \"query_name\": \"co_mention\", \"rationale\": \"The question asks for connections between an actor (Tom Steyer\\'s brother) and a context (California AI policy).\", \"parameters\": {\"actor\": \"Tom Steyer\\'s brother\", \"context\": \"California AI policy\"}}]}')], usage=RequestUsage(input_tokens=846, cache_read_tokens=641, output_tokens=84), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 17, 990902, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 17, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-szppxETMupH5PXBaqcolnmkk2rPHqVEq', finish_reason='stop', run_id='01a082cc-c359-7181-92fb-00d793b81960', conversation_id='01a082cc-c359-7181-92fb-00d662fe11df')"
+      }
+    },
+    {
+      "case_id": "E2-1",
+      "question": "What has been reported about SB 9?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3158.1098749884404,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q004\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for reports on a specific legislative entity (SB 9).\", \"parameters\": {\"seed\": \"SB 9\"}}]}')], usage=RequestUsage(input_tokens=609, cache_read_tokens=416, output_tokens=66), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 21, 148645, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 21, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-d7VvM95d7T2J970wKFXxpN2QeDZ7rBv0', finish_reason='stop', run_id='01a082cc-d88b-7131-ac55-ca66a9885280', conversation_id='01a082cc-d88b-7131-ac55-ca65aba5508d')"
+      }
+    },
+    {
+      "case_id": "E2-2",
+      "question": "What is Proposition 38?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3073.939624999184,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q005\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for information about a specific proposition, which is an entity in the schema.\", \"parameters\": {\"seed\": \"Proposition 38\"}}]}')], usage=RequestUsage(input_tokens=613, cache_read_tokens=414, output_tokens=69), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 24, 223742, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 24, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oBe9JiWSJqVGHcVIZWBG7xjo0ak9Jmfl', finish_reason='stop', run_id='01a082cc-e4e1-7509-9d3c-8aa2b25696ae', conversation_id='01a082cc-e4e1-7509-9d3c-8aa1c76bca9c')"
+      }
+    },
+    {
+      "case_id": "E2-3",
+      "question": "What does the HOA fee cap bill do?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3667.8902919520624,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q006\", \"query_name\": \"measure_dossier\", \"rationale\": \"The question asks for the content/purpose of a specific bill (HOA fee cap bill), which is best addressed by retrieving the dossier for that measure.\", \"parameters\": {\"seed\": \"HOA fee cap bill\"}}]}')], usage=RequestUsage(input_tokens=641, cache_read_tokens=416, output_tokens=83), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 27, 889321, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 27, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-0WGaZAXI2pUpq4W9qPpxVqBY91Fp2uaM', finish_reason='stop', run_id='01a082cc-f0e3-7025-a328-bdfe00ae6f7d', conversation_id='01a082cc-f0e3-7025-a328-bdfdc7b18279')"
+      }
+    },
+    {
+      "case_id": "E3-1",
+      "question": "What has been reported on housing and community development?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1478.345665964298,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q007\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for reports on a broad topic, which corresponds to a policy area sweep.\", \"parameters\": {\"topic\": \"housing and community development\"}}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=70), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 29, 370504, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 29, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-eA0PD8lZN1oCnGRGpPWt5wBsBylbeOJo', finish_reason='stop', run_id='01a082cc-ff37-770b-8345-09c7ec6519c5', conversation_id='01a082cc-ff37-770b-8345-09c693f345f5')"
+      }
+    },
+    {
+      "case_id": "E3-2",
+      "question": "What has been reported on labor and employment in the last three months?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1902.3099170299247,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q008\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for reports on a specific topic (labor and employment) within a timeframe, which corresponds to a sweep of a policy area.\", \"parameters\": {\"topic\": \"labor and employment\", \"since_date\": \"2026-06-08\"}}] }')], usage=RequestUsage(input_tokens=426, cache_read_tokens=382, output_tokens=97), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 31, 271622, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 31, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-d7xFZOF67phbLFqp9QlZarnhufUPTGqi', finish_reason='stop', run_id='01a082cd-04fd-70fc-9e0b-fbd9622c60c6', conversation_id='01a082cd-04fd-70fc-9e0b-fbd8147e7846')"
+      }
+    },
+    {
+      "case_id": "E3-3",
+      "question": "Which policy areas has coverage concentrated on?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5180.772084044293,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q009\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The user is asking for a distribution of coverage across policy areas. Per instructions, \\'*\\' is the topic for a coverage distribution.\"}]}')], usage=RequestUsage(input_tokens=860, cache_read_tokens=637, output_tokens=64), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 36, 439022, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 36, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oAFCzf2nSu8T9KB8WaMt0FnXUn2T6FkA', finish_reason='stop', run_id='01a082cd-0c6b-723b-afa8-ba945f820f64', conversation_id='01a082cd-0c6b-723b-afa8-ba93d4f6480f')"
+      }
+    },
+    {
+      "case_id": "R1-1",
+      "question": "Which organizations opposed the $28 construction minimum wage bill, and what did they say?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3480.732958007138,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q010\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The user is asking for organizations that lobbied against a specific measure ($28 construction minimum wage bill).\", \"parameters\": {\"measure\": \"$28 construction minimum wage bill\"}}]}')], usage=RequestUsage(input_tokens=636, cache_read_tokens=425, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 39, 932236, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 39, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-9U7mpRwxP4Rd3HY2NbmHdJlkVqkNDQuF', finish_reason='stop', run_id='01a082cd-20a8-715a-8293-b6cfe6447e79', conversation_id='01a082cd-20a8-715a-8293-b6ce77ba2fae')"
+      }
+    },
+    {
+      "case_id": "R1-2",
+      "question": "Which lawmakers spoke against the HOA fee cap bill?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4871.953042049427,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q011\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for lawmakers\\' positions on a specific bill (HOA fee cap bill), which requires the \\'measure\\' parameter.\"}]}')], usage=RequestUsage(input_tokens=832, cache_read_tokens=623, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 44, 797671, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 44, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JXdLpWnn3pwWxMxnYeDlAofgg0xUCmMp', finish_reason='stop', run_id='01a082cd-2e41-7310-b0f6-613ec9c8191f', conversation_id='01a082cd-2e41-7310-b0f6-613d7640a61a')"
+      }
+    },
+    {
+      "case_id": "R1-3",
+      "question": "Who endorsed Proposition 38?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4908.324207994156,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q012\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for endorsements for Proposition 38; the measure parameter is \\'Proposition 38\\'.\"}]}')], usage=RequestUsage(input_tokens=823, cache_read_tokens=616, output_tokens=61), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 49, 710131, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 49, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-8zeEZv1XY69GMYe2lGuNTRVXCUKzOEwW', finish_reason='stop', run_id='01a082cd-414a-77ce-b0ab-cf7ddc1e3af1', conversation_id='01a082cd-414a-77ce-b0ab-cf7c45ad559d')"
+      }
+    },
+    {
+      "case_id": "R1-4",
+      "question": "Which unions opposed the housing bill that would raise wages to $28?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1841.7016249732114,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q013\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for organizations (unions) that opposed a specific measure (housing bill).\", \"parameters\": {\"measure\": \"housing bill that would raise wages to $28\"}}]}')], usage=RequestUsage(input_tokens=427, cache_read_tokens=382, output_tokens=81), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 51, 555813, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 51, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-MVj9WBgTzIZq1usNTpOLQ3m9r37Yg5Ui', finish_reason='stop', run_id='01a082cd-5475-7429-aaef-5e9bed230270', conversation_id='01a082cd-5475-7429-aaef-5e9a68d503f9')"
+      }
+    },
+    {
+      "case_id": "R2-1",
+      "question": "Which organizations lobbied on the Uber insurance law?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3187.1645000064746,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q014\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The user is asking for organizations that lobbied on a specific measure (Uber insurance law).\", \"parameters\": {\"measure\": \"Uber insurance law\"}}]}')], usage=RequestUsage(input_tokens=618, cache_read_tokens=417, output_tokens=70), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 54, 743492, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 54, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-1CAMeWdjECeMs0QbeBu3mK0PBxpAFrCp', finish_reason='stop', run_id='01a082cd-5ba7-744f-ac05-9713624a76ab', conversation_id='01a082cd-5ba7-744f-ac05-9712574da54e')"
+      }
+    },
+    {
+      "case_id": "R2-2",
+      "question": "What did tribes argue in the cardroom blackjack dispute?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5081.534083001316,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q015\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for arguments regarding a specific dispute; \\'cardroom blackjack dispute\\' is the literal seed phrase for the entity dossier.\"}]}')], usage=RequestUsage(input_tokens=855, cache_read_tokens=638, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 59, 822672, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 59, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-WphxlCsw2S69Q15yyRLvOTgQgX0Faa7s', finish_reason='stop', run_id='01a082cd-681a-76ba-9939-5570cdf76427', conversation_id='01a082cd-681a-76ba-9939-556fbfde46ef')"
+      }
+    },
+    {
+      "case_id": "R3-1",
+      "question": "Which organizations funded the campaign for Proposition 38?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3175.910916994326,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q016\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for organizations that funded the campaign for Proposition 38.\", \"parameters\": {\"campaign_or_target\": \"Proposition 38\"}}]}')], usage=RequestUsage(input_tokens=607, cache_read_tokens=418, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 3, 1566, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 2, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-U90wtqRa9HLPF0ftgxP7LD2NryO0TE4n', finish_reason='stop', run_id='01a082cd-7bf4-7662-8045-a8bceb8022f4', conversation_id='01a082cd-7bf4-7662-8045-a8bb07d15161')"
+      }
+    },
+    {
+      "case_id": "R3-2",
+      "question": "How much did the construction trades spend opposing the wage bill?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4797.289083013311,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q017\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for lobbying spending by construction trades on a specific measure, \\'wage bill\\'.\"}]}')], usage=RequestUsage(input_tokens=840, cache_read_tokens=631, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 7, 794526, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 7, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-XxvP06QjSye7kA3iLfdsxxOXSI8B7nhE', finish_reason='stop', run_id='01a082cd-885c-72ab-a591-c61618b66583', conversation_id='01a082cd-885c-72ab-a591-c6152f3b9bcf')"
+      }
+    },
+    {
+      "case_id": "R3-3",
+      "question": "Which organizations funded a given ballot-measure campaign, and on what dates?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5806.144625006709,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q018\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for organizations that funded a given ballot-measure campaign; \\'ballot-measure campaign\\' is the extracted seed phrase for the campaign_or_target parameter.\"}]}')], usage=RequestUsage(input_tokens=857, cache_read_tokens=626, output_tokens=72), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 13, 602588, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 13, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-Tloz3AqUzvHPDGEzjuMRWQJVJyoyOyDK', finish_reason='stop', run_id='01a082cd-9b19-76dc-8c9e-fc5886227d94', conversation_id='01a082cd-9b19-76dc-8c9e-fc579a2a523e')"
+      }
+    },
+    {
+      "case_id": "M1-1",
+      "question": "Which policy areas has Uber engaged with in California?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5290.863250032999,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q019\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for policy areas an actor (Uber) has engaged with. The actor parameter is \\'Uber\\'.\"}]}')], usage=RequestUsage(input_tokens=866, cache_read_tokens=632, output_tokens=62), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 18, 890336, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 18, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-vabt3MhPiY2mlGe1XmubvBolypnoB36Q', finish_reason='stop', run_id='01a082cd-b1c7-7039-b315-7849cc3632be', conversation_id='01a082cd-b1c7-7039-b315-784833a6a1fb')"
+      }
+    },
+    {
+      "case_id": "M1-2",
+      "question": "Which policy areas do the construction trade unions appear in?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3611.9837919832207,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q020\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The user is asking for policy areas associated with a specific topic (construction trade unions).\", \"parameters\": {\"topic\": \"construction trade unions\"}}]}')], usage=RequestUsage(input_tokens=615, cache_read_tokens=418, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 22, 506923, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 22, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-MYkexPUODwNH4UaKYC1Gdn780UROhhlG', finish_reason='stop', run_id='01a082cd-c672-712c-bb31-10dc102c075b', conversation_id='01a082cd-c672-712c-bb31-10db6157fa07')"
+      }
+    },
+    {
+      "case_id": "M2-1",
+      "question": "Which organizations took the same side as the construction unions on the wage bill?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1825.401917041745,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q021\", \"query_name\": \"same_side\", \"rationale\": \"The user is asking for entities that shared a position with a specific group on a specific measure.\", \"parameters\": {\"actor\": \"construction unions\", \"organization_sub_label\": \"measure\"}}] }')], usage=RequestUsage(input_tokens=427, cache_read_tokens=382, output_tokens=83), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 24, 334025, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 24, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-1ke8i5b8NjNLDAqUIVowjVbj32LgPy7K', finish_reason='stop', run_id='01a082cd-d48e-777e-8dc4-34e129008c59', conversation_id='01a082cd-d48e-777e-8dc4-34e0af74d1f5')"
+      }
+    },
+    {
+      "case_id": "M2-2",
+      "question": "Which lawmakers have opposed the same bills as Uber?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4810.01420901157,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q022\", \"query_name\": \"same_side\", \"rationale\": \"The user is asking for lawmakers who have taken a position similar to Uber on legislative measures. The actor is \\'Uber\\'.\"}]}')], usage=RequestUsage(input_tokens=828, cache_read_tokens=623, output_tokens=61), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 29, 138380, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 29, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-V0QHjKfJwinyJvxfznJ293mo4deJxqBP', finish_reason='stop', run_id='01a082cd-dbb0-74b2-932f-10eb51f8db9d', conversation_id='01a082cd-dbb0-74b2-932f-10eafcac905d')"
+      }
+    },
+    {
+      "case_id": "M2-3",
+      "question": "Which organizations have opposed the same measures more than once?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 6248.77645802917,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q023\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question is an open-universe query seeking to identify organizations based on a pattern of behavior (opposing measures) without providing a specific actor or topic; since no specific seed or topic is provided to anchor the search, it is an open-universe absence of parameters.\", \"parameters\": {\"topic\": \"*\"}}]}')], usage=RequestUsage(input_tokens=891, cache_read_tokens=636, output_tokens=101), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 35, 390402, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 35, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-yhltYfxGLFNrfyFOFdeqyo0jwPDvytxv', finish_reason='stop', run_id='01a082cd-ee7a-737e-9f6f-c48b112e946b', conversation_id='01a082cd-ee7a-737e-9f6f-c48a977fed05')"
+      }
+    },
+    {
+      "case_id": "M3-1",
+      "question": "Which organizations are reported alongside Gavin Newsom in coverage of the climate deal?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3497.888082987629,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q024\", \"query_name\": \"co_mention\", \"rationale\": \"The question asks for entities reported alongside a specific actor (Gavin Newsom) within a specific context (climate deal).\", \"parameters\": {\"actor\": \"Gavin Newsom\", \"context\": \"climate deal\"}}]}')], usage=RequestUsage(input_tokens=624, cache_read_tokens=421, output_tokens=79), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 38, 888753, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 38, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-Q9T1Ci9LjS4odX0hccMaI9nfn98x9dvf', finish_reason='stop', run_id='01a082ce-06e3-747f-935a-d9e2d18da772', conversation_id='01a082ce-06e3-747f-935a-d9e1be0266ff')"
+      }
+    },
+    {
+      "case_id": "M3-2",
+      "question": "Who else appears in reporting on the Bay Area city project?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5638.107042002957,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q025\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for entities related to the \\'Bay Area city project\\'. Since \\'co_mention\\' requires a specific actor and the input is a project/topic, \\'entity_dossier\\' is the most appropriate way to retrieve information related to that seed phrase.\"}]}')], usage=RequestUsage(input_tokens=868, cache_read_tokens=625, output_tokens=93), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 44, 522584, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 44, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JQvPmkgCUfD56Cyx88wPauB6BJf5jimY', finish_reason='stop', run_id='01a082ce-148d-77ac-a984-0e2d2c111111', conversation_id='01a082ce-148d-77ac-a984-0e2cd92c6d51')"
+      }
+    },
+    {
+      "case_id": "M4-1",
+      "question": "Which bills has a given candidate taken a position on, among those whose campaign a given industry funded?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5579.64049995644,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q026\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for the legislative positions (footprint) of a candidate (actor) in the context of specific funding/industry influence.\"}]}')], usage=RequestUsage(input_tokens=910, cache_read_tokens=649, output_tokens=67), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 50, 104512, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 50, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-IioXvAVzTYObyVFHB8pWM3jBwbsOOQTs', finish_reason='stop', run_id='01a082ce-2a93-76eb-b357-11ad38036426', conversation_id='01a082ce-2a93-76eb-b357-11aca6889155')"
+      }
+    },
+    {
+      "case_id": "M4-2",
+      "question": "Which funders of a given campaign also lobbied on bills that campaign's candidate voted on?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3384.4977089902386,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q027\", \"query_name\": \"defer\", \"rationale\": \"The question requires identifying specific campaign funders and candidates to establish an actor, but the query cannot be executed without the specific entity names (seed) provided in the prompt.\"}]}')], usage=RequestUsage(input_tokens=637, cache_read_tokens=426, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 53, 491215, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 53, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-LZW1MyyuFZVO52h1XZfQMmyegN83Cf2j', finish_reason='stop', run_id='01a082ce-405f-728b-9452-f1e3e7b1f4e1', conversation_id='01a082ce-405e-739a-802b-483ac9a3e3cf')"
+      }
+    },
+    {
+      "case_id": "M5-1",
+      "question": "How did each senator vote on the ADA lawsuit bill that died?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1595.4361659823917,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q028\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for voting records on a specific legislative measure (ADA lawsuit bill).\", \"parameters\": {\"measure\": \"ADA lawsuit bill\"}}] }')], usage=RequestUsage(input_tokens=425, cache_read_tokens=382, output_tokens=71), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 55, 88849, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 55, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JgV1jOqBRfNTkohJDU0l8W7IYGWL1cae', finish_reason='stop', run_id='01a082ce-4d97-72f3-9016-c4c475188a95', conversation_id='01a082ce-4d97-72f3-9016-c4c34ee6dd72')"
+      }
+    },
+    {
+      "case_id": "M5-2",
+      "question": "Which lawmakers most often vote against their own party?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1566.3567079463974,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q029\", \"query_name\": \"decline\", \"rationale\": \"The question asks for a comparative analysis of voting patterns across party lines, which requires historical roll call data and party affiliation mapping not available in the current query selection.\"}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=72), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 56, 653277, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 56, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-5eooKEjUK2QoTTVirRXreh3avD0oM9N2', finish_reason='stop', run_id='01a082ce-53d3-7198-8ebb-73b4dc2584bc', conversation_id='01a082ce-53d3-7198-8ebb-73b37c515d92')"
+      }
+    },
+    {
+      "case_id": "M5-3",
+      "question": "Which senators did not vote on the ADA lawsuit bill?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3270.2522079925984,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q030\", \"query_name\": \"defer\", \"rationale\": \"The question is a closed-universe negation regarding a roll call roster, which must be deferred because the roster or roll call is missing.\"}]}')], usage=RequestUsage(input_tokens=635, cache_read_tokens=418, output_tokens=62), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 59, 923176, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 59, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-i6QiyrZvfm8VLLOiOWoOSp8IaIdQZ1ox', finish_reason='stop', run_id='01a082ce-59f1-75da-ade8-fa097fad2f5f', conversation_id='01a082ce-59f1-75da-ade8-fa08a62a57a3')"
+      }
+    },
+    {
+      "case_id": "D-1",
+      "question": "What did the Texas legislature do about housing this year?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3847.9972910135984,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q031\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for legislative activity regarding a specific topic (housing) within a timeframe (this year), which maps to a sweep of a policy area.\", \"parameters\": {\"topic\": \"housing\", \"since_date\": \"2026-01-01\"}}]}')], usage=RequestUsage(input_tokens=641, cache_read_tokens=418, output_tokens=95), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 3, 772572, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 3, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-N5unA9DqoYJKhBMamxteHMoiN0IwmwYQ', finish_reason='stop', run_id='01a082ce-66b7-709d-a9df-f231fee2dd7a', conversation_id='01a082ce-66b7-709d-a9df-f2305d7251da')"
+      }
+    },
+    {
+      "case_id": "D-2",
+      "question": "Why did Newsom really sign the Uber ballot-measure deal?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1498.5474580316804,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q032\", \"query_name\": \"decline\", \"rationale\": \"The question asks for motivation/intent (\\'why did he really\\') which is an open-universe interpretation beyond the scope of the provided data schema.\"}]}')], usage=RequestUsage(input_tokens=424, cache_read_tokens=382, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 5, 270467, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 5, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-5q4U3ghRK2j09UjIaEnbYautTbyjtd6g', finish_reason='stop', run_id='01a082ce-75bf-76d3-bcde-6ebd5297cba1', conversation_id='01a082ce-75bf-76d3-bcde-6ebc6879f97f')"
+      }
+    },
+    {
+      "case_id": "D-3",
+      "question": "Should I vote yes on Proposition 38?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 3107.668707962148,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q033\", \"query_name\": \"decline\", \"rationale\": \"The question asks for a personal voting recommendation, which is a subjective opinion and outside the scope of data retrieval.\"}]}')], usage=RequestUsage(input_tokens=626, cache_read_tokens=417, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 8, 379752, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 8, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-6S2b1HfwD7uQT9veAazxG6y23L4jCxOs', finish_reason='stop', run_id='01a082ce-7b9a-704a-b5ea-a0e738b96218', conversation_id='01a082ce-7b9a-704a-b5ea-a0e6716e6790')"
+      }
+    },
+    {
+      "case_id": "D-4",
+      "question": "Will the HOA fee cap bill pass?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1445.1405419968069,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q034\", \"query_name\": \"defer\", \"rationale\": \"The question asks for a prediction of a legislative outcome; the available tools only provide historical data and current footprints, not predictive modeling.\"}]}')], usage=RequestUsage(input_tokens=420, cache_read_tokens=382, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 9, 824955, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 9, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-8JQMQBeT6alJ3Kn4Pg4f9fXGlhPPOGlD', finish_reason='stop', run_id='01a082ce-87be-7607-a3cc-42160a809b27', conversation_id='01a082ce-87be-7607-a3cc-42157a6969ff')"
+      }
+    },
+    {
+      "case_id": "D-5",
+      "question": "Which California legislators are bought by tech money?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4932.552999991458,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q035\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for campaign contributions from tech money to legislators; \\'tech\\' is the target sector for the campaign_funding query.\"}]}')], usage=RequestUsage(input_tokens=837, cache_read_tokens=624, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 14, 753830, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 14, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-nb74IkqPMTW4dvdraRYGyDbCKKwPkKrt', finish_reason='stop', run_id='01a082ce-8d63-72d0-be6b-fecf9ee803f3', conversation_id='01a082ce-8d63-72d0-be6b-fece21f63f18')"
+      }
+    },
+    {
+      "case_id": "D-6",
+      "question": "Who are the family members of a given legislator?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1295.1075839810073,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q036\", \"query_name\": \"decline\", \"rationale\": \"primary-schema tenure probes are outside these live query selections\"}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=51), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 16, 48673, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 16, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-l0iqVtXunJ7EHI6UBJ2Ym2kShzkr7Hkp', finish_reason='stop', run_id='01a082ce-a0a7-7061-843d-6b2f42ab739f', conversation_id='01a082ce-a0a7-7061-843d-6b2ec1cc0153')"
+      }
+    },
+    {
+      "case_id": "D-7",
+      "question": "Which organizations did not fund the campaign against Proposition 38?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1156.0077090398408,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q037\", \"query_name\": \"decline\", \"rationale\": \"Decline open-universe absence.\"}]}')], usage=RequestUsage(input_tokens=425, cache_read_tokens=382, output_tokens=46), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 17, 208934, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 17, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-woTSvh6KnM9zuQCDhnzYei3dQMpA9zst', finish_reason='stop', run_id='01a082ce-a5b7-73d4-a0c0-b40348e82057', conversation_id='01a082ce-a5b7-73d4-a0c0-b40235d22df4')"
+      }
+    },
+    {
+      "case_id": "F-1",
+      "question": "How did each senator vote on the ADA lawsuit bill?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4787.875915993936,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q038\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for voting records on the \\'ADA lawsuit bill\\', which serves as the measure parameter for the roll_call query.\"}]}')], usage=RequestUsage(input_tokens=819, cache_read_tokens=610, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 21, 991846, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 21, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-RHasDygrlndOK80sc4pLsxm6UpFyMrYE', finish_reason='stop', run_id='01a082ce-aa3b-74e3-bcd0-1e03cb4499f0', conversation_id='01a082ce-aa3b-74e3-bcd0-1e02ed199604')"
+      }
+    },
+    {
+      "case_id": "F-2",
+      "question": "Who were the largest donors to the 2026 governor's race?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 5443.36450000992,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q039\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for donors to the 2026 governor\\'s race; \\'2026 governor\\'s race\\' is the target.\", \"parameters\": {\"campaign_or_target\": \"2026 governor\\'s race\"}}]}')], usage=RequestUsage(input_tokens=839, cache_read_tokens=616, output_tokens=88), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 27, 439220, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 27, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-HP2hTCAIvMuqb6Oagdco1gLuKvuSqhGM', finish_reason='stop', run_id='01a082ce-bcef-705d-8195-430517afeb63', conversation_id='01a082ce-bcef-705d-8195-430481460d80')"
+      }
+    },
+    {
+      "case_id": "F-3",
+      "question": "Who represented Assembly District 52 before and after the 2021 redistricting?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1365.6586250290275,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q040\", \"query_name\": \"defer\", \"rationale\": \"District questions require cycle_year and are deferred because the live news graph lacks District and tenure data.\"}]}')], usage=RequestUsage(input_tokens=431, cache_read_tokens=382, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 28, 804621, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 28, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-YGAI2wNgXNER1sMBuSS31rfhIMKA88wS', finish_reason='stop', run_id='01a082ce-d232-74ac-9407-28e1edb93d01', conversation_id='01a082ce-d232-74ac-9407-28e01738c412')"
+      }
+    },
+    {
+      "case_id": "F-4",
+      "question": "Which Assembly members did not vote on AB 1165?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "TypeError: 'RunUsage' object is not callable",
+        "latency_ms": 1654.0921670384705,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q041\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for a roll call result regarding a specific measure (AB 1165).\", \"parameters\": {\"measure\": \"AB 1165\"}}]}')], usage=RequestUsage(input_tokens=426, cache_read_tokens=382, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 30, 457637, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 30, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-A68hH9FyanVavnHfPxBHV49MCEZ615qT', finish_reason='stop', run_id='01a082ce-d788-75c8-aae7-99c510e52ff7', conversation_id='01a082ce-d788-75c8-aae7-99c496969032')"
+      }
+    },
+    {
+      "case_id": "C-1",
+      "question": "Which bills did the Assembly Appropriations Committee hear?",
+      "status": "missing_selection",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4718.281166977249,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q042\", \"query_name\": \"committee_activity\", \"rationale\": \"The question asks for activities of the Assembly Appropriations Committee, which maps to committee_activity with \\'Assembly Appropriations Committee\\' as the committee parameter.\"}]}')], usage=RequestUsage(input_tokens=809, cache_read_tokens=602, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 35, 173460, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 35, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oqzzeStbZyIB68yB2jGFpcwqugZgM9Vf', finish_reason='stop', run_id='01a082ce-ddfe-7774-a714-be1afdc370b1', conversation_id='01a082ce-ddfe-7774-a714-be197958b01b')"
+      }
+    }
+  ]
+}

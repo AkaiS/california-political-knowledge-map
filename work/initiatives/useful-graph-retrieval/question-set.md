@@ -4,6 +4,12 @@ Authored by [Decide the target question set](issues/02-target-question-set.md).
 The decisions this set embodies live in that ticket; this document holds the
 targets themselves.
 
+For issue 05's construction experiment, use the
+[questions grounded in the populated graph](query-construction/README.md).
+Authored on 2026-09-08 at the maintainer's request, that set retains these
+families with concrete, retrievable subjects and executed reference Cypher.
+This document retains the broader targets and the Declined and Deferred controls.
+
 Additions may be made by anyone, including an agent. **Removals and rewordings
 are the maintainer's alone** — a retrieval mode that cannot answer a question is
 not fixed by editing the question.

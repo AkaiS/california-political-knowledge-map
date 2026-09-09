@@ -1,0 +1,2126 @@
+{
+  "prototype": "composable semantic triples",
+  "as_of_date": "2026-09-08",
+  "started_at": "2026-09-09T02:37:52.495656+00:00",
+  "finished_at": "2026-09-09T02:38:33.328001+00:00",
+  "duration_seconds": 40.832345,
+  "model": "gemma4:26b",
+  "telemetry": "local only; external export disabled through prototype test context",
+  "source_hashes": {
+    "src/knowledge_map/prototypes/composable_triples/inputs/cases.yaml": "b5670e9b25e047d32feade4b2b3ab46698a2a50a558f2c90a577391441ac7121",
+    "src/knowledge_map/prototypes/composable_triples/inputs/verified-results.json": "36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a",
+    "src/knowledge_map/prototypes/composable_triples/inputs/prior-comparison.md": "2c51c10ee24b5686d6020d9528ab16aa2e236f2dcf80a56ae64a35a901df7377",
+    "news-ontology.md": "e1c2e5fd6acaca991c8f87eb6f240831963079fd5b6faaa65d5e6c49ce2befd1"
+  },
+  "arm_design": {
+    "oracle": "Evaluator-authored semantic shape; binder sees original question and derived slots, never reference values, Cypher, rows, or evidence.",
+    "two-stage": "Pattern model call followed by a binder model call whose Pydantic schema is derived from the validated pattern.",
+    "single": "One model call emits a pattern and generic slot/value list; compiler derives slots afterward. This intentionally lacks the binder arm's pattern-specific output schema.",
+    "binding_resolution": "Literal extraction plus canonical Policy Area vocabulary supplied equally to all arms; no graph candidate-resolution tool."
+  },
+  "records": [
+    {
+      "case_id": "C-M2-01",
+      "opaque_model_id": "Q16",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+      "arm": "oracle",
+      "pattern_stage": {
+        "status": "valid",
+        "source": "evaluator_authored_oracle_structure",
+        "pattern": {
+          "nodes": [
+            {
+              "name": "anchor",
+              "label": "Organization"
+            },
+            {
+              "name": "bill",
+              "label": "Bill"
+            },
+            {
+              "name": "peer",
+              "label": "Organization"
+            }
+          ],
+          "triples": [
+            {
+              "subject": "anchor",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "bill",
+              "claim_name": "anchor_support"
+            },
+            {
+              "subject": "peer",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "bill",
+              "claim_name": "peer_support"
+            }
+          ],
+          "constraints": [
+            {
+              "variable": "anchor",
+              "property": "name",
+              "operator": "eq",
+              "slot": "anchor_name",
+              "description": "Exact anchor Organization name"
+            },
+            {
+              "variable": "bill",
+              "property": "name",
+              "operator": "eq",
+              "slot": "bill_name",
+              "description": "Exact Bill Designation"
+            },
+            {
+              "variable": "bill",
+              "property": "session",
+              "operator": "eq",
+              "slot": "session",
+              "description": "Exact legislative session"
+            }
+          ],
+          "inequalities": [
+            {
+              "left_variable": "anchor",
+              "right_variable": "peer",
+              "property": "id"
+            }
+          ],
+          "return_targets": [
+            {
+              "variable": "peer",
+              "fields": [
+                "id",
+                "name"
+              ]
+            },
+            {
+              "variable": "bill",
+              "fields": [
+                "id",
+                "name"
+              ]
+            }
+          ],
+          "aggregate": null,
+          "rationale": "Require two distinct Organizations to share the same Bill and same explicit side."
+        },
+        "contains_expected_values": false
+      },
+      "binding_stage": {
+        "status": "valid",
+        "output": {
+          "anchor_name": "Walt Disney",
+          "bill_name": "AB 186",
+          "session": "2025-2026"
+        },
+        "usage": {
+          "input_tokens": 3484,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 41,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 11402.5,
+        "transport_attempts": [
+          {
+            "stage": "oracle_binding",
+            "opaque_id": "Q16",
+            "status_code": 200,
+            "latency_ms": 10438.8,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+                },
+                {
+                  "role": "user",
+                  "content": "Opaque question id: Q16\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nValidated required bindings: {\"anchor_name\": \"Exact anchor Organization name\", \"bill_name\": \"Exact Bill Designation\", \"session\": \"Exact legislative session\"}"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 700,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "PatternBindings",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "anchor_name": {
+                        "description": "Exact anchor Organization name",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "bill_name": {
+                        "description": "Exact Bill Designation",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "session": {
+                        "description": "Exact legislative session",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "anchor_name",
+                      "bill_name",
+                      "session"
+                    ],
+                    "title": "PatternBindings",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\"anchor_name\": \"Walt Disney\", \"bill_name\": \"AB 186\", \"session\": \"2025-2026\"}"
+                  }
+                }
+              ],
+              "created": 1788921483,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 41,
+                "prompt_tokens": 3484,
+                "total_tokens": 3525,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              },
+              "id": "chatcmpl-ZJHQOacWiyygRsrX78yd5855OfmQacqG",
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 3484,
+                "prompt_ms": 9537.275,
+                "prompt_per_token_ms": 2.7374497703788747,
+                "prompt_per_second": 365.30350650474065,
+                "predicted_n": 41,
+                "predicted_ms": 680.733,
+                "predicted_per_token_ms": 16.603243902439022,
+                "predicted_per_second": 60.22919411869265
+              }
+            }
+          }
+        ]
+      },
+      "compiled": {
+        "cypher": "MATCH (anchor:Organization)-[_rel_0:LOBBIED_FOR]->(bill:Bill),\n      (peer:Organization)-[_rel_1:LOBBIED_FOR]->(bill:Bill)\nWHERE anchor.name = $anchor_name AND bill.name = $bill_name AND bill.session = $session AND anchor.id <> peer.id\nRETURN DISTINCT peer.id AS peer_id,\n       peer.name AS peer_name,\n       bill.id AS bill_id,\n       bill.name AS bill_name,\n       [{kind:'anchor_support',ids:_rel_0.chunks},{kind:'peer_support',ids:_rel_1.chunks}] AS evidence_groups",
+        "required_slots": [
+          "anchor_name",
+          "bill_name",
+          "session"
+        ],
+        "slot_descriptions": {
+          "anchor_name": "Exact anchor Organization name",
+          "bill_name": "Exact Bill Designation",
+          "session": "Exact legislative session"
+        }
+      },
+      "bindings": {
+        "anchor_name": "Walt Disney",
+        "bill_name": "AB 186",
+        "session": "2025-2026"
+      },
+      "execution_stage": {
+        "status": "executed",
+        "explain_query_type": "r",
+        "query_type": "r",
+        "explain_latency_ms": 23.6,
+        "query_latency_ms": 9.6,
+        "row_count": 3,
+        "rows": [
+          {
+            "peer_id": "Organization:creative-artists-agency",
+            "peer_name": "Creative Artists Agency",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "bill_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "anchor_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "peer_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ]
+              }
+            ]
+          },
+          {
+            "peer_id": "Organization:skydance",
+            "peer_name": "SkyDance",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "bill_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "anchor_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "peer_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          },
+          {
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra",
+            "peer_name": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "bill_name": "AB 186",
+            "evidence_groups": [
+              {
+                "kind": "anchor_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              },
+              {
+                "kind": "peer_support",
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ]
+              }
+            ]
+          }
+        ],
+        "stage_latency_ms": 36.0
+      },
+      "resolved_evidence": [
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10",
+          "text": "off the refund within two years, instead of five.\n\nIf approved, Assembly Bill 186 would cost the state up to $170 million in annual tax revenue, according to a legislative analysis of Assembly Bill 186.\n\nA slew of lobbyists representing motion picture studios, such as SkyDance and Walt Disney, as well as labor unions, such as the Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA), supported Assembly Bill 186 during a budget hearing Sunday.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        },
+        {
+          "chunk_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7",
+          "text": "pressure to make billionaires and corporations pay more.\n\nHollywood advocates were infuriated, arguing corporate tax credit cap threatened to hamstring film tax credit. Bryan Lourd, CEO of the Creative Artists Agency, urged lawmakers earlier this month to exempt motion picture companies from the cap.\n\n\u201cWithout Assembly Bill 186, we risk destabilizing film tax credit that is critical to keeping film and television production in California and the thousands of jobs film tax credit supports,\u201d Bryan Lourd said in a letter.\n\n",
+          "article_id": "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/",
+          "article_title": "Saving Hollywood? California to restore access to tax break for independent films",
+          "published_date": "2026-08-31T12:00:00Z"
+        }
+      ],
+      "resolved_evidence_count": 2,
+      "evaluator_reference": {
+        "id": "C-M2-01",
+        "family": "M2",
+        "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+        "row_count": 3,
+        "rows": [
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "SkyDance",
+            "peer_id": "Organization:skydance"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "peer_support"
+              }
+            ],
+            "peer": "Creative Artists Agency",
+            "peer_id": "Organization:creative-artists-agency"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M2-01",
+      "opaque_model_id": "Q16",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+      "arm": "two-stage",
+      "pattern_stage": {
+        "status": "compiler_unsupported",
+        "output": {
+          "nodes": [
+            {
+              "name": "bill",
+              "label": "Bill"
+            },
+            {
+              "name": "org_disney",
+              "label": "Organization"
+            },
+            {
+              "name": "org_other",
+              "label": "Organization"
+            }
+          ],
+          "triples": [
+            {
+              "subject": "bill",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "org_disney",
+              "claim_name": "lobbying_for_ab186_disney"
+            },
+            {
+              "subject": "bill",
+              "predicates": [
+                "LOBBIED_FOR"
+              ],
+              "object": "org_other",
+              "claim_name": "lobbying_for_ab186_other"
+            }
+          ],
+          "constraints": [],
+          "inequalities": [],
+          "return_targets": [
+            {
+              "variable": "org_other",
+              "fields": [
+                "name"
+              ]
+            }
+          ],
+          "aggregate": null,
+          "rationale": "The question asks for organizations (other than Walt Disney) that lobbied for a specific bill (AB 186) in a specific session (2025-2026). We identify the Bill node by its designation (AB 186) and session, then find all organizations connected via the LOBBIED_FOR relationship. We exclude the organization identified as Walt Disney by an id inequality (implied by 'other') and return the names of the remaining organizations."
+        },
+        "usage": {
+          "input_tokens": 3609,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 379,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 13983.7,
+        "transport_attempts": [
+          {
+            "stage": "pattern",
+            "opaque_id": "Q16",
+            "status_code": 200,
+            "latency_ms": 13900.5,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "Select a small connected semantic graph pattern for the question. Do not write Cypher and do not include binding values.\nDeclare named node variables and directed triples from the supplied persisted News Ontology. Reusing a node variable is a join. Put alternative predicates on one triple only when they have the same endpoints, provenance mechanism, and semantic role. Add equality or half-open date constraints whose slot names describe values that must come from the question. Add an id inequality when two roles must be distinct. Return only variables and fields asked for by the question. Use the optional aggregate only for a count of distinct project ids grouped by one variable, while collecting those same source ids. Give every semantic claim edge a stable claim_name so the compiler can attach its own evidence. HAS_CHUNK is structural.\n\nThe compiler, not you, owns relationship direction, Cypher, labels, provenance traversal, parameterization, and execution. Supported constraint properties are name, session, title, and published_date. Supported operations are eq, date_gte, date_lt. The pattern must stay within the output schema's labels and predicates.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+                },
+                {
+                  "role": "user",
+                  "content": "Opaque question id: Q16\nQuestion: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 1800,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "PatternPlan",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "nodes": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "pattern": "^[a-z][a-z0-9_]*$",
+                              "type": "string"
+                            },
+                            "label": {
+                              "enum": [
+                                "Politician",
+                                "Organization",
+                                "LaborUnion",
+                                "PAC",
+                                "Bill",
+                                "Prop",
+                                "Campaign",
+                                "LegislativeEvent",
+                                "Committee",
+                                "NewsArticle",
+                                "Chunk",
+                                "PolicyArea"
+                              ],
+                              "title": "NodeLabel",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "label"
+                          ],
+                          "title": "NodeVar",
+                          "type": "object"
+                        },
+                        "minItems": 2,
+                        "type": "array"
+                      },
+                      "triples": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "subject": {
+                              "type": "string"
+                            },
+                            "predicates": {
+                              "items": {
+                                "enum": [
+                                  "MENTIONED_IN",
+                                  "HAS_CHUNK",
+                                  "DISCUSSES_TOPIC",
+                                  "DECLARED_STANCE",
+                                  "ENDORSED",
+                                  "LOBBIED_FOR",
+                                  "LOBBIED_AGAINST",
+                                  "ABOUT_TOPIC",
+                                  "FUNDED",
+                                  "CAMPAIGN_FOR",
+                                  "VOTED_AYE",
+                                  "VOTED_NO",
+                                  "ABSTAINED",
+                                  "ACTION_ON",
+                                  "REFERRED_TO"
+                                ],
+                                "title": "Predicate",
+                                "type": "string"
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            },
+                            "object": {
+                              "type": "string"
+                            },
+                            "claim_name": {
+                              "pattern": "^[a-z][a-z0-9_]*$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "subject",
+                            "predicates",
+                            "object",
+                            "claim_name"
+                          ],
+                          "title": "Triple",
+                          "type": "object"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "constraints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "variable": {
+                              "type": "string"
+                            },
+                            "property": {
+                              "enum": [
+                                "id",
+                                "name",
+                                "session",
+                                "title",
+                                "published_date"
+                              ],
+                              "title": "PropertyName",
+                              "type": "string"
+                            },
+                            "operator": {
+                              "enum": [
+                                "eq",
+                                "date_gte",
+                                "date_lt"
+                              ],
+                              "title": "ConstraintOperator",
+                              "type": "string"
+                            },
+                            "slot": {
+                              "pattern": "^[a-z][a-z0-9_]*$",
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "variable",
+                            "property",
+                            "slot",
+                            "description"
+                          ],
+                          "title": "Constraint",
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "inequalities": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "left_variable": {
+                              "type": "string"
+                            },
+                            "right_variable": {
+                              "type": "string"
+                            },
+                            "property": {
+                              "enum": [
+                                "id",
+                                "name",
+                                "session",
+                                "title",
+                                "published_date"
+                              ],
+                              "title": "PropertyName",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "left_variable",
+                            "right_variable"
+                          ],
+                          "title": "Inequality",
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "return_targets": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "variable": {
+                              "type": "string"
+                            },
+                            "fields": {
+                              "items": {
+                                "enum": [
+                                  "id",
+                                  "name",
+                                  "session",
+                                  "title",
+                                  "published_date"
+                                ],
+                                "title": "PropertyName",
+                                "type": "string"
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "variable",
+                            "fields"
+                          ],
+                          "title": "ReturnTarget",
+                          "type": "object"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "aggregate": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "description": "The only aggregate needed by this batch.",
+                            "properties": {
+                              "group_variable": {
+                                "type": "string"
+                              },
+                              "count_distinct_variable": {
+                                "type": "string"
+                              },
+                              "collect_distinct_variable": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "group_variable",
+                              "count_distinct_variable",
+                              "collect_distinct_variable"
+                            ],
+                            "title": "Aggregate",
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "rationale": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "nodes",
+                      "triples",
+                      "return_targets",
+                      "rationale"
+                    ],
+                    "title": "PatternPlan",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\n  \"nodes\": [\n    {\n      \"name\": \"bill\",\n      \"label\": \"Bill\"\n    },\n    {\n      \"name\": \"org_disney\",\n      \"label\": \"Organization\"\n    },\n    {\n      \"name\": \"org_other\",\n      \"label\": \"Organization\"\n    }\n  ],\n  \"triples\": [\n    {\n      \"subject\": \"bill\",\n      \"predicates\": [\n        \"LOBBIED_FOR\"\n      ],\n      \"object\": \"org_disney\",\n      \"claim_name\": \"lobbying_for_ab186_disney\"\n    },\n    {\n      \"subject\": \"bill\",\n      \"predicates\": [\n        \"LOBBIED_FOR\"\n      ],\n      \"object\": \"org_other\",\n      \"claim_name\": \"lobbying_for_ab186_other\"\n    }\n  ],\n  \"return_targets\": [\n    {\n      \"variable\": \"org_other\",\n      \"fields\": [\n        \"name\"\n      ]\n    }\n  ],\n  \"rationale\": \"The question asks for organizations (other than Walt Disney) that lobbied for a specific bill (AB 186) in a specific session (2025-2026). We identify the Bill node by its designation (AB 186) and session, then find all organizations connected via the LOBBIED_FOR relationship. We exclude the organization identified as Walt Disney by an id inequality (implied by 'other') and return the names of the remaining organizations.\"\n}"
+                  }
+                }
+              ],
+              "created": 1788921498,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 379,
+                "prompt_tokens": 3609,
+                "total_tokens": 3988,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              },
+              "id": "chatcmpl-jgGiqB39gqwaOgz2fbsu0uN0ejc1rXLc",
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 3609,
+                "prompt_ms": 7248.484,
+                "prompt_per_token_ms": 2.0084466611249656,
+                "prompt_per_second": 497.8972154729181,
+                "predicted_n": 379,
+                "predicted_ms": 6331.118,
+                "predicted_per_token_ms": 16.704796833773088,
+                "predicted_per_second": 59.86304472606576
+              }
+            }
+          }
+        ],
+        "error": "PatternError: LOBBIED_FOR cannot connect Bill to Organization"
+      },
+      "binding_stage": null,
+      "execution_stage": {
+        "status": "not_reached"
+      },
+      "evaluator_reference": {
+        "id": "C-M2-01",
+        "family": "M2",
+        "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+        "row_count": 3,
+        "rows": [
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "SkyDance",
+            "peer_id": "Organization:skydance"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "peer_support"
+              }
+            ],
+            "peer": "Creative Artists Agency",
+            "peer_id": "Organization:creative-artists-agency"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "C-M2-01",
+      "opaque_model_id": "Q16",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+      "arm": "single",
+      "pattern_stage": {
+        "status": "compiler_unsupported",
+        "output": {
+          "pattern": {
+            "nodes": [
+              {
+                "name": "bill",
+                "label": "Bill"
+              },
+              {
+                "name": "org_disney",
+                "label": "Organization"
+              },
+              {
+                "name": "org_other",
+                "label": "Organization"
+              }
+            ],
+            "triples": [
+              {
+                "subject": "bill",
+                "predicates": [
+                  "LOBBIED_FOR"
+                ],
+                "object": "org_disney",
+                "claim_name": "lobbying_for_disney"
+              },
+              {
+                "subject": "bill",
+                "predicates": [
+                  "LOBBIED_FOR"
+                ],
+                "object": "org_other",
+                "claim_name": "lobbying_for_other"
+              }
+            ],
+            "constraints": [],
+            "inequalities": [],
+            "return_targets": [
+              {
+                "variable": "org_other",
+                "fields": [
+                  "name"
+                ]
+              }
+            ],
+            "aggregate": null,
+            "rationale": "Find organizations lobbying for the same bill as Disney in a specific session. The bill's designation is 'AB 186' and the session is '2025-2026'. We use an id inequality to ensure the 'other' organization is not Disney."
+          },
+          "bindings": [
+            {
+              "slot": "bill.name",
+              "value": "AB 186"
+            },
+            {
+              "slot": "bill.session",
+              "value": "2025-2026"
+            },
+            {
+              "slot": "org_disney.name",
+              "value": "Walt Disney"
+            },
+            {
+              "slot": "org_other.id",
+              "value": "NOT org_disney.id"
+            }
+          ]
+        },
+        "usage": {
+          "input_tokens": 3667,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 463,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0
+        },
+        "latency_ms": 15312.1,
+        "transport_attempts": [
+          {
+            "stage": "single_pattern_and_bindings",
+            "opaque_id": "Q16",
+            "status_code": 200,
+            "latency_ms": 15304.8,
+            "request": {
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "In one response, select a small connected semantic graph pattern and provide its binding values. Follow the same pattern rules as the two-stage arm. Do not write Cypher or answer from general knowledge. Each binding item names one declared constraint slot, and bindings must exactly cover the pattern's slots. The compiler will validate the pattern first, derive the required slots, then reject missing or extra binding items.\nDeclare named node variables and directed triples from the supplied persisted News Ontology. Reusing a node variable is a join. Put alternative predicates on one triple only when they have the same endpoints, provenance mechanism, and semantic role. Add equality or half-open date constraints whose slot names describe values that must come from the question. Add an id inequality when two roles must be distinct. Return only variables and fields asked for by the question. Use the optional aggregate only for a count of distinct project ids grouped by one variable, while collecting those same source ids. Give every semantic claim edge a stable claim_name so the compiler can attach its own evidence. HAS_CHUNK is structural.\n\nThe compiler, not you, owns relationship direction, Cypher, labels, provenance traversal, parameterization, and execution. Supported constraint properties are name, session, title, and published_date. Supported operations are eq, date_gte, date_lt. The pattern must stay within the output schema's labels and predicates.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+                },
+                {
+                  "role": "user",
+                  "content": "Opaque question id: Q16\nQuestion: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?"
+                }
+              ],
+              "model": "gemma4:26b",
+              "max_tokens": 2200,
+              "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                  "name": "PatternWithBindings",
+                  "schema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "pattern": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "nodes": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "pattern": "^[a-z][a-z0-9_]*$",
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "enum": [
+                                    "Politician",
+                                    "Organization",
+                                    "LaborUnion",
+                                    "PAC",
+                                    "Bill",
+                                    "Prop",
+                                    "Campaign",
+                                    "LegislativeEvent",
+                                    "Committee",
+                                    "NewsArticle",
+                                    "Chunk",
+                                    "PolicyArea"
+                                  ],
+                                  "title": "NodeLabel",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "label"
+                              ],
+                              "title": "NodeVar",
+                              "type": "object"
+                            },
+                            "minItems": 2,
+                            "type": "array"
+                          },
+                          "triples": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "subject": {
+                                  "type": "string"
+                                },
+                                "predicates": {
+                                  "items": {
+                                    "enum": [
+                                      "MENTIONED_IN",
+                                      "HAS_CHUNK",
+                                      "DISCUSSES_TOPIC",
+                                      "DECLARED_STANCE",
+                                      "ENDORSED",
+                                      "LOBBIED_FOR",
+                                      "LOBBIED_AGAINST",
+                                      "ABOUT_TOPIC",
+                                      "FUNDED",
+                                      "CAMPAIGN_FOR",
+                                      "VOTED_AYE",
+                                      "VOTED_NO",
+                                      "ABSTAINED",
+                                      "ACTION_ON",
+                                      "REFERRED_TO"
+                                    ],
+                                    "title": "Predicate",
+                                    "type": "string"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                },
+                                "object": {
+                                  "type": "string"
+                                },
+                                "claim_name": {
+                                  "pattern": "^[a-z][a-z0-9_]*$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "subject",
+                                "predicates",
+                                "object",
+                                "claim_name"
+                              ],
+                              "title": "Triple",
+                              "type": "object"
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "constraints": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "variable": {
+                                  "type": "string"
+                                },
+                                "property": {
+                                  "enum": [
+                                    "id",
+                                    "name",
+                                    "session",
+                                    "title",
+                                    "published_date"
+                                  ],
+                                  "title": "PropertyName",
+                                  "type": "string"
+                                },
+                                "operator": {
+                                  "enum": [
+                                    "eq",
+                                    "date_gte",
+                                    "date_lt"
+                                  ],
+                                  "title": "ConstraintOperator",
+                                  "type": "string"
+                                },
+                                "slot": {
+                                  "pattern": "^[a-z][a-z0-9_]*$",
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "variable",
+                                "property",
+                                "slot",
+                                "description"
+                              ],
+                              "title": "Constraint",
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "inequalities": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "left_variable": {
+                                  "type": "string"
+                                },
+                                "right_variable": {
+                                  "type": "string"
+                                },
+                                "property": {
+                                  "enum": [
+                                    "id",
+                                    "name",
+                                    "session",
+                                    "title",
+                                    "published_date"
+                                  ],
+                                  "title": "PropertyName",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "left_variable",
+                                "right_variable"
+                              ],
+                              "title": "Inequality",
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "return_targets": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "variable": {
+                                  "type": "string"
+                                },
+                                "fields": {
+                                  "items": {
+                                    "enum": [
+                                      "id",
+                                      "name",
+                                      "session",
+                                      "title",
+                                      "published_date"
+                                    ],
+                                    "title": "PropertyName",
+                                    "type": "string"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                }
+                              },
+                              "required": [
+                                "variable",
+                                "fields"
+                              ],
+                              "title": "ReturnTarget",
+                              "type": "object"
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "aggregate": {
+                            "default": null,
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "description": "The only aggregate needed by this batch.",
+                                "properties": {
+                                  "group_variable": {
+                                    "type": "string"
+                                  },
+                                  "count_distinct_variable": {
+                                    "type": "string"
+                                  },
+                                  "collect_distinct_variable": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "group_variable",
+                                  "count_distinct_variable",
+                                  "collect_distinct_variable"
+                                ],
+                                "title": "Aggregate",
+                                "type": "object"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "rationale": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "nodes",
+                          "triples",
+                          "return_targets",
+                          "rationale"
+                        ],
+                        "title": "PatternPlan",
+                        "type": "object"
+                      },
+                      "bindings": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "slot": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "slot",
+                            "value"
+                          ],
+                          "title": "BindingValue",
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "pattern",
+                      "bindings"
+                    ],
+                    "title": "PatternWithBindings",
+                    "type": "object"
+                  }
+                }
+              },
+              "stream": false,
+              "temperature": 0.0,
+              "top_p": null,
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              }
+            },
+            "response": {
+              "choices": [
+                {
+                  "finish_reason": "stop",
+                  "index": 0,
+                  "message": {
+                    "role": "assistant",
+                    "content": "{\n  \"pattern\": {\n    \"nodes\": [\n      {\n        \"name\": \"bill\",\n        \"label\": \"Bill\"\n      },\n      {\n        \"name\": \"org_disney\",\n        \"label\": \"Organization\"\n      },\n      {\n        \"name\": \"org_other\",\n        \"label\": \"Organization\"\n      }\n    ],\n    \"triples\": [\n      {\n        \"subject\": \"bill\",\n        \"predicates\": [\n          \"LOBBIED_FOR\"\n        ],\n        \"object\": \"org_disney\",\n        \"claim_name\": \"lobbying_for_disney\"\n      },\n      {\n        \"subject\": \"bill\",\n        \"predicates\": [\n          \"LOBBIED_FOR\"\n        ],\n        \"object\": \"org_other\",\n        \"claim_name\": \"lobbying_for_other\"\n      }\n    ],\n    \"return_targets\": [\n      {\n        \"variable\": \"org_other\",\n        \"fields\": [\n          \"name\"\n        ]\n      }\n    ],\n    \"rationale\": \"Find organizations lobbying for the same bill as Disney in a specific session. The bill's designation is 'AB 186' and the session is '2025-2026'. We use an id inequality to ensure the 'other' organization is not Disney.\"\n  },\n  \"bindings\": [\n    {\n      \"slot\": \"bill.name\",\n      \"value\": \"AB 186\"\n    },\n    {\n      \"slot\": \"bill.session\",\n      \"value\": \"2025-2026\"\n    },\n    {\n      \"slot\": \"org_disney.name\",\n      \"value\": \"Walt Disney\"\n    },\n    {\n      \"slot\": \"org_other.id\",\n      \"value\": \"NOT org_disney.id\"\n    }\n  ]\n}"
+                  }
+                }
+              ],
+              "created": 1788921513,
+              "model": "gemma4:26b",
+              "system_fingerprint": "b10150-dee2a846b",
+              "object": "chat.completion",
+              "usage": {
+                "completion_tokens": 463,
+                "prompt_tokens": 3667,
+                "total_tokens": 4130,
+                "prompt_tokens_details": {
+                  "cached_tokens": 0
+                }
+              },
+              "id": "chatcmpl-PdRrcCU5YFr0AFtVfVkz19bTMpuMP4hL",
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 3667,
+                "prompt_ms": 7255.528,
+                "prompt_per_token_ms": 1.978600490864467,
+                "prompt_per_second": 505.4077387613968,
+                "predicted_n": 463,
+                "predicted_ms": 7761.854,
+                "predicted_per_token_ms": 16.764263498920087,
+                "predicted_per_second": 59.65069685670459
+              }
+            }
+          }
+        ],
+        "error": "PatternError: LOBBIED_FOR cannot connect Bill to Organization"
+      },
+      "binding_stage": null,
+      "execution_stage": {
+        "status": "not_reached"
+      },
+      "evaluator_reference": {
+        "id": "C-M2-01",
+        "family": "M2",
+        "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+        "row_count": 3,
+        "rows": [
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "Screen Actors Guild-American Federation of Television and Radio Artists (SAG-AFTRA)",
+            "peer_id": "Organization:screen-actors-guild-american-federation-of-television-and-radio-artists-sag-aftra"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "peer_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              }
+            ],
+            "peer": "SkyDance",
+            "peer_id": "Organization:skydance"
+          },
+          {
+            "bill": "AB 186",
+            "bill_id": "Bill:2025-2026:ab-186",
+            "evidence_groups": [
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10"
+                ],
+                "kind": "seed_support"
+              },
+              {
+                "ids": [
+                  "https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7"
+                ],
+                "kind": "peer_support"
+              }
+            ],
+            "peer": "Creative Artists Agency",
+            "peer_id": "Organization:creative-artists-agency"
+          }
+        ]
+      }
+    }
+  ],
+  "transport_attempt_count": 3,
+  "transport_attempts": [
+    {
+      "stage": "oracle_binding",
+      "opaque_id": "Q16",
+      "status_code": 200,
+      "latency_ms": 10438.8,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Fill only the small binding object derived from a validated semantic pattern. Extract exact entity names, Bill Designations, sessions, article titles, and date boundaries from the original question. Do not change the pattern, answer the question, or write Cypher. Use a canonical Policy Area name when the question uses its plain-language equivalent.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+          },
+          {
+            "role": "user",
+            "content": "Opaque question id: Q16\nOriginal question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?\nValidated required bindings: {\"anchor_name\": \"Exact anchor Organization name\", \"bill_name\": \"Exact Bill Designation\", \"session\": \"Exact legislative session\"}"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 700,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "PatternBindings",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "anchor_name": {
+                  "description": "Exact anchor Organization name",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "bill_name": {
+                  "description": "Exact Bill Designation",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "session": {
+                  "description": "Exact legislative session",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "anchor_name",
+                "bill_name",
+                "session"
+              ],
+              "title": "PatternBindings",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"anchor_name\": \"Walt Disney\", \"bill_name\": \"AB 186\", \"session\": \"2025-2026\"}"
+            }
+          }
+        ],
+        "created": 1788921483,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 41,
+          "prompt_tokens": 3484,
+          "total_tokens": 3525,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-ZJHQOacWiyygRsrX78yd5855OfmQacqG",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 3484,
+          "prompt_ms": 9537.275,
+          "prompt_per_token_ms": 2.7374497703788747,
+          "prompt_per_second": 365.30350650474065,
+          "predicted_n": 41,
+          "predicted_ms": 680.733,
+          "predicted_per_token_ms": 16.603243902439022,
+          "predicted_per_second": 60.22919411869265
+        }
+      }
+    },
+    {
+      "stage": "pattern",
+      "opaque_id": "Q16",
+      "status_code": 200,
+      "latency_ms": 13900.5,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Select a small connected semantic graph pattern for the question. Do not write Cypher and do not include binding values.\nDeclare named node variables and directed triples from the supplied persisted News Ontology. Reusing a node variable is a join. Put alternative predicates on one triple only when they have the same endpoints, provenance mechanism, and semantic role. Add equality or half-open date constraints whose slot names describe values that must come from the question. Add an id inequality when two roles must be distinct. Return only variables and fields asked for by the question. Use the optional aggregate only for a count of distinct project ids grouped by one variable, while collecting those same source ids. Give every semantic claim edge a stable claim_name so the compiler can attach its own evidence. HAS_CHUNK is structural.\n\nThe compiler, not you, owns relationship direction, Cypher, labels, provenance traversal, parameterization, and execution. Supported constraint properties are name, session, title, and published_date. Supported operations are eq, date_gte, date_lt. The pattern must stay within the output schema's labels and predicates.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+          },
+          {
+            "role": "user",
+            "content": "Opaque question id: Q16\nQuestion: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 1800,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "PatternPlan",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "nodes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "pattern": "^[a-z][a-z0-9_]*$",
+                        "type": "string"
+                      },
+                      "label": {
+                        "enum": [
+                          "Politician",
+                          "Organization",
+                          "LaborUnion",
+                          "PAC",
+                          "Bill",
+                          "Prop",
+                          "Campaign",
+                          "LegislativeEvent",
+                          "Committee",
+                          "NewsArticle",
+                          "Chunk",
+                          "PolicyArea"
+                        ],
+                        "title": "NodeLabel",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label"
+                    ],
+                    "title": "NodeVar",
+                    "type": "object"
+                  },
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "triples": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "subject": {
+                        "type": "string"
+                      },
+                      "predicates": {
+                        "items": {
+                          "enum": [
+                            "MENTIONED_IN",
+                            "HAS_CHUNK",
+                            "DISCUSSES_TOPIC",
+                            "DECLARED_STANCE",
+                            "ENDORSED",
+                            "LOBBIED_FOR",
+                            "LOBBIED_AGAINST",
+                            "ABOUT_TOPIC",
+                            "FUNDED",
+                            "CAMPAIGN_FOR",
+                            "VOTED_AYE",
+                            "VOTED_NO",
+                            "ABSTAINED",
+                            "ACTION_ON",
+                            "REFERRED_TO"
+                          ],
+                          "title": "Predicate",
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "claim_name": {
+                        "pattern": "^[a-z][a-z0-9_]*$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subject",
+                      "predicates",
+                      "object",
+                      "claim_name"
+                    ],
+                    "title": "Triple",
+                    "type": "object"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "constraints": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "variable": {
+                        "type": "string"
+                      },
+                      "property": {
+                        "enum": [
+                          "id",
+                          "name",
+                          "session",
+                          "title",
+                          "published_date"
+                        ],
+                        "title": "PropertyName",
+                        "type": "string"
+                      },
+                      "operator": {
+                        "enum": [
+                          "eq",
+                          "date_gte",
+                          "date_lt"
+                        ],
+                        "title": "ConstraintOperator",
+                        "type": "string"
+                      },
+                      "slot": {
+                        "pattern": "^[a-z][a-z0-9_]*$",
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "variable",
+                      "property",
+                      "slot",
+                      "description"
+                    ],
+                    "title": "Constraint",
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "inequalities": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "left_variable": {
+                        "type": "string"
+                      },
+                      "right_variable": {
+                        "type": "string"
+                      },
+                      "property": {
+                        "enum": [
+                          "id",
+                          "name",
+                          "session",
+                          "title",
+                          "published_date"
+                        ],
+                        "title": "PropertyName",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "left_variable",
+                      "right_variable"
+                    ],
+                    "title": "Inequality",
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "return_targets": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "variable": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "items": {
+                          "enum": [
+                            "id",
+                            "name",
+                            "session",
+                            "title",
+                            "published_date"
+                          ],
+                          "title": "PropertyName",
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "variable",
+                      "fields"
+                    ],
+                    "title": "ReturnTarget",
+                    "type": "object"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "aggregate": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "description": "The only aggregate needed by this batch.",
+                      "properties": {
+                        "group_variable": {
+                          "type": "string"
+                        },
+                        "count_distinct_variable": {
+                          "type": "string"
+                        },
+                        "collect_distinct_variable": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "group_variable",
+                        "count_distinct_variable",
+                        "collect_distinct_variable"
+                      ],
+                      "title": "Aggregate",
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rationale": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nodes",
+                "triples",
+                "return_targets",
+                "rationale"
+              ],
+              "title": "PatternPlan",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n  \"nodes\": [\n    {\n      \"name\": \"bill\",\n      \"label\": \"Bill\"\n    },\n    {\n      \"name\": \"org_disney\",\n      \"label\": \"Organization\"\n    },\n    {\n      \"name\": \"org_other\",\n      \"label\": \"Organization\"\n    }\n  ],\n  \"triples\": [\n    {\n      \"subject\": \"bill\",\n      \"predicates\": [\n        \"LOBBIED_FOR\"\n      ],\n      \"object\": \"org_disney\",\n      \"claim_name\": \"lobbying_for_ab186_disney\"\n    },\n    {\n      \"subject\": \"bill\",\n      \"predicates\": [\n        \"LOBBIED_FOR\"\n      ],\n      \"object\": \"org_other\",\n      \"claim_name\": \"lobbying_for_ab186_other\"\n    }\n  ],\n  \"return_targets\": [\n    {\n      \"variable\": \"org_other\",\n      \"fields\": [\n        \"name\"\n      ]\n    }\n  ],\n  \"rationale\": \"The question asks for organizations (other than Walt Disney) that lobbied for a specific bill (AB 186) in a specific session (2025-2026). We identify the Bill node by its designation (AB 186) and session, then find all organizations connected via the LOBBIED_FOR relationship. We exclude the organization identified as Walt Disney by an id inequality (implied by 'other') and return the names of the remaining organizations.\"\n}"
+            }
+          }
+        ],
+        "created": 1788921498,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 379,
+          "prompt_tokens": 3609,
+          "total_tokens": 3988,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-jgGiqB39gqwaOgz2fbsu0uN0ejc1rXLc",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 3609,
+          "prompt_ms": 7248.484,
+          "prompt_per_token_ms": 2.0084466611249656,
+          "prompt_per_second": 497.8972154729181,
+          "predicted_n": 379,
+          "predicted_ms": 6331.118,
+          "predicted_per_token_ms": 16.704796833773088,
+          "predicted_per_second": 59.86304472606576
+        }
+      }
+    },
+    {
+      "stage": "single_pattern_and_bindings",
+      "opaque_id": "Q16",
+      "status_code": 200,
+      "latency_ms": 15304.8,
+      "request": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "In one response, select a small connected semantic graph pattern and provide its binding values. Follow the same pattern rules as the two-stage arm. Do not write Cypher or answer from general knowledge. Each binding item names one declared constraint slot, and bindings must exactly cover the pattern's slots. The compiler will validate the pattern first, derive the required slots, then reject missing or extra binding items.\nDeclare named node variables and directed triples from the supplied persisted News Ontology. Reusing a node variable is a join. Put alternative predicates on one triple only when they have the same endpoints, provenance mechanism, and semantic role. Add equality or half-open date constraints whose slot names describe values that must come from the question. Add an id inequality when two roles must be distinct. Return only variables and fields asked for by the question. Use the optional aggregate only for a count of distinct project ids grouped by one variable, while collecting those same source ids. Give every semantic claim edge a stable claim_name so the compiler can attach its own evidence. HAS_CHUNK is structural.\n\nThe compiler, not you, owns relationship direction, Cypher, labels, provenance traversal, parameterization, and execution. Supported constraint properties are name, session, title, and published_date. Supported operations are eq, date_gte, date_lt. The pattern must stay within the output schema's labels and predicates.\n\n\nPersisted store notes:\n- NewsArticle.published_date is a string; date bounds apply to its first 10 characters.\n- Chunk-decided claim provenance is in relationship.chunks.\n- Article-decided ABOUT_TOPIC provenance is in relationship.articles; those article ids reach evidence through HAS_CHUNK.\n- DISCUSSES_TOPIC belongs to NewsArticle and reaches evidence through that article's HAS_CHUNK edge.\n- A Bill's name is its Bill Designation; session disambiguates recurring designations.\n- A named calendar month uses a half-open date range: its first day through the first day of the next month.\n- Every question is known to have a retrieval path. Attempt construction and do not answer from general knowledge.\n\nCanonical Policy Area names: Aging & Long-Term Care, Agriculture, Arts, Entertainment & Tourism, Banking & Finance, Business & Professions, Economic Development, Education (K\u201312), Emergency Management, Energy & Utilities, Environment & Natural Resources, Government Operations, Health, Higher Education, Housing & Community Development, Human Services, Insurance, Judiciary, Labor & Employment, Local Government, Privacy & Consumer Protection, Public Employment & Pensions, Public Safety, Revenue & Taxation, Technology & Communications, Transportation, Veterans' & Military Affairs, Water\n\nPersisted News Ontology:\n<!-- Generated by `uv run python -m knowledge_map.ontology.render`; do not edit. -->\n# News Ontology\n\nThe closed set of graph structures the news pipeline can produce. It is a subset\nof the primary ontology plus the declared shortcuts below.\n\n## Labels and properties\n\n| Label | Property names | Sub-labels |\n| --- | --- | --- |\n| `Bill` | `current_status`, `session` | \u2014 |\n| `Campaign` | `election_cycle`, `status` | `BallotMeasureCampaign`, `CandidateCampaign` |\n| `Chunk` | `embedding`, `id`, `index`, `text` | \u2014 |\n| `Committee` | `chamber` | \u2014 |\n| `LegislativeEvent` | `date`, `description`, `type` | `Amendment`, `Hearing`, `Vote` |\n| `NewsArticle` | `author`, `id`, `published_date`, `publisher`, `summary`, `title` | \u2014 |\n| `Organization` | `fppc_id`, `industry_sector` | `AdvocacyGroup`, `Corporation`, `EducationalInstitution`, `GovernmentAgency`, `GrassrootsMovement`, `IE_Committee`, `LaborUnion`, `MediaOrganization`, `NonProfit`, `PAC`, `TradeAssociation`, `TribalNation` |\n| `PolicyArea` | `embedding`, `id`, `name` | \u2014 |\n| `Politician` | `birth_date`, `current_party` | \u2014 |\n| `Prop` | `election_date`, `number`, `official_title`, `summary` | \u2014 |\n\n## Relationships\n\nA relationship asserts that a claim exists and what identifies it \u2014 nothing\nmore. The properties it declares, and only those, are its **Claim Key**: they\nare normalized and form the edge's merge key, because the relationship means\nsomething different at a different value \u2014 two articles naming different\namounts assert different things and get separate edges. Anything else an\narticle said about the relationship stays in the `Chunk` the edge points back\nto. A Claim Key property is not required of the extractor: an edge that\narrives without one is written and carries `needs_review`.\n\n| Type | Sources | Targets | Claim Key |\n| --- | --- | --- | --- |\n| `ABOUT_TOPIC` | `Bill` / `Prop` | `PolicyArea` | \u2014 |\n| `ABSTAINED` | `Politician` | `LegislativeEvent` | \u2014 |\n| `ACTION_ON` | `LegislativeEvent` | `Bill` | \u2014 |\n| `CAMPAIGN_FOR` | `Campaign` | `Politician` / `Prop` | \u2014 |\n| `CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `DECLARED_STANCE` | `Organization` / `Politician` | `Bill` / `Prop` | `alignment` |\n| `DENOUNCED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `DISCUSSES_TOPIC` | `NewsArticle` | `PolicyArea` | \u2014 |\n| `ENDORSED` | `Organization` / `Politician` | `Campaign` / `Prop` | \u2014 |\n| `FUNDED` | `Organization` | `Campaign` | `amount` / `date` |\n| `HAS_CHUNK` | `NewsArticle` | `Chunk` | \u2014 |\n| `HELD_BY` | `LegislativeEvent` | `Committee` | \u2014 |\n| `LOBBIED_AGAINST` | `Organization` | `Bill` | \u2014 |\n| `LOBBIED_FOR` | `Organization` | `Bill` | \u2014 |\n| `MENTIONED_IN` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | `Chunk` | \u2014 |\n| `REFERRED_TO` | `Bill` | `Committee` | \u2014 |\n| `SERVES_ON` | `Politician` | `Committee` | \u2014 |\n| `VICE_CHAIRS` | `Politician` | `Committee` | \u2014 |\n| `VOTED_AYE` | `Politician` | `LegislativeEvent` | \u2014 |\n| `VOTED_NO` | `Politician` | `LegislativeEvent` | \u2014 |\n\n## Shortcuts\n\nPaths the news write path flattens into one edge, because prose names the\nendpoints but not what sits between them. Each rule holds the path it\nreplaced, so a shortcut edge can be expanded back out from its type alone.\nThe edge itself records nothing about the collapse: the rule below names the\nlabel to reinsert, and a copy on every edge would only go stale.\n\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_AYE`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_AYE`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VOTED_NO`\u2192 `LegislativeEvent` \u21d2 `Politician` -`VOTED_NO`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`ABSTAINED`\u2192 `LegislativeEvent` \u21d2 `Politician` -`ABSTAINED`\u2192 `LegislativeEvent` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`SERVES_ON`\u2192 `Committee` \u21d2 `Politician` -`SERVES_ON`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n- `Politician` -`HELD_TENURE`\u2192 `LegislativeTenure` \u2192 `LegislativeTenure` -`VICE_CHAIRS`\u2192 `Committee` \u21d2 `Politician` -`VICE_CHAIRS`\u2192 `Committee` (`skips`: `LegislativeTenure`)\n\n## Divergences from the primary ontology\n\nWhere the two ontologies part: a property the write path stamps that the\nprimary ontology does not declare, or one the primary ontology declares that\nnews cannot supply. Either way it marks something nothing we hold can settle.\nUnlike a shortcut, a divergence is not reversible from our own record: closing\none needs an authoritative source.\n\nAn edge's evidence is not a divergence: the `Chunk` it was read from is\nrecorded in `chunks`, which the primary ontology has no need of because a\nrecord does not cite a passage. Nor is its collapse, which the shortcut holds.\n\nThe gap column is derived, not declared: a property the primary ontology\ndeclares is one news drops, and one it does not declare is one the write\npath stamps. Nothing records the direction twice.\n\n| Property | Applies to | Gap | Why it diverges |\n| --- | --- | --- | --- |\n| `id` | `Bill` / `Campaign` / `Committee` / `LegislativeEvent` / `Organization` / `Politician` / `Prop` | news cannot supply it | A node's key is minted by the write path from its label and the name the article used, so that two articles naming one entity reach one node. A single article cannot see that agreement, so an extractor supplying an `id` would be keying the graph off prose it alone read. |\n| `name` | `Campaign` / `Committee` / `Organization` | news cannot supply it | The extractor already reports the surface string as the entity's name, and the write path copies it into the properties itself. Asking for it twice invites a second, different spelling of the same name. |\n| `first_name` | `Politician` | news cannot supply it | Splitting a person's name is entity resolution, not extraction. Whether `Anamarie Avila Farias` surnames as `Farias` or `Avila Farias` is not something the chunk states, and only an authoritative roster settles it. |\n| `last_name` | `Politician` | news cannot supply it | The other half of the same split, and unresolvable for the same reason: a chunk names a person, it does not parse them. |\n| `name` | `LegislativeEvent` / `Politician` / `Prop` | the write path stamps it | The extractor identifies an entity by the surface string the article used, but these labels declare structured fields instead of a `name`. Only entity resolution against an authoritative record can populate them. |\n| `session_verified` | `Bill` | the write path stamps it | A `Bill` id is only stable per legislative session, and news prose rarely names one. Tier 1 resolves it from a linked authoritative bill page, so the session is as good as the source and the key is final. |\n| `name` | `Bill` | news cannot supply it | A `Bill`'s name is its Bill Designation, parsed from the surface string the article used and supplied by Bill Session Resolution. The extraction model reports only that surface string, so it must not guess or decompose the designation itself. |\n| `session_inferred` | `Bill` | the write path stamps it | Tier 2 guesses the session from the article's publication date, which is wrong for a bill discussed outside the session that introduced it. The key is provisional: only the authoritative session can confirm or re-key it. |\n| `date_verified` | `LegislativeEvent` | the write path stamps it | The article stated the date of the event, so the `date` is as good as the source. It is still not part of the key: the date identifies nothing here, it is the fact a later reconciliation joins on. |\n| `date_inferred` | `LegislativeEvent` | the write path stamps it | The article dated the event no other way, so its publication date stands in. News usually reports an event within a day or two of it happening, which makes the stand-in near enough to join on and far too soft to key on. |\n| `sequence_number` | `LegislativeEvent` | news cannot supply it | An article reports that a hearing or a vote happened, never where it sat among the events before it. A single article sees one event, so nothing we hold can order it against another article's, and only an authoritative legislative record supplies the position. |\n| `needs_review` | `Bill` / `LegislativeEvent` | the write path stamps it | For a `Bill`, no session could be resolved or inferred, so the key is a placeholder that nothing we hold can settle. For a `LegislativeEvent`, neither the article nor its metadata yielded a date, so the event carries none and a later reconciliation has nothing to join on. |\n| `transaction_id` | `FUNDED` | news cannot supply it | An article reports that money moved, never the FPPC filing that recorded it. Nothing an article carries identifies the transaction, and only the disclosure record itself supplies the id. |\n| `needs_review` | `DECLARED_STANCE` / `FUNDED` | the write path stamps it | The article asserted the relationship without a value the claim depends on, or named one in a form nothing else will match. The edge is real but its key is incomplete, so it cannot yet be compared against another article's. |\n\n## Primary ontology concepts outside news scope\n\nLabels: `District`, `ExternalIdentifier`, `LegislativeTenure`, `RedistrictingCycle`.\n\nRelationships: `EVOLVED_INTO`, `HAS_IDENTIFIER`, `HELD_TENURE`, `REPRESENTS_DISTRICT`, `TRANSITIONED_BY`.\n\n## Policy Areas\n\n| ID | Name |\n| --- | --- |\n| `aging-and-long-term-care` | Aging & Long-Term Care |\n| `agriculture` | Agriculture |\n| `arts-entertainment-and-tourism` | Arts, Entertainment & Tourism |\n| `banking-and-finance` | Banking & Finance |\n| `business-and-professions` | Business & Professions |\n| `economic-development` | Economic Development |\n| `education` | Education (K\u201312) |\n| `emergency-management` | Emergency Management |\n| `energy-and-utilities` | Energy & Utilities |\n| `environment-and-natural-resources` | Environment & Natural Resources |\n| `government-operations` | Government Operations |\n| `health` | Health |\n| `higher-education` | Higher Education |\n| `housing` | Housing & Community Development |\n| `human-services` | Human Services |\n| `insurance` | Insurance |\n| `judiciary` | Judiciary |\n| `labor` | Labor & Employment |\n| `local-government` | Local Government |\n| `privacy-and-consumer-protection` | Privacy & Consumer Protection |\n| `public-employment-and-pensions` | Public Employment & Pensions |\n| `public-safety` | Public Safety |\n| `taxation` | Revenue & Taxation |\n| `technology` | Technology & Communications |\n| `transportation` | Transportation |\n| `veterans-and-military-affairs` | Veterans' & Military Affairs |\n| `water` | Water |"
+          },
+          {
+            "role": "user",
+            "content": "Opaque question id: Q16\nQuestion: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?"
+          }
+        ],
+        "model": "gemma4:26b",
+        "max_tokens": 2200,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "PatternWithBindings",
+            "schema": {
+              "additionalProperties": false,
+              "properties": {
+                "pattern": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nodes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "pattern": "^[a-z][a-z0-9_]*$",
+                            "type": "string"
+                          },
+                          "label": {
+                            "enum": [
+                              "Politician",
+                              "Organization",
+                              "LaborUnion",
+                              "PAC",
+                              "Bill",
+                              "Prop",
+                              "Campaign",
+                              "LegislativeEvent",
+                              "Committee",
+                              "NewsArticle",
+                              "Chunk",
+                              "PolicyArea"
+                            ],
+                            "title": "NodeLabel",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "label"
+                        ],
+                        "title": "NodeVar",
+                        "type": "object"
+                      },
+                      "minItems": 2,
+                      "type": "array"
+                    },
+                    "triples": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "subject": {
+                            "type": "string"
+                          },
+                          "predicates": {
+                            "items": {
+                              "enum": [
+                                "MENTIONED_IN",
+                                "HAS_CHUNK",
+                                "DISCUSSES_TOPIC",
+                                "DECLARED_STANCE",
+                                "ENDORSED",
+                                "LOBBIED_FOR",
+                                "LOBBIED_AGAINST",
+                                "ABOUT_TOPIC",
+                                "FUNDED",
+                                "CAMPAIGN_FOR",
+                                "VOTED_AYE",
+                                "VOTED_NO",
+                                "ABSTAINED",
+                                "ACTION_ON",
+                                "REFERRED_TO"
+                              ],
+                              "title": "Predicate",
+                              "type": "string"
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          },
+                          "object": {
+                            "type": "string"
+                          },
+                          "claim_name": {
+                            "pattern": "^[a-z][a-z0-9_]*$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "subject",
+                          "predicates",
+                          "object",
+                          "claim_name"
+                        ],
+                        "title": "Triple",
+                        "type": "object"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "constraints": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "variable": {
+                            "type": "string"
+                          },
+                          "property": {
+                            "enum": [
+                              "id",
+                              "name",
+                              "session",
+                              "title",
+                              "published_date"
+                            ],
+                            "title": "PropertyName",
+                            "type": "string"
+                          },
+                          "operator": {
+                            "enum": [
+                              "eq",
+                              "date_gte",
+                              "date_lt"
+                            ],
+                            "title": "ConstraintOperator",
+                            "type": "string"
+                          },
+                          "slot": {
+                            "pattern": "^[a-z][a-z0-9_]*$",
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "variable",
+                          "property",
+                          "slot",
+                          "description"
+                        ],
+                        "title": "Constraint",
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "inequalities": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "left_variable": {
+                            "type": "string"
+                          },
+                          "right_variable": {
+                            "type": "string"
+                          },
+                          "property": {
+                            "enum": [
+                              "id",
+                              "name",
+                              "session",
+                              "title",
+                              "published_date"
+                            ],
+                            "title": "PropertyName",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "left_variable",
+                          "right_variable"
+                        ],
+                        "title": "Inequality",
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "return_targets": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "variable": {
+                            "type": "string"
+                          },
+                          "fields": {
+                            "items": {
+                              "enum": [
+                                "id",
+                                "name",
+                                "session",
+                                "title",
+                                "published_date"
+                              ],
+                              "title": "PropertyName",
+                              "type": "string"
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "variable",
+                          "fields"
+                        ],
+                        "title": "ReturnTarget",
+                        "type": "object"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "aggregate": {
+                      "default": null,
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "description": "The only aggregate needed by this batch.",
+                          "properties": {
+                            "group_variable": {
+                              "type": "string"
+                            },
+                            "count_distinct_variable": {
+                              "type": "string"
+                            },
+                            "collect_distinct_variable": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "group_variable",
+                            "count_distinct_variable",
+                            "collect_distinct_variable"
+                          ],
+                          "title": "Aggregate",
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rationale": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "nodes",
+                    "triples",
+                    "return_targets",
+                    "rationale"
+                  ],
+                  "title": "PatternPlan",
+                  "type": "object"
+                },
+                "bindings": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "slot": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "slot",
+                      "value"
+                    ],
+                    "title": "BindingValue",
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "pattern",
+                "bindings"
+              ],
+              "title": "PatternWithBindings",
+              "type": "object"
+            }
+          }
+        },
+        "stream": false,
+        "temperature": 0.0,
+        "top_p": null,
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\n  \"pattern\": {\n    \"nodes\": [\n      {\n        \"name\": \"bill\",\n        \"label\": \"Bill\"\n      },\n      {\n        \"name\": \"org_disney\",\n        \"label\": \"Organization\"\n      },\n      {\n        \"name\": \"org_other\",\n        \"label\": \"Organization\"\n      }\n    ],\n    \"triples\": [\n      {\n        \"subject\": \"bill\",\n        \"predicates\": [\n          \"LOBBIED_FOR\"\n        ],\n        \"object\": \"org_disney\",\n        \"claim_name\": \"lobbying_for_disney\"\n      },\n      {\n        \"subject\": \"bill\",\n        \"predicates\": [\n          \"LOBBIED_FOR\"\n        ],\n        \"object\": \"org_other\",\n        \"claim_name\": \"lobbying_for_other\"\n      }\n    ],\n    \"return_targets\": [\n      {\n        \"variable\": \"org_other\",\n        \"fields\": [\n          \"name\"\n        ]\n      }\n    ],\n    \"rationale\": \"Find organizations lobbying for the same bill as Disney in a specific session. The bill's designation is 'AB 186' and the session is '2025-2026'. We use an id inequality to ensure the 'other' organization is not Disney.\"\n  },\n  \"bindings\": [\n    {\n      \"slot\": \"bill.name\",\n      \"value\": \"AB 186\"\n    },\n    {\n      \"slot\": \"bill.session\",\n      \"value\": \"2025-2026\"\n    },\n    {\n      \"slot\": \"org_disney.name\",\n      \"value\": \"Walt Disney\"\n    },\n    {\n      \"slot\": \"org_other.id\",\n      \"value\": \"NOT org_disney.id\"\n    }\n  ]\n}"
+            }
+          }
+        ],
+        "created": 1788921513,
+        "model": "gemma4:26b",
+        "system_fingerprint": "b10150-dee2a846b",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 463,
+          "prompt_tokens": 3667,
+          "total_tokens": 4130,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-PdRrcCU5YFr0AFtVfVkz19bTMpuMP4hL",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 3667,
+          "prompt_ms": 7255.528,
+          "prompt_per_token_ms": 1.978600490864467,
+          "prompt_per_second": 505.4077387613968,
+          "predicted_n": 463,
+          "predicted_ms": 7761.854,
+          "predicted_per_token_ms": 16.764263498920087,
+          "predicted_per_second": 59.65069685670459
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+version: 1
+purpose: Question-only copy of the verified construction set; references remain evaluator-only.
+source_sha256: b5670e9b25e047d32feade4b2b3ab46698a2a50a558f2c90a577391441ac7121
+cases:
+  - id: C-E1-01
+    question: What stored reporting mentions Steve Hilton?
+  - id: C-E1-02
+    question: What stored reporting mentions Gail Pellerin?
+  - id: C-E2-01
+    question: What reporting is attached to SB 9 in the 2025-2026 legislative session?
+  - id: C-E2-02
+    question: What stored reporting is attached to Proposition 38?
+  - id: C-E3-01
+    question: Which stored articles discuss housing and community development in July 2026?
+  - id: C-E3-02
+    question: Which stored articles discuss labor and employment in July 2026?
+  - id: C-E3-03
+    question: How many stored articles discuss each policy area? Include the source articles behind every count.
+  - id: C-R1-01
+    question: Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what reporting states that position?
+  - id: C-R1-02
+    question: Which organizations are reported to have endorsed the Steve Hilton campaign?
+  - id: C-R2-01
+    question: Which organizations are recorded as lobbying in favor of AB 186 in the 2025-2026 session?
+  - id: C-R2-02
+    question: Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?
+  - id: C-R3-01
+    question: Which organizations are recorded as funding the Yes on Proposition 38 campaign, and what reporting supports those links?
+  - id: C-R3-02
+    question: Which PACs are recorded as funding the Ed Musgrove campaign, and what reporting supports those links?
+  - id: C-M1-01
+    question: Which policy areas are connected to Catalina Media Development LLC through Bills it has a recorded lobbying relationship with?
+  - id: C-M1-02
+    question: Which policy areas are connected to Stand With Survivors through Bills it has a recorded lobbying relationship with?
+  - id: C-M2-01
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?
+  - id: C-M2-02
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?
+  - id: C-M3-01
+    question: Which organizations appear in the same stored reporting chunks as Steve Hilton?
+  - id: C-M3-02
+    question: Which organizations appear in the same reporting chunks as Gavin Newsom in the article titled Newsom pushes environmental carve-out for campaign donor’s Santa Monica project?
+  - id: C-M4-01
+    question: Which candidates are connected to California Leads through campaigns it is recorded as funding? Include the campaign and reporting for each link.
+  - id: C-M4-02
+    question: Which ballot measures are connected to Michelson Center For Public Policy through campaigns it is recorded as funding? Include the campaign and reporting for each link.
+  - id: C-M5-01
+    question: What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session, and which reporting states it?
+  - id: C-M5-02
+    question: What vote is recorded for Scott Wiener on SB 1229 in the 2025-2026 session, and which reporting states it?
+  - id: C-C1-01
+    question: Which Bills from the 2025-2026 session are recorded as referred to the Senate Appropriations Committee?
+  - id: C-C1-02
+    question: Which committees is AB 2540 in the 2025-2026 session recorded as having been referred to?

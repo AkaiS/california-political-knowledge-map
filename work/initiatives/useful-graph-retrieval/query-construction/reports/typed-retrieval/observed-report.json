@@ -1,0 +1,1193 @@
+{
+  "prototype": "typed_parameterized_retrieval",
+  "mode": "live",
+  "question_set": "work/initiatives/useful-graph-retrieval/question-set.md",
+  "question_count": 42,
+  "anchor_date": "2026-09-08",
+  "deployment": {
+    "kind": "local",
+    "configured_model": "gemma4:26b",
+    "external_telemetry_export": false
+  },
+  "model_latency_ms": 151871.3001680444,
+  "model_usage": {
+    "requests": null,
+    "input_tokens": 16632,
+    "output_tokens": 2117,
+    "interpretation": "Final successful responses only; lower bound, excludes retry responses."
+  },
+  "total_latency_ms": 151940.48533402383,
+  "schema_stress_probes": [
+    {
+      "probe": "legislative_tenure_vote",
+      "valid": true,
+      "note": "Politician must traverse HELD_TENURE first"
+    },
+    {
+      "probe": "organization_sub_label",
+      "valid": true,
+      "note": "sub-label refines Organization"
+    },
+    {
+      "probe": "campaign_for_prop",
+      "valid": true,
+      "note": "target union arm 1"
+    },
+    {
+      "probe": "campaign_for_politician",
+      "valid": true,
+      "note": "target union arm 2"
+    },
+    {
+      "probe": "district_cycle",
+      "valid": true,
+      "note": "District identity requires cycle_year"
+    }
+  ],
+  "selection_score": {
+    "compatible": 14,
+    "incompatible_or_missing": 28,
+    "interpretation": "Heuristic family agreement only. Outcome-5 disposition remains unsettled and this is not a Gold Set score."
+  },
+  "records": [
+    {
+      "case_id": "E1-1",
+      "question": "What has been reported about Gavin Newsom's position on the climate deal?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "actor_policy_footprint",
+      "parameters": {
+        "actor": "Gavin Newsom"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "E1-1 requires entity_dossier, got actor_policy_footprint"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 6013.049917004537,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 844,
+          "cache_read_tokens": 616,
+          "output_tokens": 76
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q001\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for information about Gavin Newsom\\'s (actor) position/activity regarding a climate deal (policy topic).\", \"parameters\": {\"actor\": \"Gavin Newsom\"}}]}')], usage=RequestUsage(input_tokens=844, cache_read_tokens=616, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 9, 317655, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 9, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-l0uxtCCMtECFqHtN9V2AT9a1XpOLfS2o', finish_reason='stop', run_id='01a082cc-9f2b-7000-bfec-3b5ddf5e0ed9', conversation_id='01a082cc-9f2b-7000-bfec-3b5cc15c8a2a')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (actor:Organization)-[claim:LOBBIED_FOR|LOBBIED_AGAINST|DECLARED_STANCE]->(bill:Bill)-[:ABOUT_TOPIC]->(area:PolicyArea)\nWHERE toLower(actor.name) CONTAINS toLower($actor)\n  AND ($organization_sub_label IS NULL OR $organization_sub_label IN labels(actor))\nUNWIND coalesce(claim.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nRETURN actor.name AS subject, labels(actor) AS labels, area.name AS policy_area,\n       bill.name AS measure, type(claim) AS relationship,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nLIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 117.26391594856977,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E1-2",
+      "question": "Who is Steve Hilton?",
+      "status": "executed",
+      "selection": "entity_dossier",
+      "parameters": {
+        "seed": "Steve Hilton"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3249.372416990809,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 613,
+          "cache_read_tokens": 412,
+          "output_tokens": 68
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q002\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for information about a specific person, which is best addressed by an entity dossier.\", \"parameters\": {\"seed\": \"Steve Hilton\"}}]}')], usage=RequestUsage(input_tokens=613, cache_read_tokens=412, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 12, 567517, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 12, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JZQq175dVPEar4PNLtELDIxWZrB1OgDv', finish_reason='stop', run_id='01a082cc-b6a8-7028-85a4-060af77cd89d', conversation_id='01a082cc-b6a8-7028-85a4-06099cb2bf31')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (entity:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:HAS_CHUNK]-(article:NewsArticle)\nWHERE toLower(entity.name) CONTAINS toLower($seed)\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN entity.name AS subject, labels(entity) AS labels, article.title AS article,\n       article.published_date AS published_date, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 20\n",
+      "row_count": 2,
+      "grounding_evidence_count": 2,
+      "sample_rows": [
+        {
+          "subject": "Steve Hilton",
+          "labels": [
+            "Politician"
+          ],
+          "article": "California Republicans tried to cut him off. Then he beat them from the right",
+          "published_date": "2026-08-05T12:15:00Z",
+          "evidence_id": "https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5",
+          "evidence": " Diego County supervisor race establishment pick.\n\nRepublican gubernatorial candidate Steve Hilton\u00a0also has a friend in Carl DeMaio, according to Hilton spokesperson Hector Barajas. Steve Hilton appeared on Carl DeMaio daily podcast in the run-up to the June primary.\n\n\u201cSteve Hilton is proud to have the support of Reform California and values Steve Hilton relationship with Carl DeMaio,\u201d Barajas said in a statement. Carl DeMaio group had endorsed Steve Hilton and Chad Bianco Steve Hilton and River"
+        },
+        {
+          "subject": "Steve Hilton",
+          "labels": [
+            "Politician"
+          ],
+          "article": "For the lone woman left in the California governor\u2019s race, it\u2019s all about \u2018temperament\u2019",
+          "published_date": "2026-05-07T12:00:00Z",
+          "evidence_id": "https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18",
+          "evidence": "herself again and resumed her support for single-payer.\n\nShe also raised eyebrows by courting the support of billionaire crypto executive Chris Larsen, who is spending his money this year fighting proposals to raise taxes on the wealthy. He donated to Porter\u2019s campaign last year before revoking his support in March when she endorsed a San Francisco ballot measure to raise taxes on corporations with highly paid CEOs. Larsen, who supports Republican Steve Hilton, declined to comment through a spok"
+        }
+      ],
+      "query_latency_ms": 76.30100002279505,
+      "limitations": null
+    },
+    {
+      "case_id": "E1-3",
+      "question": "What has been reported about Tom Steyer's brother and California AI policy?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "co_mention",
+      "parameters": {
+        "actor": "Tom Steyer's brother",
+        "context": "California AI policy"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "E1-3 requires entity_dossier, got co_mention"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 5425.242625002284,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 846,
+          "cache_read_tokens": 641,
+          "output_tokens": 84
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q003\", \"query_name\": \"co_mention\", \"rationale\": \"The question asks for connections between an actor (Tom Steyer\\'s brother) and a context (California AI policy).\", \"parameters\": {\"actor\": \"Tom Steyer\\'s brother\", \"context\": \"California AI policy\"}}]}')], usage=RequestUsage(input_tokens=846, cache_read_tokens=641, output_tokens=84), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 17, 990902, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 17, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-szppxETMupH5PXBaqcolnmkk2rPHqVEq', finish_reason='stop', run_id='01a082cc-c359-7181-92fb-00d793b81960', conversation_id='01a082cc-c359-7181-92fb-00d662fe11df')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (politician:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:MENTIONED_IN]-(peer:Organization)\nWHERE toLower(politician.name) CONTAINS toLower($actor)\n  AND ($context IS NULL OR toLower(chunk.text) CONTAINS toLower($context))\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nRETURN politician.name AS seed, peer.name AS subject, labels(peer) AS labels,\n       article.title AS article, article.published_date AS published_date,\n       chunk.id AS evidence_id, left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 49.899332982022315,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E2-1",
+      "question": "What has been reported about SB 9?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "entity_dossier",
+      "parameters": {
+        "seed": "SB 9"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "E2-1 requires measure_dossier, got entity_dossier"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3158.1098749884404,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 609,
+          "cache_read_tokens": 416,
+          "output_tokens": 66
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q004\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for reports on a specific legislative entity (SB 9).\", \"parameters\": {\"seed\": \"SB 9\"}}]}')], usage=RequestUsage(input_tokens=609, cache_read_tokens=416, output_tokens=66), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 21, 148645, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 21, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-d7VvM95d7T2J970wKFXxpN2QeDZ7rBv0', finish_reason='stop', run_id='01a082cc-d88b-7131-ac55-ca66a9885280', conversation_id='01a082cc-d88b-7131-ac55-ca65aba5508d')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (entity:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:HAS_CHUNK]-(article:NewsArticle)\nWHERE toLower(entity.name) CONTAINS toLower($seed)\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN entity.name AS subject, labels(entity) AS labels, article.title AS article,\n       article.published_date AS published_date, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 24.778916034847498,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E2-2",
+      "question": "What is Proposition 38?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "entity_dossier",
+      "parameters": {
+        "seed": "Proposition 38"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "E2-2 requires measure_dossier, got entity_dossier"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3073.939624999184,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 613,
+          "cache_read_tokens": 414,
+          "output_tokens": 69
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q005\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for information about a specific proposition, which is an entity in the schema.\", \"parameters\": {\"seed\": \"Proposition 38\"}}]}')], usage=RequestUsage(input_tokens=613, cache_read_tokens=414, output_tokens=69), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 24, 223742, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 24, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oBe9JiWSJqVGHcVIZWBG7xjo0ak9Jmfl', finish_reason='stop', run_id='01a082cc-e4e1-7509-9d3c-8aa2b25696ae', conversation_id='01a082cc-e4e1-7509-9d3c-8aa1c76bca9c')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (entity:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:HAS_CHUNK]-(article:NewsArticle)\nWHERE toLower(entity.name) CONTAINS toLower($seed)\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN entity.name AS subject, labels(entity) AS labels, article.title AS article,\n       article.published_date AS published_date, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 9.49237501481548,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E2-3",
+      "question": "What does the HOA fee cap bill do?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "measure_dossier",
+      "parameters": {
+        "seed": "HOA fee cap bill"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3667.8902919520624,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 641,
+          "cache_read_tokens": 416,
+          "output_tokens": 83
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q006\", \"query_name\": \"measure_dossier\", \"rationale\": \"The question asks for the content/purpose of a specific bill (HOA fee cap bill), which is best addressed by retrieving the dossier for that measure.\", \"parameters\": {\"seed\": \"HOA fee cap bill\"}}]}')], usage=RequestUsage(input_tokens=641, cache_read_tokens=416, output_tokens=83), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 27, 889321, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 27, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-0WGaZAXI2pUpq4W9qPpxVqBY91Fp2uaM', finish_reason='stop', run_id='01a082cc-f0e3-7025-a328-bdfe00ae6f7d', conversation_id='01a082cc-f0e3-7025-a328-bdfdc7b18279')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (measure)-[:MENTIONED_IN]->(chunk:Chunk)<-[:HAS_CHUNK]-(article:NewsArticle)\nWHERE (measure:Bill OR measure:Prop)\n  AND toLower(coalesce(measure.name, '')) CONTAINS toLower($seed)\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN measure.name AS subject, labels(measure) AS labels, article.title AS article,\n       article.published_date AS published_date, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 54.51129196444526,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E3-1",
+      "question": "What has been reported on housing and community development?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "policy_area_sweep",
+      "parameters": {
+        "topic": "housing and community development"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1478.345665964298,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 422,
+          "cache_read_tokens": 382,
+          "output_tokens": 70
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q007\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for reports on a broad topic, which corresponds to a policy area sweep.\", \"parameters\": {\"topic\": \"housing and community development\"}}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=70), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 29, 370504, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 29, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-eA0PD8lZN1oCnGRGpPWt5wBsBylbeOJo', finish_reason='stop', run_id='01a082cc-ff37-770b-8345-09c7ec6519c5', conversation_id='01a082cc-ff37-770b-8345-09c693f345f5')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (article:NewsArticle)-[:DISCUSSES_TOPIC]->(area:PolicyArea),\n      (article)-[:HAS_CHUNK]->(chunk:Chunk)\nWHERE ($topic = '*' OR toLower(area.name) CONTAINS toLower($topic))\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN area.name AS subject, count(DISTINCT article) AS article_count,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nORDER BY article_count DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 63.21041699266061,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E3-2",
+      "question": "What has been reported on labor and employment in the last three months?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "policy_area_sweep",
+      "parameters": {
+        "topic": "labor and employment",
+        "since_date": "2026-06-08"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1902.3099170299247,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 426,
+          "cache_read_tokens": 382,
+          "output_tokens": 97
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q008\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for reports on a specific topic (labor and employment) within a timeframe, which corresponds to a sweep of a policy area.\", \"parameters\": {\"topic\": \"labor and employment\", \"since_date\": \"2026-06-08\"}}] }')], usage=RequestUsage(input_tokens=426, cache_read_tokens=382, output_tokens=97), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 31, 271622, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 31, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-d7xFZOF67phbLFqp9QlZarnhufUPTGqi', finish_reason='stop', run_id='01a082cd-04fd-70fc-9e0b-fbd9622c60c6', conversation_id='01a082cd-04fd-70fc-9e0b-fbd8147e7846')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (article:NewsArticle)-[:DISCUSSES_TOPIC]->(area:PolicyArea),\n      (article)-[:HAS_CHUNK]->(chunk:Chunk)\nWHERE ($topic = '*' OR toLower(area.name) CONTAINS toLower($topic))\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN area.name AS subject, count(DISTINCT article) AS article_count,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nORDER BY article_count DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 129.8293339787051,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "E3-3",
+      "question": "Which policy areas has coverage concentrated on?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5180.772084044293,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q009\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The user is asking for a distribution of coverage across policy areas. Per instructions, \\'*\\' is the topic for a coverage distribution.\"}]}')], usage=RequestUsage(input_tokens=860, cache_read_tokens=637, output_tokens=64), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 36, 439022, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 36, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oAFCzf2nSu8T9KB8WaMt0FnXUn2T6FkA', finish_reason='stop', run_id='01a082cd-0c6b-723b-afa8-ba945f820f64', conversation_id='01a082cd-0c6b-723b-afa8-ba93d4f6480f')"
+      }
+    },
+    {
+      "case_id": "R1-1",
+      "question": "Which organizations opposed the $28 construction minimum wage bill, and what did they say?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "lobbying_on_measure",
+      "parameters": {
+        "measure": "$28 construction minimum wage bill"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "R1-1 requires position_on_measure, got lobbying_on_measure"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3480.732958007138,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 636,
+          "cache_read_tokens": 425,
+          "output_tokens": 76
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q010\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The user is asking for organizations that lobbied against a specific measure ($28 construction minimum wage bill).\", \"parameters\": {\"measure\": \"$28 construction minimum wage bill\"}}]}')], usage=RequestUsage(input_tokens=636, cache_read_tokens=425, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 39, 932236, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 39, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-9U7mpRwxP4Rd3HY2NbmHdJlkVqkNDQuF', finish_reason='stop', run_id='01a082cd-20a8-715a-8293-b6cfe6447e79', conversation_id='01a082cd-20a8-715a-8293-b6ce77ba2fae')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (actor:Organization)-[claim:LOBBIED_FOR|LOBBIED_AGAINST]->(measure:Bill)\nWHERE toLower(coalesce(measure.name, '')) CONTAINS toLower($measure)\n  AND ($organization_sub_label IS NULL OR $organization_sub_label IN labels(actor))\nUNWIND coalesce(claim.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nRETURN actor.name AS subject, labels(actor) AS labels, type(claim) AS relationship,\n       measure.name AS object, chunk.id AS evidence_id, left(chunk.text, 500) AS evidence,\n       article.published_date AS published_date\nORDER BY published_date DESC LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 39.65512500144541,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "R1-2",
+      "question": "Which lawmakers spoke against the HOA fee cap bill?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4871.953042049427,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q011\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for lawmakers\\' positions on a specific bill (HOA fee cap bill), which requires the \\'measure\\' parameter.\"}]}')], usage=RequestUsage(input_tokens=832, cache_read_tokens=623, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 44, 797671, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 44, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JXdLpWnn3pwWxMxnYeDlAofgg0xUCmMp', finish_reason='stop', run_id='01a082cd-2e41-7310-b0f6-613ec9c8191f', conversation_id='01a082cd-2e41-7310-b0f6-613d7640a61a')"
+      }
+    },
+    {
+      "case_id": "R1-3",
+      "question": "Who endorsed Proposition 38?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4908.324207994156,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q012\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for endorsements for Proposition 38; the measure parameter is \\'Proposition 38\\'.\"}]}')], usage=RequestUsage(input_tokens=823, cache_read_tokens=616, output_tokens=61), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 49, 710131, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 49, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-8zeEZv1XY69GMYe2lGuNTRVXCUKzOEwW', finish_reason='stop', run_id='01a082cd-414a-77ce-b0ab-cf7ddc1e3af1', conversation_id='01a082cd-414a-77ce-b0ab-cf7c45ad559d')"
+      }
+    },
+    {
+      "case_id": "R1-4",
+      "question": "Which unions opposed the housing bill that would raise wages to $28?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "lobbying_on_measure",
+      "parameters": {
+        "measure": "housing bill that would raise wages to $28"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "R1-4 requires position_on_measure, got lobbying_on_measure"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1841.7016249732114,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 427,
+          "cache_read_tokens": 382,
+          "output_tokens": 81
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q013\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for organizations (unions) that opposed a specific measure (housing bill).\", \"parameters\": {\"measure\": \"housing bill that would raise wages to $28\"}}]}')], usage=RequestUsage(input_tokens=427, cache_read_tokens=382, output_tokens=81), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 51, 555813, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 51, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-MVj9WBgTzIZq1usNTpOLQ3m9r37Yg5Ui', finish_reason='stop', run_id='01a082cd-5475-7429-aaef-5e9bed230270', conversation_id='01a082cd-5475-7429-aaef-5e9a68d503f9')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (actor:Organization)-[claim:LOBBIED_FOR|LOBBIED_AGAINST]->(measure:Bill)\nWHERE toLower(coalesce(measure.name, '')) CONTAINS toLower($measure)\n  AND ($organization_sub_label IS NULL OR $organization_sub_label IN labels(actor))\nUNWIND coalesce(claim.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nRETURN actor.name AS subject, labels(actor) AS labels, type(claim) AS relationship,\n       measure.name AS object, chunk.id AS evidence_id, left(chunk.text, 500) AS evidence,\n       article.published_date AS published_date\nORDER BY published_date DESC LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 5.532542010769248,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "R2-1",
+      "question": "Which organizations lobbied on the Uber insurance law?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "lobbying_on_measure",
+      "parameters": {
+        "measure": "Uber insurance law"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3187.1645000064746,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 618,
+          "cache_read_tokens": 417,
+          "output_tokens": 70
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q014\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The user is asking for organizations that lobbied on a specific measure (Uber insurance law).\", \"parameters\": {\"measure\": \"Uber insurance law\"}}]}')], usage=RequestUsage(input_tokens=618, cache_read_tokens=417, output_tokens=70), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 54, 743492, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 54, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-1CAMeWdjECeMs0QbeBu3mK0PBxpAFrCp', finish_reason='stop', run_id='01a082cd-5ba7-744f-ac05-9713624a76ab', conversation_id='01a082cd-5ba7-744f-ac05-9712574da54e')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (actor:Organization)-[claim:LOBBIED_FOR|LOBBIED_AGAINST]->(measure:Bill)\nWHERE toLower(coalesce(measure.name, '')) CONTAINS toLower($measure)\n  AND ($organization_sub_label IS NULL OR $organization_sub_label IN labels(actor))\nUNWIND coalesce(claim.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nRETURN actor.name AS subject, labels(actor) AS labels, type(claim) AS relationship,\n       measure.name AS object, chunk.id AS evidence_id, left(chunk.text, 500) AS evidence,\n       article.published_date AS published_date\nORDER BY published_date DESC LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 4.891540971584618,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "R2-2",
+      "question": "What did tribes argue in the cardroom blackjack dispute?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5081.534083001316,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q015\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for arguments regarding a specific dispute; \\'cardroom blackjack dispute\\' is the literal seed phrase for the entity dossier.\"}]}')], usage=RequestUsage(input_tokens=855, cache_read_tokens=638, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 54, 59, 822672, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 54, 59, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-WphxlCsw2S69Q15yyRLvOTgQgX0Faa7s', finish_reason='stop', run_id='01a082cd-681a-76ba-9939-5570cdf76427', conversation_id='01a082cd-681a-76ba-9939-556fbfde46ef')"
+      }
+    },
+    {
+      "case_id": "R3-1",
+      "question": "Which organizations funded the campaign for Proposition 38?",
+      "status": "executed",
+      "selection": "campaign_funding",
+      "parameters": {
+        "campaign_or_target": "Proposition 38"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3175.910916994326,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 607,
+          "cache_read_tokens": 418,
+          "output_tokens": 68
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q016\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for organizations that funded the campaign for Proposition 38.\", \"parameters\": {\"campaign_or_target\": \"Proposition 38\"}}]}')], usage=RequestUsage(input_tokens=607, cache_read_tokens=418, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 3, 1566, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 2, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-U90wtqRa9HLPF0ftgxP7LD2NryO0TE4n', finish_reason='stop', run_id='01a082cd-7bf4-7662-8045-a8bceb8022f4', conversation_id='01a082cd-7bf4-7662-8045-a8bb07d15161')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (funder:Organization)-[funding:FUNDED]->(campaign:Campaign)-[:CAMPAIGN_FOR]->(target)\nWHERE toLower(coalesce(campaign.name, '') + ' ' + coalesce(target.name, '')) CONTAINS toLower($campaign_or_target)\nUNWIND coalesce(funding.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nWITH funder, funding, campaign, target, chunk, article\nWHERE ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN funder.name AS subject, labels(funder) AS labels, campaign.name AS campaign,\n       labels(target) AS target_labels, target.name AS target, funding.amount AS amount,\n       funding.date AS date, funding.transaction_id AS transaction_id,\n       chunk.id AS evidence_id, left(chunk.text, 500) AS evidence LIMIT 30\n",
+      "row_count": 1,
+      "grounding_evidence_count": 1,
+      "sample_rows": [
+        {
+          "subject": "Michelson Center For Public Policy",
+          "labels": [
+            "Organization",
+            "NonProfit"
+          ],
+          "campaign": "Yes on Proposition 38 campaign",
+          "target_labels": [
+            "Prop"
+          ],
+          "target": "Proposition 38",
+          "amount": null,
+          "date": null,
+          "transaction_id": null,
+          "evidence_id": "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13",
+          "evidence": "could satisfy the stipulations of Proposition 38.\n\nThe website supporting Proposition 38 touts Proposition 38 as an effort to award grant dollars to scientists working on drug therapies for incurable diseases, but makes no mention of California Institute for Immunology and Immunotherapy as a likely recipient of half the bond revenue. Gary K. Michelson and the Michelson Center For Public Policyc Policy, donated at least $8.2 million to Yes on Proposition 38 campaign. Meyer Luskin, has given at le"
+        }
+      ],
+      "query_latency_ms": 26.180957967881113,
+      "limitations": "The populated FUNDED edges lack amount and date Claim Keys; the query can identify evidence-bearing funder edges but cannot answer amount or date from structure."
+    },
+    {
+      "case_id": "R3-2",
+      "question": "How much did the construction trades spend opposing the wage bill?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4797.289083013311,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q017\", \"query_name\": \"lobbying_on_measure\", \"rationale\": \"The question asks for lobbying spending by construction trades on a specific measure, \\'wage bill\\'.\"}]}')], usage=RequestUsage(input_tokens=840, cache_read_tokens=631, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 7, 794526, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 7, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-XxvP06QjSye7kA3iLfdsxxOXSI8B7nhE', finish_reason='stop', run_id='01a082cd-885c-72ab-a591-c61618b66583', conversation_id='01a082cd-885c-72ab-a591-c6152f3b9bcf')"
+      }
+    },
+    {
+      "case_id": "R3-3",
+      "question": "Which organizations funded a given ballot-measure campaign, and on what dates?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5806.144625006709,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q018\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for organizations that funded a given ballot-measure campaign; \\'ballot-measure campaign\\' is the extracted seed phrase for the campaign_or_target parameter.\"}]}')], usage=RequestUsage(input_tokens=857, cache_read_tokens=626, output_tokens=72), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 13, 602588, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 13, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-Tloz3AqUzvHPDGEzjuMRWQJVJyoyOyDK', finish_reason='stop', run_id='01a082cd-9b19-76dc-8c9e-fc5886227d94', conversation_id='01a082cd-9b19-76dc-8c9e-fc579a2a523e')"
+      }
+    },
+    {
+      "case_id": "M1-1",
+      "question": "Which policy areas has Uber engaged with in California?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5290.863250032999,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q019\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for policy areas an actor (Uber) has engaged with. The actor parameter is \\'Uber\\'.\"}]}')], usage=RequestUsage(input_tokens=866, cache_read_tokens=632, output_tokens=62), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 18, 890336, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 18, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-vabt3MhPiY2mlGe1XmubvBolypnoB36Q', finish_reason='stop', run_id='01a082cd-b1c7-7039-b315-7849cc3632be', conversation_id='01a082cd-b1c7-7039-b315-784833a6a1fb')"
+      }
+    },
+    {
+      "case_id": "M1-2",
+      "question": "Which policy areas do the construction trade unions appear in?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "policy_area_sweep",
+      "parameters": {
+        "topic": "construction trade unions"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "M1-2 requires actor_policy_footprint, got policy_area_sweep"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3611.9837919832207,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 615,
+          "cache_read_tokens": 418,
+          "output_tokens": 68
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q020\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The user is asking for policy areas associated with a specific topic (construction trade unions).\", \"parameters\": {\"topic\": \"construction trade unions\"}}]}')], usage=RequestUsage(input_tokens=615, cache_read_tokens=418, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 22, 506923, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 22, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-MYkexPUODwNH4UaKYC1Gdn780UROhhlG', finish_reason='stop', run_id='01a082cd-c672-712c-bb31-10dc102c075b', conversation_id='01a082cd-c672-712c-bb31-10db6157fa07')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (article:NewsArticle)-[:DISCUSSES_TOPIC]->(area:PolicyArea),\n      (article)-[:HAS_CHUNK]->(chunk:Chunk)\nWHERE ($topic = '*' OR toLower(area.name) CONTAINS toLower($topic))\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN area.name AS subject, count(DISTINCT article) AS article_count,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nORDER BY article_count DESC LIMIT 20\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 6.896291044540703,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "M2-1",
+      "question": "Which organizations took the same side as the construction unions on the wage bill?",
+      "status": "coverage_gap",
+      "selection": "same_side",
+      "parameters": {
+        "actor": "construction unions",
+        "organization_sub_label": "measure"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1825.401917041745,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 427,
+          "cache_read_tokens": 382,
+          "output_tokens": 83
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q021\", \"query_name\": \"same_side\", \"rationale\": \"The user is asking for entities that shared a position with a specific group on a specific measure.\", \"parameters\": {\"actor\": \"construction unions\", \"organization_sub_label\": \"measure\"}}] }')], usage=RequestUsage(input_tokens=427, cache_read_tokens=382, output_tokens=83), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 24, 334025, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 24, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-1ke8i5b8NjNLDAqUIVowjVbj32LgPy7K', finish_reason='stop', run_id='01a082cd-d48e-777e-8dc4-34e129008c59', conversation_id='01a082cd-d48e-777e-8dc4-34e0af74d1f5')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (seed)-[left_claim:DECLARED_STANCE]->(measure)<-[right_claim:DECLARED_STANCE]-(peer)\nWHERE (seed:Organization OR seed:Politician) AND (peer:Organization OR peer:Politician)\n  AND id(seed) <> id(peer) AND toLower(seed.name) CONTAINS toLower($actor)\n  AND ($measure IS NULL OR toLower(coalesce(measure.name, '')) CONTAINS toLower($measure))\n  AND left_claim.alignment IS NOT NULL AND left_claim.alignment = right_claim.alignment\nUNWIND coalesce(left_claim.chunks, []) + coalesce(right_claim.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nRETURN seed.name AS seed, peer.name AS subject, labels(peer) AS labels,\n       measure.name AS measure, left_claim.alignment AS alignment,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nLIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": "The populated DECLARED_STANCE edges lack alignment Claim Keys, so same-side comparison is unavailable."
+    },
+    {
+      "case_id": "M2-2",
+      "question": "Which lawmakers have opposed the same bills as Uber?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4810.01420901157,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q022\", \"query_name\": \"same_side\", \"rationale\": \"The user is asking for lawmakers who have taken a position similar to Uber on legislative measures. The actor is \\'Uber\\'.\"}]}')], usage=RequestUsage(input_tokens=828, cache_read_tokens=623, output_tokens=61), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 29, 138380, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 29, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-V0QHjKfJwinyJvxfznJ293mo4deJxqBP', finish_reason='stop', run_id='01a082cd-dbb0-74b2-932f-10eb51f8db9d', conversation_id='01a082cd-dbb0-74b2-932f-10eafcac905d')"
+      }
+    },
+    {
+      "case_id": "M2-3",
+      "question": "Which organizations have opposed the same measures more than once?",
+      "status": "executed",
+      "selection": "policy_area_sweep",
+      "parameters": {
+        "topic": "*"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "M2-3 requires same_side, got policy_area_sweep"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 6248.77645802917,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 891,
+          "cache_read_tokens": 636,
+          "output_tokens": 101
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q023\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question is an open-universe query seeking to identify organizations based on a pattern of behavior (opposing measures) without providing a specific actor or topic; since no specific seed or topic is provided to anchor the search, it is an open-universe absence of parameters.\", \"parameters\": {\"topic\": \"*\"}}]}')], usage=RequestUsage(input_tokens=891, cache_read_tokens=636, output_tokens=101), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 35, 390402, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 35, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-yhltYfxGLFNrfyFOFdeqyo0jwPDvytxv', finish_reason='stop', run_id='01a082cd-ee7a-737e-9f6f-c48b112e946b', conversation_id='01a082cd-ee7a-737e-9f6f-c48a977fed05')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (article:NewsArticle)-[:DISCUSSES_TOPIC]->(area:PolicyArea),\n      (article)-[:HAS_CHUNK]->(chunk:Chunk)\nWHERE ($topic = '*' OR toLower(area.name) CONTAINS toLower($topic))\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN area.name AS subject, count(DISTINCT article) AS article_count,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nORDER BY article_count DESC LIMIT 20\n",
+      "row_count": 20,
+      "grounding_evidence_count": 100,
+      "sample_rows": [
+        {
+          "subject": "Housing & Community Development",
+          "article_count": 29,
+          "grounding_evidence": [
+            {
+              "evidence": "City of Los Angeles and Gavin Newsom and Karen Bass.\n\nMeanwhile, a parallel debate is also playing out in the state capitol. Earlier this summer, Sen. Sasha Ren\u00e9e P\u00e9rez, a Democrat who represents Altadena, introduced a bill to temporarily exempt Altadena from Senate Bill 9 along with another related",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10"
+            },
+            {
+              "evidence": "sign that Senate Bill 9 is on fire survivors side.\n\n\u201cThe writing is on the wall,\u201d Sonja Trauss said. \u201cIt\u2019s a good signal when parties are settling because it indicates the respondents feelings about how defendable the respondents side is.\u201d\n\nThe legal battle continues for Los Angeles County, the City",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_9"
+            },
+            {
+              "evidence": "costs and insufficient or sluggish insurance payouts.\n\nOf the more than 16,000 structures destroyed in the Eaton and Palisades fires, structures destroyed in the Eaton and Palisades fires were located in the City of Los Angeles and in Altadena, in unincorporated Los Angeles County. Even so, Trauss s",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8"
+            },
+            {
+              "evidence": "high-profile, if ultimately unsuccessful, run for LA mayor.\n\nYIMBY Law and other pro-development groups have argued that Senate Bill 9 gives fire survivors additional financial flexibility to rebuild amid escalating construction costs and insufficient or sluggish insurance payouts.\n\n",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7"
+            },
+            {
+              "evidence": "back,\u201d said YIMBY Law executive director Sonja Trauss.\n\nfire survivors have railed against the prospect of building back at higher densities, raising concerns about snarled evacuations along with broader concerns about traffic and unwelcome changes in community character. One of the most vocal criti",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6"
+            }
+          ]
+        },
+        {
+          "subject": "Labor & Employment",
+          "article_count": 21,
+          "grounding_evidence": [
+            {
+              "evidence": "legislative body as Democrats,\u201d Buffy Wicks said.\n\nEven with the wage language jettisoned, trouble may lie ahead for Assembly Bill 1751. Another Democrat on the committee, Sen. Maria Elena Durazo, noted that the changes made today did not address Maria Elena Durazo concerns over Assembly Bill 1751 c",
+              "evidence_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_9"
+            },
+            {
+              "evidence": "wage,\u201d said Sen. Lena Gonzalez, a Long Beach Democrat.\n\nWicks ended Buffy Wicks testimony on a similar note.\n\n\u201cThe idea to raise the floor from $16 to $28 seems like it should be an easy thing for us to do in this legislative body as Democrats,\u201d Buffy Wicks said.\n\n",
+              "evidence_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_8"
+            },
+            {
+              "evidence": "language \u2014 feelings directed in part at Jesse Arregu\u00edn.\n\nDespite Jesse Arregu\u00edn promise to pursue a future compromise, \u201c(I) don\u2019t think Jesse Arregu\u00edn understands the hard part\u2026Jesse Arregu\u00edn lack of leadership,\u201d said Danny Curtin, director of the California Council of Carpenters, in a text message.",
+              "evidence_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_7"
+            },
+            {
+              "evidence": "advocacy group composed largely of business groups.\n\nAfter the wage provision was pulled, State Building and Construction Trades Council \u2014 the trades members showed up in droves to the hearing \u2014 went neutral on Assembly Bill 1751.\n\nAssembly Bill 1751 ultimately passed through the Senate Housing Comm",
+              "evidence_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6"
+            },
+            {
+              "evidence": "wage levels required for publicly funded projects.\n\nThe state\u2019s unionized carpenters, a regular political foe of State Building and Construction Trades Council on housing policy, disputed characterization characterization, arguing characterization residential construction workers rarely work on jobs",
+              "evidence_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_5"
+            }
+          ]
+        },
+        {
+          "subject": "Local Government",
+          "article_count": 21,
+          "grounding_evidence": [
+            {
+              "evidence": "City of Los Angeles and Gavin Newsom and Karen Bass.\n\nMeanwhile, a parallel debate is also playing out in the state capitol. Earlier this summer, Sen. Sasha Ren\u00e9e P\u00e9rez, a Democrat who represents Altadena, introduced a bill to temporarily exempt Altadena from Senate Bill 9 along with another related",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10"
+            },
+            {
+              "evidence": "sign that Senate Bill 9 is on fire survivors side.\n\n\u201cThe writing is on the wall,\u201d Sonja Trauss said. \u201cIt\u2019s a good signal when parties are settling because it indicates the respondents feelings about how defendable the respondents side is.\u201d\n\nThe legal battle continues for Los Angeles County, the City",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_9"
+            },
+            {
+              "evidence": "costs and insufficient or sluggish insurance payouts.\n\nOf the more than 16,000 structures destroyed in the Eaton and Palisades fires, structures destroyed in the Eaton and Palisades fires were located in the City of Los Angeles and in Altadena, in unincorporated Los Angeles County. Even so, Trauss s",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8"
+            },
+            {
+              "evidence": "high-profile, if ultimately unsuccessful, run for LA mayor.\n\nYIMBY Law and other pro-development groups have argued that Senate Bill 9 gives fire survivors additional financial flexibility to rebuild amid escalating construction costs and insufficient or sluggish insurance payouts.\n\n",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7"
+            },
+            {
+              "evidence": "back,\u201d said YIMBY Law executive director Sonja Trauss.\n\nfire survivors have railed against the prospect of building back at higher densities, raising concerns about snarled evacuations along with broader concerns about traffic and unwelcome changes in community character. One of the most vocal criti",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6"
+            }
+          ]
+        }
+      ],
+      "query_latency_ms": 80.30087500810623,
+      "limitations": null
+    },
+    {
+      "case_id": "M3-1",
+      "question": "Which organizations are reported alongside Gavin Newsom in coverage of the climate deal?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "co_mention",
+      "parameters": {
+        "actor": "Gavin Newsom",
+        "context": "climate deal"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3497.888082987629,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 624,
+          "cache_read_tokens": 421,
+          "output_tokens": 79
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q024\", \"query_name\": \"co_mention\", \"rationale\": \"The question asks for entities reported alongside a specific actor (Gavin Newsom) within a specific context (climate deal).\", \"parameters\": {\"actor\": \"Gavin Newsom\", \"context\": \"climate deal\"}}]}')], usage=RequestUsage(input_tokens=624, cache_read_tokens=421, output_tokens=79), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 38, 888753, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 38, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-Q9T1Ci9LjS4odX0hccMaI9nfn98x9dvf', finish_reason='stop', run_id='01a082ce-06e3-747f-935a-d9e2d18da772', conversation_id='01a082ce-06e3-747f-935a-d9e1be0266ff')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (politician:Politician)-[:MENTIONED_IN]->(chunk:Chunk)<-[:MENTIONED_IN]-(peer:Organization)\nWHERE toLower(politician.name) CONTAINS toLower($actor)\n  AND ($context IS NULL OR toLower(chunk.text) CONTAINS toLower($context))\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nRETURN politician.name AS seed, peer.name AS subject, labels(peer) AS labels,\n       article.title AS article, article.published_date AS published_date,\n       chunk.id AS evidence_id, left(chunk.text, 500) AS evidence\nORDER BY published_date DESC LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 12.57595798233524,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "M3-2",
+      "question": "Who else appears in reporting on the Bay Area city project?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5638.107042002957,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q025\", \"query_name\": \"entity_dossier\", \"rationale\": \"The question asks for entities related to the \\'Bay Area city project\\'. Since \\'co_mention\\' requires a specific actor and the input is a project/topic, \\'entity_dossier\\' is the most appropriate way to retrieve information related to that seed phrase.\"}]}')], usage=RequestUsage(input_tokens=868, cache_read_tokens=625, output_tokens=93), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 44, 522584, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 44, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JQvPmkgCUfD56Cyx88wPauB6BJf5jimY', finish_reason='stop', run_id='01a082ce-148d-77ac-a984-0e2d2c111111', conversation_id='01a082ce-148d-77ac-a984-0e2cd92c6d51')"
+      }
+    },
+    {
+      "case_id": "M4-1",
+      "question": "Which bills has a given candidate taken a position on, among those whose campaign a given industry funded?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 5579.64049995644,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q026\", \"query_name\": \"actor_policy_footprint\", \"rationale\": \"The question asks for the legislative positions (footprint) of a candidate (actor) in the context of specific funding/industry influence.\"}]}')], usage=RequestUsage(input_tokens=910, cache_read_tokens=649, output_tokens=67), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 50, 104512, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 50, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-IioXvAVzTYObyVFHB8pWM3jBwbsOOQTs', finish_reason='stop', run_id='01a082ce-2a93-76eb-b357-11ad38036426', conversation_id='01a082ce-2a93-76eb-b357-11aca6889155')"
+      }
+    },
+    {
+      "case_id": "M4-2",
+      "question": "Which funders of a given campaign also lobbied on bills that campaign's candidate voted on?",
+      "status": "selected",
+      "selection": "defer",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "M4-2 requires influence_chain, got defer"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3384.4977089902386,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 637,
+          "cache_read_tokens": 426,
+          "output_tokens": 68
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q027\", \"query_name\": \"defer\", \"rationale\": \"The question requires identifying specific campaign funders and candidates to establish an actor, but the query cannot be executed without the specific entity names (seed) provided in the prompt.\"}]}')], usage=RequestUsage(input_tokens=637, cache_read_tokens=426, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 53, 491215, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 53, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-LZW1MyyuFZVO52h1XZfQMmyegN83Cf2j', finish_reason='stop', run_id='01a082ce-405f-728b-9452-f1e3e7b1f4e1', conversation_id='01a082ce-405e-739a-802b-483ac9a3e3cf')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "M5-1",
+      "question": "How did each senator vote on the ADA lawsuit bill that died?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "roll_call",
+      "parameters": {
+        "measure": "ADA lawsuit bill"
+      },
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1595.4361659823917,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 425,
+          "cache_read_tokens": 382,
+          "output_tokens": 71
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q028\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for voting records on a specific legislative measure (ADA lawsuit bill).\", \"parameters\": {\"measure\": \"ADA lawsuit bill\"}}] }')], usage=RequestUsage(input_tokens=425, cache_read_tokens=382, output_tokens=71), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 55, 88849, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 55, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-JgV1jOqBRfNTkohJDU0l8W7IYGWL1cae', finish_reason='stop', run_id='01a082ce-4d97-72f3-9016-c4c475188a95', conversation_id='01a082ce-4d97-72f3-9016-c4c34ee6dd72')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (politician:Politician)-[vote:VOTED_AYE|VOTED_NO|ABSTAINED]->(event:LegislativeEvent)-[:ACTION_ON]->(bill:Bill)\nWHERE toLower(coalesce(bill.name, '')) CONTAINS toLower($measure)\nOPTIONAL MATCH (event)-[:MENTIONED_IN]->(chunk:Chunk)\nRETURN politician.name AS subject, type(vote) AS vote, event.type AS event,\n       event.date AS date, bill.name AS measure, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence LIMIT 100\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 35.05125001538545,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "M5-2",
+      "question": "Which lawmakers most often vote against their own party?",
+      "status": "selected",
+      "selection": "decline",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "M5-2 requires roll_call, got decline"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1566.3567079463974,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 422,
+          "cache_read_tokens": 382,
+          "output_tokens": 72
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q029\", \"query_name\": \"decline\", \"rationale\": \"The question asks for a comparative analysis of voting patterns across party lines, which requires historical roll call data and party affiliation mapping not available in the current query selection.\"}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=72), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 56, 653277, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 56, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-5eooKEjUK2QoTTVirRXreh3avD0oM9N2', finish_reason='stop', run_id='01a082ce-53d3-7198-8ebb-73b4dc2584bc', conversation_id='01a082ce-53d3-7198-8ebb-73b37c515d92')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "M5-3",
+      "question": "Which senators did not vote on the ADA lawsuit bill?",
+      "status": "selected",
+      "selection": "defer",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "M5-3 requires roll_call, got defer"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3270.2522079925984,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 635,
+          "cache_read_tokens": 418,
+          "output_tokens": 62
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q030\", \"query_name\": \"defer\", \"rationale\": \"The question is a closed-universe negation regarding a roll call roster, which must be deferred because the roster or roll call is missing.\"}]}')], usage=RequestUsage(input_tokens=635, cache_read_tokens=418, output_tokens=62), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 55, 59, 923176, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 55, 59, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-i6QiyrZvfm8VLLOiOWoOSp8IaIdQZ1ox', finish_reason='stop', run_id='01a082ce-59f1-75da-ade8-fa097fad2f5f', conversation_id='01a082ce-59f1-75da-ade8-fa08a62a57a3')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "D-1",
+      "question": "What did the Texas legislature do about housing this year?",
+      "status": "executed",
+      "selection": "policy_area_sweep",
+      "parameters": {
+        "topic": "housing",
+        "since_date": "2026-01-01"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "D-1 requires decline, got policy_area_sweep"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3847.9972910135984,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 641,
+          "cache_read_tokens": 418,
+          "output_tokens": 95
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q031\", \"query_name\": \"policy_area_sweep\", \"rationale\": \"The question asks for legislative activity regarding a specific topic (housing) within a timeframe (this year), which maps to a sweep of a policy area.\", \"parameters\": {\"topic\": \"housing\", \"since_date\": \"2026-01-01\"}}]}')], usage=RequestUsage(input_tokens=641, cache_read_tokens=418, output_tokens=95), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 3, 772572, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 3, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-N5unA9DqoYJKhBMamxteHMoiN0IwmwYQ', finish_reason='stop', run_id='01a082ce-66b7-709d-a9df-f231fee2dd7a', conversation_id='01a082ce-66b7-709d-a9df-f2305d7251da')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (article:NewsArticle)-[:DISCUSSES_TOPIC]->(area:PolicyArea),\n      (article)-[:HAS_CHUNK]->(chunk:Chunk)\nWHERE ($topic = '*' OR toLower(area.name) CONTAINS toLower($topic))\n  AND ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN area.name AS subject, count(DISTINCT article) AS article_count,\n       collect(DISTINCT {evidence_id: chunk.id, evidence: left(chunk.text, 300)})[0..5] AS grounding_evidence\nORDER BY article_count DESC LIMIT 20\n",
+      "row_count": 1,
+      "grounding_evidence_count": 5,
+      "sample_rows": [
+        {
+          "subject": "Housing & Community Development",
+          "article_count": 29,
+          "grounding_evidence": [
+            {
+              "evidence": "City of Los Angeles and Gavin Newsom and Karen Bass.\n\nMeanwhile, a parallel debate is also playing out in the state capitol. Earlier this summer, Sen. Sasha Ren\u00e9e P\u00e9rez, a Democrat who represents Altadena, introduced a bill to temporarily exempt Altadena from Senate Bill 9 along with another related",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10"
+            },
+            {
+              "evidence": "sign that Senate Bill 9 is on fire survivors side.\n\n\u201cThe writing is on the wall,\u201d Sonja Trauss said. \u201cIt\u2019s a good signal when parties are settling because it indicates the respondents feelings about how defendable the respondents side is.\u201d\n\nThe legal battle continues for Los Angeles County, the City",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_9"
+            },
+            {
+              "evidence": "costs and insufficient or sluggish insurance payouts.\n\nOf the more than 16,000 structures destroyed in the Eaton and Palisades fires, structures destroyed in the Eaton and Palisades fires were located in the City of Los Angeles and in Altadena, in unincorporated Los Angeles County. Even so, Trauss s",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8"
+            },
+            {
+              "evidence": "high-profile, if ultimately unsuccessful, run for LA mayor.\n\nYIMBY Law and other pro-development groups have argued that Senate Bill 9 gives fire survivors additional financial flexibility to rebuild amid escalating construction costs and insufficient or sluggish insurance payouts.\n\n",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7"
+            },
+            {
+              "evidence": "back,\u201d said YIMBY Law executive director Sonja Trauss.\n\nfire survivors have railed against the prospect of building back at higher densities, raising concerns about snarled evacuations along with broader concerns about traffic and unwelcome changes in community character. One of the most vocal criti",
+              "evidence_id": "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6"
+            }
+          ]
+        }
+      ],
+      "query_latency_ms": 48.07320795953274,
+      "limitations": null
+    },
+    {
+      "case_id": "D-2",
+      "question": "Why did Newsom really sign the Uber ballot-measure deal?",
+      "status": "selected",
+      "selection": "decline",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1498.5474580316804,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 424,
+          "cache_read_tokens": 382,
+          "output_tokens": 68
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q032\", \"query_name\": \"decline\", \"rationale\": \"The question asks for motivation/intent (\\'why did he really\\') which is an open-universe interpretation beyond the scope of the provided data schema.\"}]}')], usage=RequestUsage(input_tokens=424, cache_read_tokens=382, output_tokens=68), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 5, 270467, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 5, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-5q4U3ghRK2j09UjIaEnbYautTbyjtd6g', finish_reason='stop', run_id='01a082ce-75bf-76d3-bcde-6ebd5297cba1', conversation_id='01a082ce-75bf-76d3-bcde-6ebc6879f97f')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "D-3",
+      "question": "Should I vote yes on Proposition 38?",
+      "status": "selected",
+      "selection": "decline",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 3107.668707962148,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 626,
+          "cache_read_tokens": 417,
+          "output_tokens": 58
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q033\", \"query_name\": \"decline\", \"rationale\": \"The question asks for a personal voting recommendation, which is a subjective opinion and outside the scope of data retrieval.\"}]}')], usage=RequestUsage(input_tokens=626, cache_read_tokens=417, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 8, 379752, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 8, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-6S2b1HfwD7uQT9veAazxG6y23L4jCxOs', finish_reason='stop', run_id='01a082ce-7b9a-704a-b5ea-a0e738b96218', conversation_id='01a082ce-7b9a-704a-b5ea-a0e6716e6790')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "D-4",
+      "question": "Will the HOA fee cap bill pass?",
+      "status": "selected",
+      "selection": "defer",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "D-4 requires decline, got defer"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1445.1405419968069,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 420,
+          "cache_read_tokens": 382,
+          "output_tokens": 65
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q034\", \"query_name\": \"defer\", \"rationale\": \"The question asks for a prediction of a legislative outcome; the available tools only provide historical data and current footprints, not predictive modeling.\"}]}')], usage=RequestUsage(input_tokens=420, cache_read_tokens=382, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 9, 824955, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 9, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-8JQMQBeT6alJ3Kn4Pg4f9fXGlhPPOGlD', finish_reason='stop', run_id='01a082ce-87be-7607-a3cc-42160a809b27', conversation_id='01a082ce-87be-7607-a3cc-42157a6969ff')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "D-5",
+      "question": "Which California legislators are bought by tech money?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4932.552999991458,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q035\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for campaign contributions from tech money to legislators; \\'tech\\' is the target sector for the campaign_funding query.\"}]}')], usage=RequestUsage(input_tokens=837, cache_read_tokens=624, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 14, 753830, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 14, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-nb74IkqPMTW4dvdraRYGyDbCKKwPkKrt', finish_reason='stop', run_id='01a082ce-8d63-72d0-be6b-fecf9ee803f3', conversation_id='01a082ce-8d63-72d0-be6b-fece21f63f18')"
+      }
+    },
+    {
+      "case_id": "D-6",
+      "question": "Who are the family members of a given legislator?",
+      "status": "selected",
+      "selection": "decline",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1295.1075839810073,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 422,
+          "cache_read_tokens": 382,
+          "output_tokens": 51
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q036\", \"query_name\": \"decline\", \"rationale\": \"primary-schema tenure probes are outside these live query selections\"}]}')], usage=RequestUsage(input_tokens=422, cache_read_tokens=382, output_tokens=51), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 16, 48673, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 16, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-l0iqVtXunJ7EHI6UBJ2Ym2kShzkr7Hkp', finish_reason='stop', run_id='01a082ce-a0a7-7061-843d-6b2f42ab739f', conversation_id='01a082ce-a0a7-7061-843d-6b2ec1cc0153')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "D-7",
+      "question": "Which organizations did not fund the campaign against Proposition 38?",
+      "status": "selected",
+      "selection": "decline",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1156.0077090398408,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 425,
+          "cache_read_tokens": 382,
+          "output_tokens": 46
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q037\", \"query_name\": \"decline\", \"rationale\": \"Decline open-universe absence.\"}]}')], usage=RequestUsage(input_tokens=425, cache_read_tokens=382, output_tokens=46), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 17, 208934, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 17, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-woTSvh6KnM9zuQCDhnzYei3dQMpA9zst', finish_reason='stop', run_id='01a082ce-a5b7-73d4-a0c0-b40348e82057', conversation_id='01a082ce-a5b7-73d4-a0c0-b40235d22df4')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "F-1",
+      "question": "How did each senator vote on the ADA lawsuit bill?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4787.875915993936,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q038\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for voting records on the \\'ADA lawsuit bill\\', which serves as the measure parameter for the roll_call query.\"}]}')], usage=RequestUsage(input_tokens=819, cache_read_tokens=610, output_tokens=63), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 21, 991846, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 21, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-RHasDygrlndOK80sc4pLsxm6UpFyMrYE', finish_reason='stop', run_id='01a082ce-aa3b-74e3-bcd0-1e03cb4499f0', conversation_id='01a082ce-aa3b-74e3-bcd0-1e02ed199604')"
+      }
+    },
+    {
+      "case_id": "F-2",
+      "question": "Who were the largest donors to the 2026 governor's race?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "campaign_funding",
+      "parameters": {
+        "campaign_or_target": "2026 governor's race"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "F-2 requires defer, got campaign_funding"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 5443.36450000992,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 839,
+          "cache_read_tokens": 616,
+          "output_tokens": 88
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q039\", \"query_name\": \"campaign_funding\", \"rationale\": \"The question asks for donors to the 2026 governor\\'s race; \\'2026 governor\\'s race\\' is the target.\", \"parameters\": {\"campaign_or_target\": \"2026 governor\\'s race\"}}]}')], usage=RequestUsage(input_tokens=839, cache_read_tokens=616, output_tokens=88), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 27, 439220, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 27, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-HP2hTCAIvMuqb6Oagdco1gLuKvuSqhGM', finish_reason='stop', run_id='01a082ce-bcef-705d-8195-430517afeb63', conversation_id='01a082ce-bcef-705d-8195-430481460d80')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (funder:Organization)-[funding:FUNDED]->(campaign:Campaign)-[:CAMPAIGN_FOR]->(target)\nWHERE toLower(coalesce(campaign.name, '') + ' ' + coalesce(target.name, '')) CONTAINS toLower($campaign_or_target)\nUNWIND coalesce(funding.chunks, []) AS chunk_id\nMATCH (chunk:Chunk {id: chunk_id})\nOPTIONAL MATCH (article:NewsArticle)-[:HAS_CHUNK]->(chunk)\nWITH funder, funding, campaign, target, chunk, article\nWHERE ($since_date IS NULL OR date(substring(article.published_date, 0, 10)) >= date($since_date))\n  AND ($until_date IS NULL OR date(substring(article.published_date, 0, 10)) <= date($until_date))\nRETURN funder.name AS subject, labels(funder) AS labels, campaign.name AS campaign,\n       labels(target) AS target_labels, target.name AS target, funding.amount AS amount,\n       funding.date AS date, funding.transaction_id AS transaction_id,\n       chunk.id AS evidence_id, left(chunk.text, 500) AS evidence LIMIT 30\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 6.201624986715615,
+      "limitations": "The populated FUNDED edges lack amount and date Claim Keys; the query can identify evidence-bearing funder edges but cannot answer amount or date from structure."
+    },
+    {
+      "case_id": "F-3",
+      "question": "Who represented Assembly District 52 before and after the 2021 redistricting?",
+      "status": "selected",
+      "selection": "defer",
+      "parameters": {},
+      "validation_errors": [],
+      "family_agreement": true,
+      "family_agreement_notes": [],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1365.6586250290275,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 431,
+          "cache_read_tokens": 382,
+          "output_tokens": 58
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q040\", \"query_name\": \"defer\", \"rationale\": \"District questions require cycle_year and are deferred because the live news graph lacks District and tenure data.\"}]}')], usage=RequestUsage(input_tokens=431, cache_read_tokens=382, output_tokens=58), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 28, 804621, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 28, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-YGAI2wNgXNER1sMBuSS31rfhIMKA88wS', finish_reason='stop', run_id='01a082ce-d232-74ac-9407-28e1edb93d01', conversation_id='01a082ce-d232-74ac-9407-28e01738c412')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": null,
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": null,
+      "limitations": null
+    },
+    {
+      "case_id": "F-4",
+      "question": "Which Assembly members did not vote on AB 1165?",
+      "status": "unresolved_seed_or_no_coverage",
+      "selection": "roll_call",
+      "parameters": {
+        "measure": "AB 1165"
+      },
+      "validation_errors": [],
+      "family_agreement": false,
+      "family_agreement_notes": [
+        "F-4 requires defer, got roll_call"
+      ],
+      "structured_output_retries": null,
+      "model": {
+        "latency_ms": 1654.0921670384705,
+        "usage_final_response_lower_bound": {
+          "input_tokens": 426,
+          "cache_read_tokens": 382,
+          "output_tokens": 76
+        },
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q041\", \"query_name\": \"roll_call\", \"rationale\": \"The question asks for a roll call result regarding a specific measure (AB 1165).\", \"parameters\": {\"measure\": \"AB 1165\"}}]}')], usage=RequestUsage(input_tokens=426, cache_read_tokens=382, output_tokens=76), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 30, 457637, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 30, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-A68hH9FyanVavnHfPxBHV49MCEZ615qT', finish_reason='stop', run_id='01a082ce-d788-75c8-aae7-99c510e52ff7', conversation_id='01a082ce-d788-75c8-aae7-99c496969032')",
+        "recovered_after_runner_serialization_error": true
+      },
+      "query": "\nMATCH (politician:Politician)-[vote:VOTED_AYE|VOTED_NO|ABSTAINED]->(event:LegislativeEvent)-[:ACTION_ON]->(bill:Bill)\nWHERE toLower(coalesce(bill.name, '')) CONTAINS toLower($measure)\nOPTIONAL MATCH (event)-[:MENTIONED_IN]->(chunk:Chunk)\nRETURN politician.name AS subject, type(vote) AS vote, event.type AS event,\n       event.date AS date, bill.name AS measure, chunk.id AS evidence_id,\n       left(chunk.text, 500) AS evidence LIMIT 100\n",
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "query_latency_ms": 20.859916985500604,
+      "limitations": "The literal typed seed matched no node or covered edge; descriptive-name resolution is outside this prototype."
+    },
+    {
+      "case_id": "C-1",
+      "question": "Which bills did the Assembly Appropriations Committee hear?",
+      "status": "selection_validation_failed",
+      "model_error": {
+        "error": "UnexpectedModelBehavior: Exceeded maximum output retries (2)",
+        "latency_ms": 4718.281166977249,
+        "raw_output": "ModelResponse(parts=[TextPart(content='{\"selections\": [{\"case_id\": \"q042\", \"query_name\": \"committee_activity\", \"rationale\": \"The question asks for activities of the Assembly Appropriations Committee, which maps to committee_activity with \\'Assembly Appropriations Committee\\' as the committee parameter.\"}]}')], usage=RequestUsage(input_tokens=809, cache_read_tokens=602, output_tokens=65), model_name='gemma4:26b', timestamp=datetime.datetime(2026, 9, 8, 20, 56, 35, 173460, tzinfo=datetime.timezone.utc), provider_name='openai', provider_url='http://localhost:8080/v1/', provider_details={'finish_reason': 'stop', 'timestamp': datetime.datetime(2026, 9, 8, 20, 56, 35, tzinfo=TzInfo(0))}, provider_response_id='chatcmpl-oqzzeStbZyIB68yB2jGFpcwqugZgM9Vf', finish_reason='stop', run_id='01a082ce-ddfe-7774-a714-be1afdc370b1', conversation_id='01a082ce-ddfe-7774-a714-be197958b01b')"
+      }
+    }
+  ],
+  "recovery": {
+    "recovered_validated_selections": 29,
+    "model_rerun": false,
+    "source": "observed-report.raw.json",
+    "limitation": "Aggregate request count and retry usage were unavailable after the runner serialization error. Per-case final-response token counts are lower bounds."
+  }
+}

@@ -1,0 +1,3357 @@
+{
+  "prototype": "generated-cypher",
+  "as_of_date": "2026-09-08",
+  "question_set": "work/initiatives/useful-graph-retrieval/question-set.md",
+  "deployment": {
+    "kind": "local",
+    "model": "gemma4:26b",
+    "request_settings": {
+      "temperature": 0.0,
+      "top_p": null,
+      "top_k": null,
+      "thinking": false,
+      "reasoning_effort": null,
+      "max_tokens": 1200,
+      "timeout": 90.0,
+      "max_attempts": 2,
+      "rate_limit_wait_cap": 120.0
+    },
+    "endpoint": "http://localhost:8080/v1",
+    "provider_policy": null
+  },
+  "max_repairs": 1,
+  "graph_access": "read-only transactions; EXPLAIN before execution",
+  "telemetry": "local-only; Logfire export disabled",
+  "cases": [
+    {
+      "case_id": "E1-1",
+      "question": "What has been reported about Gavin Newsom's position on the climate deal?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for 'Gavin Newsom's position on the climate deal'. While the graph contains news-based coverage of politicians and policy areas, the specific 'climate deal' mentioned is not a defined node in the current schema (which uses Bill, Prop, or PolicyArea). Furthermore, the graph's DECLARED_STANCE edges currently omit 'alignment', meaning the graph cannot programmatically determine if a stance is 'for' or 'against' a specific deal via relationships alone. To provide an accurate answer, the system requires authoritative ingestion of the specific 'climate deal' entity and its associated legislative or policy identifiers, which is currently absent from the populated news-only graph.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', preventing the determination of whether a stance is supportive or oppositional.",
+          "The 'climate deal' is a colloquial term and does not map to a specific Bill, Prop, or PolicyArea node in the current graph without further disambiguation.",
+          "The graph is news-only and lacks the authoritative legislative context required to define the specific parameters of a 'deal'."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for 'Gavin Newsom's position on the climate deal'. While the graph contains news-based coverage of politicians and policy areas, the specific 'climate deal' mentioned is not a defined node in the current schema (which uses Bill, Prop, or PolicyArea). Furthermore, the graph's DECLARED_STANCE edges currently omit 'alignment', meaning the graph cannot programmatically determine if a stance is 'for' or 'against' a specific deal via relationships alone. To provide an accurate answer, the system requires authoritative ingestion of the specific 'climate deal' entity and its associated legislative or policy identifiers, which is currently absent from the populated news-only graph.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', preventing the determination of whether a stance is supportive or oppositional.",
+        "The 'climate deal' is a colloquial term and does not map to a specific Bill, Prop, or PolicyArea node in the current graph without further disambiguation.",
+        "The graph is news-only and lacks the authoritative legislative context required to define the specific parameters of a 'deal'."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 9357.1,
+        "critic": 4551.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1293,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 263,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1556
+        },
+        "critic": {
+          "input_tokens": 1380,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1406
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E1-2",
+      "question": "Who is Steve Hilton?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'Who is Steve Hilton?' is a general biographical inquiry. The provided graph is a news-populated political retrieval prototype containing specific entities (Politicians, Organizations, Bills, etc.) and their relationships within California politics. The graph does not contain general biographical encyclopedic data or a 'Person' entity type that functions as a general knowledge base; it only contains 'Politician' nodes. If 'Steve Hilton' is not explicitly present as a 'Politician' node or mentioned in 'NewsArticle' chunks within this specific political dataset, the information is absent from the populated graph. No Cypher can be generated for a person not present in the news-populated political graph.",
+        "limitations": []
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'Who is Steve Hilton?' is a general biographical inquiry. The provided graph is a news-populated political retrieval prototype containing specific entities (Politicians, Organizations, Bills, etc.) and their relationships within California politics. The graph does not contain general biographical encyclopedic data or a 'Person' entity type that functions as a general knowledge base; it only contains 'Politician' nodes. If 'Steve Hilton' is not explicitly present as a 'Politician' node or mentioned in 'NewsArticle' chunks within this specific political dataset, the information is absent from the populated graph. No Cypher can be generated for a person not present in the news-populated political graph.",
+      "limitations": [],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 3307.5,
+        "critic": 4308.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1283,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 1281,
+          "output_tokens": 161,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1444
+        },
+        "critic": {
+          "input_tokens": 1285,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1311
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E1-3",
+      "question": "What has been reported about Tom Steyer's brother and California AI policy?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query asks for information regarding 'Tom Steyer's brother'. The current graph schema and populated data contain nodes for 'Politician' and 'Organization', but does not contain familial relationship properties or edges (e.g., BROTHER_OF) to establish or query kinship. Consequently, the identity of the brother cannot be resolved within the existing graph to perform a search for 'AI policy' related to him. This requires authoritative ingestion of biographical/relational data which is absent from the populated news-only graph.",
+        "limitations": [
+          "The graph lacks familial relationship edges (e.g., BROTHER_OF) required to identify 'Tom Steyer's brother'.",
+          "The graph is news-only and does not contain biographical metadata required to resolve kinship-based queries."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query asks for information regarding 'Tom Steyer's brother'. The current graph schema and populated data contain nodes for 'Politician' and 'Organization', but does not contain familial relationship properties or edges (e.g., BROTHER_OF) to establish or query kinship. Consequently, the identity of the brother cannot be resolved within the existing graph to perform a search for 'AI policy' related to him. This requires authoritative ingestion of biographical/relational data which is absent from the populated news-only graph.",
+      "limitations": [
+        "The graph lacks familial relationship edges (e.g., BROTHER_OF) required to identify 'Tom Steyer's brother'.",
+        "The graph is news-only and does not contain biographical metadata required to resolve kinship-based queries."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6759.7,
+        "critic": 3961.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1294,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 193,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1487
+        },
+        "critic": {
+          "input_tokens": 1312,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1338
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E2-1",
+      "question": "What has been reported about SB 9?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for information regarding 'SB 9'. While the graph contains news-populated data, the query requires identifying specific legislative entities. Per instructions, the graph contains no LegislativeTenure, District, or RedistrictingCycle nodes, and the current schema for 'Bill' nodes does not explicitly link to 'NewsArticle' via a direct relationship; instead, news coverage is reached via 'MENTIONED_IN' or through 'PolicyArea' topics. However, the core issue is that 'SB 9' is a specific legislative identifier. If 'SB 9' is not explicitly present as a 'Bill' node in the news-populated graph, or if the user is seeking legislative history/status not covered by the news-only layer, the request must be deferred. Furthermore, the prompt implies a need for comprehensive reporting which may require authoritative ingestion not present in the current news-only graph.",
+        "limitations": [
+          "The graph is news-only; it does not contain authoritative legislative records or roll-call data.",
+          "DECLARED_STANCE edges lack alignment data; cannot determine if an organization is for or against SB 9 via that edge alone.",
+          "FUNDED edges lack amount and date; cannot verify spending levels related to SB 9 via that edge alone."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for information regarding 'SB 9'. While the graph contains news-populated data, the query requires identifying specific legislative entities. Per instructions, the graph contains no LegislativeTenure, District, or RedistrictingCycle nodes, and the current schema for 'Bill' nodes does not explicitly link to 'NewsArticle' via a direct relationship; instead, news coverage is reached via 'MENTIONED_IN' or through 'PolicyArea' topics. However, the core issue is that 'SB 9' is a specific legislative identifier. If 'SB 9' is not explicitly present as a 'Bill' node in the news-populated graph, or if the user is seeking legislative history/status not covered by the news-only layer, the request must be deferred. Furthermore, the prompt implies a need for comprehensive reporting which may require authoritative ingestion not present in the current news-only graph.",
+      "limitations": [
+        "The graph is news-only; it does not contain authoritative legislative records or roll-call data.",
+        "DECLARED_STANCE edges lack alignment data; cannot determine if an organization is for or against SB 9 via that edge alone.",
+        "FUNDED edges lack amount and date; cannot verify spending levels related to SB 9 via that edge alone."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 9000.2,
+        "critic": 4185.4,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1287,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 296,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1583
+        },
+        "critic": {
+          "input_tokens": 1407,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1433
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E2-2",
+      "question": "What is Proposition 38?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'What is Proposition 38?' seeks a definition or summary of a specific ballot measure. While the graph contains 'Prop' nodes, the current schema and instructions dictate that authoritative definitions or summaries of legislative/ballot items are not part of the news-populated layer. The graph is designed for news-driven claims and coverage analysis, not as a primary legal or legislative reference. Therefore, this request is deferred as it requires authoritative ingestion of the proposition's text/summary which is absent from the news-only graph.",
+        "limitations": [
+          "The graph is news-only and does not contain authoritative legislative summaries or legal text.",
+          "The 'Prop' node contains a 'summary' property, but per instructions, queries are only generated for news-populated cases (claims/coverage) rather than direct retrieval of legislative definitions."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'What is Proposition 38?' seeks a definition or summary of a specific ballot measure. While the graph contains 'Prop' nodes, the current schema and instructions dictate that authoritative definitions or summaries of legislative/ballot items are not part of the news-populated layer. The graph is designed for news-driven claims and coverage analysis, not as a primary legal or legislative reference. Therefore, this request is deferred as it requires authoritative ingestion of the proposition's text/summary which is absent from the news-only graph.",
+      "limitations": [
+        "The graph is news-only and does not contain authoritative legislative summaries or legal text.",
+        "The 'Prop' node contains a 'summary' property, but per instructions, queries are only generated for news-populated cases (claims/coverage) rather than direct retrieval of legislative definitions."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6310.9,
+        "critic": 3864.9,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1285,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 203,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1488
+        },
+        "critic": {
+          "input_tokens": 1314,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1340
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E2-3",
+      "question": "What does the HOA fee cap bill do?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for the functional substance of a specific legislative topic ('HOA fee cap bill'). The current graph is populated with news-only data and lacks the authoritative legislative text, bill summaries, or official legislative descriptions required to define the specific mechanics of a bill. While news articles may discuss the topic, the graph's schema for 'Bill' nodes does not contain a 'summary' or 'description' property, and the 'PolicyArea' nodes only link to articles/chunks via topic edges. Without authoritative ingestion of the bill's text or a summary property on the Bill node, the specific 'what' of the bill cannot be answered from the current graph state.",
+        "limitations": [
+          "The graph contains news coverage but lacks authoritative legislative text or bill summaries.",
+          "DECLARED_STANCE edges lack alignment data, preventing determination of support/opposition via edges alone.",
+          "FUNDED edges lack amount and date, preventing financial analysis."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for the functional substance of a specific legislative topic ('HOA fee cap bill'). The current graph is populated with news-only data and lacks the authoritative legislative text, bill summaries, or official legislative descriptions required to define the specific mechanics of a bill. While news articles may discuss the topic, the graph's schema for 'Bill' nodes does not contain a 'summary' or 'description' property, and the 'PolicyArea' nodes only link to articles/chunks via topic edges. Without authoritative ingestion of the bill's text or a summary property on the Bill node, the specific 'what' of the bill cannot be answered from the current graph state.",
+      "limitations": [
+        "The graph contains news coverage but lacks authoritative legislative text or bill summaries.",
+        "DECLARED_STANCE edges lack alignment data, preventing determination of support/opposition via edges alone.",
+        "FUNDED edges lack amount and date, preventing financial analysis."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6527.7,
+        "critic": 3867.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1287,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 226,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1513
+        },
+        "critic": {
+          "input_tokens": 1337,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1363
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E3-1",
+      "question": "What has been reported on housing and community development?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for reporting on 'housing and community development'. While the graph contains NewsArticles and PolicyAreas, the specific topic 'housing and community development' must be matched against the 'PolicyArea' name. If no exact match exists, the query will return no results. Note: DECLARED_STANCE edges currently lack alignment data and FUNDED edges lack amount/date data; results will include Chunk text for manual audit of these claims.",
+        "limitations": [
+          "DECLARED_STANCE edges do not contain alignment data; evidence must be inspected via Chunk text.",
+          "FUNDED edges do not contain amount or date; evidence must be inspected via Chunk text.",
+          "The query is limited to news-populated coverage only."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for reporting on 'housing and community development'. While the graph contains NewsArticles and PolicyAreas, the specific topic 'housing and community development' must be matched against the 'PolicyArea' name. If no exact match exists, the query will return no results. Note: DECLARED_STANCE edges currently lack alignment data and FUNDED edges lack amount/date data; results will include Chunk text for manual audit of these claims.",
+      "limitations": [
+        "DECLARED_STANCE edges do not contain alignment data; evidence must be inspected via Chunk text.",
+        "FUNDED edges do not contain amount or date; evidence must be inspected via Chunk text.",
+        "The query is limited to news-populated coverage only."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5576.9,
+        "critic": 3755.9,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 183,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1471
+        },
+        "critic": {
+          "input_tokens": 1295,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1321
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E3-2",
+      "question": "What has been reported on labor and employment in the last three months?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for news coverage regarding 'labor and employment' within a specific three-month window relative to 2026-09-08. While the graph contains NewsArticle and PolicyArea nodes, the query requires filtering by a specific date range and a specific topic. I will attempt to retrieve news articles discussing the 'Labor and Employment' policy area published between 2026-06-08 and 2026-09-08, including the associated chunks for grounding evidence.",
+        "limitations": [
+          "The graph is news-only; it does not contain authoritative legislative roll-call data or district information.",
+          "DECLARED_STANCE edges lack alignment data; results will include chunks to allow manual inspection of stance.",
+          "FUNDED edges lack amount and date; results will include chunks to allow manual inspection of transaction details."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for news coverage regarding 'labor and employment' within a specific three-month window relative to 2026-09-08. While the graph contains NewsArticle and PolicyArea nodes, the query requires filtering by a specific date range and a specific topic. I will attempt to retrieve news articles discussing the 'Labor and Employment' policy area published between 2026-06-08 and 2026-09-08, including the associated chunks for grounding evidence.",
+      "limitations": [
+        "The graph is news-only; it does not contain authoritative legislative roll-call data or district information.",
+        "DECLARED_STANCE edges lack alignment data; results will include chunks to allow manual inspection of stance.",
+        "FUNDED edges lack amount and date; results will include chunks to allow manual inspection of transaction details."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6053.7,
+        "critic": 3657.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1292,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 214,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1506
+        },
+        "critic": {
+          "input_tokens": 1330,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1350
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "E3-3",
+      "question": "Which policy areas has coverage concentrated on?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for a high-level aggregation of coverage concentration across policy areas. While the graph contains 'DISCUSSES_TOPIC' relationships between 'NewsArticle' and 'PolicyArea', the current schema and data constraints (specifically the requirement to return identifiers, names, article metadata, and Chunk text to audit Grounding Evidence) make a simple aggregate count insufficient for a 'retrieval prototype' that must provide auditability. To answer 'which areas have coverage concentrated on' while adhering to the grounding requirement, I must retrieve the specific articles and chunks that define that coverage. However, since the user is asking for a summary/statistical trend rather than a specific fact-check or retrieval of a specific claim, this falls under 'outcome-5' (analytical/statistical synthesis) which requires authoritative ingestion/aggregation not present in the current news-only retrieval layer.",
+        "limitations": [
+          "The graph is news-only and lacks the legislative/roll-call data required to correlate policy area coverage with legislative activity.",
+          "The 'DISCUSSES_TOPIC' relationship is article-decided; to audit the 'concentration', we must inspect the underlying Chunks via HAS_CHUNK to ensure the topic assignment is grounded in the text."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for a high-level aggregation of coverage concentration across policy areas. While the graph contains 'DISCUSSES_TOPIC' relationships between 'NewsArticle' and 'PolicyArea', the current schema and data constraints (specifically the requirement to return identifiers, names, article metadata, and Chunk text to audit Grounding Evidence) make a simple aggregate count insufficient for a 'retrieval prototype' that must provide auditability. To answer 'which areas have coverage concentrated on' while adhering to the grounding requirement, I must retrieve the specific articles and chunks that define that coverage. However, since the user is asking for a summary/statistical trend rather than a specific fact-check or retrieval of a specific claim, this falls under 'outcome-5' (analytical/statistical synthesis) which requires authoritative ingestion/aggregation not present in the current news-only retrieval layer.",
+      "limitations": [
+        "The graph is news-only and lacks the legislative/roll-call data required to correlate policy area coverage with legislative activity.",
+        "The 'DISCUSSES_TOPIC' relationship is article-decided; to audit the 'concentration', we must inspect the underlying Chunks via HAS_CHUNK to ensure the topic assignment is grounded in the text."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7442.6,
+        "critic": 4012.5,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1286,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 284,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1570
+        },
+        "critic": {
+          "input_tokens": 1396,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1422
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R1-1",
+      "question": "Which organizations opposed the $28 construction minimum wage bill, and what did they say?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for organizations that 'opposed' a specific bill. While the graph contains LOBBIED_AGAINST and DECLARED_STANCE relationships, the DECLARED_STANCE edges currently omit the 'alignment' property required to distinguish between support and opposition. Furthermore, the LOBBIED_AGAINST relationship is a direct edge that does not contain the specific 'why' (the 'what they said' component) within the edge itself; that information is stored in Chunk text. Because the current graph state cannot reliably distinguish 'opposition' via DECLARED_STANCE without the alignment property, and because the query requires identifying specific claims made by organizations, I must first retrieve all news-related evidence regarding the bill to inspect the text for opposition claims.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', making it impossible to programmatically distinguish opposition from support via that relationship alone.",
+          "LOBBIED_AGAINST edges do not contain the reasoning/text; reasoning is only available via Chunk text linked to NewsArticles.",
+          "The query requires inspection of Chunk text to verify 'what they said' as the relationship itself does not store the claim content."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for organizations that 'opposed' a specific bill. While the graph contains LOBBIED_AGAINST and DECLARED_STANCE relationships, the DECLARED_STANCE edges currently omit the 'alignment' property required to distinguish between support and opposition. Furthermore, the LOBBIED_AGAINST relationship is a direct edge that does not contain the specific 'why' (the 'what they said' component) within the edge itself; that information is stored in Chunk text. Because the current graph state cannot reliably distinguish 'opposition' via DECLARED_STANCE without the alignment property, and because the query requires identifying specific claims made by organizations, I must first retrieve all news-related evidence regarding the bill to inspect the text for opposition claims.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', making it impossible to programmatically distinguish opposition from support via that relationship alone.",
+        "LOBBIED_AGAINST edges do not contain the reasoning/text; reasoning is only available via Chunk text linked to NewsArticles.",
+        "The query requires inspection of Chunk text to verify 'what they said' as the relationship itself does not store the claim content."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7351.7,
+        "critic": 3600.6,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1296,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 284,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1580
+        },
+        "critic": {
+          "input_tokens": 1404,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1430
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R1-2",
+      "question": "Which lawmakers spoke against the HOA fee cap bill?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for lawmakers who 'spoke against' a specific bill. While the graph contains VOTED_NO relationships, 'speaking against' a bill in a news context requires identifying specific claims within news articles or chunks. However, the current graph schema lacks a direct relationship for 'spoke_against' or 'opposed_in_hearing'. While I can search for politicians linked to news articles discussing the bill, the specific sentiment of 'speaking against' is not a structured property in the current news-populated layer. Furthermore, the graph lacks the LegislativeTenure or official roll-call data required to verify legislative testimony or formal opposition beyond simple vote records. I can only retrieve news-based evidence if the sentiment is explicitly captured in a Chunk text, but I cannot definitively identify 'speakers' without a structured 'spoke_against' relationship or a specific 'Statement' node type.",
+        "limitations": [
+          "The graph contains VOTED_NO relationships, but these represent formal votes, not verbal testimony or 'speaking against' in a news context.",
+          "The DECLARED_STANCE edges currently omit 'alignment', making it impossible to distinguish between support and opposition via that relationship alone.",
+          "The graph is news-only and lacks the authoritative legislative record (roll-call/testimony) required to confirm verbal opposition."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable with the current schema. Specifically, 'speaking against' a bill is a qualitative action/sentiment not captured by the existing structured relationships. While 'VOTED_NO' exists, a vote is not synonymous with verbal testimony or 'speaking against' in a news context. Furthermore, the plan correctly notes that 'DECLARED_STANCE' lacks an 'alignment' property in the provided ontology (the ontology actually *does* include 'alignment' for DECLARED_STANCE, but the plan's reasoning regarding the lack of a 'spoke_against' relationship is the primary valid reason for deferral). The plan correctly identifies that the graph is news-centric and lacks the specific 'Statement' or 'Testimony' nodes required to fulfill the 'spoke against' requirement."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for lawmakers who 'spoke against' a specific bill. While the graph contains VOTED_NO relationships, 'speaking against' a bill in a news context requires identifying specific claims within news articles or chunks. However, the current graph schema lacks a direct relationship for 'spoke_against' or 'opposed_in_hearing'. While I can search for politicians linked to news articles discussing the bill, the specific sentiment of 'speaking against' is not a structured property in the current news-populated layer. Furthermore, the graph lacks the LegislativeTenure or official roll-call data required to verify legislative testimony or formal opposition beyond simple vote records. I can only retrieve news-based evidence if the sentiment is explicitly captured in a Chunk text, but I cannot definitively identify 'speakers' without a structured 'spoke_against' relationship or a specific 'Statement' node type.",
+      "limitations": [
+        "The graph contains VOTED_NO relationships, but these represent formal votes, not verbal testimony or 'speaking against' in a news context.",
+        "The DECLARED_STANCE edges currently omit 'alignment', making it impossible to distinguish between support and opposition via that relationship alone.",
+        "The graph is news-only and lacks the authoritative legislative record (roll-call/testimony) required to confirm verbal opposition."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable with the current schema. Specifically, 'speaking against' a bill is a qualitative action/sentiment not captured by the existing structured relationships. While 'VOTED_NO' exists, a vote is not synonymous with verbal testimony or 'speaking against' in a news context. Furthermore, the plan correctly notes that 'DECLARED_STANCE' lacks an 'alignment' property in the provided ontology (the ontology actually *does* include 'alignment' for DECLARED_STANCE, but the plan's reasoning regarding the lack of a 'spoke_against' relationship is the primary valid reason for deferral). The plan correctly identifies that the graph is news-centric and lacks the specific 'Statement' or 'Testimony' nodes required to fulfill the 'spoke against' requirement."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7772.4,
+        "critic": 6282.1,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 304,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1592
+        },
+        "critic": {
+          "input_tokens": 1416,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 198,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1614
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R1-3",
+      "question": "Who endorsed Proposition 38?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for endorsements of a specific Proposition. While the graph contains 'ENDORSED' relationships, the current schema for 'DECLARED_STANCE' and 'ENDORSED' edges lacks the necessary alignment or specific sentiment properties to distinguish between an endorsement and an opposition within the relationship itself. Furthermore, the prompt specifies that 'DECLARED_STANCE' edges currently omit alignment. To ensure accuracy and avoid false positives in a political retrieval context, I must retrieve the underlying news chunks to verify the sentiment of the endorsement. However, since the user is asking for a specific list of endorsers which may rely on authoritative campaign filings or specific news coverage not yet fully mapped to the 'ENDORSED' relationship without sentiment context, I will provide a query to inspect the news evidence for Proposition 38.",
+        "limitations": [
+          "The 'ENDORSED' relationship does not contain a sentiment property (e.g., 'support' vs 'oppose').",
+          "The 'DECLARED_STANCE' relationship lacks alignment data.",
+          "The graph is news-populated only; it does not contain authoritative CAL-ACCESS or official campaign finance data."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for endorsements of a specific Proposition. While the graph contains 'ENDORSED' relationships, the current schema for 'DECLARED_STANCE' and 'ENDORSED' edges lacks the necessary alignment or specific sentiment properties to distinguish between an endorsement and an opposition within the relationship itself. Furthermore, the prompt specifies that 'DECLARED_STANCE' edges currently omit alignment. To ensure accuracy and avoid false positives in a political retrieval context, I must retrieve the underlying news chunks to verify the sentiment of the endorsement. However, since the user is asking for a specific list of endorsers which may rely on authoritative campaign filings or specific news coverage not yet fully mapped to the 'ENDORSED' relationship without sentiment context, I will provide a query to inspect the news evidence for Proposition 38.",
+      "limitations": [
+        "The 'ENDORSED' relationship does not contain a sentiment property (e.g., 'support' vs 'oppose').",
+        "The 'DECLARED_STANCE' relationship lacks alignment data.",
+        "The graph is news-populated only; it does not contain authoritative CAL-ACCESS or official campaign finance data."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7322.7,
+        "critic": 3423.4,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1285,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 267,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1552
+        },
+        "critic": {
+          "input_tokens": 1375,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1401
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R1-4",
+      "question": "Which unions opposed the housing bill that would raise wages to $28?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query asks for specific opposition to a housing bill regarding a $28 wage increase. While the graph contains news-based claims, the current schema for DECLARED_STANCE edges lacks the 'alignment' property required to distinguish between support and opposition. Additionally, the LOBBIED_AGAINST relationship is present, but the prompt's specific wage threshold ($28) is a granular detail that requires searching through Chunk text rather than direct property matching on Bill nodes. I will attempt to retrieve organizations linked to housing-related bills via news articles to inspect the text for the specific wage claim and opposition stance.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit alignment, making it impossible to confirm opposition via stance alone; evidence must be audited via Chunk text.",
+          "LOBBIED_AGAINST relationships are available but do not inherently contain the specific wage amount ($28) mentioned in the query.",
+          "The graph is news-only; it does not contain authoritative roll-call votes or legislative records to confirm official opposition."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query asks for specific opposition to a housing bill regarding a $28 wage increase. While the graph contains news-based claims, the current schema for DECLARED_STANCE edges lacks the 'alignment' property required to distinguish between support and opposition. Additionally, the LOBBIED_AGAINST relationship is present, but the prompt's specific wage threshold ($28) is a granular detail that requires searching through Chunk text rather than direct property matching on Bill nodes. I will attempt to retrieve organizations linked to housing-related bills via news articles to inspect the text for the specific wage claim and opposition stance.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit alignment, making it impossible to confirm opposition via stance alone; evidence must be audited via Chunk text.",
+        "LOBBIED_AGAINST relationships are available but do not inherently contain the specific wage amount ($28) mentioned in the query.",
+        "The graph is news-only; it does not contain authoritative roll-call votes or legislative records to confirm official opposition."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6387.8,
+        "critic": 3708.9,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1293,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 251,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1544
+        },
+        "critic": {
+          "input_tokens": 1368,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1394
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R2-1",
+      "question": "Which organizations lobbied on the Uber insurance law?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for organizations that 'lobbied' on a specific topic. While the graph contains LOBBIED_FOR and LOBBIED_AGAINST relationships, these are structural links to Bill nodes. The user's query refers to 'the Uber insurance law', which is a topical concept. To identify organizations associated with this topic via news coverage, I must first resolve the topic to a PolicyArea, then find NewsArticles discussing that topic, and finally identify Organizations mentioned in those articles or linked via news-decided claims. However, the current graph schema only supports identifying organizations through news-decided claims via the `MENTIONED_IN` relationship or through direct `LOBBIED` relationships to a specific `Bill` node. Since 'Uber insurance law' is a descriptive term and not a specific Bill ID, I must search for Bills or PolicyAreas related to 'Uber' and 'insurance' to find the relevant nodes. If no specific Bill is identified, I will search for Organizations mentioned in articles discussing the relevant PolicyArea.",
+        "limitations": [
+          "The graph contains LOBBIED_FOR and LOBBIED_AGAINST edges, but these require a specific Bill node. If 'Uber insurance law' is not explicitly mapped to a Bill ID in the graph, retrieval relies on news-decided claims.",
+          "DECLARED_STANCE edges currently omit alignment; however, LOBBIED edges are direct. If the user implies stance via news, we must inspect the Chunk text for evidence of lobbying activity.",
+          "The graph is news-only; it does not contain authoritative lobbying disclosure data (e.g., FPPC filings) unless captured in a NewsArticle."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for organizations that 'lobbied' on a specific topic. While the graph contains LOBBIED_FOR and LOBBIED_AGAINST relationships, these are structural links to Bill nodes. The user's query refers to 'the Uber insurance law', which is a topical concept. To identify organizations associated with this topic via news coverage, I must first resolve the topic to a PolicyArea, then find NewsArticles discussing that topic, and finally identify Organizations mentioned in those articles or linked via news-decided claims. However, the current graph schema only supports identifying organizations through news-decided claims via the `MENTIONED_IN` relationship or through direct `LOBBIED` relationships to a specific `Bill` node. Since 'Uber insurance law' is a descriptive term and not a specific Bill ID, I must search for Bills or PolicyAreas related to 'Uber' and 'insurance' to find the relevant nodes. If no specific Bill is identified, I will search for Organizations mentioned in articles discussing the relevant PolicyArea.",
+      "limitations": [
+        "The graph contains LOBBIED_FOR and LOBBIED_AGAINST edges, but these require a specific Bill node. If 'Uber insurance law' is not explicitly mapped to a Bill ID in the graph, retrieval relies on news-decided claims.",
+        "DECLARED_STANCE edges currently omit alignment; however, LOBBIED edges are direct. If the user implies stance via news, we must inspect the Chunk text for evidence of lobbying activity.",
+        "The graph is news-only; it does not contain authoritative lobbying disclosure data (e.g., FPPC filings) unless captured in a NewsArticle."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 9133.7,
+        "critic": 3391.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 385,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1673
+        },
+        "critic": {
+          "input_tokens": 1497,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1517
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R2-2",
+      "question": "What did tribes argue in the cardroom blackjack dispute?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for specific arguments made by 'tribes' regarding a 'cardroom blackjack dispute'. While the graph contains 'TribalNation' organizations and 'NewsArticle' nodes, the current schema for 'DECLARED_STANCE' and 'FUNDED' relationships lacks the granularity (alignment, amount, date) required to definitively map specific arguments to specific tribal entities without ambiguity. Furthermore, the query requires identifying specific claims within text chunks that are not explicitly indexed by 'argument' type. I must defer this to an authoritative ingestion layer that can process the semantic content of the 'chunks' specifically for legal/dispute arguments.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit alignment, making it impossible to distinguish between tribes arguing 'for' or 'against' a specific bill/prop via the relationship alone.",
+          "FUNDED edges omit amount and date, preventing temporal correlation of tribal spending to the dispute.",
+          "The graph is news-only; it lacks the legislative record (roll-call votes/hearing transcripts) that would contain the formal arguments of tribal representatives."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for specific arguments made by 'tribes' regarding a 'cardroom blackjack dispute'. While the graph contains 'TribalNation' organizations and 'NewsArticle' nodes, the current schema for 'DECLARED_STANCE' and 'FUNDED' relationships lacks the granularity (alignment, amount, date) required to definitively map specific arguments to specific tribal entities without ambiguity. Furthermore, the query requires identifying specific claims within text chunks that are not explicitly indexed by 'argument' type. I must defer this to an authoritative ingestion layer that can process the semantic content of the 'chunks' specifically for legal/dispute arguments.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit alignment, making it impossible to distinguish between tribes arguing 'for' or 'against' a specific bill/prop via the relationship alone.",
+        "FUNDED edges omit amount and date, preventing temporal correlation of tribal spending to the dispute.",
+        "The graph is news-only; it lacks the legislative record (roll-call votes/hearing transcripts) that would contain the formal arguments of tribal representatives."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6609.0,
+        "critic": 3549.8,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 256,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1545
+        },
+        "critic": {
+          "input_tokens": 1369,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1395
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R3-1",
+      "question": "Which organizations funded the campaign for Proposition 38?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for specific campaign funding data (organizations that funded Proposition 38). While the graph contains FUNDED relationships, the current schema limitations state that FUNDED edges currently omit the amount and date, and the graph is populated via news articles. Because the graph is 'news-only' and lacks the authoritative CAL-ACCESS/FPPC layer required to verify specific financial transactions or donor lists for a specific proposition, this request is deferred as it requires authoritative ingestion not present in the current news-populated graph.",
+        "limitations": [
+          "The FUNDED relationship in the current graph does not contain the necessary transaction details (amount, date) to verify specific campaign financing.",
+          "The graph is news-only; it does not contain the authoritative roll-call or financial disclosure layers (CAL-ACCESS) required to answer specific funding questions with certainty."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for specific campaign funding data (organizations that funded Proposition 38). While the graph contains FUNDED relationships, the current schema limitations state that FUNDED edges currently omit the amount and date, and the graph is populated via news articles. Because the graph is 'news-only' and lacks the authoritative CAL-ACCESS/FPPC layer required to verify specific financial transactions or donor lists for a specific proposition, this request is deferred as it requires authoritative ingestion not present in the current news-populated graph.",
+      "limitations": [
+        "The FUNDED relationship in the current graph does not contain the necessary transaction details (amount, date) to verify specific campaign financing.",
+        "The graph is news-only; it does not contain the authoritative roll-call or financial disclosure layers (CAL-ACCESS) required to answer specific funding questions with certainty."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5387.6,
+        "critic": 3611.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 203,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1492
+        },
+        "critic": {
+          "input_tokens": 1318,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1344
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "R3-2",
+      "question": "How much did the construction trades spend opposing the wage bill?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for specific spending amounts ('How much') regarding a 'wage bill'. The current graph schema contains FUNDED relationships between Organizations and Campaigns, but the FUNDED edges currently omit the 'amount' and 'date' properties required to calculate or verify total spending. Furthermore, the graph lacks a direct link between Organizations and Bills for spending (only LOBBIED_AGAINST/FOR relationships exist, which do not contain financial values). Because the necessary financial data is absent from the populated graph, this question cannot be answered with the current data layer.",
+        "limitations": [
+          "FUNDED edges currently omit 'amount' and 'date' properties.",
+          "LOBBIED_AGAINST/FOR relationships do not contain financial transaction data.",
+          "The graph is news-populated and does not contain authoritative roll-call or financial disclosure layers required for precise spending calculations."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable due to missing data properties. Specifically, the 'LOBBIED_AGAINST' relationship lacks the 'amount' property required to answer 'How much', and the 'FUNDED' relationship is directed towards 'Campaign' nodes rather than 'Bill' nodes. The reasoning is sound and adheres to the provided ontology and the rule regarding missing relationship properties for spending amounts."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for specific spending amounts ('How much') regarding a 'wage bill'. The current graph schema contains FUNDED relationships between Organizations and Campaigns, but the FUNDED edges currently omit the 'amount' and 'date' properties required to calculate or verify total spending. Furthermore, the graph lacks a direct link between Organizations and Bills for spending (only LOBBIED_AGAINST/FOR relationships exist, which do not contain financial values). Because the necessary financial data is absent from the populated graph, this question cannot be answered with the current data layer.",
+      "limitations": [
+        "FUNDED edges currently omit 'amount' and 'date' properties.",
+        "LOBBIED_AGAINST/FOR relationships do not contain financial transaction data.",
+        "The graph is news-populated and does not contain authoritative roll-call or financial disclosure layers required for precise spending calculations."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable due to missing data properties. Specifically, the 'LOBBIED_AGAINST' relationship lacks the 'amount' property required to answer 'How much', and the 'FUNDED' relationship is directed towards 'Campaign' nodes rather than 'Bill' nodes. The reasoning is sound and adheres to the provided ontology and the rule regarding missing relationship properties for spending amounts."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5530.0,
+        "critic": 5120.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1290,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 212,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1502
+        },
+        "critic": {
+          "input_tokens": 1326,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 112,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1438
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "R3-3",
+      "question": "Which organizations funded a given ballot-measure campaign, and on what dates?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for specific funding amounts and transaction dates for a ballot measure campaign. While the FUNDED relationship exists in the schema, the prompt's limitations state that FUNDED edges currently omit amount and date. Because the graph lacks the authoritative financial data required to answer 'on what dates' and 'which organizations' with certainty, this request is deferred to an authoritative ingestion layer.",
+        "limitations": [
+          "The FUNDED relationship in the current news-populated graph does not contain 'amount' or 'date' properties.",
+          "The graph is news-only and lacks the authoritative CAL-ACCESS/financial layer required for transaction-level auditing."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for specific funding amounts and transaction dates for a ballot measure campaign. While the FUNDED relationship exists in the schema, the prompt's limitations state that FUNDED edges currently omit amount and date. Because the graph lacks the authoritative financial data required to answer 'on what dates' and 'which organizations' with certainty, this request is deferred to an authoritative ingestion layer.",
+      "limitations": [
+        "The FUNDED relationship in the current news-populated graph does not contain 'amount' or 'date' properties.",
+        "The graph is news-only and lacks the authoritative CAL-ACCESS/financial layer required for transaction-level auditing."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5060.8,
+        "critic": 3476.0,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1293,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 162,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1455
+        },
+        "critic": {
+          "input_tokens": 1281,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1307
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "M1-1",
+      "question": "Which policy areas has Uber engaged with in California?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for policy areas Uber has 'engaged with'. In this graph, engagement is represented by news coverage (NewsArticle) or legislative actions (LOBBIED_FOR/AGAINST). However, the prompt specifies that 'DECLARED_STANCE' edges currently omit alignment and 'FUNDED' edges omit amount/date. While I can retrieve news articles mentioning Uber and their associated policy areas, the graph lacks the authoritative 'LegislativeTenure' or 'District' nodes required to confirm the scope of 'California' engagement versus general national activity. I will proceed by retrieving news-based evidence of Uber's involvement in policy areas via news articles to provide a prototype view of coverage.",
+        "limitations": [
+          "DECLARED_STANCE edges omit alignment; cannot determine if Uber's stance was for or against a specific bill/prop via this edge alone.",
+          "FUNDED edges omit amount and date; cannot establish the scale or timing of financial engagement.",
+          "The graph is news-only; it does not contain authoritative legislative roll-call data or district-level mapping to confirm 'California' specific engagement without news context."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan is deferred because it claims the graph lacks the necessary nodes to confirm 'California' engagement. However, the ontology provides 'Organization' (which includes 'Corporation' like Uber) and 'NewsArticle'. While the graph may not have a 'State' node, the question asks for policy areas Uber has engaged with in California. A valid approach would be to search for NewsArticles that mention Uber (Organization) and are linked to PolicyAreas via DISCUSSES_TOPIC, or check if Uber has LOBBIED_FOR/AGAINST Bills that are linked to PolicyAreas via ABOUT_TOPIC. The plan's reasoning that it cannot confirm 'California' due to a lack of 'District' nodes is a limitation of the data's granularity, but the question can still be answered by retrieving all policy areas associated with Uber's activities in the news or legislative actions present in the graph, as 'engagement' is a broad term. The plan's decision to 'proceed by retrieving news-based evidence' is actually a valid path to a prototype, but it incorrectly labels the disposition as 'deferred' based on a perceived inability to filter by state, whereas a prototype should attempt to find the intersection of Uber and PolicyAreas regardless of the state-level precision."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for policy areas Uber has 'engaged with'. In this graph, engagement is represented by news coverage (NewsArticle) or legislative actions (LOBBIED_FOR/AGAINST). However, the prompt specifies that 'DECLARED_STANCE' edges currently omit alignment and 'FUNDED' edges omit amount/date. While I can retrieve news articles mentioning Uber and their associated policy areas, the graph lacks the authoritative 'LegislativeTenure' or 'District' nodes required to confirm the scope of 'California' engagement versus general national activity. I will proceed by retrieving news-based evidence of Uber's involvement in policy areas via news articles to provide a prototype view of coverage.",
+      "limitations": [
+        "DECLARED_STANCE edges omit alignment; cannot determine if Uber's stance was for or against a specific bill/prop via this edge alone.",
+        "FUNDED edges omit amount and date; cannot establish the scale or timing of financial engagement.",
+        "The graph is news-only; it does not contain authoritative legislative roll-call data or district-level mapping to confirm 'California' specific engagement without news context."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan is deferred because it claims the graph lacks the necessary nodes to confirm 'California' engagement. However, the ontology provides 'Organization' (which includes 'Corporation' like Uber) and 'NewsArticle'. While the graph may not have a 'State' node, the question asks for policy areas Uber has engaged with in California. A valid approach would be to search for NewsArticles that mention Uber (Organization) and are linked to PolicyAreas via DISCUSSES_TOPIC, or check if Uber has LOBBIED_FOR/AGAINST Bills that are linked to PolicyAreas via ABOUT_TOPIC. The plan's reasoning that it cannot confirm 'California' due to a lack of 'District' nodes is a limitation of the data's granularity, but the question can still be answered by retrieving all policy areas associated with Uber's activities in the news or legislative actions present in the graph, as 'engagement' is a broad term. The plan's decision to 'proceed by retrieving news-based evidence' is actually a valid path to a prototype, but it incorrectly labels the disposition as 'deferred' based on a perceived inability to filter by state, whereas a prototype should attempt to find the intersection of Uber and PolicyAreas regardless of the state-level precision."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6889.8,
+        "critic": 8011.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 268,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1556
+        },
+        "critic": {
+          "input_tokens": 1380,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 287,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1667
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M1-2",
+      "question": "Which policy areas do the construction trade unions appear in?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query asks for policy areas associated with 'construction trade unions'. While the graph contains 'LaborUnion' sublabels under 'Organization', the current schema for 'DECLARED_STANCE' edges lacks 'alignment' data, and 'FUNDED' edges lack 'amount' and 'date'. More importantly, the graph is news-only; it does not contain authoritative industry classifications or direct 'LaborUnion' -> 'PolicyArea' mappings. I can only retrieve policy areas mentioned in news articles that also mention construction trade unions via chunks, but I cannot definitively state they 'appear' in those areas as a matter of fact without the alignment/sector data being explicitly linked to the PolicyArea node. I will attempt to find news articles that discuss a PolicyArea and also mention a LaborUnion in their chunks to provide evidence for inspection.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit alignment, so we cannot confirm if a union supports or opposes a policy via stance alone.",
+          "The graph is news-populated; associations are based on journalistic mention rather than authoritative industry/sector mapping.",
+          "The query relies on the intersection of NewsArticle topics and LaborUnion mentions within the same article's chunks."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query asks for policy areas associated with 'construction trade unions'. While the graph contains 'LaborUnion' sublabels under 'Organization', the current schema for 'DECLARED_STANCE' edges lacks 'alignment' data, and 'FUNDED' edges lack 'amount' and 'date'. More importantly, the graph is news-only; it does not contain authoritative industry classifications or direct 'LaborUnion' -> 'PolicyArea' mappings. I can only retrieve policy areas mentioned in news articles that also mention construction trade unions via chunks, but I cannot definitively state they 'appear' in those areas as a matter of fact without the alignment/sector data being explicitly linked to the PolicyArea node. I will attempt to find news articles that discuss a PolicyArea and also mention a LaborUnion in their chunks to provide evidence for inspection.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit alignment, so we cannot confirm if a union supports or opposes a policy via stance alone.",
+        "The graph is news-populated; associations are based on journalistic mention rather than authoritative industry/sector mapping.",
+        "The query relies on the intersection of NewsArticle topics and LaborUnion mentions within the same article's chunks."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7638.3,
+        "critic": 3839.8,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 281,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1570
+        },
+        "critic": {
+          "input_tokens": 1394,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1414
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M2-1",
+      "question": "Which organizations took the same side as the construction unions on the wage bill?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for a comparison of organizational stances on a specific 'wage bill'. While the graph contains DECLARED_STANCE edges, these edges currently omit the 'alignment' property (e.g., whether they are for or against). Consequently, the graph cannot programmatically determine if an organization is on the 'same side' as construction unions. Furthermore, the graph lacks the authoritative roll-call/voting data required to establish a definitive legislative stance for comparison. I can only retrieve news-based evidence for inspection.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', making it impossible to determine if an organization's stance is 'same side' or 'opposite side' via Cypher.",
+          "The graph lacks authoritative roll-call/voting data (VOTED_AYE/VOTED_NO) for Bills; it only contains news-based mentions.",
+          "The graph lacks LegislativeTenure or District nodes to verify the specific legislative context of the 'wage bill'."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'DECLARED_STANCE' relationship is missing the 'alignment' property required to determine if two entities are on the 'same side'. Without this property, the logic of 'same side' cannot be resolved via Cypher. Additionally, the plan correctly notes the absence of voting data (VOTED_AYE/VOTED_NO) for Bills, which would be the alternative way to establish stance. The decision to defer is correct based on the provided ontology."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for a comparison of organizational stances on a specific 'wage bill'. While the graph contains DECLARED_STANCE edges, these edges currently omit the 'alignment' property (e.g., whether they are for or against). Consequently, the graph cannot programmatically determine if an organization is on the 'same side' as construction unions. Furthermore, the graph lacks the authoritative roll-call/voting data required to establish a definitive legislative stance for comparison. I can only retrieve news-based evidence for inspection.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', making it impossible to determine if an organization's stance is 'same side' or 'opposite side' via Cypher.",
+        "The graph lacks authoritative roll-call/voting data (VOTED_AYE/VOTED_NO) for Bills; it only contains news-based mentions.",
+        "The graph lacks LegislativeTenure or District nodes to verify the specific legislative context of the 'wage bill'."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'DECLARED_STANCE' relationship is missing the 'alignment' property required to determine if two entities are on the 'same side'. Without this property, the logic of 'same side' cannot be resolved via Cypher. Additionally, the plan correctly notes the absence of voting data (VOTED_AYE/VOTED_NO) for Bills, which would be the alternative way to establish stance. The decision to defer is correct based on the provided ontology."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6199.1,
+        "critic": 5612.1,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1293,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 241,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1534
+        },
+        "critic": {
+          "input_tokens": 1358,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 129,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1487
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M2-2",
+      "question": "Which lawmakers have opposed the same bills as Uber?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for lawmakers who have 'opposed' the same bills as Uber. In the current graph schema, 'DECLARED_STANCE' edges between Organizations and Politicians regarding Bills/Props omit the 'alignment' property, making it impossible to programmatically distinguish between 'support' and 'opposition' via that relationship. Furthermore, while 'LOBBIED_AGAINST' exists, the graph lacks the authoritative roll-call/voting data (VOTED_NO) linked to specific Bill IDs in a way that allows for a reliable intersection of 'Uber's opposition' and 'Lawmaker opposition' without the alignment property or a direct link between Organization lobbying and Politician voting records. I can only retrieve evidence for inspection if the user provides specific Bill IDs or if the alignment property is populated.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', so opposition cannot be established via stance edges.",
+          "LOBBIED_AGAINST/FOR edges exist, but the graph does not currently link Organization lobbying actions directly to Politician voting records (VOTED_NO) in a way that identifies 'the same bills' without ambiguity.",
+          "The graph is news-populated only; it lacks the authoritative legislative roll-call layer required to confirm official opposition."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'DECLARED_STANCE' relationship lacks the 'alignment' property required to distinguish between 'support' and 'opposition'. Additionally, it correctly notes that 'LOBBIED_AGAINST' (Organization -> Bill) and 'VOTED_NO' (Politician -> LegislativeEvent) cannot be intersected to find 'the same bills' because 'VOTED_NO' links to a 'LegislativeEvent', which must then be linked to a 'Bill' via 'ACTION_ON'. While a path exists (Organization)-[:LOBBIED_AGAINST]->(Bill)<-[:ACTION_ON]-(LegislativeEvent)<-[:VOTED_NO]-(Politician), the plan's reasoning regarding the lack of 'alignment' on DECLARED_STANCE is a valid deterministic constraint for the specific semantic requirement of 'opposed' in the context of stance-based queries."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for lawmakers who have 'opposed' the same bills as Uber. In the current graph schema, 'DECLARED_STANCE' edges between Organizations and Politicians regarding Bills/Props omit the 'alignment' property, making it impossible to programmatically distinguish between 'support' and 'opposition' via that relationship. Furthermore, while 'LOBBIED_AGAINST' exists, the graph lacks the authoritative roll-call/voting data (VOTED_NO) linked to specific Bill IDs in a way that allows for a reliable intersection of 'Uber's opposition' and 'Lawmaker opposition' without the alignment property or a direct link between Organization lobbying and Politician voting records. I can only retrieve evidence for inspection if the user provides specific Bill IDs or if the alignment property is populated.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', so opposition cannot be established via stance edges.",
+        "LOBBIED_AGAINST/FOR edges exist, but the graph does not currently link Organization lobbying actions directly to Politician voting records (VOTED_NO) in a way that identifies 'the same bills' without ambiguity.",
+        "The graph is news-populated only; it lacks the authoritative legislative roll-call layer required to confirm official opposition."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'DECLARED_STANCE' relationship lacks the 'alignment' property required to distinguish between 'support' and 'opposition'. Additionally, it correctly notes that 'LOBBIED_AGAINST' (Organization -> Bill) and 'VOTED_NO' (Politician -> LegislativeEvent) cannot be intersected to find 'the same bills' because 'VOTED_NO' links to a 'LegislativeEvent', which must then be linked to a 'Bill' via 'ACTION_ON'. While a path exists (Organization)-[:LOBBIED_AGAINST]->(Bill)<-[:ACTION_ON]-(LegislativeEvent)<-[:VOTED_NO]-(Politician), the plan's reasoning regarding the lack of 'alignment' on DECLARED_STANCE is a valid deterministic constraint for the specific semantic requirement of 'opposed' in the context of stance-based queries."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 8011.5,
+        "critic": 6949.4,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 301,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1589
+        },
+        "critic": {
+          "input_tokens": 1413,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 220,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1633
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M2-3",
+      "question": "Which organizations have opposed the same measures more than once?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for organizations that have 'opposed' measures. In the current graph schema, opposition is represented by the `LOBBIED_AGAINST` relationship or via `DECLARED_STANCE` (where alignment is specified). However, the `DECLARED_STANCE` edges currently omit the `alignment` property, making it impossible to distinguish between support and opposition through that relationship. Furthermore, the `LOBBIED_AGAINST` relationship does not contain a timestamp or specific measure identifier beyond the target node. To identify organizations opposing the *same* measure more than once, we would need to track multiple instances of opposition to the same `Bill` or `Prop` over time, but the current schema lacks the temporal metadata on `LOBBIED_AGAINST` or the `alignment` property on `DECLARED_STANCE` to reliably confirm 'opposition' vs 'support' or 'multiple instances' of the same stance. Therefore, this query cannot be fulfilled with the current data state.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', preventing the identification of 'opposition' via stance.",
+          "LOBBIED_AGAINST relationships lack temporal properties (date) to determine if multiple instances of lobbying occurred over time or are redundant entries.",
+          "The graph is news-only and lacks the authoritative legislative history required to verify repeated opposition patterns."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for organizations that have 'opposed' measures. In the current graph schema, opposition is represented by the `LOBBIED_AGAINST` relationship or via `DECLARED_STANCE` (where alignment is specified). However, the `DECLARED_STANCE` edges currently omit the `alignment` property, making it impossible to distinguish between support and opposition through that relationship. Furthermore, the `LOBBIED_AGAINST` relationship does not contain a timestamp or specific measure identifier beyond the target node. To identify organizations opposing the *same* measure more than once, we would need to track multiple instances of opposition to the same `Bill` or `Prop` over time, but the current schema lacks the temporal metadata on `LOBBIED_AGAINST` or the `alignment` property on `DECLARED_STANCE` to reliably confirm 'opposition' vs 'support' or 'multiple instances' of the same stance. Therefore, this query cannot be fulfilled with the current data state.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', preventing the identification of 'opposition' via stance.",
+        "LOBBIED_AGAINST relationships lack temporal properties (date) to determine if multiple instances of lobbying occurred over time or are redundant entries.",
+        "The graph is news-only and lacks the authoritative legislative history required to verify repeated opposition patterns."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 8589.4,
+        "critic": 3929.1,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 328,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1617
+        },
+        "critic": {
+          "input_tokens": 1441,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1461
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M3-1",
+      "question": "Which organizations are reported alongside Gavin Newsom in coverage of the climate deal?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query asks for organizations reported alongside a specific politician in relation to a specific topic ('climate deal'). While the graph contains NewsArticle and Organization nodes, the current schema for 'DECLARED_STANCE' and 'FUNDED' edges lacks the necessary alignment, amount, or date properties to establish political context or transaction history. Furthermore, the 'climate deal' is a topical concept that must be mapped to a 'PolicyArea' node; if 'climate deal' is not an exact match for a 'PolicyArea.name', the retrieval cannot proceed. The request is deferred as it requires authoritative ingestion of specific news-to-topic mappings and relationship metadata not currently present in the populated graph.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit alignment, preventing the determination of whether an organization is 'alongside' a politician in a supportive or opposing capacity.",
+          "FUNDED edges currently omit amount and date, preventing temporal or financial context for the 'deal'.",
+          "The term 'climate deal' is a natural language concept; retrieval depends on an exact match or semantic link to a 'PolicyArea' node which is not guaranteed."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question cannot be answered with the current schema. The question asks for organizations 'reported alongside' a politician in 'coverage' of a topic. To answer this, the graph would need a path connecting a Politician and an Organization through a NewsArticle (e.g., (Politician)-[:MENTIONED_IN]->(Chunk)<-[:HAS_CHUNK]-(NewsArticle)-[:DISCUSSES_TOPIC]->(PolicyArea) AND (Organization)-[:MENTIONED_IN]->(Chunk)<-[:HAS_CHUNK]-(NewsArticle)). However, the schema only provides MENTIONED_IN relationships to Chunks, and the plan correctly notes that 'alongside' is semantically ambiguous without specific relationship properties or a direct news-based co-occurrence path defined in the ontology. Furthermore, the plan correctly identifies the dependency on a 'PolicyArea' match for 'climate deal'."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query asks for organizations reported alongside a specific politician in relation to a specific topic ('climate deal'). While the graph contains NewsArticle and Organization nodes, the current schema for 'DECLARED_STANCE' and 'FUNDED' edges lacks the necessary alignment, amount, or date properties to establish political context or transaction history. Furthermore, the 'climate deal' is a topical concept that must be mapped to a 'PolicyArea' node; if 'climate deal' is not an exact match for a 'PolicyArea.name', the retrieval cannot proceed. The request is deferred as it requires authoritative ingestion of specific news-to-topic mappings and relationship metadata not currently present in the populated graph.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit alignment, preventing the determination of whether an organization is 'alongside' a politician in a supportive or opposing capacity.",
+        "FUNDED edges currently omit amount and date, preventing temporal or financial context for the 'deal'.",
+        "The term 'climate deal' is a natural language concept; retrieval depends on an exact match or semantic link to a 'PolicyArea' node which is not guaranteed."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question cannot be answered with the current schema. The question asks for organizations 'reported alongside' a politician in 'coverage' of a topic. To answer this, the graph would need a path connecting a Politician and an Organization through a NewsArticle (e.g., (Politician)-[:MENTIONED_IN]->(Chunk)<-[:HAS_CHUNK]-(NewsArticle)-[:DISCUSSES_TOPIC]->(PolicyArea) AND (Organization)-[:MENTIONED_IN]->(Chunk)<-[:HAS_CHUNK]-(NewsArticle)). However, the schema only provides MENTIONED_IN relationships to Chunks, and the plan correctly notes that 'alongside' is semantically ambiguous without specific relationship properties or a direct news-based co-occurrence path defined in the ontology. Furthermore, the plan correctly identifies the dependency on a 'PolicyArea' match for 'climate deal'."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7038.7,
+        "critic": 6815.4,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1292,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 268,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1560
+        },
+        "critic": {
+          "input_tokens": 1383,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 213,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1596
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M3-2",
+      "question": "Who else appears in reporting on the Bay Area city project?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query refers to a 'Bay Area city project'. This entity is not identified in the provided schema as a specific node type (e.g., it is not a PolicyArea, Bill, or Prop) and no specific identifier was provided for this project. Without a specific node or topic identifier to anchor the search, the query cannot be executed against the current graph structure. Furthermore, the graph is news-only and lacks the legislative/district context required to resolve 'city projects' unless they are explicitly linked to a PolicyArea or Bill via NewsArticles.",
+        "limitations": [
+          "The term 'Bay Area city project' is an ambiguous natural language descriptor and does not map to a specific node ID or property in the schema.",
+          "The graph contains coverage gaps: DECLARED_STANCE edges lack alignment data, and FUNDED edges lack amount and date data; these cannot be used to establish opposition or spending totals."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query refers to a 'Bay Area city project'. This entity is not identified in the provided schema as a specific node type (e.g., it is not a PolicyArea, Bill, or Prop) and no specific identifier was provided for this project. Without a specific node or topic identifier to anchor the search, the query cannot be executed against the current graph structure. Furthermore, the graph is news-only and lacks the legislative/district context required to resolve 'city projects' unless they are explicitly linked to a PolicyArea or Bill via NewsArticles.",
+      "limitations": [
+        "The term 'Bay Area city project' is an ambiguous natural language descriptor and does not map to a specific node ID or property in the schema.",
+        "The graph contains coverage gaps: DECLARED_STANCE edges lack alignment data, and FUNDED edges lack amount and date data; these cannot be used to establish opposition or spending totals."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6769.2,
+        "critic": 3428.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1290,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 219,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1509
+        },
+        "critic": {
+          "input_tokens": 1335,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1355
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "M4-1",
+      "question": "Which bills has a given candidate taken a position on, among those whose campaign a given industry funded?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query requires identifying a candidate's position on specific bills. While the graph contains 'DECLARED_STANCE' edges, these edges currently omit the 'alignment' property (e.g., support vs. opposition), making it impossible to determine if a candidate 'took a position' (in terms of stance) versus merely being linked to a bill via an organization. Furthermore, the 'FUNDED' relationship lacks the 'amount' and 'date' properties necessary to verify the context of industry funding. Because the graph cannot establish whether a stance was taken or the nature of the funding, this request is deferred for authoritative ingestion.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit 'alignment', so the direction of the candidate's position cannot be established.",
+          "FUNDED edges currently omit 'amount' and 'date', preventing verification of the timing or scale of industry influence.",
+          "The graph is news-only and lacks authoritative roll-call or legislative tenure data."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query requires identifying a candidate's position on specific bills. While the graph contains 'DECLARED_STANCE' edges, these edges currently omit the 'alignment' property (e.g., support vs. opposition), making it impossible to determine if a candidate 'took a position' (in terms of stance) versus merely being linked to a bill via an organization. Furthermore, the 'FUNDED' relationship lacks the 'amount' and 'date' properties necessary to verify the context of industry funding. Because the graph cannot establish whether a stance was taken or the nature of the funding, this request is deferred for authoritative ingestion.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit 'alignment', so the direction of the candidate's position cannot be established.",
+        "FUNDED edges currently omit 'amount' and 'date', preventing verification of the timing or scale of industry influence.",
+        "The graph is news-only and lacks authoritative roll-call or legislative tenure data."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6314.8,
+        "critic": 3932.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1298,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 236,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1534
+        },
+        "critic": {
+          "input_tokens": 1358,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1384
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "M4-2",
+      "question": "Which funders of a given campaign also lobbied on bills that campaign's candidate voted on?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The query requires linking a candidate's voting record (via VOTED_AYE/VOTED_NO) to specific bills, and then identifying organizations that funded the candidate's campaign and lobbied on those same bills. However, the current graph schema lacks the 'LegislativeTenure' or 'District' nodes necessary to establish a candidate's official legislative role or the specific timeframe of their voting authority relative to the campaign. Furthermore, the 'FUNDED' relationship currently lacks the 'date' and 'amount' properties required to verify the temporal relevance of the funding to the legislative session. Because the graph is news-only and lacks the authoritative roll-call/tenure layer required to bridge 'Politician' to 'Bill' via 'LegislativeEvent' in a way that confirms legislative capacity, this request is deferred for authoritative ingestion.",
+        "limitations": [
+          "The 'FUNDED' relationship currently omits 'amount' and 'date', making it impossible to verify if funding occurred during the relevant legislative session.",
+          "The 'DECLARED_STANCE' edges omit 'alignment', preventing verification of stance-based lobbying.",
+          "The graph lacks 'LegislativeTenure' nodes, which are required to confirm a Politician's official capacity to vote on a specific Bill during a specific session."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The query requires linking a candidate's voting record (via VOTED_AYE/VOTED_NO) to specific bills, and then identifying organizations that funded the candidate's campaign and lobbied on those same bills. However, the current graph schema lacks the 'LegislativeTenure' or 'District' nodes necessary to establish a candidate's official legislative role or the specific timeframe of their voting authority relative to the campaign. Furthermore, the 'FUNDED' relationship currently lacks the 'date' and 'amount' properties required to verify the temporal relevance of the funding to the legislative session. Because the graph is news-only and lacks the authoritative roll-call/tenure layer required to bridge 'Politician' to 'Bill' via 'LegislativeEvent' in a way that confirms legislative capacity, this request is deferred for authoritative ingestion.",
+      "limitations": [
+        "The 'FUNDED' relationship currently omits 'amount' and 'date', making it impossible to verify if funding occurred during the relevant legislative session.",
+        "The 'DECLARED_STANCE' edges omit 'alignment', preventing verification of stance-based lobbying.",
+        "The graph lacks 'LegislativeTenure' nodes, which are required to confirm a Politician's official capacity to vote on a specific Bill during a specific session."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7751.0,
+        "critic": 3606.2,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1297,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 302,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1599
+        },
+        "critic": {
+          "input_tokens": 1423,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1449
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "M5-1",
+      "question": "How did each senator vote on the ADA lawsuit bill that died?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for specific roll-call voting records ('how did each senator vote') on a specific bill. The current graph is a news-populated layer and does not contain the authoritative CAL-ACCESS roll-call layer or LegislativeTenure nodes required to reconstruct official legislative voting tallies. While news articles may mention votes, the graph lacks the structural integrity to provide a complete or authoritative list of all senators' votes for a specific bill. This requires authoritative ingestion of legislative records.",
+        "limitations": [
+          "The graph is news-only and lacks the authoritative roll-call layer required for complete voting tallies.",
+          "The graph lacks LegislativeTenure nodes to verify current senate membership at the time of the event.",
+          "News-based claims of votes are subject to coverage gaps and may not capture all participating members."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for specific roll-call voting records ('how did each senator vote') on a specific bill. The current graph is a news-populated layer and does not contain the authoritative CAL-ACCESS roll-call layer or LegislativeTenure nodes required to reconstruct official legislative voting tallies. While news articles may mention votes, the graph lacks the structural integrity to provide a complete or authoritative list of all senators' votes for a specific bill. This requires authoritative ingestion of legislative records.",
+      "limitations": [
+        "The graph is news-only and lacks the authoritative roll-call layer required for complete voting tallies.",
+        "The graph lacks LegislativeTenure nodes to verify current senate membership at the time of the event.",
+        "News-based claims of votes are subject to coverage gaps and may not capture all participating members."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5567.3,
+        "critic": 3515.0,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1291,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 198,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1489
+        },
+        "critic": {
+          "input_tokens": 1313,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1333
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "M5-2",
+      "question": "Which lawmakers most often vote against their own party?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for a quantitative analysis of legislative voting patterns (voting against party lines). The current graph contains news-based coverage of legislative events via VOTED_AYE and VOTED_NO relationships, but it lacks the authoritative 'LegislativeTenure' or 'District' nodes required to establish a politician's party affiliation over time or the formal party-line context of a vote. Furthermore, the graph does not contain a 'Party' node or a 'PartyLine' property on LegislativeEvents to define what constitutes a 'party vote.' Therefore, this query cannot be answered with the existing news-populated graph.",
+        "limitations": [
+          "The graph lacks authoritative roll-call data and party-line designations for LegislativeEvents.",
+          "The graph lacks LegislativeTenure nodes to verify party affiliation at the time of a specific vote.",
+          "The graph is news-populated only; it does not contain the structural legislative data required for statistical voting analysis."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for a quantitative analysis of legislative voting patterns (voting against party lines). The current graph contains news-based coverage of legislative events via VOTED_AYE and VOTED_NO relationships, but it lacks the authoritative 'LegislativeTenure' or 'District' nodes required to establish a politician's party affiliation over time or the formal party-line context of a vote. Furthermore, the graph does not contain a 'Party' node or a 'PartyLine' property on LegislativeEvents to define what constitutes a 'party vote.' Therefore, this query cannot be answered with the existing news-populated graph.",
+      "limitations": [
+        "The graph lacks authoritative roll-call data and party-line designations for LegislativeEvents.",
+        "The graph lacks LegislativeTenure nodes to verify party affiliation at the time of a specific vote.",
+        "The graph is news-populated only; it does not contain the structural legislative data required for statistical voting analysis."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5962.2,
+        "critic": 3810.8,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 226,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1514
+        },
+        "critic": {
+          "input_tokens": 1338,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1364
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "M5-3",
+      "question": "Which senators did not vote on the ADA lawsuit bill?",
+      "layer": "outcome-5",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for a list of senators who did not vote on a specific bill. This requires authoritative roll-call data (legislative voting records) to determine which members were present but did not vote, or were absent. The current graph is a news-only prototype and does not contain the authoritative CAL-ACCESS layer or LegislativeTenure nodes required to perform a complete census of legislative voting behavior. I can only retrieve news articles that explicitly mention specific politicians' voting actions or absences regarding the 'ADA lawsuit bill'.",
+        "limitations": [
+          "The graph lacks authoritative roll-call data; it only contains news-reported claims.",
+          "The graph lacks 'District' or 'LegislativeTenure' nodes to verify current Senate membership.",
+          "The graph lacks 'LegislativeEvent' nodes for all official votes; it only contains those mentioned in news articles."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for a list of senators who did not vote on a specific bill. This requires authoritative roll-call data (legislative voting records) to determine which members were present but did not vote, or were absent. The current graph is a news-only prototype and does not contain the authoritative CAL-ACCESS layer or LegislativeTenure nodes required to perform a complete census of legislative voting behavior. I can only retrieve news articles that explicitly mention specific politicians' voting actions or absences regarding the 'ADA lawsuit bill'.",
+      "limitations": [
+        "The graph lacks authoritative roll-call data; it only contains news-reported claims.",
+        "The graph lacks 'District' or 'LegislativeTenure' nodes to verify current Senate membership.",
+        "The graph lacks 'LegislativeEvent' nodes for all official votes; it only contains those mentioned in news articles."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5531.6,
+        "critic": 3672.6,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 207,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1496
+        },
+        "critic": {
+          "input_tokens": 1319,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1345
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "D-1",
+      "question": "What did the Texas legislature do about housing this year?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request pertains to the Texas legislature, whereas the populated graph is restricted to California political data. This falls outside the scope of the current prototype layer.",
+        "limitations": [
+          "The graph is news-only and does not contain authoritative legislative roll-call data or district information.",
+          "DECLARED_STANCE edges lack alignment data; FUNDED edges lack amount and date data; these must be verified via Chunk text.",
+          "The graph contains no data for Texas jurisdictions."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable because the graph is restricted to California political data, whereas the question asks about the Texas legislature. This is a valid reason for a 'deferred' disposition based on the scope of the prototype."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request pertains to the Texas legislature, whereas the populated graph is restricted to California political data. This falls outside the scope of the current prototype layer.",
+      "limitations": [
+        "The graph is news-only and does not contain authoritative legislative roll-call data or district information.",
+        "DECLARED_STANCE edges lack alignment data; FUNDED edges lack amount and date data; these must be verified via Chunk text.",
+        "The graph contains no data for Texas jurisdictions."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable because the graph is restricted to California political data, whereas the question asks about the Texas legislature. This is a valid reason for a 'deferred' disposition based on the scope of the prototype."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 4078.5,
+        "critic": 4272.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 130,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1419
+        },
+        "critic": {
+          "input_tokens": 1243,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 75,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1318
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-2",
+      "question": "Why did Newsom really sign the Uber ballot-measure deal?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'Why did Newsom really sign the Uber ballot-measure deal?' seeks to establish intent, motivation, or 'real' reasons behind a political action. This requires authoritative ingestion of legislative intent, private communications, or non-public political strategy, which is absent from the news-populated graph. The current graph only contains news-reported coverage and cannot establish the underlying 'why' beyond what is explicitly stated in news articles. Furthermore, the graph lacks the LegislativeTenure or official legislative record required to verify the specific context of the signing event.",
+        "limitations": [
+          "The graph contains news-only coverage; it does not contain authoritative legislative records or private motivations.",
+          "DECLARED_STANCE edges lack alignment data, making it impossible to determine if an organization's stance was in favor or opposition based on the edge alone.",
+          "FUNDED edges lack amount and date, preventing a quantitative analysis of campaign influence.",
+          "The graph lacks the LegislativeTenure layer required to verify the official context of the signing."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'Why did Newsom really sign the Uber ballot-measure deal?' seeks to establish intent, motivation, or 'real' reasons behind a political action. This requires authoritative ingestion of legislative intent, private communications, or non-public political strategy, which is absent from the news-populated graph. The current graph only contains news-reported coverage and cannot establish the underlying 'why' beyond what is explicitly stated in news articles. Furthermore, the graph lacks the LegislativeTenure or official legislative record required to verify the specific context of the signing event.",
+      "limitations": [
+        "The graph contains news-only coverage; it does not contain authoritative legislative records or private motivations.",
+        "DECLARED_STANCE edges lack alignment data, making it impossible to determine if an organization's stance was in favor or opposition based on the edge alone.",
+        "FUNDED edges lack amount and date, preventing a quantitative analysis of campaign influence.",
+        "The graph lacks the LegislativeTenure layer required to verify the official context of the signing."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6187.6,
+        "critic": 3502.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1290,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 242,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1532
+        },
+        "critic": {
+          "input_tokens": 1354,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1374
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-3",
+      "question": "Should I vote yes on Proposition 38?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'Should I vote yes on Proposition 38?' is a request for a subjective voting recommendation. Per the system instructions, I am a read-only retrieval prototype for political data and cannot provide voting advice or personal opinions. I can only retrieve factual news coverage, endorsements, and funding data related to the proposition.",
+        "limitations": [
+          "DECLARED_STANCE edges currently omit alignment; retrieval of chunks is required to determine if an entity is for or against.",
+          "FUNDED edges currently omit amount and date; retrieval of chunks is required to verify transaction details.",
+          "The graph is news-only and does not contain authoritative roll-call or legislative tenure data."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'Should I vote yes on Proposition 38?' is a request for a subjective voting recommendation. Per the system instructions, I am a read-only retrieval prototype for political data and cannot provide voting advice or personal opinions. I can only retrieve factual news coverage, endorsements, and funding data related to the proposition.",
+      "limitations": [
+        "DECLARED_STANCE edges currently omit alignment; retrieval of chunks is required to determine if an entity is for or against.",
+        "FUNDED edges currently omit amount and date; retrieval of chunks is required to verify transaction details.",
+        "The graph is news-only and does not contain authoritative roll-call or legislative tenure data."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 4764.2,
+        "critic": 3420.1,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 172,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1460
+        },
+        "critic": {
+          "input_tokens": 1284,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1310
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-4",
+      "question": "Will the HOA fee cap bill pass?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'Will the HOA fee cap bill pass?' is a predictive outcome-5 question regarding the future success of legislation. The current graph contains news-populated data regarding past or current events, but does not contain authoritative legislative forecasting or the outcome of future sessions. Per instructions, outcome-5 questions require authoritative ingestion that is absent from the populated graph and must be deferred.",
+        "limitations": [
+          "The graph is news-only and does not contain authoritative roll-call or legislative forecasting data.",
+          "The graph contains coverage gaps: DECLARED_STANCE edges lack alignment data, and FUNDED edges lack amount and date data; these cannot be used to establish opposition or spending totals without inspecting the underlying chunks."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'Will the HOA fee cap bill pass?' is a predictive outcome-5 question regarding the future success of legislation. The current graph contains news-populated data regarding past or current events, but does not contain authoritative legislative forecasting or the outcome of future sessions. Per instructions, outcome-5 questions require authoritative ingestion that is absent from the populated graph and must be deferred.",
+      "limitations": [
+        "The graph is news-only and does not contain authoritative roll-call or legislative forecasting data.",
+        "The graph contains coverage gaps: DECLARED_STANCE edges lack alignment data, and FUNDED edges lack amount and date data; these cannot be used to establish opposition or spending totals without inspecting the underlying chunks."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 4953.1,
+        "critic": 3235.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1286,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 177,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1463
+        },
+        "critic": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 20,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1309
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-5",
+      "question": "Which California legislators are bought by tech money?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question 'Which California legislators are bought by tech money?' requires establishing a causal or corruptive link between campaign funding and legislative action. The current graph schema contains 'FUNDED' edges between Organizations and Campaigns, but these edges lack the 'amount' and 'date' properties necessary to quantify influence, and the 'DECLARED_STANCE' edges lack 'alignment' data to determine if funding correlates with political support. Furthermore, the graph lacks 'LegislativeTenure' or 'District' nodes required to identify specific 'California legislators' versus general politicians. Because the graph is news-only and lacks the authoritative financial/roll-call layer required to substantiate claims of being 'bought,' this query cannot be answered without inventing evidence.",
+        "limitations": [
+          "The 'FUNDED' relationship currently omits 'amount' and 'date' in the edge properties, preventing the quantification of 'tech money'.",
+          "The 'DECLARED_STANCE' relationship omits 'alignment', making it impossible to determine if an organization's stance matches a politician's voting record via news claims.",
+          "The graph lacks 'LegislativeTenure' and 'District' nodes, making it impossible to verify if a 'Politician' is a current California legislator.",
+          "The graph is news-populated only; it does not contain the authoritative CAL-ACCESS or roll-call data required to establish corruption or 'buying' of legislators."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable based on the provided ontology and schema. The term 'bought' is a subjective/corruptive claim that cannot be deterministically mapped to the existing graph properties. Specifically, the schema lacks a way to link 'tech money' (which would require filtering Organizations by industry_sector or sublabels like 'Corporation' or 'PAC') to a legislator's actions in a way that implies a causal 'buying' relationship. Furthermore, the plan correctly notes that the graph lacks geographic/district data to filter for 'California' legislators specifically, and the 'FUNDED' relationship connects Organizations to Campaigns, not directly to Politicians, making the link to specific individuals indirect and insufficient to prove the user's premise."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question 'Which California legislators are bought by tech money?' requires establishing a causal or corruptive link between campaign funding and legislative action. The current graph schema contains 'FUNDED' edges between Organizations and Campaigns, but these edges lack the 'amount' and 'date' properties necessary to quantify influence, and the 'DECLARED_STANCE' edges lack 'alignment' data to determine if funding correlates with political support. Furthermore, the graph lacks 'LegislativeTenure' or 'District' nodes required to identify specific 'California legislators' versus general politicians. Because the graph is news-only and lacks the authoritative financial/roll-call layer required to substantiate claims of being 'bought,' this query cannot be answered without inventing evidence.",
+      "limitations": [
+        "The 'FUNDED' relationship currently omits 'amount' and 'date' in the edge properties, preventing the quantification of 'tech money'.",
+        "The 'DECLARED_STANCE' relationship omits 'alignment', making it impossible to determine if an organization's stance matches a politician's voting record via news claims.",
+        "The graph lacks 'LegislativeTenure' and 'District' nodes, making it impossible to verify if a 'Politician' is a current California legislator.",
+        "The graph is news-populated only; it does not contain the authoritative CAL-ACCESS or roll-call data required to establish corruption or 'buying' of legislators."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable based on the provided ontology and schema. The term 'bought' is a subjective/corruptive claim that cannot be deterministically mapped to the existing graph properties. Specifically, the schema lacks a way to link 'tech money' (which would require filtering Organizations by industry_sector or sublabels like 'Corporation' or 'PAC') to a legislator's actions in a way that implies a causal 'buying' relationship. Furthermore, the plan correctly notes that the graph lacks geographic/district data to filter for 'California' legislators specifically, and the 'FUNDED' relationship connects Organizations to Campaigns, not directly to Politicians, making the link to specific individuals indirect and insufficient to prove the user's premise."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 7632.6,
+        "critic": 6267.6,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1287,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 326,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1613
+        },
+        "critic": {
+          "input_tokens": 1434,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 180,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1614
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-6",
+      "question": "Who are the family members of a given legislator?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for information regarding the family members of a legislator. The current populated graph is news-only and contains no schema or nodes for familial relationships, kinship, or personal biographical data. Such information is not present in the news-populated layer.",
+        "limitations": [
+          "The graph contains no 'FamilyMember' or 'Kinship' labels.",
+          "The graph is restricted to news-populated entities and does not include authoritative biographical or vital records."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for information regarding the family members of a legislator. The current populated graph is news-only and contains no schema or nodes for familial relationships, kinship, or personal biographical data. Such information is not present in the news-populated layer.",
+      "limitations": [
+        "The graph contains no 'FamilyMember' or 'Kinship' labels.",
+        "The graph is restricted to news-populated entities and does not include authoritative biographical or vital records."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 4158.2,
+        "critic": 3159.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1288,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 124,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1412
+        },
+        "critic": {
+          "input_tokens": 1238,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1264
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "D-7",
+      "question": "Which organizations did not fund the campaign against Proposition 38?",
+      "layer": "declined",
+      "expected_disposition": "declined",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for organizations that *did not* fund a specific campaign. In a graph database, 'non-existence' of a relationship (the absence of a FUNDED edge) cannot be queried to produce a list of all possible entities in the universe that lack that edge. To identify who did *not* fund the campaign, one would need a complete registry of all legal entities in California, which is not contained within this news-populated graph. Furthermore, the current schema for FUNDED edges lacks the 'amount' and 'date' properties required to distinguish between 'not funding' and 'funding in a different period/amount' via news claims. This is an outcome-5/authoritative ingestion requirement.",
+        "limitations": [
+          "The graph is news-populated and does not contain a master registry of all California organizations.",
+          "The FUNDED relationship currently lacks the temporal and quantitative metadata required to definitively prove a lack of contribution via news snippets.",
+          "Querying for the absence of a relationship (NOT FUNDED) is logically impossible for an open-world set of entities."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable due to the 'open-world' nature of the graph. In a news-populated graph, one cannot list entities that *did not* do something because the graph only contains entities that *did* something (positive evidence). To list non-funders, one would need a complete universe of all possible organizations, which is not present in the schema. The reasoning provided in the plan is logically sound and adheres to the constraints of the ontology."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for organizations that *did not* fund a specific campaign. In a graph database, 'non-existence' of a relationship (the absence of a FUNDED edge) cannot be queried to produce a list of all possible entities in the universe that lack that edge. To identify who did *not* fund the campaign, one would need a complete registry of all legal entities in California, which is not contained within this news-populated graph. Furthermore, the current schema for FUNDED edges lacks the 'amount' and 'date' properties required to distinguish between 'not funding' and 'funding in a different period/amount' via news claims. This is an outcome-5/authoritative ingestion requirement.",
+      "limitations": [
+        "The graph is news-populated and does not contain a master registry of all California organizations.",
+        "The FUNDED relationship currently lacks the temporal and quantitative metadata required to definitively prove a lack of contribution via news snippets.",
+        "Querying for the absence of a relationship (NOT FUNDED) is logically impossible for an open-world set of entities."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the question is unanswerable due to the 'open-world' nature of the graph. In a news-populated graph, one cannot list entities that *did not* do something because the graph only contains entities that *did* something (positive evidence). To list non-funders, one would need a complete universe of all possible organizations, which is not present in the schema. The reasoning provided in the plan is logically sound and adheres to the constraints of the ontology."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 6133.0,
+        "critic": 5227.7,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1291,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 253,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1544
+        },
+        "critic": {
+          "input_tokens": 1368,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 127,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1495
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "F-1",
+      "question": "How did each senator vote on the ADA lawsuit bill?",
+      "layer": "deferred",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for roll-call voting data ('How did each senator vote...') which requires an authoritative legislative layer (CAL-ACCESS/Roll-call). The current populated graph is news-only and contains no LegislativeTenure or authoritative voting records. While news articles may mention votes, the graph lacks the structural capacity to provide a comprehensive list of 'each senator's' vote on a specific bill without authoritative ingestion.",
+        "limitations": [
+          "The graph is news-populated only; it lacks the authoritative roll-call layer required to answer 'how each senator voted' comprehensively.",
+          "LegislativeEvent nodes may exist in news coverage, but the graph does not contain the full roster of senators or their official voting records."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for roll-call voting data ('How did each senator vote...') which requires an authoritative legislative layer (CAL-ACCESS/Roll-call). The current populated graph is news-only and contains no LegislativeTenure or authoritative voting records. While news articles may mention votes, the graph lacks the structural capacity to provide a comprehensive list of 'each senator's' vote on a specific bill without authoritative ingestion.",
+      "limitations": [
+        "The graph is news-populated only; it lacks the authoritative roll-call layer required to answer 'how each senator voted' comprehensively.",
+        "LegislativeEvent nodes may exist in news coverage, but the graph does not contain the full roster of senators or their official voting records."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 4943.4,
+        "critic": 3290.6,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1289,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 178,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1467
+        },
+        "critic": {
+          "input_tokens": 1293,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1319
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "F-2",
+      "question": "Who were the largest donors to the 2026 governor's race?",
+      "layer": "deferred",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for the 'largest donors' to the 2026 governor's race. The current graph schema for the FUNDED relationship explicitly omits 'amount' and 'date' properties, meaning the graph cannot perform mathematical aggregations or sorting to identify 'largest' donors. Furthermore, the graph is news-only and lacks the authoritative financial/roll-call layer required to determine actual campaign contribution totals. This is an outcome-5/authoritative ingestion requirement.",
+        "limitations": [
+          "The FUNDED relationship currently omits 'amount' and 'date' properties, preventing the calculation of donor rankings.",
+          "The graph is populated via news coverage and does not contain the authoritative CAL-ACCESS or FPPC financial transaction layer required for accurate donor identification."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'FUNDED' relationship in the provided ontology *does* contain 'amount' and 'date' properties, contradicting the plan's reasoning that they are omitted. However, the plan's conclusion to 'defer' is correct based on the Grounding Evidence requirement: the question asks for 'largest donors' to a 2026 race, but the ontology is news-based and lacks the authoritative financial data (transactional records) required to perform a global aggregation of all donors for a specific election cycle. The plan's reasoning regarding the lack of an authoritative financial layer is valid, even though its premise about the schema properties is factually incorrect based on the provided ontology."
+        ],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for the 'largest donors' to the 2026 governor's race. The current graph schema for the FUNDED relationship explicitly omits 'amount' and 'date' properties, meaning the graph cannot perform mathematical aggregations or sorting to identify 'largest' donors. Furthermore, the graph is news-only and lacks the authoritative financial/roll-call layer required to determine actual campaign contribution totals. This is an outcome-5/authoritative ingestion requirement.",
+      "limitations": [
+        "The FUNDED relationship currently omits 'amount' and 'date' properties, preventing the calculation of donor rankings.",
+        "The graph is populated via news coverage and does not contain the authoritative CAL-ACCESS or FPPC financial transaction layer required for accurate donor identification."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": false,
+        "errors": [
+          "The plan correctly identifies that the 'FUNDED' relationship in the provided ontology *does* contain 'amount' and 'date' properties, contradicting the plan's reasoning that they are omitted. However, the plan's conclusion to 'defer' is correct based on the Grounding Evidence requirement: the question asks for 'largest donors' to a 2026 race, but the ontology is news-based and lacks the authoritative financial data (transactional records) required to perform a global aggregation of all donors for a specific election cycle. The plan's reasoning regarding the lack of an authoritative financial layer is valid, even though its premise about the schema properties is factually incorrect based on the provided ontology."
+        ],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5043.1,
+        "critic": 5682.5,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1295,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 188,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1483
+        },
+        "critic": {
+          "input_tokens": 1309,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 170,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1479
+        }
+      },
+      "status": "failed"
+    },
+    {
+      "case_id": "F-3",
+      "question": "Who represented Assembly District 52 before and after the 2021 redistricting?",
+      "layer": "deferred",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The question asks for historical representation of a specific legislative district (Assembly District 52) before and after a specific redistricting cycle (2021). The current graph schema and populated data do not contain 'LegislativeTenure', 'District', or 'RedistrictingCycle' nodes, nor does it contain an authoritative layer for roll-call or district-based representation. This information is absent from the news-populated graph and requires authoritative ingestion.",
+        "limitations": [
+          "The graph lacks 'District' nodes and 'LegislativeTenure' data required to map politicians to specific geographic boundaries over time.",
+          "The graph is news-only and does not contain the authoritative legislative records necessary to answer district-specific representation queries."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The question asks for historical representation of a specific legislative district (Assembly District 52) before and after a specific redistricting cycle (2021). The current graph schema and populated data do not contain 'LegislativeTenure', 'District', or 'RedistrictingCycle' nodes, nor does it contain an authoritative layer for roll-call or district-based representation. This information is absent from the news-populated graph and requires authoritative ingestion.",
+      "limitations": [
+        "The graph lacks 'District' nodes and 'LegislativeTenure' data required to map politicians to specific geographic boundaries over time.",
+        "The graph is news-only and does not contain the authoritative legislative records necessary to answer district-specific representation queries."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5208.6,
+        "critic": 3137.3,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1297,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 181,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1478
+        },
+        "critic": {
+          "input_tokens": 1304,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1330
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "F-4",
+      "question": "Which Assembly members did not vote on AB 1165?",
+      "layer": "deferred",
+      "expected_disposition": "deferred",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for a list of Assembly members who did not vote on a specific bill. This requires access to authoritative roll-call voting records or a complete roster of current Assembly members to identify absences/non-votes. The populated graph is news-only and lacks the 'LegislativeTenure' or 'District' nodes required to establish a complete set of Assembly members for a specific session, and it does not contain an authoritative roll-call layer. Therefore, this query cannot be fulfilled with the current graph schema.",
+        "limitations": [
+          "The graph is news-populated only and lacks authoritative legislative rosters.",
+          "The graph lacks 'LegislativeTenure' nodes required to define the full membership of the Assembly for a specific session.",
+          "The graph lacks an authoritative roll-call layer to determine non-participation (absence) vs. presence without a vote."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for a list of Assembly members who did not vote on a specific bill. This requires access to authoritative roll-call voting records or a complete roster of current Assembly members to identify absences/non-votes. The populated graph is news-only and lacks the 'LegislativeTenure' or 'District' nodes required to establish a complete set of Assembly members for a specific session, and it does not contain an authoritative roll-call layer. Therefore, this query cannot be fulfilled with the current graph schema.",
+      "limitations": [
+        "The graph is news-populated only and lacks authoritative legislative rosters.",
+        "The graph lacks 'LegislativeTenure' nodes required to define the full membership of the Assembly for a specific session.",
+        "The graph lacks an authoritative roll-call layer to determine non-participation (absence) vs. presence without a vote."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5354.8,
+        "critic": 3259.6,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1292,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 208,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1500
+        },
+        "critic": {
+          "input_tokens": 1324,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1350
+        }
+      },
+      "status": "ok"
+    },
+    {
+      "case_id": "C-1",
+      "question": "Which bills did the Assembly Appropriations Committee hear?",
+      "layer": "news-populated",
+      "expected_disposition": "query",
+      "initial_plan": {
+        "disposition": "deferred",
+        "cypher": null,
+        "params": {},
+        "explanation": "The request asks for a list of bills heard by a specific committee. This requires access to authoritative roll-call or legislative session data (LegislativeTenure, District, or RedistrictingCycle) which is explicitly absent from the populated news-only graph. The current graph only contains news-based coverage of legislative events, which may mention hearings but does not constitute an authoritative record of committee business.",
+        "limitations": [
+          "The graph is news-only and lacks the authoritative CAL-ACCESS layer required to list all bills heard by a committee.",
+          "Information regarding committee hearings is only available if specifically reported in a NewsArticle.",
+          "DECLARED_STANCE edges currently omit alignment, and FUNDED edges omit amount and date; however, these are not directly relevant to the specific query."
+        ]
+      },
+      "initial_deterministic_validation_errors": [],
+      "initial_critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "disposition": "deferred",
+      "query": null,
+      "params": {},
+      "explanation": "The request asks for a list of bills heard by a specific committee. This requires access to authoritative roll-call or legislative session data (LegislativeTenure, District, or RedistrictingCycle) which is explicitly absent from the populated news-only graph. The current graph only contains news-based coverage of legislative events, which may mention hearings but does not constitute an authoritative record of committee business.",
+      "limitations": [
+        "The graph is news-only and lacks the authoritative CAL-ACCESS layer required to list all bills heard by a committee.",
+        "Information regarding committee hearings is only available if specifically reported in a NewsArticle.",
+        "DECLARED_STANCE edges currently omit alignment, and FUNDED edges omit amount and date; however, these are not directly relevant to the specific query."
+      ],
+      "deterministic_validation_errors": [],
+      "critic": {
+        "valid": true,
+        "errors": [],
+        "should_repair": false
+      },
+      "repair_attempts": [],
+      "row_count": 0,
+      "grounding_evidence_count": 0,
+      "sample_rows": [],
+      "execution_error": null,
+      "latency_ms": {
+        "generation": 5167.3,
+        "critic": 3038.9,
+        "execution": null
+      },
+      "usage": {
+        "generation": {
+          "input_tokens": 1287,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 277,
+          "output_tokens": 193,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1480
+        },
+        "critic": {
+          "input_tokens": 1304,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 112,
+          "output_tokens": 26,
+          "input_audio_tokens": 0,
+          "cache_audio_read_tokens": 0,
+          "output_audio_tokens": 0,
+          "details": {},
+          "requests": 1,
+          "tool_calls": 0,
+          "total_tokens": 1330
+        }
+      },
+      "status": "failed"
+    }
+  ],
+  "stress_probes": [
+    {
+      "probe_id": "tenure-direct-invalid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (p:Politician)-[:VOTED_AYE]->(v:LegislativeEvent) RETURN p, v LIMIT 5",
+      "validation_errors": [
+        "primary ontology path bypasses LegislativeTenure"
+      ]
+    },
+    {
+      "probe_id": "tenure-mediated-valid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (p:Politician)-[:HELD_TENURE]->(t:LegislativeTenure)-[:VOTED_AYE]->(v:LegislativeEvent) RETURN p, t, v LIMIT 5",
+      "validation_errors": []
+    },
+    {
+      "probe_id": "sublabel-incompatible-invalid",
+      "layer": "news-populated",
+      "cypher": "MATCH (o:Campaign:LaborUnion)-[:MENTIONED_IN]->(c:Chunk) RETURN o, c.text LIMIT 5",
+      "validation_errors": [
+        "sub-label LaborUnion is incompatible with Campaign"
+      ]
+    },
+    {
+      "probe_id": "sublabel-standalone-valid",
+      "layer": "news-populated",
+      "cypher": "MATCH (o:LaborUnion)-[:MENTIONED_IN]->(c:Chunk) RETURN o, c.text LIMIT 5",
+      "validation_errors": []
+    },
+    {
+      "probe_id": "sublabel-paired-valid",
+      "layer": "news-populated",
+      "cypher": "MATCH (o:Organization:LaborUnion)-[:MENTIONED_IN]->(c:Chunk) RETURN o, c.text LIMIT 5",
+      "validation_errors": []
+    },
+    {
+      "probe_id": "campaign-union-invalid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (c:Campaign)-[:CAMPAIGN_FOR]->(b:Bill) RETURN c, b LIMIT 5",
+      "validation_errors": [
+        "CAMPAIGN_FOR target must be constrained to Prop or Politician"
+      ]
+    },
+    {
+      "probe_id": "campaign-union-valid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (c:Campaign)-[:CAMPAIGN_FOR]->(p:Prop) RETURN c, p LIMIT 5",
+      "validation_errors": []
+    },
+    {
+      "probe_id": "district-cycle-blind-invalid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (d:District {number: $number}) RETURN d LIMIT 5",
+      "validation_errors": [
+        "District match omits cycle_year"
+      ]
+    },
+    {
+      "probe_id": "district-cycle-scoped-valid",
+      "layer": "outcome-5",
+      "cypher": "MATCH (d:District {number: $number, cycle_year: $cycle_year}) RETURN d LIMIT 5",
+      "validation_errors": []
+    }
+  ],
+  "summary": {
+    "case_count": 42,
+    "status_counts": {
+      "ok": 10,
+      "failed": 32
+    },
+    "disposition_mismatches": 30,
+    "deterministic_rejections": 0,
+    "critic_rejections": 10,
+    "critic_only_rejections": 10,
+    "deterministic_only_rejections": 0,
+    "agreed_rejections": 0,
+    "repair_attempts": 0,
+    "execution_errors": 0,
+    "cases_with_grounding_evidence": 0,
+    "generation_total_tokens": 63971,
+    "critic_total_tokens": 59104
+  }
+}

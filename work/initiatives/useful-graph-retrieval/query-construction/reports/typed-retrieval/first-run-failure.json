@@ -1,0 +1,15 @@
+{
+  "prototype": "typed_parameterized_retrieval",
+  "mode": "live",
+  "attempt": "first baseline",
+  "question_count": 42,
+  "request_shape": "one structured SelectionBatch request containing 42 opaque question IDs",
+  "deployment": "local gemma4:26b",
+  "transport_attempts": 3,
+  "outcome": "HTTP 400 before a model response",
+  "model_output": null,
+  "model_usage": null,
+  "graph_queries_executed": 0,
+  "server_response": "Failed to initialize samplers: failed to parse grammar",
+  "causal_attribution": "the llama.cpp server rejected the generated structured-output grammar before inference; batch size was not established as the cause"
+}

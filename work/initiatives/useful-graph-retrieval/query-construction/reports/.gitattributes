@@ -1,0 +1,3 @@
+# Preserve the original final blank line in these byte-identical snapshots.
+generated-cypher/query_construction_cases.yaml whitespace=-blank-at-eof
+generated-cypher/query_construction_expected.json whitespace=-blank-at-eof

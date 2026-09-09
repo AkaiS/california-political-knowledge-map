@@ -1,0 +1,348 @@
+version: 1
+purpose: Graph-backed construction examples for issue 05; not a formal Evaluation Gold Set.
+as_of_date: '2026-09-08'
+model_input_fields:
+- question
+construction_instruction: Construct a read-only retrieval query for this verified-answerable question against the supplied persisted News Ontology. Query the graph to retrieve evidence; do not predict missing coverage or answer from general knowledge.
+cases:
+- id: C-E1-01
+  family: E1
+  question: What stored reporting mentions Steve Hilton?
+  grounding: evidence-grounded
+  scope_note: Entity dossier over recorded mentions, without demanding a complete biography.
+  reference:
+    cypher: "MATCH (n:Politician)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)\nWHERE n.name = $name \nRETURN DISTINCT n.id AS subject_id,n.name AS subject,a.id AS article_id,\n       a.title AS article_title,[{kind:'entity_mention',ids:[c.id]}] AS evidence_groups"
+    parameters:
+      name: Steve Hilton
+- id: C-E1-02
+  family: E1
+  question: What stored reporting mentions Gail Pellerin?
+  grounding: evidence-grounded
+  scope_note: A second named Politician; no vote is inferred from being a bill proponent.
+  reference:
+    cypher: "MATCH (n:Politician)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)\nWHERE n.name = $name \nRETURN DISTINCT n.id AS subject_id,n.name AS subject,a.id AS article_id,\n       a.title AS article_title,[{kind:'entity_mention',ids:[c.id]}] AS evidence_groups"
+    parameters:
+      name: Gail Pellerin
+- id: C-E2-01
+  family: E2
+  question: What reporting is attached to SB 9 in the 2025-2026 legislative session?
+  grounding: evidence-grounded
+  scope_note: The session is explicit so seed resolution does not require guessing.
+  reference:
+    cypher: |-
+      MATCH (n:Bill)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)
+      WHERE n.name = $name AND n.session = $session
+      RETURN DISTINCT n.id AS subject_id,n.name AS subject,a.id AS article_id,
+             a.title AS article_title,[{kind:'entity_mention',ids:[c.id]}] AS evidence_groups
+    parameters:
+      name: SB 9
+      session: 2025-2026
+- id: C-E2-02
+  family: E2
+  question: What stored reporting is attached to Proposition 38?
+  grounding: evidence-grounded
+  scope_note: Retrieves the currently recorded proposition and reporting, not every historical measure numbered 38.
+  reference:
+    cypher: "MATCH (n:Prop)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)\nWHERE n.name = $name \nRETURN DISTINCT n.id AS subject_id,n.name AS subject,a.id AS article_id,\n       a.title AS article_title,[{kind:'entity_mention',ids:[c.id]}] AS evidence_groups"
+    parameters:
+      name: Proposition 38
+- id: C-E3-01
+  family: E3
+  question: Which stored articles discuss housing and community development in July 2026?
+  grounding: evidence-grounded
+  scope_note: Uses article-level topic assignments and an explicit half-open publication window.
+  reference:
+    cypher: |-
+      MATCH (a:NewsArticle)-[:DISCUSSES_TOPIC]->(p:PolicyArea),(a)-[:HAS_CHUNK]->(c:Chunk)
+      WHERE p.name=$area AND date(substring(a.published_date,0,10)) >= date($start)
+       AND date(substring(a.published_date,0,10)) < date($end)
+      RETURN a.id AS article_id,a.title AS article_title,a.published_date AS published_date,
+       [{kind:'article_topic_grounding',ids:collect(DISTINCT c.id)}] AS evidence_groups
+    parameters:
+      area: Housing & Community Development
+      start: '2026-07-01'
+      end: '2026-08-01'
+- id: C-E3-02
+  family: E3
+  question: Which stored articles discuss labor and employment in July 2026?
+  grounding: evidence-grounded
+  scope_note: A second temporal sweep; published_date is stored as a string.
+  reference:
+    cypher: |-
+      MATCH (a:NewsArticle)-[:DISCUSSES_TOPIC]->(p:PolicyArea),(a)-[:HAS_CHUNK]->(c:Chunk)
+      WHERE p.name=$area AND date(substring(a.published_date,0,10)) >= date($start)
+       AND date(substring(a.published_date,0,10)) < date($end)
+      RETURN a.id AS article_id,a.title AS article_title,a.published_date AS published_date,
+       [{kind:'article_topic_grounding',ids:collect(DISTINCT c.id)}] AS evidence_groups
+    parameters:
+      area: Labor & Employment
+      start: '2026-07-01'
+      end: '2026-08-01'
+- id: C-E3-03
+  family: E3
+  question: How many stored articles discuss each policy area? Include the source articles behind every count.
+  grounding: structure-derived
+  scope_note: Counts stored article assignments. Each entry chunk navigates to its source article; it is not an independent chunk-level topic classification.
+  reference:
+    cypher: |-
+      MATCH (a:NewsArticle)-[:DISCUSSES_TOPIC]->(p:PolicyArea),(a)-[:HAS_CHUNK]->(c:Chunk)
+      WITH p,a,c ORDER BY c.index,c.id
+      WITH p,a,head(collect(c.id)) AS entry_chunk
+      RETURN p.id AS area_id,p.name AS area,count(DISTINCT a.id) AS article_count,
+       collect(DISTINCT a.id) AS article_ids,
+       collect(DISTINCT {kind:a.id,ids:[entry_chunk]}) AS evidence_groups
+    parameters: {}
+- id: C-R1-01
+  family: R1
+  question: Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what reporting states that position?
+  grounding: evidence-grounded
+  scope_note: The text supplies the position; no missing alignment property is filtered or inferred.
+  reference:
+    cypher: |-
+      MATCH (s:Organization:LaborUnion)-[r:DECLARED_STANCE]->(t:Bill)
+      WHERE t.name=$measure AND t.session=$session
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      measure: AB 1018
+      session: 2025-2026
+- id: C-R1-02
+  family: R1
+  question: Which organizations are reported to have endorsed the Steve Hilton campaign?
+  grounding: evidence-grounded
+  scope_note: Uses explicit endorsement edges; duplicate graph nodes may share one project id.
+  reference:
+    cypher: |-
+      MATCH (s:Organization)-[r:ENDORSED]->(t:Campaign)
+      WHERE t.name=$campaign
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      campaign: Steve Hilton campaign
+- id: C-R2-01
+  family: R2
+  question: Which organizations are recorded as lobbying in favor of AB 186 in the 2025-2026 session?
+  grounding: evidence-grounded
+  scope_note: The attached reporting describes support by studio and union lobbyists.
+  reference:
+    cypher: |-
+      MATCH (s:Organization)-[r:LOBBIED_FOR]->(t:Bill)
+      WHERE t.name=$measure AND t.session=$session
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      measure: AB 186
+      session: 2025-2026
+- id: C-R2-02
+  family: R2
+  question: Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?
+  grounding: evidence-grounded
+  scope_note: The stored relationship records opposition; retrieve its reporting rather than inventing a lobbying amount.
+  reference:
+    cypher: |-
+      MATCH (s:Organization)-[r:LOBBIED_AGAINST]->(t:Bill)
+      WHERE t.name=$measure AND t.session=$session
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      measure: SB 947
+      session: 2025-2026
+- id: C-R3-01
+  family: R3
+  question: Which organizations are recorded as funding the Yes on Proposition 38 campaign, and what reporting supports those links?
+  grounding: evidence-grounded
+  scope_note: News funding links exist. Amount and date are absent from the Claim Key, so this asks for entities and reporting.
+  reference:
+    cypher: |-
+      MATCH (s:Organization)-[r:FUNDED]->(t:Campaign)
+      WHERE t.name=$campaign
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      campaign: Yes on Proposition 38 campaign
+- id: C-R3-02
+  family: R3
+  question: Which PACs are recorded as funding the Ed Musgrove campaign, and what reporting supports those links?
+  grounding: evidence-grounded
+  scope_note: The reporting describes campaign support by a super PAC; this does not assert a direct candidate contribution.
+  reference:
+    cypher: |-
+      MATCH (s:Organization:PAC)-[r:FUNDED]->(t:Campaign)
+      WHERE t.name=$campaign
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      campaign: Ed Musgrove campaign
+- id: C-M1-01
+  family: M1
+  question: Which policy areas are connected to Catalina Media Development LLC through Bills it has a recorded lobbying relationship with?
+  grounding: structure-derived
+  scope_note: Follows observed lobbying and article-grounded Bill topic edges; does not infer causal influence.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[r:LOBBIED_FOR|LOBBIED_AGAINST]->(b:Bill)-[t:ABOUT_TOPIC]->(p:PolicyArea)
+      WHERE o.name=$actor
+      MATCH (a:NewsArticle)-[:HAS_CHUNK]->(c:Chunk) WHERE a.id IN t.articles
+      WITH o,r,b,p,collect(DISTINCT c.id) AS topic_chunks
+      RETURN DISTINCT o.id AS actor_id,o.name AS actor,b.id AS bill_id,b.name AS bill,
+       b.session AS session,p.id AS area_id,p.name AS area,
+       [{kind:'actor_bill',ids:r.chunks},{kind:'bill_topic_article',ids:topic_chunks}] AS evidence_groups
+    parameters:
+      actor: Catalina Media Development LLC
+- id: C-M1-02
+  family: M1
+  question: Which policy areas are connected to Stand With Survivors through Bills it has a recorded lobbying relationship with?
+  grounding: structure-derived
+  scope_note: A second populated policy footprint. Duplicate stored ids are deduplicated in reference rows.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[r:LOBBIED_FOR|LOBBIED_AGAINST]->(b:Bill)-[t:ABOUT_TOPIC]->(p:PolicyArea)
+      WHERE o.name=$actor
+      MATCH (a:NewsArticle)-[:HAS_CHUNK]->(c:Chunk) WHERE a.id IN t.articles
+      WITH o,r,b,p,collect(DISTINCT c.id) AS topic_chunks
+      RETURN DISTINCT o.id AS actor_id,o.name AS actor,b.id AS bill_id,b.name AS bill,
+       b.session AS session,p.id AS area_id,p.name AS area,
+       [{kind:'actor_bill',ids:r.chunks},{kind:'bill_topic_article',ids:topic_chunks}] AS evidence_groups
+    parameters:
+      actor: Stand With Survivors
+- id: C-M2-01
+  family: M2
+  question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?
+  grounding: structure-derived
+  scope_note: Same-side intersection uses two explicit LOBBIED_FOR edges, preserving the category without missing stance alignment.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[r:LOBBIED_FOR]->(b:Bill)<-[s:LOBBIED_FOR]-(peer:Organization)
+      WHERE o.name=$actor AND b.name=$measure AND b.session=$session AND o.id<>peer.id
+      RETURN DISTINCT peer.id AS peer_id,peer.name AS peer,b.id AS bill_id,b.name AS bill,
+       [{kind:'seed_support',ids:r.chunks},{kind:'peer_support',ids:s.chunks}] AS evidence_groups
+    parameters:
+      actor: Walt Disney
+      measure: AB 186
+      session: 2025-2026
+- id: C-M2-02
+  family: M2
+  question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?
+  grounding: structure-derived
+  scope_note: A second seed tests the same intersection with separate claim provenance.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[r:LOBBIED_FOR]->(b:Bill)<-[s:LOBBIED_FOR]-(peer:Organization)
+      WHERE o.name=$actor AND b.name=$measure AND b.session=$session AND o.id<>peer.id
+      RETURN DISTINCT peer.id AS peer_id,peer.name AS peer,b.id AS bill_id,b.name AS bill,
+       [{kind:'seed_support',ids:r.chunks},{kind:'peer_support',ids:s.chunks}] AS evidence_groups
+    parameters:
+      actor: Creative Artists Agency
+      measure: AB 186
+      session: 2025-2026
+- id: C-M3-01
+  family: M3
+  question: Which organizations appear in the same stored reporting chunks as Steve Hilton?
+  grounding: evidence-grounded
+  scope_note: Co-mention means sharing a Chunk; it does not imply a financial or political relationship.
+  reference:
+    cypher: "MATCH (p:Politician)-[:MENTIONED_IN]->(c:Chunk)<-[:MENTIONED_IN]-(o:Organization),\n (a:NewsArticle)-[:HAS_CHUNK]->(c)\nWHERE p.name=$politician \nRETURN DISTINCT o.id AS organization_id,o.name AS organization,a.id AS article_id,\n [{kind:'shared_reporting_chunk',ids:[c.id]}] AS evidence_groups"
+    parameters:
+      politician: Steve Hilton
+- id: C-M3-02
+  family: M3
+  question: Which organizations appear in the same reporting chunks as Gavin Newsom in the article titled Newsom pushes environmental carve-out for campaign donor’s Santa Monica project?
+  grounding: evidence-grounded
+  scope_note: Names the source article to make the subject and reporting scope resolvable.
+  reference:
+    cypher: |-
+      MATCH (p:Politician)-[:MENTIONED_IN]->(c:Chunk)<-[:MENTIONED_IN]-(o:Organization),
+       (a:NewsArticle)-[:HAS_CHUNK]->(c)
+      WHERE p.name=$politician AND a.title=$title
+      RETURN DISTINCT o.id AS organization_id,o.name AS organization,a.id AS article_id,
+       [{kind:'shared_reporting_chunk',ids:[c.id]}] AS evidence_groups
+    parameters:
+      politician: Gavin Newsom
+      title: Newsom pushes environmental carve-out for campaign donor’s Santa Monica project
+- id: C-M4-01
+  family: M4
+  question: Which candidates are connected to California Leads through campaigns it is recorded as funding? Include the campaign and reporting for each link.
+  grounding: structure-derived
+  scope_note: Populated two-hop influence-chain prefix. The original extension from candidate to Bill has zero matches.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[f:FUNDED]->(c:Campaign)-[r:CAMPAIGN_FOR]->(t:Politician)
+      WHERE o.name=$funder
+      RETURN DISTINCT c.id AS campaign_id,c.name AS campaign,t.id AS target_id,t.name AS target,
+       [{kind:'funding_support',ids:f.chunks},{kind:'campaign_target',ids:r.chunks}] AS evidence_groups
+    parameters:
+      funder: California Leads
+- id: C-M4-02
+  family: M4
+  question: Which ballot measures are connected to Michelson Center For Public Policy through campaigns it is recorded as funding? Include the campaign and reporting for each link.
+  grounding: structure-derived
+  scope_note: Same two-hop chain with the Prop arm of CAMPAIGN_FOR. No causal influence or funding total is inferred.
+  reference:
+    cypher: |-
+      MATCH (o:Organization)-[f:FUNDED]->(c:Campaign)-[r:CAMPAIGN_FOR]->(t:Prop)
+      WHERE o.name=$funder
+      RETURN DISTINCT c.id AS campaign_id,c.name AS campaign,t.id AS target_id,t.name AS target,
+       [{kind:'funding_support',ids:f.chunks},{kind:'campaign_target',ids:r.chunks}] AS evidence_groups
+    parameters:
+      funder: Michelson Center For Public Policy
+- id: C-M5-01
+  family: M5
+  question: What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session, and which reporting states it?
+  grounding: evidence-grounded
+  scope_note: An individually reported vote using the News Ontology shortcut; no complete roll call or event date is assumed.
+  reference:
+    cypher: |-
+      MATCH (p:Politician)-[v:VOTED_AYE|VOTED_NO|ABSTAINED]->(e:LegislativeEvent)-[r:ACTION_ON]->(b:Bill)
+      WHERE p.name=$politician AND b.name=$measure AND b.session=$session
+      RETURN DISTINCT p.id AS politician_id,p.name AS politician,type(v) AS position,
+       e.id AS event_id,b.id AS bill_id,b.name AS bill,
+       [{kind:'reported_vote',ids:v.chunks},{kind:'event_bill',ids:r.chunks}] AS evidence_groups
+    parameters:
+      politician: Catherine Blakespear
+      measure: SB 1007
+      session: 2025-2026
+- id: C-M5-02
+  family: M5
+  question: What vote is recorded for Scott Wiener on SB 1229 in the 2025-2026 session, and which reporting states it?
+  grounding: evidence-grounded
+  scope_note: The attached quote explicitly says he voted no. The stored event sub-label is Hearing, so matching only Vote would miss it.
+  reference:
+    cypher: |-
+      MATCH (p:Politician)-[v:VOTED_AYE|VOTED_NO|ABSTAINED]->(e:LegislativeEvent)-[r:ACTION_ON]->(b:Bill)
+      WHERE p.name=$politician AND b.name=$measure AND b.session=$session
+      RETURN DISTINCT p.id AS politician_id,p.name AS politician,type(v) AS position,
+       e.id AS event_id,b.id AS bill_id,b.name AS bill,
+       [{kind:'reported_vote',ids:v.chunks},{kind:'event_bill',ids:r.chunks}] AS evidence_groups
+    parameters:
+      politician: Scott Wiener
+      measure: SB 1229
+      session: 2025-2026
+- id: C-C1-01
+  family: C1
+  question: Which Bills from the 2025-2026 session are recorded as referred to the Senate Appropriations Committee?
+  grounding: evidence-grounded
+  scope_note: The original committee-hearing question is narrowed to the populated referral relationship.
+  reference:
+    cypher: |-
+      MATCH (s:Bill)-[r:REFERRED_TO]->(t:Committee)
+      WHERE t.name=$committee AND s.session=$session
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      committee: Senate Appropriations Committee
+      session: 2025-2026
+- id: C-C1-02
+  family: C1
+  question: Which committees is AB 2540 in the 2025-2026 session recorded as having been referred to?
+  grounding: evidence-grounded
+  scope_note: Reverse lookup of the same recorded referrals. Does not silently call referrals hearings.
+  reference:
+    cypher: |-
+      MATCH (s:Bill)-[r:REFERRED_TO]->(t:Committee)
+      WHERE s.name=$measure AND s.session=$session
+      RETURN DISTINCT s.id AS subject_id,s.name AS subject,t.id AS target_id,t.name AS target,
+       type(r) AS relationship,[{kind:'relationship_claim',ids:r.chunks}] AS evidence_groups
+    parameters:
+      measure: AB 2540
+      session: 2025-2026
+
