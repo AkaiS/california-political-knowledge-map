@@ -2,7 +2,8 @@
 
 Labels: wayfinder:grilling, needs-triage
 Parent: [Useful Graph Retrieval](../MAP.md)
-Blocked by: [Prototype query construction and validation against the ontology](05-prototype-query-construction-and-validation.md), [Decide the retrieval modes and the index inventory they require](06-retrieval-modes-and-index-inventory.md)
+Blocked by: [Prototype query construction and validation against the ontology](05-prototype-query-construction-and-validation.md)
+Inputs: [Accepted retrieval modes and index inventory](06-retrieval-modes-and-index-inventory.md)
 
 ## Question
 
@@ -35,3 +36,18 @@ cannot be enumerated before the topology is known.
 ## Blocking
 
 - Blocks: Define the retrieval and answer contract.
+
+## Input from the retrieval modes decision
+
+[Issue 06](06-retrieval-modes-and-index-inventory.md) closed on 2026-09-08. The
+available modes are full-text search over names, article titles, and chunk text;
+Article Chunk vector search; and typed structural traversal. This ticket owns
+which modes run, their order, and the sufficiency judgement. There is no accepted
+rule requiring all three modes for every question.
+
+Combine and deduplicate the chunks reached by whichever modes run, preserving
+their retrieval routes and supporting graph claims. Combination is not another
+mode, and issue 09 owns shared ranking. Source discovery does not require a
+matching extracted relationship. Internal-ID lookup must preserve existing
+identity ambiguity; external-identifier implementation and Policy Area vectors
+are deferred.

@@ -96,12 +96,17 @@ blockers.
 ### Useful Graph Retrieval frontier
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
-charted on 2026-07-29 and holds ten tickets. Two are takeable now; the rest
-declare their blockers.
+charted on 2026-07-29 and holds ten tickets. Issues 04 and 06 closed on
+2026-09-08. Issue 05 has completed prototype comparisons ready for review, with
+follow-up experiments specified. Issue 07 still requires that review, and issue
+09 still requires the issue 08 contract.
 
-- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Every other retrieval decision waits on it.
-- [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md), `ready-for-human`.
+- [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
+- [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md): the authored question set is available as an input to the prototype.
 - [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
+- [Decide which subgraph is retrievable now and which is deferred](initiatives/useful-graph-retrieval/issues/04-retrievable-subgraph-now.md), `completed` on 2026-09-08. Scope, librarian presentation, and coverage policy are settled against the live inventory.
+- [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `ready-for-human`. Generated Cypher, typed retrieval, and composable-triples comparisons are complete, with reports preserved in the [archive](initiatives/useful-graph-retrieval/query-construction/reports/README.md). The next experiment tests compiler-assigned pattern identifiers and entity candidate resolution; the architecture decision remains open.
+- [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. The required index inventory is specified; mode selection belongs to issue 07 and shared ranking to issue 09. External-identifier implementation and Policy Area vectors are deferred.
 
 ### Pydantic-Native Evaluation Routing
 

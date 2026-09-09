@@ -48,6 +48,39 @@ a retrievable graph rides on this ticket.
 
 ## Answer
 
+### Current inventory, 2026-09-08
+
+The [read-only graph inventory](../research/04-graph-inventory-2026-09-08.md)
+records **98 CalMatters Source Articles, 2,407 Article Chunks, 3,668 nodes, and
+6,061 relationships**. All ten News Ontology base labels are present, with
+19 of its 20 relationship types. The report contains every label, sub-label,
+and relationship count and preserves the exact queries and raw results.
+
+- Included but empty: `IE_Committee` as an Organization sub-label, and
+  `VICE_CHAIRS`. No News Ontology base label is empty.
+- Excluded and absent: `District`, `ExternalIdentifier`, `LegislativeTenure`,
+  and `RedistrictingCycle`; the corresponding excluded relationship types are
+  listed in the inventory.
+- SQLite holds 103 Stories: the 98 completed Stories exactly match the graph
+  articles, and five unprocessed Stories are absent from the graph.
+- Every chunk has text and a 768-dimensional embedding, and the chunk vector
+  index is online. Grounding connections are present, with no dangling claim
+  references found.
+- All 174 stance edges lack alignment, all 12 funding edges lack amount and
+  date, and 34 Organization IDs are duplicated across 70 nodes. Twenty-two
+  Bills lack sessions. These limit structural answers despite source access.
+
+This is an observation of the available corpus, not a claim of Publication
+completeness or evidence that the specified rebuild ran. The surviving
+adherence report has four empty maps but no run or corpus identity. The task
+remains open; no data was dropped, ingested, or repaired during this inventory.
+
+The observed graph nevertheless satisfies the factual prerequisite for issue 04's
+scope decision and issue 05's read-only prototype. Those tasks can proceed with
+the recorded limitations while this population task remains separate work.
+
+### Rebuild completion requirements
+
 Record on resolution: which ontology labels and relationship types actually
 materialized and at what counts, and which remained empty — distinguishing
 labels the News Ontology excludes outright from labels it includes that produced

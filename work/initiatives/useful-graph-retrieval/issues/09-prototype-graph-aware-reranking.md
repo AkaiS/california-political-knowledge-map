@@ -2,7 +2,8 @@
 
 Labels: wayfinder:prototype, needs-triage
 Parent: [Useful Graph Retrieval](../MAP.md)
-Blocked by: [Decide the retrieval modes and the index inventory they require](06-retrieval-modes-and-index-inventory.md), [Define the retrieval and answer contract](08-retrieval-and-answer-contract.md)
+Blocked by: [Define the retrieval and answer contract](08-retrieval-and-answer-contract.md)
+Inputs: [Accepted retrieval modes and index inventory](06-retrieval-modes-and-index-inventory.md)
 
 ## Question
 
@@ -22,3 +23,25 @@ article several times over, and only the graph can tell those apart.
 Record whether reranking justifies its latency, and whether the winning signal
 is cheap enough to compute per query or needs precomputation. If it needs
 precomputation, that is a new ticket, not a silent addition to this one.
+
+## Input from the retrieval modes decision
+
+[Issue 06](06-retrieval-modes-and-index-inventory.md) closed on 2026-09-08.
+Candidates come from full-text search over names, article titles, and chunk
+text; Article Chunk vector search; and typed structural traversal. Combine and
+deduplicate Article Chunks while retaining every retrieval route and supporting
+graph claim. Name and title matches lead to candidate passages and retain their
+matching field.
+
+This prototype owns shared ranking of those candidates as well as the comparison
+of structural signals. Issue 06 selects no fusion formula, mode weights, or
+structural preference; combination itself is not another retrieval mode. Compare
+the lexical and vector baselines before deciding how structural evidence should
+affect the combined ranking. Mode selection and execution remain issue 07's work.
+
+Group selected passages by Source Article for presentation. Preserve issue 04's
+eligibility and coverage policy: a candidate does not need an extracted
+relationship, duplicate Organization IDs do not establish distinct actors, and
+missing claim properties cannot supply a structural ranking fact. External-ID
+implementation and Policy Area vectors are deferred. The index requirements
+are specified in issue 06; the decision did not create the new indexes.

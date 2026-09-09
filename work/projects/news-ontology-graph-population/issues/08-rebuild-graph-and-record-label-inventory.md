@@ -56,3 +56,16 @@ metric.
 - [04 — Sub-labels and Entity Extraction Adapter conformance](04-sub-labels-and-extraction-conformance.md)
 - [06 — Node identity, provenance, and topic edges](06-node-identity-provenance-and-topic-edges.md)
 - [07 — Bill session resolution from article links](07-bill-session-resolution.md)
+
+## Comments
+
+### 2026-09-08 — Current graph inventory
+
+A [read-only inventory](../../../initiatives/useful-graph-retrieval/research/04-graph-inventory-2026-09-08.md)
+and its summary on the parent population ticket now record the current graph's
+counts, empty structures, and corpus reconciliation. There are 98 completed
+Stories in the graph and five unprocessed Stories outside it. The observation
+does not establish that the planned rebuild ran, and the surviving adherence
+file cannot be attributed to the full corpus. Acceptance criteria for the
+completed rebuild remain unchecked; the inventory also records missing claim
+properties and duplicated Organization IDs that constrain retrieval.

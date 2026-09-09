@@ -238,8 +238,20 @@ A thematic policy category serving as a hub node that Bills, Props, and Source A
 _Avoid_: Tag, category, subject, theme; "a topic" as a name for the node
 
 **Grounding Evidence**:
-The Article Chunks loaded into context to support a retrieval answer. The graph is what reaches them — a query assembles a subgraph, and the Chunks attached to its nodes and edges are the evidence — rather than what supplies them: a relationship asserts existence and identity only, so the detail an answer needs lives in the Chunk the edge points back to. An answer derived from graph structure alone still carries the Chunks behind each element it counted. A topic edge names no Article Chunk, because it is decided for the whole article: what grounds it is the Source Article, and the Chunks reached through it are the ones that article attaches.
+The Article Chunks loaded into context to support a Retrieval Answer, reached through graph connections or other retrieval such as embedding similarity; a missing extracted relationship does not disqualify relevant source material. Answers derived from graph structure still carry the Chunks behind each element counted, and article-level topic claims reach their Chunks through the Source Article that grounds them.
 _Avoid_: Context, retrieved documents, source text, supporting chunks
+
+**Retrieval Answer**:
+A selection of relevant sources and original supporting passages presented for the reader to consult, with brief guidance connecting them to the question and stating known limits on what they support. It serves a librarian's role by directing the reader to sources and highlighting disagreements without adjudicating them.
+_Avoid_: Expert verdict, standalone summary
+
+**Deferred**:
+The coverage state of a legitimate question whose required data is not yet available, expected to become answerable as coverage expands. It is distinct from a permanently Declined question and from a search that finds no matching evidence.
+_Avoid_: Declined, failed search, no results
+
+**Coverage Description**:
+A succinct account of verified available material and its known coverage limits, organized by Publication or distinct public-record collection, with an authored description of what each provides. It supplies the corpus coverage context for recognizing Deferred questions; refresh operations and whether a particular search finds matching evidence are separate concerns.
+_Avoid_: Search result, answer confidence
 
 **Evaluation Data Set**:
 Every labeled example for one component operation, authored as one YAML file under `evals/`. The file is the Data Set; there is no database copy, no construction factory, and no immutable revision beyond the commit the file is read at. Revising it is editing the file and committing; reviewing a revision is reading the diff. Reading it validates every case against the task's own Pydantic types, so a mislabeled field is caught at read time rather than at run time. Every Data Set is a Gold Set or a Silver Set, and the two are never one population: the umbrella names what they have in common and nothing more.
