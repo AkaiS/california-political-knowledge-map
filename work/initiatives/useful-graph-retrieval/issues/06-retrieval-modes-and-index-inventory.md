@@ -30,3 +30,18 @@ Decide it here as an index requirement.
 
 - Blocks: Decide the retrieval agent topology and orchestration.
 - Blocks: Prototype graph-aware reranking.
+
+## Input from the retrievable subgraph decision
+
+[Ticket 04](04-retrievable-subgraph-now.md)'s grilling on 2026-09-08 accepted
+Article Chunk embedding retrieval as a route to source material alongside graph
+connections. A missing extracted relationship must not disqualify a relevant
+passage found through another route. This ticket still decides mode selection,
+combination, and indexes; comparative answer quality belongs to evaluation.
+
+The [2026-09-08 live inventory](../research/04-graph-inventory-2026-09-08.md)
+confirms an online 768-dimensional cosine chunk vector index covering 2,407
+embedded chunks. Only the two token lookup indexes accompany it; no full-text
+or property lookup indexes and no constraints were observed. The report also
+records populated and empty target traversals and the missing alignment,
+funding properties, and duplicate Organization identities that constrain them.
