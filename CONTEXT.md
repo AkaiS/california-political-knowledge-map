@@ -163,6 +163,10 @@ _Avoid_: Coreference tag, tagged reference, annotation
 An LLM agent that returns an accept-or-reject verdict for each Mention Span and a reason for rejected spans, so only semantically supported references are applied before chunking.
 _Avoid_: Critic agent, checker, validator
 
+**Stance Alignment Critic**:
+An LLM agent that is shown one Article Chunk and only the `DECLARED_STANCE` relationships already extracted from it, and returns each one's alignment — `POSITIVE`, `NEGATIVE`, or `NEUTRAL` — so a stance the extractor left bare carries the direction the News Ontology says a stance entails. It judges direction only: it never adds, drops, or rewrites a claim.
+_Avoid_: Stance classifier, alignment tagger, sentiment agent
+
 **Coreference Resolution Run**:
 The outcome of resolving one Source Article: the resolved text, the numbered sentences shown to the annotator, every Mention Span the model returned, and each Mention Span's outcome. It is what the Coreference Adapter returns, what a coreference failure carries, and what the Dead Letter Queue records.
 _Avoid_: Resolution result, coref run, annotation run

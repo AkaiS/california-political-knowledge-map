@@ -11,6 +11,7 @@ from knowledge_map.evaluation.tasks import task_named
 from knowledge_map.evaluation.tasks.extraction import (
     AgreedOnTheClaimProperties,
     AgreedOnTheNodeDetail,
+    AgreedOnTheStanceAlignment,
     ExtractedWithoutFailing,
     ExtractionExpectation,
     ExtractionInput,
@@ -86,7 +87,7 @@ def test_every_evaluator_returns_a_type_pydantic_evals_accepts() -> None:
             adapter.validate_python(_scored(evaluator, **kwargs))
 
 
-def test_extraction_is_a_registered_task_with_its_six_evaluators() -> None:
+def test_extraction_is_a_registered_task_with_its_seven_evaluators() -> None:
     task = task_named("extraction")
 
     assert task.data_set_stem == "extraction"
@@ -97,6 +98,7 @@ def test_extraction_is_a_registered_task_with_its_six_evaluators() -> None:
         "AgreedOnTheNodeDetail",
         "FoundTheSilverRelationships",
         "AgreedOnTheClaimProperties",
+        "AgreedOnTheStanceAlignment",
         "StayedInsideTheNewsOntology",
         "ExtractedWithoutFailing",
     ]
@@ -345,3 +347,36 @@ def test_the_task_binds_one_explicit_deployment_and_conforms_each_chunk(monkeypa
     assert [node.name for node in first.nodes] == ["Uber"]
     assert first.dropped_item_count == 1
     assert second.dropped_item_count == 1
+
+
+def test_a_bare_stance_and_an_aligned_one_are_one_claim_to_the_f1_score() -> None:
+    """Why the alignment needs its own score.
+
+    `relationship_identity` keys on endpoints and type, so a stance carrying
+    no alignment at all is counted found. The alignment score is the only
+    place the difference is visible.
+    """
+
+    expected = [_relationship("Newsom", "DECLARED_STANCE", "SB 7", alignment="NEGATIVE")]
+    bare = [_relationship("Newsom", "DECLARED_STANCE", "SB 7")]
+
+    assert _scored(
+        FoundTheSilverRelationships(), expected_edges=expected, edges=bare
+    )["relationship_f1"] == 1.0
+    assert _scored(
+        AgreedOnTheStanceAlignment(), expected_edges=expected, edges=bare
+    ) == {"stance_alignment_accuracy": 0.0}
+
+
+def test_the_critic_supplying_the_wanted_alignment_scores_one() -> None:
+    expected = [_relationship("Newsom", "DECLARED_STANCE", "SB 7", alignment="NEGATIVE")]
+
+    assert _scored(
+        AgreedOnTheStanceAlignment(), expected_edges=expected, edges=expected
+    ) == {"stance_alignment_accuracy": 1.0}
+
+
+def test_stance_alignment_is_unscored_where_silver_declares_no_stance() -> None:
+    edges = [_relationship("Uber", "LOBBIED_FOR", "SB 371", amount="$1")]
+
+    assert _scored(AgreedOnTheStanceAlignment(), expected_edges=edges, edges=edges) == {}

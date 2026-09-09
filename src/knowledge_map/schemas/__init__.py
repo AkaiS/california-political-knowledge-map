@@ -5,6 +5,7 @@ from .extraction import (
     ExtractionResult,
     Node,
     Relationship,
+    StanceAlignmentVerdict,
 )
 from .bill_sessions import BillSessionResolution, BillSessionResolutions
 from .legislative_events import LegislativeEventDate, LegislativeEventDates
