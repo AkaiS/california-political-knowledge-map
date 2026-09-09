@@ -1,0 +1,2684 @@
+{
+  "elapsed_s": 279.92540192604065,
+  "chunks_read": 166,
+  "call_count": 166,
+  "abstained_count": 6,
+  "written": 0,
+  "missing_chunk_ids": [],
+  "proposals": [
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:151",
+      "source": "Spencer Pratt",
+      "source_label": "Politician",
+      "target": "SB 9",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:156",
+      "source": "YIMBY Law",
+      "source_label": "Organization",
+      "target": "SB 9",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:167",
+      "source": "Sasha Ren\u00e9e P\u00e9rez",
+      "source_label": "Politician",
+      "target": "SB 9",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:229",
+      "source": "Sasha Ren\u00e9e P\u00e9rez",
+      "source_label": "Politician",
+      "target": "SB 1090",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1",
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_28",
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_29"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1": "POSITIVE",
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_28": "POSITIVE",
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_29": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:262",
+      "source": "Abundant Housing LA",
+      "source_label": "Organization",
+      "target": "SB 9",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:279",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 9",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:309",
+      "source": "Matt Haney",
+      "source_label": "Politician",
+      "target": "AB 1556",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:313",
+      "source": "Corporation for Supportive Housing",
+      "source_label": "Organization",
+      "target": "AB 1556",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_7"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_7": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:324",
+      "source": "Mike Gipson",
+      "source_label": "Politician",
+      "target": "AB 1165",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_11"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_11": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:344",
+      "source": "Catherine Blakespear",
+      "source_label": "Politician",
+      "target": "AB 1924",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_18"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_18": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:354",
+      "source": "League of California Cities",
+      "source_label": "Organization",
+      "target": "SB 866",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_23"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_23": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:355",
+      "source": "Blakespear",
+      "source_label": "Politician",
+      "target": "SB 866",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:359",
+      "source": "Marie Alvarado-Gil",
+      "source_label": "Politician",
+      "target": "SB 866",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_24"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_24": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:369",
+      "source": "Ash Kalra",
+      "source_label": "Politician",
+      "target": "AB 2122",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_29"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_29": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:370",
+      "source": "Josh Lowenthal",
+      "source_label": "Politician",
+      "target": "AB 2122",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_29"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_29": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:374",
+      "source": "California State Sheriff\u2019s Association",
+      "source_label": "Organization",
+      "target": "AB 2122",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_30"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_30": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:391",
+      "source": "Buffy Wicks",
+      "source_label": "Politician",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:411",
+      "source": "State Building and Construction Trades Council",
+      "source_label": "Organization",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6"
+      ],
+      "alignment": "NEUTRAL",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6": "NEUTRAL"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:423",
+      "source": "Mar\u00eda Elena Durazo",
+      "source_label": "Politician",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_9"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_9": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:482",
+      "source": "Sharon Quirk-Silva",
+      "source_label": "Politician",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1",
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1": "POSITIVE",
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:501",
+      "source": "The State Building and Construction Trades Council",
+      "source_label": "Organization",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_8"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_8": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:533",
+      "source": "Chris Ward",
+      "source_label": "Politician",
+      "target": "AB 1751",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_21"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_21": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:691",
+      "source": "Damon Connolly",
+      "source_label": "Politician",
+      "target": "a bill to further restrict how the high-road money is used",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_13"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_13": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:724",
+      "source": "Dave Cortese",
+      "source_label": "Politician",
+      "target": "Senate Constitutional Amendment 5",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_11"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_11": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:729",
+      "source": "Cortese",
+      "source_label": "Politician",
+      "target": "Senate Constitutional Amendment 5",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_13"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/#chunk_13": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:884",
+      "source": "Western States Petroleum Association",
+      "source_label": "Organization",
+      "target": "SB 1245",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_30"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_30": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:905",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 623",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_0"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_0": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1085",
+      "source": "Ben Allen",
+      "source_label": "Politician",
+      "target": "SB 1229",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_5",
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_23": "POSITIVE",
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1102",
+      "source": "Maggy Krell",
+      "source_label": "Politician",
+      "target": "SB 1229",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_9"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_9": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1146",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 1229",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_24"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1151",
+      "source": "California Coastal Commission",
+      "source_label": "Organization",
+      "target": "SB 1229",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_25"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_25": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1158",
+      "source": "California YIMBY",
+      "source_label": "Organization",
+      "target": "SB 1229",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_27"
+      ],
+      "alignment": "NEUTRAL",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_27": "NEUTRAL"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1212",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "sustainable aviation fuel tax credit",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/#chunk_15"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/#chunk_15": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1388",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "Common Sense bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk_19"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/#chunk_19": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1433",
+      "source": "Chris Ward",
+      "source_label": "Politician",
+      "target": "AB 1775",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1468",
+      "source": "Ash Kalra",
+      "source_label": "Politician",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_0",
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_6"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_0": "NEGATIVE",
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_6": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1474",
+      "source": "Roger Niello",
+      "source_label": "Politician",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_2",
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_14"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_14": "POSITIVE",
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_2": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1497",
+      "source": "California Chamber of Commerce",
+      "source_label": "Organization",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_8"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_8": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1498",
+      "source": "California Restaurant Association",
+      "source_label": "Organization",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_8"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_8": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1503",
+      "source": "Civil Justice Association of California",
+      "source_label": "Organization",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_10"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_10": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1507",
+      "source": "Josh Lowenthal",
+      "source_label": "Politician",
+      "target": "AB 649",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_11"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_11": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1519",
+      "source": "Roger Niello",
+      "source_label": "Politician",
+      "target": "Lowenthal\u2019s bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_14"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_14": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1523",
+      "source": "disability rights groups",
+      "source_label": "Organization",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1529",
+      "source": "disability rights groups",
+      "source_label": "Organization",
+      "target": "Lowenthal\u2019s bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_17"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_17": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1534",
+      "source": "Consumer Attorneys of California",
+      "source_label": "Organization",
+      "target": "SB 84",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_18"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/#chunk_18": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1767",
+      "source": "Catherine Stefani",
+      "source_label": "Politician",
+      "target": "AB 2540",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_3"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_3": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1777",
+      "source": "Faculty Association of California Community Colleges",
+      "source_label": "Organization",
+      "target": "AB 2540",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1793",
+      "source": "Health Services Association of California Community Colleges",
+      "source_label": "Organization",
+      "target": "AB 2540",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1840",
+      "source": "Insurance Department",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_0"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_0": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1865",
+      "source": "California Insurance Department",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_12",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_24"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10": "NEGATIVE",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_12": "NEGATIVE",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16": "NEGATIVE",
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_24": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1866",
+      "source": "California Insurance Department",
+      "source_label": "Organization",
+      "target": "Proposition 103",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1867",
+      "source": "Consumer Watchdog",
+      "source_label": "Organization",
+      "target": "Proposition 103",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1868",
+      "source": "Consumer Watchdog",
+      "source_label": "Organization",
+      "target": "Proposition 103",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_10": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1880",
+      "source": "Josephine Figueroa",
+      "source_label": "Politician",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1891",
+      "source": "Consumer Watchdog",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1892",
+      "source": "Consumer Watchdog",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_16": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1932",
+      "source": "Christopher Cabaldon",
+      "source_label": "Politician",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_25"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_25": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1955",
+      "source": "Consumer Federation of America",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_31"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_31": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:1963",
+      "source": "Privacy Rights Clearinghouse",
+      "source_label": "Organization",
+      "target": "AB 311",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_33"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/#chunk_33": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2022",
+      "source": "Donald Trump",
+      "source_label": "Politician",
+      "target": "federal housing bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_3"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_3": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2048",
+      "source": "YIMBY Action",
+      "source_label": "Organization",
+      "target": "federal housing bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_14"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_14": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2064",
+      "source": "Scott Peters",
+      "source_label": "Politician",
+      "target": "federal housing bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2228",
+      "source": "Laura Richardson",
+      "source_label": "Politician",
+      "target": "SB 1305",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_2"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_2": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2275",
+      "source": "California Department of Fish and Wildlife",
+      "source_label": "Organization",
+      "target": "SB 1305",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_24"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_24": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2282",
+      "source": "Center for Biological Diversity",
+      "source_label": "Organization",
+      "target": "SB 1305",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_27"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_27": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2298",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "Proposition 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_3",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_16"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_3": "NEGATIVE",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0": "NEGATIVE",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_16": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2315",
+      "source": "California Teachers Association",
+      "source_label": "Organization",
+      "target": "Proposition 3",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_9"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_9": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2322",
+      "source": "CTA",
+      "source_label": "Organization",
+      "target": "billionaire tax",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_11"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_11": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2323",
+      "source": "CTA",
+      "source_label": "Organization",
+      "target": "Proposition 3",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_11"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2329",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_13",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_13": "NEGATIVE",
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2512",
+      "source": "United Food and Commercial Workers Western States Council",
+      "source_label": "Organization",
+      "target": "AB 1776",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_12"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_12": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2579",
+      "source": "California Department of Finance",
+      "source_label": "Organization",
+      "target": "CalSHAPE program",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_17"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_17": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2616",
+      "source": "Al Muratsuchi",
+      "source_label": "Politician",
+      "target": "Proposition 2",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_28"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/#chunk_28": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2670",
+      "source": "Tom Lackey",
+      "source_label": "Politician",
+      "target": "AB 1653",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2688",
+      "source": "UndauntedK12",
+      "source_label": "Organization",
+      "target": "AB 1653",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_12"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_12": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2689",
+      "source": "UndauntedK12",
+      "source_label": "Organization",
+      "target": "AB 1653",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_12"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_12": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2701",
+      "source": "Melissa Hurtado",
+      "source_label": "Politician",
+      "target": "SB 1248",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_17"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/#chunk_17": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2933",
+      "source": "California Chamber of Commerce",
+      "source_label": "Organization",
+      "target": "AB 1776",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_21",
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_13": "NEGATIVE",
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_21": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2934",
+      "source": "California Chamber of Commerce",
+      "source_label": "Organization",
+      "target": "COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_21"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_21": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2944",
+      "source": "Cecilia Aguiar-Curry",
+      "source_label": "Politician",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2945",
+      "source": "Jasmeet Bains",
+      "source_label": "Politician",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2946",
+      "source": "Melissa Hurtado",
+      "source_label": "Politician",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2947",
+      "source": "California Federation of Labor Unions",
+      "source_label": "Organization",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2948",
+      "source": "SEIU California",
+      "source_label": "Organization",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2949",
+      "source": "United Food and Commercial Workers",
+      "source_label": "Organization",
+      "target": "the COMPETE Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:2960",
+      "source": "John Laird",
+      "source_label": "Politician",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_27",
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_2"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_27": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_2": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3010",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "last year\u2019s bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_19"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_19": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3093",
+      "source": "California Institute for Immunology and Immunotherapy",
+      "source_label": "Organization",
+      "target": "Proposition 38",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3210",
+      "source": "Jerry Brown",
+      "source_label": "Politician",
+      "target": "Jerry Brown 2013 pension reform law",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/#chunk_1"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/#chunk_1": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3296",
+      "source": "Josh Hoover",
+      "source_label": "Politician",
+      "target": "AB 2211",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_14",
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_22",
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_23"
+      ],
+      "alignment": null,
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_14": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_22": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/#chunk_23": "NEGATIVE"
+      },
+      "conflicted": true
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3484",
+      "source": "Xavier Becerra",
+      "source_label": "Politician",
+      "target": "Proposition 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_0": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3507",
+      "source": "Planned Parenthood",
+      "source_label": "Organization",
+      "target": "Proposition 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_7"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_7": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3516",
+      "source": "California Teachers Association",
+      "source_label": "Organization",
+      "target": "Proposition 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_10"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_10": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3528",
+      "source": "Xavier Becerra",
+      "source_label": "Politician",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3529",
+      "source": "CTA",
+      "source_label": "Organization",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3530",
+      "source": "California Professional Firefighters",
+      "source_label": "Organization",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3531",
+      "source": "Planned Parenthood",
+      "source_label": "Organization",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_12": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3535",
+      "source": "State Building and Construction Trades Council",
+      "source_label": "Organization",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3540",
+      "source": "Ro Khanna",
+      "source_label": "Politician",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_14"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_14": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3541",
+      "source": "Bernie Sanders",
+      "source_label": "Politician",
+      "target": "Prop. 40",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_14"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_14": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3660",
+      "source": "Western States Petroleum Association",
+      "source_label": "Organization",
+      "target": "Government Claims Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3706",
+      "source": "Howard Jarvis Taxpayers Association",
+      "source_label": "Organization",
+      "target": "Jarvis proposition",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_1",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_3",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_22"
+      ],
+      "alignment": null,
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_1": "POSITIVE",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_22": "POSITIVE",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_3": "NEGATIVE"
+      },
+      "conflicted": true
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3717",
+      "source": "Howard Jarvis Taxpayers Association",
+      "source_label": "Organization",
+      "target": "Jarvis proposition",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_3",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_22"
+      ],
+      "alignment": null,
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_22": "POSITIVE",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_3": "NEGATIVE"
+      },
+      "conflicted": true
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3752",
+      "source": "Buffy Wicks",
+      "source_label": "Politician",
+      "target": "AB 736",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_18",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_19"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_18": "POSITIVE",
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_19": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3770",
+      "source": "Howard Jarvis Taxpayers Association",
+      "source_label": "Organization",
+      "target": "Wicks bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_23"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3771",
+      "source": "Howard Jarvis Taxpayers Association",
+      "source_label": "Organization",
+      "target": "Wicks bill",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_23"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:3792",
+      "source": "Council of Infill Builders",
+      "source_label": "Organization",
+      "target": "Measure ULA",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_28"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/#chunk_28": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4083",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4084",
+      "source": "California Chamber of Commerce",
+      "source_label": "Organization",
+      "target": "SB 903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4086",
+      "source": "California Medical Association",
+      "source_label": "Organization",
+      "target": "SB 903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_32": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4256",
+      "source": "California Nurses Association",
+      "source_label": "Organization",
+      "target": "AB 1018",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4257",
+      "source": "California Nurses Association",
+      "source_label": "Organization",
+      "target": "SB 7",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4258",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 7",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4286",
+      "source": "Robert Rivas",
+      "source_label": "Politician",
+      "target": "SB 492",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_2"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_2": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4290",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 492",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_3",
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_10",
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_12",
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_0",
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_5"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_0": "NEGATIVE",
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_5": "NEGATIVE",
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_10": "NEGATIVE",
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_12": "NEGATIVE",
+        "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/#chunk_3": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4357",
+      "source": "Buffy Wicks",
+      "source_label": "Politician",
+      "target": "AB 1903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_1",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_3",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_4",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_9"
+      ],
+      "alignment": null,
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_1": "POSITIVE",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_3": "NEGATIVE",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_4": "POSITIVE",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_9": "POSITIVE"
+      },
+      "conflicted": true
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4358",
+      "source": "Yes In My Backyard",
+      "source_label": "Organization",
+      "target": "AB 1903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_1"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_1": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4382",
+      "source": "Consumer Attorneys of California",
+      "source_label": "Organization",
+      "target": "AB 1903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_7"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_7": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4383",
+      "source": "Consumer Attorneys of California",
+      "source_label": "Organization",
+      "target": "AB 1903",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_7"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_7": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4395",
+      "source": "Buffy Wicks",
+      "source_label": "Politician",
+      "target": "SB 1120",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_11"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_11": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4400",
+      "source": "Sabrina Cervantes",
+      "source_label": "Politician",
+      "target": "SB 1013",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_12",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_11",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_12",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_15"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_11": "POSITIVE",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_12": "POSITIVE",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_15": "POSITIVE",
+        "https://calmatters.org/housing/2026/09/condo-construction-bill-dies/#chunk_12": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4464",
+      "source": "Cottie Petrie-Norris",
+      "source_label": "Politician",
+      "target": "SB 492",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_16",
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_17"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_16": "NEGATIVE",
+        "https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/#chunk_17": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4527",
+      "source": "Akilah Weber Pierson",
+      "source_label": "Politician",
+      "target": "SB 344",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_4"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_4": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4534",
+      "source": "Chris Ward",
+      "source_label": "Politician",
+      "target": "SB 344",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4565",
+      "source": "Weber Pierson",
+      "source_label": "Politician",
+      "target": "SB 958",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_16"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_16": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4570",
+      "source": "Midway Rising",
+      "source_label": "Organization",
+      "target": "SB 958",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_17"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_17": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4571",
+      "source": "Midway Rising",
+      "source_label": "Organization",
+      "target": "SB 958",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_17"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/#chunk_17": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4604",
+      "source": "Cecilia Aguiar-Curry",
+      "source_label": "Politician",
+      "target": "AB 1776",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_3",
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_4"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_3": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_4": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4621",
+      "source": "Economic Security California Action",
+      "source_label": "Organization",
+      "target": "AB 1776",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_9"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_9": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4639",
+      "source": "California Department of Finance",
+      "source_label": "Organization",
+      "target": "AB 1776",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_14"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_14": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4759",
+      "source": "Cecilia Aguiar-Curry",
+      "source_label": "Politician",
+      "target": "SB 1013",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_2"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_2": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4770",
+      "source": "California State Sheriff\u2019s Association",
+      "source_label": "Organization",
+      "target": "SB 1013",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_6",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_18"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_18": "NEGATIVE",
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_6": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4799",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 1013",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_18"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/#chunk_18": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4814",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "AB 713",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0",
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0": "NEGATIVE",
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4826",
+      "source": "Jos\u00e9 Luis Solache",
+      "source_label": "Politician",
+      "target": "AB 713",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_3"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_3": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4878",
+      "source": "UC",
+      "source_label": "Organization",
+      "target": "AB 713",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_26"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4879",
+      "source": "UC",
+      "source_label": "Organization",
+      "target": "AB 713",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_26"
+      ],
+      "alignment": null,
+      "by_chunk": {},
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4888",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0",
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_1"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_1": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4889",
+      "source": "Republicans",
+      "source_label": "Organization",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_0": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4913",
+      "source": "Carl DeMaio",
+      "source_label": "Politician",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4921",
+      "source": "Jenny Rae Le Roux",
+      "source_label": "Politician",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_18"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_18": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4930",
+      "source": "Bonta",
+      "source_label": "Politician",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4931",
+      "source": "Gail Pellerin",
+      "source_label": "Politician",
+      "target": "AB 2624",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:4946",
+      "source": "LaShae Sharp-Collins",
+      "source_label": "Politician",
+      "target": "AB 2760",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/#chunk_3"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/#chunk_3": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5119",
+      "source": "Austin Beutner",
+      "source_label": "Politician",
+      "target": "Proposition 28",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_1"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_1": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5132",
+      "source": "Al Muratsuchi",
+      "source_label": "Politician",
+      "target": "AB 2440",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_4"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_4": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5140",
+      "source": "Austin Beutner",
+      "source_label": "Politician",
+      "target": "AB 2440",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_6"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_6": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5141",
+      "source": "Austin Beutner",
+      "source_label": "Politician",
+      "target": "Prop. 28",
+      "target_label": "Prop",
+      "chunks": [
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5168",
+      "source": "Scott Wiener",
+      "source_label": "Politician",
+      "target": "SB 895",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_1",
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_1": "POSITIVE",
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5173",
+      "source": "University of California",
+      "source_label": "Organization",
+      "target": "SB 895",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_2"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_2": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5178",
+      "source": "Gavin Newsom",
+      "source_label": "Politician",
+      "target": "SB 895",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_3"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_3": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5240",
+      "source": "Laird",
+      "source_label": "Politician",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5244",
+      "source": "Youth Law Center",
+      "source_label": "Organization",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6",
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_7"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_7": "POSITIVE",
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5255",
+      "source": "Stand With Survivors",
+      "source_label": "Organization",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5344",
+      "source": "survivor groups",
+      "source_label": "Organization",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_3"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_3": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5365",
+      "source": "Civil Justice Association of California",
+      "source_label": "Organization",
+      "target": "SB 577",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_11"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_11": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5554",
+      "source": "Maxine Waters",
+      "source_label": "Politician",
+      "target": "No Militarization of Space Act",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/#chunk_9"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/#chunk_9": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5766",
+      "source": "Data Center Coalition",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5767",
+      "source": "Data Center Coalition",
+      "source_label": "Organization",
+      "target": "AB 2619",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_13"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_13": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5784",
+      "source": "League of California Cities",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5785",
+      "source": "League of California Cities",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5786",
+      "source": "California State Association of Counties",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5787",
+      "source": "Rural County Representatives of California",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_15": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5792",
+      "source": "Santa Clara Valley Water District",
+      "source_label": "Organization",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_16"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_16": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5793",
+      "source": "Santa Clara Valley Water District",
+      "source_label": "Organization",
+      "target": "AB 2619",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_16"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_16": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5808",
+      "source": "Michael Kiparsky",
+      "source_label": "Politician",
+      "target": "AB 2469",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_21"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_21": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5809",
+      "source": "Michael Kiparsky",
+      "source_label": "Politician",
+      "target": "AB 2619",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_21"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_21": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5841",
+      "source": "Rick Zbur",
+      "source_label": "Politician",
+      "target": "AB 1740",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7",
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9"
+      ],
+      "alignment": null,
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7": "NEGATIVE",
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9": "POSITIVE"
+      },
+      "conflicted": true
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5854",
+      "source": "Ben Allen",
+      "source_label": "Politician",
+      "target": "AB 1740",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5954",
+      "source": "California State University system",
+      "source_label": "Organization",
+      "target": "SB 960",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_21"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_21": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5955",
+      "source": "California State University system",
+      "source_label": "Organization",
+      "target": "AB 2694",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_21"
+      ],
+      "alignment": "NEGATIVE",
+      "by_chunk": {
+        "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_21": "NEGATIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:5996",
+      "source": "John Harabedian",
+      "source_label": "Politician",
+      "target": "AB 1642",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_5"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_5": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:6001",
+      "source": "Mike Gipson",
+      "source_label": "Politician",
+      "target": "AB 1642",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    },
+    {
+      "edge_id": "5:30dd8ef3-0ab2-41fe-98b6-2b7947941c24:6002",
+      "source": "Mike Gipson",
+      "source_label": "Politician",
+      "target": "AB 1795",
+      "target_label": "Bill",
+      "chunks": [
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_6"
+      ],
+      "alignment": "POSITIVE",
+      "by_chunk": {
+        "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_6": "POSITIVE"
+      },
+      "conflicted": false
+    }
+  ]
+}

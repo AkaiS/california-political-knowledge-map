@@ -1,0 +1,1338 @@
+[
+ {
+  "case_id": 1,
+  "source": "Ben Allen",
+  "target": "SB 1229",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Bill's author defending its protections"
+ },
+ {
+  "case_id": 2,
+  "source": "Maggy Krell",
+  "target": "SB 1229",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Krell praises: bill \"closes it to speculative developers\""
+ },
+ {
+  "case_id": 3,
+  "source": "Gavin Newsom",
+  "target": "SB 1229",
+  "alignment": "UNSUPPORTED",
+  "confidence": "high",
+  "note": "Chunk describes Newsom's orders, not his position on SB 1229"
+ },
+ {
+  "case_id": 4,
+  "source": "California Coastal Commission",
+  "target": "SB 1229",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supports Senate Bill 1229\""
+ },
+ {
+  "case_id": 5,
+  "source": "California YIMBY",
+  "target": "SB 1229",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "Says bill \"should address why\" survivors sell — critique of scope"
+ },
+ {
+  "case_id": 6,
+  "source": "Gavin Newsom",
+  "target": "sustainable aviation fuel tax credit",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Newsom proposed\"; argues it would boost greener fuel"
+ },
+ {
+  "case_id": 7,
+  "source": "Gavin Newsom",
+  "target": "Common Sense bill",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"vetoed a Common Sense bill\""
+ },
+ {
+  "case_id": 8,
+  "source": "Chris Ward",
+  "target": "AB 1775",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"the bill by ... Chris Ward\" — author"
+ },
+ {
+  "case_id": 9,
+  "source": "Ash Kalra",
+  "target": "SB 84",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"judiciary chair Ash Kalra rejected Senate Bill 84\""
+ },
+ {
+  "case_id": 10,
+  "source": "Roger Niello",
+  "target": "SB 84",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Niello is author, continued advocacy for the bill"
+ },
+ {
+  "case_id": 11,
+  "source": "California Chamber of Commerce",
+  "target": "SB 84",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported Senate Bill 84\""
+ },
+ {
+  "case_id": 12,
+  "source": "California Restaurant Association",
+  "target": "SB 84",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported Senate Bill 84\""
+ },
+ {
+  "case_id": 13,
+  "source": "Civil Justice Association of California",
+  "target": "SB 84",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Civil Justice Association of California supported Senate Bill 84\""
+ },
+ {
+  "case_id": 14,
+  "source": "Josh Lowenthal",
+  "target": "AB 649",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Lowenthal worked with committee to create the proposal"
+ },
+ {
+  "case_id": 15,
+  "source": "Spencer Pratt",
+  "target": "SB 9",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"One of the most vocal critics of Senate Bill 9\""
+ },
+ {
+  "case_id": 16,
+  "source": "Roger Niello",
+  "target": "Lowenthal’s bill",
+  "alignment": "NEUTRAL",
+  "confidence": "medium",
+  "note": "\"let the best merit win\" — no preference stated"
+ },
+ {
+  "case_id": 17,
+  "source": "disability rights groups",
+  "target": "SB 84",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"disability rights groups remain opposed\""
+ },
+ {
+  "case_id": 18,
+  "source": "disability rights groups",
+  "target": "Lowenthal’s bill",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"now support Lowenthal's bill\""
+ },
+ {
+  "case_id": 19,
+  "source": "Consumer Attorneys of California",
+  "target": "SB 84",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"which also opposes Senate Bill 84\""
+ },
+ {
+  "case_id": 20,
+  "source": "YIMBY Law",
+  "target": "SB 9",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Argued SB 9 gives fire survivors financial flexibility"
+ },
+ {
+  "case_id": 21,
+  "source": "Sasha Renée Pérez",
+  "target": "SB 9",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "Introduced bill to exempt Altadena from SB 9"
+ },
+ {
+  "case_id": 22,
+  "source": "Catherine Stefani",
+  "target": "AB 2540",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Authored by Assemblymember Catherine Stefani\""
+ },
+ {
+  "case_id": 23,
+  "source": "Faculty Association of California Community Colleges",
+  "target": "AB 2540",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supports AB 2540\""
+ },
+ {
+  "case_id": 24,
+  "source": "Health Services Association of California Community Colleges",
+  "target": "AB 2540",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"opposes Assembly Bill 2540\""
+ },
+ {
+  "case_id": 25,
+  "source": "Insurance Department",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"drawing opposition from the Insurance Department\""
+ },
+ {
+  "case_id": 26,
+  "source": "California Insurance Department",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"insurance department is opposed to AB 311\""
+ },
+ {
+  "case_id": 27,
+  "source": "California Insurance Department",
+  "target": "Proposition 103",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Cites Prop 103 as governing law; no stance on the prop itself"
+ },
+ {
+  "case_id": 28,
+  "source": "Consumer Watchdog",
+  "target": "Proposition 103",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "Consumer Watchdog's Rosenfield wrote the ballot proposition"
+ },
+ {
+  "case_id": 29,
+  "source": "Consumer Watchdog",
+  "target": "Proposition 103",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "Consumer Watchdog's Rosenfield wrote the ballot proposition"
+ },
+ {
+  "case_id": 30,
+  "source": "Josephine Figueroa",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Criticises \"vague language\" and disparate-impact risk"
+ },
+ {
+  "case_id": 31,
+  "source": "Consumer Watchdog",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "Department's concerns about the bill align with Consumer Watchdog's"
+ },
+ {
+  "case_id": 32,
+  "source": "Consumer Watchdog",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "Department's concerns about the bill align with Consumer Watchdog's"
+ },
+ {
+  "case_id": 33,
+  "source": "Christopher Cabaldon",
+  "target": "AB 311",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"showed strong support for AB 311\""
+ },
+ {
+  "case_id": 34,
+  "source": "Consumer Federation of America",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"plans to write a letter criticizing AB 311\""
+ },
+ {
+  "case_id": 35,
+  "source": "Privacy Rights Clearinghouse",
+  "target": "AB 311",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Calls it \"an opaque surveillance pricing infrastructure\""
+ },
+ {
+  "case_id": 36,
+  "source": "Donald Trump",
+  "target": "federal housing bill",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "\"Trump vowed again not to sign the federal housing bill in protest\""
+ },
+ {
+  "case_id": 37,
+  "source": "YIMBY Action",
+  "target": "federal housing bill",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "\"a small nudge ... could still have a good impact\""
+ },
+ {
+  "case_id": 38,
+  "source": "Scott Peters",
+  "target": "federal housing bill",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Praises the chassis-requirement removal at press conference"
+ },
+ {
+  "case_id": 39,
+  "source": "Laura Richardson",
+  "target": "SB 1305",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Richardson's own bill"
+ },
+ {
+  "case_id": 40,
+  "source": "California Department of Fish and Wildlife",
+  "target": "SB 1305",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Legislative analysis on capacity; no CDFW position stated"
+ },
+ {
+  "case_id": 41,
+  "source": "Center for Biological Diversity",
+  "target": "SB 1305",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"which supports Senate Bill 1305\""
+ },
+ {
+  "case_id": 42,
+  "source": "Sasha Renée Pérez",
+  "target": "SB 1090",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"SB 1090 by Sen. Sasha Renee Perez\" — author"
+ },
+ {
+  "case_id": 43,
+  "source": "Gavin Newsom",
+  "target": "Proposition 40",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Tech donors railed against it; Newsom's own position not stated"
+ },
+ {
+  "case_id": 44,
+  "source": "California Teachers Association",
+  "target": "Proposition 3",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"sponsored by the California Teachers Association\""
+ },
+ {
+  "case_id": 45,
+  "source": "CTA",
+  "target": "billionaire tax",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"The union opposes the billionaire tax\""
+ },
+ {
+  "case_id": 46,
+  "source": "CTA",
+  "target": "Proposition 3",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"campaign in favor of Proposition 3\""
+ },
+ {
+  "case_id": 47,
+  "source": "Gavin Newsom",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Gavin Newsom opposition to Prop. 40\""
+ },
+ {
+  "case_id": 48,
+  "source": "United Food and Commercial Workers Western States Council",
+  "target": "AB 1776",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "UFCW president says bill would protect wages — supportive framing"
+ },
+ {
+  "case_id": 49,
+  "source": "California Department of Finance",
+  "target": "CalSHAPE program",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Department of Finance opposed CalSHAPE program in 2020\""
+ },
+ {
+  "case_id": 50,
+  "source": "Al Muratsuchi",
+  "target": "Proposition 2",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Al Muratsuchi authored Proposition 2\""
+ },
+ {
+  "case_id": 51,
+  "source": "Abundant Housing LA",
+  "target": "SB 9",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "Says SB 9 lot splits could help homeowners close the gap"
+ },
+ {
+  "case_id": 52,
+  "source": "Tom Lackey",
+  "target": "AB 1653",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Wrote the bill; calls it a \"simple, common-sense step\""
+ },
+ {
+  "case_id": 53,
+  "source": "UndauntedK12",
+  "target": "AB 1653",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported the law\""
+ },
+ {
+  "case_id": 54,
+  "source": "UndauntedK12",
+  "target": "AB 1653",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported the law\""
+ },
+ {
+  "case_id": 55,
+  "source": "Melissa Hurtado",
+  "target": "SB 1248",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"authored by Sen. Melissa Hurtado\""
+ },
+ {
+  "case_id": 56,
+  "source": "Gavin Newsom",
+  "target": "SB 9",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"executive orders to nullify SB 9\" in high-hazard zones"
+ },
+ {
+  "case_id": 57,
+  "source": "California Chamber of Commerce",
+  "target": "AB 1776",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "\"ad campaign railing against\"; later dropped from signature list"
+ },
+ {
+  "case_id": 58,
+  "source": "California Chamber of Commerce",
+  "target": "COMPETE Act",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Bill \"has infuriated\" CalChamber, set it \"on a warpath\""
+ },
+ {
+  "case_id": 59,
+  "source": "Cecilia Aguiar-Curry",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Authored the COMPETE Act"
+ },
+ {
+  "case_id": 60,
+  "source": "Jasmeet Bains",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Listed among lawmakers supporting the act"
+ },
+ {
+  "case_id": 61,
+  "source": "Melissa Hurtado",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Listed among lawmakers supporting the act"
+ },
+ {
+  "case_id": 62,
+  "source": "California Federation of Labor Unions",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"unions have lined up as co-sponsors\""
+ },
+ {
+  "case_id": 63,
+  "source": "SEIU California",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"unions have lined up as co-sponsors\""
+ },
+ {
+  "case_id": 64,
+  "source": "United Food and Commercial Workers",
+  "target": "the COMPETE Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"unions have lined up as co-sponsors\""
+ },
+ {
+  "case_id": 66,
+  "source": "Gavin Newsom",
+  "target": "last year’s bill",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Why Newsom vetoed last year's bill\""
+ },
+ {
+  "case_id": 67,
+  "source": "Matt Haney",
+  "target": "AB 1556",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Matt Haney new bill, Assembly bill 1556\""
+ },
+ {
+  "case_id": 68,
+  "source": "California Institute for Immunology and Immunotherapy",
+  "target": "Proposition 38",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Chunk says prop favors the institute; no institute position stated"
+ },
+ {
+  "case_id": 69,
+  "source": "Corporation for Supportive Housing",
+  "target": "AB 1556",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Critic who \"fears Assembly bill 1556 could put people back on the streets\""
+ },
+ {
+  "case_id": 70,
+  "source": "Jerry Brown",
+  "target": "Jerry Brown 2013 pension reform law",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Brown's own 2013 pension reform law"
+ },
+ {
+  "case_id": 71,
+  "source": "Mike Gipson",
+  "target": "AB 1165",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Assembly Bill 1165 by Assemblymember Mike Gipson\""
+ },
+ {
+  "case_id": 73,
+  "source": "Catherine Blakespear",
+  "target": "AB 1924",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"a bill by Senator Catherine Blakespear\" — author"
+ },
+ {
+  "case_id": 74,
+  "source": "Xavier Becerra",
+  "target": "Proposition 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"So does Xavier Becerra\" — opposes Prop 40"
+ },
+ {
+  "case_id": 75,
+  "source": "Planned Parenthood",
+  "target": "Proposition 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"oppose Proposition 40, along with ... Planned Parenthood\""
+ },
+ {
+  "case_id": 76,
+  "source": "California Teachers Association",
+  "target": "Proposition 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"It intentionally goes around public education funding\""
+ },
+ {
+  "case_id": 77,
+  "source": "Xavier Becerra",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"are against Prop. 40\""
+ },
+ {
+  "case_id": 78,
+  "source": "CTA",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"are against Prop. 40\""
+ },
+ {
+  "case_id": 79,
+  "source": "California Professional Firefighters",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"are against Prop. 40\""
+ },
+ {
+  "case_id": 80,
+  "source": "Planned Parenthood",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"are against Prop. 40\""
+ },
+ {
+  "case_id": 81,
+  "source": "State Building and Construction Trades Council",
+  "target": "Prop. 40",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Chris Hannan spoke against Prop. 40 before a party committee\""
+ },
+ {
+  "case_id": 82,
+  "source": "League of California Cities",
+  "target": "SB 866",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Dozens of cities oppose ... as does the League of California Cities\""
+ },
+ {
+  "case_id": 83,
+  "source": "Ro Khanna",
+  "target": "Prop. 40",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"has support from Rep. Ro Khanna\""
+ },
+ {
+  "case_id": 84,
+  "source": "Bernie Sanders",
+  "target": "Prop. 40",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"has support from ... U.S. Sen. Bernie Sanders\""
+ },
+ {
+  "case_id": 85,
+  "source": "Blakespear",
+  "target": "SB 866",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Her bill; she conceded amendments to advance it"
+ },
+ {
+  "case_id": 86,
+  "source": "Marie Alvarado-Gil",
+  "target": "SB 866",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Calls it \"an un-funded mandate\" and a \"half-cooked bill\""
+ },
+ {
+  "case_id": 87,
+  "source": "Western States Petroleum Association",
+  "target": "Government Claims Act",
+  "alignment": "POSITIVE",
+  "confidence": "low",
+  "note": "Invokes the Act favorably in litigation; no stance on the law itself"
+ },
+ {
+  "case_id": 88,
+  "source": "Ash Kalra",
+  "target": "AB 2122",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"by Assemblymembers Ash Kalra and Josh Lowenthal\""
+ },
+ {
+  "case_id": 89,
+  "source": "Josh Lowenthal",
+  "target": "AB 2122",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"by Assemblymembers Ash Kalra and Josh Lowenthal\""
+ },
+ {
+  "case_id": 92,
+  "source": "California State Sheriff’s Association",
+  "target": "AB 2122",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Sheriffs' Association is opposed to the bill\""
+ },
+ {
+  "case_id": 93,
+  "source": "Buffy Wicks",
+  "target": "AB 736",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Buffy Wicks rolled out Assembly Bill 736\""
+ },
+ {
+  "case_id": 94,
+  "source": "Howard Jarvis Taxpayers Association",
+  "target": "Wicks bill",
+  "alignment": "NEUTRAL",
+  "confidence": "high",
+  "note": "\"people can support or not support, it's up to people\""
+ },
+ {
+  "case_id": 95,
+  "source": "Howard Jarvis Taxpayers Association",
+  "target": "Wicks bill",
+  "alignment": "NEUTRAL",
+  "confidence": "high",
+  "note": "\"people can support or not support, it's up to people\""
+ },
+ {
+  "case_id": 96,
+  "source": "Council of Infill Builders",
+  "target": "Measure ULA",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"poorly designed transfer taxes like Measure ULA\"; advocate for changing it"
+ },
+ {
+  "case_id": 97,
+  "source": "Buffy Wicks",
+  "target": "AB 1751",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"a co-author of Assembly Bill 1751\""
+ },
+ {
+  "case_id": 98,
+  "source": "Gavin Newsom",
+  "target": "SB 903",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Gavin Newsom vetoed Senate Bill 903 last year\""
+ },
+ {
+  "case_id": 99,
+  "source": "California Chamber of Commerce",
+  "target": "SB 903",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"oppose Senate Bill 903\""
+ },
+ {
+  "case_id": 100,
+  "source": "California Medical Association",
+  "target": "SB 903",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"oppose Senate Bill 903\""
+ },
+ {
+  "case_id": 101,
+  "source": "State Building and Construction Trades Council",
+  "target": "AB 1751",
+  "alignment": "NEUTRAL",
+  "confidence": "high",
+  "note": "\"went neutral on Assembly Bill 1751\""
+ },
+ {
+  "case_id": 102,
+  "source": "María Elena Durazo",
+  "target": "AB 1751",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "Unresolved concerns over circumvention of local land-use authority"
+ },
+ {
+  "case_id": 103,
+  "source": "California Nurses Association",
+  "target": "AB 1018",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"endorsed by California Nurses Association\""
+ },
+ {
+  "case_id": 104,
+  "source": "California Nurses Association",
+  "target": "SB 7",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"endorsed by California Nurses Association\""
+ },
+ {
+  "case_id": 105,
+  "source": "Gavin Newsom",
+  "target": "SB 7",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Gavin Newsom vetoed Senate Bill 7\""
+ },
+ {
+  "case_id": 106,
+  "source": "Robert Rivas",
+  "target": "SB 492",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Calls the bill a collection of \"half measures\""
+ },
+ {
+  "case_id": 107,
+  "source": "Gavin Newsom",
+  "target": "SB 492",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"opposed by Gov. Gavin Newsom\""
+ },
+ {
+  "case_id": 109,
+  "source": "Yes In My Backyard",
+  "target": "AB 1903",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Backed by real estate interests, YIMBY advocates\""
+ },
+ {
+  "case_id": 110,
+  "source": "Consumer Attorneys of California",
+  "target": "AB 1903",
+  "alignment": "NEUTRAL",
+  "confidence": "medium",
+  "note": "\"stopped fighting\" the bill after it was watered down"
+ },
+ {
+  "case_id": 111,
+  "source": "Consumer Attorneys of California",
+  "target": "AB 1903",
+  "alignment": "NEUTRAL",
+  "confidence": "medium",
+  "note": "\"stopped fighting\" the bill after it was watered down"
+ },
+ {
+  "case_id": 112,
+  "source": "Buffy Wicks",
+  "target": "SB 1120",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"plead with colleagues to pass SB 1120\""
+ },
+ {
+  "case_id": 113,
+  "source": "Sabrina Cervantes",
+  "target": "SB 1013",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Author; \"look forward to continuing to fight\" for it"
+ },
+ {
+  "case_id": 114,
+  "source": "Cottie Petrie-Norris",
+  "target": "SB 492",
+  "alignment": "NEUTRAL",
+  "confidence": "medium",
+  "note": "Credits provisions but \"don't want to get SB 492 rushed\""
+ },
+ {
+  "case_id": 115,
+  "source": "Akilah Weber Pierson",
+  "target": "SB 344",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"authored by Sen. Akilah Weber Pierson\""
+ },
+ {
+  "case_id": 116,
+  "source": "Chris Ward",
+  "target": "SB 344",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Presented the bill and \"defended the deal\""
+ },
+ {
+  "case_id": 117,
+  "source": "Weber Pierson",
+  "target": "SB 958",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"also by Weber Pierson\" — author"
+ },
+ {
+  "case_id": 118,
+  "source": "Midway Rising",
+  "target": "SB 958",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Lawmakers distanced the project from the bill; developer's stance unstated"
+ },
+ {
+  "case_id": 119,
+  "source": "Midway Rising",
+  "target": "SB 958",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Lawmakers distanced the project from the bill; developer's stance unstated"
+ },
+ {
+  "case_id": 120,
+  "source": "Cecilia Aguiar-Curry",
+  "target": "AB 1776",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Author calls it \"a strong step forward for antitrust enforcement\""
+ },
+ {
+  "case_id": 121,
+  "source": "Economic Security California Action",
+  "target": "AB 1776",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Advocacy group describes bill approvingly as empowering enforcers"
+ },
+ {
+  "case_id": 122,
+  "source": "California Department of Finance",
+  "target": "AB 1776",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"the state's Department of Finance opposed Assembly Bill 1776\""
+ },
+ {
+  "case_id": 123,
+  "source": "Cecilia Aguiar-Curry",
+  "target": "SB 1013",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"stopped in the Assembly by majority leader Cecilia Aguiar-Curry\""
+ },
+ {
+  "case_id": 125,
+  "source": "Gavin Newsom",
+  "target": "SB 1013",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "\"Gavin Newsom vetoed\" over the 60-day deletion requirement"
+ },
+ {
+  "case_id": 126,
+  "source": "Gavin Newsom",
+  "target": "AB 713",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Gavin Newsom vetoed Assembly Bill 713 last time\""
+ },
+ {
+  "case_id": 127,
+  "source": "Sharon Quirk-Silva",
+  "target": "AB 1751",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"authored by Fullerton Democrat Sharon Quirk-Silva\""
+ },
+ {
+  "case_id": 128,
+  "source": "José Luis Solache",
+  "target": "AB 713",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Assembly Bill 713 by Assemblymember Jose Luis Solache\""
+ },
+ {
+  "case_id": 129,
+  "source": "UC",
+  "target": "AB 713",
+  "alignment": "NEUTRAL",
+  "confidence": "high",
+  "note": "\"UC does not have a position on AB 713\""
+ },
+ {
+  "case_id": 130,
+  "source": "UC",
+  "target": "AB 713",
+  "alignment": "NEUTRAL",
+  "confidence": "high",
+  "note": "\"UC does not have a position on AB 713\""
+ },
+ {
+  "case_id": 131,
+  "source": "Gavin Newsom",
+  "target": "AB 2624",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Gov. Gavin Newsom signed Assembly Bill 2624\""
+ },
+ {
+  "case_id": 132,
+  "source": "Republicans",
+  "target": "AB 2624",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Republicans characterized AB 2624 as a threat to the First Amendment\""
+ },
+ {
+  "case_id": 133,
+  "source": "Carl DeMaio",
+  "target": "AB 2624",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"one of the biggest opponents of Assembly Bill 2624\""
+ },
+ {
+  "case_id": 134,
+  "source": "Jenny Rae Le Roux",
+  "target": "AB 2624",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Calls the law \"redundant\" and \"too overly broad\""
+ },
+ {
+  "case_id": 135,
+  "source": "Bonta",
+  "target": "AB 2624",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "\"Bonta disagrees with the characterization\" and defends the law"
+ },
+ {
+  "case_id": 136,
+  "source": "Gail Pellerin",
+  "target": "AB 2624",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"proponent of Assembly Bill 2624\""
+ },
+ {
+  "case_id": 137,
+  "source": "LaShae Sharp-Collins",
+  "target": "AB 2760",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"LaShae Sharp-Collins ... introduced Assembly Bill 2760\""
+ },
+ {
+  "case_id": 138,
+  "source": "The State Building and Construction Trades Council",
+  "target": "AB 1751",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Warns the low minimum wage would \"signify the new norm\""
+ },
+ {
+  "case_id": 139,
+  "source": "Austin Beutner",
+  "target": "Proposition 28",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"chief architect behind Proposition 28\""
+ },
+ {
+  "case_id": 140,
+  "source": "Al Muratsuchi",
+  "target": "AB 2440",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"AB 2440, by Assemblymember Al Muratsuchi\" — author"
+ },
+ {
+  "case_id": 141,
+  "source": "Austin Beutner",
+  "target": "AB 2440",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"balked at the bill\", said it \"gutted\" Prop 28's intent"
+ },
+ {
+  "case_id": 142,
+  "source": "Austin Beutner",
+  "target": "Prop. 28",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "Defends Prop 28's intent against changes he says gut it"
+ },
+ {
+  "case_id": 143,
+  "source": "Scott Wiener",
+  "target": "SB 895",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Senate Bill 895 by Sen. Scott Wiener\" — author"
+ },
+ {
+  "case_id": 144,
+  "source": "University of California",
+  "target": "SB 895",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"united front led by the University of California ... to restore SB 895\""
+ },
+ {
+  "case_id": 145,
+  "source": "Gavin Newsom",
+  "target": "SB 895",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"the Assembly, Senate and Gavin Newsom are all backing\""
+ },
+ {
+  "case_id": 146,
+  "source": "Laird",
+  "target": "SB 577",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"SB 577 was a step in the right direction\""
+ },
+ {
+  "case_id": 147,
+  "source": "Youth Law Center",
+  "target": "SB 577",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"the Youth Law Center and allies embraced the deal\""
+ },
+ {
+  "case_id": 148,
+  "source": "Stand With Survivors",
+  "target": "SB 577",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"a bill that is bad for survivors\"; vowed to lobby for veto"
+ },
+ {
+  "case_id": 149,
+  "source": "Chris Ward",
+  "target": "AB 1751",
+  "alignment": "POSITIVE",
+  "confidence": "medium",
+  "note": "\"supported Assembly Bill 1751 in general\" though wary"
+ },
+ {
+  "case_id": 150,
+  "source": "survivor groups",
+  "target": "SB 577",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Groups argued against damage caps, which the bill dropped; no bill stance"
+ },
+ {
+  "case_id": 151,
+  "source": "Civil Justice Association of California",
+  "target": "SB 577",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Bill \"puts some common sense back into a system\""
+ },
+ {
+  "case_id": 152,
+  "source": "Maxine Waters",
+  "target": "No Militarization of Space Act",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"signed on to No Militarization of Space Act\""
+ },
+ {
+  "case_id": 153,
+  "source": "Data Center Coalition",
+  "target": "AB 2469",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "\"concerned that AB 2469 and AB 2619 single out data centers\""
+ },
+ {
+  "case_id": 154,
+  "source": "Data Center Coalition",
+  "target": "AB 2619",
+  "alignment": "NEGATIVE",
+  "confidence": "medium",
+  "note": "\"concerned that AB 2469 and AB 2619 single out data centers\""
+ },
+ {
+  "case_id": 155,
+  "source": "League of California Cities",
+  "target": "AB 2469",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Bill \"undermines local governments' ability to protect ... communities\""
+ },
+ {
+  "case_id": 156,
+  "source": "League of California Cities",
+  "target": "AB 2469",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Bill \"undermines local governments' ability to protect ... communities\""
+ },
+ {
+  "case_id": 157,
+  "source": "California State Association of Counties",
+  "target": "AB 2469",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Signed the letter saying the bill \"undermines local governments' ability\""
+ },
+ {
+  "case_id": 158,
+  "source": "Rural County Representatives of California",
+  "target": "AB 2469",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "Signed the letter saying the bill \"undermines local governments' ability\""
+ },
+ {
+  "case_id": 159,
+  "source": "Santa Clara Valley Water District",
+  "target": "AB 2469",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported Assembly Bill 2469 and Assembly Bill 2619\""
+ },
+ {
+  "case_id": 160,
+  "source": "Santa Clara Valley Water District",
+  "target": "AB 2619",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"supported Assembly Bill 2469 and Assembly Bill 2619\""
+ },
+ {
+  "case_id": 161,
+  "source": "Michael Kiparsky",
+  "target": "AB 2469",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Suggests complementary state action; no support/oppose position stated"
+ },
+ {
+  "case_id": 162,
+  "source": "Michael Kiparsky",
+  "target": "AB 2619",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Suggests complementary state action; no support/oppose position stated"
+ },
+ {
+  "case_id": 164,
+  "source": "Ben Allen",
+  "target": "AB 1740",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Ben Allen supports Assembly Bill 1740 instead\""
+ },
+ {
+  "case_id": 165,
+  "source": "California State University system",
+  "target": "SB 960",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"California State University system was opposed\""
+ },
+ {
+  "case_id": 166,
+  "source": "California State University system",
+  "target": "AB 2694",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"California State University system was opposed\""
+ },
+ {
+  "case_id": 167,
+  "source": "John Harabedian",
+  "target": "AB 1642",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "Author; sets \"a first-in-the-nation standard\""
+ },
+ {
+  "case_id": 168,
+  "source": "Mike Gipson",
+  "target": "AB 1642",
+  "alignment": "UNSUPPORTED",
+  "confidence": "medium",
+  "note": "Gipson authored the companion AB 1795; no stance on AB 1642 stated"
+ },
+ {
+  "case_id": 169,
+  "source": "Mike Gipson",
+  "target": "AB 1795",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Assembly Bill 1795, authored by Assemblymember Mike Gipson\""
+ },
+ {
+  "case_id": 170,
+  "source": "Damon Connolly",
+  "target": "a bill to further restrict how the high-road money is used",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"authored by San Rafael Assemblymember Damon Connolly\""
+ },
+ {
+  "case_id": 171,
+  "source": "Dave Cortese",
+  "target": "Senate Constitutional Amendment 5",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Authored by Sen. Dave Cortese\""
+ },
+ {
+  "case_id": 172,
+  "source": "Cortese",
+  "target": "Senate Constitutional Amendment 5",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Cortese and his supporters think SCA 5 can ... stop the bleeding\""
+ },
+ {
+  "case_id": 173,
+  "source": "Western States Petroleum Association",
+  "target": "SB 1245",
+  "alignment": "NEGATIVE",
+  "confidence": "high",
+  "note": "\"Western States Petroleum Association opposes SB 1245\""
+ },
+ {
+  "case_id": 174,
+  "source": "Gavin Newsom",
+  "target": "SB 623",
+  "alignment": "POSITIVE",
+  "confidence": "high",
+  "note": "\"Gov. Gavin Newsom on Thursday signed Senate Bill 623\""
+ }
+]
