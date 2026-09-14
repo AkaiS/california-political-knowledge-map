@@ -27,7 +27,7 @@ settles whether that future capability belongs in the initial implementation.
 ## Downstream decisions
 
 - [Topology and orchestration](07-retrieval-agent-topology.md) consumes this
-  decision and still requires the issue 05 prototype.
+  decision together with issue 05's selected query-construction direction.
 - [Reranking](09-prototype-graph-aware-reranking.md) consumes this decision and
   still requires the issue 08 contract.
 
@@ -147,6 +147,8 @@ remaining blocker for this initiative.
 ## Handoff
 
 - Issue 07 receives the three available modes and owns their execution policy.
+  Its structural traversal uses issue 05's typed semantic constructor and
+  deterministic Cypher compiler selected at `511eaeee`.
 - Issue 08 represents combined chunk candidates, retained retrieval routes and
   supporting claims, ranking, and grouping by Source Article.
 - Issue 09 owns shared ranking of the combined candidates and the comparison
@@ -166,3 +168,17 @@ full-text coverage of names, titles, and chunk text, and deferred Policy Area
 vectors. The final confirmation accepted the concrete index inventory,
 non-unique ID lookups that preserve existing ambiguity, and documentation-only
 closure with implementation handed forward.
+
+### 2026-09-14: Query-construction dependency resolved
+
+Issue 05 selected the atomic semantic construction shape at `511eaeee`. Models
+choose typed semantic pieces, occurrence wiring, and positional values; code
+owns validation, Cypher, Grounding Evidence traversal, Source Article lookup,
+and result hydration. Bill-name values use the repository's Bill Designation
+parser before entity resolution. Free-form model-generated Cypher and a general
+model critic are not part of the selected direction.
+
+This does not change the three retrieval modes or index inventory above. It
+removes the remaining query-construction dependency from issue 07. See the
+[final experiment comparison](../query-construction/atomic-five-experiment-comparison.md)
+and [focused Bill-binding note](../query-construction/bill-binding-experiment.md).

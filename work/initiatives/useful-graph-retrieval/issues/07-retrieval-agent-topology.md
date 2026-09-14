@@ -2,8 +2,7 @@
 
 Labels: wayfinder:grilling, needs-triage
 Parent: [Useful Graph Retrieval](../MAP.md)
-Blocked by: [Prototype query construction and validation against the ontology](05-prototype-query-construction-and-validation.md)
-Inputs: [Accepted retrieval modes and index inventory](06-retrieval-modes-and-index-inventory.md)
+Inputs: [Accepted query construction and validation](05-prototype-query-construction-and-validation.md), [Accepted retrieval modes and index inventory](06-retrieval-modes-and-index-inventory.md)
 
 ## Question
 
@@ -11,7 +10,8 @@ What agent topology executes retrieval, and who decides that retrieval is
 sufficient?
 
 The modes inventory says what retrieval can do and the query-construction
-prototype says whether generation needs a critic. Neither answers control flow.
+decision supplies a typed semantic constructor with deterministic Cypher and
+validation. Neither answers control flow.
 Candidate topologies:
 
 - A single agent holding the retrieval modes as tools, selecting among them.
@@ -51,3 +51,18 @@ mode, and issue 09 owns shared ranking. Source discovery does not require a
 matching extracted relationship. Internal-ID lookup must preserve existing
 identity ambiguity; external-identifier implementation and Policy Area vectors
 are deferred.
+
+## Input from the query-construction decision
+
+[Issue 05](05-prototype-query-construction-and-validation.md) closed on
+2026-09-14. Structural traversal uses the atomic semantic construction shape
+preserved at `511eaeee`: models filter the semantic schema, select and wire typed
+compiler-owned pieces, and bind positional question values. Code owns legal
+graph shapes, validation, Cypher, Grounding Evidence traversal, Source Article
+lookup, and result hydration. Bill-name bindings use the repository's Bill
+Designation parser before entity resolution.
+
+The constructor uses specific deterministic failures and bounded stage retries;
+it does not add a general model critic. This ticket decides whether orchestration
+needs a critic for cross-mode repair or sufficiency, plus the bounds and failure
+states exposed to the answer contract.

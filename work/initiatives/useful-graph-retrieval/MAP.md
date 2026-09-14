@@ -55,8 +55,8 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
   articles and 2,407 embedded chunks, with all news base labels present. Missing
   stance alignment, funding properties, and complete joined paths, plus
   duplicated Organization IDs, constrain structural retrieval. Ticket 04 is
-  complete and issue 05 can prototype against this observed graph. The parent
-  population task remains open as separate work.
+  complete, and issue 05 used this observed graph for its query-construction
+  prototypes. The parent population task remains open as separate work.
 - The repository's established agent pattern is a Generator/Critic team loop
   (Selector Healing Pipeline, Coreference Critic). Retrieval either extends
   that pattern or departs from it deliberately.
@@ -64,6 +64,15 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 ## Decisions so far
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
+
+- Query construction settled on 2026-09-14: models filter the semantic schema,
+  select and wire typed compiler-owned pieces, and bind positional values; code
+  owns validation, Cypher, Grounding Evidence traversal, Source Article lookup,
+  and result hydration. Bill-name values use the shared Bill Designation parser
+  before entity resolution. Do not use free-form model-generated Cypher or a
+  general query-construction critic. Prototype source remains on the experiment
+  branches and tag; only the findings and decision move into `main`. See
+  [05-prototype-query-construction-and-validation.md](issues/05-prototype-query-construction-and-validation.md).
 
 - Retrieval modes and indexes settled on 2026-09-08: full-text over names, titles, and chunk text; Article Chunk vectors; typed traversal. Combine and deduplicate chunks while retaining provenance, then group selected passages by source. Issue 07 owns mode selection and issue 09 owns shared ranking. Add three full-text indexes and ten non-unique base-label ID indexes; retain chunk vector and token lookup indexes. External-identifier implementation and Policy Area vectors are deferred. See [06-retrieval-modes-and-index-inventory.md](issues/06-retrieval-modes-and-index-inventory.md).
 
