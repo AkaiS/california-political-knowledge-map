@@ -38,9 +38,9 @@ from knowledge_map.schemas.retrieval import (
     SuccessfulBranch,
 )
 from knowledge_map.schemas.structural import (
+    OntologySelection,
     PieceSelection,
     PositionalBindings,
-    SemanticSchemaSelection,
     SemanticWiring,
 )
 from knowledge_map.utils.agents import create_agent
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class StructuralAgents:
-    schema_filter: Agent[None, SemanticSchemaSelection]
+    ontology_filter: Agent[None, OntologySelection]
     selector: Agent[None, PieceSelection]
     wiring: Agent[None, SemanticWiring]
     binder: Agent[None, PositionalBindings]
@@ -58,7 +58,7 @@ class StructuralAgents:
 
 def get_structural_agents(
     *,
-    schema_model: Model,
+    ontology_model: Model,
     selection_model: Model,
     wiring_model: Model,
     binding_model: Model,
@@ -68,13 +68,13 @@ def get_structural_agents(
         "Never emit Cypher, graph identifiers, variables, parameters, projections, or provenance paths. "
     )
     return StructuralAgents(
-        schema_filter=cast(
-            Agent[None, SemanticSchemaSelection],
+        ontology_filter=cast(
+            Agent[None, OntologySelection],
             create_agent(
-                schema_model,
-                name="structural_schema_filter",
+                ontology_model,
+                name="structural_ontology_filter",
                 retries=0,
-                output_type=SemanticSchemaSelection,
+                output_type=OntologySelection,
                 instructions=common
                 + "Select relevant labels, relationships, and filter properties.",
             ),
@@ -143,8 +143,8 @@ class Neo4jStructuralRetriever:
             async with asyncio.timeout_at(deadline):
                 attempts = 1
                 question = request.rewrite.question
-                schema = (
-                    await self.agents.schema_filter.run(
+                ontology = (
+                    await self.agents.ontology_filter.run(
                         json.dumps(
                             {
                                 "question": question,
@@ -154,7 +154,7 @@ class Neo4jStructuralRetriever:
                         usage=usage,
                     )
                 ).output
-                catalog = filtered_catalog(schema)
+                catalog = filtered_catalog(ontology)
                 stage = "typed_selection"
                 selection = (
                     await self.agents.selector.run(

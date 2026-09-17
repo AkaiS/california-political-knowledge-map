@@ -9,7 +9,7 @@ approval:
   then observe ranked candidates, graph claims, Grounding Evidence, identity
   ambiguity, and structured failure logs. Controlled-graph tests execute the
   compiled query in the disposable Neo4j fixture.
-- `get_structural_agents(*, schema_model, selection_model, wiring_model,
+- `get_structural_agents(*, ontology_model, selection_model, wiring_model,
   binding_model) -> StructuralAgents` creates the four model stages through the
   shared observable agent factory. Tests inspect typed requests and responses
   through the injected models.
@@ -20,7 +20,7 @@ text is transformed ingestion text, not a verified quotation; original Story
 verification remains the Evidence Assembler's responsibility.
 
 The implementation follows the atomic semantic constructor preserved at
-`511eaeee`. Models filter the semantic schema, select compiler-owned pieces,
+`511eaeee`. Models filter the News Ontology, select compiler-owned pieces,
 wire numeric occurrences, and bind positional values. Code owns graph labels,
 identifiers, variables, parameters, projections, and provenance paths.
 
@@ -39,7 +39,7 @@ The caller owns the driver and supplies an absolute event-loop deadline to
 the remaining time also limits the Neo4j transaction.
 
 Each stage uses a closed Pydantic output and the shared observable agent factory.
-There are no model-callable database tools. The schema filter narrows the News
+There are no model-callable database tools. The ontology filter narrows the News
 Ontology, the selector chooses supplied catalog IDs, the wiring stage connects
 numeric occurrences, and the binder returns values in wired-filter order.
 Binding an internal ID treats it as a literal value supplied by the question,

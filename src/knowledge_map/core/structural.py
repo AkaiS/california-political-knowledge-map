@@ -7,10 +7,10 @@ from typing import get_args
 from knowledge_map.core.bill_sessions import parse_bill_designation
 from knowledge_map.ontology import news
 from knowledge_map.schemas.structural import (
+    OntologySelection,
     PieceSelection,
     PositionalBindings,
     SemanticLabel,
-    SemanticSchemaSelection,
     SemanticWiring,
 )
 
@@ -26,8 +26,13 @@ class Piece:
     operator: str = "eq"
 
 
-_PARENT = {"LaborUnion": "Organization", "PAC": "Organization"}
 _LABELS = get_args(SemanticLabel.__value__)
+_PARENT = {
+    child: parent
+    for parent, children in news.SUB_LABELS.items()
+    for child in _LABELS
+    if child in children
+}
 
 CATALOG = tuple(
     piece
@@ -71,25 +76,25 @@ CATALOG = tuple(
 )
 
 
-def filtered_catalog(schema: SemanticSchemaSelection) -> tuple[Piece, ...]:
+def filtered_catalog(selection: OntologySelection) -> tuple[Piece, ...]:
     legal_relationships = {p.predicate for p in CATALOG if p.kind == "relationship"}
-    if not set(schema.relationships) <= legal_relationships:
+    if not set(selection.relationships) <= legal_relationships:
         raise ValueError("select only semantic ontology relationships")
-    for label, props in schema.filter_properties.items():
+    for label, props in selection.filter_properties.items():
         legal = {p.property for p in CATALOG if p.label == label and p.kind == "filter"}
-        if label not in schema.labels or not set(props) <= legal:
+        if label not in selection.labels or not set(props) <= legal:
             raise ValueError("filter properties must belong to selected labels")
     return tuple(
         p
         for p in CATALOG
-        if p.label in schema.labels
+        if p.label in selection.labels
         and (
             p.kind == "role"
             or p.kind == "filter"
-            and p.property in schema.filter_properties.get(p.label, ())
+            and p.property in selection.filter_properties.get(p.label, ())
             or p.kind == "relationship"
-            and p.predicate in schema.relationships
-            and p.target in schema.labels
+            and p.predicate in selection.relationships
+            and p.target in selection.labels
         )
     )
 

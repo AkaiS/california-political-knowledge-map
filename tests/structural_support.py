@@ -55,7 +55,7 @@ def scripted_agents(outputs=None, *, inspect=None, stalled_stage=None):
         return FunctionModel(respond)
 
     return get_structural_agents(
-        schema_model=model_at(0),
+        ontology_model=model_at(0),
         selection_model=model_at(1),
         wiring_model=model_at(2),
         binding_model=model_at(3),

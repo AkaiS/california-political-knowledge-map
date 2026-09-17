@@ -26,10 +26,12 @@ def driver_for(rows=()):
 @pytest.mark.parametrize(
     "problem,stage,kind",
     [
-        ("schema_transport", "schema_filtering", "transport"),
-        ("schema_output", "schema_filtering", "model_output"),
-        ("schema_property", "schema_filtering", "validation"),
+        ("ontology_transport", "schema_filtering", "transport"),
+        ("ontology_output", "schema_filtering", "model_output"),
+        ("ontology_property", "schema_filtering", "validation"),
         ("selection_transport", "typed_selection", "transport"),
+        ("selection_too_many_roles", "typed_selection", "model_output"),
+        ("selection_too_many_relationships", "typed_selection", "model_output"),
         ("selection_piece", "typed_selection", "validation"),
         ("wiring_transport", "wiring", "transport"),
         ("wiring_endpoint", "wiring", "validation"),
@@ -44,16 +46,20 @@ def driver_for(rows=()):
 def test_initial_attempt_failures_are_distinct_and_safe(problem, stage, kind, caplog):
     outputs = entity_outputs()
     if problem.endswith("_transport"):
-        index = {"schema": 0, "selection": 1, "wiring": 2, "binding": 3}[
+        index = {"ontology": 0, "selection": 1, "wiring": 2, "binding": 3}[
             problem.split("_")[0]
         ]
         outputs[index] = httpx.ConnectError("sensitive transport detail")
-    elif problem == "schema_output":
+    elif problem == "ontology_output":
         outputs[0]["cypher"] = "sensitive unwanted Cypher"
-    elif problem == "schema_property":
+    elif problem == "ontology_property":
         outputs[0]["filter_properties"] = {"Politician": ["session"]}
     elif problem == "selection_piece":
         outputs[1]["role_ids"] = ["sensitive invented identifier"]
+    elif problem == "selection_too_many_roles":
+        outputs[1]["role_ids"] = ["one", "two", "three"]
+    elif problem == "selection_too_many_relationships":
+        outputs[1]["relationship_ids"] = ["one", "two"]
     elif problem == "wiring_endpoint":
         outputs[2]["filters"][0]["role_index"] = 9
     elif problem == "binding_output":

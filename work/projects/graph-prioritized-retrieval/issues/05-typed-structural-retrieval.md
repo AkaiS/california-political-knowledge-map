@@ -54,7 +54,7 @@ implementation were added: `Neo4jStructuralRetriever.retrieve` and
 those interfaces, using scripted model responses and external Neo4j boundaries.
 
 The atomic constructor from `511eaeee` now has a production path for one entity
-or one relationship. Models filter semantic choices, select compiler-owned
+or one relationship. Models filter the News Ontology, select compiler-owned
 pieces, wire positional occurrences, and bind values. Code validates labels and
 endpoints, parses Bill Designations, compiles parameterized read-only Cypher,
 traverses provenance, and hydrates candidate Grounding Evidence. The shared
@@ -88,3 +88,32 @@ Project commands used `UV_CACHE_DIR=/private/tmp/ticket-05-uv-cache`.
 No acceptance criterion is blocked. Multi-hop construction and correction
 attempts remain ticket 06 work. Live model quality remains unmeasured; the
 controlled graph is behavioral evidence, not a Gold Set.
+
+### Review closure, 2026-09-17
+
+A two-axis review from fixed point `d2413cc3` found no Spec gaps or scope creep.
+The Standards review found that the new API used generic schema terminology for
+the News Ontology and repeated its parent/sub-label mapping. The review fix
+renamed the new ontology-filter types and seam, derives supported sub-label
+parents from `news.SUB_LABELS`, and restricts the ticket-05 selection contract
+to its implemented maximum of two roles and one relationship. The existing
+`schema_filtering` failure-stage value remains because ticket 02 already made it
+part of the shared retrieval contract and this ticket explicitly requires that
+stage to stay distinguishable.
+
+The suggested `Piece`/selected-piece value-object refactor was not taken. Those
+values are private, immutable, compiler-created catalog data; external model
+selections are checked against the catalog before use. Adding a public wrapper
+would not close an exposed invalid state in this ticket and would pre-shape the
+multi-hop representation owned by ticket 06.
+
+Review verification passed:
+
+- Focused structural and shared-contract tests: 68 passed.
+- Disposable Neo4j structural integration tests: 16 passed.
+- Final deterministic suite: 1070 passed, 26 opt-in integration tests skipped,
+  and the same two existing provider warnings.
+- Changed-file `uvx --offline ty check`, `uv run --no-sync ruff check`, and
+  `git diff --check`: passed.
+
+The ticket remains `completed`; no valid review finding is unresolved.

@@ -23,15 +23,15 @@ type FilterProperty = Literal["id", "name", "session", "title", "published_date"
 type Position = Annotated[int, Field(strict=True, ge=0)]
 
 
-class SemanticSchemaSelection(RetrievalValue):
+class OntologySelection(RetrievalValue):
     labels: Annotated[tuple[SemanticLabel, ...], Field(min_length=1)]
     relationships: tuple[NonemptyText, ...]
     filter_properties: dict[SemanticLabel, tuple[FilterProperty, ...]]
 
 
 class PieceSelection(RetrievalValue):
-    role_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=1, max_length=4)]
-    relationship_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=3)]
+    role_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=1, max_length=2)]
+    relationship_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=1)]
     filter_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=8)]
 
 
