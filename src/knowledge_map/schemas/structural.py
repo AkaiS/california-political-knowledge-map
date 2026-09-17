@@ -30,8 +30,12 @@ class OntologySelection(RetrievalValue):
 
 
 class PieceSelection(RetrievalValue):
-    role_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=1, max_length=2)]
-    relationship_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=1)]
+    role_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=1)] = Field(
+        description="At most four connected role occurrences."
+    )
+    relationship_ids: tuple[NonemptyText, ...] = Field(
+        description="At most three question-semantic relationship occurrences."
+    )
     filter_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=8)]
 
 
@@ -46,10 +50,22 @@ class FilterWiring(RetrievalValue):
     role_index: Position
 
 
+class DistinctRoles(RetrievalValue):
+    left_role_index: Position
+    right_role_index: Position
+
+
 class SemanticWiring(RetrievalValue):
     triples: tuple[TripleWiring, ...]
     filters: tuple[FilterWiring, ...]
+    distinct_roles: tuple[DistinctRoles, ...] = ()
+
+
+class BillNameAssignment(RetrievalValue):
+    slot_index: Position
+    value: NonemptyText
 
 
 class PositionalBindings(RetrievalValue):
-    values: Annotated[tuple[NonemptyText, ...], Field(max_length=8)]
+    values: Annotated[tuple[NonemptyText | None, ...], Field(max_length=8)]
+    bill_names: tuple[BillNameAssignment, ...] = ()

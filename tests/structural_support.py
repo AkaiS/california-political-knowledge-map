@@ -40,12 +40,18 @@ def scripted_agents(outputs=None, *, inspect=None, stalled_stage=None):
     outputs = outputs or entity_outputs()
 
     def model_at(index):
+        attempt = 0
+
         async def respond(messages, info):
+            nonlocal attempt
             if stalled_stage == index:
                 await asyncio.Event().wait()
             if inspect:
                 inspect(index, messages, info)
             output = outputs[index]
+            if isinstance(output, list):
+                output = output[min(attempt, len(output) - 1)]
+            attempt += 1
             if isinstance(output, Exception):
                 raise output
             return ModelResponse(
@@ -89,4 +95,79 @@ def relationship_outputs(
             "filters": [{"filter_index": 0, "role_index": 1}],
         },
         {"values": [value]},
+    ]
+
+
+def influence_outputs(hops=2, funder="California Leads"):
+    labels = ["Organization", "Campaign", "Politician", "Bill"][: hops + 1]
+    predicates = ["FUNDED", "CAMPAIGN_FOR", "DECLARED_STANCE"][:hops]
+    return [
+        {
+            "labels": labels,
+            "relationships": predicates,
+            "filter_properties": {"Organization": ["name"]},
+        },
+        {
+            "role_ids": [f"ROLE__{label.upper()}" for label in labels],
+            "relationship_ids": [
+                f"REL__{labels[i].upper()}__{predicate}__{labels[i + 1].upper()}"
+                for i, predicate in enumerate(predicates)
+            ],
+            "filter_ids": ["FILTER__ORGANIZATION__NAME__EQ"],
+        },
+        {
+            "triples": [
+                {
+                    "relationship_index": i,
+                    "source_role_index": i,
+                    "target_role_index": i + 1,
+                }
+                for i in range(hops)
+            ],
+            "filters": [{"filter_index": 0, "role_index": 0}],
+        },
+        {"values": [funder]},
+    ]
+
+
+def multi_bill_outputs():
+    return [
+        {
+            "labels": ["Organization", "Bill"],
+            "relationships": ["LOBBIED_FOR", "LOBBIED_AGAINST"],
+            "filter_properties": {"Bill": ["name"]},
+        },
+        {
+            "role_ids": ["ROLE__BILL", "ROLE__ORGANIZATION", "ROLE__BILL"],
+            "relationship_ids": [
+                "REL__ORGANIZATION__LOBBIED_FOR__BILL",
+                "REL__ORGANIZATION__LOBBIED_AGAINST__BILL",
+            ],
+            "filter_ids": ["FILTER__BILL__NAME__EQ", "FILTER__BILL__NAME__EQ"],
+        },
+        {
+            "triples": [
+                {
+                    "relationship_index": 0,
+                    "source_role_index": 1,
+                    "target_role_index": 0,
+                },
+                {
+                    "relationship_index": 1,
+                    "source_role_index": 1,
+                    "target_role_index": 2,
+                },
+            ],
+            "filters": [
+                {"filter_index": 0, "role_index": 0},
+                {"filter_index": 1, "role_index": 2},
+            ],
+        },
+        {
+            "values": [None, None],
+            "bill_names": [
+                {"slot_index": 1, "value": "Senate Bill 01947"},
+                {"slot_index": 0, "value": "Assembly Bill 00186"},
+            ],
+        },
     ]

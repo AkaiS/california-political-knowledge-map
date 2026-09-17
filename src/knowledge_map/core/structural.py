@@ -24,6 +24,11 @@ class Piece:
     predicate: str | None = None
     target: str | None = None
     operator: str = "eq"
+    alternatives: tuple[str, ...] = ()
+
+
+class HopBoundError(ValueError):
+    pass
 
 
 _LABELS = get_args(SemanticLabel.__value__)
@@ -34,50 +39,67 @@ _PARENT = {
     if child in children
 }
 
-CATALOG = tuple(
-    piece
-    for label in _LABELS
-    for piece in (
-        Piece(f"ROLE__{label.upper()}", "role", label),
-        *(
-            Piece(
-                f"FILTER__{label.upper()}__{prop.upper()}__{operator.upper()}",
-                "filter",
-                label,
-                prop,
-                operator=operator,
-            )
-            for prop in (
-                ("id", "title", "published_date")
-                if label == "NewsArticle"
-                else ("id", "name", "session")
-                if label == "Bill"
-                else ("id", "name")
-            )
-            for operator in (
-                ("date_gte", "date_lt") if prop == "published_date" else ("eq",)
-            )
+CATALOG = (
+    tuple(
+        piece
+        for label in _LABELS
+        for piece in (
+            Piece(f"ROLE__{label.upper()}", "role", label),
+            *(
+                Piece(
+                    f"FILTER__{label.upper()}__{prop.upper()}__{operator.upper()}",
+                    "filter",
+                    label,
+                    prop,
+                    operator=operator,
+                )
+                for prop in (
+                    ("id", "title", "published_date")
+                    if label == "NewsArticle"
+                    else ("id", "name", "session")
+                    if label == "Bill"
+                    else ("id", "name")
+                )
+                for operator in (
+                    ("date_gte", "date_lt") if prop == "published_date" else ("eq",)
+                )
+            ),
+        )
+    )
+    + tuple(
+        Piece(
+            f"REL__{source.upper()}__{predicate}__{target.upper()}",
+            "relationship",
+            source,
+            predicate=predicate,
+            target=target,
+        )
+        for predicate, shape in sorted(news.RELATIONSHIPS.items())
+        if predicate not in {"HAS_CHUNK", "MENTIONED_IN"}
+        for source in _LABELS
+        if _PARENT.get(source, source) in shape.source_labels
+        for target in _LABELS
+        if _PARENT.get(target, target) in shape.target_labels
+    )
+    + (
+        Piece(
+            "REL__POLITICIAN__RECORDED_VOTE__LEGISLATIVEEVENT",
+            "relationship",
+            "Politician",
+            target="LegislativeEvent",
+            alternatives=("VOTED_AYE", "VOTED_NO", "ABSTAINED"),
         ),
     )
-) + tuple(
-    Piece(
-        f"REL__{source.upper()}__{predicate}__{target.upper()}",
-        "relationship",
-        source,
-        predicate=predicate,
-        target=target,
-    )
-    for predicate, shape in sorted(news.RELATIONSHIPS.items())
-    if predicate not in {"HAS_CHUNK", "MENTIONED_IN"}
-    for source in _LABELS
-    if _PARENT.get(source, source) in shape.source_labels
-    for target in _LABELS
-    if _PARENT.get(target, target) in shape.target_labels
 )
 
 
 def filtered_catalog(selection: OntologySelection) -> tuple[Piece, ...]:
-    legal_relationships = {p.predicate for p in CATALOG if p.kind == "relationship"}
+    legal_relationships = {
+        predicate
+        for p in CATALOG
+        if p.kind == "relationship"
+        for predicate in (p.alternatives or (p.predicate,))
+    }
     if not set(selection.relationships) <= legal_relationships:
         raise ValueError("select only semantic ontology relationships")
     for label, props in selection.filter_properties.items():
@@ -93,7 +115,7 @@ def filtered_catalog(selection: OntologySelection) -> tuple[Piece, ...]:
             or p.kind == "filter"
             and p.property in selection.filter_properties.get(p.label, ())
             or p.kind == "relationship"
-            and p.predicate in selection.relationships
+            and set(p.alternatives or (p.predicate,)) <= set(selection.relationships)
             and p.target in selection.labels
         )
     )
@@ -102,6 +124,10 @@ def filtered_catalog(selection: OntologySelection) -> tuple[Piece, ...]:
 def selected_pieces(
     selection: PieceSelection, catalog: tuple[Piece, ...]
 ) -> dict[str, tuple[Piece, ...]]:
+    if len(selection.relationship_ids) > 3:
+        raise HopBoundError("at most three question-semantic relationships are allowed")
+    if len(selection.role_ids) > 4:
+        raise ValueError("at most four connected roles are allowed")
     by_id = {piece.id: piece for piece in catalog}
     grouped = {}
     for kind, ids in (
@@ -120,27 +146,46 @@ def validate_wiring(
 ) -> None:
     roles, filters = pieces["role"], pieces["filter"]
     relationships = pieces["relationship"]
+    if len(relationships) > 3:
+        raise HopBoundError("at most three question-semantic relationships are allowed")
     if relationships:
-        if len(relationships) != 1 or len(roles) != 2:
-            raise ValueError("one relationship needs exactly two roles")
-        if len(wiring.triples) != 1:
-            raise ValueError("wire the selected relationship exactly once")
-        triple = wiring.triples[0]
-        if triple.relationship_index != 0 or {
-            triple.source_role_index,
-            triple.target_role_index,
-        } != {0, 1}:
-            raise ValueError(
-                "wire the selected relationship between its two distinct roles"
-            )
-        relationship = relationships[0]
-        if (
-            roles[triple.source_role_index].label != relationship.label
-            or roles[triple.target_role_index].label != relationship.target
+        if sorted(t.relationship_index for t in wiring.triples) != list(
+            range(len(relationships))
         ):
-            raise ValueError("relationship endpoints must have their declared labels")
+            raise ValueError("wire each selected relationship exactly once")
+        connected = {0}
+        for triple in wiring.triples:
+            source, target = triple.source_role_index, triple.target_role_index
+            if source >= len(roles) or target >= len(roles) or source == target:
+                raise ValueError(
+                    "wire relationships between two distinct selected roles"
+                )
+            relationship = relationships[triple.relationship_index]
+            if (
+                roles[source].label != relationship.label
+                or roles[target].label != relationship.target
+            ):
+                raise ValueError(
+                    "relationship endpoints must have their declared labels"
+                )
+        for _ in relationships:
+            for triple in wiring.triples:
+                endpoints = {triple.source_role_index, triple.target_role_index}
+                if connected & endpoints:
+                    connected |= endpoints
+        if connected != set(range(len(roles))):
+            raise ValueError("wire all selected roles into one connected question")
     elif len(roles) != 1 or wiring.triples:
         raise ValueError("entity lookup needs one role and no semantic relationship")
+    for pair in wiring.distinct_roles:
+        if (
+            pair.left_role_index >= len(roles)
+            or pair.right_role_index >= len(roles)
+            or pair.left_role_index == pair.right_role_index
+        ):
+            raise ValueError(
+                "distinct roles must name two different selected role indices"
+            )
     if sorted(item.filter_index for item in wiring.filters) != list(
         range(len(filters))
     ):
@@ -161,6 +206,52 @@ def compile_query(
     validate_wiring(wiring, pieces)
     if len(bindings.values) != len(wiring.filters):
         raise ValueError("bind one value per wired filter")
+    values = list(bindings.values)
+    bill_slots = [
+        i
+        for i, item in enumerate(wiring.filters)
+        if pieces["filter"][item.filter_index].label == "Bill"
+        and pieces["filter"][item.filter_index].property == "name"
+    ]
+    if len(bill_slots) > 1:
+        if sorted(item.slot_index for item in bindings.bill_names) != bill_slots:
+            raise ValueError(
+                "assign each Bill-name slot exactly once through bill_names"
+            )
+        for assignment in bindings.bill_names:
+            if values[assignment.slot_index] is not None:
+                raise ValueError(
+                    "leave positional Bill-name values null when using bill_names"
+                )
+            values[assignment.slot_index] = assignment.value
+    elif bindings.bill_names:
+        raise ValueError(
+            "use positional values when there is at most one Bill-name slot"
+        )
+    for slot in bill_slots:
+        designation = parse_bill_designation(values[slot])
+        if designation is None:
+            raise ValueError(
+                f"Bill-name slot {slot} needs a recognized Bill Designation: SB N, AB N, Senate Bill N, or Assembly Bill N"
+            )
+        values[slot] = designation
+    identities = set()
+    for slot in bill_slots:
+        role_index = wiring.filters[slot].role_index
+        sessions = tuple(
+            values[i]
+            for i, item in enumerate(wiring.filters)
+            if item.role_index == role_index
+            and pieces["filter"][item.filter_index].property == "session"
+        )
+        identity = (values[slot], sessions)
+        if identity in identities:
+            raise ValueError(
+                "assign distinct Bill Designations or sessions to separate Bill-name slots; do not repeat one Bill across all slots"
+            )
+        identities.add(identity)
+    if any(value is None for value in values):
+        raise ValueError("bind a nonempty value to every filter slot")
     roles = pieces["role"]
 
     def node(index: int) -> str:
@@ -169,28 +260,26 @@ def compile_query(
         return f"(role_{index}:{labels})"
 
     if wiring.triples:
-        triple = wiring.triples[0]
-        source, target = triple.source_role_index, triple.target_role_index
         clauses = [
-            f"MATCH {node(source)}-[semantic_rel_0:{pieces['relationship'][0].predicate}]->{node(target)}"
+            f"MATCH {node(t.source_role_index)}-[semantic_rel_{t.relationship_index}:{'|'.join(relationship.alternatives) or relationship.predicate}]->{node(t.target_role_index)}"
+            for t in wiring.triples
+            for relationship in (pieces["relationship"][t.relationship_index],)
         ]
     else:
         clauses = [f"MATCH {node(0)}"]
-    parameters = {f"parameter_{i}": v for i, v in enumerate(bindings.values)}
-    constraints = []
+    parameters = {f"parameter_{i}": v for i, v in enumerate(values) if v is not None}
+    constraints = [
+        f"role_{pair.left_role_index}.id <> role_{pair.right_role_index}.id"
+        for pair in wiring.distinct_roles
+    ]
     for i, item in enumerate(wiring.filters):
         piece = pieces["filter"][item.filter_index]
-        if piece.label == "Bill" and piece.property == "name":
-            designation = parse_bill_designation(bindings.values[i])
-            if designation is None:
-                raise ValueError("Bill name must contain a recognized Bill Designation")
-            parameters[f"parameter_{i}"] = designation
         property_expression = f"role_{item.role_index}.{piece.property}"
         if piece.operator == "eq":
             constraints.append(f"{property_expression} = $parameter_{i}")
         else:
             parameters[f"parameter_{i}"] = date.fromisoformat(
-                bindings.values[i]
+                parameters[f"parameter_{i}"]
             ).isoformat()
             operator = ">=" if piece.operator == "date_gte" else "<"
             constraints.append(
@@ -199,43 +288,58 @@ def compile_query(
     if constraints:
         clauses.append("WHERE " + " AND ".join(constraints))
     if wiring.triples:
-        predicate = pieces["relationship"][0].predicate
-        if predicate == "DISCUSSES_TOPIC":
-            clauses.extend(
-                (
-                    f"OPTIONAL MATCH (role_{source})-[:HAS_CHUNK]->(c:Chunk)",
-                    f"WITH *, role_{source} AS a",
-                )
-            )
-        elif predicate == "ABOUT_TOPIC":
-            clauses.extend(
-                (
+        hydration = []
+        claims = []
+        for triple in sorted(wiring.triples, key=lambda t: t.relationship_index):
+            source, target = triple.source_role_index, triple.target_role_index
+            relation = f"semantic_rel_{triple.relationship_index}"
+            predicate = pieces["relationship"][triple.relationship_index].predicate
+            branch = [f"WITH role_{source}, role_{target}, {relation}"]
+            if predicate == "DISCUSSES_TOPIC":
+                branch.extend(
                     (
-                        "UNWIND CASE WHEN size(coalesce(semantic_rel_0.articles, [])) = 0 "
-                        "THEN [null] ELSE semantic_rel_0.articles END AS asserting_article_id"
-                    ),
-                    "OPTIONAL MATCH (a:NewsArticle {id: asserting_article_id})-[:HAS_CHUNK]->(c:Chunk)",
+                        f"OPTIONAL MATCH (role_{source})-[:HAS_CHUNK]->(c:Chunk)",
+                        f"WITH c, role_{source} AS a",
+                    )
                 )
-            )
-        else:
-            clauses.extend(
-                (
+            elif predicate == "ABOUT_TOPIC":
+                branch.extend(
                     (
-                        "UNWIND CASE WHEN size(coalesce(semantic_rel_0.chunks, [])) = 0 "
-                        "THEN [null] ELSE semantic_rel_0.chunks END AS asserting_chunk_id"
-                    ),
-                    (
-                        f"OPTIONAL MATCH (role_{source})-[:MENTIONED_IN]->"
-                        f"(c:Chunk {{id: asserting_chunk_id}})<-[:MENTIONED_IN]-(role_{target})"
-                    ),
-                    "OPTIONAL MATCH (a:NewsArticle)-[:HAS_CHUNK]->(c)",
+                        (
+                            f"UNWIND CASE WHEN size(coalesce({relation}.articles, [])) = 0 "
+                            f"THEN [null] ELSE {relation}.articles END AS asserting_article_id"
+                        ),
+                        "OPTIONAL MATCH (a:NewsArticle {id: asserting_article_id})-[:HAS_CHUNK]->(c:Chunk)",
+                    )
                 )
+            else:
+                branch.extend(
+                    (
+                        (
+                            f"UNWIND CASE WHEN size(coalesce({relation}.chunks, [])) = 0 "
+                            f"THEN [null] ELSE {relation}.chunks END AS asserting_chunk_id"
+                        ),
+                        (
+                            f"OPTIONAL MATCH (role_{source})-[:MENTIONED_IN]->"
+                            f"(c:Chunk {{id: asserting_chunk_id}})<-[:MENTIONED_IN]-(role_{target})"
+                        ),
+                        "OPTIONAL MATCH (a:NewsArticle)-[:HAS_CHUNK]->(c)",
+                    )
+                )
+            branch.append("RETURN c, a")
+            hydration.append("\n".join(branch))
+            claims.append(
+                "{relationship_type: type("
+                + relation
+                + "), claim_properties: properties("
+                + relation
+                + "), "
+                f"source_id: role_{source}.id, source_element_id: elementId(role_{source}), "
+                f"target_id: role_{target}.id, target_element_id: elementId(role_{target})"
+                + "}"
             )
-        claim_fields = (
-            "type(semantic_rel_0) AS relationship_type, properties(semantic_rel_0) AS claim_properties, "
-            f"role_{source}.id AS source_id, elementId(role_{source}) AS source_element_id, "
-            f"role_{target}.id AS target_id, elementId(role_{target}) AS target_element_id, "
-        )
+        clauses.append("CALL {\n" + "\nUNION ALL\n".join(hydration) + "\n}")
+        claim_fields = "[" + ", ".join(claims) + "] AS claims, "
     else:
         if roles[0].label == "NewsArticle":
             clauses.extend(
