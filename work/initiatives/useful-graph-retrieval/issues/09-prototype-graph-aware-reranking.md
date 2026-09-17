@@ -1,8 +1,8 @@
 # Prototype weights and structural signals for graph-prioritized reranking
 
-Labels: wayfinder:prototype, needs-triage
+Labels: wayfinder:prototype, ready-for-agent
 Parent: [Useful Graph Retrieval](../MAP.md)
-Blocked by: [Define the retrieval and answer contract](08-retrieval-and-answer-contract.md)
+Blocked by: [Full-text retrieval](../../../projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), [Dense retrieval](../../../projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), [Bounded multi-hop structural retrieval](../../../projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), [Graph-prioritized reciprocal-rank fusion](../../../projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md)
 Inputs: [Accepted retrieval modes and index inventory](06-retrieval-modes-and-index-inventory.md), [Accepted retrieval topology](07-retrieval-agent-topology.md)
 
 ## Question
@@ -26,6 +26,12 @@ Select numerical weights and candidate limits, record the relevance and latency
 trade-offs, and determine whether the winning signal is cheap enough to compute
 per query or needs precomputation. If it needs precomputation, that is a new
 ticket, not a silent addition to this one.
+
+Run the comparison against the implemented full-text, dense, and bounded typed
+structural branches. Use their retained pre-fusion rankings and the configurable
+fusion implementation. Synthetic candidate lists may test the fusion formula,
+but they cannot select production weights or establish relevance and latency
+trade-offs.
 
 ## Input from the retrieval modes decision
 

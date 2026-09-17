@@ -30,6 +30,8 @@ question.
 - [ ] One branch failure never discards another branch's candidates.
 - [ ] Branch candidates pass through graph-prioritized fusion and deterministic
       Evidence Assembly before the Chat Agent receives them.
+- [ ] The production fusion configuration uses the numerical weights and
+      candidate limits accepted by the graph-aware reranking prototype.
 - [ ] Every failed branch reaches user-facing disclosure. Structural failure on
       a Relational Question is prominent, while text-branch failures remain
       visible but secondary.
@@ -55,3 +57,4 @@ question.
 - [06 — Bounded multi-hop structural retrieval](06-bounded-multi-hop-structural-retrieval.md).
 - [07 — Graph-prioritized reciprocal-rank fusion](07-graph-prioritized-reciprocal-rank-fusion.md).
 - [08 — Deterministic Evidence Assembly](08-deterministic-evidence-assembly.md).
+- [Useful Graph Retrieval issue 09](../../../initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), which measures the implemented branches and selects the production weights and candidate limits.

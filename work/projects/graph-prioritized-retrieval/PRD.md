@@ -278,10 +278,18 @@ perform the traversal.
 
 ### Dependencies and sequencing
 
-- The retrieval and answer contract decision supplies the final typed evidence,
-  citation, coverage, and branch-result representations.
-- The graph-aware reranking prototype supplies weighted-RRF parameters and
-  candidate limits. Structural priority itself is already decided.
+- The retrievable-scope, retrieval-mode, and topology decisions have settled the
+  retrieval and answer contract's behavior. This project's contract ticket
+  turns those decisions into concrete Pydantic evidence, citation, coverage,
+  branch-result, and answer representations. Useful Graph Retrieval issue 08
+  records those implemented types; it does not block their implementation.
+- Full-text, dense, and bounded typed structural retrieval must produce real
+  ranked candidates before the graph-aware reranking prototype runs. The fusion
+  ticket supplies configurable weighted reciprocal-rank fusion and an unweighted
+  baseline. The prototype then selects production weights and candidate limits
+  from those working branches.
+- Final coordinator and Chat Agent handoff waits for the reranking prototype's
+  measured parameters. Structural priority itself is already decided.
 - The developer retrieval surface renders this project's contracts but does not
   define new retrieval behavior.
 - No ADR is added. This PRD is the feature's durable design document.
@@ -339,10 +347,8 @@ Suite owned by the Model Evaluation initiative.
 - Free-form model-generated Cypher.
 - Letting a model select among retrieval modes beyond the internal relational
   branch flag.
-- Choosing weighted-RRF numbers or final candidate and context limits before the
-  graph-aware reranking prototype reports them.
-- Defining the final retrieval and answer schemas already owned by the retrieval
-  and answer contract decision.
+- Choosing production weighted-RRF numbers or final candidate limits before the
+  graph-aware reranking prototype measures the implemented retrieval branches.
 - Adding Policy Area vectors, external-identifier lookup, community detection,
   Graph Data Science, or influence ranking.
 - Resolving duplicate graph identities or treating deduplication of candidates

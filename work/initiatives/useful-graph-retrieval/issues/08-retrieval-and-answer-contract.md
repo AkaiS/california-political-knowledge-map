@@ -1,8 +1,9 @@
 # Define the retrieval and answer contract
 
-Labels: wayfinder:grilling, needs-triage
+Labels: wayfinder:grilling, ready-for-agent
 Parent: [Useful Graph Retrieval](../MAP.md)
 Inputs: [Accepted retrieval topology and orchestration](07-retrieval-agent-topology.md)
+Blocked by: [Graph-Prioritized Retrieval issue 02](../../../projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md)
 
 ## Question
 
@@ -63,10 +64,17 @@ following contract requirements:
 - Deferred coverage is explained before approval and again with any evidence
   recovered. Declined remains a policy outcome, not a retrieval failure.
 
-## Blocking
+## Remaining work
 
-- Blocks: Prototype graph-aware reranking.
-- Blocks: Decide the developer retrieval surface.
+The retrievable-scope, retrieval-mode, and topology decisions have settled the
+contract's semantics. Graph-Prioritized Retrieval issue 02 owns the remaining
+work: encode those decisions as concrete Pydantic types and prove that the
+distinct outcomes cannot collapse into one representation. Once those types
+exist, record them here as the answer and close this decision.
+
+This ticket no longer blocks retrieval implementation or the reranking
+prototype. The developer retrieval surface still waits for the concrete types
+because it renders them without defining new behavior.
 
 ## Input from the retrievable subgraph decision
 

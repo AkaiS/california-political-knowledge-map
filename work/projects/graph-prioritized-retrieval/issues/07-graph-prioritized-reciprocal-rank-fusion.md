@@ -9,16 +9,23 @@ Labels: ready-for-agent
 ## What to build
 
 Combine branch candidates through weighted reciprocal-rank fusion over their
-union. Apply the numerical parameters selected by the reranking prototype so
-typed structural retrieval has greater weight than either text branch without
-excluding candidates found only through full-text or dense retrieval.
+union. Make weights, the reciprocal-rank constant, and candidate limits explicit
+configuration. The implementation supplies the unweighted baseline and
+structurally weighted variants that the reranking prototype will compare. A
+valid production configuration requires typed structural retrieval to have
+greater weight than either text branch without excluding candidates found only
+through full-text or dense retrieval.
 
 ## Acceptance criteria
 
 - [ ] Fusion consumes the union of branch candidates and does not require a
       candidate to appear in every branch.
-- [ ] Typed structural retrieval has greater weight than either full-text or
-      dense retrieval using the accepted numerical parameters.
+- [ ] Branch weights, the reciprocal-rank constant, and candidate limits are
+      explicit configuration rather than constants chosen by this ticket.
+- [ ] Production configuration validation requires typed structural retrieval
+      to have greater weight than either full-text or dense retrieval.
+- [ ] The reranking prototype can run an unweighted measurement baseline and
+      several weighted configurations without changing fusion code.
 - [ ] A candidate found through several branches accumulates each branch's
       reciprocal-rank contribution.
 - [ ] A candidate absent from structural retrieval remains eligible through a
@@ -29,12 +36,10 @@ excluding candidates found only through full-text or dense retrieval.
 - [ ] Fusion never compares raw scores across branches.
 - [ ] Candidate deduplication does not merge graph entities or resolve identity
       ambiguity.
-- [ ] Candidate limits and fusion parameters match the accepted reranking
-      prototype result.
 - [ ] Behavioral tests cover structural priority, text-only gap filling,
-      candidates found through several routes, and rank ties.
+      candidates found through several routes, rank ties, configuration
+      validation, and the unweighted baseline.
 
 ## Blocked by
 
 - [02 — Retrieval execution and evidence contracts](02-retrieval-execution-and-evidence-contracts.md).
-- [Useful Graph Retrieval issue 09](../../../initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), which supplies numerical weights and candidate limits.

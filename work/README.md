@@ -48,19 +48,21 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issue 01 is takeable now. Issue 02 consumes its Query Rewrite and the retrieval
-and answer contract. Once 02 lands, the three retrieval branches, fusion, and
-Evidence Assembly can advance on their declared edges before final integration.
+Issue 01 is takeable now. Issue 02 turns the settled retrieval and answer
+semantics into concrete types. Once 02 lands, the three retrieval branches,
+parameterized fusion, and Evidence Assembly can advance. The reranking prototype
+then measures the working branches and supplies production parameters to final
+integration.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), takeable. A separately configured stronger model produces the user-approved Query Rewrite and internal relational route.
-- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), blocked by 01 and Useful Graph Retrieval issue 08.
+- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), blocked by 01.
 - [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), blocked by 02.
 - [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), blocked by 02.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), blocked by 02.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), blocked by 05.
-- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), blocked by 02 and Useful Graph Retrieval issue 09.
+- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), blocked by 02. It supplies configurable and unweighted variants to the reranking prototype.
 - [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), blocked by 02.
-- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 01, 03, 04, 06, 07, and 08.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 01, 03, 04, 06, 07, 08, and Useful Graph Retrieval issue 09.
 
 ### Bill Designation Recovery frontier
 
@@ -118,7 +120,9 @@ blockers.
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
 charted on 2026-07-29 and holds ten tickets. Issues 04 through 07 are complete.
-Issue 08 is the next decision; issue 09 requires its contract.
+Issue 08's semantics are settled; Graph-Prioritized Retrieval issue 02 supplies
+its remaining concrete types. Issue 09 waits for working retrieval branches and
+parameterized fusion so it can measure real rankings.
 
 - [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md): the authored question set is available as an input to the prototype.
@@ -127,7 +131,8 @@ Issue 08 is the next decision; issue 09 requires its contract.
 - [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `completed` on 2026-09-14. The atomic semantic constructor preserved at `511eaeee` is the selected structural construction shape.
 - [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. External-identifier implementation and Policy Area vectors are deferred.
 - [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
-- [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), next. It consumes issue 07's granular branch facts and unblocks reranking and the developer surface.
+- [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), blocked by Graph-Prioritized Retrieval issue 02. Its behavior is settled; the remaining work records the concrete Pydantic types produced by implementation.
+- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), blocked by Graph-Prioritized Retrieval issues 03, 04, 06, and 07. It selects production weights and candidate limits from real branch outputs.
 
 ### Pydantic-Native Evaluation Routing
 

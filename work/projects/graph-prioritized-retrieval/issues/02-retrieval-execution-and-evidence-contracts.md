@@ -13,10 +13,12 @@ Assembly, and the Chat Agent. Retrieval accepts one approved Query Rewrite and
 preserves the facts needed to distinguish what was searched, what returned
 evidence, and what failed.
 
-Adopt the final evidence, citation, coverage, and answer representations from
-the Useful Graph Retrieval contract. Internal failure detail remains in
-structured logs, while answer-facing data carries enough information to disclose
-failed branches without exposing exceptions or model output.
+Turn the contract semantics already settled by the retrievable-scope, retrieval-
+mode, and topology decisions into concrete Pydantic types. This is the remaining
+implementation work for Useful Graph Retrieval issue 08, not a dependency on
+later wayfinder work. Internal failure detail remains in structured logs, while
+answer-facing data carries enough information to disclose failed branches
+without exposing exceptions or model output.
 
 ## Acceptance criteria
 
@@ -49,4 +51,3 @@ failed branches without exposing exceptions or model output.
 ## Blocked by
 
 - [01 — Query Rewrite and approval](01-query-rewrite-and-approval.md).
-- [Useful Graph Retrieval issue 08](../../../initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), which supplies the final evidence, citation, coverage, and answer representations.
