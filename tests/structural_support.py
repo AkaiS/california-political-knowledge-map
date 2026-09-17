@@ -130,6 +130,36 @@ def influence_outputs(hops=2, funder="California Leads"):
     ]
 
 
+def co_mention_outputs(article_title=None):
+    labels = ["Organization", "Politician"]
+    filter_properties = {"Politician": ["name"]}
+    role_ids = ["ROLE__ORGANIZATION", "ROLE__POLITICIAN"]
+    filter_ids = ["FILTER__POLITICIAN__NAME__EQ"]
+    filters = [{"filter_index": 0, "role_index": 1}]
+    values = ["Steve Hilton"]
+    if article_title is not None:
+        labels.append("NewsArticle")
+        filter_properties["NewsArticle"] = ["title"]
+        role_ids.append("ROLE__NEWSARTICLE")
+        filter_ids.append("FILTER__NEWSARTICLE__TITLE__EQ")
+        filters.append({"filter_index": 1, "role_index": 2})
+        values.append(article_title)
+    return [
+        {
+            "labels": labels,
+            "relationships": [],
+            "filter_properties": filter_properties,
+        },
+        {
+            "role_ids": role_ids,
+            "relationship_ids": [],
+            "filter_ids": filter_ids,
+        },
+        {"triples": [], "filters": filters},
+        {"values": values},
+    ]
+
+
 def multi_bill_outputs():
     return [
         {

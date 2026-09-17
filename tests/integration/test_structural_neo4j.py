@@ -8,6 +8,7 @@ from neo4j import AsyncGraphDatabase
 from pydantic_ai.messages import RetryPromptPart, UserPromptPart
 from structural_support import (
     approved_request,
+    co_mention_outputs,
     entity_outputs,
     influence_outputs,
     multi_bill_outputs,
@@ -17,6 +18,54 @@ from structural_support import (
 
 from knowledge_map.adapters.structural import Neo4jStructuralRetriever
 from knowledge_map.schemas.retrieval import FailedBranch, SuccessfulBranch
+
+
+@pytest.mark.parametrize(
+    ("article_title", "expected"),
+    [
+        (None, [("co-mention-named", "named-org"), ("co-mention-other", "other-org")]),
+        ("Named article", [("co-mention-named", "named-org")]),
+    ],
+)
+def test_fixed_provenance_supports_verified_co_mentions(
+    disposable_neo4j_uri, article_title, expected
+):
+    async def run():
+        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+            await driver.execute_query("""
+                MERGE (p:Politician {id: 'co-mention-politician', name: 'Steve Hilton'})
+                MERGE (named:Organization {id: 'named-org', name: 'Reform California'})
+                MERGE (other:Organization {id: 'other-org', name: 'Other organization'})
+                MERGE (named_chunk:Chunk {id: 'co-mention-named', text: 'Named article reporting.'})
+                MERGE (other_chunk:Chunk {id: 'co-mention-other', text: 'Other reporting.'})
+                MERGE (p)-[:MENTIONED_IN]->(named_chunk)
+                MERGE (named)-[:MENTIONED_IN]->(named_chunk)
+                MERGE (p)-[:MENTIONED_IN]->(other_chunk)
+                MERGE (other)-[:MENTIONED_IN]->(other_chunk)
+                MERGE (:NewsArticle {id: 'https://example.org/named', title: 'Named article'})-[:HAS_CHUNK]->(named_chunk)
+                MERGE (:NewsArticle {id: 'https://example.org/other', title: 'Other article'})-[:HAS_CHUNK]->(other_chunk)
+            """)
+            question = "Which organizations appear in the same stored reporting chunks as Steve Hilton?"
+            if article_title is not None:
+                question = (
+                    "Which organizations appear in the same reporting chunks as Steve Hilton "
+                    f"in the article titled {article_title}?"
+                )
+            return await Neo4jStructuralRetriever(
+                driver,
+                agents=scripted_agents(co_mention_outputs(article_title)),
+            ).retrieve(
+                approved_request(question),
+                deadline=asyncio.get_running_loop().time() + 15,
+            )
+
+    outcome = asyncio.run(run())
+    assert isinstance(outcome, SuccessfulBranch)
+    assert [
+        (candidate.chunk_id, candidate.routes[0].entry_node.id)
+        for candidate in outcome.candidates
+    ] == expected
+    assert all(not candidate.routes[0].graph_claims for candidate in outcome.candidates)
 
 
 @pytest.fixture

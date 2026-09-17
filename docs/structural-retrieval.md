@@ -41,6 +41,13 @@ belong to the connected question, and each selected relationship and filter is
 wired exactly once. `distinct_roles` expresses an explicit request for other or
 different entities by excluding equal internal IDs. No new ADR is introduced.
 
+The verified reported-alongside questions use a separate zero-semantic-hop
+shape. The selector places the requested result entity first, the named entity
+second, and an optional Source Article third. The compiler connects both
+entities to one Article Chunk through fixed `MENTIONED_IN` paths and applies an
+optional article-title filter through `HAS_CHUNK`. Those provenance edges are
+not selectable semantic relationships and produce no semantic `GraphClaim`.
+
 The supplied `RECORDED_VOTE` piece matches any of `VOTED_AYE`, `VOTED_NO`, or
 `ABSTAINED`. It is one semantic hop, because a match traverses one of those
 relationships. The ontology filter must retain all three alternatives before
@@ -151,12 +158,13 @@ These tests establish controlled behavior. They do not measure model selection
 quality or recall on the political corpus.
 
 The controlled graph includes the verified construction families' two-hop
-campaign, same-side lobbying, and reported-vote shapes, plus three-hop campaign
-and Policy Area extensions. It exercises correction success on either permitted
-correction and exhaustion at every model stage, successful empty three-hop
-searches, and both chunk-level and article-level provenance beyond the semantic
-hop budget. The preserved 25-case batch currently contains at most two semantic
-hops; its original three-hop campaign extension is checked on controlled data.
+campaign, same-side lobbying, reported-alongside, and reported-vote shapes, plus
+three-hop campaign and Policy Area extensions. It exercises correction success
+on either permitted correction and exhaustion at every model stage, successful
+empty three-hop searches, and both chunk-level and article-level provenance
+beyond the semantic hop budget. The preserved 25-case batch currently contains
+at most two semantic hops; its original three-hop campaign extension is checked
+on controlled data.
 
 The 25 verified construction cases remain development checks, not a held-out
 Gold Set. Recheck their read-only reference queries with:

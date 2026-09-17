@@ -182,7 +182,15 @@ def test_four_semantic_relationships_exhaust_hop_bound_corrections(caplog):
 
 
 @pytest.mark.parametrize(
-    "problem", ["missing", "duplicate_slot", "broadcast", "positional", "invalid"]
+    "problem",
+    [
+        "missing",
+        "duplicate_slot",
+        "broadcast",
+        "partial_session",
+        "positional",
+        "invalid",
+    ],
 )
 def test_multi_bill_assignments_reject_missing_or_ambiguous_values(problem, caplog):
     outputs = multi_bill_outputs()
@@ -192,6 +200,12 @@ def test_multi_bill_assignments_reject_missing_or_ambiguous_values(problem, capl
     elif problem == "duplicate_slot":
         binding["bill_names"][0]["slot_index"] = 0
     elif problem == "broadcast":
+        binding["bill_names"][0]["value"] = "Assembly Bill 186"
+    elif problem == "partial_session":
+        outputs[0]["filter_properties"]["Bill"].append("session")
+        outputs[1]["filter_ids"].append("FILTER__BILL__SESSION__EQ")
+        outputs[2]["filters"].append({"filter_index": 2, "role_index": 0})
+        binding["values"].append("2025-2026")
         binding["bill_names"][0]["value"] = "Assembly Bill 186"
     elif problem == "positional":
         binding["values"] = ["AB 186", "SB 1947"]
@@ -220,6 +234,32 @@ def test_multi_bill_assignments_reject_missing_or_ambiguous_values(problem, capl
         "validation",
         3,
     )
+
+
+def test_repeated_bill_designation_requires_explicit_different_sessions():
+    outputs = multi_bill_outputs()
+    outputs[0]["filter_properties"]["Bill"].append("session")
+    outputs[1]["filter_ids"].extend(["FILTER__BILL__SESSION__EQ"] * 2)
+    outputs[2]["filters"].extend(
+        [
+            {"filter_index": 2, "role_index": 0},
+            {"filter_index": 3, "role_index": 2},
+        ]
+    )
+    outputs[3]["values"].extend(["2023-2024", "2025-2026"])
+    outputs[3]["bill_names"][0]["value"] = "Assembly Bill 186"
+
+    async def run():
+        return await Neo4jStructuralRetriever(
+            driver_for(), agents=scripted_agents(outputs)
+        ).retrieve(
+            approved_request(
+                "Compare AB 186 across the 2023-2024 and 2025-2026 sessions"
+            ),
+            deadline=asyncio.get_running_loop().time() + 10,
+        )
+
+    assert asyncio.run(run()) == SuccessfulBranch(branch="structural", candidates=())
 
 
 @pytest.mark.parametrize(

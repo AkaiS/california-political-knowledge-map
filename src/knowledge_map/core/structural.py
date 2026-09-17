@@ -2,7 +2,7 @@
 
 from dataclasses import asdict, dataclass
 from datetime import date
-from typing import get_args
+from typing import cast, get_args
 
 from knowledge_map.core.bill_sessions import parse_bill_designation
 from knowledge_map.ontology import news
@@ -175,8 +175,11 @@ def validate_wiring(
                     connected |= endpoints
         if connected != set(range(len(roles))):
             raise ValueError("wire all selected roles into one connected question")
-    elif len(roles) != 1 or wiring.triples:
-        raise ValueError("entity lookup needs one role and no semantic relationship")
+    elif wiring.triples or not (len(roles) == 1 or _is_co_mention_shape(roles)):
+        raise ValueError(
+            "zero-relationship retrieval needs one role or a co-mention shape with "
+            "the result role first, the named entity second, and an optional Source Article third"
+        )
     for pair in wiring.distinct_roles:
         if (
             pair.left_role_index >= len(roles)
@@ -235,7 +238,7 @@ def compile_query(
                 f"Bill-name slot {slot} needs a recognized Bill Designation: SB N, AB N, Senate Bill N, or Assembly Bill N"
             )
         values[slot] = designation
-    identities = set()
+    sessions_by_designation: dict[str, list[tuple[str | None, ...]]] = {}
     for slot in bill_slots:
         role_index = wiring.filters[slot].role_index
         sessions = tuple(
@@ -244,12 +247,17 @@ def compile_query(
             if item.role_index == role_index
             and pieces["filter"][item.filter_index].property == "session"
         )
-        identity = (values[slot], sessions)
-        if identity in identities:
+        designation = cast(str, values[slot])
+        prior_sessions = sessions_by_designation.setdefault(designation, [])
+        if prior_sessions and (
+            len(sessions) != 1
+            or any(len(prior) != 1 for prior in prior_sessions)
+            or sessions in prior_sessions
+        ):
             raise ValueError(
                 "assign distinct Bill Designations or sessions to separate Bill-name slots; do not repeat one Bill across all slots"
             )
-        identities.add(identity)
+        prior_sessions.append(sessions)
     if any(value is None for value in values):
         raise ValueError("bind a nonempty value to every filter slot")
     roles = pieces["role"]
@@ -259,12 +267,22 @@ def compile_query(
         labels = f"{_PARENT[label]}:{label}" if label in _PARENT else label
         return f"(role_{index}:{labels})"
 
+    co_mention = not wiring.triples and _is_co_mention_shape(roles)
     if wiring.triples:
         clauses = [
             f"MATCH {node(t.source_role_index)}-[semantic_rel_{t.relationship_index}:{'|'.join(relationship.alternatives) or relationship.predicate}]->{node(t.target_role_index)}"
             for t in wiring.triples
             for relationship in (pieces["relationship"][t.relationship_index],)
         ]
+    elif co_mention:
+        clauses = [
+            f"MATCH {node(0)}-[:MENTIONED_IN]->(c:Chunk)<-[:MENTIONED_IN]-{node(1)}"
+        ]
+        if len(roles) == 3:
+            clauses.append(f"MATCH {node(2)}-[:HAS_CHUNK]->(c)")
+            clauses.append("WITH *, role_2 AS a")
+        else:
+            clauses.append("MATCH (a:NewsArticle)-[:HAS_CHUNK]->(c)")
     else:
         clauses = [f"MATCH {node(0)}"]
     parameters = {f"parameter_{i}": v for i, v in enumerate(values) if v is not None}
@@ -340,7 +358,7 @@ def compile_query(
             )
         clauses.append("CALL {\n" + "\nUNION ALL\n".join(hydration) + "\n}")
         claim_fields = "[" + ", ".join(claims) + "] AS claims, "
-    else:
+    elif not co_mention:
         if roles[0].label == "NewsArticle":
             clauses.extend(
                 ("MATCH (role_0)-[:HAS_CHUNK]->(c:Chunk)", "WITH *, role_0 AS a")
@@ -353,6 +371,8 @@ def compile_query(
             clauses.append(
                 "MATCH (role_0)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)"
             )
+        claim_fields = ""
+    else:
         claim_fields = ""
     clauses.append(
         "RETURN DISTINCT "
@@ -367,3 +387,14 @@ def compile_query(
 
 def public_pieces(pieces: tuple[Piece, ...]) -> list[dict]:
     return [asdict(piece) for piece in pieces]
+
+
+def _is_co_mention_shape(roles: tuple[Piece, ...]) -> bool:
+    def mentionable(role: Piece) -> bool:
+        return role.label not in {"NewsArticle", "PolicyArea"}
+
+    return (len(roles) == 2 and all(mentionable(role) for role in roles)) or (
+        len(roles) == 3
+        and all(mentionable(role) for role in roles[:2])
+        and roles[2].label == "NewsArticle"
+    )

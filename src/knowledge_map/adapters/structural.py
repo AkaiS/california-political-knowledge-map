@@ -18,6 +18,7 @@ from pydantic_ai.usage import RunUsage
 from knowledge_map.core.structural import (
     CATALOG,
     HopBoundError,
+    Piece,
     compile_query,
     filtered_catalog,
     public_pieces,
@@ -56,11 +57,12 @@ class ConstructionValidation:
     stage: Literal["schema_filtering", "typed_selection", "wiring", "validation"]
     rejected_request: int = -1
     hop_bound: bool = False
+    result: object | None = None
 
 
 def _validated_output(ctx: RunContext[ConstructionValidation], output: Any) -> Any:
     try:
-        ctx.deps.check(output)
+        ctx.deps.result = ctx.deps.check(output)
     except ValueError as error:
         ctx.deps.rejected_request = ctx.usage.requests
         ctx.deps.hop_bound = isinstance(error, HopBoundError)
@@ -109,7 +111,10 @@ def get_structural_agents(
                 deps_type=ConstructionValidation,
                 output_type=PieceSelection,
                 instructions=common
-                + "Select only supplied piece IDs, keeping separate occurrences for each role.",
+                + "Select only supplied piece IDs, keeping separate occurrences for each role. "
+                "For a same-reporting-chunk question, select the requested result entity first, "
+                "the named entity second, and an optional Source Article third; select no "
+                "question-semantic relationship for those fixed provenance paths.",
             ),
         ),
         wiring=cast(
@@ -122,7 +127,9 @@ def get_structural_agents(
                 output_type=SemanticWiring,
                 instructions=common
                 + "Wire selected occurrences by zero-based numeric index. Use each filter and relationship once. "
-                "Use distinct_roles for questions asking for other or different entities.",
+                "Use distinct_roles for questions asking for other or different entities. "
+                "A same-reporting-chunk question has no triples; wire its entity and optional "
+                "Source Article filters to the selected roles.",
             ),
         ),
         binder=cast(
@@ -182,37 +189,33 @@ class Neo4jStructuralRetriever:
             async with asyncio.timeout_at(deadline):
                 attempts = 1
                 question = request.rewrite.question
-                ontology = (
-                    await self.agents.ontology_filter.run(
-                        json.dumps(
-                            {
-                                "question": question,
-                                "catalog": public_pieces(CATALOG),
-                            }
-                        ),
-                        usage=usage,
-                        deps=validation,
-                    )
-                ).output
-                catalog = filtered_catalog(ontology)
+                await self.agents.ontology_filter.run(
+                    json.dumps(
+                        {
+                            "question": question,
+                            "catalog": public_pieces(CATALOG),
+                        }
+                    ),
+                    usage=usage,
+                    deps=validation,
+                )
+                catalog = cast(tuple[Piece, ...], validation.result)
                 stage = "typed_selection"
                 stage_start = usage.requests
                 validation = ConstructionValidation(
                     lambda output: selected_pieces(output, catalog), stage
                 )
-                selection = (
-                    await self.agents.selector.run(
-                        json.dumps(
-                            {
-                                "question": question,
-                                "catalog": public_pieces(catalog),
-                            }
-                        ),
-                        usage=usage,
-                        deps=validation,
-                    )
-                ).output
-                pieces = selected_pieces(selection, catalog)
+                await self.agents.selector.run(
+                    json.dumps(
+                        {
+                            "question": question,
+                            "catalog": public_pieces(catalog),
+                        }
+                    ),
+                    usage=usage,
+                    deps=validation,
+                )
+                pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
                 chosen = {kind: public_pieces(items) for kind, items in pieces.items()}
                 stage = "wiring"
                 stage_start = usage.requests
@@ -226,37 +229,34 @@ class Neo4jStructuralRetriever:
                         deps=validation,
                     )
                 ).output
-                validate_wiring(wiring, pieces)
                 stage = "binding"
                 stage_start = usage.requests
                 validation = ConstructionValidation(
                     lambda output: compile_query(pieces, wiring, output), "validation"
                 )
-                bindings = (
-                    await self.agents.binder.run(
-                        json.dumps(
-                            {
-                                "question": question,
-                                "filters": [
-                                    {
-                                        **public_pieces(
-                                            (pieces["filter"][item.filter_index],)
-                                        )[0],
-                                        "slot_index": index,
-                                        "role_index": item.role_index,
-                                    }
-                                    for index, item in enumerate(wiring.filters)
-                                ],
-                                "wiring": wiring.model_dump(),
-                                "pieces": chosen,
-                            }
-                        ),
-                        usage=usage,
-                        deps=validation,
-                    )
-                ).output
+                await self.agents.binder.run(
+                    json.dumps(
+                        {
+                            "question": question,
+                            "filters": [
+                                {
+                                    **public_pieces(
+                                        (pieces["filter"][item.filter_index],)
+                                    )[0],
+                                    "slot_index": index,
+                                    "role_index": item.role_index,
+                                }
+                                for index, item in enumerate(wiring.filters)
+                            ],
+                            "wiring": wiring.model_dump(),
+                            "pieces": chosen,
+                        }
+                    ),
+                    usage=usage,
+                    deps=validation,
+                )
                 stage = "validation"
-                cypher, parameters = compile_query(pieces, wiring, bindings)
+                cypher, parameters = cast(tuple[str, dict[str, str]], validation.result)
                 stage = "cypher_execution"
                 stage_start = usage.requests
                 async with self.driver.session(

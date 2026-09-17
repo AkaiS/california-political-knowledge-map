@@ -62,6 +62,12 @@ Hydration follows every matched claim and preserves the whole claim tuple on
 each candidate. Chunk-level and article-level provenance use fixed paths
 outside the semantic hop budget.
 
+The accepted reported-alongside family is a zero-semantic-hop construction:
+two entity roles share one Article Chunk through compiler-owned `MENTIONED_IN`
+paths, with an optional Source Article title applied through `HAS_CHUNK`. The
+requested entity is retained as the route entry node, while those fixed paths
+remain provenance rather than invented semantic claims.
+
 Pydantic AI output validators supply deterministic `ModelRetry` feedback and
 allow at most two corrections for each stage. Pydantic shape failures share
 that budget. Exhaustion retains the responsible stage and attempts consumed;
@@ -99,3 +105,34 @@ candidate-to-Bill extension and a three-hop article-topic extension are verified
 on controlled data. The 25 reference checks remain development cases, not a
 held-out Gold Set, and do not measure the production models' construction
 quality. No acceptance criterion is blocked.
+
+### Review closure, 2026-09-17
+
+The two-axis review from fixed point `b323ca35` found one Standards judgement
+call and one Spec gap. The Standards finding was valid: deterministic stage
+checks ran in the Pydantic AI output validator and then repeated after each
+accepted response. The validator now retains each checked result for the
+retriever to consume, so correction feedback and retry behavior stay unchanged
+without duplicate compiler work.
+
+The Spec finding was also valid. The accepted reported-alongside cases contain
+no question-semantic relationship; they connect two entities through fixed
+`MENTIONED_IN` provenance and optionally scope the shared Article Chunk through
+a Source Article. The compiler now owns that zero-semantic-hop shape, retains
+the requested entity as the route entry node, and emits no semantic graph claim
+for provenance edges. Controlled Neo4j cases cover both verified forms.
+
+Review tracing also found that equal Bill Designations with a session on only
+one slot could evade the multi-Bill broadcast guard. Repeated designations now
+require one explicit and different session on every repeated slot. The existing
+explicit multi-value assignment remains unchanged.
+
+Verification passed:
+
+- Focused structural tests: 75 passed, including 37 disposable-Neo4j cases.
+- One final deterministic suite: 1086 passed, 47 opt-in integration tests
+  skipped, with the same two existing provider warnings.
+- Changed-module offline type checking, changed-file Ruff checking and format
+  checking, and `git diff --check`: passed.
+
+The ticket remains `completed`; no valid review finding is unresolved.
