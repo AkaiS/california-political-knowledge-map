@@ -66,6 +66,14 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
 
+- Retrieval and answer contracts implemented on 2026-09-17: Pydantic values
+  preserve approved inputs, branch-local rankings, distinct branch outcomes,
+  graph claims, Source Article citations, verified-passage representations,
+  coverage, context limits, and failure disclosures. Operational diagnostics
+  remain separate from answer-facing failures. See
+  [08-retrieval-and-answer-contract.md](issues/08-retrieval-and-answer-contract.md)
+  and the [contract documentation](../../../docs/retrieval-contracts.md).
+
 - Query construction settled on 2026-09-14: models filter the semantic schema,
   select and wire typed compiler-owned pieces, and bind positional values; code
   owns validation, Cypher, Grounding Evidence traversal, Source Article lookup,

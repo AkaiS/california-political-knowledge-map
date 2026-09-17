@@ -1,9 +1,9 @@
 # Define the retrieval and answer contract
 
-Labels: wayfinder:grilling, ready-for-agent
+Labels: wayfinder:grilling, completed
 Parent: [Useful Graph Retrieval](../MAP.md)
 Inputs: [Accepted retrieval topology and orchestration](07-retrieval-agent-topology.md)
-Blocked by: [Graph-Prioritized Retrieval issue 02](../../../projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md)
+Implemented by: [Graph-Prioritized Retrieval issue 02](../../../projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md)
 
 ## Question
 
@@ -64,17 +64,25 @@ following contract requirements:
 - Deferred coverage is explained before approval and again with any evidence
   recovered. Declined remains a policy outcome, not a retrieval failure.
 
-## Remaining work
+## Answer
 
-The retrievable-scope, retrieval-mode, and topology decisions have settled the
-contract's semantics. Graph-Prioritized Retrieval issue 02 owns the remaining
-work: encode those decisions as concrete Pydantic types and prove that the
-distinct outcomes cannot collapse into one representation. Once those types
-exist, record them here as the answer and close this decision.
+The concrete Pydantic types landed through Graph-Prioritized Retrieval issue 02
+on 2026-09-17. `schemas/retrieval.py` supplies `RetrievalRequest`,
+`RetrievalExecutionResult`, discriminated branch outcomes, `BranchCandidate`,
+`FusedCandidate`, `GraphClaim`, `SourceArticleCitation`, `VerifiedPassage`,
+`CoverageDescription`, `MonthlyCoverage`, `AppliedContextLimits`,
+`EvidencePackage`, `EvidenceAssemblyFailure`, and `RetrievalAnswer`.
+`RetrievalFailureLog` holds operational details separately from answer-facing
+failures. The existing question-preparation types cover approval, rejection,
+Declined and Deferred decisions, and rewrite unavailability.
 
-This ticket no longer blocks retrieval implementation or the reranking
-prototype. The developer retrieval surface still waits for the concrete types
-because it renders them without defining new behavior.
+The [contract documentation](../../../../docs/retrieval-contracts.md) describes
+the fields and validation boundaries. Forty contract tests cover routing,
+candidate provenance, distinct structural outcomes, citations, coverage,
+context limits, failure disclosures, and JSON round trips. The full deterministic
+suite passed 996 tests. The developer retrieval surface may consume these types;
+the remaining branch, fusion, assembler, and Chat Agent tickets implement their
+producers. Retrieval and answer evaluation remains Model Evaluation work.
 
 ## Input from the retrievable subgraph decision
 

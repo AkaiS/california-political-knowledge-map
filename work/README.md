@@ -48,20 +48,20 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issue 01 is complete. Issue 02 is takeable and turns the settled retrieval and answer
-semantics into concrete types. Once 02 lands, the three retrieval branches,
+Issues 01 and 02 are complete. The approved-rewrite workflow and concrete
+retrieval and answer types are available. The three retrieval branches,
 parameterized fusion, and Evidence Assembly can advance. Configurable initial
 weights and limits are enough for final integration. Later reranking measurement
 does not block this project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
-- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), takeable.
-- [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), blocked by 02.
-- [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), blocked by 02.
-- [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), blocked by 02.
+- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), `completed` on 2026-09-17. Validated Pydantic contracts preserve branch outcomes, candidate provenance, citations, coverage, context limits, and safe failure disclosures.
+- [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), takeable.
+- [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), takeable.
+- [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), takeable.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), blocked by 05.
-- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), blocked by 02. It supplies configurable initial weights and limits plus an unweighted measurement baseline.
-- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), blocked by 02.
+- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), takeable. It supplies configurable initial weights and limits plus an unweighted measurement baseline.
+- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), takeable.
 - [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 01, 03, 04, 06, 07, and 08.
 
 ### Bill Designation Recovery frontier
@@ -119,9 +119,9 @@ blockers.
 ### Useful Graph Retrieval frontier
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
-charted on 2026-07-29 and holds ten tickets. Issues 04 through 07 are complete.
-Issue 08's semantics are settled; Graph-Prioritized Retrieval issue 02 supplies
-its remaining concrete types. Issue 09 waits for working retrieval branches and
+charted on 2026-07-29 and holds ten tickets. Issues 04 through 08 are complete.
+Graph-Prioritized Retrieval issue 02 supplies the concrete retrieval and answer
+types. Issue 09 waits for working retrieval branches and
 parameterized fusion so it can measure real rankings.
 
 - [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
@@ -131,7 +131,7 @@ parameterized fusion so it can measure real rankings.
 - [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `completed` on 2026-09-14. The atomic semantic constructor preserved at `511eaeee` is the selected structural construction shape.
 - [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. External-identifier implementation and Policy Area vectors are deferred.
 - [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
-- [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), blocked by Graph-Prioritized Retrieval issue 02. Its behavior is settled; the remaining work records the concrete Pydantic types produced by implementation.
+- [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), `completed` on 2026-09-17. Records the concrete Pydantic contracts implemented by Graph-Prioritized Retrieval issue 02.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), blocked by Graph-Prioritized Retrieval issues 03, 04, 06, and 07. It measures real branch outputs and may recommend later configuration changes; it does not block the implementation project.
 
 ### Pydantic-Native Evaluation Routing
