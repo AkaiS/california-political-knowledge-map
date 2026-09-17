@@ -17,12 +17,9 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md),
-  `ready-for-agent` as of 2026-09-16. A stronger Query Rewriter produces the
-  approved question consumed by concurrent full-text, dense, and conditional
-  typed structural retrieval. Weighted reciprocal-rank fusion favors structural
-  evidence, and a deterministic Evidence Assembler returns provenance-rich
-  evidence to the Chat Agent. Broken into nine issues below.
+- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
+  `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
+  the real pre-fusion rankings needed to compare weights and structural signals.
 - [Reprocessing an article leaves its old chunk extractions in the graph](issues/02-chunk-extraction-retains-stale-decisions.md), `ready-for-agent` as of 2026-09-03.
   A standalone defect, found while fixing the article-level topic write. The
   chunk write path is merge-only, so a re-run strands the tail chunks of a
@@ -135,7 +132,7 @@ measurement of real rankings.
 - [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. External-identifier implementation and Policy Area vectors are deferred.
 - [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
 - [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), `completed` on 2026-09-17. Records the concrete Pydantic contracts implemented by Graph-Prioritized Retrieval issue 02.
-- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), takeable after Graph-Prioritized Retrieval issues 03, 04, 06, and 07. It measures real branch outputs and may recommend later configuration changes; it does not block the implementation project.
+- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), `ready-for-agent` as of 2026-09-17. Graph-Prioritized Retrieval issues 03, 04, 06, and 07 are complete, so it can measure real branch outputs and recommend later configuration changes.
 
 ### Pydantic-Native Evaluation Routing
 
@@ -165,9 +162,9 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
@@ -256,6 +253,20 @@ On 2026-09-02, Policy Area Staging was built and closed:
 - [IG-10](inbox.md) records what the Topic Assignment Data Set surfaced and did
   not settle: `ABOUT_TOPIC` admits only `Bill` and `Prop`, so an enacted federal
   statute is annotated as a `Bill`. A modelling gap, not an annotation error.
+
+On 2026-09-17, Graph-Prioritized Retrieval was built, reviewed, and closed:
+
+- All nine issues have checked acceptance criteria and `completed` labels. The
+  parent PRD is now `completed` and appears in the completed project table.
+- The completed project left current attention. Useful Graph Retrieval issue 09,
+  the graph-aware reranking prototype, is now listed there because its retrieval
+  branch and fusion blockers are complete.
+- The sequence-wide Standards and Spec review found no implementation gap. Both
+  axes found the stale parent state, which this reconciliation fixes. A final
+  changed-file type check also found and fixed four missing union narrowings in
+  Query Rewrite tests.
+- The full deterministic suite passed: `1198 passed, 47 skipped`, with the same
+  two existing provider warnings.
 
 ## Information model
 

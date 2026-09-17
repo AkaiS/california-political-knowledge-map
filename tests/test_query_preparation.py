@@ -18,6 +18,7 @@ from knowledge_map.core.question_preparation import (
 )
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.schemas.query_preparation import (
+    AwaitingQueryApproval,
     QueryRewriteProposal,
     QuestionAssessment,
 )
@@ -212,7 +213,7 @@ def test_rejection_retains_feedback_and_only_a_new_proposal_can_be_approved(
     assert preparation.rejections == (rejected,)
     assert requests[-1]["original_question"] == original
     assert requests[-1]["rejections"] == [rejected.model_dump()]
-    assert revised.approval is not None
+    assert isinstance(revised, AwaitingQueryApproval)
     assert revised.approval.question == second
     assert preparation.approve().question == second
     record = next(
@@ -315,7 +316,7 @@ def test_a_second_prepare_cannot_replace_a_proposal_while_it_is_being_prepared()
                 result = await first
             with pytest.raises(ValueError):
                 await preparation.prepare()
-        assert result.approval is not None
+        assert isinstance(result, AwaitingQueryApproval)
         assert result.approval.question == question
         approved = preparation.approve()
         assert approved.question == question

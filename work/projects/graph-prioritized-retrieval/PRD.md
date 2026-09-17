@@ -1,6 +1,6 @@
 # Product Requirements: Graph-Prioritized Retrieval
 
-Labels: ready-for-agent
+Labels: completed
 
 Parent: [Useful Graph Retrieval issue 07](../../initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md)
 
