@@ -90,3 +90,19 @@ existing temporary tool environment. No acceptance criterion is blocked. The
 coordinator, fusion, and original-wording verification remain with their own
 tickets. Tests assert returned identities, routes, and native score ordering,
 without assuming a specific Neo4j scoring algorithm.
+
+2026-09-17: The two-axis review found no specification gaps or documented
+standards violations. It accepted one design-smell finding: index metadata,
+search paths, and route kinds were split across string-keyed tables and an
+inline mapping. A frozen `_FullTextChannel` now keeps each channel's values
+together. The review did not accept the suggested test-harness extraction;
+those short scenario-local setups make each injected driver boundary explicit,
+while a helper would hide the behavior under test.
+
+After the review fix, the 16 focused tests and 8 disposable-Neo4j integration
+tests passed. Ruff, Ty, and `git diff --check` passed. The full deterministic
+suite passed with 1,018 tests, 8 opt-in integration skips, and the two existing
+provider warnings. All acceptance criteria remain satisfied and the
+`completed` triage label remains accurate. The supplied fixed-point SHA had an
+invalid suffix; review used its resolved repository commit,
+`f1899040f8ad67e7559a851cb941abb030ee2b28`.

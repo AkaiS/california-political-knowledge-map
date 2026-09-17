@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Literal, LiteralString
 
@@ -105,15 +106,25 @@ _ENTITY_LABELS: tuple[LiteralString, ...] = (
     "Politician",
     "Prop",
 )
-_FULL_TEXT_INDEXES: dict[
-    LiteralString, tuple[tuple[LiteralString, ...], LiteralString]
-] = {
-    "entity_name_fulltext_index": (_ENTITY_LABELS, "name"),
-    "article_title_fulltext_index": (("NewsArticle",), "title"),
-    "chunk_text_fulltext_index": (("Chunk",), "text"),
-}
-_SEARCH_PATHS: dict[LiteralString, LiteralString] = {
-    "name": """
+type _MatchedField = Literal["name", "title", "text"]
+type _RouteKind = Literal["entity_name", "article_title", "chunk_text"]
+
+
+@dataclass(frozen=True)
+class _FullTextChannel:
+    index_name: LiteralString
+    labels: tuple[LiteralString, ...]
+    matched_field: _MatchedField
+    search_path: LiteralString
+    route_kind: _RouteKind
+
+
+_FULL_TEXT_CHANNELS = (
+    _FullTextChannel(
+        index_name="entity_name_fulltext_index",
+        labels=_ENTITY_LABELS,
+        matched_field="name",
+        search_path="""
         CALL (node) {
             MATCH (node)-[:MENTIONED_IN]->(c:Chunk)<-[:HAS_CHUNK]-(a:NewsArticle)
             RETURN c, a
@@ -122,9 +133,27 @@ _SEARCH_PATHS: dict[LiteralString, LiteralString] = {
             RETURN c, a
         }
     """,
-    "title": "MATCH (node)-[:HAS_CHUNK]->(c:Chunk) WITH node, score, c, node AS a",
-    "text": "MATCH (node)<-[:HAS_CHUNK]-(a:NewsArticle) WITH node, score, a, node AS c",
-}
+        route_kind="entity_name",
+    ),
+    _FullTextChannel(
+        index_name="article_title_fulltext_index",
+        labels=("NewsArticle",),
+        matched_field="title",
+        search_path=(
+            "MATCH (node)-[:HAS_CHUNK]->(c:Chunk) WITH node, score, c, node AS a"
+        ),
+        route_kind="article_title",
+    ),
+    _FullTextChannel(
+        index_name="chunk_text_fulltext_index",
+        labels=("Chunk",),
+        matched_field="text",
+        search_path=(
+            "MATCH (node)<-[:HAS_CHUNK]-(a:NewsArticle) WITH node, score, a, node AS c"
+        ),
+        route_kind="chunk_text",
+    ),
+)
 
 
 class Neo4jFullTextRetriever:
@@ -135,10 +164,11 @@ class Neo4jFullTextRetriever:
     async def ensure_indexes(self, *, timeout_seconds: float = 30) -> None:
         """Install retrieval indexes without imposing uniqueness on existing IDs."""
         async with self.driver.session(database=self.database) as session:
-            for name, (labels, field) in _FULL_TEXT_INDEXES.items():
+            for channel in _FULL_TEXT_CHANNELS:
                 result = await session.run(
-                    f"CREATE FULLTEXT INDEX {name} IF NOT EXISTS "
-                    f"FOR (n:{'|'.join(labels)}) ON EACH [n.{field}]"
+                    f"CREATE FULLTEXT INDEX {channel.index_name} IF NOT EXISTS "
+                    f"FOR (n:{'|'.join(channel.labels)}) "
+                    f"ON EACH [n.{channel.matched_field}]"
                 )
                 await result.consume()
             for label in (*_ENTITY_LABELS, "NewsArticle", "Chunk"):
@@ -213,17 +243,17 @@ class Neo4jFullTextRetriever:
                         "WHERE name IN $names RETURN name, type, state, labelsOrTypes, properties",
                         deadline,
                     ),
-                    names=list(_FULL_TEXT_INDEXES),
+                    names=[channel.index_name for channel in _FULL_TEXT_CHANNELS],
                 )
                 indexes = {row["name"]: row for row in await result.data()}
-                for name, (labels, field) in _FULL_TEXT_INDEXES.items():
-                    index = indexes.get(name)
+                for channel in _FULL_TEXT_CHANNELS:
+                    index = indexes.get(channel.index_name)
                     if (
                         index is None
                         or index["type"] != "FULLTEXT"
                         or index["state"] != "ONLINE"
-                        or set(index["labelsOrTypes"]) != set(labels)
-                        or index["properties"] != [field]
+                        or set(index["labelsOrTypes"]) != set(channel.labels)
+                        or index["properties"] != [channel.matched_field]
                     ):
                         return _failed(
                             RetrievalFailureLog(
@@ -235,11 +265,11 @@ class Neo4jFullTextRetriever:
                             )
                         )
                 stage = "execution"
-                for name, (_, field) in _FULL_TEXT_INDEXES.items():
+                for channel in _FULL_TEXT_CHANNELS:
                     result = await session.run(
                         _query(
                             "CALL db.index.fulltext.queryNodes($index, $query) YIELD node, score "
-                            + _SEARCH_PATHS[field]
+                            + channel.search_path
                             + " "
                             "RETURN DISTINCT c.id AS chunk_id, a.id AS source_article_id, "
                             "node.id AS entry_id, labels(node) AS labels, "
@@ -247,9 +277,9 @@ class Neo4jFullTextRetriever:
                             "ORDER BY score DESC, chunk_id, entry_id, element_id",
                             deadline,
                         ),
-                        parameters={"index": name, "query": query},
+                        parameters={"index": channel.index_name, "query": query},
                     )
-                    matches.append([(field, row) for row in await result.data()])
+                    matches.append([(channel, row) for row in await result.data()])
         except (DriverError, Neo4jError) as error:
             if isinstance(error, Neo4jError):
                 if ".Transaction.TransactionTimedOut" in error.code:
@@ -288,12 +318,8 @@ class Neo4jFullTextRetriever:
                     routes=(
                         RetrievalRoute.model_validate(
                             {
-                                "kind": {
-                                    "name": "entity_name",
-                                    "title": "article_title",
-                                    "text": "chunk_text",
-                                }[field],
-                                "matched_field": field,
+                                "kind": channel.route_kind,
+                                "matched_field": channel.matched_field,
                                 "entry_node": GraphNodeReference(
                                     id=row["entry_id"],
                                     label=next(
@@ -311,6 +337,6 @@ class Neo4jFullTextRetriever:
                         ),
                     ),
                 )
-                for rank, (field, row) in enumerate(rows, 1)
+                for rank, (channel, row) in enumerate(rows, 1)
             ),
         )
