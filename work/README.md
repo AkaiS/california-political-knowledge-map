@@ -48,14 +48,14 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issue 01 is takeable now. Issue 02 turns the settled retrieval and answer
+Issue 01 is complete. Issue 02 is takeable and turns the settled retrieval and answer
 semantics into concrete types. Once 02 lands, the three retrieval branches,
 parameterized fusion, and Evidence Assembly can advance. Configurable initial
 weights and limits are enough for final integration. Later reranking measurement
 does not block this project.
 
-- [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), takeable. A separately configured stronger model produces the user-approved Query Rewrite and internal relational route.
-- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), blocked by 01.
+- [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
+- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), takeable.
 - [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), blocked by 02.
 - [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), blocked by 02.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), blocked by 02.

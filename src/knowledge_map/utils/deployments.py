@@ -9,7 +9,11 @@ from knowledge_map.schemas import (
     OpenRouterProviderPolicy,
 )
 
-from .models import resolve_chat_base_url, resolve_local_chat_model
+from .models import (
+    DEFAULT_LOCAL_CHAT_MODEL,
+    resolve_chat_base_url,
+    resolve_local_chat_model,
+)
 
 
 def deployment_from_environment(
@@ -62,3 +66,23 @@ def deployment_from_environment(
         request_settings=request_settings,
         provider_policy=OpenRouterProviderPolicy(providers=providers),
     )
+
+
+def query_rewriter_deployment_from_environment() -> ModelDeployment:
+    """Resolve the rewriter's independently selected model and deployment."""
+
+    model = os.environ.get("QUERY_REWRITER_MODEL", "").strip()
+    if not model:
+        raise ValueError("set QUERY_REWRITER_MODEL for the Query Rewriter deployment")
+    deployment = deployment_from_environment(
+        os.environ.get("QUERY_REWRITER_DEPLOYMENT", "local"),
+        default_local_model=DEFAULT_LOCAL_CHAT_MODEL,
+        model_override=model,
+        command_name="Query Rewriter",
+    )
+    endpoint = os.environ.get("QUERY_REWRITER_BASE_URL", "").strip()
+    if deployment.kind is DeploymentKind.LOCAL and endpoint:
+        return ModelDeployment.model_validate(
+            {**deployment.model_dump(), "endpoint": endpoint}
+        )
+    return deployment

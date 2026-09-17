@@ -1,6 +1,6 @@
 # 01 — Query Rewrite and approval
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -21,28 +21,59 @@ original question.
 
 ## Acceptance criteria
 
-- [ ] The Query Rewriter's Model Deployment is configured separately from the
+- [x] The Query Rewriter's Model Deployment is configured separately from the
       downstream construction deployments.
-- [ ] A Query Rewrite contains one nonempty natural-language question and one
+- [x] A Query Rewrite contains one nonempty natural-language question and one
       internal `relational` boolean.
-- [ ] Rewrite instructions target the form of the 25 verified construction
+- [x] Rewrite instructions target the form of the 25 verified construction
       questions: explicit entities, relationships, dates or sessions, and
       requested result.
-- [ ] The rewrite omits a separate request for reporting, citations, or sources
+- [x] The rewrite omits a separate request for reporting, citations, or sources
       because retrieval always returns Grounding Evidence.
-- [ ] Question policy and coverage receive only the Query Rewrite.
-- [ ] A Declined rewrite stops with an explanation before approval or retrieval.
-- [ ] A Deferred rewrite explains the unavailable capability and recoverable
+- [x] Question policy and coverage receive only the Query Rewrite.
+- [x] A Declined rewrite stops with an explanation before approval or retrieval.
+- [x] A Deferred rewrite explains the unavailable capability and recoverable
       portion before approval.
-- [ ] The user sees the rewritten question but not `relational`.
-- [ ] Rejection records the proposed question, internal route, and any user
+- [x] The user sees the rewritten question but not `relational`.
+- [x] Rejection records the proposed question, internal route, and any user
       correction; rejected text never reaches retrieval.
-- [ ] Query Rewriter transport exhaustion records `rewrite_unavailable`, reports
+- [x] Query Rewriter transport exhaustion records `rewrite_unavailable`, reports
       a temporary network problem, and does not use the original wording as a
       fallback.
-- [ ] Scripted-model tests cover accepted, rejected, Declined, Deferred, and
+- [x] Scripted-model tests cover accepted, rejected, Declined, Deferred, and
       unavailable rewrite behavior without asserting prompt text.
 
 ## Blocked by
 
 None. Can start immediately.
+
+## Comments
+
+2026-09-17: Implemented the question-preparation boundary in
+`core/question_preparation.py` and its public values in
+`schemas/query_preparation.py`. `prepare()` sends only the rewrite to the Chat
+Agent's injected policy/coverage assessor. `approve()` releases the sole
+retrieval input; `reject()` retains and logs feedback for another proposal.
+Approval presentation excludes routing metadata and retains Deferred limits.
+Connection failures and exhausted transient provider responses produce
+`rewrite_unavailable`, with no approval or original-question fallback.
+
+The Query Rewriter has independent deployment, model, and optional local
+endpoint settings. It uses the existing agent factory and transport handling.
+Its instructions preserve named entities, relationships, scope, dates, and
+sessions using construction-case examples, and omit redundant evidence
+requests while preserving source-discovery intent. See
+[question preparation](../../../../docs/query-preparation.md) and
+[Model Deployments](../../../../docs/model-deployments.md) for use and settings.
+
+Validation used the confirmed public seams. The new preparation and deployment
+tests passed 16 cases; the focused run including deployment documentation,
+chat configuration, and observability passed 41. The full deterministic suite,
+`uv run --no-sync pytest -q`, passed 956 tests with two existing provider
+warnings. `ty check` and `ruff check` passed for the changed source and tests.
+The type checker was run through `uv` from a temporary tool environment.
+
+Scripted `FunctionModel` responses cover accepted, rejected, Declined, Deferred,
+and unavailable outcomes without prompt-text assertions. They establish the
+interaction contract, not a real model's rewriting quality. Retrieval invocation
+and the Chat Agent's complete conversation remain issue 09's integration work.
