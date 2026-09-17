@@ -6,8 +6,9 @@ branches, fusion, Evidence Assembly, and the Chat Agent. These contracts impleme
 The [full-text adapter](full-text-retrieval.md),
 [dense adapter](dense-retrieval.md), and
 [structural adapter](structural-retrieval.md) produce branch outcomes.
-[Retrieval fusion](retrieval-fusion.md) combines their candidates. The remaining
-project tickets implement Evidence Assembly and coordination.
+[Retrieval fusion](retrieval-fusion.md) combines their candidates.
+[Evidence Assembly](evidence-assembly.md) verifies original wording and packages
+the result. Coordinator wiring remains the final project ticket.
 
 ## Approved input and execution facts
 
@@ -80,8 +81,8 @@ title, HTTP link, publication date when available, and one or more passages.
 the original Story body, its Source Article identity, and its fused candidate.
 The type requires the `original_story` verification marker and checks that the
 offset length matches the wording. It cannot prove a quotation against a Story
-that it does not hold. The Evidence Assembler in issue 08 must load that Story
-and verify the text before constructing the value. Transformed chunk text is
+that it does not hold. The Evidence Assembler loads that Story and verifies the
+text before constructing the value. Transformed chunk text is
 not an alternative verification mode.
 
 `AppliedContextLimits` records the assembler's measurement unit, maximum and
@@ -90,7 +91,8 @@ characters or tokens. Validation rejects a reported overrun and too many selecte
 passages. The assembler owns measurement of the context actually supplied to the
 Chat Agent, including citation and coverage overhead. Contract validation does
 not tokenize or count a serialized execution audit as if it were model context.
-Budget selection and truncation remain issue 08's work.
+The assembler uses whole-passage selection and exact character counting of
+`render_evidence_context(package)`, as described in [Evidence Assembly](evidence-assembly.md).
 
 `RetrievalAnswer` adds an optional introduction, typed source relevance notes,
 and disagreements referring to selected sources. It retains the evidence package

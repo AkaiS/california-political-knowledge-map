@@ -48,12 +48,13 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issues 01 through 07 are complete. The approved-rewrite workflow, concrete
+Issues 01 through 08 are complete. The approved-rewrite workflow, concrete
 retrieval and answer types, and full-text, dense, and bounded typed structural
 branches are available. Parameterized fusion supplies initial weights, candidate
-limits, and an unweighted measurement baseline. Evidence Assembly can advance,
-followed by final integration. Later reranking measurement does not block this
-project.
+limits, and an unweighted measurement baseline. Evidence Assembly verifies
+original Story wording, retains provenance, and applies deterministic context
+limits. Final integration can advance. Later reranking measurement does not
+block this project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
 - [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), `completed` on 2026-09-17. Validated Pydantic contracts preserve branch outcomes, candidate provenance, citations, coverage, context limits, and safe failure disclosures.
@@ -62,8 +63,8 @@ project.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), `completed` on 2026-09-17. Typed construction retrieves entities and single relationships with claims, Grounding Evidence, preserved identity ambiguity, and distinct failure stages.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), `completed` on 2026-09-17. Connected questions use at most three semantic relationships, each model stage has two corrections, and explicit Bill-slot assignments preserve multi-Bill intent.
 - [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), `completed` on 2026-09-17. Configurable weighted fusion ranks the candidate union, preserves every contribution, and supplies an unweighted measurement baseline.
-- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), takeable.
-- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 08.
+- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), `completed` on 2026-09-17. Exact Story verification, source grouping, route retention, relevant coverage, and measured context selection return a typed package or distinct assembly failure.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), takeable after 08.
 
 ### Bill Designation Recovery frontier
 
