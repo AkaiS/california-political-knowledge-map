@@ -37,8 +37,9 @@ settles whether that future capability belongs in the initial implementation.
 Article Chunk embedding retrieval as a route to source material alongside graph
 connections. A missing extracted relationship must not disqualify a relevant
 passage found through another route. This ticket decides available modes,
-combination, and indexes. Issue 07 owns mode selection during execution;
-comparative answer quality belongs to evaluation.
+combination, and indexes. Issue 07 later fixed the execution rule: full-text and
+dense retrieval always run, while typed structural retrieval also runs for a
+Relational Question. Comparative answer quality belongs to evaluation.
 
 The [2026-09-08 live inventory](../research/04-graph-inventory-2026-09-08.md)
 confirms an online 768-dimensional cosine chunk vector index covering 2,407
@@ -73,8 +74,10 @@ not establish event-time coverage, and an unresolved Bill session remains
 ambiguous regardless of which search found it.
 
 This inventory specifies available capabilities, not a requirement to run every
-mode on every question. Issue 07 decides mode selection, sequencing, and when
-retrieval is sufficient.
+mode on every question. Issue 07 subsequently selected concurrent full-text and
+dense retrieval for every approved Query Rewrite, adding typed structural
+retrieval when the rewrite is relational. It also rejected a separate
+sufficiency loop.
 
 ### Combine chunks, then rank and present sources
 
@@ -84,10 +87,11 @@ their supporting graph claims. Deduplicating candidates does not merge graph
 entities or resolve identity uncertainty.
 
 Combination is not a fourth retrieval mode. It gathers the candidate evidence;
-issue 09 determines shared ranking through its lexical, vector, and structural
-comparisons. This decision prescribes no fusion formula, mode weights, or
-structural preference. Issue 08 defines the typed representation of candidates,
-their provenance, and ranking.
+issue 07 subsequently selected weighted reciprocal-rank fusion with typed
+structural retrieval receiving greater weight than either text branch. Issue 09
+determines the numerical weights and candidate limits through its lexical,
+vector, and structural comparisons. Issue 08 defines the typed representation
+of candidates, their provenance, and ranking.
 
 Group selected passages by Source Article for the librarian's presentation.
 Keep useful passages from different parts of an article while presenting that
@@ -146,13 +150,15 @@ remaining blocker for this initiative.
 
 ## Handoff
 
-- Issue 07 receives the three available modes and owns their execution policy.
-  Its structural traversal uses issue 05's typed semantic constructor and
+- Issue 07 runs full-text and dense retrieval concurrently for every approved
+  Query Rewrite and adds typed structural retrieval for a Relational Question.
+  Structural traversal uses issue 05's typed semantic constructor and
   deterministic Cypher compiler selected at `511eaeee`.
 - Issue 08 represents combined chunk candidates, retained retrieval routes and
   supporting claims, ranking, and grouping by Source Article.
-- Issue 09 owns shared ranking of the combined candidates and the comparison
-  of lexical, vector, and structural signals. No combination formula is assumed.
+- Issue 09 selects numerical weights and candidate limits for the weighted
+  reciprocal-rank fusion chosen by issue 07. Structural retrieval's greater
+  weight is already decided.
 - The eventual retrieval PRD must implement the index inventory above and carry
   the existing identity and evidence limitations forward.
 

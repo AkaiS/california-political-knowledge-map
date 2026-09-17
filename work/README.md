@@ -11,13 +11,18 @@ have not yet been shaped into executable work.
 
 ### Ready for human
 
-- [Review query-construction prototypes and graph-backed questions](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md). The latest keyed selector/composer/binder run completed 2/25 end-to-end; a separate composer diagnostic passed both cases with correct keys supplied. The architectural choice remains open.
 - [Build the initial relevance Evaluation Gold Set](initiatives/model-evaluation/issues/03-build-initial-relevance-evaluation-gold-set.md)
 - [Review Relevance Filter evaluations](projects/scraping-pipeline/issues/13-relevance-evals.md)
 - [Review Selector Healing evaluations](projects/scraping-pipeline/issues/14-healer-evals.md)
 
 ### Ready for agent
 
+- [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md),
+  `ready-for-agent` as of 2026-09-16. A stronger Query Rewriter produces the
+  approved question consumed by concurrent full-text, dense, and conditional
+  typed structural retrieval. Weighted reciprocal-rank fusion favors structural
+  evidence, and a deterministic Evidence Assembler returns provenance-rich
+  evidence to the Chat Agent. Broken into nine issues below.
 - [Reprocessing an article leaves its old chunk extractions in the graph](issues/02-chunk-extraction-retains-stale-decisions.md), `ready-for-agent` as of 2026-09-03.
   A standalone defect, found while fixing the article-level topic write. The
   chunk write path is merge-only, so a re-run strands the tail chunks of a
@@ -40,6 +45,22 @@ have not yet been shaped into executable work.
   narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
   below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### Graph-Prioritized Retrieval frontier
+
+Issue 01 is takeable now. Issue 02 consumes its Query Rewrite and the retrieval
+and answer contract. Once 02 lands, the three retrieval branches, fusion, and
+Evidence Assembly can advance on their declared edges before final integration.
+
+- [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), takeable. A separately configured stronger model produces the user-approved Query Rewrite and internal relational route.
+- [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), blocked by 01 and Useful Graph Retrieval issue 08.
+- [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), blocked by 02.
+- [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), blocked by 02.
+- [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), blocked by 02.
+- [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), blocked by 05.
+- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), blocked by 02 and Useful Graph Retrieval issue 09.
+- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), blocked by 02.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 01, 03, 04, 06, 07, and 08.
 
 ### Bill Designation Recovery frontier
 
@@ -96,17 +117,17 @@ blockers.
 ### Useful Graph Retrieval frontier
 
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
-charted on 2026-07-29 and holds ten tickets. Issues 04 and 06 closed on
-2026-09-08. Issue 05 has completed prototype comparisons ready for review, with
-follow-up experiments specified. Issue 07 still requires that review, and issue
-09 still requires the issue 08 contract.
+charted on 2026-07-29 and holds ten tickets. Issues 04 through 07 are complete.
+Issue 08 is the next decision; issue 09 requires its contract.
 
 - [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md): the authored question set is available as an input to the prototype.
 - [Survey graph retrieval patterns and available tooling](initiatives/useful-graph-retrieval/issues/03-survey-graph-retrieval-patterns.md), `completed` on 2026-08-05; facts live in [the findings](initiatives/useful-graph-retrieval/research/03-graph-retrieval-patterns-findings.md).
 - [Decide which subgraph is retrievable now and which is deferred](initiatives/useful-graph-retrieval/issues/04-retrievable-subgraph-now.md), `completed` on 2026-09-08. Scope, librarian presentation, and coverage policy are settled against the live inventory.
-- [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `ready-for-human`. All six attempts are summarized in the [consolidated findings](initiatives/useful-graph-retrieval/query-construction/findings.md), with reports preserved in the [archive](initiatives/useful-graph-retrieval/query-construction/reports/README.md). Identifier assignment, entity resolution, and separate selector/composer/binder experiments are complete; the architecture decision remains open.
-- [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. The required index inventory is specified; mode selection belongs to issue 07 and shared ranking to issue 09. External-identifier implementation and Policy Area vectors are deferred.
+- [Prototype query construction and validation against the ontology](initiatives/useful-graph-retrieval/issues/05-prototype-query-construction-and-validation.md), `completed` on 2026-09-14. The atomic semantic constructor preserved at `511eaeee` is the selected structural construction shape.
+- [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. External-identifier implementation and Policy Area vectors are deferred.
+- [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
+- [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), next. It consumes issue 07's granular branch facts and unblocks reranking and the developer surface.
 
 ### Pydantic-Native Evaluation Routing
 
@@ -136,7 +157,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |

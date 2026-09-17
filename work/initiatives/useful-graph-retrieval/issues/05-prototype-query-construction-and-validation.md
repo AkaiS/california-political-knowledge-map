@@ -102,7 +102,9 @@ Use typed contracts and deterministic checks for validation, with specific
 failures returned to the existing bounded stage retry. Do not add a general
 model critic to query construction. In the generated-Cypher comparison, the
 critic independently rejected no initial query beyond the deterministic checks.
-Issue 07 still owns orchestration-wide retry and sufficiency policy.
+Issue 07 subsequently placed this constructor in the conditional structural
+branch of a fixed concurrent pipeline, retained its bounded stage correction,
+and rejected an orchestration-wide sufficiency loop.
 
 The [five-experiment comparison](../query-construction/atomic-five-experiment-comparison.md)
 records the final comparison, costs, contamination audit, rejected alternatives,
@@ -118,11 +120,11 @@ the retrieval PRD that consumes this initiative.
 
 ## Handoff
 
-- Blocks: Decide the retrieval agent topology and orchestration.
-- Issue 07 receives a typed semantic constructor with deterministic Cypher,
-  validation, provenance, and output hydration as the selected query-construction
-  component. It decides how that component participates in retrieval-mode
-  selection, bounded repair, and evidence sufficiency.
+- The completed issue 07 topology uses this typed semantic constructor for
+  Relational Questions, alongside concurrent full-text and dense retrieval. See
+  [the accepted topology](07-retrieval-agent-topology.md).
+- Production implementation belongs to the
+  [Graph-Prioritized Retrieval PRD](../../../projects/graph-prioritized-retrieval/PRD.md).
 
 ## Comments
 
