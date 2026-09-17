@@ -22,16 +22,20 @@ Corroboration deserves particular attention: an assertion supported by several
 independent publications is stronger evidence than one supported by a single
 article several times over, and only the graph can tell those apart.
 
-Select numerical weights and candidate limits, record the relevance and latency
+Recommend tuned weights and candidate limits, record the relevance and latency
 trade-offs, and determine whether the winning signal is cheap enough to compute
-per query or needs precomputation. If it needs precomputation, that is a new
-ticket, not a silent addition to this one.
+per query or needs precomputation. Any accepted change lands later as a
+configuration update. If it needs precomputation, that is a new ticket, not a
+silent addition to this one.
 
 Run the comparison against the implemented full-text, dense, and bounded typed
 structural branches. Use their retained pre-fusion rankings and the configurable
 fusion implementation. Synthetic candidate lists may test the fusion formula,
 but they cannot select production weights or establish relevance and latency
 trade-offs.
+
+This prototype is downstream measurement. It does not block implementation,
+initial configuration, or the complete retrieval pipeline.
 
 ## Input from the retrieval modes decision
 
@@ -44,11 +48,11 @@ matching field.
 
 Issue 07 subsequently selected weighted reciprocal-rank fusion over the candidate
 union and requires typed structural retrieval to receive greater weight than
-either full-text or dense retrieval. This prototype owns the numerical weights,
-candidate limits, and comparison of structural signals. It must still compare
-the lexical and vector baselines and measure whether the chosen structural boost
-improves the ranked evidence. It does not reopen structural priority or the
-execution rule fixed by issue 07.
+either full-text or dense retrieval. Implementation supplies configurable
+initial weights and candidate limits. This prototype compares those values and
+structural signals against lexical and vector baselines, then recommends later
+configuration changes if measurement supports them. It does not reopen
+structural priority or the execution rule fixed by issue 07.
 
 Group selected passages by Source Article for presentation. Preserve issue 04's
 eligibility and coverage policy: a candidate does not need an extracted

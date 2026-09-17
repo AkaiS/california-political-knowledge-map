@@ -245,7 +245,8 @@ perform the traversal.
   contributing route and graph claim. It does not merge graph entities.
 - Weighted reciprocal-rank fusion runs over the candidate union. Structural
   retrieval has greater weight than either full-text or dense retrieval. The
-  reranking prototype selects the numerical weights and candidate limits.
+  implementation supplies configurable initial weights and candidate limits.
+  Later measurement may tune them without changing the fusion contract.
 
 ### Evidence Assembly
 
@@ -283,13 +284,13 @@ perform the traversal.
   turns those decisions into concrete Pydantic evidence, citation, coverage,
   branch-result, and answer representations. Useful Graph Retrieval issue 08
   records those implemented types; it does not block their implementation.
-- Full-text, dense, and bounded typed structural retrieval must produce real
-  ranked candidates before the graph-aware reranking prototype runs. The fusion
-  ticket supplies configurable weighted reciprocal-rank fusion and an unweighted
-  baseline. The prototype then selects production weights and candidate limits
-  from those working branches.
-- Final coordinator and Chat Agent handoff waits for the reranking prototype's
-  measured parameters. Structural priority itself is already decided.
+- The fusion ticket supplies configurable weighted reciprocal-rank fusion,
+  documented initial weights and candidate limits, and an unweighted baseline.
+  These initial values are sufficient for the complete retrieval pipeline and
+  do not require a prior quality experiment.
+- The graph-aware reranking prototype runs only after the retrieval branches
+  exist. It may recommend later configuration changes, but it does not block any
+  ticket in this project or the final coordinator and Chat Agent handoff.
 - The developer retrieval surface renders this project's contracts but does not
   define new retrieval behavior.
 - No ADR is added. This PRD is the feature's durable design document.
@@ -347,8 +348,8 @@ Suite owned by the Model Evaluation initiative.
 - Free-form model-generated Cypher.
 - Letting a model select among retrieval modes beyond the internal relational
   branch flag.
-- Choosing production weighted-RRF numbers or final candidate limits before the
-  graph-aware reranking prototype measures the implemented retrieval branches.
+- Empirically tuning weighted-RRF parameters and candidate limits. This project
+  supplies configurable initial values; later measurement may revise them.
 - Adding Policy Area vectors, external-identifier lookup, community detection,
   Graph Data Science, or influence ranking.
 - Resolving duplicate graph identities or treating deduplication of candidates
