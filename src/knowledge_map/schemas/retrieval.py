@@ -116,9 +116,15 @@ class BranchCandidate(RetrievalValue):
     source_article_id: NonemptyText
     ranking: BranchRanking
     routes: Annotated[tuple[RetrievalRoute, ...], Field(min_length=1)]
+    grounding: "GroundingEvidence | None" = None
 
     @model_validator(mode="after")
     def routes_belong_to_branch(self) -> Self:
+        if self.grounding is not None and (
+            self.grounding.chunk_id != self.chunk_id
+            or self.grounding.citation.source_article_id != self.source_article_id
+        ):
+            raise ValueError("Grounding Evidence must belong to the candidate")
         matches = {
             "entity_name": (RetrievalBranch.FULL_TEXT, "name"),
             "article_title": (RetrievalBranch.FULL_TEXT, "title"),
@@ -323,6 +329,14 @@ class SourceArticleCitation(RetrievalValue):
     published_date: NonemptyText | None = None
 
 
+class GroundingEvidence(RetrievalValue):
+    """Stored chunk wording, still requiring original Story verification."""
+
+    chunk_id: NonemptyText
+    text: Annotated[str, Field(min_length=1)]
+    citation: SourceArticleCitation
+
+
 class VerifiedPassage(RetrievalValue):
     """An assembler-verified passage and its offsets in the original Story body."""
 
@@ -468,3 +482,6 @@ class RetrievalAnswer(RetrievalValue):
                     "disagreements must refer to distinct selected sources"
                 )
         return self
+
+
+BranchCandidate.model_rebuild()

@@ -48,9 +48,10 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issues 01 through 04 are complete. The approved-rewrite workflow, concrete
-retrieval and answer types, and full-text and dense branches are available. Typed
-structural retrieval, parameterized fusion, and Evidence Assembly can advance. Configurable initial
+Issues 01 through 05 are complete. The approved-rewrite workflow, concrete
+retrieval and answer types, and full-text, dense, and initial typed structural
+branches are available. Bounded multi-hop retrieval, parameterized fusion, and
+Evidence Assembly can advance. Configurable initial
 weights and limits are enough for final integration. Later reranking measurement
 does not block this project.
 
@@ -58,8 +59,8 @@ does not block this project.
 - [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), `completed` on 2026-09-17. Validated Pydantic contracts preserve branch outcomes, candidate provenance, citations, coverage, context limits, and safe failure disclosures.
 - [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), `completed` on 2026-09-17. Deterministic keyword preparation and indexed name, title, and chunk-text retrieval preserve candidate routes, branch-local scores, and safe failure stages.
 - [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), `completed` on 2026-09-17. Approved-question embeddings search the existing Article Chunk vector index with a configured candidate limit, retaining ranked dense routes and distinct failure stages.
-- [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), takeable.
-- [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), blocked by 05.
+- [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), `completed` on 2026-09-17. Typed construction retrieves entities and single relationships with claims, Grounding Evidence, preserved identity ambiguity, and distinct failure stages.
+- [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), takeable.
 - [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), takeable. It supplies configurable initial weights and limits plus an unweighted measurement baseline.
 - [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), takeable.
 - [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 01, 03, 04, 06, 07, and 08.
