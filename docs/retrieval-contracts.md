@@ -3,9 +3,11 @@
 `knowledge_map.schemas.retrieval` defines the values passed between retrieval
 branches, fusion, Evidence Assembly, and the Chat Agent. These contracts implement
 [Graph-Prioritized Retrieval issue 02](../work/projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md).
-The [full-text adapter](full-text-retrieval.md) and
-[dense adapter](dense-retrieval.md) produce their respective branch outcomes.
-The remaining project tickets implement the other operations.
+The [full-text adapter](full-text-retrieval.md),
+[dense adapter](dense-retrieval.md), and
+[structural adapter](structural-retrieval.md) produce branch outcomes.
+[Retrieval fusion](retrieval-fusion.md) combines their candidates. The remaining
+project tickets implement Evidence Assembly and coordination.
 
 ## Approved input and execution facts
 
@@ -62,8 +64,9 @@ an internal ID. Candidate deduplication does not resolve these identities.
 branch candidates as contributions. Every contribution must identify the same
 Article Chunk and Source Article. Evidence packaging checks selected
 contributions against the execution record, rejecting invented contributions,
-lost routes, or a passage cited to a different Source Article. The fusion
-algorithm and its weights belong to issue 07.
+lost routes, or a passage cited to a different Source Article. The
+[fusion algorithm and configuration](retrieval-fusion.md) use branch ranks and
+preserve every contribution for a selected chunk.
 
 ## Evidence and answers
 

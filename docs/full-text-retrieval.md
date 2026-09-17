@@ -61,9 +61,10 @@ matching behavior, as described in its
 Several contributions may name the same chunk. Keeping them preserves distinct
 entry nodes, routes, scores, and pre-fusion ranks. Fusion must deduplicate by
 chunk identity while retaining all contributions and count each retrieval
-branch once, using that branch's best rank for the chunk. Candidate limits and
-fusion configuration belong to issue 07; this adapter currently retains all
-completed matches before fusion and context truncation.
+branch once, using that branch's best rank for the chunk.
+[Fusion configuration](retrieval-fusion.md) supplies candidate nomination and
+output limits; this adapter retains all completed matches before fusion and
+context truncation.
 
 A completed search without candidates returns `SuccessfulBranch(candidates=())`.
 An unavailable or incompatible index fails the search, even if the question

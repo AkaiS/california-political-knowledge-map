@@ -48,11 +48,12 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issues 01 through 06 are complete. The approved-rewrite workflow, concrete
+Issues 01 through 07 are complete. The approved-rewrite workflow, concrete
 retrieval and answer types, and full-text, dense, and bounded typed structural
-branches are available. Parameterized fusion and Evidence Assembly can advance. Configurable initial
-weights and limits are enough for final integration. Later reranking measurement
-does not block this project.
+branches are available. Parameterized fusion supplies initial weights, candidate
+limits, and an unweighted measurement baseline. Evidence Assembly can advance,
+followed by final integration. Later reranking measurement does not block this
+project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
 - [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), `completed` on 2026-09-17. Validated Pydantic contracts preserve branch outcomes, candidate provenance, citations, coverage, context limits, and safe failure disclosures.
@@ -60,9 +61,9 @@ does not block this project.
 - [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), `completed` on 2026-09-17. Approved-question embeddings search the existing Article Chunk vector index with a configured candidate limit, retaining ranked dense routes and distinct failure stages.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), `completed` on 2026-09-17. Typed construction retrieves entities and single relationships with claims, Grounding Evidence, preserved identity ambiguity, and distinct failure stages.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), `completed` on 2026-09-17. Connected questions use at most three semantic relationships, each model stage has two corrections, and explicit Bill-slot assignments preserve multi-Bill intent.
-- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), takeable. It supplies configurable initial weights and limits plus an unweighted measurement baseline.
+- [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), `completed` on 2026-09-17. Configurable weighted fusion ranks the candidate union, preserves every contribution, and supplies an unweighted measurement baseline.
 - [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), takeable.
-- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 07 and 08.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), blocked by 08.
 
 ### Bill Designation Recovery frontier
 
@@ -121,8 +122,8 @@ blockers.
 The [Useful Graph Retrieval map](initiatives/useful-graph-retrieval/MAP.md) was
 charted on 2026-07-29 and holds ten tickets. Issues 04 through 08 are complete.
 Graph-Prioritized Retrieval issue 02 supplies the concrete retrieval and answer
-types. Issue 09 waits for working retrieval branches and
-parameterized fusion so it can measure real rankings.
+types. The retrieval branches and parameterized fusion now unblock issue 09's
+measurement of real rankings.
 
 - [Update the extraction prompt to the settled ontology and populate the graph](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md), `ready-for-agent` as of 2026-08-05, specified by the [News Ontology and Graph Population PRD](projects/news-ontology-graph-population/PRD.md). Population work remains open, but the current graph inventory is sufficient for the retrieval prototype to proceed.
 - [Decide the target question set for California political retrieval](initiatives/useful-graph-retrieval/issues/02-target-question-set.md): the authored question set is available as an input to the prototype.
@@ -132,7 +133,7 @@ parameterized fusion so it can measure real rankings.
 - [Decide the retrieval modes and the index inventory they require](initiatives/useful-graph-retrieval/issues/06-retrieval-modes-and-index-inventory.md), `completed` on 2026-09-08. Full-text search, chunk vectors, and typed traversal contribute combined chunk candidates. External-identifier implementation and Policy Area vectors are deferred.
 - [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
 - [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), `completed` on 2026-09-17. Records the concrete Pydantic contracts implemented by Graph-Prioritized Retrieval issue 02.
-- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), blocked by Graph-Prioritized Retrieval issues 03, 04, 06, and 07. It measures real branch outputs and may recommend later configuration changes; it does not block the implementation project.
+- [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), takeable after Graph-Prioritized Retrieval issues 03, 04, 06, and 07. It measures real branch outputs and may recommend later configuration changes; it does not block the implementation project.
 
 ### Pydantic-Native Evaluation Routing
 

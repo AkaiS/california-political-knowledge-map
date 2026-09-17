@@ -125,8 +125,8 @@ Candidates retain the Claim Key, review flag, claim provenance, endpoint element
 IDs, stored chunk wording, and Source Article citation. The stored Source
 Article ID supplies the URL when there is no separate URL property. Candidate
 ranks follow chunk ID, Source Article ID, and entry element ID; there is no
-invented structural similarity score. Ranking configuration and fusion belong
-to ticket 07.
+invented structural similarity score. [Retrieval fusion](retrieval-fusion.md)
+applies configured weights and candidate limits to the retained branch output.
 
 No matching semantic entity or relationship returns `SuccessfulBranch` with an
 empty candidate tuple. A matched claim whose provenance cannot produce valid

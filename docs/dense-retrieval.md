@@ -11,8 +11,9 @@ outcome = await retriever.retrieve(request, deadline=deadline)
 ```
 
 The caller supplies and closes an asynchronous Neo4j driver. `candidate_limit`
-is a required positive integer. The example uses 50; issue 07 owns the pipeline's
-initial limits. `deadline` is absolute time from
+is a required positive integer. The example uses the initial
+[`FusionConfig.dense_candidate_limit`](retrieval-fusion.md) of 50. `deadline` is
+absolute time from
 `asyncio.get_running_loop().time()`, shared with the other retrieval branches.
 An injected Pydantic AI `Embedder` can replace the default client returned by
 `get_embedding_embedder`. Retrieval awaits `embed_query` directly, so embedding
