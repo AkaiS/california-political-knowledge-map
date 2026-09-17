@@ -48,15 +48,15 @@ have not yet been shaped into executable work.
 
 ### Graph-Prioritized Retrieval frontier
 
-Issues 01 and 02 are complete. The approved-rewrite workflow and concrete
-retrieval and answer types are available. The three retrieval branches,
-parameterized fusion, and Evidence Assembly can advance. Configurable initial
+Issues 01 through 03 are complete. The approved-rewrite workflow, concrete
+retrieval and answer types, and full-text branch are available. Dense and typed
+structural retrieval, parameterized fusion, and Evidence Assembly can advance. Configurable initial
 weights and limits are enough for final integration. Later reranking measurement
 does not block this project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
 - [02 Retrieval execution and evidence contracts](projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md), `completed` on 2026-09-17. Validated Pydantic contracts preserve branch outcomes, candidate provenance, citations, coverage, context limits, and safe failure disclosures.
-- [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), takeable.
+- [03 Full-text retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/03-full-text-retrieval.md), `completed` on 2026-09-17. Deterministic keyword preparation and indexed name, title, and chunk-text retrieval preserve candidate routes, branch-local scores, and safe failure stages.
 - [04 Dense retrieval from an approved rewrite](projects/graph-prioritized-retrieval/issues/04-dense-retrieval.md), takeable.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), takeable.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), blocked by 05.

@@ -3,7 +3,8 @@
 `knowledge_map.schemas.retrieval` defines the values passed between retrieval
 branches, fusion, Evidence Assembly, and the Chat Agent. These contracts implement
 [Graph-Prioritized Retrieval issue 02](../work/projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md).
-The remaining project tickets implement the operations that produce them.
+The [full-text adapter](full-text-retrieval.md) produces the full-text branch
+outcome. The remaining project tickets implement the other operations.
 
 ## Approved input and execution facts
 
