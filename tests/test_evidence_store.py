@@ -134,6 +134,28 @@ def test_source_article_url_primary_key_hydrates_without_a_duplicate_url_propert
     assert str(grounding.citation.url) == "https://example.com/full_text"
 
 
+def test_story_lookup_uses_the_unnormalized_source_article_primary_key(tmp_path):
+    from knowledge_map.schemas.retrieval import SourceArticleCitation
+
+    path = str(tmp_path / "stories.db")
+    init_db(path)
+    story = Story(
+        url="https://example.com",
+        title="Root URL",
+        content="The stored URL has no trailing slash.",
+    )
+    save_story(story, path)
+    store = EvidenceStore(graph_driver([]), story_db_path=path)
+    citation = SourceArticleCitation(
+        source_article_id=story.url,
+        title=story.title,
+        url=story.url,
+    )
+
+    assert str(citation.url) == "https://example.com/"
+    assert asyncio.run(store.load_story(citation)) == story
+
+
 def test_a_locked_document_store_does_not_leave_a_worker_waiting_past_the_deadline(
     tmp_path,
 ):

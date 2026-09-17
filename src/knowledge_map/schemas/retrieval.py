@@ -238,6 +238,13 @@ class RetrievalExecutionResult(RetrievalValue):
             if branch in self.failed_branches
         )
 
+    @property
+    def structural_empty_disclosure(self) -> str | None:
+        structural = self.evidence_by_branch.get(RetrievalBranch.STRUCTURAL)
+        if structural == ():
+            return "No matching graph connections were found in the available graph."
+        return None
+
 
 class RetrievalFailureLog(RetrievalValue):
     """Operational detail for structured logs, never nested in an answer value."""
@@ -455,10 +462,12 @@ class EvidenceAssemblyFailure(RetrievalValue):
 
     @property
     def failure_disclosures(self) -> tuple[str, ...]:
-        return (
-            *self.execution.failure_disclosures,
-            "Grounding Evidence could not be assembled and verified.",
-        )
+        disclosures = list(self.execution.failure_disclosures)
+        structural_empty = self.execution.structural_empty_disclosure
+        if structural_empty:
+            disclosures.append(structural_empty)
+        disclosures.append("Grounding Evidence could not be assembled and verified.")
+        return tuple(disclosures)
 
 
 class SourceRelevanceNote(RetrievalValue):

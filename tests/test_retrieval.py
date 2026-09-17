@@ -340,6 +340,26 @@ def test_preparation_consumes_the_same_deadline_without_starting_expired_branche
     assert all(branch.requests == [] for branch in branches.values())
 
 
+def test_fusion_must_finish_before_the_shared_deadline(monkeypatch):
+    import knowledge_map.core.retrieval as retrieval_module
+
+    now = [100.0]
+    original_fusion = retrieval_module.fuse_candidates
+
+    def late_fusion(*args, **kwargs):
+        result = original_fusion(*args, **kwargs)
+        now[0] = 102.0
+        return result
+
+    monkeypatch.setattr(retrieval_module, "fuse_candidates", late_fusion)
+    result = retrieve(
+        coordinator(deadline_seconds=1, clock=lambda: now[0]),
+    )
+
+    assert isinstance(result, EvidenceAssemblyFailure)
+    assert set(result.execution.evidence_by_branch) == {"full_text", "dense"}
+
+
 @pytest.mark.parametrize("seconds", [0, -1, float("inf"), float("nan"), True])
 def test_deadline_configuration_requires_a_finite_positive_duration(seconds):
     with pytest.raises(ValueError):

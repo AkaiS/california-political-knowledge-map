@@ -25,7 +25,6 @@ from knowledge_map.schemas.retrieval import (
     MonthlyCoverage,
     NonemptyText,
     RetrievalAnswer,
-    RetrievalBranch,
     RetrievalValue,
     SourceDisagreement,
     SourceRelevanceNote,
@@ -165,13 +164,9 @@ class ChatSession:
             usage=self._usage,
         )
         disclosures = list(package.failure_disclosures)
-        structural = package.execution.evidence_by_branch.get(
-            RetrievalBranch.STRUCTURAL
-        )
-        if structural == ():
-            disclosures.append(
-                "No matching graph connections were found in the available graph."
-            )
+        structural_empty = package.execution.structural_empty_disclosure
+        if structural_empty:
+            disclosures.append(structural_empty)
         if rewrite.assessment.status == "deferred":
             assert rewrite.assessment.explanation is not None
             disclosures.append(rewrite.assessment.explanation)

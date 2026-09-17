@@ -69,7 +69,7 @@ class EvidenceStore:
 
     async def load_story(self, citation: SourceArticleCitation) -> Story:
         try:
-            return await asyncio.to_thread(self._read_story, str(citation.url))
+            return await asyncio.to_thread(self._read_story, citation.source_article_id)
         except sqlite3.Error as error:
             raise EvidenceHydrationError(
                 "The original Story could not be loaded"

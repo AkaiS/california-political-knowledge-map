@@ -140,3 +140,34 @@ runs after the bounded retrieval phase. The existing exact-Story-substring
 verification limitation remains: transformed chunks need an original-position
 mapping before they can become quotations. No live model, database, browser,
 or retrieval-quality evaluation was run for this integration ticket.
+
+2026-09-17 review: Independent Standards and Spec agents reviewed the three-dot
+diff from `c13860ed3ede7ec866788f445c1e3924daa45295`. Standards found no hard
+violations and six judgement calls. The structural retriever's shadowed usage
+accumulators were renamed to distinguish branch-local accounting from the
+caller's total. The other five did not justify changes: the repeated failure
+factory is local to adapters with different branch policies; repeated test
+doubles are deliberately local; the three coverage values are the recorded
+public seam; disclosure composition belongs to the result and session boundary;
+and the package-level disclosure property gives successful and failed assembly
+results a uniform consumer interface.
+
+The Spec review found three issues. Review fixes now retain the successful-empty
+structural disclosure even when Evidence Assembly fails, use the unmodified
+Source Article ID rather than a normalized `HttpUrl` as the SQLite Story key,
+and explicitly reject a fusion result that finishes after the shared deadline
+before hydration starts. Synchronous fusion remains deterministic in-process;
+the deadline governs whether its result may advance, rather than leaving a
+cancelled worker running in the background.
+
+Review verification:
+
+- New coordinator, Chat Agent, and storage tests: 36 passed.
+- Focused affected suite: 260 passed.
+- Final full deterministic suite: 1,198 passed, 47 opt-in Neo4j tests skipped,
+  and the same two provider warnings.
+- Changed-file `ruff check`, `ruff format --check`, `ty check`, and
+  `git diff --check`: passed.
+
+No valid review finding remains unresolved. Live integrations and retrieval
+quality evaluation remain outside this ticket, as recorded above.

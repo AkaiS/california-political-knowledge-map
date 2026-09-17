@@ -281,6 +281,48 @@ def test_assembly_failure_discloses_branch_failures_without_requesting_an_answer
     assert len(requests) == 1
 
 
+def test_assembly_failure_discloses_a_successful_empty_structural_search():
+    async def unavailable(citation):
+        raise LookupError("original Story unavailable")
+
+    branches = {branch: Branch(branch, ()) for branch in RetrievalBranch}
+    branches[RetrievalBranch.FULL_TEXT] = Branch(RetrievalBranch.FULL_TEXT)
+    calls = []
+
+    def respond(messages, info):
+        calls.append(messages)
+        return ModelResponse(
+            parts=[ToolCallPart(info.output_tools[0].name, {"status": "allowed"})]
+        )
+
+    agent, rewriter = get_chat_agent(), rewriter_agent()
+    session = ChatSession(
+        "Find support for AB 1",
+        chat_agent=agent,
+        rewriter=rewriter,
+        retrieval=coordinator(branches, load_story=unavailable),
+        coverage=COVERAGE,
+        relevant_collection_ids=("reporting",),
+    )
+
+    async def exercise():
+        await session.prepare()
+        return await session.approve()
+
+    with (
+        agent.override(model=FunctionModel(respond)),
+        rewriter.override(model=rewrite_response(rewrite().question, True)),
+    ):
+        result = asyncio.run(exercise())
+
+    assert isinstance(result, EvidenceAssemblyFailure)
+    assert result.failure_disclosures == (
+        "No matching graph connections were found in the available graph.",
+        "Grounding Evidence could not be assembled and verified.",
+    )
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize("terminal", ["declined", "rewrite_unavailable"])
 def test_unapproved_terminal_questions_never_start_retrieval(terminal):
     branches = {branch: Branch(branch) for branch in RetrievalBranch}

@@ -86,7 +86,8 @@ It cannot present them as verified quotations. Assembly failure does not relabel
 a successful retrieval branch as failed.
 
 `EvidenceStore` reads chunks through their actual Source Article links. It uses
-the Source Article URL primary key when no duplicate URL property exists.
+the unmodified Source Article ID as the SQLite lookup key because that ID is the
+Story URL primary key; it does not use Pydantic's normalized `HttpUrl` rendering.
 SQLite reads run in a worker, open the existing database read-only, and fail
 immediately on a lock, so a cancelled coroutine does not leave that worker
 waiting on SQLite's default busy timeout. Neo4j and SQLite failures become

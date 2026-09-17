@@ -199,10 +199,13 @@ class RetrievalCoordinator:
         try:
             if clock() >= deadline:
                 raise TimeoutError
+            fused = fuse_candidates(execution, config=self._fusion_config)
+            if clock() >= deadline:
+                raise TimeoutError
             async with asyncio.timeout(deadline - clock()):
                 result = await self._assembler.assemble(
                     execution,
-                    fuse_candidates(execution, config=self._fusion_config),
+                    fused,
                     coverage=coverage,
                     relevant_collection_ids=relevant_collection_ids,
                     monthly_coverage=monthly_coverage,

@@ -185,8 +185,8 @@ class Neo4jStructuralRetriever:
             "hop_bound",
         ] = "schema_filtering"
         attempts = 0
-        total_usage = usage
-        usage = RunUsage()
+        caller_usage = usage
+        branch_usage = RunUsage()
         stage_start = 0
         validation = ConstructionValidation(filtered_catalog, "schema_filtering")
         try:
@@ -201,12 +201,12 @@ class Neo4jStructuralRetriever:
                             "catalog": public_pieces(CATALOG),
                         }
                     ),
-                    usage=usage,
+                    usage=branch_usage,
                     deps=validation,
                 )
                 catalog = cast(tuple[Piece, ...], validation.result)
                 stage = "typed_selection"
-                stage_start = usage.requests
+                stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: selected_pieces(output, catalog), stage
                 )
@@ -217,25 +217,25 @@ class Neo4jStructuralRetriever:
                             "catalog": public_pieces(catalog),
                         }
                     ),
-                    usage=usage,
+                    usage=branch_usage,
                     deps=validation,
                 )
                 pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
                 chosen = {kind: public_pieces(items) for kind, items in pieces.items()}
                 stage = "wiring"
-                stage_start = usage.requests
+                stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: validate_wiring(output, pieces), stage
                 )
                 wiring = (
                     await self.agents.wiring.run(
                         json.dumps({"question": question, "pieces": chosen}),
-                        usage=usage,
+                        usage=branch_usage,
                         deps=validation,
                     )
                 ).output
                 stage = "binding"
-                stage_start = usage.requests
+                stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: compile_query(pieces, wiring, output), "validation"
                 )
@@ -257,13 +257,13 @@ class Neo4jStructuralRetriever:
                             "pieces": chosen,
                         }
                     ),
-                    usage=usage,
+                    usage=branch_usage,
                     deps=validation,
                 )
                 stage = "validation"
                 cypher, parameters = cast(tuple[str, dict[str, str]], validation.result)
                 stage = "cypher_execution"
-                stage_start = usage.requests
+                stage_start = branch_usage.requests
                 async with self.driver.session(
                     database=self.database, default_access_mode=READ_ACCESS
                 ) as session:
@@ -318,7 +318,7 @@ class Neo4jStructuralRetriever:
             kind = "transport"
         except UnexpectedModelBehavior:
             kind = "model_output"
-            if validation.rejected_request == usage.requests:
+            if validation.rejected_request == branch_usage.requests:
                 stage, kind = validation.stage, "validation"
                 if validation.hop_bound:
                     stage, kind = "hop_bound", "hop_bound_exhausted"
@@ -333,18 +333,18 @@ class Neo4jStructuralRetriever:
         except (KeyError, TypeError, ValueError):
             kind = "hydration" if stage == "hydration" else "validation"
         finally:
-            if total_usage is not None:
-                total_usage.incr(usage)
+            if caller_usage is not None:
+                caller_usage.incr(branch_usage)
             if attempts:
-                attempts = max(1, usage.requests - stage_start)
+                attempts = max(1, branch_usage.requests - stage_start)
             logger.info(
                 "retrieval_model_usage",
                 extra={
                     "event": "retrieval_model_usage",
                     "branch": "structural",
-                    "requests": usage.requests,
-                    "input_tokens": usage.input_tokens,
-                    "output_tokens": usage.output_tokens,
+                    "requests": branch_usage.requests,
+                    "input_tokens": branch_usage.input_tokens,
+                    "output_tokens": branch_usage.output_tokens,
                 },
             )
         return _failed(
