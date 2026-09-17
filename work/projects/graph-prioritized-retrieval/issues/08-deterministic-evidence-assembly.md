@@ -99,3 +99,15 @@ Verification:
 
 All acceptance criteria are satisfied. No live-model, live-database, or browser
 verification was needed for this deterministic boundary.
+
+2026-09-17: Post-implementation review passed the Spec axis with no findings.
+The Standards axis found no hard violations and raised two judgement calls. The
+ambiguous local `count` was renamed to `selected_passage_count`. The suggested
+package-level projection for `render_evidence_context` was declined because the
+renderer is the boundary that intentionally reads the nested retrieval contract;
+pass-through accessors would move rather than remove that dependency.
+
+Review verification: 32 focused evidence tests passed; changed-file Ruff,
+format, and ty checks passed; and the single final suite passed with 1,162 tests,
+47 opt-in Neo4j skips, and the same two provider warnings. No valid finding
+remains unresolved.

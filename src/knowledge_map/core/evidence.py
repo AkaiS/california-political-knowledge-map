@@ -160,7 +160,8 @@ class EvidenceAssembler:
         )
 
         def package_for(
-            selected: dict[str, SourceArticleEvidence], count: int
+            selected: dict[str, SourceArticleEvidence],
+            selected_passage_count: int,
         ) -> EvidencePackage:
             return EvidencePackage(
                 execution=execution,
@@ -172,17 +173,17 @@ class EvidenceAssembler:
                     limit=limits.character_limit,
                     used=0,
                     max_passages=limits.max_passages,
-                    omitted_passages=len(candidates) - count,
+                    omitted_passages=len(candidates) - selected_passage_count,
                 ),
             )
 
-        count = 0
-        package = package_for(sources, count)
+        selected_passage_count = 0
+        package = package_for(sources, selected_passage_count)
         ordered = sorted(
             candidates, key=lambda candidate: (candidate.rank, candidate.chunk_id)
         )
         for candidate in ordered:
-            if count == limits.max_passages:
+            if selected_passage_count == limits.max_passages:
                 break
             grounding = await self._load_grounding(candidate)
             if (
@@ -214,11 +215,11 @@ class EvidenceAssembler:
                 citation=grounding.citation,
                 passages=(*previous.passages, passage) if previous else (passage,),
             )
-            proposal = package_for(proposed, count + 1)
+            proposal = package_for(proposed, selected_passage_count + 1)
             if len(render_evidence_context(proposal)) <= limits.character_limit:
                 sources = proposed
                 package = proposal
-                count += 1
+                selected_passage_count += 1
         return package.model_copy(
             update={
                 "context": AppliedContextLimits(
