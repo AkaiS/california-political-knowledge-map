@@ -5,6 +5,7 @@ from typing import Annotated, Literal, Self
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     StrictBool,
     StringConstraints,
     model_validator,
@@ -15,7 +16,7 @@ type QuestionText = Annotated[
 ]
 
 
-class QueryRewrite(BaseModel):
+class QueryRewriteProposal(BaseModel):
     """One proposed question and its internal structural-retrieval route."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -54,23 +55,46 @@ class QueryApproval(BaseModel):
     recoverable_portion: QuestionText | None = None
 
 
-class QuestionPreparationResult(BaseModel):
-    """The presentation returned to the Chat Agent before retrieval."""
+class AwaitingQueryApproval(BaseModel):
+    """A proposed question that the Chat Agent may present for approval."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    status: Literal["awaiting_approval", "declined", "rewrite_unavailable"]
-    approval: QueryApproval | None = None
-    message: str | None = None
+    status: Literal["awaiting_approval"] = "awaiting_approval"
+    approval: QueryApproval
 
 
-class ApprovedQueryRewrite(QueryRewrite):
-    """The approved retrieval input, retaining the coverage decision."""
+class DeclinedQuestion(BaseModel):
+    """A policy-declined question that cannot proceed to approval."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: Literal["declined"] = "declined"
+    message: QuestionText
+
+
+class RewriteUnavailable(BaseModel):
+    """A temporary Query Rewriter failure that prevents approval."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: Literal["rewrite_unavailable"] = "rewrite_unavailable"
+    message: QuestionText
+
+
+type QuestionPreparationResult = Annotated[
+    AwaitingQueryApproval | DeclinedQuestion | RewriteUnavailable,
+    Field(discriminator="status"),
+]
+
+
+class QueryRewrite(QueryRewriteProposal):
+    """The user-approved retrieval input, retaining the coverage decision."""
 
     assessment: QuestionAssessment
 
 
-class RewriteRejection(QueryRewrite):
+class RewriteRejection(QueryRewriteProposal):
     """The rejected proposal and the feedback for another rewrite attempt."""
 
     outcome: Literal["rewrite_rejected"] = "rewrite_rejected"

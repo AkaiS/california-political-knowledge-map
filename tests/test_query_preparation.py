@@ -17,7 +17,10 @@ from knowledge_map.core.question_preparation import (
     get_query_rewriter,
 )
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
-from knowledge_map.schemas.query_preparation import QueryRewrite, QuestionAssessment
+from knowledge_map.schemas.query_preparation import (
+    QueryRewriteProposal,
+    QuestionAssessment,
+)
 
 
 def rewriter_agent():
@@ -56,7 +59,7 @@ def rewrite_response(question, relational):
 )
 def test_rewrite_requires_a_nonblank_question_and_boolean_route(values):
     with pytest.raises(ValidationError):
-        QueryRewrite.model_validate(values)
+        QueryRewriteProposal.model_validate(values)
 
 
 def test_only_the_approved_rewrite_becomes_the_retrieval_question():
@@ -75,14 +78,18 @@ def test_only_the_approved_rewrite_becomes_the_retrieval_question():
         return QuestionAssessment(status="allowed")
 
     agent = rewriter_agent()
-    preparation = QuestionPreparation(original, rewriter=agent, assess=assess)
+    preparation = QuestionPreparation(
+        original,
+        rewriter=agent,
+        assess_question_policy_and_coverage=assess,
+    )
     with pytest.raises(ValueError):
         preparation.approve()
 
     with agent.override(model=rewrite_response(rewritten, True)):
         result = asyncio.run(preparation.prepare())
 
-    assert assessed == [QueryRewrite(question=rewritten, relational=True)]
+    assert assessed == [QueryRewriteProposal(question=rewritten, relational=True)]
     assert result.status == "awaiting_approval"
     assert result.approval is not None
     assert result.approval.question == rewritten
@@ -106,15 +113,17 @@ def test_declined_rewrite_stops_with_an_explanation_before_approval():
 
     agent = rewriter_agent()
     preparation = QuestionPreparation(
-        "Tell me his real reason for SB 9.", rewriter=agent, assess=assess
+        "Tell me his real reason for SB 9.",
+        rewriter=agent,
+        assess_question_policy_and_coverage=assess,
     )
     with agent.override(model=rewrite_response(rewritten, True)):
         result = asyncio.run(preparation.prepare())
 
-    assert assessed == [QueryRewrite(question=rewritten, relational=True)]
+    assert assessed == [QueryRewriteProposal(question=rewritten, relational=True)]
     assert result.status == "declined"
     assert result.message == explanation
-    assert result.approval is None
+    assert "approval" not in result.model_dump()
     with pytest.raises(ValueError):
         preparation.approve()
 
@@ -125,7 +134,7 @@ def test_deferred_rewrite_explains_its_limit_and_recoverable_portion_before_appr
     recoverable = "Reporting may identify individual senators' votes."
 
     async def assess(rewrite):
-        assert rewrite == QueryRewrite(question=rewritten, relational=True)
+        assert rewrite == QueryRewriteProposal(question=rewritten, relational=True)
         return QuestionAssessment(
             status="deferred",
             explanation=explanation,
@@ -136,7 +145,7 @@ def test_deferred_rewrite_explains_its_limit_and_recoverable_portion_before_appr
     preparation = QuestionPreparation(
         "Every senator's SB 1007 vote in 2025-2026 with sources please.",
         rewriter=agent,
-        assess=assess,
+        assess_question_policy_and_coverage=assess,
     )
     with agent.override(model=rewrite_response(rewritten, True)):
         result = asyncio.run(preparation.prepare())
@@ -182,7 +191,11 @@ def test_rejection_retains_feedback_and_only_a_new_proposal_can_be_approved(
         return QuestionAssessment(status="allowed")
 
     agent = rewriter_agent()
-    preparation = QuestionPreparation(original, rewriter=agent, assess=assess)
+    preparation = QuestionPreparation(
+        original,
+        rewriter=agent,
+        assess_question_policy_and_coverage=assess,
+    )
     with caplog.at_level(logging.INFO), agent.override(model=FunctionModel(respond)):
         asyncio.run(preparation.prepare())
         rejected = preparation.reject(correction=correction)
@@ -235,7 +248,9 @@ def test_transport_exhaustion_records_unavailable_without_an_original_question_f
 
     agent = rewriter_agent()
     preparation = QuestionPreparation(
-        "Who endorsed Steve Hilton?", rewriter=agent, assess=assess
+        "Who endorsed Steve Hilton?",
+        rewriter=agent,
+        assess_question_policy_and_coverage=assess,
     )
     with (
         caplog.at_level(logging.WARNING),
@@ -244,7 +259,7 @@ def test_transport_exhaustion_records_unavailable_without_an_original_question_f
         result = asyncio.run(preparation.prepare())
 
     assert result.status == "rewrite_unavailable"
-    assert result.approval is None
+    assert "approval" not in result.model_dump()
     assert result.message is not None
     assert "network" in result.message.lower()
     assert "temporary" in result.message.lower()
@@ -284,7 +299,11 @@ def test_a_second_prepare_cannot_replace_a_proposal_while_it_is_being_prepared()
             )
 
         agent = rewriter_agent()
-        preparation = QuestionPreparation(question, rewriter=agent, assess=assess)
+        preparation = QuestionPreparation(
+            question,
+            rewriter=agent,
+            assess_question_policy_and_coverage=assess,
+        )
         with agent.override(model=FunctionModel(respond)):
             first = asyncio.create_task(preparation.prepare())
             await entered.wait()

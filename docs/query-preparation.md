@@ -2,10 +2,10 @@
 
 `QuestionPreparation` owns one question's preparation for the Chat Agent. Its
 rewriter is a Pydantic AI agent created by `get_query_rewriter`. The injected
-asynchronous `assess` callable represents the Chat Agent's question-policy and
-coverage decision. It receives only `QueryRewrite`, containing `question` and
-the internal `relational` boolean. The original wording goes only to the
-rewriter.
+asynchronous `assess_question_policy_and_coverage` callable represents the Chat
+Agent's question-policy and coverage decision. It receives only a
+`QueryRewriteProposal`, containing `question` and the internal `relational`
+boolean. The original wording goes only to the rewriter.
 
 ```python
 from knowledge_map.core.question_preparation import (
@@ -16,7 +16,7 @@ from knowledge_map.core.question_preparation import (
 preparation = QuestionPreparation(
     original_question,
     rewriter=get_query_rewriter(),
-    assess=assess_question_policy_and_coverage,
+    assess_question_policy_and_coverage=assess_question_policy_and_coverage,
 )
 presentation = await preparation.prepare()
 ```
@@ -29,10 +29,9 @@ an explanation; Deferred also requires a description of the recoverable
 portion, including an explicit statement if none is known.
 
 Only after the user approves, call `preparation.approve()`. Its
-`ApprovedQueryRewrite` is the retrieval input, with the assessed question,
+`QueryRewrite` is the user-approved retrieval input, with the assessed question,
 internal route, and coverage decision retained. Do not send the original
-question to retrieval. A second approval cannot release the same proposal
-again.
+question to retrieval. A second approval cannot release the same proposal again.
 
 If the user rejects the question, call
 `preparation.reject(correction=user_correction)` and then `prepare()` for a new

@@ -9,14 +9,18 @@ import httpx
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
+from knowledge_map.core.exceptions import is_retryable_transport_failure
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import (
-    ApprovedQueryRewrite,
+    AwaitingQueryApproval,
+    DeclinedQuestion,
     QueryApproval,
     QueryRewrite,
+    QueryRewriteProposal,
     QuestionAssessment,
     QuestionPreparationResult,
     RewriteRejection,
+    RewriteUnavailable,
 )
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.deployments import query_rewriter_deployment_from_environment
@@ -62,15 +66,15 @@ Rejected wording has not been approved for retrieval.
 
 def get_query_rewriter(
     deployment: ModelDeployment | None = None,
-) -> Agent[None, QueryRewrite]:
+) -> Agent[None, QueryRewriteProposal]:
     """Construct the Query Rewriter through the shared observable factory."""
 
     return cast(
-        Agent[None, QueryRewrite],
+        Agent[None, QueryRewriteProposal],
         create_agent(
             get_chat_model(deployment or query_rewriter_deployment_from_environment()),
             name="query_rewriter",
-            output_type=QueryRewrite,
+            output_type=QueryRewriteProposal,
             instructions=QUERY_REWRITER_INSTRUCTIONS,
         ),
     )
@@ -83,13 +87,15 @@ class QuestionPreparation:
         self,
         original_question: str,
         *,
-        rewriter: Agent[None, QueryRewrite],
-        assess: Callable[[QueryRewrite], Awaitable[QuestionAssessment]],
+        rewriter: Agent[None, QueryRewriteProposal],
+        assess_question_policy_and_coverage: Callable[
+            [QueryRewriteProposal], Awaitable[QuestionAssessment]
+        ],
     ) -> None:
         self._original_question = original_question
         self._rewriter = rewriter
-        self._assess = assess
-        self._pending: ApprovedQueryRewrite | None = None
+        self._assess_question_policy_and_coverage = assess_question_policy_and_coverage
+        self._pending: QueryRewrite | None = None
         self._state: Literal["ready", "preparing", "awaiting_approval", "finished"] = (
             "ready"
         )
@@ -119,16 +125,12 @@ class QuestionPreparation:
                 )
             )
         except (ModelAPIError, httpx.TransportError) as error:
-            if isinstance(error, ModelHTTPError) and error.status_code not in {
-                408,
-                429,
-                500,
-                502,
-                503,
-                504,
-                524,
-                529,
-            }:
+            temporary_request_status = isinstance(
+                error, ModelHTTPError
+            ) and error.status_code in {408, 429}
+            if not temporary_request_status and not is_retryable_transport_failure(
+                error
+            ):
                 raise
             self._state = "finished"
             logger.warning(
@@ -140,28 +142,25 @@ class QuestionPreparation:
                     "error_type": type(error).__name__,
                 },
             )
-            return QuestionPreparationResult(
-                status="rewrite_unavailable",
+            return RewriteUnavailable(
                 message=(
                     "A temporary network problem prevented rewriting your question. "
                     "The question cannot be answered right now. Please try again later."
                 ),
             )
         rewrite = result.output
-        assessment = await self._assess(rewrite)
+        assessment = await self._assess_question_policy_and_coverage(rewrite)
         if assessment.status == "declined":
             self._state = "finished"
-            return QuestionPreparationResult(
-                status="declined", message=assessment.explanation
-            )
-        self._pending = ApprovedQueryRewrite(
+            assert assessment.explanation is not None
+            return DeclinedQuestion(message=assessment.explanation)
+        self._pending = QueryRewrite(
             question=rewrite.question,
             relational=rewrite.relational,
             assessment=assessment,
         )
         self._state = "awaiting_approval"
-        return QuestionPreparationResult(
-            status="awaiting_approval",
+        return AwaitingQueryApproval(
             approval=QueryApproval(
                 question=rewrite.question,
                 explanation=assessment.explanation,
@@ -169,7 +168,7 @@ class QuestionPreparation:
             ),
         )
 
-    def approve(self) -> ApprovedQueryRewrite:
+    def approve(self) -> QueryRewrite:
         """Release only the current proposal as the sole retrieval question."""
 
         if self._pending is None:

@@ -77,3 +77,12 @@ Scripted `FunctionModel` responses cover accepted, rejected, Declined, Deferred,
 and unavailable outcomes without prompt-text assertions. They establish the
 interaction contract, not a real model's rewriting quality. Retrieval invocation
 and the Chat Agent's complete conversation remain issue 09's integration work.
+
+2026-09-17 review: The Standards and Spec reviews confirmed the ticket behavior
+and found no missing requirement or scope creep. Review fixes reserve the domain
+term Query Rewrite for the approved retrieval input, name the preapproval value
+Query Rewrite Proposal, make preparation outcomes a discriminated union, name
+the policy-and-coverage callback explicitly, and reuse the shared exhausted
+transport classifier. The 43 affected tests and the full deterministic suite
+passed; the full run completed 956 tests with the two existing provider warnings.
+The acceptance checkboxes and `completed` label remain supported by this evidence.
