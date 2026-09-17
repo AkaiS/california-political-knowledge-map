@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from knowledge_map.schemas.query_preparation import QueryRewrite, QuestionAssessment
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
+    BranchScore,
     CoverageDescription,
     EvidenceAssemblyFailure,
     EvidencePackage,
@@ -73,6 +74,7 @@ def candidate_values(branch="full_text", chunk_id="article-a#chunk_0", rank=1):
     }[branch]
     return {
         "chunk_id": chunk_id,
+        "source_article_id": chunk_id.split("#", 1)[0],
         "ranking": {"branch": branch, "rank": rank, "score": 0.8},
         "routes": [
             {
@@ -130,9 +132,12 @@ def test_fused_candidate_retains_branch_ranks_routes_and_claim_identity():
     assert claim.chunk_ids == ("article-a#chunk_0",)
     with pytest.raises(TypeError):
         _ = full_text.ranking < graph.ranking  # ty: ignore[unsupported-operator]
+    with pytest.raises(TypeError):
+        _ = full_text.ranking.score < graph.ranking.score  # ty: ignore[unsupported-operator]
+    assert isinstance(graph.ranking.score, BranchScore)
     with pytest.raises(ValidationError):
         FusedCandidate.model_validate(
-            {**fused.model_dump(), "fusion_score": graph.ranking}
+            {**fused.model_dump(), "fusion_score": graph.ranking.score}
         )
     with pytest.raises(ValidationError, match="same Article Chunk"):
         FusedCandidate(
@@ -141,6 +146,47 @@ def test_fused_candidate_retains_branch_ranks_routes_and_claim_identity():
             fusion_score=0.075,
             contributions=(full_text,),
         )
+    other_source = BranchCandidate.model_validate(
+        {
+            **candidate_values("dense", rank=2),
+            "source_article_id": "article-b",
+        }
+    )
+    with pytest.raises(ValidationError, match="same Source Article"):
+        FusedCandidate(
+            chunk_id="article-a#chunk_0",
+            rank=1,
+            fusion_score=0.075,
+            contributions=(full_text, other_source),
+        )
+
+
+@pytest.mark.parametrize(
+    ("relationship_type", "chunk_ids", "source_article_ids"),
+    [
+        ("LOBBIED_FOR", [], []),
+        ("LOBBIED_FOR", ["article-a#chunk_0"], ["article-a"]),
+        ("LOBBIED_FOR", [], ["article-a"]),
+        ("DISCUSSES_TOPIC", ["article-a#chunk_0"], []),
+        ("ABOUT_TOPIC", ["article-a#chunk_0"], ["article-a"]),
+    ],
+)
+def test_graph_claim_requires_provenance_at_its_decision_grain(
+    relationship_type, chunk_ids, source_article_ids
+):
+    values = candidate_values("structural")
+    values["routes"][0]["graph_claims"] = [
+        {
+            "source": {"id": "org-disney", "label": "Organization"},
+            "target": {"id": "bill-ab186", "label": "Bill"},
+            "relationship_type": relationship_type,
+            "claim_key": {},
+            "chunk_ids": chunk_ids,
+            "source_article_ids": source_article_ids,
+        }
+    ]
+    with pytest.raises(ValidationError, match="claim"):
+        BranchCandidate.model_validate(values)
 
 
 def execution_values(structural_status="succeeded", relational=True):
@@ -429,6 +475,7 @@ def test_evidence_package_and_answer_retain_sources_limits_and_failure_disclosur
         "budget_exceeded",
         "wrong_usage",
         "invented_candidate",
+        "candidate_from_wrong_source",
     ],
 )
 def test_evidence_package_rejects_inconsistent_grounding_or_context_limits(change):
@@ -449,6 +496,10 @@ def test_evidence_package_rejects_inconsistent_grounding_or_context_limits(chang
         values["sources"][0]["passages"][0]["candidate"]["contributions"][0]["ranking"][
             "score"
         ] = 42
+    elif change == "candidate_from_wrong_source":
+        values["sources"][0]["passages"][0]["candidate"]["contributions"][0][
+            "source_article_id"
+        ] = "article-b"
     with pytest.raises(ValidationError):
         EvidencePackage.model_validate(values)
 

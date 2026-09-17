@@ -35,12 +35,13 @@ and all discriminated outcomes. There is no execution-wide success label.
 
 ## Candidates and provenance
 
-`BranchCandidate` identifies an Article Chunk and retains `BranchRanking` plus
-every `RetrievalRoute` that found it. Ranking holds the originating branch,
-one-based rank, and finite raw score. A branch with no native numeric score uses
-`None`. Raw scores are nested in their branch ranking and cannot occupy the
-separate numeric `FusedCandidate.fusion_score` field. Rankings have no ordering
-operation; fusion consumes their ranks rather than comparing raw scores.
+`BranchCandidate` identifies an Article Chunk and its Source Article, and retains
+`BranchRanking` plus every `RetrievalRoute` that found it. Ranking holds the
+originating branch, one-based rank, and finite raw `BranchScore`. A branch with
+no native numeric score uses `None`. `BranchScore` preserves the JSON number but
+has no ordering operation and cannot occupy the separate numeric
+`FusedCandidate.fusion_score` field. Fusion consumes branch ranks rather than
+comparing raw scores.
 
 Route kind determines the branch and matched field. Full-text routes match
 entity `name`, article `title`, or chunk `text`; dense routes match `embedding`;
@@ -48,21 +49,23 @@ typed traversal has no matched text field. Each route retains its entry node
 and any supporting `GraphClaim` values.
 
 A graph claim retains endpoint references, relationship type, Claim Key,
-`needs_review`, and the asserting Article Chunk or Source Article identities.
-Node references can include the database element identity alongside the internal
-ID, preserving distinct graph nodes that share an internal ID. Candidate
-deduplication does not resolve these identities. Article-level topic claims keep
-their Source Article provenance, as required by ADR 0020.
+`needs_review`, and exactly one provenance grain. Chunk-level claims name their
+asserting Article Chunks. Article-level `ABOUT_TOPIC` and `DISCUSSES_TOPIC`
+claims name their asserting Source Articles and cannot name an Article Chunk,
+as required by ADR 0020. Node references can include the database element
+identity alongside the internal ID, preserving distinct graph nodes that share
+an internal ID. Candidate deduplication does not resolve these identities.
 
 `FusedCandidate` holds a shared rank and fusion score plus the complete original
 branch candidates as contributions. Every contribution must identify the same
-Article Chunk. Evidence packaging checks selected contributions against the
-execution record, rejecting invented contributions or lost routes. The fusion
+Article Chunk and Source Article. Evidence packaging checks selected
+contributions against the execution record, rejecting invented contributions,
+lost routes, or a passage cited to a different Source Article. The fusion
 algorithm and its weights belong to issue 07.
 
 ## Evidence and answers
 
-`EvidencePackage` carries the execution record, selected `SourceEvidence`,
+`EvidencePackage` carries the execution record, selected `SourceArticleEvidence`,
 relevant `CoverageDescription`, optional monthly coverage, and
 `AppliedContextLimits`. The execution record preserves the pre-fusion candidates
 even when selection omits passages. Each Source Article appears once, with a

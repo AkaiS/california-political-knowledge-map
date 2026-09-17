@@ -97,3 +97,17 @@ assembler must perform Story-body verification and measure the actual Chat Agent
 context before constructing them. The contracts do not implement retrieval,
 fusion, coverage loading, or log emission; those remain with their assigned
 implementation tickets. No acceptance criterion is blocked.
+
+2026-09-17: The two-axis code review found four contract defects. Branch-local
+scores remained directly comparable and assignable as fusion scores; graph
+claims could omit provenance or use the wrong decision grain; a passage could
+cite a different Source Article from its candidate; and `SourceEvidence` did not
+use the domain's full Source Article name. The fixes add an opaque
+`BranchScore`, require claim provenance at the chunk or article decision grain,
+carry Source Article identity on branch candidates through fusion and evidence
+validation, and rename the grouping type to `SourceArticleEvidence`.
+
+The focused contract suite now passes 46 tests. The full deterministic suite,
+`uv run --no-sync pytest -q`, passes 1002 tests with the same two existing
+provider warnings. `ty check`, `ruff check`, and `git diff --check` pass. All
+acceptance criteria remain satisfied, so the ticket retains `completed`.

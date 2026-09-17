@@ -10,6 +10,7 @@ from pydantic import (
     Field,
     FiniteFloat,
     HttpUrl,
+    RootModel,
     StringConstraints,
     model_validator,
 )
@@ -25,6 +26,12 @@ type Count = Annotated[int, Field(strict=True, ge=0)]
 
 class RetrievalValue(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class BranchScore(RootModel[FiniteFloat]):
+    """An opaque branch-local score that has no cross-branch ordering."""
+
+    model_config = ConfigDict(frozen=True)
 
 
 class RetrievalBranch(StrEnum):
@@ -65,6 +72,23 @@ class GraphClaim(RetrievalValue):
     source_article_ids: tuple[NonemptyText, ...] = ()
     needs_review: bool = False
 
+    @model_validator(mode="after")
+    def require_provenance_at_the_claims_decision_grain(self) -> Self:
+        article_level = self.relationship_type in {
+            "ABOUT_TOPIC",
+            "DISCUSSES_TOPIC",
+        }
+        if article_level:
+            if not self.source_article_ids or self.chunk_ids:
+                raise ValueError(
+                    "an article-level topic claim must name only its asserting Source Articles"
+                )
+        elif not self.chunk_ids or self.source_article_ids:
+            raise ValueError(
+                "a chunk-level claim must name only its asserting Article Chunks"
+            )
+        return self
+
 
 class RetrievalRoute(RetrievalValue):
     kind: Literal[
@@ -84,11 +108,12 @@ class BranchRanking(RetrievalValue):
 
     branch: RetrievalBranch
     rank: Rank
-    score: FiniteFloat | None
+    score: BranchScore | None
 
 
 class BranchCandidate(RetrievalValue):
     chunk_id: NonemptyText
+    source_article_id: NonemptyText
     ranking: BranchRanking
     routes: Annotated[tuple[RetrievalRoute, ...], Field(min_length=1)]
 
@@ -119,7 +144,15 @@ class FusedCandidate(RetrievalValue):
     def contributions_refer_to_one_chunk(self) -> Self:
         if any(candidate.chunk_id != self.chunk_id for candidate in self.contributions):
             raise ValueError("all contributions must refer to the same Article Chunk")
+        if len({candidate.source_article_id for candidate in self.contributions}) != 1:
+            raise ValueError(
+                "all contributions must refer to the same Source Article"
+            )
         return self
+
+    @property
+    def source_article_id(self) -> str:
+        return self.contributions[0].source_article_id
 
 
 class SuccessfulBranch(RetrievalValue):
@@ -307,7 +340,7 @@ class VerifiedPassage(RetrievalValue):
         return self
 
 
-class SourceEvidence(RetrievalValue):
+class SourceArticleEvidence(RetrievalValue):
     citation: SourceArticleCitation
     passages: Annotated[tuple[VerifiedPassage, ...], Field(min_length=1)]
 
@@ -318,6 +351,13 @@ class SourceEvidence(RetrievalValue):
             for passage in self.passages
         ):
             raise ValueError("every passage must belong to its cited Source Article")
+        if any(
+            passage.candidate.source_article_id != self.citation.source_article_id
+            for passage in self.passages
+        ):
+            raise ValueError(
+                "every passage candidate must come from its cited Source Article"
+            )
         return self
 
 
@@ -337,7 +377,7 @@ class AppliedContextLimits(RetrievalValue):
 
 class EvidencePackage(RetrievalValue):
     execution: RetrievalExecutionResult
-    sources: tuple[SourceEvidence, ...]
+    sources: tuple[SourceArticleEvidence, ...]
     coverage: CoverageDescription
     monthly_coverage: tuple[MonthlyCoverage, ...] = ()
     context: AppliedContextLimits
