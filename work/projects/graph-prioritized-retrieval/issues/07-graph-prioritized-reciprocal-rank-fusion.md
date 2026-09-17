@@ -96,3 +96,15 @@ All acceptance criteria are satisfied. No quality tuning is claimed. These
 limits select among retained candidates; database work remains bounded by the
 branches' own query limits and deadline. Evidence Assembly and coordinator
 wiring remain tickets 08 and 09.
+
+2026-09-17: Independent code review against
+`7b51f92c5573263cbee221e6bebbed31ad1420f3` found no specification gaps, scope
+creep, incorrect behavior, or documented-standard violations. The Standards
+axis raised one judgement-call `Repeated Switches` smell for the adjacent
+branch-to-weight and branch-to-limit mappings in `core/fusion.py`. No change was
+made: the two mappings hold different configuration dimensions, remain
+co-located in one function, and extracting an accessor would add indirection
+without removing the required public per-branch fields or reducing the edits
+needed to introduce another retrieval branch. The finding is therefore
+dispositioned as not actionable. Focused contract tests and the final project
+suite passed; the review closed with no unresolved valid findings.
