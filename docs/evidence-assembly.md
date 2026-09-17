@@ -18,8 +18,9 @@ Construct the assembler with two asynchronous storage functions:
 Storage adapters must convert database or transport failures to
 `EvidenceHydrationError`. Missing rows may raise `LookupError`; operating-system
 and value-validation errors also become assembly failures. Cancellation and
-unexpected programming errors propagate. No storage calls retry here. Concrete
-database wiring and the retrieval deadline belong to coordinator ticket 09.
+unexpected programming errors propagate. No storage calls retry here. The
+[retrieval coordinator](retrieval-pipeline.md) supplies concrete database wiring
+and the retrieval deadline.
 
 The assembler requires the hydrated wording to occur exactly in `Story.content`.
 It records the first exact occurrence as half-open character offsets and checks

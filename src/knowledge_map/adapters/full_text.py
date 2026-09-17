@@ -183,7 +183,11 @@ class Neo4jFullTextRetriever:
             await result.consume()
 
     async def retrieve(
-        self, request: RetrievalRequest, *, deadline: float
+        self,
+        request: RetrievalRequest,
+        *,
+        deadline: float,
+        keywords: tuple[str, ...] | None = None,
     ) -> SuccessfulBranch | FailedBranch:
         attempts = 0
         try:
@@ -191,7 +195,9 @@ class Neo4jFullTextRetriever:
                 raise TimeoutError
             async with asyncio.timeout_at(deadline):
                 attempts = 1
-                outcome = await self._retrieve(request, deadline=deadline)
+                outcome = await self._retrieve(
+                    request, deadline=deadline, keywords=keywords
+                )
                 if deadline <= asyncio.get_running_loop().time():
                     raise TimeoutError
                 return outcome
@@ -217,9 +223,14 @@ class Neo4jFullTextRetriever:
             )
 
     async def _retrieve(
-        self, request: RetrievalRequest, *, deadline: float
+        self,
+        request: RetrievalRequest,
+        *,
+        deadline: float,
+        keywords: tuple[str, ...] | None,
     ) -> SuccessfulBranch | FailedBranch:
-        keywords = extract_full_text_keywords(request.rewrite)
+        if keywords is None:
+            keywords = extract_full_text_keywords(request.rewrite)
         if not keywords:
             return _failed(
                 RetrievalFailureLog(

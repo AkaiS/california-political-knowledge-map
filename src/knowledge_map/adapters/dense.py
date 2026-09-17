@@ -10,6 +10,7 @@ from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
 from pydantic_ai import Embedder
 from pydantic_ai.exceptions import ModelAPIError
+from pydantic_ai.usage import RunUsage
 
 from knowledge_map.adapters.embedding import get_embedding_embedder
 from knowledge_map.config import settings
@@ -65,7 +66,11 @@ class Neo4jDenseRetriever:
         self.database = database
 
     async def retrieve(
-        self, request: RetrievalRequest, *, deadline: float
+        self,
+        request: RetrievalRequest,
+        *,
+        deadline: float,
+        usage: RunUsage | None = None,
     ) -> SuccessfulBranch | FailedBranch:
         attempts = 0
         stage: Literal["preparation", "execution"] = "preparation"
@@ -74,7 +79,11 @@ class Neo4jDenseRetriever:
                 raise TimeoutError
             async with asyncio.timeout_at(deadline):
                 attempts = 1
+                if usage is not None:
+                    usage.requests += 1
                 embedding = await self.embedder.embed_query(request.rewrite.question)
+                if usage is not None:
+                    usage.incr(embedding.usage)
                 if len(embedding.embeddings) != 1:
                     raise ValueError("Expected one query embedding")
                 vector = embedding.embeddings[0]

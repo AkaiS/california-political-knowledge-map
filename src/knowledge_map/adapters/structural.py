@@ -167,7 +167,11 @@ class Neo4jStructuralRetriever:
         self.database = database
 
     async def retrieve(
-        self, request: RetrievalRequest, *, deadline: float
+        self,
+        request: RetrievalRequest,
+        *,
+        deadline: float,
+        usage: RunUsage | None = None,
     ) -> SuccessfulBranch | FailedBranch:
         stage: Literal[
             "schema_filtering",
@@ -181,6 +185,7 @@ class Neo4jStructuralRetriever:
             "hop_bound",
         ] = "schema_filtering"
         attempts = 0
+        total_usage = usage
         usage = RunUsage()
         stage_start = 0
         validation = ConstructionValidation(filtered_catalog, "schema_filtering")
@@ -328,6 +333,8 @@ class Neo4jStructuralRetriever:
         except (KeyError, TypeError, ValueError):
             kind = "hydration" if stage == "hydration" else "validation"
         finally:
+            if total_usage is not None:
+                total_usage.incr(usage)
             if attempts:
                 attempts = max(1, usage.requests - stage_start)
             logger.info(

@@ -16,7 +16,8 @@ baseline = fuse_candidates(execution, config=config, unweighted_baseline=True)
 `FusionConfig` construction and JSON validation, and `fuse_candidates`, are the
 public test seams recorded before implementation under the maintainer's advance
 confirmation. Tests supply the existing retrieval contracts. Fusion needs no
-model, database, or clock dependency. The coordinator consumes it in ticket 09.
+model, database, or clock dependency. The [retrieval coordinator](retrieval-pipeline.md)
+consumes it before Evidence Assembly.
 
 ## Configuration
 

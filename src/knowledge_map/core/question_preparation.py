@@ -8,6 +8,7 @@ from typing import Literal, cast
 import httpx
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+from pydantic_ai.usage import RunUsage
 
 from knowledge_map.core.exceptions import is_retryable_transport_failure
 from knowledge_map.schemas import ModelDeployment
@@ -91,9 +92,11 @@ class QuestionPreparation:
         assess_question_policy_and_coverage: Callable[
             [QueryRewriteProposal], Awaitable[QuestionAssessment]
         ],
+        usage: RunUsage | None = None,
     ) -> None:
         self._original_question = original_question
         self._rewriter = rewriter
+        self._usage = usage
         self._assess_question_policy_and_coverage = assess_question_policy_and_coverage
         self._pending: QueryRewrite | None = None
         self._state: Literal["ready", "preparing", "awaiting_approval", "finished"] = (
@@ -122,7 +125,8 @@ class QuestionPreparation:
                             rejection.model_dump() for rejection in self._rejections
                         ],
                     }
-                )
+                ),
+                usage=self._usage,
             )
         except (ModelAPIError, httpx.TransportError) as error:
             temporary_request_status = isinstance(

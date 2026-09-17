@@ -151,9 +151,7 @@ class FusedCandidate(RetrievalValue):
         if any(candidate.chunk_id != self.chunk_id for candidate in self.contributions):
             raise ValueError("all contributions must refer to the same Article Chunk")
         if len({candidate.source_article_id for candidate in self.contributions}) != 1:
-            raise ValueError(
-                "all contributions must refer to the same Source Article"
-            )
+            raise ValueError("all contributions must refer to the same Source Article")
         return self
 
     @property
@@ -226,6 +224,19 @@ class RetrievalExecutionResult(RetrievalValue):
             for outcome in self.outcomes
             if outcome.status == "succeeded"
         }
+
+    @property
+    def failure_disclosures(self) -> tuple[str, ...]:
+        messages = {
+            RetrievalBranch.STRUCTURAL: "Graph connections matching the question could not be searched.",
+            RetrievalBranch.FULL_TEXT: "Full-text retrieval could not be completed.",
+            RetrievalBranch.DENSE: "Dense retrieval could not be completed.",
+        }
+        return tuple(
+            message
+            for branch, message in messages.items()
+            if branch in self.failed_branches
+        )
 
 
 class RetrievalFailureLog(RetrievalValue):
@@ -435,21 +446,19 @@ class EvidencePackage(RetrievalValue):
 
     @property
     def failure_disclosures(self) -> tuple[str, ...]:
-        messages = {
-            RetrievalBranch.STRUCTURAL: "Graph connections matching the question could not be searched.",
-            RetrievalBranch.FULL_TEXT: "Full-text retrieval could not be completed.",
-            RetrievalBranch.DENSE: "Dense retrieval could not be completed.",
-        }
-        return tuple(
-            message
-            for branch, message in messages.items()
-            if branch in self.failed_branches
-        )
+        return self.execution.failure_disclosures
 
 
 class EvidenceAssemblyFailure(RetrievalValue):
     outcome: Literal["assembly_failed"] = "assembly_failed"
     execution: RetrievalExecutionResult
+
+    @property
+    def failure_disclosures(self) -> tuple[str, ...]:
+        return (
+            *self.execution.failure_disclosures,
+            "Grounding Evidence could not be assembled and verified.",
+        )
 
 
 class SourceRelevanceNote(RetrievalValue):
