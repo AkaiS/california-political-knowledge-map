@@ -1,0 +1,12 @@
+{
+  "collection_id": "calmatters",
+  "name": "CalMatters",
+  "kind": "publication",
+  "description": "CalMatters reporting on California politics and public policy. Source Articles and their Article Chunks support finding reporting and reported connections among political actors, organizations, and measures.",
+  "limitations": [
+    "This is a selected collection of reporting. Completeness against all CalMatters articles is unknown.",
+    "Reported connections are not a complete record of roll calls, campaign finance, lobbying, bill text, or ballot information.",
+    "Publication dates describe the reporting, not the dates of every event it discusses. Missing reporting or graph connections cannot establish that an event did not occur."
+  ],
+  "date_basis": "publication_date"
+}

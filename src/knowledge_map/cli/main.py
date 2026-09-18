@@ -29,10 +29,15 @@ from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
 from knowledge_map.utils.deployments import deployment_from_environment
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
-from knowledge_map.utils.reachability import ModelEndpoint, check_endpoints
+from knowledge_map.utils.reachability import (
+    ModelEndpoint,
+    check_endpoints,
+    model_reachability_check_skipped,
+)
 
 
 CLI_COMMAND_HELP = {
+    "chat": "Start the local retrieval chat in your browser",
     "ingest": "Run batch ingestion of unprocessed articles",
     "clear": "Clear all nodes and relationships from Neo4j",
     "analyze": "Inspect and list distinct node labels in the Neo4j database",
@@ -55,10 +60,6 @@ CLI_COMMAND_HELP = {
     "telemetry": "Manage the Logfire credential this project runs on",
 }
 
-
-# Set to bypass the Model Reachability Check without editing a command line,
-# for the deterministic test suite and for an operator who knows better.
-SKIP_MODEL_CHECK_ENV = "SKIP_MODEL_REACHABILITY_CHECK"
 
 # The local endpoints each command's agents reach. Keyed like CLI_COMMAND_HELP,
 # so a command absent here is one that runs no agent at all.
@@ -102,7 +103,7 @@ def enforce_model_reachability(parsed_args) -> None:
 
     if getattr(parsed_args, "skip_model_check", False):
         return
-    if os.environ.get(SKIP_MODEL_CHECK_ENV, "").strip():
+    if model_reachability_check_skipped():
         return
 
     required = required_model_endpoints(parsed_args)
@@ -293,6 +294,11 @@ def main(args=None):
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
+    chat_parser = subparsers.add_parser("chat", help=CLI_COMMAND_HELP["chat"])
+    chat_parser.add_argument(
+        "--port", type=int, default=7932, help="Local chat port (default: 7932)"
+    )
+
     # Attached only to gated commands, so the flag never appears on a command
     # that reaches no model and would silently ignore it.
     model_check_parser = argparse.ArgumentParser(add_help=False)
@@ -430,6 +436,19 @@ def main(args=None):
     setup_logging()
 
     enforce_model_reachability(parsed_args)
+
+    if parsed_args.action == "chat":
+        import uvicorn
+
+        from knowledge_map.web import create_app
+
+        browser_url = f"http://127.0.0.1:{parsed_args.port}"
+        uvicorn.run(
+            create_app(browser_url=browser_url),
+            host="127.0.0.1",
+            port=parsed_args.port,
+        )
+        return
 
     if parsed_args.action == "ingest":
         try:

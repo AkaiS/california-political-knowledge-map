@@ -66,6 +66,14 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
 
+- The developer surface is a local, single-user browser chat built from
+  Pydantic AI's stock frontend and a deterministic adapter around the existing
+  Chat Session. The completed Local Retrieval Chat project records the command,
+  approval and correction flow, evidence presentation, startup boundary, and
+  process-local lifecycle. See
+  [10-developer-retrieval-surface.md](issues/10-developer-retrieval-surface.md)
+  and the [Local Retrieval Chat PRD](../../projects/local-retrieval-chat/PRD.md).
+
 - Retrieval and answer contracts implemented on 2026-09-17: Pydantic values
   preserve approved inputs, branch-local rankings, distinct branch outcomes,
   graph claims, Source Article citations, verified-passage representations,

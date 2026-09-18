@@ -28,6 +28,7 @@ def get_embedding_embedder(
     *,
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> Embedder:
     """Build the Embedder for the embedding stage, on the retrying HTTP client.
 
@@ -50,7 +51,7 @@ def get_embedding_embedder(
         base_url=resolve_embedding_base_url(),
         # llama-server does not check it, but the SDK refuses to build without one.
         api_key="llama.cpp",
-        http_client=build_retrying_client(transport_settings, transport),
+        http_client=http_client or build_retrying_client(transport_settings, transport),
         max_retries=0,
     )
     provider = OpenAIProvider(openai_client=openai_client)

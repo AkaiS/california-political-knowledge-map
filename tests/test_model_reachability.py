@@ -6,12 +6,12 @@ import httpx
 import pytest
 
 from knowledge_map.cli.main import (
-    SKIP_MODEL_CHECK_ENV,
     enforce_model_reachability,
     main,
     required_model_endpoints,
 )
 from knowledge_map.utils.reachability import (
+    SKIP_MODEL_CHECK_ENV,
     EndpointReachability,
     ModelEndpoint,
     check_endpoint,
@@ -159,9 +159,7 @@ def test_selecting_openrouter_drops_only_the_chat_endpoint():
     openrouter = _namespace(action="ingest", deployment="openrouter")
 
     assert required_model_endpoints(local) == CHAT_AND_EMBEDDING
-    assert required_model_endpoints(openrouter) == frozenset(
-        {ModelEndpoint.EMBEDDING}
-    )
+    assert required_model_endpoints(openrouter) == frozenset({ModelEndpoint.EMBEDDING})
 
 
 # --- the gate ---------------------------------------------------------------
@@ -250,9 +248,7 @@ def test_update_sources_stops_before_touching_the_database(
     def fail(*args, **kwargs):
         raise AssertionError("discovery must not start")
 
-    monkeypatch.setattr(
-        "knowledge_map.cli.main.ListingPageDiscoveryService", fail
-    )
+    monkeypatch.setattr("knowledge_map.cli.main.ListingPageDiscoveryService", fail)
 
     with pytest.raises(SystemExit) as exit_info:
         main(["update-sources"])

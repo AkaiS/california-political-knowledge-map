@@ -45,11 +45,13 @@ class RetrievalGuidance(RetrievalValue):
 
 def get_chat_agent(
     deployment: ModelDeployment | None = None,
+    *,
+    cache_model: bool = True,
 ) -> Agent[None, QuestionAssessment]:
     return cast(
         Agent[None, QuestionAssessment],
         create_agent(
-            get_chat_model(deployment or DEFAULT_LOCAL_CHAT_MODEL),
+            get_chat_model(deployment or DEFAULT_LOCAL_CHAT_MODEL, cache=cache_model),
             name="chat_agent",
             output_type=QuestionAssessment,
             retries=0,

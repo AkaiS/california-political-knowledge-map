@@ -67,13 +67,18 @@ Rejected wording has not been approved for retrieval.
 
 def get_query_rewriter(
     deployment: ModelDeployment | None = None,
+    *,
+    cache_model: bool = True,
 ) -> Agent[None, QueryRewriteProposal]:
     """Construct the Query Rewriter through the shared observable factory."""
 
     return cast(
         Agent[None, QueryRewriteProposal],
         create_agent(
-            get_chat_model(deployment or query_rewriter_deployment_from_environment()),
+            get_chat_model(
+                deployment or query_rewriter_deployment_from_environment(),
+                cache=cache_model,
+            ),
             name="query_rewriter",
             output_type=QueryRewriteProposal,
             instructions=QUERY_REWRITER_INSTRUCTIONS,

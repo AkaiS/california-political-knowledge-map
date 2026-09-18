@@ -1095,6 +1095,7 @@ def get_chat_model(
     transport_settings: TransportSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     openrouter_retry_hooks: OpenRouterRetryHooks | None = None,
+    cache: bool = True,
 ) -> OpenAIChatModel:
     """Get a chat model from a typed deployment or a configured local path.
 
@@ -1105,6 +1106,7 @@ def get_chat_model(
     Typed local deployments are memoized by their effective identity and an
     injected transport, so equivalent agents share one client and connection
     pool without allowing distinct mock transports to leak into one another.
+    Callers that own and close their client's lifetime use ``cache=False``.
     """
 
     # Instrument Pydantic AI and HTTPX before constructing either provider's
@@ -1128,12 +1130,13 @@ def get_chat_model(
                     openrouter_retry_hooks,
                 )
             key = (default_model, transport)
-            model = _models.get(key)
+            model = _models.get(key) if cache else None
             if model is None:
                 model = _build_openrouter_model(
                     default_model, None, transport
                 )
-                _models[key] = model
+                if cache:
+                    _models[key] = model
             return model
         if default_model.kind is not DeploymentKind.LOCAL:
             raise ValueError(f"unsupported chat deployment kind: {default_model.kind}")
@@ -1142,7 +1145,7 @@ def get_chat_model(
         )
         request_settings = default_model.request_settings
         key = (default_model, transport)
-        model = _models.get(key)
+        model = _models.get(key) if cache else None
         if model is None:
             model = _build_model(
                 default_model.model,
@@ -1151,7 +1154,8 @@ def get_chat_model(
                 None,
                 transport,
             )
-            _models[key] = model
+            if cache:
+                _models[key] = model
         return model
 
     base_url = resolve_chat_base_url()
@@ -1173,10 +1177,11 @@ def get_chat_model(
         ),
     )
     key = (deployment, None)
-    model = _models.get(key)
+    model = _models.get(key) if cache else None
     if model is None:
         model = _build_model(
             deployment.model, base_url, deployment.request_settings, None, None
         )
-        _models[key] = model
+        if cache:
+            _models[key] = model
     return model

@@ -13,6 +13,6 @@ import pytest
 def skip_model_reachability_check(monkeypatch):
     # Imported lazily: the CLI module pulls in the whole adapter stack, and
     # collection should not pay for that in every test session.
-    from knowledge_map.cli.main import SKIP_MODEL_CHECK_ENV
+    from knowledge_map.utils.reachability import SKIP_MODEL_CHECK_ENV
 
     monkeypatch.setenv(SKIP_MODEL_CHECK_ENV, "1")
