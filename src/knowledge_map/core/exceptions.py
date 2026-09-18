@@ -13,7 +13,10 @@ from knowledge_map.adapters.policy_areas import (
 
 class PipelineException(Exception):
     """Base exception for pipeline execution issues."""
-    def __init__(self, message: str, component: str, original_exception: Exception) -> None:
+
+    def __init__(
+        self, message: str, component: str, original_exception: Exception
+    ) -> None:
         self.component = component
         self.original_exception = original_exception
         super().__init__(message)
@@ -21,7 +24,6 @@ class PipelineException(Exception):
 
 class PipelineRateLimitError(PipelineException):
     """Raised when a rate limit is hit and cannot be retried or exceeds cap."""
-    pass
 
 
 class PipelineConnectivityError(PipelineException):
@@ -31,12 +33,11 @@ class PipelineConnectivityError(PipelineException):
     def retryable(self) -> bool:
         """Whether the original provider failure can succeed on a later run."""
 
-        return _is_retryable_transport_failure(self.original_exception)
+        return is_retryable_transport_failure(self.original_exception)
 
 
 class PipelineLockError(Exception):
     """Raised when a pipeline lock file exists or is written."""
-    pass
 
 
 def classify_exception(e: Exception) -> bool:
@@ -89,18 +90,20 @@ def _final_status_code(error: Exception) -> int | None:
     return None
 
 
-_RETRYABLE_SERVER_STATUS_CODES = frozenset({
-    500,
-    502,
-    503,
-    504,
-    524,
-    529,
-})
+_RETRYABLE_SERVER_STATUS_CODES = frozenset(
+    {
+        500,
+        502,
+        503,
+        504,
+        524,
+        529,
+    }
+)
 
 
-def _is_retryable_transport_failure(error: Exception) -> bool:
-    """Classify typed failures that may succeed when the Story is retried."""
+def is_retryable_transport_failure(error: Exception) -> bool:
+    """Classify typed transport failures that may succeed on a later request."""
 
     if isinstance(error, httpx.TransportError):
         return True

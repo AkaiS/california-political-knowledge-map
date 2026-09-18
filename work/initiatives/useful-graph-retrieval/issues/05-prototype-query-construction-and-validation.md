@@ -1,6 +1,6 @@
 # Prototype query construction and validation against the ontology
 
-Labels: wayfinder:prototype, ready-for-human
+Labels: wayfinder:prototype, completed
 Parent: [Useful Graph Retrieval](../MAP.md)
 Inputs: [Target question set](02-target-question-set.md), [Retrievable scope and answer policy](04-retrievable-subgraph-now.md), [Current graph inventory](../research/04-graph-inventory-2026-09-08.md)
 
@@ -71,9 +71,60 @@ coverage limits and defects already present in the data:
 The target questions remain unchanged. Label what each experiment can establish
 from current evidence, including cases where only partial reporting is available.
 
-## Blocking
+## Answer
 
-- Blocks: Decide the retrieval agent topology and orchestration.
+Accepted on 2026-09-14. The retrieval layer will not ask a model to emit
+free-form Cypher. It will use the atomic semantic construction shape preserved
+at `511eaeee`, then compile and validate Cypher in code.
+
+The selected boundary is:
+
+1. A model filters the persisted semantic schema to the labels, relationships,
+   and filterable properties relevant to the question.
+2. A model selects typed, compiler-owned semantic pieces and wires their
+   occurrences through typed contracts. The model does not invent identifiers,
+   variables, parameter names, projections, provenance paths, or Cypher.
+3. A positional binder supplies question values. Code validates those values
+   against the compiled slot contract and resolves stored entities.
+4. The compiler owns legal graph shapes, Cypher generation, Grounding Evidence
+   traversal, Source Article lookup, and result hydration.
+
+Keep the Bill Designation rule from `511eaeee`. Before entity resolution, code
+passes every single `Bill.name` binding through the ingestion-side
+`parse_bill_designation` contract. It normalizes `SB N`, `AB N`, `Senate Bill
+N`, and `Assembly Bill N`; rejects other phrases; and uses the existing bounded
+retry with the rejected value, accepted forms, and the designation already
+present in the question. Questions with several Bill-name slots need an explicit
+multi-value assignment contract rather than assigning the first designation to
+every slot.
+
+Use typed contracts and deterministic checks for validation, with specific
+failures returned to the existing bounded stage retry. Do not add a general
+model critic to query construction. In the generated-Cypher comparison, the
+critic independently rejected no initial query beyond the deterministic checks.
+Issue 07 subsequently placed this constructor in the conditional structural
+branch of a fixed concurrent pipeline, retained its bounded stage correction,
+and rejected an orchestration-wide sufficiency loop.
+
+The [five-experiment comparison](../query-construction/atomic-five-experiment-comparison.md)
+records the final comparison, costs, contamination audit, rejected alternatives,
+and remaining semantic-completeness work. The focused
+[Bill-binding note](../query-construction/bill-binding-experiment.md) records the
+accepted delta. The 25 questions are development examples, not a held-out Gold
+Set, so this decision selects an implementation direction without claiming that
+the current prototype generalizes or is production-ready.
+
+The prototype source remains on its experiment branches and tag. This issue
+imports only the findings and decision into `main`; implementation belongs to
+the retrieval PRD that consumes this initiative.
+
+## Handoff
+
+- The completed issue 07 topology uses this typed semantic constructor for
+  Relational Questions, alongside concurrent full-text and dense retrieval. See
+  [the accepted topology](07-retrieval-agent-topology.md).
+- Production implementation belongs to the
+  [Graph-Prioritized Retrieval PRD](../../../projects/graph-prioritized-retrieval/PRD.md).
 
 ## Comments
 
@@ -250,3 +301,18 @@ preserves the three later attempts alongside the original three, with exact
 source blobs and checksums. The later findings each include three worked
 examples. No production implementation is adopted and the two failed-gate
 experiments were not combined.
+
+### 2026-09-14: Select the atomic semantic construction direction
+
+Five focused branches tested changes to the deterministic-hydration baseline.
+The [comparison](../query-construction/atomic-five-experiment-comparison.md)
+selects `511eaeee` as the primary prototype shape and rejects the NewsArticle
+boundary, peer-prompt, attached-reporting-prompt, and vote-catalog changes.
+
+The selected branch recovered the failed Bill binding without changing another
+case's classification or failure stage. It applies the repository's existing
+Bill Designation parser before graph resolution and adds no model or graph call.
+The annotated tag
+`experiments/query-construction/primary-atomic-shape-2026-09-14` preserves the
+prototype. Its source and tests stay out of `main`; only the findings and the
+decision recorded in this issue move forward.

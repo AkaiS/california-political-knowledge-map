@@ -1,9 +1,17 @@
 # Questions grounded in the populated graph
 
-Read the [consolidated experiment findings](findings.md) for all six attempts,
-with end-to-end scores separated from binding controls and diagnostics.
+Read the [consolidated experiment findings](findings.md) for the first six
+attempts, with end-to-end scores separated from binding controls and
+diagnostics. The later
+[five-experiment comparison](atomic-five-experiment-comparison.md) selects the
+atomic semantic construction shape at `511eaeee`; the
+[Bill-binding note](bill-binding-experiment.md) records its accepted delta.
 
-Use these questions for the next [query-construction experiment](../issues/05-prototype-query-construction-and-validation.md). All 25 have an executed reference query with nonempty results and resolvable Grounding Evidence, checked on 2026-09-08 against the local graph of 98 NewsArticles and 2,407 Chunks.
+These 25 questions supported the query-construction experiments for
+[issue 05](../issues/05-prototype-query-construction-and-validation.md). All 25
+have an executed reference query with nonempty results and resolvable Grounding
+Evidence, checked on 2026-09-08 against the local graph of 98 NewsArticles and
+2,407 Chunks.
 
 The questions preserve all eleven families in the [target question set](../question-set.md), plus its later committee category. They make the subjects, session, and reporting scope concrete. The original target set still records the broader product ambitions and its Declined and Deferred examples. Those examples do not belong in this positive construction batch.
 
@@ -25,8 +33,8 @@ single-call alternative on the same 25 questions.
 
 The [report archive](reports/README.md) preserves the raw runs, corrected
 assessments, replays, and source-commit provenance. The
-[next-experiment plan](next-experiment.md) focuses on compiler-assigned pattern
-identifiers and retrieval-time entity binding.
+[next-experiment plan](next-experiment.md) is retained as the historical plan
+that led to compiler-owned identifiers and retrieval-time entity binding.
 
 ## Preserved categories and concrete subjects
 

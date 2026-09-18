@@ -245,6 +245,22 @@ _Avoid_: Tag, category, subject, theme; "a topic" as a name for the node
 The Article Chunks loaded into context to support a Retrieval Answer, reached through graph connections or other retrieval such as embedding similarity; a missing extracted relationship does not disqualify relevant source material. Answers derived from graph structure still carry the Chunks behind each element counted, and article-level topic claims reach their Chunks through the Source Article that grounds them.
 _Avoid_: Context, retrieved documents, source text, supporting chunks
 
+**Chat Agent**:
+The conversational agent that receives the person's original question, applies question policy and coverage to the Query Rewrite, obtains approval, invokes retrieval, and presents the Retrieval Answer. It receives the Evidence Assembler's package directly; no separate answering or sufficiency agent sits between them.
+_Avoid_: Retrieval Orchestrator, Answering Agent
+
+**Evidence Assembler**:
+The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups passages by Source Article, supplies verified original wording and relevant coverage limits, and applies the context budget without interpreting or summarizing the evidence.
+_Avoid_: Answering Agent, Evidence Curator, context summarizer
+
+**Relational Question**:
+A question whose answer depends on one or more typed relationships among political entities or measures, including a relationship-constrained comparison, intersection, aggregate, or path. Source or passage discovery about a subject is not relational merely because retrieval follows fixed provenance links when it hydrates the result.
+_Avoid_: Zero-hop question, graph question, Cypher question
+
+**Query Rewrite**:
+The user-approved natural-language restatement that the retrieval pipeline uses in place of the original wording. It makes the requested entities, relationships, scope, and result explicit in the form used by the verified query-construction cases; it does not ask separately for reporting because every retrieval returns Grounding Evidence.
+_Avoid_: Retrieval plan, normalized query, Cypher query
+
 **Retrieval Answer**:
 A selection of relevant sources and original supporting passages presented for the reader to consult, with brief guidance connecting them to the question and stating known limits on what they support. It serves a librarian's role by directing the reader to sources and highlighting disagreements without adjudicating them.
 _Avoid_: Expert verdict, standalone summary

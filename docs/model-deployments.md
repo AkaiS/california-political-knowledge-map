@@ -10,6 +10,17 @@ about the local deployment, not proof that the two behave identically.
 
 The domain glossary in [`CONTEXT.md`](../CONTEXT.md) is the canonical vocabulary.
 
+The Query Rewriter has its own deployment selection. Set
+`QUERY_REWRITER_DEPLOYMENT=local|openrouter` and a nonempty
+`QUERY_REWRITER_MODEL`. `QUERY_REWRITER_BASE_URL` optionally selects a separate
+local chat server; blank uses `LLAMA_CPP_BASE_URL`. These settings do not alter
+the models selected for construction, ingestion, or evaluation. OpenRouter
+rewriting uses the existing key and provider policy, and shared `LLM_*` request
+settings apply. An explicit `ModelDeployment` passed to `get_query_rewriter`
+overrides the rewriter's environment configuration, including its request
+settings. See [question preparation](query-preparation.md) for the approval
+boundary.
+
 ## Choose a deployment
 
 `ca-map eval run <task>` evaluates against OpenRouter by default. Use

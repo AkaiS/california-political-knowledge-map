@@ -1,8 +1,9 @@
 # Define the retrieval and answer contract
 
-Labels: wayfinder:grilling, needs-triage
+Labels: wayfinder:grilling, completed
 Parent: [Useful Graph Retrieval](../MAP.md)
-Blocked by: [Decide the retrieval agent topology and orchestration](07-retrieval-agent-topology.md)
+Inputs: [Accepted retrieval topology and orchestration](07-retrieval-agent-topology.md)
+Implemented by: [Graph-Prioritized Retrieval issue 02](../../../projects/graph-prioritized-retrieval/issues/02-retrieval-execution-and-evidence-contracts.md)
 
 ## Question
 
@@ -32,10 +33,56 @@ delivers what it needs.
 The contract must be renderable by a chat UI with citations without altering the
 retrieval layer beneath it.
 
-## Blocking
+## Input from the topology decision
 
-- Blocks: Prototype graph-aware reranking.
-- Blocks: Decide the developer retrieval surface.
+[Issue 07](07-retrieval-agent-topology.md) closed on 2026-09-16 and supplies the
+following contract requirements:
+
+- Query preparation records a user-approved natural-language Query Rewrite and
+  an internal `relational` route. Rejected rewrites retain the proposed question,
+  route, and user correction. `rewrite_unavailable` stops before retrieval and
+  never falls back to the original wording.
+- Every approved rewrite expects full-text and dense branches. A Relational
+  Question also expects typed structural retrieval. The contract records the
+  expected branches, evidence recovered by each, and failed branches rather
+  than requiring a `complete` or `partial` summary.
+- Each branch retains its ranked candidates before fusion, including Article
+  Chunk identity, branch-local rank and score, route and matched field, and any
+  supporting graph claim. Fused candidates retain every contributing route.
+- A successful branch returning no candidates is distinct from a failed branch.
+  A successful empty structural traversal says that the available graph contains
+  no matching connection; a construction or execution failure says that the
+  connection could not be searched.
+- Every failed branch reaches user-facing disclosure. Structural failure on a
+  Relational Question is the prominent limitation; text-branch failures remain
+  visible but secondary. Detailed failure stage, kind, attempts, and diagnostics
+  stay in logs rather than the answer contract.
+- A deterministic Evidence Assembler verifies original wording, groups passages
+  by Source Article, attaches relevant Coverage Description entries, and applies
+  the context budget. No post-retrieval model or sufficiency loop alters the
+  package before it returns to the Chat Agent.
+- Deferred coverage is explained before approval and again with any evidence
+  recovered. Declined remains a policy outcome, not a retrieval failure.
+
+## Answer
+
+The concrete Pydantic types landed through Graph-Prioritized Retrieval issue 02
+on 2026-09-17. `schemas/retrieval.py` supplies `RetrievalRequest`,
+`RetrievalExecutionResult`, discriminated branch outcomes, `BranchCandidate`,
+`FusedCandidate`, `GraphClaim`, `SourceArticleCitation`, `VerifiedPassage`,
+`CoverageDescription`, `MonthlyCoverage`, `AppliedContextLimits`,
+`EvidencePackage`, `EvidenceAssemblyFailure`, and `RetrievalAnswer`.
+`RetrievalFailureLog` holds operational details separately from answer-facing
+failures. The existing question-preparation types cover approval, rejection,
+Declined and Deferred decisions, and rewrite unavailability.
+
+The [contract documentation](../../../../docs/retrieval-contracts.md) describes
+the fields and validation boundaries. Forty contract tests cover routing,
+candidate provenance, distinct structural outcomes, citations, coverage,
+context limits, failure disclosures, and JSON round trips. The full deterministic
+suite passed 996 tests. The developer retrieval surface may consume these types;
+the remaining branch, fusion, assembler, and Chat Agent tickets implement their
+producers. Retrieval and answer evaluation remains Model Evaluation work.
 
 ## Input from the retrievable subgraph decision
 

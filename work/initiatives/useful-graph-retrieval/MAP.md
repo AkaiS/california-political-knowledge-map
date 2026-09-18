@@ -55,17 +55,45 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
   articles and 2,407 embedded chunks, with all news base labels present. Missing
   stance alignment, funding properties, and complete joined paths, plus
   duplicated Organization IDs, constrain structural retrieval. Ticket 04 is
-  complete and issue 05 can prototype against this observed graph. The parent
-  population task remains open as separate work.
+  complete, and issue 05 used this observed graph for its query-construction
+  prototypes. The parent population task remains open as separate work.
 - The repository's established agent pattern is a Generator/Critic team loop
-  (Selector Healing Pipeline, Coreference Critic). Retrieval either extends
-  that pattern or departs from it deliberately.
+  (Selector Healing Pipeline, Coreference Critic). Retrieval deliberately
+  departs from it: deterministic validation and Evidence Assembly leave no
+  discrete post-retrieval artifact for a general critic to judge.
 
 ## Decisions so far
 
 <!-- one line per closed ticket; zoom the link for the detail the ticket holds -->
 
-- Retrieval modes and indexes settled on 2026-09-08: full-text over names, titles, and chunk text; Article Chunk vectors; typed traversal. Combine and deduplicate chunks while retaining provenance, then group selected passages by source. Issue 07 owns mode selection and issue 09 owns shared ranking. Add three full-text indexes and ten non-unique base-label ID indexes; retain chunk vector and token lookup indexes. External-identifier implementation and Policy Area vectors are deferred. See [06-retrieval-modes-and-index-inventory.md](issues/06-retrieval-modes-and-index-inventory.md).
+- Retrieval and answer contracts implemented on 2026-09-17: Pydantic values
+  preserve approved inputs, branch-local rankings, distinct branch outcomes,
+  graph claims, Source Article citations, verified-passage representations,
+  coverage, context limits, and failure disclosures. Operational diagnostics
+  remain separate from answer-facing failures. See
+  [08-retrieval-and-answer-contract.md](issues/08-retrieval-and-answer-contract.md)
+  and the [contract documentation](../../../docs/retrieval-contracts.md).
+
+- Query construction settled on 2026-09-14: models filter the semantic schema,
+  select and wire typed compiler-owned pieces, and bind positional values; code
+  owns validation, Cypher, Grounding Evidence traversal, Source Article lookup,
+  and result hydration. Bill-name values use the shared Bill Designation parser
+  before entity resolution. Do not use free-form model-generated Cypher or a
+  general query-construction critic. Prototype source remains on the experiment
+  branches and tag; only the findings and decision move into `main`. See
+  [05-prototype-query-construction-and-validation.md](issues/05-prototype-query-construction-and-validation.md).
+
+- Retrieval topology settled on 2026-09-16: a stronger Query Rewriter produces
+  a user-approved Query Rewrite and an internal relational route. Full-text and
+  dense retrieval always run concurrently; a Relational Question adds the typed
+  structural constructor selected at `511eaeee`. Weighted reciprocal-rank fusion
+  favors structural retrieval, then a deterministic Evidence Assembler returns
+  provenance-rich evidence to the original Chat Agent. There is no planner,
+  general critic, post-retrieval model, or sufficiency loop. See
+  [07-retrieval-agent-topology.md](issues/07-retrieval-agent-topology.md) and the
+  [Graph-Prioritized Retrieval PRD](../../projects/graph-prioritized-retrieval/PRD.md).
+
+- Retrieval modes and indexes settled on 2026-09-08: full-text over names, titles, and chunk text; Article Chunk vectors; typed traversal. Combine and deduplicate chunks while retaining provenance, then group selected passages by source. Full-text and dense retrieval run on every approved rewrite; relational rewrites add typed traversal. Issue 09 tunes weighted reciprocal-rank fusion. Add three full-text indexes and ten non-unique base-label ID indexes; retain chunk vector and token lookup indexes. External-identifier implementation and Policy Area vectors are deferred. See [06-retrieval-modes-and-index-inventory.md](issues/06-retrieval-modes-and-index-inventory.md).
 
 - Retrievable scope settled against the 2026-09-08 inventory: source discovery through graph and embeddings, librarian-style source presentation, explicit partial evidence and coverage limits, and collection-level Coverage Descriptions with monthly detail on demand. Missing properties, duplicate identities, and empty joined paths constrain structural answers. See [04-retrievable-subgraph-now.md](issues/04-retrievable-subgraph-now.md).
 
