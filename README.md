@@ -47,9 +47,14 @@ the HTML is cached. This is not an offline frontend bundle.
 
 Enter one political question to receive a Query Rewrite Proposal. Deferred
 questions include the coverage limit and the recoverable portion; Declined
-questions and unavailable rewrites end without approval. This slice stops at
-the proposal. Approval, corrections, and answer retrieval are connected by the
-following Local Retrieval Chat tickets.
+questions and unavailable rewrites end without approval. Approving the proposal
+runs retrieval once. Search details shows the search in progress, then expands
+to show retrieval routes, branch ranks, graph claims, coverage, and branch
+outcomes. The answer presents numbered Source Article links and verified
+passages, with Deferred limits and branch failures kept visible. Candidate
+wording and detailed failure diagnostics are excluded from Search details.
+Rewrite corrections and conversation cleanup are connected by the following
+Local Retrieval Chat ticket.
 
 Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
 defaults to `document_store.db`, and a reachable Neo4j configured with

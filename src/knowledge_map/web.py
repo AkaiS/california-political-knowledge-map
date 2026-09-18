@@ -2,12 +2,18 @@
 
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import uuid4
 
 from fastapi import FastAPI
 from pydantic import ValidationError
-from pydantic_ai.ui.vercel_ai.request_types import SubmitMessage, TextUIPart
+from pydantic_ai.ui.vercel_ai.request_types import (
+    SubmitMessage,
+    TextUIPart,
+    ToolApprovalResponded,
+    ToolApprovalRespondedPart,
+)
 from pydantic_ai.ui.vercel_ai.response_types import (
     BaseChunk,
     DoneChunk,
@@ -18,22 +24,34 @@ from pydantic_ai.ui.vercel_ai.response_types import (
     TextStartChunk,
     ToolApprovalRequestChunk,
     ToolInputAvailableChunk,
+    ToolOutputAvailableChunk,
 )
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
+from knowledge_map.chat_presentation import render_answer, search_details
 from knowledge_map.chat_startup import (
     ChatDependencies,
     chat_dependencies,
     new_chat_session,
 )
 from knowledge_map.schemas.query_preparation import QuestionPreparationResult
+from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.utils.agents import create_agent
 
 
 class PreparationSession(Protocol):
     async def prepare(self) -> QuestionPreparationResult: ...
+
+    async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure: ...
+
+
+@dataclass
+class BrowserSession:
+    session: PreparationSession
+    message_id: str | None = None
+    approval_id: str | None = None
 
 
 def create_app(
@@ -46,7 +64,7 @@ def create_app(
     ] = new_chat_session,
 ) -> FastAPI:
     """Serve the stock frontend and adapt its messages to one Chat Session."""
-    sessions: dict[str, PreparationSession] = {}
+    sessions: dict[str, BrowserSession] = {}
     dependencies: ChatDependencies | None = None
 
     @asynccontextmanager
@@ -74,9 +92,68 @@ def create_app(
                 {"error": "Models and tools are fixed at application startup."},
                 status_code=400,
             )
-        if submission.id in sessions:
-            return JSONResponse(
-                {"error": "This question is awaiting approval."}, status_code=409
+        if entry := sessions.get(submission.id):
+            message = submission.messages[-1] if submission.messages else None
+            approvals = (
+                [
+                    part
+                    for part in message.parts
+                    if isinstance(part, ToolApprovalRespondedPart)
+                    and part.type == "tool-Query approval"
+                    and part.tool_call_id == entry.approval_id
+                    and isinstance(part.approval, ToolApprovalResponded)
+                    and part.approval.id == entry.approval_id
+                    and part.approval.approved
+                ]
+                if message
+                and message.role == "assistant"
+                and message.id == entry.message_id
+                else []
+            )
+            if entry.approval_id is None or len(approvals) != 1:
+                return JSONResponse(
+                    {"error": "This question has no matching pending approval."},
+                    status_code=409,
+                )
+            approval_id = entry.approval_id
+            entry.approval_id = None
+
+            async def answer_stream() -> AsyncIterator[str]:
+                operation_id = str(uuid4())
+                starting: list[BaseChunk] = [
+                    StartChunk(message_id=entry.message_id),
+                    ToolOutputAvailableChunk(
+                        tool_call_id=approval_id, output={"approved": True}
+                    ),
+                    ToolInputAvailableChunk(
+                        tool_call_id=operation_id, tool_name="Search details", input={}
+                    ),
+                ]
+                for chunk in starting:
+                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                result = await entry.session.approve()
+                text = render_answer(result)
+                text_id = str(uuid4())
+                chunks: list[BaseChunk] = [
+                    ToolOutputAvailableChunk(
+                        tool_call_id=operation_id, output=search_details(result)
+                    ),
+                    TextStartChunk(id=text_id),
+                    TextDeltaChunk(id=text_id, delta=text),
+                    TextEndChunk(id=text_id),
+                    FinishChunk(finish_reason="stop"),
+                    DoneChunk(),
+                ]
+                for chunk in chunks:
+                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+
+            return StreamingResponse(
+                answer_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "x-vercel-ai-ui-message-stream": "v1",
+                    "Cache-Control": "no-cache",
+                },
             )
         if len(submission.messages) != 1 or submission.messages[0].role != "user":
             return JSONResponse(
@@ -93,7 +170,8 @@ def create_app(
         if not question:
             return JSONResponse({"error": "Enter a text question."}, status_code=422)
         session = session_factory(question, dependencies)
-        sessions[submission.id] = session
+        entry = BrowserSession(session)
+        sessions[submission.id] = entry
 
         async def stream() -> AsyncIterator[str]:
             result = await session.prepare()
@@ -118,6 +196,8 @@ def create_app(
                 TextEndChunk(id=message_id),
             ]
             if result.status == "awaiting_approval":
+                entry.message_id = message_id
+                entry.approval_id = call_id
                 chunks.extend(
                     [
                         ToolInputAvailableChunk(

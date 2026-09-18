@@ -59,7 +59,7 @@ def question_request(question: str, conversation_id: str = "conversation-1") -> 
     }
 
 
-def events(response: httpx2.Response) -> list[dict]:
+def events(response: httpx.Response | httpx2.Response) -> list[dict]:
     assert response.status_code == 200
     assert response.headers["x-vercel-ai-ui-message-stream"] == "v1"
     return [
@@ -77,6 +77,9 @@ def test_first_question_prepares_one_session_and_exposes_only_public_approval():
             return AwaitingQueryApproval(
                 approval=QueryApproval(question="Which organizations supported AB 1?")
             )
+
+        async def approve(self):
+            pytest.fail("Preparation must never enter retrieval")
 
     def session_factory(question, dependencies):
         questions.append(question)
@@ -120,6 +123,9 @@ def test_deferred_proposal_shows_the_coverage_limit_and_recoverable_portion():
                     recoverable_portion="CalMatters reporting can identify some votes.",
                 )
             )
+
+        async def approve(self):
+            pytest.fail("Preparation must never enter retrieval")
 
     with TestClient(
         create_app(startup=no_dependencies, session_factory=lambda *_: Session()),
