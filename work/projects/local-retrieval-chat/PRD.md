@@ -1,6 +1,6 @@
 # Product Requirements: Local Retrieval Chat
 
-Labels: ready-for-agent
+Labels: completed
 
 Parent: [Useful Graph Retrieval issue 10](../../initiatives/useful-graph-retrieval/issues/10-developer-retrieval-surface.md)
 

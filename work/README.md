@@ -17,11 +17,6 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md),
-  `ready-for-agent` as of 2026-09-18. A local FastAPI application adapts one
-  browser conversation and one political question to the existing Chat Session,
-  using Pydantic AI's stock frontend and process-local state. It is broken into
-  five tracer-bullet issues; the frontier is below.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
@@ -71,15 +66,16 @@ measurement does not block this project.
 
 ### Local Retrieval Chat frontier
 
-The secured stock browser shell, question preparation, answer approval, and
-rewrite correction paths are complete. The final lifecycle ticket can now join
-those paths and enforce cleanup and conversation isolation.
+All five issues are complete. The secured stock browser shell now prepares,
+corrects, and approves one political question per browser conversation. It
+releases terminal Chat Sessions, keeps active conversations isolated, and does
+not reconstruct browser history after restart.
 
 - [01 Launch the secured local chat shell](projects/local-retrieval-chat/issues/01-launch-secured-local-chat-shell.md), `completed` on 2026-09-18. Pydantic AI's Host-validating stock web UI runs on loopback through `ca-map chat`, with a stable default port and optional port override.
 - [02 Prepare one CalMatters question for approval](projects/local-retrieval-chat/issues/02-prepare-one-calmatters-question.md), `completed` on 2026-09-18. Startup assembles fixed live dependencies and measured CalMatters coverage, and the browser presents each typed preparation outcome without exposing the internal route.
 - [03 Approve and inspect a Retrieval Answer](projects/local-retrieval-chat/issues/03-approve-and-inspect-retrieval-answer.md), `completed` on 2026-09-18. Approval returns numbered verified evidence and safe expandable Search details.
 - [04 Reject and revise a Query Rewrite Proposal](projects/local-retrieval-chat/issues/04-reject-and-revise-query-rewrite.md), `completed` on 2026-09-18. Rejection waits for a correction and returns another separately approvable proposal.
-- [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), takeable. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.
+- [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), `completed` on 2026-09-18. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.
 
 ### Bill Designation Recovery frontier
 
@@ -179,9 +175,9 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record

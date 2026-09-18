@@ -91,7 +91,7 @@ def create_app(
     terminal_conversations: set[str] = set()
     dependencies: ChatDependencies | None = None
 
-    def finish_session(conversation_id: str) -> None:
+    def retire_conversation(conversation_id: str) -> None:
         sessions.pop(conversation_id, None)
         terminal_conversations.add(conversation_id)
 
@@ -200,7 +200,7 @@ def create_app(
                 )
 
             # The response owns the consumed session until its answer finishes.
-            finish_session(submission.id)
+            retire_conversation(submission.id)
 
             async def answer_stream() -> AsyncIterator[str]:
                 operation_id = str(uuid4())
@@ -278,7 +278,7 @@ def create_app(
                 result = await entry.session.prepare()
             except Exception:
                 logger.exception("Chat Session preparation failed")
-                finish_session(conversation_id)
+                retire_conversation(conversation_id)
                 failure_chunks: list[BaseChunk] = [
                     StartChunk(message_id=str(uuid4())),
                     ErrorChunk(error_text=TERMINAL_FAILURE),
@@ -289,10 +289,10 @@ def create_app(
                     yield f"data: {chunk.encode(sdk_version=7)}\n\n"
                 return
             except BaseException:
-                finish_session(conversation_id)
+                retire_conversation(conversation_id)
                 raise
             if result.status != "awaiting_approval":
-                finish_session(conversation_id)
+                retire_conversation(conversation_id)
             message_id, call_id = str(uuid4()), str(uuid4())
             text = (
                 result.message
