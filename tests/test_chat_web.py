@@ -13,6 +13,7 @@ from knowledge_map.schemas.query_preparation import (
     AwaitingQueryApproval,
     DeclinedQuestion,
     QueryApproval,
+    RewriteRejection,
     RewriteUnavailable,
 )
 from knowledge_map.web import create_app
@@ -81,6 +82,9 @@ def test_first_question_prepares_one_session_and_exposes_only_public_approval():
         async def approve(self):
             pytest.fail("Preparation must never enter retrieval")
 
+        def reject(self, correction=None) -> RewriteRejection:
+            pytest.fail("Preparation must never reject a proposal")
+
     def session_factory(question, dependencies):
         questions.append(question)
         return Session()
@@ -127,6 +131,9 @@ def test_deferred_proposal_shows_the_coverage_limit_and_recoverable_portion():
         async def approve(self):
             pytest.fail("Preparation must never enter retrieval")
 
+        def reject(self, correction=None) -> RewriteRejection:
+            pytest.fail("Preparation must never reject a proposal")
+
     with TestClient(
         create_app(startup=no_dependencies, session_factory=lambda *_: Session()),
         base_url="http://127.0.0.1:7932",
@@ -159,6 +166,9 @@ def test_terminal_preparation_outcomes_offer_neither_approval_nor_retrieval(outc
 
         async def approve(self):
             pytest.fail("Preparation must never enter retrieval")
+
+        def reject(self, correction=None) -> RewriteRejection:
+            pytest.fail("Preparation must never reject a proposal")
 
     with TestClient(
         create_app(startup=no_dependencies, session_factory=lambda *_: Session()),

@@ -53,8 +53,12 @@ to show retrieval routes, branch ranks, graph claims, coverage, and branch
 outcomes. The answer presents numbered Source Article links and verified
 passages, with Deferred limits and branch failures kept visible. Candidate
 wording and detailed failure diagnostics are excluded from Search details.
-Rewrite corrections and conversation cleanup are connected by the following
-Local Retrieval Chat ticket.
+
+Reject a proposal to request a change, then describe that change in the chat
+composer. The same Chat Session returns a revised proposal for approval. You
+can repeat this correction loop; retrieval starts only after you approve a
+proposal. Pending corrections exist only in application memory. Conversation
+cleanup is connected by the following Local Retrieval Chat ticket.
 
 Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
 defaults to `document_store.db`, and a reachable Neo4j configured with

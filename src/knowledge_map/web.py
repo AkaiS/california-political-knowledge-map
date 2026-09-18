@@ -25,6 +25,7 @@ from pydantic_ai.ui.vercel_ai.response_types import (
     ToolApprovalRequestChunk,
     ToolInputAvailableChunk,
     ToolOutputAvailableChunk,
+    ToolOutputDeniedChunk,
 )
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
@@ -36,13 +37,18 @@ from knowledge_map.chat_startup import (
     chat_dependencies,
     new_chat_session,
 )
-from knowledge_map.schemas.query_preparation import QuestionPreparationResult
+from knowledge_map.schemas.query_preparation import (
+    QuestionPreparationResult,
+    RewriteRejection,
+)
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.utils.agents import create_agent
 
 
 class ChatSessionProtocol(Protocol):
     async def prepare(self) -> QuestionPreparationResult: ...
+
+    def reject(self, correction: str | None = None) -> RewriteRejection: ...
 
     async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure: ...
 
@@ -52,6 +58,7 @@ class BrowserSession:
     session: ChatSessionProtocol
     message_id: str | None = None
     approval_id: str | None = None
+    awaiting_correction: bool = False
 
 
 def create_app(
@@ -94,6 +101,23 @@ def create_app(
             )
         if entry := sessions.get(submission.id):
             message = submission.messages[-1] if submission.messages else None
+            if entry.awaiting_correction and message and message.role == "user":
+                if not message.parts or any(
+                    not isinstance(part, TextUIPart) for part in message.parts
+                ):
+                    return JSONResponse(
+                        {"error": "Enter a text correction."}, status_code=422
+                    )
+                correction = "\n".join(
+                    part.text for part in message.parts if isinstance(part, TextUIPart)
+                ).strip()
+                if not correction:
+                    return JSONResponse(
+                        {"error": "Enter a text correction."}, status_code=422
+                    )
+                entry.awaiting_correction = False
+                entry.session.reject(correction)
+                return prepare_response(entry)
             approvals = (
                 [
                     part
@@ -103,7 +127,6 @@ def create_app(
                     and part.tool_call_id == entry.approval_id
                     and isinstance(part.approval, ToolApprovalResponded)
                     and part.approval.id == entry.approval_id
-                    and part.approval.approved
                 ]
                 if message
                 and message.role == "assistant"
@@ -117,6 +140,36 @@ def create_app(
                 )
             approval_id = entry.approval_id
             entry.approval_id = None
+            decision = approvals[0].approval
+            assert isinstance(decision, ToolApprovalResponded)
+            if not decision.approved:
+                entry.awaiting_correction = True
+
+                async def rejection_stream() -> AsyncIterator[str]:
+                    text_id = str(uuid4())
+                    chunks: list[BaseChunk] = [
+                        StartChunk(message_id=entry.message_id),
+                        ToolOutputDeniedChunk(tool_call_id=approval_id),
+                        TextStartChunk(id=text_id),
+                        TextDeltaChunk(
+                            id=text_id,
+                            delta="Describe the change you want in your next message.",
+                        ),
+                        TextEndChunk(id=text_id),
+                        FinishChunk(finish_reason="stop"),
+                        DoneChunk(),
+                    ]
+                    for chunk in chunks:
+                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+
+                return StreamingResponse(
+                    rejection_stream(),
+                    media_type="text/event-stream",
+                    headers={
+                        "x-vercel-ai-ui-message-stream": "v1",
+                        "Cache-Control": "no-cache",
+                    },
+                )
 
             async def answer_stream() -> AsyncIterator[str]:
                 operation_id = str(uuid4())
@@ -172,9 +225,11 @@ def create_app(
         session = session_factory(question, dependencies)
         entry = BrowserSession(session)
         sessions[submission.id] = entry
+        return prepare_response(entry)
 
+    def prepare_response(entry: BrowserSession) -> StreamingResponse:
         async def stream() -> AsyncIterator[str]:
-            result = await session.prepare()
+            result = await entry.session.prepare()
             message_id, call_id = str(uuid4()), str(uuid4())
             text = (
                 result.message

@@ -18,6 +18,7 @@ from knowledge_map.schemas.query_preparation import (
     QueryApproval,
     QueryRewrite,
     QuestionAssessment,
+    RewriteRejection,
 )
 from knowledge_map.schemas.retrieval import (
     AppliedContextLimits,
@@ -204,6 +205,9 @@ class AnswerSession:
         self.approvals += 1
         return self.outcome
 
+    def reject(self, correction=None) -> RewriteRejection:
+        pytest.fail("Rejection requires a correction from the composer")
+
 
 def approval_request(
     preparation, *, question="Who backed AB 1?", conversation_id="conversation-1"
@@ -263,9 +267,7 @@ def test_approval_returns_one_answer_and_cannot_be_consumed_again():
     assert repeated.status_code == 409
 
 
-@pytest.mark.parametrize(
-    "changed_field", ["approval_id", "tool_call_id", "message_id", "denied"]
-)
+@pytest.mark.parametrize("changed_field", ["approval_id", "tool_call_id", "message_id"])
 def test_unmatched_approval_does_not_consume_the_pending_proposal(changed_field):
     session = AnswerSession()
     with TestClient(
@@ -284,8 +286,6 @@ def test_unmatched_approval_does_not_consume_the_pending_proposal(changed_field)
             part["toolCallId"] = "a-different-call"
         elif changed_field == "message_id":
             message["id"] = "a-different-message"
-        else:
-            part["approval"]["approved"] = False
         rejected = client.post("/api/chat", json=invalid)
         assert rejected.status_code == 409
         assert session.approvals == 0
