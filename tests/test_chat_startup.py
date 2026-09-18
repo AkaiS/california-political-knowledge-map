@@ -16,13 +16,14 @@ from test_model_factory import chat_completion
 from knowledge_map.adapters.sqlite_db import init_db
 from knowledge_map.chat_startup import chat_dependencies
 from knowledge_map.schemas.query_preparation import AwaitingQueryApproval, QueryApproval
+from knowledge_map.utils.reachability import SKIP_MODEL_CHECK_ENV
 from knowledge_map.web import create_app
 
 
 def test_real_chat_session_prepares_the_question_using_startup_coverage(
     startup_dependencies,
 ):
-    _, _, _, _, requests, _, _ = startup_dependencies
+    _, _, _, _, requests, _, _, _ = startup_dependencies
     with TestClient(create_app(), base_url="http://localhost") as client:
         response = client.post("/api/chat", json=question_request("Who backed AB 1?"))
         chunks = events(response)
@@ -47,6 +48,7 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
 
 @pytest.fixture
 def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    monkeypatch.delenv(SKIP_MODEL_CHECK_ENV, raising=False)
     path = tmp_path / "stories.db"
     init_db(str(path))
     monkeypatch.setenv("SQLITE_DB_PATH", str(path))
@@ -93,6 +95,7 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     clients = []
     requests = []
     failures = set()
+    statuses = {}
 
     def respond(request: httpx.Request):
         requests.append(request)
@@ -101,6 +104,8 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             or request.url.host == "unavailable-embedding.test"
         ):
             raise httpx.ConnectError("private diagnostic", request=request)
+        if request.method == "GET":
+            return httpx.Response(statuses.get(request.url.host, 200))
         if request.method == "POST":
             if request.url.host == "rewriter.test":
                 output = {
@@ -117,7 +122,7 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
                     "recoverable_portion": f"{entry['name']} has {entry['availability']['available_count']} available articles.",
                 }
             return httpx.Response(200, json=chat_completion(json.dumps(output)))
-        return httpx.Response(200, json={"data": []})
+        raise AssertionError(f"Unexpected request: {request.method} {request.url}")
 
     client_type = httpx.AsyncClient
 
@@ -128,13 +133,13 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             clients.append(self)
 
     monkeypatch.setattr(httpx, "AsyncClient", Client)
-    return path, driver, drivers, clients, requests, failures, result
+    return path, driver, drivers, clients, requests, failures, statuses, result
 
 
 def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
     startup_dependencies,
 ):
-    _, driver, drivers, clients, requests, _, _ = startup_dependencies
+    _, driver, drivers, clients, requests, _, _, _ = startup_dependencies
     received = []
 
     def session_factory(question, dependencies):
@@ -180,6 +185,53 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
     driver.close.assert_awaited_once()
 
 
+def test_startup_counts_any_local_model_http_response_as_reachable(
+    startup_dependencies,
+):
+    _, _, _, _, requests, _, statuses, _ = startup_dependencies
+    statuses.update({"rewriter.test": 401, "chat.test": 503})
+
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        assert client.get("/api/configure").status_code == 200
+
+    assert {request.url.host for request in requests} == {
+        "chat.test",
+        "rewriter.test",
+    }
+
+
+def test_startup_honors_the_shared_model_reachability_override(
+    startup_dependencies,
+    monkeypatch,
+):
+    _, _, _, _, requests, failures, _, _ = startup_dependencies
+    failures.update({"rewriter.test", "chat.test"})
+    monkeypatch.setenv(SKIP_MODEL_CHECK_ENV, "1")
+
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        assert client.get("/api/configure").status_code == 200
+
+    assert requests == []
+
+
+def test_startup_does_not_probe_openrouter_deployments(
+    startup_dependencies,
+    monkeypatch,
+):
+    _, _, _, _, requests, _, _, _ = startup_dependencies
+    monkeypatch.setenv("QUERY_REWRITER_DEPLOYMENT", "openrouter")
+    monkeypatch.setenv("QUERY_REWRITER_MODEL", "openai/rewriter-test")
+    monkeypatch.setenv("CHAT_DEPLOYMENT", "openrouter")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("OPENROUTER_MODEL", "openai/test-model")
+    monkeypatch.setenv("OPENROUTER_PROVIDERS", "test-provider")
+
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        assert client.get("/api/configure").status_code == 200
+
+    assert requests == []
+
+
 @pytest.mark.parametrize(
     "failure, explanation",
     [
@@ -199,7 +251,7 @@ def test_startup_names_the_unavailable_dependency_and_cleans_up(
     monkeypatch,
     tmp_path,
 ):
-    _, driver, drivers, clients, _, failures, result = startup_dependencies
+    _, driver, drivers, clients, _, failures, _, result = startup_dependencies
     startup = chat_dependencies
     if failure == "sqlite":
         monkeypatch.setenv("SQLITE_DB_PATH", str(tmp_path / "missing.db"))

@@ -29,7 +29,12 @@ from knowledge_map.core.exceptions import PipelineLockError
 from knowledge_map.utils.telemetry import setup_telemetry
 from knowledge_map.utils.deployments import deployment_from_environment
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
-from knowledge_map.utils.reachability import ModelEndpoint, check_endpoints
+from knowledge_map.utils.reachability import (
+    SKIP_MODEL_CHECK_ENV,
+    ModelEndpoint,
+    check_endpoints,
+    model_reachability_check_skipped,
+)
 
 
 CLI_COMMAND_HELP = {
@@ -56,10 +61,6 @@ CLI_COMMAND_HELP = {
     "telemetry": "Manage the Logfire credential this project runs on",
 }
 
-
-# Set to bypass the Model Reachability Check without editing a command line,
-# for the deterministic test suite and for an operator who knows better.
-SKIP_MODEL_CHECK_ENV = "SKIP_MODEL_REACHABILITY_CHECK"
 
 # The local endpoints each command's agents reach. Keyed like CLI_COMMAND_HELP,
 # so a command absent here is one that runs no agent at all.
@@ -103,7 +104,7 @@ def enforce_model_reachability(parsed_args) -> None:
 
     if getattr(parsed_args, "skip_model_check", False):
         return
-    if os.environ.get(SKIP_MODEL_CHECK_ENV, "").strip():
+    if model_reachability_check_skipped():
         return
 
     required = required_model_endpoints(parsed_args)

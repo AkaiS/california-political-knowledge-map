@@ -60,10 +60,11 @@ Set `QUERY_REWRITER_MODEL` and the other `QUERY_REWRITER_*` settings for the
 Query Rewriter. `CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
 for the Chat Agent and structural construction, using the existing deployment
 environment settings. These choices are fixed at startup. The frontend has no
-model or tool picker. Both required model endpoints must answer their model
-listing request successfully, even when `SKIP_MODEL_REACHABILITY_CHECK` is set.
-This checks connectivity, not generation quality or which weights a local
-server loaded.
+model or tool picker. Each required local model endpoint must answer its
+model-listing request unless `SKIP_MODEL_REACHABILITY_CHECK` is set. Any HTTP
+response counts as reachable; the check does not inspect response status,
+generation quality, or which weights the server loaded. OpenRouter is not
+probed, so its first real request reports provider reachability failures.
 
 The authored CalMatters description lives in
 `src/knowledge_map/resources/calmatters-coverage.json`. Startup refreshes its

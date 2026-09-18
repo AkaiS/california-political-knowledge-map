@@ -27,7 +27,7 @@ from knowledge_map.adapters.structural import (
 from knowledge_map.core.chat import ChatSession, get_chat_agent
 from knowledge_map.core.question_preparation import get_query_rewriter
 from knowledge_map.core.retrieval import RetrievalCoordinator
-from knowledge_map.schemas import ModelDeployment
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.query_preparation import (
     QueryRewriteProposal,
@@ -39,6 +39,10 @@ from knowledge_map.utils.deployments import (
     query_rewriter_deployment_from_environment,
 )
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, build_retrying_client
+from knowledge_map.utils.reachability import (
+    model_reachability_check_skipped,
+    request_model_listing,
+)
 
 
 @dataclass(frozen=True)
@@ -166,17 +170,18 @@ async def chat_dependencies(
             chat_agent = get_chat_agent(chat_deployment, cache_model=False)
             assert isinstance(chat_agent.model, OpenAIChatModel)
             resources.push_async_callback(chat_agent.model.client.close)
-        async with httpx.AsyncClient(timeout=5) as probe:
-            for name, model in (
-                ("Query Rewriter", rewriter.model),
-                ("Chat Agent", chat_agent.model),
-            ):
-                with _required(f"{name} deployment"):
-                    response = await probe.get(
-                        str(model.client.base_url.join("models")),
-                        headers={"Authorization": f"Bearer {model.client.api_key}"},
-                    )
-                    response.raise_for_status()
+        if not model_reachability_check_skipped():
+            async with httpx.AsyncClient(timeout=5) as probe:
+                for name, deployment, model in (
+                    ("Query Rewriter", rewrite_deployment, rewriter.model),
+                    ("Chat Agent", chat_deployment, chat_agent.model),
+                ):
+                    if deployment.kind is DeploymentKind.OPENROUTER:
+                        continue
+                    with _required(f"{name} deployment"):
+                        await request_model_listing(
+                            str(model.client.base_url), client=probe
+                        )
         embedding_client = await resources.enter_async_context(build_retrying_client())
         embedder = get_embedding_embedder(http_client=embedding_client)
         structural_agents = get_structural_agents(

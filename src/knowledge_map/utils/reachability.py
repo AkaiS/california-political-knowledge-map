@@ -10,6 +10,7 @@ which GGUF it has loaded or whether generation succeeds; the first real request
 remains the authority on both.
 """
 
+import os
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -20,6 +21,7 @@ from .models import resolve_chat_base_url, resolve_embedding_base_url
 # Short by design. A reachable llama.cpp server answers immediately, so a wait
 # long enough to matter is itself the unreachable answer the caller wants.
 REACHABILITY_TIMEOUT_SECONDS = 5.0
+SKIP_MODEL_CHECK_ENV = "SKIP_MODEL_REACHABILITY_CHECK"
 
 
 class ModelEndpoint(StrEnum):
@@ -45,6 +47,32 @@ class EndpointReachability:
     base_url: str
     reachable: bool
     detail: str = ""
+
+
+def model_reachability_check_skipped() -> bool:
+    """Whether the operator disabled the shared local-endpoint preflight."""
+
+    return bool(os.environ.get(SKIP_MODEL_CHECK_ENV, "").strip())
+
+
+async def request_model_listing(
+    base_url: str,
+    *,
+    timeout: float = REACHABILITY_TIMEOUT_SECONDS,
+    client: httpx.AsyncClient | None = None,
+) -> None:
+    """Ask a local model endpoint to respond without interpreting its status.
+
+    Any HTTP response proves that a server accepted the request. Transport
+    failures propagate so the caller can name the dependency that is down.
+    """
+
+    url = f"{base_url.rstrip('/')}/models"
+    if client is None:
+        async with httpx.AsyncClient(timeout=timeout) as owned_client:
+            await owned_client.get(url)
+    else:
+        await client.get(url)
 
 
 def check_endpoint(
