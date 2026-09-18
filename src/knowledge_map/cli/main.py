@@ -439,6 +439,7 @@ def main(args=None):
 
     if parsed_args.action == "chat":
         import uvicorn
+
         from knowledge_map.web import create_app
 
         print(f"Open http://127.0.0.1:{parsed_args.port} in your browser.", flush=True)

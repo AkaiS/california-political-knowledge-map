@@ -71,13 +71,13 @@ measurement does not block this project.
 
 ### Local Retrieval Chat frontier
 
-The chain starts with the secured stock browser shell, then connects one real
+The secured stock browser shell is complete. The next issue connects one real
 CalMatters-backed question to Query Rewrite approval. Answer approval and rewrite
 correction may proceed in parallel after that shared seam. The final lifecycle
 ticket joins both paths.
 
-- [01 Launch the secured local chat shell](projects/local-retrieval-chat/issues/01-launch-secured-local-chat-shell.md), takeable. Upgrade to the Host-validating Pydantic AI web UI and launch it locally through `ca-map chat`.
-- [02 Prepare one CalMatters question for approval](projects/local-retrieval-chat/issues/02-prepare-one-calmatters-question.md), blocked by 01. Assemble live dependencies and coverage, then present the first typed preparation outcome in the browser.
+- [01 Launch the secured local chat shell](projects/local-retrieval-chat/issues/01-launch-secured-local-chat-shell.md), `completed` on 2026-09-18. Pydantic AI's Host-validating stock web UI runs on loopback through `ca-map chat`, with a stable default port and optional port override.
+- [02 Prepare one CalMatters question for approval](projects/local-retrieval-chat/issues/02-prepare-one-calmatters-question.md), takeable. Assemble live dependencies and coverage, then present the first typed preparation outcome in the browser.
 - [03 Approve and inspect a Retrieval Answer](projects/local-retrieval-chat/issues/03-approve-and-inspect-retrieval-answer.md), blocked by 02. Approval returns numbered verified evidence and safe expandable Search details.
 - [04 Reject and revise a Query Rewrite Proposal](projects/local-retrieval-chat/issues/04-reject-and-revise-query-rewrite.md), blocked by 02. Rejection waits for a correction and returns another separately approvable proposal.
 - [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), blocked by 03 and 04. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.

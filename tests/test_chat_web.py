@@ -9,7 +9,9 @@ from starlette.testclient import TestClient
 from knowledge_map.web import create_app
 
 
-@pytest.mark.parametrize("path", ["/", "/api/configure", "/api/chat"])
+@pytest.mark.parametrize(
+    "path", ["/", "/api/configure", "/api/chat", "/docs", "/redoc", "/openapi.json"]
+)
 def test_chat_rejects_a_nonlocal_host(path: str):
     with TestClient(create_app(), base_url="http://attacker.example") as client:
         response = client.request("POST" if path == "/api/chat" else "GET", path)
