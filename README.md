@@ -57,8 +57,15 @@ wording and detailed failure diagnostics are excluded from Search details.
 Reject a proposal to request a change, then describe that change in the chat
 composer. The same Chat Session returns a revised proposal for approval. You
 can repeat this correction loop; retrieval starts only after you approve a
-proposal. Pending corrections exist only in application memory. Conversation
-cleanup is connected by the following Local Retrieval Chat ticket.
+proposal. Each browser conversation handles one political question. After an
+answer, a Declined question, an unavailable rewrite, or an unrecoverable failure,
+start a new chat for another question. Completed Chat Session objects are
+released; only their conversation IDs remain in memory to prevent continuation.
+
+Pending approvals and corrections exist only in application memory and remain
+available until you continue or stop the server. Restarting the server discards
+them. Browser-managed history stays readable, but continuing an old conversation
+returns "Start a new chat to ask a question." It cannot restore a Chat Session.
 
 Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
 defaults to `document_store.db`, and a reachable Neo4j configured with

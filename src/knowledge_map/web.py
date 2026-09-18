@@ -1,5 +1,6 @@
 """Local browser entry point for retrieval chat."""
 
+import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ from pydantic_ai.ui.vercel_ai.request_types import (
 from pydantic_ai.ui.vercel_ai.response_types import (
     BaseChunk,
     DoneChunk,
+    ErrorChunk,
     FinishChunk,
     StartChunk,
     TextDeltaChunk,
@@ -27,6 +29,7 @@ from pydantic_ai.ui.vercel_ai.response_types import (
     ToolInputAvailableChunk,
     ToolOutputAvailableChunk,
     ToolOutputDeniedChunk,
+    ToolOutputErrorChunk,
 )
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
@@ -44,6 +47,11 @@ from knowledge_map.schemas.query_preparation import (
 )
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.utils.agents import create_agent
+
+logger = logging.getLogger(__name__)
+
+NEW_CHAT_GUIDANCE = "Start a new chat to ask a question."
+TERMINAL_FAILURE = f"This question could not be completed. {NEW_CHAT_GUIDANCE}"
 
 
 class ChatSessionProtocol(Protocol):
@@ -80,14 +88,23 @@ def create_app(
 ) -> FastAPI:
     """Serve the stock frontend and adapt its messages to one Chat Session."""
     sessions: dict[str, BrowserSession] = {}
+    terminal_conversations: set[str] = set()
     dependencies: ChatDependencies | None = None
+
+    def finish_session(conversation_id: str) -> None:
+        sessions.pop(conversation_id, None)
+        terminal_conversations.add(conversation_id)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nonlocal dependencies
-        async with startup() as dependencies:
-            yield
-        sessions.clear()
+        try:
+            async with startup() as dependencies:
+                yield
+        finally:
+            sessions.clear()
+            terminal_conversations.clear()
+            dependencies = None
 
     async def post_chat(request: Request) -> Response:
         if (
@@ -110,14 +127,25 @@ def create_app(
         if entry := sessions.get(submission.id):
             message = submission.messages[-1] if submission.messages else None
             if entry.awaiting_correction and message and message.role == "user":
+                rejected_proposal = (
+                    submission.messages[-2] if len(submission.messages) >= 2 else None
+                )
+                if (
+                    rejected_proposal is None
+                    or rejected_proposal.role != "assistant"
+                    or rejected_proposal.id != entry.message_id
+                ):
+                    return JSONResponse(
+                        {"error": "This question has no matching rejected proposal."},
+                        status_code=409,
+                    )
                 correction = _composer_text(message)
                 if correction is None:
                     return JSONResponse(
                         {"error": "Enter a text correction."}, status_code=422
                     )
                 entry.awaiting_correction = False
-                entry.session.reject(correction)
-                return prepare_response(entry)
+                return prepare_response(submission.id, entry, correction=correction)
             approvals = (
                 [
                     part
@@ -171,6 +199,9 @@ def create_app(
                     },
                 )
 
+            # The response owns the consumed session until its answer finishes.
+            finish_session(submission.id)
+
             async def answer_stream() -> AsyncIterator[str]:
                 operation_id = str(uuid4())
                 starting: list[BaseChunk] = [
@@ -182,9 +213,23 @@ def create_app(
                         tool_call_id=operation_id, tool_name="Search details", input={}
                     ),
                 ]
-                for chunk in starting:
-                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
-                result = await entry.session.approve()
+                try:
+                    for chunk in starting:
+                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                    result = await entry.session.approve()
+                except Exception:
+                    logger.exception("Chat Session approval failed")
+                    failure_chunks: list[BaseChunk] = [
+                        ToolOutputErrorChunk(
+                            tool_call_id=operation_id, error_text=TERMINAL_FAILURE
+                        ),
+                        ErrorChunk(error_text=TERMINAL_FAILURE),
+                        FinishChunk(finish_reason="stop"),
+                        DoneChunk(),
+                    ]
+                    for chunk in failure_chunks:
+                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                    return
                 text = render_answer(result)
                 text_id = str(uuid4())
                 chunks: list[BaseChunk] = [
@@ -208,10 +253,12 @@ def create_app(
                     "Cache-Control": "no-cache",
                 },
             )
-        if len(submission.messages) != 1 or submission.messages[0].role != "user":
-            return JSONResponse(
-                {"error": "Start a new chat to ask a question."}, status_code=409
-            )
+        if (
+            submission.id in terminal_conversations
+            or len(submission.messages) != 1
+            or submission.messages[0].role != "user"
+        ):
+            return JSONResponse({"error": NEW_CHAT_GUIDANCE}, status_code=409)
         message = submission.messages[0]
         question = _composer_text(message)
         if question is None:
@@ -219,11 +266,33 @@ def create_app(
         session = session_factory(question, dependencies)
         entry = BrowserSession(session)
         sessions[submission.id] = entry
-        return prepare_response(entry)
+        return prepare_response(submission.id, entry)
 
-    def prepare_response(entry: BrowserSession) -> StreamingResponse:
+    def prepare_response(
+        conversation_id: str, entry: BrowserSession, *, correction: str | None = None
+    ) -> StreamingResponse:
         async def stream() -> AsyncIterator[str]:
-            result = await entry.session.prepare()
+            try:
+                if correction is not None:
+                    entry.session.reject(correction)
+                result = await entry.session.prepare()
+            except Exception:
+                logger.exception("Chat Session preparation failed")
+                finish_session(conversation_id)
+                failure_chunks: list[BaseChunk] = [
+                    StartChunk(message_id=str(uuid4())),
+                    ErrorChunk(error_text=TERMINAL_FAILURE),
+                    FinishChunk(finish_reason="stop"),
+                    DoneChunk(),
+                ]
+                for chunk in failure_chunks:
+                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                return
+            except BaseException:
+                finish_session(conversation_id)
+                raise
+            if result.status != "awaiting_approval":
+                finish_session(conversation_id)
             message_id, call_id = str(uuid4()), str(uuid4())
             text = (
                 result.message
