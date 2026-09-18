@@ -27,6 +27,27 @@ Use `--dry-run` to preview the setup, `--source PATH` to transfer local state
 from a different worktree, or `--skip-sync` when dependencies are already set
 up.
 
+## Local chat
+
+Start the local browser chat shell with:
+
+```bash
+uv run ca-map chat
+```
+
+The command prints `http://127.0.0.1:7932`. Open that URL in your browser.
+Use `uv run ca-map chat --port 8123` to choose another port. The server always
+binds to `127.0.0.1`, stays in the foreground, and stops with Ctrl+C.
+
+Pydantic AI serves its stock frontend from its default CDN build and caches the
+HTML under `$XDG_CACHE_HOME/pydantic-ai/web-ui`, or
+`~/.cache/pydantic-ai/web-ui` when `XDG_CACHE_HOME` is unset. The first visit may
+require network access, and frontend assets can still require CDN access after
+the HTML is cached. This is not an offline frontend bundle.
+
+This currently launches the chat shell. Question preparation and retrieval are
+not connected yet.
+
 ## Model deployments
 
 Operational guidance for choosing local llama.cpp or OpenRouter chat, configuring

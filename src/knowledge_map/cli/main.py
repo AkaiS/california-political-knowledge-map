@@ -33,6 +33,7 @@ from knowledge_map.utils.reachability import ModelEndpoint, check_endpoints
 
 
 CLI_COMMAND_HELP = {
+    "chat": "Start the local retrieval chat in your browser",
     "ingest": "Run batch ingestion of unprocessed articles",
     "clear": "Clear all nodes and relationships from Neo4j",
     "analyze": "Inspect and list distinct node labels in the Neo4j database",
@@ -293,6 +294,11 @@ def main(args=None):
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
+    chat_parser = subparsers.add_parser("chat", help=CLI_COMMAND_HELP["chat"])
+    chat_parser.add_argument(
+        "--port", type=int, default=7932, help="Local chat port (default: 7932)"
+    )
+
     # Attached only to gated commands, so the flag never appears on a command
     # that reaches no model and would silently ignore it.
     model_check_parser = argparse.ArgumentParser(add_help=False)
@@ -430,6 +436,14 @@ def main(args=None):
     setup_logging()
 
     enforce_model_reachability(parsed_args)
+
+    if parsed_args.action == "chat":
+        import uvicorn
+        from knowledge_map.web import create_app
+
+        print(f"Open http://127.0.0.1:{parsed_args.port} in your browser.", flush=True)
+        uvicorn.run(create_app(), host="127.0.0.1", port=parsed_args.port)
+        return
 
     if parsed_args.action == "ingest":
         try:
