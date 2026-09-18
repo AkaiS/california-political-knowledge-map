@@ -101,6 +101,7 @@ on both. A server left running with the wrong model loaded passes the check.
 
 | Command | Chat | Embedding |
 | --- | --- | --- |
+| `chat` | yes (local Query Rewriter and Chat Agent deployments) | no |
 | `ingest` | yes (local deployment only) | yes |
 | `update-sources` | yes | yes |
 | `scrape-archive` | yes | yes |
@@ -114,6 +115,11 @@ still checked: it remains local llama.cpp inference whichever chat deployment a
 command selects. OpenRouter reachability is not checked; its configuration is
 still validated during command setup, and the request itself surfaces an
 unreachable provider.
+
+`chat` checks the Query Rewriter and Chat Agent when either uses a local
+deployment. It does not check the embedding endpoint at startup because dense
+embedding is one retrieval branch and retains the retrieval contract's
+partial-failure behavior.
 
 Every other command -- `clear`, `analyze`, `janitor`, the publication commands,
 `review-selectors`, `refetch-html`, `purge-cache`, `classifier train`, and

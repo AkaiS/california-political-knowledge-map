@@ -146,6 +146,7 @@ measurement of real rankings.
 - [Decide the retrieval agent topology and orchestration](initiatives/useful-graph-retrieval/issues/07-retrieval-agent-topology.md), `completed` on 2026-09-16. The accepted design is specified for implementation by [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md).
 - [Define the retrieval and answer contract](initiatives/useful-graph-retrieval/issues/08-retrieval-and-answer-contract.md), `completed` on 2026-09-17. Records the concrete Pydantic contracts implemented by Graph-Prioritized Retrieval issue 02.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md), `ready-for-agent` as of 2026-09-17. Graph-Prioritized Retrieval issues 03, 04, 06, and 07 are complete, so it can measure real branch outputs and recommend later configuration changes.
+- [Decide the developer retrieval surface](initiatives/useful-graph-retrieval/issues/10-developer-retrieval-surface.md), `completed` on 2026-09-18. The completed [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md) project implements the local browser interface, approval flow, evidence presentation, and one-question lifecycle settled by this decision.
 
 ### Pydantic-Native Evaluation Routing
 

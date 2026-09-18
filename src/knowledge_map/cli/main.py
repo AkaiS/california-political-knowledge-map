@@ -30,7 +30,6 @@ from knowledge_map.utils.telemetry import setup_telemetry
 from knowledge_map.utils.deployments import deployment_from_environment
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL
 from knowledge_map.utils.reachability import (
-    SKIP_MODEL_CHECK_ENV,
     ModelEndpoint,
     check_endpoints,
     model_reachability_check_skipped,
@@ -443,8 +442,12 @@ def main(args=None):
 
         from knowledge_map.web import create_app
 
-        print(f"Open http://127.0.0.1:{parsed_args.port} in your browser.", flush=True)
-        uvicorn.run(create_app(), host="127.0.0.1", port=parsed_args.port)
+        browser_url = f"http://127.0.0.1:{parsed_args.port}"
+        uvicorn.run(
+            create_app(browser_url=browser_url),
+            host="127.0.0.1",
+            port=parsed_args.port,
+        )
         return
 
     if parsed_args.action == "ingest":

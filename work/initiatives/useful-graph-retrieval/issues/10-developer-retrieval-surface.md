@@ -1,6 +1,6 @@
 # Decide the developer retrieval surface
 
-Labels: wayfinder:grilling, needs-triage
+Labels: wayfinder:grilling, completed
 Parent: [Useful Graph Retrieval](../MAP.md)
 Blocked by: [Define the retrieval and answer contract](08-retrieval-and-answer-contract.md)
 
@@ -84,3 +84,9 @@ otherwise the chat UI that replaces it later cannot inherit the same behaviour.
   picker or optional tool controls.
 - This decision produces a ready-for-agent implementation PRD rather than adding
   the web application directly to the initiative ticket.
+
+## Comments
+
+2026-09-18: The decision was handed off through the Local Retrieval Chat PRD.
+All five implementation issues and the parent project are complete, so this
+initiative ticket is complete as well.

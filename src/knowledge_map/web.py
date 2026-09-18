@@ -1,7 +1,7 @@
 """Local browser entry point for retrieval chat."""
 
 import logging
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from typing import Protocol
@@ -54,6 +54,21 @@ NEW_CHAT_GUIDANCE = "Start a new chat to ask a question."
 TERMINAL_FAILURE = f"This question could not be completed. {NEW_CHAT_GUIDANCE}"
 
 
+def _encode_chunks(chunks: Iterable[BaseChunk]) -> str:
+    return "".join(f"data: {chunk.encode(sdk_version=7)}\n\n" for chunk in chunks)
+
+
+def _chat_stream_response(content: AsyncIterator[str]) -> StreamingResponse:
+    return StreamingResponse(
+        content,
+        media_type="text/event-stream",
+        headers={
+            "x-vercel-ai-ui-message-stream": "v1",
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
 class ChatSessionProtocol(Protocol):
     async def prepare(self) -> QuestionPreparationResult: ...
 
@@ -85,6 +100,7 @@ def create_app(
     session_factory: Callable[
         [str, ChatDependencies | None], ChatSessionProtocol
     ] = new_chat_session,
+    browser_url: str | None = None,
 ) -> FastAPI:
     """Serve the stock frontend and adapt its messages to one Chat Session."""
     sessions: dict[str, BrowserSession] = {}
@@ -100,6 +116,8 @@ def create_app(
         nonlocal dependencies
         try:
             async with startup() as dependencies:
+                if browser_url is not None:
+                    print(f"Open {browser_url} in your browser.", flush=True)
                 yield
         finally:
             sessions.clear()
@@ -187,17 +205,9 @@ def create_app(
                         FinishChunk(finish_reason="stop"),
                         DoneChunk(),
                     ]
-                    for chunk in chunks:
-                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                    yield _encode_chunks(chunks)
 
-                return StreamingResponse(
-                    rejection_stream(),
-                    media_type="text/event-stream",
-                    headers={
-                        "x-vercel-ai-ui-message-stream": "v1",
-                        "Cache-Control": "no-cache",
-                    },
-                )
+                return _chat_stream_response(rejection_stream())
 
             # The response owns the consumed session until its answer finishes.
             retire_conversation(submission.id)
@@ -214,8 +224,7 @@ def create_app(
                     ),
                 ]
                 try:
-                    for chunk in starting:
-                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                    yield _encode_chunks(starting)
                     result = await entry.session.approve()
                 except Exception:
                     logger.exception("Chat Session approval failed")
@@ -227,8 +236,7 @@ def create_app(
                         FinishChunk(finish_reason="stop"),
                         DoneChunk(),
                     ]
-                    for chunk in failure_chunks:
-                        yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                    yield _encode_chunks(failure_chunks)
                     return
                 text = render_answer(result)
                 text_id = str(uuid4())
@@ -242,17 +250,9 @@ def create_app(
                     FinishChunk(finish_reason="stop"),
                     DoneChunk(),
                 ]
-                for chunk in chunks:
-                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                yield _encode_chunks(chunks)
 
-            return StreamingResponse(
-                answer_stream(),
-                media_type="text/event-stream",
-                headers={
-                    "x-vercel-ai-ui-message-stream": "v1",
-                    "Cache-Control": "no-cache",
-                },
-            )
+            return _chat_stream_response(answer_stream())
         if (
             submission.id in terminal_conversations
             or len(submission.messages) != 1
@@ -285,8 +285,7 @@ def create_app(
                     FinishChunk(finish_reason="stop"),
                     DoneChunk(),
                 ]
-                for chunk in failure_chunks:
-                    yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+                yield _encode_chunks(failure_chunks)
                 return
             except BaseException:
                 retire_conversation(conversation_id)
@@ -338,17 +337,9 @@ def create_app(
                     DoneChunk(),
                 ]
             )
-            for chunk in chunks:
-                yield f"data: {chunk.encode(sdk_version=7)}\n\n"
+            yield _encode_chunks(chunks)
 
-        return StreamingResponse(
-            stream(),
-            media_type="text/event-stream",
-            headers={
-                "x-vercel-ai-ui-message-stream": "v1",
-                "Cache-Control": "no-cache",
-            },
-        )
+        return _chat_stream_response(stream())
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     frontend = create_agent(name="local_chat_shell").to_web()
