@@ -1,6 +1,6 @@
 # 04 — Reject and revise a Query Rewrite Proposal
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -19,26 +19,48 @@ Query Rewriter, not a replacement query and not permission to retrieve.
 
 ## Acceptance criteria
 
-- [ ] Rejecting a proposal changes the browser conversation to an
+- [x] Rejecting a proposal changes the browser conversation to an
       awaiting-correction state and clearly asks for the desired change.
-- [ ] Rejection alone does not call the Chat Session's rejection operation with
+- [x] Rejection alone does not call the Chat Session's rejection operation with
       an invented or empty correction.
-- [ ] The next ordinary composer message is passed as the correction to the core
+- [x] The next ordinary composer message is passed as the correction to the core
       rejection operation, preserving its atomic rejection-and-correction
       contract.
-- [ ] After recording the correction, the same Chat Session prepares and
+- [x] After recording the correction, the same Chat Session prepares and
       presents a new Query Rewrite Proposal.
-- [ ] The revised proposal exposes only its public Query Approval and requires a
+- [x] The revised proposal exposes only its public Query Approval and requires a
       separate approval before retrieval can start.
-- [ ] A correction can never be interpreted directly as an approved Query
+- [x] A correction can never be interpreted directly as an approved Query
       Rewrite or a second political question.
-- [ ] Another rejection may repeat the same two-step interaction without
+- [x] Another rejection may repeat the same two-step interaction without
       creating a second Chat Session for the browser conversation.
-- [ ] The awaiting-correction state remains process-local and introduces no
+- [x] The awaiting-correction state remains process-local and introduces no
       transcript or pending-approval persistence.
-- [ ] ASGI-level tests cover rejection, correction, another proposal, repeated
+- [x] ASGI-level tests cover rejection, correction, another proposal, repeated
       correction, and the absence of retrieval before a later approval.
 
 ## Blocked by
 
 - [02 — Prepare one CalMatters question for approval](02-prepare-one-calmatters-question.md).
+
+## Comments
+
+2026-09-18: Implemented deterministic two-step rejection through the stock chat
+protocol. Rejecting a Query Rewrite Proposal consumes its approval, emits the
+denied operation, and asks for a correction without calling the core or entering
+retrieval. The next text-only composer message is passed to the same Chat
+Session's atomic rejection operation, which prepares a fresh public proposal
+that requires its own approval. The process-local loop can repeat without
+creating another Chat Session.
+
+The independent Spec review found no missing, incorrect, or out-of-scope
+behavior. The Standards review found one valid judgment-call issue: question and
+correction composer text were parsed by duplicated logic. The review fix moved
+that shared rule behind one adapter helper so both paths continue to accept only
+nonempty text messages.
+
+Review verification passed 31 focused ASGI tests, changed-feature-file Ruff,
+formatting, and type checks, `git diff --check`, and the full deterministic
+suite: 1,246 passed, 47 skipped, with one existing Pydantic AI sampling warning.
+No browser, live model, Neo4j, CDN, or retrieval-quality check was run, as this
+ticket's deterministic boundary requires.

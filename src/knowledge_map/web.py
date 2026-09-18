@@ -13,6 +13,7 @@ from pydantic_ai.ui.vercel_ai.request_types import (
     TextUIPart,
     ToolApprovalResponded,
     ToolApprovalRespondedPart,
+    UIMessage,
 )
 from pydantic_ai.ui.vercel_ai.response_types import (
     BaseChunk,
@@ -61,6 +62,13 @@ class BrowserSession:
     awaiting_correction: bool = False
 
 
+def _composer_text(message: UIMessage) -> str | None:
+    text_parts = [part for part in message.parts if isinstance(part, TextUIPart)]
+    if not text_parts or len(text_parts) != len(message.parts):
+        return None
+    return "\n".join(part.text for part in text_parts).strip() or None
+
+
 def create_app(
     *,
     startup: Callable[
@@ -102,16 +110,8 @@ def create_app(
         if entry := sessions.get(submission.id):
             message = submission.messages[-1] if submission.messages else None
             if entry.awaiting_correction and message and message.role == "user":
-                if not message.parts or any(
-                    not isinstance(part, TextUIPart) for part in message.parts
-                ):
-                    return JSONResponse(
-                        {"error": "Enter a text correction."}, status_code=422
-                    )
-                correction = "\n".join(
-                    part.text for part in message.parts if isinstance(part, TextUIPart)
-                ).strip()
-                if not correction:
+                correction = _composer_text(message)
+                if correction is None:
                     return JSONResponse(
                         {"error": "Enter a text correction."}, status_code=422
                     )
@@ -213,14 +213,8 @@ def create_app(
                 {"error": "Start a new chat to ask a question."}, status_code=409
             )
         message = submission.messages[0]
-        if not message.parts or any(
-            not isinstance(part, TextUIPart) for part in message.parts
-        ):
-            return JSONResponse({"error": "Enter a text question."}, status_code=422)
-        question = "\n".join(
-            part.text for part in message.parts if isinstance(part, TextUIPart)
-        ).strip()
-        if not question:
+        question = _composer_text(message)
+        if question is None:
             return JSONResponse({"error": "Enter a text question."}, status_code=422)
         session = session_factory(question, dependencies)
         entry = BrowserSession(session)

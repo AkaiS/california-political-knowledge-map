@@ -71,15 +71,15 @@ measurement does not block this project.
 
 ### Local Retrieval Chat frontier
 
-The secured stock browser shell, one-question preparation path, and answer
-approval path are complete. Rewrite correction is the remaining parallel path;
-the final lifecycle ticket joins both paths.
+The secured stock browser shell, question preparation, answer approval, and
+rewrite correction paths are complete. The final lifecycle ticket can now join
+those paths and enforce cleanup and conversation isolation.
 
 - [01 Launch the secured local chat shell](projects/local-retrieval-chat/issues/01-launch-secured-local-chat-shell.md), `completed` on 2026-09-18. Pydantic AI's Host-validating stock web UI runs on loopback through `ca-map chat`, with a stable default port and optional port override.
 - [02 Prepare one CalMatters question for approval](projects/local-retrieval-chat/issues/02-prepare-one-calmatters-question.md), `completed` on 2026-09-18. Startup assembles fixed live dependencies and measured CalMatters coverage, and the browser presents each typed preparation outcome without exposing the internal route.
 - [03 Approve and inspect a Retrieval Answer](projects/local-retrieval-chat/issues/03-approve-and-inspect-retrieval-answer.md), `completed` on 2026-09-18. Approval returns numbered verified evidence and safe expandable Search details.
-- [04 Reject and revise a Query Rewrite Proposal](projects/local-retrieval-chat/issues/04-reject-and-revise-query-rewrite.md), takeable. Rejection waits for a correction and returns another separately approvable proposal.
-- [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), blocked by 04. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.
+- [04 Reject and revise a Query Rewrite Proposal](projects/local-retrieval-chat/issues/04-reject-and-revise-query-rewrite.md), `completed` on 2026-09-18. Rejection waits for a correction and returns another separately approvable proposal.
+- [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), takeable. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.
 
 ### Bill Designation Recovery frontier
 
