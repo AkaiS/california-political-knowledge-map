@@ -29,7 +29,7 @@ up.
 
 ## Local chat
 
-Start the local browser chat shell with:
+Start local retrieval chat with:
 
 ```bash
 uv run ca-map chat
@@ -45,8 +45,38 @@ HTML under `$XDG_CACHE_HOME/pydantic-ai/web-ui`, or
 require network access, and frontend assets can still require CDN access after
 the HTML is cached. This is not an offline frontend bundle.
 
-This currently launches the chat shell. Question preparation and retrieval are
-not connected yet.
+Enter one political question to receive a Query Rewrite Proposal. Deferred
+questions include the coverage limit and the recoverable portion; Declined
+questions and unavailable rewrites end without approval. This slice stops at
+the proposal. Approval, corrections, and answer retrieval are connected by the
+following Local Retrieval Chat tickets.
+
+Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
+defaults to `document_store.db`, and a reachable Neo4j configured with
+`NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD`. `NEO4J_DATABASE` defaults to
+`neo4j`. Chat opens SQLite read-only and does not create a missing store.
+
+Set `QUERY_REWRITER_MODEL` and the other `QUERY_REWRITER_*` settings for the
+Query Rewriter. `CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
+for the Chat Agent and structural construction, using the existing deployment
+environment settings. These choices are fixed at startup. The frontend has no
+model or tool picker. Both required model endpoints must answer their model
+listing request successfully, even when `SKIP_MODEL_REACHABILITY_CHECK` is set.
+This checks connectivity, not generation quality or which weights a local
+server loaded.
+
+The authored CalMatters description lives in
+`src/knowledge_map/resources/calmatters-coverage.json`. Startup refreshes its
+article count and publication-date range from distinct CalMatters Source
+Articles with Article Chunks in Neo4j. At least one is required. Unknown
+publication dates remain unknown, and completeness has no assumed denominator.
+Every version-one question uses this one collection, with no monthly coverage.
+Embedding availability, structural generation, and retrieval index checks wait
+until retrieval, where existing branch failures remain visible.
+
+The application shares its agents, retrieval dependencies, and coverage across
+in-memory Chat Sessions. Shutdown closes the Neo4j driver and the model and
+embedding HTTP clients that this application owns.
 
 ## Model deployments
 
