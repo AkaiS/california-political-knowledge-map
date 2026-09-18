@@ -117,6 +117,13 @@ class QuestionPreparation:
             raise ValueError("this question already has a proposal or is finished")
         self._state = "preparing"
         try:
+            return await self._prepare()
+        finally:
+            if self._state == "preparing":
+                self._state = "finished"
+
+    async def _prepare(self) -> QuestionPreparationResult:
+        try:
             result = await self._rewriter.run(
                 json.dumps(
                     {

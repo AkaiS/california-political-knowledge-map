@@ -323,3 +323,63 @@ def test_a_second_prepare_cannot_replace_a_proposal_while_it_is_being_prepared()
         assert approved.relational is False
 
     asyncio.run(exercise())
+
+
+def test_assessment_failure_leaves_preparation_finished():
+    question = "Which stored articles discuss housing in July 2026?"
+
+    async def assess(rewrite):
+        raise RuntimeError("assessment failed")
+
+    async def exercise():
+        agent = rewriter_agent()
+        preparation = QuestionPreparation(
+            question,
+            rewriter=agent,
+            assess_question_policy_and_coverage=assess,
+        )
+        with agent.override(model=rewrite_response(question, False)):
+            with pytest.raises(RuntimeError, match="assessment failed"):
+                await preparation.prepare()
+            assert preparation._state == "finished"
+            with pytest.raises(
+                ValueError, match="this question already has a proposal or is finished"
+            ):
+                await preparation.prepare()
+
+        with pytest.raises(ValueError, match="there is no question awaiting approval"):
+            preparation.approve()
+
+    asyncio.run(exercise())
+
+
+def test_cancelled_assessment_leaves_preparation_finished():
+    question = "Which stored articles discuss housing in July 2026?"
+
+    async def exercise():
+        assessment_started = asyncio.Event()
+
+        async def assess(rewrite):
+            assessment_started.set()
+            await asyncio.Event().wait()
+            raise AssertionError("the cancelled assessment must not resume")
+
+        agent = rewriter_agent()
+        preparation = QuestionPreparation(
+            question,
+            rewriter=agent,
+            assess_question_policy_and_coverage=assess,
+        )
+        with agent.override(model=rewrite_response(question, False)):
+            task = asyncio.create_task(preparation.prepare())
+            await assessment_started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert preparation._state == "finished"
+            with pytest.raises(
+                ValueError, match="this question already has a proposal or is finished"
+            ):
+                await preparation.prepare()
+
+    asyncio.run(exercise())
