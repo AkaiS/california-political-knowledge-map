@@ -43,7 +43,7 @@ def search_details(
     }
 
 
-def _plain_text(text: str) -> str:
+def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 
 
@@ -69,17 +69,18 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
         citation = source.citation
         source_numbers[citation.source_article_id] = number
         paragraphs.append(
-            f"{number}. [{_plain_text(citation.title)}](<{citation.url}>)"
+            f"{number}. [{_escape_markdown_text(citation.title)}](<{citation.url}>)"
         )
         paragraphs.extend(
-            _plain_text(note.note)
+            _escape_markdown_text(note.note)
             for note in result.source_notes
             if note.source_article_id == citation.source_article_id
         )
         for passage in source.passages:
             paragraphs.append(
                 "\n".join(
-                    f"> {_plain_text(line)}" for line in passage.text.splitlines()
+                    f"> {_escape_markdown_text(line)}"
+                    for line in passage.text.splitlines()
                 )
             )
     for disagreement in result.disagreements:
@@ -87,7 +88,9 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
             str(source_numbers[source_id])
             for source_id in disagreement.source_article_ids
         )
-        paragraphs.append(f"Sources {numbers}: {_plain_text(disagreement.description)}")
+        paragraphs.append(
+            f"Sources {numbers}: {_escape_markdown_text(disagreement.description)}"
+        )
     if not result.evidence.sources:
         paragraphs.append("No verified passages were selected.")
     return "\n\n".join(paragraphs)

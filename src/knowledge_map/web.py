@@ -41,7 +41,7 @@ from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAn
 from knowledge_map.utils.agents import create_agent
 
 
-class PreparationSession(Protocol):
+class ChatSessionProtocol(Protocol):
     async def prepare(self) -> QuestionPreparationResult: ...
 
     async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure: ...
@@ -49,7 +49,7 @@ class PreparationSession(Protocol):
 
 @dataclass
 class BrowserSession:
-    session: PreparationSession
+    session: ChatSessionProtocol
     message_id: str | None = None
     approval_id: str | None = None
 
@@ -60,7 +60,7 @@ def create_app(
         [], AbstractAsyncContextManager[ChatDependencies | None]
     ] = chat_dependencies,
     session_factory: Callable[
-        [str, ChatDependencies | None], PreparationSession
+        [str, ChatDependencies | None], ChatSessionProtocol
     ] = new_chat_session,
 ) -> FastAPI:
     """Serve the stock frontend and adapt its messages to one Chat Session."""

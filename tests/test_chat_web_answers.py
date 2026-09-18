@@ -205,11 +205,13 @@ class AnswerSession:
         return self.outcome
 
 
-def approval_request(preparation, *, conversation_id="conversation-1"):
+def approval_request(
+    preparation, *, question="Who backed AB 1?", conversation_id="conversation-1"
+):
     proposal = next(
         event for event in preparation if event["type"] == "tool-input-available"
     )
-    request = question_request("Who backed AB 1?", conversation_id)
+    request = question_request(question, conversation_id)
     request["messages"].append(
         {
             "id": preparation[0]["messageId"],
@@ -226,6 +228,19 @@ def approval_request(preparation, *, conversation_id="conversation-1"):
         }
     )
     return request
+
+
+def approve_question(client, question, *, conversation_id="conversation-1"):
+    prepared = events(
+        client.post("/api/chat", json=question_request(question, conversation_id))
+    )
+    response = client.post(
+        "/api/chat",
+        json=approval_request(
+            prepared, question=question, conversation_id=conversation_id
+        ),
+    )
+    return response, events(response)
 
 
 def test_approval_returns_one_answer_and_cannot_be_consumed_again():
@@ -319,10 +334,7 @@ def test_search_details_remain_browser_presentation_outside_chat_agent_context_a
             base_url="http://localhost",
         ) as client,
     ):
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
+        _, completed = approve_question(client, "Who backed AB 1?")
 
     assert any(event.get("toolName") == "Search details" for event in completed)
     assert len(prompts) == 2
@@ -337,10 +349,7 @@ def test_answer_numbers_source_links_and_shows_only_selected_verified_passages()
         create_app(startup=no_dependencies, session_factory=lambda *_: session),
         base_url="http://localhost",
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
+        _, completed = approve_question(client, "Who backed AB 1?")
 
     text = "".join(
         event["delta"] for event in completed if event["type"] == "text-delta"
@@ -361,11 +370,7 @@ def test_search_details_include_routes_branch_ranks_graph_claims_and_coverage():
         create_app(startup=no_dependencies, session_factory=lambda *_: session),
         base_url="http://localhost",
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        response = client.post("/api/chat", json=approval_request(prepared))
-        completed = events(response)
+        response, completed = approve_question(client, "Who backed AB 1?")
 
     operation = next(
         event for event in completed if event.get("toolName") == "Search details"
@@ -465,10 +470,7 @@ def test_main_answer_keeps_deferred_and_every_branch_failure_visible(failed_coun
         ),
         base_url="http://localhost",
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who voted yes?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
+        _, completed = approve_question(client, "Who voted yes?")
 
     text = "".join(
         event["delta"] for event in completed if event["type"] == "text-delta"
@@ -509,11 +511,7 @@ def test_assembly_failure_discloses_limits_without_presenting_audit_candidates_a
         ),
         base_url="http://localhost",
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who voted yes?"))
-        )
-        response = client.post("/api/chat", json=approval_request(prepared))
-        completed = events(response)
+        response, completed = approve_question(client, "Who voted yes?")
 
     text = "".join(
         event["delta"] for event in completed if event["type"] == "text-delta"
