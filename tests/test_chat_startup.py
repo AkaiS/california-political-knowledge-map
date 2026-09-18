@@ -69,8 +69,7 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     result.data.return_value = [
         {
             "available_count": 2,
-            "earliest_date": "2025-03-02",
-            "latest_date": "2026-09-01",
+            "publication_dates": ["2025-03-02", "2026-09-01"],
         }
     ]
 
@@ -185,6 +184,57 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
     driver.close.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    ("stored_dates", "expected_range"),
+    [
+        (
+            [None, "", "not a date", "2025-03-02T12:00:00Z", "2026-09-01"],
+            ("2025-03-02", "2026-09-01"),
+        ),
+        ([None, "", "not a date"], (None, None)),
+    ],
+)
+def test_startup_ignores_unparseable_publication_dates(
+    startup_dependencies,
+    stored_dates,
+    expected_range,
+):
+    _, _, _, _, _, _, _, result = startup_dependencies
+    result.data.return_value = [
+        {"available_count": len(stored_dates), "publication_dates": stored_dates}
+    ]
+    received = []
+
+    def session_factory(question, dependencies):
+        received.append(dependencies)
+
+        class Session:
+            async def prepare(self):
+                return AwaitingQueryApproval(
+                    approval=QueryApproval(
+                        question=question,
+                        explanation="Review this question.",
+                    )
+                )
+
+        return Session()
+
+    with TestClient(
+        create_app(session_factory=session_factory), base_url="http://localhost"
+    ) as client:
+        response = client.post(
+            "/api/chat", json=question_request("Find CalMatters reporting.")
+        )
+
+    assert response.status_code == 200
+    entry = received[0].coverage.entries[0]
+    actual_range = tuple(
+        value.isoformat() if value is not None else None
+        for value in (entry.earliest_date, entry.latest_date)
+    )
+    assert actual_range == expected_range
+
+
 def test_startup_counts_any_local_model_http_response_as_reachable(
     startup_dependencies,
 ):
@@ -266,9 +316,7 @@ def test_startup_names_the_unavailable_dependency_and_cleans_up(
     elif failure == "coverage_refresh":
         result.data.side_effect = ServiceUnavailable("private detail")
     elif failure == "empty_coverage":
-        result.data.return_value = [
-            {"available_count": 0, "earliest_date": None, "latest_date": None}
-        ]
+        result.data.return_value = [{"available_count": 0, "publication_dates": []}]
 
     with (
         pytest.raises(RuntimeError, match=explanation),

@@ -7,6 +7,7 @@ import sqlite3
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack, asynccontextmanager, closing, contextmanager
 from dataclasses import dataclass
+from datetime import date
 from importlib.resources import files
 from pathlib import Path
 
@@ -80,6 +81,22 @@ def _check_document_store(path: Path) -> None:
         connection.execute("SELECT id, story_id, text, url FROM story_links LIMIT 0")
 
 
+def _publication_date_range(
+    stored_values: list[object],
+) -> tuple[date | None, date | None]:
+    parsed: list[date] = []
+    for value in stored_values:
+        if not isinstance(value, str):
+            continue
+        try:
+            parsed.append(date.fromisoformat(value[:10]))
+        except ValueError:
+            continue
+    if not parsed:
+        return None, None
+    return min(parsed), max(parsed)
+
+
 @contextmanager
 def _required(dependency: str) -> Iterator[None]:
     try:
@@ -126,8 +143,7 @@ async def chat_dependencies(
                     "MATCH (article:NewsArticle)-[:HAS_CHUNK]->(:Chunk) "
                     "WHERE any(prefix IN $prefixes WHERE article.id STARTS WITH prefix) "
                     "WITH DISTINCT article RETURN count(article) AS available_count, "
-                    "min(substring(article.published_date, 0, 10)) AS earliest_date, "
-                    "max(substring(article.published_date, 0, 10)) AS latest_date",
+                    "collect(DISTINCT article.published_date) AS publication_dates",
                     parameters={
                         "prefixes": [
                             "https://calmatters.org/",
@@ -142,6 +158,9 @@ async def chat_dependencies(
                 raise ValueError(
                     "No CalMatters Source Articles with Article Chunks are available"
                 )
+            earliest_date, latest_date = _publication_date_range(
+                inventory["publication_dates"]
+            )
             coverage = CoverageDescription(
                 entries=(
                     CoverageEntry.model_validate(
@@ -150,8 +169,8 @@ async def chat_dependencies(
                             "availability": {
                                 "available_count": inventory["available_count"]
                             },
-                            "earliest_date": inventory["earliest_date"],
-                            "latest_date": inventory["latest_date"],
+                            "earliest_date": earliest_date,
+                            "latest_date": latest_date,
                         }
                     ),
                 )

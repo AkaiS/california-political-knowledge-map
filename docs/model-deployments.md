@@ -54,6 +54,11 @@ model factory builds a Pydantic AI model. Start the local chat server with
 `scripts/llama-server.sh` and the local embedding server with
 `scripts/llama-embed.sh`.
 
+The project constrains the OpenAI SDK to versions `>=2.45.0,<3`. The lower
+bound matches the Pydantic AI dependency, while the upper bound preserves the
+`ModelAPIError` contract used when the retry transport exhausts HTTP failures.
+An OpenAI 3 upgrade must revalidate that provider-failure behavior first.
+
 Selecting OpenRouter requires all three of these non-empty values:
 
 * `OPENROUTER_API_KEY` authenticates the application to OpenRouter. The key is
