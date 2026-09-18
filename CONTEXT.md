@@ -249,6 +249,10 @@ _Avoid_: Context, retrieved documents, source text, supporting chunks
 The conversational agent that receives the person's original question, applies question policy and coverage to the Query Rewrite, obtains approval, invokes retrieval, and presents the Retrieval Answer. It receives the Evidence Assembler's package directly; no separate answering or sufficiency agent sits between them.
 _Avoid_: Retrieval Orchestrator, Answering Agent
 
+**Chat Session**:
+The stateful interaction devoted to one political question, including any Query Rewrite rejection, correction, and approval before retrieval and the resulting Retrieval Answer. A new political question starts a new Chat Session; answers do not rely on context from an earlier one.
+_Avoid_: Multi-question chat, persistent conversation
+
 **Evidence Assembler**:
 The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups passages by Source Article, supplies verified original wording and relevant coverage limits, and applies the context budget without interpreting or summarizing the evidence.
 _Avoid_: Answering Agent, Evidence Curator, context summarizer
@@ -257,8 +261,12 @@ _Avoid_: Answering Agent, Evidence Curator, context summarizer
 A question whose answer depends on one or more typed relationships among political entities or measures, including a relationship-constrained comparison, intersection, aggregate, or path. Source or passage discovery about a subject is not relational merely because retrieval follows fixed provenance links when it hydrates the result.
 _Avoid_: Zero-hop question, graph question, Cypher question
 
+**Query Rewrite Proposal**:
+The candidate natural-language restatement and internal route produced for a Chat Session before retrieval. The person sees only the restated question and either approves it as the Query Rewrite or supplies a correction for the Query Rewriter to consider in another proposal.
+_Avoid_: Draft query, proposed Cypher, retrieval plan
+
 **Query Rewrite**:
-The user-approved natural-language restatement that the retrieval pipeline uses in place of the original wording. It makes the requested entities, relationships, scope, and result explicit in the form used by the verified query-construction cases; it does not ask separately for reporting because every retrieval returns Grounding Evidence.
+The approved natural-language question from a Query Rewrite Proposal that the retrieval pipeline uses in place of the original wording. It makes the requested entities, relationships, scope, and result explicit in the form used by the verified query-construction cases; it does not ask separately for reporting because every retrieval returns Grounding Evidence.
 _Avoid_: Retrieval plan, normalized query, Cypher query
 
 **Retrieval Answer**:
