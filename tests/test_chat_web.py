@@ -70,7 +70,10 @@ def events(response: httpx.Response | httpx2.Response) -> list[dict]:
     ]
 
 
-def test_first_question_prepares_one_session_and_exposes_only_public_approval():
+@pytest.mark.parametrize("use_frontend_options", [False, True])
+def test_first_question_prepares_one_session_and_exposes_only_public_approval(
+    use_frontend_options,
+):
     questions = []
 
     class Session:
@@ -94,6 +97,12 @@ def test_first_question_prepares_one_session_and_exposes_only_public_approval():
         base_url="http://127.0.0.1:7932",
     ) as client:
         payload = question_request("Who backed AB 1?")
+        if use_frontend_options:
+            config = client.get("/api/configure").json()
+            # The stock UI selects models[0].id on mount and sends it on every turn.
+            payload.update(
+                model=config["models"][0]["id"], builtinTools=[], effort="medium"
+            )
         response = client.post("/api/chat", json=payload)
         chunks = events(response)
         repeated = client.post("/api/chat", json=payload)
@@ -211,7 +220,16 @@ def test_chat_accepts_local_hosts(host: str):
         response = client.get("/api/configure", headers={"Host": f"{host}:7932"})
 
     assert response.status_code == 200
-    assert response.json() == {"models": [], "builtinTools": []}
+    assert response.json() == {
+        "models": [
+            {
+                "id": "",
+                "name": "Local retrieval",
+                "builtinTools": [],
+            }
+        ],
+        "builtinTools": [],
+    }
 
 
 def test_root_serves_the_default_cdn_frontend_and_reuses_the_local_cache(

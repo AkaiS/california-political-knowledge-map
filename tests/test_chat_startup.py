@@ -172,7 +172,11 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
             assert "CalMatters: 2 articles, 2025-03-02 to 2026-09-01." in json.dumps(
                 chunks
             )
-        assert client.get("/api/configure").json() == {"models": [], "builtinTools": []}
+        config = client.get("/api/configure").json()
+        assert len(config["models"]) == 1
+        assert config["models"][0]["id"] == ""
+        assert config["models"][0]["builtinTools"] == []
+        assert config["builtinTools"] == []
 
     assert received[0] is received[1]
     assert len(drivers) == 1

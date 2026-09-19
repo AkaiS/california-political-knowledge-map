@@ -341,8 +341,27 @@ def create_app(
 
         return _chat_stream_response(stream())
 
+    async def configure_frontend(request: Request) -> Response:
+        # The stock UI requires a first model even when Chat Sessions own deployment.
+        # An empty ID means no override and keeps its model picker hidden.
+        return JSONResponse(
+            {
+                "models": [
+                    {
+                        "id": "",
+                        "name": "Local retrieval",
+                        "builtinTools": [],
+                    }
+                ],
+                "builtinTools": [],
+            }
+        )
+
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     frontend = create_agent(name="local_chat_shell").to_web()
     frontend.router.routes.insert(0, Route("/api/chat", post_chat, methods=["POST"]))
+    frontend.router.routes.insert(
+        0, Route("/api/configure", configure_frontend, methods=["GET"])
+    )
     app.mount("/", frontend)
     return app
