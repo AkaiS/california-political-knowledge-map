@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from knowledge_map.adapters.neo4j_db import Neo4jAdapter, Neo4jConfigError, Neo4jConnectionError
 from knowledge_map.core.bill_sessions import resolve_bill_sessions
 from knowledge_map.core.legislative_events import resolve_legislative_event_dates
@@ -13,14 +13,6 @@ from knowledge_map.schemas import (
     Relationship,
     SourceArticle,
 )
-
-@pytest.fixture(autouse=True)
-def mock_ensure_vector_index(request):
-    if "no_mock_ensure_index" in request.keywords:
-        yield
-    else:
-        with patch("knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index", create=True) as m:
-            yield m
 
 def test_missing_uri_raises_error():
     with pytest.raises(Neo4jConfigError) as exc_info:
@@ -330,40 +322,20 @@ def test_get_nodes_by_label_failure():
         manager.get_nodes_by_label("PoliticalActor")
     assert "Failed to retrieve nodes for label" in str(exc_info.value)
 
-@pytest.mark.no_mock_ensure_index
-def test_connect_creates_and_verifies_vector_index():
+def test_connect_verifies_connectivity_without_writing_schema():
     mock_driver = MagicMock()
-    mock_session = MagicMock()
-    
-    mock_driver.session.return_value.__enter__.return_value = mock_session
-    
-    # Mock return value for SHOW INDEXES query
-    mock_result = MagicMock()
-    mock_result.peek.return_value = {"name": "chunk_vector_index"}
-    mock_session.run.return_value = mock_result
-    
+
     manager = Neo4jAdapter(
         uri="bolt://localhost:7687",
         username="neo4j",
         password="password",
         driver=mock_driver
     )
-    
+
     manager.connect()
-    
-    assert mock_session.run.call_count == 2
-    
-    # 1. Check create index Cypher
-    create_query = mock_session.run.call_args_list[0][0][0]
-    assert "CREATE VECTOR INDEX chunk_vector_index" in create_query
-    assert "FOR (c:Chunk)" in create_query
-    assert "ON (c.embedding)" in create_query
-    assert "768" in create_query
-    
-    # 2. Check verify index Cypher
-    verify_query = mock_session.run.call_args_list[1][0][0]
-    assert "SHOW INDEXES" in verify_query
-    assert "chunk_vector_index" in verify_query
+
+    mock_driver.verify_connectivity.assert_called_once_with()
+    mock_driver.session.assert_not_called()
 
 def test_ingest_article():
     mock_driver = MagicMock()

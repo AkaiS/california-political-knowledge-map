@@ -14,12 +14,11 @@ from knowledge_map.schemas.retrieval import (
 
 
 def test_missing_index_is_failure_even_when_question_would_match_nothing(
-    disposable_neo4j_uri, caplog
+    neo4j_schema_uri, caplog
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query("DROP INDEX article_title_fulltext_index")
             return await retriever.retrieve(
                 RetrievalRequest(
@@ -47,14 +46,11 @@ def test_missing_index_is_failure_even_when_question_would_match_nothing(
     )
 
 
-def test_installs_accepted_indexes_without_uniqueness_or_removing_existing_indexes(
-    disposable_neo4j_uri,
+def test_schema_installs_accepted_indexes_without_uniqueness_or_removing_defaults(
+    neo4j_schema_uri,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
-            retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
-            await retriever.ensure_indexes()
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             records, _, _ = await driver.execute_query("SHOW INDEXES")
             full_text = {
                 row["name"]: (set(row["labelsOrTypes"]), row["properties"])
@@ -100,18 +96,29 @@ def test_installs_accepted_indexes_without_uniqueness_or_removing_existing_index
                 and row["state"] == "ONLINE"
                 for row in ranges
             )
+            (vector,) = [row for row in records if row["type"] == "VECTOR"]
+            assert (
+                vector["name"],
+                vector["labelsOrTypes"],
+                vector["properties"],
+                vector["state"],
+            ) == (
+                "chunk_vector_index",
+                ["Chunk"],
+                ["embedding"],
+                "ONLINE",
+            )
             assert len([row for row in records if row["type"] == "LOOKUP"]) == 2
 
     asyncio.run(run())
 
 
 def test_retains_every_route_and_ambiguous_entity_identity_with_local_scores(
-    disposable_neo4j_uri,
+    neo4j_schema_uri,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query("""
                 CREATE (a:NewsArticle {id: 'source-shared', title: 'Eldervoss'})
                 CREATE (c:Chunk {id: 'chunk-shared', text: 'Eldervoss'})
@@ -173,12 +180,11 @@ def test_retains_every_route_and_ambiguous_entity_identity_with_local_scores(
 
 
 def test_completed_search_without_grounded_matches_is_successful_empty(
-    disposable_neo4j_uri,
+    neo4j_schema_uri,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query("""
                 CREATE (:Politician {id: 'orphan', name: 'Orphanessa'})
                 CREATE (:NewsArticle {id: 'orphan-source', title: 'Orphanessa'})
@@ -200,12 +206,11 @@ def test_completed_search_without_grounded_matches_is_successful_empty(
 
 
 def test_policy_area_name_reaches_article_level_grounding_without_a_graph_claim(
-    disposable_neo4j_uri,
+    neo4j_schema_uri,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query("""
                 CREATE (a:NewsArticle {id: 'source-topic', title: 'Policy report'})
                 CREATE (c:Chunk {id: 'chunk-topic', text: 'An article passage'})
@@ -244,16 +249,15 @@ def test_policy_area_name_reaches_article_level_grounding_without_a_graph_claim(
     ],
 )
 def test_article_title_and_chunk_text_matches_reach_source_chunks(
-    disposable_neo4j_uri,
+    neo4j_schema_uri,
     field,
     word,
     kind,
     label,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query(
                 """
                 CREATE (a:NewsArticle {id: $article, title: $title})
@@ -295,12 +299,11 @@ def test_article_title_and_chunk_text_matches_reach_source_chunks(
 
 
 def test_entity_name_match_reaches_grounding_evidence_without_claiming_support(
-    disposable_neo4j_uri,
+    neo4j_schema_uri,
 ):
     async def run():
-        async with AsyncGraphDatabase.driver(disposable_neo4j_uri) as driver:
+        async with AsyncGraphDatabase.driver(neo4j_schema_uri) as driver:
             retriever = Neo4jFullTextRetriever(driver)
-            await retriever.ensure_indexes()
             await driver.execute_query("""
                 CREATE (a:NewsArticle {id: 'source-name', title: 'A biography'})
                 CREATE (c:Chunk {id: 'chunk-name', text: 'A committee biography.'})

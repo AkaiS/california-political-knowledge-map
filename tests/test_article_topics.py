@@ -6,7 +6,7 @@ asserts how a Policy Area was arrived at — only what reached the graph.
 """
 
 import inspect
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -25,14 +25,6 @@ ARTICLE = SourceArticle(
     title="Two bills, two subjects",
     content="Assembly Bill 218 and Proposition 33.",
 )
-
-
-@pytest.fixture(autouse=True)
-def mock_ensure_vector_index():
-    with patch(
-        "knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index", create=True
-    ):
-        yield
 
 
 @pytest.fixture

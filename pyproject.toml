@@ -39,9 +39,6 @@ filterwarnings = [
     "ignore::DeprecationWarning:pydantic_ai.*",
     "ignore::logfire._internal.config.LogfireNotConfiguredWarning",
 ]
-markers = [
-    "no_mock_ensure_index: do not mock the _ensure_vector_index method in Neo4jManager"
-]
 
 [build-system]
 requires = ["hatchling"]

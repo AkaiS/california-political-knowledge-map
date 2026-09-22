@@ -2,7 +2,6 @@ import re
 
 from neo4j import GraphDatabase
 
-from knowledge_map.config import settings
 from knowledge_map.ontology import news
 from knowledge_map.ontology.keys import bill_key, derived_key
 from knowledge_map.schemas import (
@@ -193,7 +192,6 @@ class Neo4jAdapter:
         self.username = username
         self.password = password
         self._driver = driver
-        self._index_ensured = False
 
     def __enter__(self):
         self.connect()
@@ -214,9 +212,6 @@ class Neo4jAdapter:
         
         try:
             self._driver.verify_connectivity()
-            if not self._index_ensured:
-                self._ensure_vector_index()
-                self._index_ensured = True
         except Exception as e:
             self.close()
             if isinstance(e, Neo4jConnectionError):
@@ -224,30 +219,6 @@ class Neo4jAdapter:
             raise Neo4jConnectionError(f"Could not connect to Neo4j database: {e}")
         
         return self._driver
-
-    def _ensure_vector_index(self):
-        dimension = settings.embedding.dimension
-        try:
-            with self._driver.session() as session:
-                query = f"""
-                CREATE VECTOR INDEX chunk_vector_index IF NOT EXISTS
-                FOR (c:Chunk)
-                ON (c.embedding)
-                OPTIONS {{
-                  indexConfig: {{
-                    `vector.dimensions`: {dimension},
-                    `vector.similarity_function`: 'cosine'
-                  }}
-                }}
-                """
-                session.run(query)
-                
-                result = session.run("SHOW INDEXES YIELD name WHERE name = 'chunk_vector_index'")
-                exists = result.peek() is not None
-                if not exists:
-                    raise Neo4jConnectionError("Vector index 'chunk_vector_index' was not created successfully.")
-        except Exception as e:
-            raise Neo4jConnectionError(f"Failed to create or verify vector index: {e}")
 
     def ingest_article(self, article: SourceArticle) -> None:
         driver = self.connect()

@@ -9,6 +9,8 @@ import pytest
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 
+from knowledge_map.database_setup import apply_neo4j_schema
+
 
 @pytest.fixture(scope="session")
 def disposable_neo4j_uri() -> Iterator[str]:
@@ -52,3 +54,12 @@ def disposable_neo4j_uri() -> Iterator[str]:
         yield uri
     finally:
         subprocess.run(["docker", "stop", container], check=True, capture_output=True)
+
+
+@pytest.fixture
+def neo4j_schema_uri(disposable_neo4j_uri: str) -> str:
+    """Apply the production Neo4j schema to the disposable database."""
+
+    with GraphDatabase.driver(disposable_neo4j_uri) as driver:
+        apply_neo4j_schema(driver, database="neo4j")
+    return disposable_neo4j_uri

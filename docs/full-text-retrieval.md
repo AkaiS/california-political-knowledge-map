@@ -8,14 +8,20 @@ database if needed, and passes an absolute deadline from
 
 ```python
 retriever = Neo4jFullTextRetriever(driver, database="neo4j")
-await retriever.ensure_indexes()  # Run during setup with schema-write permission.
 outcome = await retriever.retrieve(request, deadline=deadline)
 ```
 
-Index setup is explicit. Retrieval uses a read session and checks required
-full-text index names, labels, properties, type, and online state. It does not
-create indexes during a search. Setup installs this accepted inventory and waits
-for indexes to become online:
+Database setup is explicit:
+
+```sh
+./scripts/setup-databases.sh
+```
+
+The setup script applies `schema/neo4j/001_retrieval_indexes.cypher`. Retrieval
+uses a read session and checks required full-text index names, labels,
+properties, type, and online state. It does not create indexes during a search.
+The schema installs this accepted inventory and waits for indexes to become
+online:
 
 | Index | Labels | Property |
 | --- | --- | --- |
@@ -24,9 +30,9 @@ for indexes to become online:
 | `chunk_text_fulltext_index` | Chunk | `text` |
 | `<lowercase-label>_id_index` | Each of those eight entity labels, NewsArticle, Chunk | `id` |
 
-The ten ID indexes are non-unique. Setup preserves existing vector and token
-indexes and never merges duplicate entity IDs. Neo4j 2026.07.1 is the integration
-test version; the entity query uses
+The ten ID indexes are non-unique. Setup also creates the Article Chunk vector
+index, preserves token indexes, and never merges duplicate entity IDs. Neo4j
+2026.07.1 is the integration test version; the entity query uses
 [scoped subqueries available since Neo4j 5.23](https://neo4j.com/docs/cypher-manual/5/subqueries/call-subquery/).
 
 ## Terms and routes

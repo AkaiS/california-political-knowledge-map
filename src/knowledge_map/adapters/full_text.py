@@ -161,27 +161,6 @@ class Neo4jFullTextRetriever:
         self.driver = driver
         self.database = database
 
-    async def ensure_indexes(self, *, timeout_seconds: float = 30) -> None:
-        """Install retrieval indexes without imposing uniqueness on existing IDs."""
-        async with self.driver.session(database=self.database) as session:
-            for channel in _FULL_TEXT_CHANNELS:
-                result = await session.run(
-                    f"CREATE FULLTEXT INDEX {channel.index_name} IF NOT EXISTS "
-                    f"FOR (n:{'|'.join(channel.labels)}) "
-                    f"ON EACH [n.{channel.matched_field}]"
-                )
-                await result.consume()
-            for label in (*_ENTITY_LABELS, "NewsArticle", "Chunk"):
-                result = await session.run(
-                    f"CREATE RANGE INDEX {label.lower()}_id_index IF NOT EXISTS "
-                    f"FOR (n:{label}) ON (n.id)"
-                )
-                await result.consume()
-            result = await session.run(
-                "CALL db.awaitIndexes($timeout)", timeout=timeout_seconds
-            )
-            await result.consume()
-
     async def retrieve(
         self,
         request: RetrievalRequest,
