@@ -17,6 +17,15 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
+- [One-Time Legacy Chunk Provenance Backfill](projects/legacy-chunk-provenance-backfill/PRD.md),
+  `ready-for-agent` as of 2026-09-22. A model-free, read-only-first command
+  measures which old coreferenced Chunks can be mapped uniquely to original
+  Stories, then supports guarded property writes and rollback after review.
+- [Original Story Passage Provenance](projects/original-story-passage-provenance/PRD.md),
+  `ready-for-agent` as of 2026-09-22. Keep coreferenced Article Chunks for
+  retrieval, attach original Story ranges and content fingerprints to Neo4j
+  Chunks, and let Evidence Assembly quote the verified Story slice. Includes
+  the replacement-boundary rule and a fail-closed legacy-chunk rollout.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
@@ -42,6 +51,17 @@ have not yet been shaped into executable work.
   narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
   below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### One-Time Legacy Chunk Provenance Backfill frontier
+
+The first ticket is takeable now. Tickets 02 and 03 can proceed independently
+after it; the copied-corpus rehearsal waits for both. No ticket authorizes a
+write to the live Story store or graph.
+
+- [01 Inventory and map verbatim legacy Article Chunks](projects/legacy-chunk-provenance-backfill/issues/01-inventory-and-map-verbatim-legacy-chunks.md), takeable. The read-only command reports unique exact mappings and skips.
+- [02 Map uniquely anchored coreferenced Article Chunks](projects/legacy-chunk-provenance-backfill/issues/02-map-uniquely-anchored-coreferenced-chunks.md), blocked by 01. Exact anchors and Chunk order extend the plan to changed wording; ambiguity remains a skip.
+- [03 Apply and roll back reviewed provenance](projects/legacy-chunk-provenance-backfill/issues/03-apply-and-roll-back-reviewed-provenance.md), blocked by 01. Conditional writes and a guarded rollback work on test data without waiting for 02.
+- [04 Rehearse and audit the corpus backfill](projects/legacy-chunk-provenance-backfill/issues/04-rehearse-and-audit-corpus-backfill.md), blocked by 02 and 03. Copied data supplies the coverage and safety report before any live decision.
 
 ### Graph-Prioritized Retrieval frontier
 
@@ -176,7 +196,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [One-Time Legacy Chunk Provenance Backfill](projects/legacy-chunk-provenance-backfill/PRD.md); [Original Story Passage Provenance](projects/original-story-passage-provenance/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
