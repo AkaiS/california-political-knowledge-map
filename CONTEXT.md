@@ -253,6 +253,14 @@ _Avoid_: Retrieval Orchestrator, Answering Agent
 The stateful interaction devoted to one political question, including any Query Rewrite rejection, correction, and approval before retrieval and the resulting Retrieval Answer. A new political question starts a new Chat Session; answers do not rely on context from an earlier one.
 _Avoid_: Multi-question chat, persistent conversation
 
+**Chat Session Audit Trail**:
+The durable, maintainer-facing account of one Chat Session's recorded stages and any Retrieval Answer, used to inspect and compare retrieval behavior.
+_Avoid_: Answer transcript, browser history
+
+**Audit Stage Record**:
+An immutable observation of one named operation or outcome in a Chat Session Audit Trail, identified independently of other operations running in parallel. Query Rewrite records also distinguish successive proposals.
+_Avoid_: Log line, numbered pipeline step
+
 **Evidence Assembler**:
 The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups passages by Source Article, supplies verified original wording and relevant coverage limits, and applies the context budget without interpreting or summarizing the evidence.
 _Avoid_: Answering Agent, Evidence Curator, context summarizer
