@@ -111,6 +111,28 @@ The application shares its agents, retrieval dependencies, and coverage across
 in-memory Chat Sessions. Shutdown closes the Neo4j driver and the model and
 embedding HTTP clients that this application owns.
 
+The first valid question assigns an application audit ID and dispatches a
+session-start observation to a separate SQLite database. `CHAT_AUDIT_DB_PATH`
+selects its location, defaulting to `chat_audit.db`. The observation saves the
+original question, startup code revision and dirty state, resolved Model
+Deployments, prompt digests, fusion and context settings, and the startup
+coverage counts with their observation time. The audit ID appears as
+`chat_audit_id` on the Chat Session's Logfire spans.
+
+Inspect a saved trail without starting chat, model clients, Neo4j, or Logfire:
+
+```bash
+uv run ca-map audit show AUDIT_ID
+uv run ca-map audit show AUDIT_ID --db /path/to/chat_audit.db
+```
+
+The command prints the saved stages as JSON and opens the database read-only.
+This initial slice records session start. Later pipeline stages are not yet
+captured. A missing record has no inferred outcome. Each insert runs in the
+background; storage failures are logged and chat continues. Committed records
+survive restart, but an insert still in flight may be lost on process exit.
+Records remain until the operator manages the database outside this command.
+
 ## Model deployments
 
 Operational guidance for choosing local llama.cpp or OpenRouter chat, configuring

@@ -38,6 +38,7 @@ from knowledge_map.utils.reachability import (
 
 CLI_COMMAND_HELP = {
     "chat": "Start the local retrieval chat in your browser",
+    "audit": "Inspect saved Chat Session Audit Trails",
     "ingest": "Run batch ingestion of unprocessed articles",
     "clear": "Clear all nodes and relationships from Neo4j",
     "analyze": "Inspect and list distinct node labels in the Neo4j database",
@@ -422,10 +423,17 @@ def main(args=None):
     from knowledge_map.cli import telemetry as telemetry_cli
     telemetry_cli.add_parser(subparsers)
 
+    from knowledge_map.cli import audit as audit_cli
+    audit_cli.add_parser(subparsers)
+
     parsed_args = parser.parse_args(args)
 
     if parsed_args.action == telemetry_cli.BOOTSTRAP_ACTION:
         telemetry_cli.dispatch(parsed_args)
+        return
+
+    if parsed_args.action == "audit":
+        audit_cli.dispatch(parsed_args)
         return
 
     # Every other command runs a model or writes data that a trace must
