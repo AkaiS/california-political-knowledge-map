@@ -88,22 +88,9 @@ class EvidenceStore:
             ),
         )
 
-    async def load_story(self, citation):
-        return self.rows[
-            next(
-                chunk
-                for chunk, (_, story) in self.rows.items()
-                if story.url == str(citation.url)
-            )
-        ][1]
-
-
 def assemble(store, retained, *, coverage=None, relevant_collection_ids=(), **kwargs):
     return asyncio.run(
-        EvidenceAssembler(
-            load_grounding=store.load_grounding,
-            load_story=store.load_story,
-        ).assemble(
+        EvidenceAssembler(load_grounding=store.load_grounding).assemble(
             retained,
             fuse_candidates(retained),
             coverage=coverage or CoverageDescription(entries=()),
@@ -113,25 +100,23 @@ def assemble(store, retained, *, coverage=None, relevant_collection_ids=(), **kw
     )
 
 
-def test_selected_wording_is_verified_against_the_original_story():
+def test_coreference_resolved_chunk_is_assembled_without_loading_the_story():
     story = Story(
         url="https://example.com/a",
         title="Original reporting",
-        content="Introduction. The union supports AB 1. More reporting.",
+        content="Introduction. She supports AB 1. More reporting.",
     )
     retained = execution(candidate())
 
     result = assemble(
-        EvidenceStore({"a": ("The union supports AB 1.", story)}), retained
+        EvidenceStore({"a": ("Senator Smith supports AB 1.", story)}), retained
     )
 
     assert isinstance(result, EvidencePackage)
     passage = result.sources[0].passages[0]
-    assert (passage.text, passage.start, passage.end, passage.verification) == (
-        "The union supports AB 1.",
-        14,
-        38,
-        "original_story",
+    assert (passage.text, passage.provenance) == (
+        "Senator Smith supports AB 1.",
+        "stored_chunk",
     )
     assert result.sources[0].citation.url == HttpUrl(story.url)
     assert (
@@ -141,7 +126,7 @@ def test_selected_wording_is_verified_against_the_original_story():
 
 
 @pytest.mark.parametrize("body", ["She supports AB 1.", None, ""])
-def test_unverifiable_wording_is_an_assembly_failure_without_changing_branches(body):
+def test_original_story_content_does_not_control_chunk_evidence(body):
     story = Story(url="https://example.com/a", title="Original reporting", content=body)
     retained = execution(candidate())
 
@@ -149,10 +134,10 @@ def test_unverifiable_wording_is_an_assembly_failure_without_changing_branches(b
         EvidenceStore({"a": ("Senator Smith supports AB 1.", story)}), retained
     )
 
-    assert isinstance(result, EvidenceAssemblyFailure)
+    assert isinstance(result, EvidencePackage)
     assert result.execution == retained
     assert result.execution.failed_branches == ()
-    assert result.model_dump()["outcome"] == "assembly_failed"
+    assert result.sources[0].passages[0].text == "Senator Smith supports AB 1."
 
 
 def test_passages_group_by_source_without_losing_distant_passages_or_graph_routes():
@@ -321,7 +306,7 @@ def test_character_budget_skips_an_oversized_passage_and_keeps_later_evidence():
 
 
 @pytest.mark.parametrize(
-    "problem", ["missing", "wrong_chunk", "wrong_source", "wrong_story", "lost_route"]
+    "problem", ["missing", "wrong_chunk", "wrong_source", "lost_route"]
 )
 def test_failed_hydration_never_misattributes_evidence_or_changes_failed_branches(
     problem,
@@ -342,14 +327,6 @@ def test_failed_hydration_never_misattributes_evidence_or_changes_failed_branche
                     }
                 )
             return grounding
-
-        async def load_story(self, citation):
-            story = await super().load_story(citation)
-            if problem == "wrong_story":
-                return story.model_copy(
-                    update={"url": "https://unrelated.example/story"}
-                )
-            return story
 
     story = Story(
         url="https://example.com/a", title="Original reporting", content="Verbatim."
@@ -379,10 +356,7 @@ def test_failed_hydration_never_misattributes_evidence_or_changes_failed_branche
     store = BrokenStore({"a": ("Verbatim.", story)})
 
     result = asyncio.run(
-        EvidenceAssembler(
-            load_grounding=store.load_grounding,
-            load_story=store.load_story,
-        ).assemble(
+        EvidenceAssembler(load_grounding=store.load_grounding).assemble(
             retained,
             fused,
             coverage=CoverageDescription(entries=()),
@@ -477,10 +451,7 @@ def test_duplicate_fused_chunks_are_an_assembly_failure():
     fused = fuse_candidates(retained)
 
     result = asyncio.run(
-        EvidenceAssembler(
-            load_grounding=store.load_grounding,
-            load_story=store.load_story,
-        ).assemble(
+        EvidenceAssembler(load_grounding=store.load_grounding).assemble(
             retained,
             (*fused, *fused),
             coverage=CoverageDescription(entries=()),
@@ -550,7 +521,7 @@ def test_coverage_that_exceeds_the_whole_budget_fails_without_dropping_its_limit
     assert result == EvidenceAssemblyFailure(execution=retained)
 
 
-def test_rendered_context_excludes_unverified_chunk_wording_but_retains_routes():
+def test_rendered_context_uses_hydrated_chunk_wording_and_retains_routes():
     story = Story(
         url="https://example.com/a",
         title="Original reporting",

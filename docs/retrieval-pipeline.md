@@ -8,7 +8,7 @@ that coordinator and one final Retrieval Answer from the same Chat Agent.
 ## Construction
 
 The caller supplies the asynchronous Neo4j driver, structural construction
-agents, document-store path, verified Coverage Description, and explicitly
+agents, verified Coverage Description, and explicitly
 relevant collection IDs. Relevant IDs may name a collection with no matches.
 They must have entries in the supplied description. Coverage is authored input;
 the coordinator does not infer new capabilities from retrieved records.
@@ -24,13 +24,12 @@ from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.schemas.fusion import FusionConfig
 
 config = FusionConfig()
-store = EvidenceStore(driver, story_db_path="document_store.db")
+store = EvidenceStore(driver)
 retrieval = RetrievalCoordinator(
     full_text=Neo4jFullTextRetriever(driver),
     dense=Neo4jDenseRetriever(driver, candidate_limit=config.dense_candidate_limit),
     structural=Neo4jStructuralRetriever(driver, agents=structural_agents),
     load_grounding=store.load_grounding,
-    load_story=store.load_story,
     fusion_config=config,
     deadline_seconds=60,
 )
@@ -78,21 +77,16 @@ above. Full-text and structural results retain their completed matches before
 fusion; their selection limits do not impose a new database-query limit.
 
 Fusion and [Evidence Assembly](evidence-assembly.md) use the same deadline.
-Assembly hydrates selected chunks, loads original Stories, verifies exact
-wording, groups passages by Source Article, and applies the configured context
-limits. If the deadline leaves no time to verify recovered candidates, the run
+Assembly hydrates selected chunks, groups passages by Source Article, and
+applies the configured context limits. If the deadline leaves no time to load
+recovered candidates, the run
 returns `EvidenceAssemblyFailure` with those candidates in its execution audit.
-It cannot present them as verified quotations. Assembly failure does not relabel
-a successful retrieval branch as failed.
+Assembly failure does not relabel a successful retrieval branch as failed.
 
 `EvidenceStore` reads chunks through their actual Source Article links. It uses
-the unmodified Source Article ID as the SQLite lookup key because that ID is the
-Story URL primary key; it does not use Pydantic's normalized `HttpUrl` rendering.
-SQLite reads run in a worker, open the existing database read-only, and fail
-immediately on a lock, so a cancelled coroutine does not leave that worker
-waiting on SQLite's default busy timeout. Neo4j and SQLite failures become
-`EvidenceHydrationError`; absent or ambiguous grounding raises `LookupError`.
-Neither loader retries or infers original wording from transformed chunk text.
+the Source Article ID as the citation URL when the graph has no separate `url`
+property. Neo4j failures become `EvidenceHydrationError`; absent or ambiguous
+grounding raises `LookupError`. The loader does not retry.
 
 ## One answer and visible limits
 
@@ -102,7 +96,7 @@ model context. The original question remains conversation context; the approved
 rewrite controls retrieval and the answer. The agent has no retrieval tools.
 
 The Chat Agent supplies brief guidance, relevance notes, and disagreements.
-Code attaches the unchanged verified package and validates referenced source
+Code attaches the unchanged evidence package and validates referenced source
 IDs. Code also prefixes all failure disclosures, placing structural failure
 first. A successful empty structural branch adds "No matching graph connections
 were found in the available graph." Deferred explanations repeat in the final
@@ -116,7 +110,7 @@ There is no second retrieval, sufficiency loop, or separate answer agent.
 The factory disables output correction retries for the Chat Agent. Invalid
 guidance or a final model failure propagates without another search.
 
-## Usage and verification
+## Usage and testing
 
 `retrieval_total_usage` logs model requests, input tokens, and output tokens
 across structural construction and dense embedding. `chat_total_usage` includes
@@ -127,7 +121,7 @@ deployment settings retain their existing bounds.
 
 `tests/test_retrieval.py`, `tests/test_chat.py`, and
 `tests/test_evidence_store.py` cover the public seams with scripted models,
-in-memory branches, fake Neo4j drivers, and temporary SQLite stores. Existing
+in-memory branches and fake Neo4j drivers. Existing
 branch tests continue to cover compilation, hop bounds, and stage corrections.
 No UI, live service, or retrieval-quality measurement is required for this
 integration contract.

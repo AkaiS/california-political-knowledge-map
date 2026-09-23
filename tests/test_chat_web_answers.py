@@ -29,6 +29,7 @@ from knowledge_map.schemas.retrieval import (
     CoverageEntry,
     EvidenceAssemblyFailure,
     EvidencePackage,
+    EvidencePassage,
     FailedBranch,
     FusedCandidate,
     GraphClaim,
@@ -45,7 +46,6 @@ from knowledge_map.schemas.retrieval import (
     SourceDisagreement,
     SourceRelevanceNote,
     SuccessfulBranch,
-    VerifiedPassage,
 )
 from knowledge_map.web import create_app
 
@@ -130,12 +130,10 @@ def selected_answer(*, dense_failed=False):
             SourceArticleEvidence(
                 citation=citation,
                 passages=(
-                    VerifiedPassage(
+                    EvidencePassage(
                         source_article_id=citation.source_article_id,
                         text=text,
-                        start=0,
-                        end=len(text),
-                        verification="original_story",
+                        provenance="stored_chunk",
                         candidate=FusedCandidate(
                             chunk_id=candidate.chunk_id,
                             rank=number,
@@ -343,7 +341,7 @@ def test_search_details_remain_browser_presentation_outside_chat_agent_context_a
     assert tools == []
 
 
-def test_answer_numbers_source_links_and_shows_only_selected_verified_passages():
+def test_answer_numbers_source_links_and_shows_only_selected_passages():
     session = AnswerSession(selected_answer(dense_failed=True))
     with TestClient(
         create_app(startup=no_dependencies, session_factory=lambda *_: session),
@@ -356,8 +354,10 @@ def test_answer_numbers_source_links_and_shows_only_selected_verified_passages()
     )
     assert "1. [Union backs AB 1](<https://calmatters.org/article-1/>)" in text
     assert "2. [Chamber opposes AB 1](<https://calmatters.org/article-2/>)" in text
-    assert "> The union supported AB 1." in text
-    assert "> The chamber opposed AB 1." in text
+    assert text.count("Stored Article Chunk:") == 2
+    assert "The union supported AB 1." in text
+    assert "The chamber opposed AB 1." in text
+    assert "> The union supported AB 1." not in text
     assert "This report records the union's position." in text
     assert "These sources report different positions on the measure." in text
     assert "Dense retrieval could not be completed." in text
@@ -516,7 +516,7 @@ def test_assembly_failure_discloses_limits_without_presenting_audit_candidates_a
     text = "".join(
         event["delta"] for event in completed if event["type"] == "text-delta"
     )
-    assert "Grounding Evidence could not be assembled and verified." in text
+    assert "Grounding Evidence could not be assembled." in text
     assert "Dense retrieval could not be completed." in text
     assert "Complete roll calls are not available." in text
     assert "The union supported AB 1." not in text

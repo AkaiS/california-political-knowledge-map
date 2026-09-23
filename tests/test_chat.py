@@ -240,7 +240,7 @@ def test_assembly_failure_discloses_branch_failures_without_requesting_an_answer
             return FailedBranch(branch=self.branch)
 
     async def unavailable(citation):
-        raise LookupError("original Story unavailable")
+        raise LookupError("stored chunk unavailable")
 
     branches = {branch: Branch(branch) for branch in RetrievalBranch}
     branches[RetrievalBranch.STRUCTURAL] = Failed(RetrievalBranch.STRUCTURAL)
@@ -258,7 +258,7 @@ def test_assembly_failure_discloses_branch_failures_without_requesting_an_answer
         "Find support for AB 1",
         chat_agent=agent,
         rewriter=rewriter,
-        retrieval=coordinator(branches, load_story=unavailable),
+        retrieval=coordinator(branches, load_grounding=unavailable),
         coverage=COVERAGE,
         relevant_collection_ids=("reporting",),
     )
@@ -275,7 +275,7 @@ def test_assembly_failure_discloses_branch_failures_without_requesting_an_answer
     assert isinstance(result, EvidenceAssemblyFailure)
     assert result.failure_disclosures == (
         "Graph connections matching the question could not be searched.",
-        "Grounding Evidence could not be assembled and verified.",
+        "Grounding Evidence could not be assembled.",
     )
     assert set(result.execution.evidence_by_branch) == {"full_text", "dense"}
     assert len(requests) == 1
@@ -283,7 +283,7 @@ def test_assembly_failure_discloses_branch_failures_without_requesting_an_answer
 
 def test_assembly_failure_discloses_a_successful_empty_structural_search():
     async def unavailable(citation):
-        raise LookupError("original Story unavailable")
+        raise LookupError("stored chunk unavailable")
 
     branches = {branch: Branch(branch, ()) for branch in RetrievalBranch}
     branches[RetrievalBranch.FULL_TEXT] = Branch(RetrievalBranch.FULL_TEXT)
@@ -300,7 +300,7 @@ def test_assembly_failure_discloses_a_successful_empty_structural_search():
         "Find support for AB 1",
         chat_agent=agent,
         rewriter=rewriter,
-        retrieval=coordinator(branches, load_story=unavailable),
+        retrieval=coordinator(branches, load_grounding=unavailable),
         coverage=COVERAGE,
         relevant_collection_ids=("reporting",),
     )
@@ -318,7 +318,7 @@ def test_assembly_failure_discloses_a_successful_empty_structural_search():
     assert isinstance(result, EvidenceAssemblyFailure)
     assert result.failure_disclosures == (
         "No matching graph connections were found in the available graph.",
-        "Grounding Evidence could not be assembled and verified.",
+        "Grounding Evidence could not be assembled.",
     )
     assert len(calls) == 1
 

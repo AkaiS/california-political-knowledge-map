@@ -39,8 +39,7 @@ Article ID, and database element ID. Each retains a one-based branch rank,
 native score, chunk and Source Article IDs, and a `chunk_embedding` route with
 matched field `embedding`. The route identifies the Chunk's internal and
 database element IDs and carries no graph claims. Scores remain local to the
-dense branch. Fusion and original Story wording verification belong to later
-project tickets.
+dense branch. Fusion and evidence packaging belong to later project tickets.
 
 ## Outcomes and failure logs
 

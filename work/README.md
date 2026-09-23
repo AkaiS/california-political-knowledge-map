@@ -17,15 +17,6 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- [One-Time Legacy Chunk Provenance Backfill](projects/legacy-chunk-provenance-backfill/PRD.md),
-  `ready-for-agent` as of 2026-09-22. A model-free, read-only-first command
-  measures which old coreferenced Chunks can be mapped uniquely to original
-  Stories, then supports guarded property writes and rollback after review.
-- [Original Story Passage Provenance](projects/original-story-passage-provenance/PRD.md),
-  `ready-for-agent` as of 2026-09-22. Keep coreferenced Article Chunks for
-  retrieval, attach original Story ranges and content fingerprints to Neo4j
-  Chunks, and let Evidence Assembly quote the verified Story slice. Includes
-  the replacement-boundary rule and a fail-closed legacy-chunk rollout.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
@@ -52,26 +43,15 @@ have not yet been shaped into executable work.
   below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
 
-### One-Time Legacy Chunk Provenance Backfill frontier
-
-The first ticket is takeable now. Tickets 02 and 03 can proceed independently
-after it; the copied-corpus rehearsal waits for both. No ticket authorizes a
-write to the live Story store or graph.
-
-- [01 Inventory and map verbatim legacy Article Chunks](projects/legacy-chunk-provenance-backfill/issues/01-inventory-and-map-verbatim-legacy-chunks.md), takeable. The read-only command reports unique exact mappings and skips.
-- [02 Map uniquely anchored coreferenced Article Chunks](projects/legacy-chunk-provenance-backfill/issues/02-map-uniquely-anchored-coreferenced-chunks.md), blocked by 01. Exact anchors and Chunk order extend the plan to changed wording; ambiguity remains a skip.
-- [03 Apply and roll back reviewed provenance](projects/legacy-chunk-provenance-backfill/issues/03-apply-and-roll-back-reviewed-provenance.md), blocked by 01. Conditional writes and a guarded rollback work on test data without waiting for 02.
-- [04 Rehearse and audit the corpus backfill](projects/legacy-chunk-provenance-backfill/issues/04-rehearse-and-audit-corpus-backfill.md), blocked by 02 and 03. Copied data supplies the coverage and safety report before any live decision.
-
 ### Graph-Prioritized Retrieval frontier
 
 Issues 01 through 09 are complete. The approved-rewrite workflow, concrete
 retrieval and answer types, and full-text, dense, and bounded typed structural
 branches are available. Parameterized fusion supplies initial weights, candidate
-limits, and an unweighted measurement baseline. Evidence Assembly verifies
-original Story wording, retains provenance, and applies deterministic context
-limits. The coordinator runs enabled branches concurrently under one deadline
-and returns assembled evidence to the original Chat Agent. Later reranking
+limits, and an unweighted measurement baseline. Evidence Assembly packages
+stored Article Chunk wording, retains provenance, and applies deterministic
+context limits. The coordinator runs enabled branches concurrently under one
+deadline and returns assembled evidence to the original Chat Agent. Later reranking
 measurement does not block this project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
@@ -81,8 +61,8 @@ measurement does not block this project.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), `completed` on 2026-09-17. Typed construction retrieves entities and single relationships with claims, Grounding Evidence, preserved identity ambiguity, and distinct failure stages.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), `completed` on 2026-09-17. Connected questions use at most three semantic relationships, each model stage has two corrections, and explicit Bill-slot assignments preserve multi-Bill intent.
 - [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), `completed` on 2026-09-17. Configurable weighted fusion ranks the candidate union, preserves every contribution, and supplies an unweighted measurement baseline.
-- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), `completed` on 2026-09-17. Exact Story verification, source grouping, route retention, relevant coverage, and measured context selection return a typed package or distinct assembly failure.
-- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), `completed` on 2026-09-17. Concurrent branches share one deadline, retain completed candidates on failure, and return verified evidence to the same Chat Agent with deterministic failure and Deferred disclosures.
+- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), `completed` on 2026-09-17. Stored Chunk hydration, source grouping, route retention, relevant coverage, and measured context selection return a typed package or distinct assembly failure.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), `completed` on 2026-09-17. Concurrent branches share one deadline, retain completed candidates on failure, and return assembled evidence to the same Chat Agent with deterministic failure and Deferred disclosures.
 
 ### Local Retrieval Chat frontier
 
@@ -196,7 +176,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [One-Time Legacy Chunk Provenance Backfill](projects/legacy-chunk-provenance-backfill/PRD.md); [Original Story Passage Provenance](projects/original-story-passage-provenance/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |

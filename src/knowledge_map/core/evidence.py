@@ -1,10 +1,8 @@
-"""Verify retained Grounding Evidence against original Stories."""
+"""Package retained Grounding Evidence for the Chat Agent."""
 
 import json
 import logging
 from collections.abc import Awaitable, Callable
-
-from pydantic import HttpUrl
 
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.retrieval import (
@@ -12,21 +10,19 @@ from knowledge_map.schemas.retrieval import (
     CoverageDescription,
     EvidenceAssemblyFailure,
     EvidencePackage,
+    EvidencePassage,
     FusedCandidate,
     GroundingEvidence,
     MonthlyCoverage,
     RetrievalExecutionResult,
-    SourceArticleCitation,
     SourceArticleEvidence,
-    VerifiedPassage,
 )
-from knowledge_map.schemas.stories import Story
 
 logger = logging.getLogger(__name__)
 
 
 class EvidenceHydrationError(RuntimeError):
-    """A storage adapter could not load the requested chunk or original Story."""
+    """A storage adapter could not load the requested Article Chunk."""
 
 
 def render_evidence_context(package: EvidencePackage) -> str:
@@ -84,10 +80,8 @@ class EvidenceAssembler:
         self,
         *,
         load_grounding: Callable[[FusedCandidate], Awaitable[GroundingEvidence]],
-        load_story: Callable[[SourceArticleCitation], Awaitable[Story]],
     ) -> None:
         self._load_grounding = load_grounding
-        self._load_story = load_story
 
     async def assemble(
         self,
@@ -113,7 +107,7 @@ class EvidenceAssembler:
                 "evidence_assembly_failed",
                 extra={
                     "event": "evidence_assembly_failed",
-                    "safe_diagnostic": "Grounding Evidence could not be assembled and verified.",
+                    "safe_diagnostic": "Grounding Evidence could not be assembled.",
                 },
             )
             return EvidenceAssemblyFailure(execution=execution)
@@ -191,20 +185,10 @@ class EvidenceAssembler:
                 or grounding.citation.source_article_id != candidate.source_article_id
             ):
                 raise ValueError("hydrated evidence belongs to another candidate")
-            story = await self._load_story(grounding.citation)
-            if HttpUrl(story.url) != grounding.citation.url:
-                raise ValueError("the original Story belongs to another citation")
-            if not story.content:
-                return EvidenceAssemblyFailure(execution=execution)
-            start = story.content.find(grounding.text)
-            if start < 0:
-                return EvidenceAssemblyFailure(execution=execution)
-            passage = VerifiedPassage(
+            passage = EvidencePassage(
                 source_article_id=candidate.source_article_id,
                 text=grounding.text,
-                start=start,
-                end=start + len(grounding.text),
-                verification="original_story",
+                provenance="stored_chunk",
                 candidate=candidate,
             )
             previous = sources.get(candidate.source_article_id)

@@ -29,10 +29,8 @@ from knowledge_map.schemas.retrieval import (
     RetrievalFailureLog,
     RetrievalRequest,
     SkippedBranch,
-    SourceArticleCitation,
     SuccessfulBranch,
 )
-from knowledge_map.schemas.stories import Story
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +116,6 @@ class RetrievalCoordinator:
         dense: ModelRetriever,
         structural: ModelRetriever,
         load_grounding: Callable[[FusedCandidate], Awaitable[GroundingEvidence]],
-        load_story: Callable[[SourceArticleCitation], Awaitable[Story]],
         fusion_config: FusionConfig | None = None,
         context_limits: EvidenceContextLimits | None = None,
         deadline_seconds: float = 60,
@@ -133,9 +130,7 @@ class RetrievalCoordinator:
         self._full_text = full_text
         self._dense = dense
         self._structural = structural
-        self._assembler = EvidenceAssembler(
-            load_grounding=load_grounding, load_story=load_story
-        )
+        self._assembler = EvidenceAssembler(load_grounding=load_grounding)
         self._fusion_config = fusion_config or FusionConfig()
         self._context_limits = context_limits or EvidenceContextLimits()
         self._deadline_seconds = deadline_seconds

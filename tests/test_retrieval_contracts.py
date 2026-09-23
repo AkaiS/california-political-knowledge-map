@@ -421,9 +421,7 @@ def evidence_values():
                     {
                         "source_article_id": "article-a",
                         "text": "Disney lobbied for AB 186.",
-                        "start": 12,
-                        "end": 38,
-                        "verification": "original_story",
+                        "provenance": "stored_chunk",
                         "candidate": {
                             "chunk_id": "article-a#chunk_0",
                             "rank": 1,
@@ -470,8 +468,8 @@ def test_evidence_package_and_answer_retain_sources_limits_and_failure_disclosur
     [
         "wrong_source",
         "duplicate_source",
-        "wrong_span",
-        "unverified",
+        "wrong_provenance",
+        "unsupported_provenance",
         "budget_exceeded",
         "wrong_usage",
         "invented_candidate",
@@ -484,10 +482,10 @@ def test_evidence_package_rejects_inconsistent_grounding_or_context_limits(chang
         values["sources"][0]["passages"][0]["source_article_id"] = "article-b"
     elif change == "duplicate_source":
         values["sources"].append(values["sources"][0])
-    elif change == "wrong_span":
-        values["sources"][0]["passages"][0]["end"] = 36
-    elif change == "unverified":
-        values["sources"][0]["passages"][0]["verification"] = "chunk_text"
+    elif change == "wrong_provenance":
+        values["sources"][0]["passages"][0]["provenance"] = "original_story"
+    elif change == "unsupported_provenance":
+        values["sources"][0]["passages"][0]["provenance"] = "chunk_text"
     elif change == "budget_exceeded":
         values["context"]["limit"] = 24
     elif change == "wrong_usage":
@@ -542,9 +540,7 @@ def test_answer_can_highlight_disagreement_with_typed_source_references():
             {
                 "source_article_id": "article-b",
                 "text": "Disney opposed AB 186.",
-                "start": 0,
-                "end": 22,
-                "verification": "original_story",
+                "provenance": "stored_chunk",
                 "candidate": {
                     "chunk_id": "article-b#chunk_0",
                     "rank": 2,

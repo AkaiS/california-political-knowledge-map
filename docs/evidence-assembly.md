@@ -7,34 +7,23 @@ using the existing [retrieval contracts](retrieval-contracts.md).
 
 ## Storage boundary
 
-Construct the assembler with two asynchronous storage functions:
+Construct the assembler with one asynchronous storage function:
 
 - `load_grounding(FusedCandidate) -> GroundingEvidence` loads the selected
   Article Chunk's wording and Source Article citation. The returned chunk ID
   and Source Article ID must match the candidate.
-- `load_story(SourceArticleCitation) -> Story` loads the original validated
-  Story from the document store. Its URL must match the citation's URL.
 
 Storage adapters must convert database or transport failures to
 `EvidenceHydrationError`. Missing rows may raise `LookupError`; operating-system
 and value-validation errors also become assembly failures. Cancellation and
-unexpected programming errors propagate. No storage calls retry here. The
-[retrieval coordinator](retrieval-pipeline.md) supplies concrete database wiring
-and the retrieval deadline.
+unexpected programming errors propagate. The storage call does not retry here.
+The [retrieval coordinator](retrieval-pipeline.md) supplies concrete database
+wiring and the retrieval deadline.
 
-The assembler requires the hydrated wording to occur exactly in `Story.content`.
-It records the first exact occurrence as half-open character offsets and checks
-the cited Source Article identity. No case folding, whitespace normalization,
-fuzzy matching, or reverse coreference inference changes the quotation.
-
-Current Neo4j chunks contain coreference-resolved text with overlap, and do not
-retain a mapping back to original Story positions. If that text is absent from
-the original Story, assembly fails. This can prevent a package containing a
-transformed chunk from reaching the Chat Agent even when other candidates are
-verbatim. Supporting such chunks requires an explicit original-position mapping
-or another verified original-passage loader; this implementation does not infer
-one. An adapter that supplies original wording must preserve the chunk's real
-provenance.
+The assembler uses the hydrated Article Chunk wording directly. It does not load
+the SQLite Story or require the coreference-resolved chunk to occur verbatim in
+the original body. Each passage carries the `stored_chunk` marker so consumers
+do not treat transformed wording as a direct quotation from the Publication.
 
 ## Assembly and coverage
 
@@ -70,7 +59,7 @@ Chat Agent. Its compact JSON contains:
 - The approved question and its assessment, including any Deferred explanation
   and recoverable portion.
 - Branch outcomes, counts for successful branches, and every failure disclosure.
-- Source Article citations, verified passages, and their candidate routes and
+- Source Article citations, stored chunk passages, and their candidate routes and
   graph claims.
 - Relevant coverage, requested monthly detail, and the omitted passage count.
 
@@ -83,7 +72,7 @@ including JSON syntax, citations, provenance, coverage, and failure disclosures.
 It does not approximate tokens. Context accounting metadata is returned in the
 typed package and is not part of the rendered model input.
 
-Each whole verified passage is admitted only if the resulting rendered context
+Each whole stored passage is admitted only if the resulting rendered context
 fits. An oversized passage is omitted, and later candidates remain eligible.
 Reaching the passage limit stops selection. Passage text is never cut mid-sentence
 to fill the budget. `omitted_passages` counts unselected fused candidates;

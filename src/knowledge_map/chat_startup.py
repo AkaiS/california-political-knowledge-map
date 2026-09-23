@@ -1,11 +1,9 @@
 """Assemble the local chat's fixed dependencies for one application lifetime."""
 
-import asyncio
 import json
 import os
-import sqlite3
 from collections.abc import AsyncIterator, Iterator
-from contextlib import AsyncExitStack, asynccontextmanager, closing, contextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import date
 from importlib.resources import files
@@ -71,16 +69,6 @@ def new_chat_session(
     )
 
 
-def _check_document_store(path: Path) -> None:
-    with closing(
-        sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=0)
-    ) as connection:
-        connection.execute(
-            "SELECT id, title, url, category, author, published_date, summary, content, status FROM stories LIMIT 0"
-        )
-        connection.execute("SELECT id, story_id, text, url FROM story_links LIMIT 0")
-
-
 def _publication_date_range(
     stored_values: list[object],
 ) -> tuple[date | None, date | None]:
@@ -112,9 +100,6 @@ async def chat_dependencies(
     *, coverage_path: Path | None = None
 ) -> AsyncIterator[ChatDependencies]:
     load_dotenv()
-    story_path = Path(os.environ.get("SQLITE_DB_PATH", "document_store.db"))
-    with _required("SQLite document store"):
-        await asyncio.to_thread(_check_document_store, story_path)
     async with AsyncExitStack() as resources:
         with _required("Neo4j"):
             driver = AsyncGraphDatabase.driver(
@@ -209,7 +194,7 @@ async def chat_dependencies(
             wiring_model=chat_agent.model,
             binding_model=chat_agent.model,
         )
-        store = EvidenceStore(driver, story_db_path=str(story_path), database=database)
+        store = EvidenceStore(driver, database=database)
         fusion = FusionConfig()
         retrieval = RetrievalCoordinator(
             full_text=Neo4jFullTextRetriever(driver, database=database),
@@ -223,7 +208,6 @@ async def chat_dependencies(
                 driver, agents=structural_agents, database=database
             ),
             load_grounding=store.load_grounding,
-            load_story=store.load_story,
             fusion_config=fusion,
         )
         yield ChatDependencies(

@@ -83,8 +83,8 @@ The limits here govern selection from retained branch outputs, not database
 query work or the Evidence Assembler's context budget. The dense retriever's
 existing `candidate_limit` bounds its vector query independently; the coordinator
 can pass `config.dense_candidate_limit` to it. Full-text and structural branches
-currently retain all completed matches before fusion. Original Story wording
-verification and context limits remain Evidence Assembly's responsibility.
+currently retain all completed matches before fusion. Passage packaging and
+context limits remain Evidence Assembly's responsibility.
 
 ## Verification
 

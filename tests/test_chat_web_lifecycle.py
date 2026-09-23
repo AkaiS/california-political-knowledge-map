@@ -256,7 +256,7 @@ def test_conversations_cannot_exchange_approvals_corrections_or_answers():
                 event["delta"] for event in completed if event["type"] == "text-delta"
             )
             assert text == (
-                f"Selected reporting for {question}\n\nNo verified passages were selected."
+                f"Selected reporting for {question}\n\nNo passages were selected."
             )
             gc.collect()
             assert created[question]() is None

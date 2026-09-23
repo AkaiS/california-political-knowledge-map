@@ -78,10 +78,7 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
         )
         for passage in source.passages:
             paragraphs.append(
-                "\n".join(
-                    f"> {_escape_markdown_text(line)}"
-                    for line in passage.text.splitlines()
-                )
+                "Stored Article Chunk:\n\n" + _escape_markdown_text(passage.text)
             )
     for disagreement in result.disagreements:
         numbers = ", ".join(
@@ -92,5 +89,5 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
             f"Sources {numbers}: {_escape_markdown_text(disagreement.description)}"
         )
     if not result.evidence.sources:
-        paragraphs.append("No verified passages were selected.")
+        paragraphs.append("No passages were selected.")
     return "\n\n".join(paragraphs)

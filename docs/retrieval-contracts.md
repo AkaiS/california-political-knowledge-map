@@ -7,8 +7,8 @@ The [full-text adapter](full-text-retrieval.md),
 [dense adapter](dense-retrieval.md), and
 [structural adapter](structural-retrieval.md) produce branch outcomes.
 [Retrieval fusion](retrieval-fusion.md) combines their candidates.
-[Evidence Assembly](evidence-assembly.md) verifies original wording and packages
-the result. Coordinator wiring remains the final project ticket.
+[Evidence Assembly](evidence-assembly.md) hydrates stored chunk wording and
+packages the result. Coordinator wiring remains the final project ticket.
 
 ## Approved input and execution facts
 
@@ -77,13 +77,10 @@ relevant `CoverageDescription`, optional monthly coverage, and
 even when selection omits passages. Each Source Article appears once, with a
 title, HTTP link, publication date when available, and one or more passages.
 
-`VerifiedPassage` records exact original wording, half-open character offsets in
-the original Story body, its Source Article identity, and its fused candidate.
-The type requires the `original_story` verification marker and checks that the
-offset length matches the wording. It cannot prove a quotation against a Story
-that it does not hold. The Evidence Assembler loads that Story and verifies the
-text before constructing the value. Transformed chunk text is
-not an alternative verification mode.
+`EvidencePassage` records stored Article Chunk wording, its Source Article
+identity, and its fused candidate. The type requires the `stored_chunk`
+provenance marker. It does not claim that coreference-resolved text appears
+verbatim in the Publication's original wording.
 
 `AppliedContextLimits` records the assembler's measurement unit, maximum and
 used amount, passage-count limit, and number of omitted passages. Units may be

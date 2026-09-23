@@ -26,8 +26,8 @@ approval:
 
 `BranchCandidate.grounding` carries optional hydrated Article Chunk text and a
 Source Article citation. Existing branch producers may leave it absent. This
-text is transformed ingestion text, not a verified quotation; original Story
-verification remains the Evidence Assembler's responsibility.
+text is transformed ingestion text, not a verbatim quotation from the
+Publication. Evidence Assembly packages the hydrated stored chunk directly.
 
 The implementation follows the atomic semantic constructor preserved at
 `511eaeee`. Models filter the News Ontology, select compiler-owned pieces,

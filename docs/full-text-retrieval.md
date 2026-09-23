@@ -52,8 +52,7 @@ A matching name or title without a grounded chunk produces no candidate.
 Each match-to-chunk contribution retains its route, matched field, entry node's
 internal ID and Neo4j element ID, Source Article ID, Article Chunk ID, one-based
 branch rank, and native full-text score. These discovery routes carry no
-supporting graph claims. Original Story wording verification belongs to the
-Evidence Assembler.
+supporting graph claims. Evidence Assembly packages the hydrated stored chunk.
 
 ## Ordering and outcomes
 

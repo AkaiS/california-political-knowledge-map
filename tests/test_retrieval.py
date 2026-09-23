@@ -24,7 +24,6 @@ from knowledge_map.schemas.retrieval import (
     SourceArticleCitation,
     SuccessfulBranch,
 )
-from knowledge_map.schemas.stories import Story
 
 
 def rewrite(relational=False):
@@ -97,14 +96,6 @@ async def load_grounding(fused):
     )
 
 
-async def load_story(citation):
-    return Story(
-        title=citation.title,
-        url=str(citation.url),
-        content="The union supports AB 1.",
-    )
-
-
 def coordinator(branches=None, **kwargs):
     branches = branches or {branch: Branch(branch) for branch in RetrievalBranch}
     return RetrievalCoordinator(
@@ -112,7 +103,6 @@ def coordinator(branches=None, **kwargs):
         dense=branches[RetrievalBranch.DENSE],
         structural=branches[RetrievalBranch.STRUCTURAL],
         load_grounding=kwargs.pop("load_grounding", load_grounding),
-        load_story=kwargs.pop("load_story", load_story),
         **kwargs,
     )
 
@@ -127,7 +117,7 @@ def retrieve(runner, approved=None):
     )
 
 
-def test_non_relational_approval_returns_verified_evidence_from_both_text_branches():
+def test_non_relational_approval_returns_stored_evidence_from_both_text_branches():
     branches = {branch: Branch(branch) for branch in RetrievalBranch}
     approved = rewrite()
     result = retrieve(coordinator(branches), approved)
@@ -150,7 +140,7 @@ def test_non_relational_approval_returns_verified_evidence_from_both_text_branch
         "ab",
         "1",
     )
-    assert result.sources[0].passages[0].verification == "original_story"
+    assert result.sources[0].passages[0].provenance == "stored_chunk"
 
 
 def test_relational_branches_make_progress_together_before_graph_prioritized_fusion():
@@ -401,23 +391,20 @@ def test_configured_fusion_limits_preserve_all_routes_and_the_pre_fusion_audit()
     )
 
 
-@pytest.mark.parametrize("stage", ["load_grounding", "load_story"])
-def test_hydration_is_inside_the_same_deadline_and_does_not_relabel_successful_branches(
-    stage,
-):
+def test_hydration_is_inside_the_same_deadline_and_does_not_relabel_successful_branches():
     cancelled = []
 
     async def stalled(value):
         try:
             await asyncio.Event().wait()
         finally:
-            cancelled.append(stage)
+            cancelled.append("load_grounding")
 
-    result = retrieve(coordinator(deadline_seconds=0.01, **{stage: stalled}))
+    result = retrieve(coordinator(deadline_seconds=0.01, load_grounding=stalled))
     assert isinstance(result, EvidenceAssemblyFailure)
     assert result.execution.failed_branches == ()
     assert set(result.execution.evidence_by_branch) == {"full_text", "dense"}
-    assert cancelled == [stage]
+    assert cancelled == ["load_grounding"]
 
 
 def test_caller_cancellation_stops_all_branches_without_becoming_a_search_failure():
