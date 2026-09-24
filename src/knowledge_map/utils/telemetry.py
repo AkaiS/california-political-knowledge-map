@@ -8,8 +8,10 @@ the OS keychain; see `docs/agents/secrets.md`.
 import json
 import logging
 import os
+import re
 import sys
 import threading
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,34 +56,59 @@ class TelemetryNotConfiguredError(RuntimeError):
     """Raised when a run would be unobservable."""
 
 
-def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
-    """Keep declared audit data, including political questions about a session.
+_AUDIT_SESSION_FIELDS = {
+    ("attributes", "original_question"),
+    ("attributes", "question"),
+    ("attributes", "approved_question"),
+    ("attributes", "correction"),
+    ("attributes", "explanation"),
+    ("attributes", "recoverable_portion"),
+    ("attributes", "model_deployments"),
+    ("attributes", "coverage"),
+    ("attributes", "accepted_pieces"),
+    ("attributes", "wiring"),
+    ("attributes", "bindings"),
+    ("attributes", "validated_query"),
+    ("attributes", "bound_values"),
+    ("attributes", "eligible_branches"),
+    ("attributes", "fused_chunk_ids"),
+    ("attributes", "selected_chunk_ids"),
+    ("attributes", "omitted_chunks"),
+    ("attributes", "rendered_text"),
+    ("attributes", "selected_sources"),
+}
+_SESSION_CREDENTIAL = re.compile(
+    r"\bsession[._ -]*(?:token|key|cookie|secret|credential|auth|id)\b",
+    re.IGNORECASE,
+)
 
-    Model Deployment payloads contain only validated non-secret settings. Raw
-    clients, headers, credentials, and provider bodies never enter these fields.
-    """
-    if match.path[:2] in {
-        ("attributes", "chat_session_id"),
-        ("attributes", "original_question"),
-        ("attributes", "question"),
-        ("attributes", "approved_question"),
-        ("attributes", "correction"),
-        ("attributes", "explanation"),
-        ("attributes", "recoverable_portion"),
-        ("attributes", "model_deployments"),
-        ("attributes", "coverage"),
-        ("attributes", "accepted_pieces"),
-        ("attributes", "wiring"),
-        ("attributes", "bindings"),
-        ("attributes", "validated_query"),
-        ("attributes", "bound_values"),
-        ("attributes", "eligible_branches"),
-        ("attributes", "fused_chunk_ids"),
-        ("attributes", "selected_chunk_ids"),
-        ("attributes", "omitted_chunks"),
-        ("attributes", "rendered_text"),
-        ("attributes", "selected_sources"),
-    }:
+
+def _contains_secret_match(value: object, pattern: re.Pattern[str]) -> bool:
+    if isinstance(value, str):
+        return bool(_SESSION_CREDENTIAL.search(value)) or any(
+            found.group(0).casefold() != "session" for found in pattern.finditer(value)
+        )
+    if isinstance(value, Mapping):
+        return any(
+            _contains_secret_match(key, pattern)
+            or _contains_secret_match(item, pattern)
+            for key, item in value.items()
+        )
+    if isinstance(value, Sequence) and not isinstance(value, bytes | bytearray):
+        return any(_contains_secret_match(item, pattern) for item in value)
+    return False
+
+
+def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
+    """Keep political uses of "session" without bypassing secret matches."""
+    if match.path == ("attributes", "chat_session_id"):
+        return match.value
+    if (
+        match.path[:2] in _AUDIT_SESSION_FIELDS
+        and match.pattern_match.group(0).casefold() == "session"
+        and not _contains_secret_match(match.path[2:], match.pattern_match.re)
+        and not _contains_secret_match(match.value, match.pattern_match.re)
+    ):
         return match.value
     return None
 

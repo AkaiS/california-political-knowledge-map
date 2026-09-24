@@ -266,6 +266,11 @@ rendered its text before attempting emission. It proves no browser receipt,
 display, or reading. Its stored passages retain `stored_chunk` provenance and
 are not a claim of verbatim Publication quotations.
 
+Logfire's secret scrubber still applies to user-controlled audit text. If it
+detects a credential-shaped value, an affected question, answer, or selected
+source field may be redacted; inspect the recorded scrub note before treating
+that field as an exact snapshot.
+
 Logfire is the only audit destination for this version. The application has no
 local audit database, audit CLI, or custom Query API client. Saved searches do
 not extend retention, provide offline inspection during an outage, or guarantee

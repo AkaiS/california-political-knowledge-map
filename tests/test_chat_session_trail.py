@@ -95,6 +95,34 @@ def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
         )
 
 
+def test_audit_text_keeps_secret_scrubbing_even_when_it_mentions_a_session(
+    startup_dependencies, chat_capture
+):
+    secret = "credential-shaped-value"
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        events(
+            client.post(
+                "/api/chat",
+                json=question_request(
+                    f"Who backed AB 1 in this session? api_key={secret}"
+                ),
+            )
+        )
+    logfire.info(
+        "audit redaction probe",
+        rendered_text=f"During this session, api_key={secret}",
+        selected_sources=[{"passages": [{"text": f"session password={secret}"}]}],
+        correction=f"session_token={secret}",
+    )
+    spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+    start = next(span for span in spans if span["name"] == "chat_session.started")
+    probe = next(span for span in spans if span["name"] == "audit redaction probe")
+    assert UUID(start["attributes"]["chat_session_id"]).version == 4
+    assert secret not in json.dumps(start["attributes"])
+    for field in ("rendered_text", "selected_sources", "correction"):
+        assert secret not in json.dumps(probe["attributes"][field])
+
+
 def test_start_records_resolved_settings_and_already_measured_coverage(
     startup_dependencies, chat_capture, monkeypatch
 ):

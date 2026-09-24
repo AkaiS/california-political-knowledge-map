@@ -366,6 +366,30 @@ def test_answer_numbers_source_links_and_shows_only_selected_passages():
     assert "UNVERIFIED_CANDIDATE_WORDING" not in text
 
 
+def test_stored_passage_block_markdown_is_shown_as_source_text():
+    outcome = selected_answer()
+    source = outcome.evidence.sources[0]
+    passage = source.passages[0].model_copy(
+        update={"text": "# Heading\n> quotation\n- item\n1. item\n---\n~~~"}
+    )
+    source = source.model_copy(update={"passages": (passage,)})
+    evidence = outcome.evidence.model_copy(
+        update={"sources": (source, *outcome.evidence.sources[1:])}
+    )
+    session = AnswerSession(outcome.model_copy(update={"evidence": evidence}))
+    with TestClient(
+        create_app(startup=no_dependencies, session_factory=lambda *_: session),
+        base_url="http://localhost",
+    ) as client:
+        _, completed = approve_question(client, "Who backed AB 1?")
+
+    text = "".join(
+        event["delta"] for event in completed if event["type"] == "text-delta"
+    )
+    assert "Stored Article Chunk:\n\n\\# Heading" in text
+    assert "&gt; quotation\n\\- item\n1\\. item\n\\---\n\\~~~" in text
+
+
 def test_search_details_include_routes_branch_ranks_graph_claims_and_coverage():
     session = AnswerSession(selected_answer())
     with TestClient(
