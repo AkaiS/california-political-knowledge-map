@@ -100,13 +100,13 @@ async def _observe_branch(
     keywords: tuple[str, ...],
 ) -> SuccessfulBranch | FailedBranch:
     with audit_stage(audit, session_id, f"{branch.value}_search") as stage:
+        stage.metadata["returned_candidate_count"] = 0
         if branch == RetrievalBranch.FULL_TEXT:
             stage.metadata["search_terms"] = list(keywords)
         outcome = await _run_branch(branch, call, deadline, clock)
         stage.status = outcome.status
-        stage.metadata["returned_candidate_count"] = (
-            len(outcome.candidates) if outcome.status == "succeeded" else 0
-        )
+        if outcome.status == "succeeded":
+            stage.metadata["returned_candidate_count"] = len(outcome.candidates)
         if outcome.status == "failed":
             stage.metadata.setdefault("failure_kind", "unexpected")
             stage.metadata.setdefault(
@@ -234,9 +234,13 @@ class RetrievalCoordinator:
                 )
         execution = RetrievalExecutionResult(request=request, outcomes=tuple(outcomes))
         try:
-            if clock() >= deadline:
-                raise TimeoutError
-            with audit_stage(audit, audit_session_id, "fusion"):
+            with audit_stage(audit, audit_session_id, "fusion") as stage:
+                if clock() >= deadline:
+                    stage.metadata.update(
+                        failure_kind="deadline_exhausted",
+                        diagnostic="The retrieval deadline expired before fusion.",
+                    )
+                    raise TimeoutError
                 fused = fuse_candidates(execution, config=self._fusion_config)
             if clock() >= deadline:
                 raise TimeoutError

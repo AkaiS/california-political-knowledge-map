@@ -19,7 +19,7 @@ from test_dense_retrieval import driver_for as dense_driver
 from test_dense_retrieval import embedder_for, online_index
 from test_full_text_retrieval import online_indexes
 from test_query_preparation import rewriter_agent
-from test_retrieval import COVERAGE, Branch, candidate, coordinator
+from test_retrieval import COVERAGE, Branch, candidate, coordinator, rewrite
 from test_structural_retrieval import driver_for as structural_driver
 
 from knowledge_map.adapters.audit import SQLiteAuditStore
@@ -34,7 +34,11 @@ from knowledge_map.core.audit import AuditWriter
 from knowledge_map.core.chat import ChatSession, get_chat_agent
 from knowledge_map.schemas.audit import AuditStageRecord
 from knowledge_map.schemas.fusion import FusionConfig
-from knowledge_map.schemas.retrieval import FailedBranch, RetrievalBranch
+from knowledge_map.schemas.retrieval import (
+    EvidenceAssemblyFailure,
+    FailedBranch,
+    RetrievalBranch,
+)
 from knowledge_map.web import create_app
 
 
@@ -339,6 +343,86 @@ def test_non_relational_empty_retrieval_records_the_skipped_structural_branch(tm
     }
     assert guidance_inputs[0]["sources"] == []
     assert "Consult the reporting." in response.text
+
+
+def test_cancelled_branch_still_records_zero_returned_candidates(tmp_path):
+    store = SQLiteAuditStore(tmp_path / "audit.sqlite")
+    writer = AuditWriter(store)
+
+    async def run():
+        await writer.initialize()
+        started = asyncio.Event()
+
+        class PausedBranch(Branch):
+            async def retrieve(self, request, **kwargs):
+                started.set()
+                await asyncio.Event().wait()
+
+        branches = {
+            RetrievalBranch.FULL_TEXT: PausedBranch(RetrievalBranch.FULL_TEXT),
+            RetrievalBranch.DENSE: Branch(RetrievalBranch.DENSE),
+            RetrievalBranch.STRUCTURAL: Branch(RetrievalBranch.STRUCTURAL),
+        }
+        task = asyncio.create_task(
+            coordinator(branches).run(
+                rewrite(),
+                coverage=COVERAGE,
+                relevant_collection_ids=("reporting",),
+                audit=writer,
+                audit_session_id="cancelled",
+            )
+        )
+        await started.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await writer.wait_for_writes()
+
+    asyncio.run(run())
+    records = store.read_trail("cancelled")
+    (failed,) = (record for record in records if record.name == "full_text_search")
+    assert failed.status == "failed"
+    assert failed.metadata["returned_candidate_count"] == 0
+    assert failed.metadata["failure_kind"] == "cancelled"
+    assert failed.metadata["search_terms"]
+
+
+def test_deadline_before_fusion_records_the_failed_stage(tmp_path):
+    store = SQLiteAuditStore(tmp_path / "audit.sqlite")
+    writer = AuditWriter(store)
+    times = iter([0.0] * 5)
+
+    async def run():
+        await writer.initialize()
+        result = await coordinator(
+            deadline_seconds=1,
+            clock=lambda: next(times, 1.0),
+        ).run(
+            rewrite(),
+            coverage=COVERAGE,
+            relevant_collection_ids=("reporting",),
+            audit=writer,
+            audit_session_id="expired",
+        )
+        await writer.wait_for_writes()
+        return result
+
+    result = asyncio.run(run())
+    assert isinstance(result, EvidenceAssemblyFailure)
+    assert all(
+        outcome.status == "succeeded" for outcome in result.execution.outcomes[:2]
+    )
+    records = store.read_trail("expired")
+    (fusion,) = (record for record in records if record.name == "fusion")
+    assert fusion.status == "failed"
+    assert fusion.metadata == {
+        "failure_kind": "deadline_exhausted",
+        "diagnostic": "The retrieval deadline expired before fusion.",
+    }
+    assert (
+        max(record.ended_at for record in records if record.name.endswith("_search"))
+        <= fusion.started_at
+    )
 
 
 @pytest.mark.parametrize("index_state", ["ONLINE", "POPULATING", None])

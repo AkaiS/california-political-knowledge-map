@@ -54,12 +54,11 @@ def audit_stage(
         yield stage
     except BaseException as error:
         stage.status = "failed"
-        stage.metadata.update(
-            failure_kind="cancelled"
-            if isinstance(error, asyncio.CancelledError)
-            else "unexpected",
-            diagnostic="The operation did not complete.",
+        stage.metadata.setdefault(
+            "failure_kind",
+            "cancelled" if isinstance(error, asyncio.CancelledError) else "unexpected",
         )
+        stage.metadata.setdefault("diagnostic", "The operation did not complete.")
         raise
     finally:
         _current_stage.reset(token)
