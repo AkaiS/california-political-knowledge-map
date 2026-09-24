@@ -129,7 +129,6 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
     assert set(deployments) == {
         "query_rewriter",
         "chat_agent",
-        "embedding",
         "structural_ontology_filter",
         "structural_selector",
         "structural_wiring",
@@ -147,8 +146,7 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         "structural_binder",
     ):
         assert deployments[role] == deployments["chat_agent"]
-    assert deployments["embedding"] == {
-        "kind": "local",
+    assert start["embedding_settings"] == {
         "model": "embedding-test",
         "endpoint": "http://unavailable-embedding.test/v1/",
     }
@@ -163,9 +161,7 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         "fused_candidate_limit": 100,
     }
     assert start["evidence_limits"] == {"character_limit": 24000, "max_passages": 12}
-    assert set(start["prompt_hashes"]) == set(deployments) - {"embedding"} | {
-        "question_policy"
-    }
+    assert set(start["prompt_hashes"]) == set(deployments) | {"question_policy"}
     for host, role in (
         ("rewriter.test", "query_rewriter"),
         ("chat.test", "chat_agent"),

@@ -13,6 +13,7 @@ class ChatSessionSettings:
     code_revision: str | None
     worktree_dirty: bool | None
     model_deployments: dict[str, dict[str, object]]
+    embedding_settings: dict[str, str]
     prompt_hashes: dict[str, str]
     fusion_settings: FusionConfig
     evidence_limits: EvidenceContextLimits

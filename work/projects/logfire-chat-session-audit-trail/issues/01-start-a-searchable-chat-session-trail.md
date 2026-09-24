@@ -29,8 +29,9 @@ None — can start immediately.
 
 2026-09-24: Implemented `chat_session.started` and `chat_session.prepare`, joined
 by the UUID `chat_session_id` and marked with `audit_schema_version=1`. Startup
-retains its code state, resolved Model Deployments, prompt hashes, fusion and
-Evidence Assembly settings, and coverage observation time. The first accepted
+retains its code state, resolved Model Deployments, local embedding settings,
+prompt hashes, fusion and Evidence Assembly settings, and coverage observation
+time. The first accepted
 question records those values with its original text and acceptance observation
 time. Unavailable Git metadata stays unknown. Preparation closes before approval
 and contains the existing Pydantic AI agent spans.
@@ -47,3 +48,11 @@ Validation: 147 focused tests passed; changed-file Ruff and `ty 0.0.83` checks
 passed; `uv run --no-sync pytest -q` passed with 1,272 tests, 47 skipped, and the
 existing Pydantic AI sampling warning. No live Logfire, model, Neo4j, or browser
 check was needed.
+
+2026-09-24 review: The Standards review found two judgment calls and no hard
+violations. The repeated structural instruction prefix is now shared without
+changing the prompts, and embedding settings are recorded separately from chat
+Model Deployments to match the domain glossary. The Spec review found no
+ticket-scope gaps. Affected tests passed (44 and 19 respectively), changed-file
+Ruff passed, and the full deterministic suite passed with 1,272 tests and 47
+skips. All six acceptance criteria remain met; the `completed` label is current.

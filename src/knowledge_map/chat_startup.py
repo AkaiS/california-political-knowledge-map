@@ -247,11 +247,10 @@ async def chat_dependencies(
                 },
                 "chat_agent": chat_snapshot,
                 **{role: chat_snapshot for role in STRUCTURAL_INSTRUCTIONS},
-                "embedding": {
-                    "kind": "local",
-                    "model": embedder.model.model_name,
-                    "endpoint": str(embedding_url),
-                },
+            },
+            embedding_settings={
+                "model": embedder.model.model_name,
+                "endpoint": str(embedding_url),
             },
             prompt_hashes={
                 role: "sha256:"
