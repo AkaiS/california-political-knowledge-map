@@ -78,7 +78,7 @@ _AUDIT_SESSION_FIELDS = {
     ("attributes", "selected_sources"),
 }
 _SESSION_CREDENTIAL = re.compile(
-    r"\bsession[._ -]*(?:token|key|cookie|secret|credential|auth|id)\b",
+    r"\bsession(?:[._-]*id|[._ -]*(?:token|key|cookie|secret|credential|auth))\b",
     re.IGNORECASE,
 )
 

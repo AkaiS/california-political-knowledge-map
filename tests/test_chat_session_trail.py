@@ -123,6 +123,21 @@ def test_audit_text_keeps_secret_scrubbing_even_when_it_mentions_a_session(
         assert secret not in json.dumps(probe["attributes"][field])
 
 
+def test_legislative_session_id_remains_in_the_recorded_question(
+    startup_dependencies, chat_capture
+):
+    question = "Which bill has legislative session ID 2025-2026?"
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        events(client.post("/api/chat", json=question_request(question)))
+
+    start = next(
+        span
+        for span in chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+        if span["name"] == "chat_session.started"
+    )
+    assert start["attributes"]["original_question"] == question
+
+
 def test_start_records_resolved_settings_and_already_measured_coverage(
     startup_dependencies, chat_capture, monkeypatch
 ):
