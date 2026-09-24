@@ -3,15 +3,25 @@
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from copy import copy
+from datetime import UTC, datetime
 from typing import Literal, cast
+from uuid import uuid4
 
 import httpx
+from pydantic import JsonValue
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+from pydantic_ai.exceptions import (
+    ModelAPIError,
+    ModelHTTPError,
+    UnexpectedModelBehavior,
+)
 from pydantic_ai.usage import RunUsage
 
+from knowledge_map.core.audit import AuditWriter
 from knowledge_map.core.exceptions import is_retryable_transport_failure
 from knowledge_map.schemas import ModelDeployment
+from knowledge_map.schemas.audit import AuditStageRecord
 from knowledge_map.schemas.query_preparation import (
     AwaitingQueryApproval,
     DeclinedQuestion,
@@ -28,6 +38,15 @@ from knowledge_map.utils.deployments import query_rewriter_deployment_from_envir
 from knowledge_map.utils.models import get_chat_model
 
 logger = logging.getLogger(__name__)
+
+
+def _failure_kind(error: Exception) -> str:
+    if isinstance(error, (ModelAPIError, httpx.TransportError)):
+        return "transport"
+    if isinstance(error, UnexpectedModelBehavior):
+        return "model_response"
+    return "unexpected"
+
 
 QUERY_REWRITER_INSTRUCTIONS = """Rewrite the person's request as one concise
 natural-language question for California political retrieval. Do not answer it.
@@ -98,10 +117,16 @@ class QuestionPreparation:
             [QueryRewriteProposal], Awaitable[QuestionAssessment]
         ],
         usage: RunUsage | None = None,
+        audit: AuditWriter | None = None,
+        audit_session_id: str | None = None,
     ) -> None:
         self._original_question = original_question
         self._rewriter = rewriter
-        self._usage = usage
+        self._usage = usage if usage is not None else RunUsage()
+        self._audit = audit
+        self._audit_session_id = audit_session_id
+        self._proposal_attempt = 0
+        self._proposal_stage_id: str | None = None
         self._assess_question_policy_and_coverage = assess_question_policy_and_coverage
         self._pending: QueryRewrite | None = None
         self._state: Literal["ready", "preparing", "awaiting_approval", "finished"] = (
@@ -128,6 +153,10 @@ class QuestionPreparation:
                 self._state = "finished"
 
     async def _prepare(self) -> QuestionPreparationResult:
+        self._proposal_attempt += 1
+        self._proposal_stage_id = str(uuid4())
+        started_at = datetime.now(UTC)
+        usage_before = copy(self._usage)
         try:
             result = await self._rewriter.run(
                 json.dumps(
@@ -140,7 +169,21 @@ class QuestionPreparation:
                 ),
                 usage=self._usage,
             )
-        except (ModelAPIError, httpx.TransportError) as error:
+        except Exception as error:
+            self._record(
+                "query_rewrite",
+                started_at,
+                {
+                    "attempt": self._proposal_attempt,
+                    "usage": self._stage_usage(usage_before),
+                    "failure_kind": _failure_kind(error),
+                    "diagnostic": "The Query Rewriter request failed.",
+                },
+                stage_id=self._proposal_stage_id,
+                status="failed",
+            )
+            if not isinstance(error, (ModelAPIError, httpx.TransportError)):
+                raise
             temporary_request_status = isinstance(
                 error, ModelHTTPError
             ) and error.status_code in {408, 429}
@@ -165,7 +208,42 @@ class QuestionPreparation:
                 ),
             )
         rewrite = result.output
-        assessment = await self._assess_question_policy_and_coverage(rewrite)
+        self._record(
+            "query_rewrite",
+            started_at,
+            {
+                "attempt": self._proposal_attempt,
+                **rewrite.model_dump(mode="json"),
+                "usage": self._stage_usage(usage_before),
+            },
+            stage_id=self._proposal_stage_id,
+        )
+        started_at = datetime.now(UTC)
+        usage_before = copy(self._usage)
+        try:
+            assessment = await self._assess_question_policy_and_coverage(rewrite)
+        except Exception as error:
+            self._record(
+                "question_assessment",
+                started_at,
+                {
+                    "proposal_stage_id": self._proposal_stage_id,
+                    "usage": self._stage_usage(usage_before),
+                    "failure_kind": _failure_kind(error),
+                    "diagnostic": "Question policy and coverage could not be assessed.",
+                },
+                status="failed",
+            )
+            raise
+        self._record(
+            "question_assessment",
+            started_at,
+            {
+                "proposal_stage_id": self._proposal_stage_id,
+                "assessment": assessment.model_dump(mode="json"),
+                "usage": self._stage_usage(usage_before),
+            },
+        )
         if assessment.status == "declined":
             self._state = "finished"
             assert assessment.explanation is not None
@@ -184,14 +262,59 @@ class QuestionPreparation:
             ),
         )
 
+    def _stage_usage(self, before: RunUsage) -> dict[str, JsonValue]:
+        return {
+            "requests": self._usage.requests - before.requests,
+            "input_tokens": self._usage.input_tokens - before.input_tokens,
+            "output_tokens": self._usage.output_tokens - before.output_tokens,
+        }
+
+    def _record(
+        self,
+        name: str,
+        started_at: datetime,
+        metadata: dict[str, JsonValue],
+        *,
+        stage_id: str | None = None,
+        status: Literal["succeeded", "failed"] = "succeeded",
+    ) -> None:
+        if self._audit is None or self._audit_session_id is None:
+            return
+        try:
+            self._audit.dispatch(
+                AuditStageRecord(
+                    stage_id=stage_id or str(uuid4()),
+                    session_id=self._audit_session_id,
+                    name=name,
+                    started_at=started_at,
+                    ended_at=datetime.now(UTC),
+                    status=status,
+                    metadata=metadata,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "chat_audit_dispatch_failed",
+                extra={"chat_audit_id": self._audit_session_id},
+            )
+
     def approve(self) -> QueryRewrite:
         """Release only the current proposal as the sole retrieval question."""
 
         if self._pending is None:
             raise ValueError("there is no question awaiting approval")
+        started_at = datetime.now(UTC)
         approved = self._pending
         self._pending = None
         self._state = "finished"
+        self._record(
+            "query_approval",
+            started_at,
+            {
+                "proposal_stage_id": self._proposal_stage_id,
+                **approved.model_dump(mode="json"),
+            },
+        )
         return approved
 
     def reject(self, correction: str | None = None) -> RewriteRejection:
@@ -199,6 +322,7 @@ class QuestionPreparation:
 
         if self._pending is None:
             raise ValueError("there is no question awaiting approval")
+        started_at = datetime.now(UTC)
         rejection = RewriteRejection(
             question=self._pending.question,
             relational=self._pending.relational,
@@ -207,6 +331,15 @@ class QuestionPreparation:
         self._rejections.append(rejection)
         self._pending = None
         self._state = "ready"
+        if correction is not None:
+            self._record(
+                "query_correction",
+                started_at,
+                {
+                    "proposal_stage_id": self._proposal_stage_id,
+                    "correction": correction,
+                },
+            )
         logger.info(
             "rewrite_rejected",
             extra={"event": "rewrite_rejected", **rejection.model_dump()},

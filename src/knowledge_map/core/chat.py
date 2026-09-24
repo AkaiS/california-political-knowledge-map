@@ -139,6 +139,8 @@ class ChatSession:
             rewriter=rewriter,
             assess_question_policy_and_coverage=self._assess,
             usage=self._usage,
+            audit=audit,
+            audit_session_id=self.audit_session_id,
         )
 
     async def _assess(self, rewrite: QueryRewriteProposal) -> QuestionAssessment:

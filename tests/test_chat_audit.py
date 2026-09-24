@@ -131,7 +131,7 @@ def test_first_question_and_correction_keep_one_audit_id_with_effective_settings
     capsys.readouterr()
     main(["audit", "show", audit_id, "--db", str(path)])
     trail = json.loads(capsys.readouterr().out)
-    (record,) = trail["stages"]
+    (record,) = [stage for stage in trail["stages"] if stage["name"] == "session_start"]
     assert record["session_id"] == audit_id
     assert record["stage_id"] != audit_id
     assert audit_id != "conversation-1"
@@ -331,11 +331,20 @@ def test_answer_proceeds_while_audit_insert_is_blocked_and_survives_write_failur
     records = store.read_trail(sessions[0].audit_session_id)
     if fail_insert:
         assert records == ()
-        (failure,) = [
+        failures = [
             record
             for record in caplog.records
             if record.message == "chat_audit_insert_failed"
         ]
-        assert failure.chat_audit_id == sessions[0].audit_session_id
+        assert failures
+        assert all(
+            failure.chat_audit_id == sessions[0].audit_session_id
+            for failure in failures
+        )
     else:
-        assert len(records) == 1
+        assert [record.name for record in records] == [
+            "session_start",
+            "query_rewrite",
+            "question_assessment",
+            "query_approval",
+        ]
