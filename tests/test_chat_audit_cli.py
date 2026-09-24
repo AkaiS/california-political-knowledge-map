@@ -178,6 +178,85 @@ def test_model_deployment_filter_matches_kind_and_model_in_any_saved_role(
     ] == expected
 
 
+def test_model_deployment_json_filter_distinguishes_saved_routes_and_settings(
+    audit_database: Path, capsys: pytest.CaptureFixture[str]
+):
+    deployments = {
+        "local-a": {
+            "kind": "local",
+            "model": "shared-model",
+            "endpoint": "http://localhost:8080/v1",
+            "request_settings": {"temperature": 0.0},
+        },
+        "local-b": {
+            "kind": "local",
+            "model": "shared-model",
+            "endpoint": "http://localhost:8081/v1",
+            "request_settings": {"temperature": 0.0},
+        },
+        "local-settings": {
+            "kind": "local",
+            "model": "shared-model",
+            "endpoint": "http://localhost:8080/v1",
+            "request_settings": {"temperature": 0.3},
+        },
+        "openrouter-a": {
+            "kind": "openrouter",
+            "model": "shared-model",
+            "provider_policy": {"providers": ["provider-a"]},
+        },
+        "openrouter-b": {
+            "kind": "openrouter",
+            "model": "shared-model",
+            "provider_policy": {"providers": ["provider-b"]},
+        },
+    }
+    store = SQLiteAuditStore(audit_database)
+    for session_id, deployment in deployments.items():
+        store.insert(
+            AuditStageRecord(
+                stage_id=f"{session_id}-start",
+                session_id=session_id,
+                name="session_start",
+                started_at=datetime.fromisoformat("2026-09-25T12:00:00Z"),
+                ended_at=datetime.fromisoformat("2026-09-25T12:00:00Z"),
+                status="succeeded",
+                metadata={"deployments": {"chat_agent": deployment}},
+            )
+        )
+
+    for session_id, deployment in deployments.items():
+        main(
+            [
+                "audit",
+                "list",
+                "--db",
+                str(audit_database),
+                "--model-deployment",
+                json.dumps(deployment),
+            ]
+        )
+        assert [
+            session["session_id"]
+            for session in json.loads(capsys.readouterr().out)["sessions"]
+        ] == [session_id]
+
+    main(
+        [
+            "audit",
+            "list",
+            "--db",
+            str(audit_database),
+            "--model-deployment",
+            "openrouter:shared-model",
+        ]
+    )
+    assert [
+        session["session_id"]
+        for session in json.loads(capsys.readouterr().out)["sessions"]
+    ] == ["later-session", "openrouter-a", "openrouter-b"]
+
+
 @pytest.mark.parametrize(
     ("filters", "expected"),
     [
@@ -439,6 +518,11 @@ def test_unknown_session_does_not_export_an_invented_trail(
         (["--model-deployment", "local"], "local:MODEL or openrouter:MODEL"),
         (["--model-deployment", "local:"], "local:MODEL or openrouter:MODEL"),
         (["--model-deployment", "unknown:model"], "local:MODEL or openrouter:MODEL"),
+        (["--model-deployment", "{"], "saved Model Deployment JSON object"),
+        (
+            ["--model-deployment", '{"kind": ["local"], "model": "a"}'],
+            "saved Model Deployment JSON object",
+        ),
     ],
 )
 def test_invalid_filter_values_have_clear_usage_errors(

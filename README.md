@@ -146,11 +146,12 @@ Retrieval Answer record, including answers with zero passages. Absence does
 not establish why an answer record is missing.
 
 Filters combine with AND. `--code-revision` matches the exact saved commit.
-`--model-deployment` takes `local:MODEL` or `openrouter:MODEL` and matches the
-exact kind and model in any saved role, including the Query Rewriter and Chat
-Agent. Endpoint, provider policy, and request settings remain available in
-`show` and `export`; the filter matches the kind and model only. A missing
-session-start record cannot match either settings filter. `--failed-stage`
+`--model-deployment` takes `local:MODEL` or `openrouter:MODEL` to match kind and
+model in any saved role, including the Query Rewriter and Chat Agent. To
+distinguish deployments with the same kind and model, pass one complete saved
+deployment JSON object from `show` or `export` as the argument. That matches
+the full object, including endpoint, provider policy, and request settings.
+A missing session-start record cannot match either settings filter. `--failed-stage`
 matches an exact saved stage name whose result is `failed`, such as
 `dense_search` or `evidence_assembly`.
 

@@ -21,10 +21,28 @@ def _timestamp(value: str) -> datetime:
     raise argparse.ArgumentTypeError("Use an ISO 8601 timestamp with a timezone.")
 
 
-def _deployment(value: str) -> tuple[str, str]:
+def _deployment(value: str) -> tuple[str, str] | dict[str, object]:
+    if value.lstrip().startswith("{"):
+        try:
+            deployment = json.loads(value)
+        except ValueError:
+            deployment = None
+        if (
+            isinstance(deployment, dict)
+            and isinstance(deployment.get("kind"), str)
+            and deployment.get("kind") in {"local", "openrouter"}
+            and isinstance(deployment.get("model"), str)
+            and deployment["model"].strip()
+        ):
+            return deployment
+        raise argparse.ArgumentTypeError(
+            "Use KIND:MODEL or a saved Model Deployment JSON object."
+        )
     kind, separator, model = value.partition(":")
     if kind not in {"local", "openrouter"} or not separator or not model:
-        raise argparse.ArgumentTypeError("Use local:MODEL or openrouter:MODEL.")
+        raise argparse.ArgumentTypeError(
+            "Use local:MODEL or openrouter:MODEL, or a saved Model Deployment JSON object."
+        )
     return kind, model
 
 
@@ -50,8 +68,8 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     listing.add_argument(
         "--model-deployment",
         type=_deployment,
-        metavar="KIND:MODEL",
-        help="Exact saved deployment kind and model in any role",
+        metavar="KIND:MODEL|JSON",
+        help="Match kind and model, or one complete saved deployment JSON object, in any role",
     )
     listing.add_argument(
         "--failed-stage", help="Exact saved stage name with a failed result"
@@ -87,8 +105,12 @@ def _matches(records: tuple[AuditStageRecord, ...], args: argparse.Namespace) ->
         )
         if not any(
             isinstance(deployment, dict)
-            and (deployment.get("kind"), deployment.get("model"))
-            == args.model_deployment
+            and (
+                deployment == args.model_deployment
+                if isinstance(args.model_deployment, dict)
+                else (deployment.get("kind"), deployment.get("model"))
+                == args.model_deployment
+            )
             for roles in deployments
             if isinstance(roles, dict)
             for deployment in roles.values()
