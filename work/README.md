@@ -83,16 +83,16 @@ not reconstruct browser history after restart.
 ### Logfire Chat Session Audit Trail frontier
 
 This project begins from the pre-audit `main` baseline. The prior SQLite audit
-implementation is preserved on a backup branch. Tickets 01 through 05 are complete;
-ticket 06 is takeable and the remaining ticket declares its blocker.
+implementation is preserved on a backup branch. Tickets 01 through 06 are complete;
+ticket 07 is takeable.
 
 - [01 Start a searchable Chat Session trail](projects/logfire-chat-session-audit-trail/issues/01-start-a-searchable-chat-session-trail.md), `completed` on 2026-09-24. Accepted questions record an application ID, effective startup conditions, and preparation spans containing their model activity.
 - [02 Trace question preparation and approval](projects/logfire-chat-session-audit-trail/issues/02-trace-question-preparation-and-approval.md), `completed` on 2026-09-24. Proposal attempts, assessments, corrections, and approved wording remain joined across bounded request operations.
 - [03 Trace retrieval branch outcomes](projects/logfire-chat-session-audit-trail/issues/03-trace-retrieval-branch-outcomes.md), `completed` on 2026-09-24. Concurrent branch spans record statuses, candidate counts, existing index observations, and safe failures; non-relational retrieval records an explicit structural skip.
 - [04 Trace structural construction](projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md), `completed` on 2026-09-24. Structural stages record accepted construction, validated query text and values, database rows, hydration counts, and safe failures within the branch span.
 - [05 Trace fusion and Evidence Assembly](projects/logfire-chat-session-audit-trail/issues/05-trace-fusion-and-evidence-assembly.md), `completed` on 2026-09-24. Fusion records eligible and fused IDs; Evidence Assembly records selection, omission reasons, coverage, measured context use, and safe stage failures.
-- [06 Trace the prepared Retrieval Answer](projects/logfire-chat-session-audit-trail/issues/06-trace-the-prepared-retrieval-answer.md), takeable.
-- [07 Inspect and compare Chat Session trails](projects/logfire-chat-session-audit-trail/issues/07-inspect-and-compare-chat-session-trails.md), blocked by 06.
+- [06 Trace the prepared Retrieval Answer](projects/logfire-chat-session-audit-trail/issues/06-trace-the-prepared-retrieval-answer.md), `completed` on 2026-09-24. Guidance spans contain model activity; prepared answers record exact rendered text and selected stored passages with citations before text emission.
+- [07 Inspect and compare Chat Session trails](projects/logfire-chat-session-audit-trail/issues/07-inspect-and-compare-chat-session-trails.md), takeable.
 
 ### Bill Designation Recovery frontier
 

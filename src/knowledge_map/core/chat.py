@@ -7,8 +7,11 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import uuid4
 
+import httpx
 import logfire
+from pydantic import ValidationError
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
 
@@ -61,6 +64,18 @@ QUESTION_POLICY = (
     "Return reported connections and sources within known coverage; do not infer "
     "a real-world negative or completeness from an absent graph connection."
 )
+
+
+def _guidance_failure_kind(error: Exception) -> str:
+    if isinstance(error, httpx.TransportError):
+        return "transport"
+    if isinstance(error, ModelAPIError):
+        return "provider"
+    if isinstance(error, UnexpectedModelBehavior):
+        return "model_output"
+    if isinstance(error, ValidationError):
+        return "validation"
+    return "unexpected"
 
 
 class RetrievalGuidance(RetrievalValue):
@@ -206,26 +221,43 @@ class ChatSession:
         )
         if isinstance(package, EvidenceAssemblyFailure):
             return package
-        result = await self._agent.run(
-            render_evidence_context(package),
-            message_history=[
-                ModelRequest(parts=[UserPromptPart(self._original_question)])
-            ],
-            output_type=RetrievalGuidance,
-            usage=self._usage,
-        )
-        disclosures = list(package.failure_disclosures)
-        structural_empty = package.execution.structural_empty_disclosure
-        if structural_empty:
-            disclosures.append(structural_empty)
-        if rewrite.assessment.status == "deferred":
-            assert rewrite.assessment.explanation is not None
-            disclosures.append(rewrite.assessment.explanation)
-        if result.output.introduction:
-            disclosures.append(result.output.introduction)
-        return RetrievalAnswer(
-            evidence=package,
-            introduction="\n\n".join(disclosures) or None,
-            source_notes=result.output.source_notes,
-            disagreements=result.output.disagreements,
-        )
+        with logfire.span(
+            "chat_session.guidance",
+            chat_session_id=self.chat_session_id,
+            audit_schema_version=1,
+        ) as span:
+            try:
+                result = await self._agent.run(
+                    render_evidence_context(package),
+                    message_history=[
+                        ModelRequest(parts=[UserPromptPart(self._original_question)])
+                    ],
+                    output_type=RetrievalGuidance,
+                    usage=self._usage,
+                )
+                disclosures = list(package.failure_disclosures)
+                structural_empty = package.execution.structural_empty_disclosure
+                if structural_empty:
+                    disclosures.append(structural_empty)
+                if rewrite.assessment.status == "deferred":
+                    assert rewrite.assessment.explanation is not None
+                    disclosures.append(rewrite.assessment.explanation)
+                if result.output.introduction:
+                    disclosures.append(result.output.introduction)
+                answer = RetrievalAnswer(
+                    evidence=package,
+                    introduction="\n\n".join(disclosures) or None,
+                    source_notes=result.output.source_notes,
+                    disagreements=result.output.disagreements,
+                )
+            except Exception as error:
+                span.set_attributes(
+                    {
+                        "status": "failed",
+                        "failure_kind": _guidance_failure_kind(error),
+                        "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+                    }
+                )
+                raise
+            span.set_attribute("status", "succeeded")
+            return answer

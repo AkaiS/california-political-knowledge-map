@@ -197,7 +197,7 @@ def test_correction_and_approval_refer_to_the_proposal_used_by_retrieval(
         assert parent["name"] in {
             "chat_session.query_rewrite",
             "chat_session.question_assessment",
-            "chat_session.approve",
+            "chat_session.guidance",
         }
         assert (
             parent["start_time"]

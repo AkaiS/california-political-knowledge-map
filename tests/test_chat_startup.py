@@ -140,6 +140,8 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
         received.append(dependencies)
 
         class Session:
+            chat_session_id = "test-session"
+
             async def prepare(self):
                 entry = dependencies.coverage.entries[0]
                 return AwaitingQueryApproval(
@@ -208,6 +210,8 @@ def test_startup_ignores_unparseable_publication_dates(
         received.append(dependencies)
 
         class Session:
+            chat_session_id = "test-session"
+
             async def prepare(self):
                 return AwaitingQueryApproval(
                     approval=QueryApproval(

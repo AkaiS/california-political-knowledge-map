@@ -190,6 +190,8 @@ def selected_answer(*, dense_failed=False):
 
 
 class AnswerSession:
+    chat_session_id = "test-session"
+
     def __init__(self, outcome=None):
         self.outcome = outcome or answer()
         self.approvals = 0

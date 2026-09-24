@@ -77,6 +77,8 @@ def test_first_question_prepares_one_session_and_exposes_only_public_approval(
     questions = []
 
     class Session:
+        chat_session_id = "test-session"
+
         async def prepare(self):
             return AwaitingQueryApproval(
                 approval=QueryApproval(question="Which organizations supported AB 1?")
@@ -128,6 +130,8 @@ def test_first_question_prepares_one_session_and_exposes_only_public_approval(
 
 def test_deferred_proposal_shows_the_coverage_limit_and_recoverable_portion():
     class Session:
+        chat_session_id = "test-session"
+
         async def prepare(self):
             return AwaitingQueryApproval(
                 approval=QueryApproval(
@@ -170,6 +174,8 @@ def test_deferred_proposal_shows_the_coverage_limit_and_recoverable_portion():
 )
 def test_terminal_preparation_outcomes_offer_neither_approval_nor_retrieval(outcome):
     class Session:
+        chat_session_id = "test-session"
+
         async def prepare(self):
             return outcome
 
