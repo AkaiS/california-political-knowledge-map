@@ -7,17 +7,18 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import uuid4
 
-import httpx
 import logfire
 from pydantic import ValidationError
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.chat_telemetry import ChatSessionSettings
 from knowledge_map.core.evidence import render_evidence_context
-from knowledge_map.core.question_preparation import QuestionPreparation
+from knowledge_map.core.question_preparation import (
+    QuestionPreparation,
+    model_failure_kind,
+)
 from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import (
@@ -67,15 +68,9 @@ QUESTION_POLICY = (
 
 
 def _guidance_failure_kind(error: Exception) -> str:
-    if isinstance(error, httpx.TransportError):
-        return "transport"
-    if isinstance(error, ModelAPIError):
-        return "provider"
-    if isinstance(error, UnexpectedModelBehavior):
-        return "model_output"
     if isinstance(error, ValidationError):
         return "validation"
-    return "unexpected"
+    return model_failure_kind(error)
 
 
 class RetrievalGuidance(RetrievalValue):

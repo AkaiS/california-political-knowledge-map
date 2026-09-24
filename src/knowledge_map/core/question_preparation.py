@@ -36,7 +36,7 @@ from knowledge_map.utils.models import get_chat_model
 logger = logging.getLogger(__name__)
 
 
-def _failure_kind(error: Exception) -> str:
+def model_failure_kind(error: Exception) -> str:
     if isinstance(error, httpx.TransportError):
         return "transport"
     if isinstance(error, ModelAPIError):
@@ -164,7 +164,7 @@ class QuestionPreparation:
                     proposal_span.set_attributes(
                         {
                             "status": "failed",
-                            "failure_kind": _failure_kind(error),
+                            "failure_kind": model_failure_kind(error),
                             "diagnostic": "The Query Rewriter could not prepare a proposal.",
                         }
                     )
@@ -200,7 +200,7 @@ class QuestionPreparation:
                     assessment_span.set_attributes(
                         {
                             "status": "failed",
-                            "failure_kind": _failure_kind(error),
+                            "failure_kind": model_failure_kind(error),
                             "diagnostic": "The Chat Agent could not assess question policy and coverage.",
                         }
                     )
