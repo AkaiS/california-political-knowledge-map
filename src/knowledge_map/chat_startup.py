@@ -1,11 +1,12 @@
 """Assemble the local chat's fixed dependencies for one application lifetime."""
 
+import hashlib
 import json
 import os
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from importlib.resources import files
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import httpx
 from dotenv import load_dotenv
 from neo4j import READ_ACCESS, AsyncGraphDatabase
 from pydantic_ai import Agent
+from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from knowledge_map.adapters.dense import Neo4jDenseRetriever
@@ -20,13 +22,24 @@ from knowledge_map.adapters.embedding import get_embedding_embedder
 from knowledge_map.adapters.evidence import EvidenceStore
 from knowledge_map.adapters.full_text import Neo4jFullTextRetriever
 from knowledge_map.adapters.structural import (
+    STRUCTURAL_INSTRUCTIONS,
     Neo4jStructuralRetriever,
     get_structural_agents,
 )
-from knowledge_map.core.chat import ChatSession, get_chat_agent
-from knowledge_map.core.question_preparation import get_query_rewriter
+from knowledge_map.chat_telemetry import ChatSessionSettings, code_state
+from knowledge_map.core.chat import (
+    CHAT_INSTRUCTIONS,
+    QUESTION_POLICY,
+    ChatSession,
+    get_chat_agent,
+)
+from knowledge_map.core.question_preparation import (
+    QUERY_REWRITER_INSTRUCTIONS,
+    get_query_rewriter,
+)
 from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
+from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.query_preparation import (
     QueryRewriteProposal,
@@ -52,6 +65,7 @@ class ChatDependencies:
     coverage: CoverageDescription
     rewriter_deployment: ModelDeployment
     chat_deployment: ModelDeployment
+    start_settings: ChatSessionSettings
 
 
 def new_chat_session(
@@ -66,6 +80,7 @@ def new_chat_session(
         coverage=dependencies.coverage,
         relevant_collection_ids=("calmatters",),
         monthly_coverage=(),
+        start_settings=dependencies.start_settings,
     )
 
 
@@ -100,6 +115,7 @@ async def chat_dependencies(
     *, coverage_path: Path | None = None
 ) -> AsyncIterator[ChatDependencies]:
     load_dotenv()
+    code_revision, worktree_dirty = code_state()
     async with AsyncExitStack() as resources:
         with _required("Neo4j"):
             driver = AsyncGraphDatabase.driver(
@@ -160,6 +176,7 @@ async def chat_dependencies(
                     ),
                 )
             )
+            coverage_observed_at = datetime.now(UTC)
         with _required("Query Rewriter deployment"):
             rewrite_deployment = query_rewriter_deployment_from_environment()
             rewriter = get_query_rewriter(rewrite_deployment, cache_model=False)
@@ -196,6 +213,7 @@ async def chat_dependencies(
         )
         store = EvidenceStore(driver, database=database)
         fusion = FusionConfig()
+        context_limits = EvidenceContextLimits()
         retrieval = RetrievalCoordinator(
             full_text=Neo4jFullTextRetriever(driver, database=database),
             dense=Neo4jDenseRetriever(
@@ -209,6 +227,45 @@ async def chat_dependencies(
             ),
             load_grounding=store.load_grounding,
             fusion_config=fusion,
+            context_limits=context_limits,
+        )
+        chat_snapshot = {
+            **chat_deployment.model_dump(mode="json"),
+            "endpoint": str(chat_agent.model.client.base_url),
+        }
+        assert isinstance(embedder.model, OpenAIEmbeddingModel)
+        embedding_url = httpx.URL(embedder.model.base_url).copy_with(
+            username=None, password=None, query=None, fragment=None
+        )
+        start_settings = ChatSessionSettings(
+            code_revision=code_revision,
+            worktree_dirty=worktree_dirty,
+            model_deployments={
+                "query_rewriter": {
+                    **rewrite_deployment.model_dump(mode="json"),
+                    "endpoint": str(rewriter.model.client.base_url),
+                },
+                "chat_agent": chat_snapshot,
+                **{role: chat_snapshot for role in STRUCTURAL_INSTRUCTIONS},
+                "embedding": {
+                    "kind": "local",
+                    "model": embedder.model.model_name,
+                    "endpoint": str(embedding_url),
+                },
+            },
+            prompt_hashes={
+                role: "sha256:"
+                + hashlib.sha256(prompt.strip().encode("utf-8")).hexdigest()
+                for role, prompt in {
+                    "query_rewriter": QUERY_REWRITER_INSTRUCTIONS,
+                    "chat_agent": CHAT_INSTRUCTIONS,
+                    "question_policy": QUESTION_POLICY,
+                    **STRUCTURAL_INSTRUCTIONS,
+                }.items()
+            },
+            fusion_settings=fusion,
+            evidence_limits=context_limits,
+            coverage_observed_at=coverage_observed_at.isoformat(),
         )
         yield ChatDependencies(
             rewriter,
@@ -217,4 +274,5 @@ async def chat_dependencies(
             coverage,
             rewrite_deployment,
             chat_deployment,
+            start_settings,
         )

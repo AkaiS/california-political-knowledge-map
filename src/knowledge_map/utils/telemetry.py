@@ -54,6 +54,22 @@ class TelemetryNotConfiguredError(RuntimeError):
     """Raised when a run would be unobservable."""
 
 
+def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
+    """Keep declared audit data, including political questions about a session.
+
+    Model Deployment payloads contain only validated non-secret settings. Raw
+    clients, headers, credentials, and provider bodies never enter these fields.
+    """
+    if match.path[:2] in {
+        ("attributes", "chat_session_id"),
+        ("attributes", "original_question"),
+        ("attributes", "model_deployments"),
+        ("attributes", "coverage"),
+    }:
+        return match.value
+    return None
+
+
 def _is_testing() -> bool:
     return (
         "pytest" in sys.modules
@@ -244,6 +260,7 @@ def setup_telemetry() -> None:
                 else os.environ.get("DEPLOYMENT_ENVIRONMENT", "development")
             ),
             send_to_logfire=False if is_testing else "if-token-present",
+            scrubbing=logfire.ScrubbingOptions(callback=scrub_chat_audit_attribute),
         )
 
         # This must follow configure() and precede Agent construction.

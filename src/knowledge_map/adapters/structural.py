@@ -78,6 +78,40 @@ class StructuralAgents:
     binder: Agent[ConstructionValidation, PositionalBindings]
 
 
+STRUCTURAL_INSTRUCTIONS = {
+    "structural_ontology_filter": (
+        "Use only the approved question and supplied semantic choices. Never emit "
+        "Cypher, graph identifiers, variables, parameters, projections, or provenance"
+        " paths. Select relevant labels, relationships, and filter properties."
+    ),
+    "structural_selector": (
+        "Use only the approved question and supplied semantic choices. Never emit "
+        "Cypher, graph identifiers, variables, parameters, projections, or provenance"
+        " paths. Select only supplied piece IDs, keeping separate occurrences for "
+        "each role. For a same-reporting-chunk question, select the requested result "
+        "entity first, the named entity second, and an optional Source Article third;"
+        " select no question-semantic relationship for those fixed provenance paths."
+    ),
+    "structural_wiring": (
+        "Use only the approved question and supplied semantic choices. Never emit "
+        "Cypher, graph identifiers, variables, parameters, projections, or provenance"
+        " paths. Wire selected occurrences by zero-based numeric index. Use each "
+        "filter and relationship once. Use distinct_roles for questions asking for "
+        "other or different entities. A same-reporting-chunk question has no triples;"
+        " wire its entity and optional Source Article filters to the selected roles."
+    ),
+    "structural_binder": (
+        "Use only the approved question and supplied semantic choices. Never emit "
+        "Cypher, graph identifiers, variables, parameters, projections, or provenance"
+        " paths. Return question values in supplied filter order. Preserve Bill names"
+        " for deterministic parsing. When several filters bind Bill names, put null "
+        "in those positional values and supply one bill_names assignment with "
+        "slot_index and value for each. Assign each bill to its wired role; never "
+        "repeat one designation across the slots. Other values remain positional."
+    ),
+}
+
+
 def get_structural_agents(
     *,
     ontology_model: Model,
@@ -85,10 +119,6 @@ def get_structural_agents(
     wiring_model: Model,
     binding_model: Model,
 ) -> StructuralAgents:
-    common = (
-        "Use only the approved question and supplied semantic choices. "
-        "Never emit Cypher, graph identifiers, variables, parameters, projections, or provenance paths. "
-    )
     agents = StructuralAgents(
         ontology_filter=cast(
             Agent[ConstructionValidation, OntologySelection],
@@ -98,8 +128,7 @@ def get_structural_agents(
                 retries=2,
                 deps_type=ConstructionValidation,
                 output_type=OntologySelection,
-                instructions=common
-                + "Select relevant labels, relationships, and filter properties.",
+                instructions=STRUCTURAL_INSTRUCTIONS["structural_ontology_filter"],
             ),
         ),
         selector=cast(
@@ -110,11 +139,7 @@ def get_structural_agents(
                 retries=2,
                 deps_type=ConstructionValidation,
                 output_type=PieceSelection,
-                instructions=common
-                + "Select only supplied piece IDs, keeping separate occurrences for each role. "
-                "For a same-reporting-chunk question, select the requested result entity first, "
-                "the named entity second, and an optional Source Article third; select no "
-                "question-semantic relationship for those fixed provenance paths.",
+                instructions=STRUCTURAL_INSTRUCTIONS["structural_selector"],
             ),
         ),
         wiring=cast(
@@ -125,11 +150,7 @@ def get_structural_agents(
                 retries=2,
                 deps_type=ConstructionValidation,
                 output_type=SemanticWiring,
-                instructions=common
-                + "Wire selected occurrences by zero-based numeric index. Use each filter and relationship once. "
-                "Use distinct_roles for questions asking for other or different entities. "
-                "A same-reporting-chunk question has no triples; wire its entity and optional "
-                "Source Article filters to the selected roles.",
+                instructions=STRUCTURAL_INSTRUCTIONS["structural_wiring"],
             ),
         ),
         binder=cast(
@@ -140,11 +161,7 @@ def get_structural_agents(
                 retries=2,
                 deps_type=ConstructionValidation,
                 output_type=PositionalBindings,
-                instructions=common
-                + "Return question values in supplied filter order. Preserve Bill names for deterministic parsing. "
-                "When several filters bind Bill names, put null in those positional values and supply "
-                "one bill_names assignment with slot_index and value for each. Assign each bill to its "
-                "wired role; never repeat one designation across the slots. Other values remain positional.",
+                instructions=STRUCTURAL_INSTRUCTIONS["structural_binder"],
             ),
         ),
     )
