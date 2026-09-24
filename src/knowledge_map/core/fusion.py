@@ -2,6 +2,7 @@
 
 from math import fsum
 
+from knowledge_map.retrieval_telemetry import record_selection
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
@@ -31,6 +32,7 @@ def fuse_candidates(
     contributions: dict[str, list[BranchCandidate]] = {}
     best_ranks: dict[str, dict[RetrievalBranch, int]] = {}
     eligible: set[str] = set()
+    eligible_branches: dict[str, object] = {}
     for branch in RetrievalBranch:
         branch_ranks: dict[str, int] = {}
         for candidate in execution.evidence_by_branch.get(branch, ()):
@@ -40,11 +42,15 @@ def fuse_candidates(
                 ranks.get(branch, candidate.ranking.rank), candidate.ranking.rank
             )
             branch_ranks[candidate.chunk_id] = ranks[branch]
-        eligible.update(
-            sorted(branch_ranks, key=lambda chunk: (branch_ranks[chunk], chunk))[
-                : limits[branch]
-            ]
-        )
+        branch_ids = sorted(
+            branch_ranks, key=lambda chunk: (branch_ranks[chunk], chunk)
+        )[: limits[branch]]
+        eligible.update(branch_ids)
+        eligible_branches[branch.value] = {
+            "count": len(branch_ids),
+            "chunk_ids": branch_ids,
+        }
+    record_selection(eligible_branches=eligible_branches)
     ranked = sorted(
         (
             (
@@ -60,7 +66,7 @@ def fuse_candidates(
         ),
         key=lambda item: (-item[1], item[0]),
     )
-    return tuple(
+    fused = tuple(
         FusedCandidate(
             chunk_id=chunk_id,
             rank=rank,
@@ -71,3 +77,5 @@ def fuse_candidates(
             ranked[: config.fused_candidate_limit], start=1
         )
     )
+    record_selection(fused_chunk_ids=[candidate.chunk_id for candidate in fused])
+    return fused

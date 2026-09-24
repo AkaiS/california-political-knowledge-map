@@ -75,6 +75,10 @@ def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
         ("attributes", "bindings"),
         ("attributes", "validated_query"),
         ("attributes", "bound_values"),
+        ("attributes", "eligible_branches"),
+        ("attributes", "fused_chunk_ids"),
+        ("attributes", "selected_chunk_ids"),
+        ("attributes", "omitted_chunks"),
     }:
         return match.value
     return None

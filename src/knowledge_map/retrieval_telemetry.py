@@ -1,8 +1,9 @@
-"""Attach existing retrieval diagnostics to the branch that observed them."""
+"""Attach retrieval diagnostics and selection decisions to their active stages."""
 
 from collections.abc import Iterator
 from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
+from typing import Literal
 
 import logfire
 
@@ -11,6 +12,56 @@ from knowledge_map.schemas.retrieval import RetrievalFailureLog
 _BRANCH_SPAN: ContextVar[logfire.LogfireSpan | None] = ContextVar(
     "retrieval_branch_span", default=None
 )
+_SELECTION_SPAN: ContextVar[logfire.LogfireSpan | None] = ContextVar(
+    "retrieval_selection_span", default=None
+)
+
+
+@contextmanager
+def selection_stage(
+    stage: Literal["fusion", "evidence_assembly"], chat_session_id: str | None
+) -> Iterator[None]:
+    with (
+        logfire.span(
+            "chat_session.fusion"
+            if stage == "fusion"
+            else "chat_session.evidence_assembly",
+            chat_session_id=chat_session_id,
+            audit_schema_version=1,
+        )
+        if chat_session_id is not None
+        else nullcontext()
+    ) as span:
+        token = _SELECTION_SPAN.set(span)
+        try:
+            yield
+            if span is not None and (span.attributes or {}).get("status") != "failed":
+                span.set_attribute("status", "succeeded")
+        except Exception as exc:
+            record_selection(
+                status="failed",
+                failure_kind=(
+                    "deadline_exhausted"
+                    if isinstance(exc, TimeoutError)
+                    else "validation"
+                    if isinstance(exc, ValueError)
+                    else "unexpected"
+                ),
+                diagnostic=(
+                    "Retrieval candidates could not be fused."
+                    if stage == "fusion"
+                    else "Grounding Evidence could not be assembled."
+                ),
+            )
+            raise
+        finally:
+            _SELECTION_SPAN.reset(token)
+
+
+def record_selection(**attributes: object) -> None:
+    span = _SELECTION_SPAN.get()
+    if span is not None:
+        span.set_attributes(attributes)
 
 
 @contextmanager

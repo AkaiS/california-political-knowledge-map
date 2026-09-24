@@ -14,7 +14,11 @@ from pydantic_ai.usage import RunUsage
 from knowledge_map.adapters.full_text import extract_full_text_keywords
 from knowledge_map.core.evidence import EvidenceAssembler
 from knowledge_map.core.fusion import fuse_candidates
-from knowledge_map.retrieval_telemetry import active_branch_span, record_branch_failure
+from knowledge_map.retrieval_telemetry import (
+    active_branch_span,
+    record_branch_failure,
+    selection_stage,
+)
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.query_preparation import QueryRewrite
@@ -252,22 +256,24 @@ class RetrievalCoordinator:
                 )
         execution = RetrievalExecutionResult(request=request, outcomes=tuple(outcomes))
         try:
-            if clock() >= deadline:
-                raise TimeoutError
-            fused = fuse_candidates(execution, config=self._fusion_config)
-            if clock() >= deadline:
-                raise TimeoutError
-            async with asyncio.timeout(deadline - clock()):
-                result = await self._assembler.assemble(
-                    execution,
-                    fused,
-                    coverage=coverage,
-                    relevant_collection_ids=relevant_collection_ids,
-                    monthly_coverage=monthly_coverage,
-                    limits=self._context_limits,
-                )
-            if clock() >= deadline:
-                raise TimeoutError
+            with selection_stage("fusion", chat_session_id):
+                if clock() >= deadline:
+                    raise TimeoutError
+                fused = fuse_candidates(execution, config=self._fusion_config)
+                if clock() >= deadline:
+                    raise TimeoutError
+            with selection_stage("evidence_assembly", chat_session_id):
+                async with asyncio.timeout(deadline - clock()):
+                    result = await self._assembler.assemble(
+                        execution,
+                        fused,
+                        coverage=coverage,
+                        relevant_collection_ids=relevant_collection_ids,
+                        monthly_coverage=monthly_coverage,
+                        limits=self._context_limits,
+                    )
+                if clock() >= deadline:
+                    raise TimeoutError
             return result
         except TimeoutError:
             logger.warning(

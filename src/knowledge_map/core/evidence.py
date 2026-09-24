@@ -4,6 +4,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 
+from knowledge_map.retrieval_telemetry import record_selection
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.retrieval import (
     AppliedContextLimits,
@@ -93,6 +94,8 @@ class EvidenceAssembler:
         monthly_coverage: tuple[MonthlyCoverage, ...] = (),
         limits: EvidenceContextLimits | None = None,
     ) -> EvidencePackage | EvidenceAssemblyFailure:
+        limits = limits or EvidenceContextLimits()
+        record_selection(limits=limits.model_dump(mode="json"))
         try:
             return await self._assemble(
                 execution,
@@ -100,9 +103,20 @@ class EvidenceAssembler:
                 coverage=coverage,
                 relevant_collection_ids=relevant_collection_ids,
                 monthly_coverage=monthly_coverage,
-                limits=limits or EvidenceContextLimits(),
+                limits=limits,
             )
-        except (EvidenceHydrationError, LookupError, OSError, ValueError):
+        except (EvidenceHydrationError, LookupError, OSError, ValueError) as exc:
+            record_selection(
+                status="failed",
+                failure_kind=(
+                    "deadline_exhausted"
+                    if isinstance(exc, TimeoutError)
+                    else "validation"
+                    if isinstance(exc, ValueError)
+                    else "hydration"
+                ),
+                diagnostic="Grounding Evidence could not be assembled.",
+            )
             logger.warning(
                 "evidence_assembly_failed",
                 extra={
@@ -152,6 +166,12 @@ class EvidenceAssembler:
                 key=lambda month: (month.collection_id, month.month),
             )
         )
+        record_selection(
+            coverage=selected_coverage.model_dump(mode="json"),
+            monthly_coverage=[
+                month.model_dump(mode="json") for month in selected_months
+            ],
+        )
 
         def package_for(
             selected: dict[str, SourceArticleEvidence],
@@ -176,8 +196,14 @@ class EvidenceAssembler:
         ordered = sorted(
             candidates, key=lambda candidate: (candidate.rank, candidate.chunk_id)
         )
-        for candidate in ordered:
+        selected_ids: list[str] = []
+        omitted: list[dict[str, str]] = []
+        for index, candidate in enumerate(ordered):
             if selected_passage_count == limits.max_passages:
+                omitted.extend(
+                    {"chunk_id": remaining.chunk_id, "reason": "passage_limit"}
+                    for remaining in ordered[index:]
+                )
                 break
             grounding = await self._load_grounding(candidate)
             if (
@@ -204,7 +230,12 @@ class EvidenceAssembler:
                 sources = proposed
                 package = proposal
                 selected_passage_count += 1
-        return package.model_copy(
+                selected_ids.append(candidate.chunk_id)
+            else:
+                omitted.append(
+                    {"chunk_id": candidate.chunk_id, "reason": "character_limit"}
+                )
+        result = package.model_copy(
             update={
                 "context": AppliedContextLimits(
                     unit="characters",
@@ -215,3 +246,9 @@ class EvidenceAssembler:
                 )
             }
         )
+        record_selection(
+            selected_chunk_ids=selected_ids,
+            omitted_chunks=omitted,
+            context=result.context.model_dump(mode="json"),
+        )
+        return result
