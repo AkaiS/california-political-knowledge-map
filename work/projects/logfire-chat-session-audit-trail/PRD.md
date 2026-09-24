@@ -1,6 +1,6 @@
 # Product requirements: Logfire Chat Session Audit Trail
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
