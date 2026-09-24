@@ -3,11 +3,13 @@
 import asyncio
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import Any, Literal, LiteralString, cast
 
 import httpx
+import logfire
 from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
 from pydantic_ai import Agent, ModelRetry, RunContext
@@ -26,7 +28,7 @@ from knowledge_map.core.structural import (
     validate_wiring,
 )
 from knowledge_map.ontology import news
-from knowledge_map.retrieval_telemetry import record_branch_failure
+from knowledge_map.retrieval_telemetry import record_branch_failure, structural_stage
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
     BranchRanking,
@@ -61,9 +63,76 @@ class ConstructionValidation:
     result: object | None = None
 
 
+@contextmanager
+def _stage(
+    stage: str,
+    *,
+    validation: ConstructionValidation | None = None,
+    usage: RunUsage | None = None,
+    deadline: float | None = None,
+) -> Iterator[logfire.LogfireSpan | None]:
+    with structural_stage(stage) as span:
+        try:
+            yield span
+        except (Exception, asyncio.CancelledError) as error:
+            failure_stage = stage
+            if isinstance(error, TimeoutError) or (
+                isinstance(error, asyncio.CancelledError)
+                and deadline is not None
+                and asyncio.get_running_loop().time() >= deadline
+            ):
+                kind = "deadline_exhausted"
+            elif isinstance(error, asyncio.CancelledError):
+                kind = "cancelled"
+            elif isinstance(error, (ModelAPIError, httpx.TransportError)):
+                kind = "transport"
+            elif isinstance(error, UnexpectedModelBehavior):
+                kind = "model_output"
+                if (
+                    validation is not None
+                    and usage is not None
+                    and (validation.rejected_request == usage.requests)
+                ):
+                    failure_stage = validation.stage
+                    kind = (
+                        "hop_bound_exhausted" if validation.hop_bound else "validation"
+                    )
+            elif isinstance(error, (DriverError, Neo4jError)):
+                kind = (
+                    "deadline_exhausted"
+                    if isinstance(error, Neo4jError)
+                    and ".Transaction.TransactionTimedOut" in error.code
+                    else "database"
+                )
+            elif isinstance(error, HopBoundError):
+                kind = "hop_bound_exhausted"
+            elif isinstance(error, (KeyError, TypeError, ValueError)):
+                kind = "hydration" if stage == "hydration" else "validation"
+            else:
+                kind = "unexpected"
+            if span is not None:
+                span.set_attributes(
+                    {
+                        "status": "failed",
+                        "failure_stage": failure_stage,
+                        "failure_kind": kind,
+                        "diagnostic": "Structural retrieval could not complete this stage.",
+                    }
+                )
+            raise
+
+
 def _validated_output(ctx: RunContext[ConstructionValidation], output: Any) -> Any:
     try:
-        ctx.deps.result = ctx.deps.check(output)
+        with (
+            _stage("validation") if ctx.deps.stage == "validation" else nullcontext()
+        ) as span:
+            ctx.deps.result = ctx.deps.check(output)
+            if span is not None:
+                cypher, parameters = cast(tuple[str, dict[str, str]], ctx.deps.result)
+                span.set_attributes(
+                    {"validated_query": cypher, "bound_values": parameters}
+                )
     except ValueError as error:
         ctx.deps.rejected_request = ctx.usage.requests
         ctx.deps.hop_bound = isinstance(error, HopBoundError)
@@ -212,123 +281,170 @@ class Neo4jStructuralRetriever:
             async with asyncio.timeout_at(deadline):
                 attempts = 1
                 question = request.rewrite.question
-                await self.agents.ontology_filter.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "catalog": public_pieces(CATALOG),
-                        }
-                    ),
+                with _stage(
+                    "schema_filtering",
+                    validation=validation,
                     usage=branch_usage,
-                    deps=validation,
-                )
-                catalog = cast(tuple[Piece, ...], validation.result)
+                    deadline=deadline,
+                ) as span:
+                    await self.agents.ontology_filter.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "catalog": public_pieces(CATALOG),
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    catalog = cast(tuple[Piece, ...], validation.result)
+                    if span is not None:
+                        span.set_attribute("accepted_pieces", public_pieces(catalog))
                 stage = "typed_selection"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: selected_pieces(output, catalog), stage
                 )
-                await self.agents.selector.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "catalog": public_pieces(catalog),
-                        }
-                    ),
+                with _stage(
+                    "typed_selection",
+                    validation=validation,
                     usage=branch_usage,
-                    deps=validation,
-                )
-                pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
-                chosen = {kind: public_pieces(items) for kind, items in pieces.items()}
+                    deadline=deadline,
+                ) as span:
+                    await self.agents.selector.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "catalog": public_pieces(catalog),
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
+                    chosen = {
+                        kind: public_pieces(items) for kind, items in pieces.items()
+                    }
+                    if span is not None:
+                        span.set_attribute("accepted_pieces", chosen)
                 stage = "wiring"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: validate_wiring(output, pieces), stage
                 )
-                wiring = (
-                    await self.agents.wiring.run(
-                        json.dumps({"question": question, "pieces": chosen}),
-                        usage=branch_usage,
-                        deps=validation,
-                    )
-                ).output
+                with _stage(
+                    "wiring",
+                    validation=validation,
+                    usage=branch_usage,
+                    deadline=deadline,
+                ) as span:
+                    wiring = (
+                        await self.agents.wiring.run(
+                            json.dumps({"question": question, "pieces": chosen}),
+                            usage=branch_usage,
+                            deps=validation,
+                        )
+                    ).output
+                    if span is not None:
+                        span.set_attribute("wiring", wiring.model_dump(mode="json"))
                 stage = "binding"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: compile_query(pieces, wiring, output), "validation"
                 )
-                await self.agents.binder.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "filters": [
-                                {
-                                    **public_pieces(
-                                        (pieces["filter"][item.filter_index],)
-                                    )[0],
-                                    "slot_index": index,
-                                    "role_index": item.role_index,
-                                }
-                                for index, item in enumerate(wiring.filters)
-                            ],
-                            "wiring": wiring.model_dump(),
-                            "pieces": chosen,
-                        }
-                    ),
+                with _stage(
+                    "binding",
+                    validation=validation,
                     usage=branch_usage,
-                    deps=validation,
-                )
+                    deadline=deadline,
+                ) as span:
+                    binding = await self.agents.binder.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "filters": [
+                                    {
+                                        **public_pieces(
+                                            (pieces["filter"][item.filter_index],)
+                                        )[0],
+                                        "slot_index": index,
+                                        "role_index": item.role_index,
+                                    }
+                                    for index, item in enumerate(wiring.filters)
+                                ],
+                                "wiring": wiring.model_dump(),
+                                "pieces": chosen,
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    if span is not None:
+                        span.set_attribute(
+                            "bindings", binding.output.model_dump(mode="json")
+                        )
                 stage = "validation"
                 cypher, parameters = cast(tuple[str, dict[str, str]], validation.result)
                 stage = "cypher_execution"
                 stage_start = branch_usage.requests
-                async with self.driver.session(
-                    database=self.database, default_access_mode=READ_ACCESS
-                ) as session:
-                    result = await session.run(
-                        Query(
-                            cast(LiteralString, cypher), timeout=_remaining(deadline)
-                        ),
-                        parameters=parameters,
-                    )
-                    rows = await result.data()
-                stage = "hydration"
-                outcome = SuccessfulBranch(
-                    branch=RetrievalBranch.STRUCTURAL,
-                    candidates=tuple(
-                        BranchCandidate(
-                            chunk_id=row["chunk_id"],
-                            source_article_id=row["source_article_id"],
-                            ranking=BranchRanking(
-                                branch=RetrievalBranch.STRUCTURAL, rank=rank, score=None
+                with _stage("cypher_execution", deadline=deadline) as span:
+                    if span is not None:
+                        span.set_attribute("database", self.database)
+                    async with self.driver.session(
+                        database=self.database, default_access_mode=READ_ACCESS
+                    ) as session:
+                        result = await session.run(
+                            Query(
+                                cast(LiteralString, cypher),
+                                timeout=_remaining(deadline),
                             ),
-                            routes=(
-                                RetrievalRoute(
-                                    kind="typed_traversal",
-                                    matched_field=None,
-                                    entry_node=GraphNodeReference(
-                                        id=row["entry_id"],
-                                        label=pieces["role"][0].label,
-                                        element_id=row["element_id"],
-                                    ),
-                                    graph_claims=_claims(row, pieces),
-                                ),
-                            ),
-                            grounding=GroundingEvidence(
-                                chunk_id=row["chunk_id"],
-                                text=row["text"],
-                                citation=SourceArticleCitation(
-                                    source_article_id=row["source_article_id"],
-                                    title=row["title"],
-                                    url=row["url"],
-                                    published_date=row["published_date"],
-                                ),
-                            ),
+                            parameters=parameters,
                         )
-                        for rank, row in enumerate(rows, 1)
-                    ),
-                )
-                _remaining(deadline)
+                        rows = await result.data()
+                    if span is not None:
+                        span.set_attribute("row_count", len(rows))
+                stage = "hydration"
+                with _stage("hydration", deadline=deadline) as span:
+                    outcome = SuccessfulBranch(
+                        branch=RetrievalBranch.STRUCTURAL,
+                        candidates=tuple(
+                            BranchCandidate(
+                                chunk_id=row["chunk_id"],
+                                source_article_id=row["source_article_id"],
+                                ranking=BranchRanking(
+                                    branch=RetrievalBranch.STRUCTURAL,
+                                    rank=rank,
+                                    score=None,
+                                ),
+                                routes=(
+                                    RetrievalRoute(
+                                        kind="typed_traversal",
+                                        matched_field=None,
+                                        entry_node=GraphNodeReference(
+                                            id=row["entry_id"],
+                                            label=pieces["role"][0].label,
+                                            element_id=row["element_id"],
+                                        ),
+                                        graph_claims=_claims(row, pieces),
+                                    ),
+                                ),
+                                grounding=GroundingEvidence(
+                                    chunk_id=row["chunk_id"],
+                                    text=row["text"],
+                                    citation=SourceArticleCitation(
+                                        source_article_id=row["source_article_id"],
+                                        title=row["title"],
+                                        url=row["url"],
+                                        published_date=row["published_date"],
+                                    ),
+                                ),
+                            )
+                            for rank, row in enumerate(rows, 1)
+                        ),
+                    )
+                    _remaining(deadline)
+                    if span is not None:
+                        span.set_attribute("candidate_count", len(outcome.candidates))
                 return outcome
         except TimeoutError:
             stage, kind = "deadline", "deadline_exhausted"

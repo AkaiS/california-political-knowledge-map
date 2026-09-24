@@ -70,6 +70,11 @@ def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
         ("attributes", "recoverable_portion"),
         ("attributes", "model_deployments"),
         ("attributes", "coverage"),
+        ("attributes", "accepted_pieces"),
+        ("attributes", "wiring"),
+        ("attributes", "bindings"),
+        ("attributes", "validated_query"),
+        ("attributes", "bound_values"),
     }:
         return match.value
     return None
