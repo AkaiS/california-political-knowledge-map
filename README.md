@@ -133,10 +133,13 @@ one-based attempt numbers; assessment, correction, and approval records identify
 their proposal by stage ID. There is no separate rejection record. A later
 proposal shows that the earlier proposal was replaced.
 Model stages retain timing, token usage, and safe failure metadata. Retrieval
-and answer stages are not yet captured. A missing record has no inferred
-outcome. Each insert runs in the background; storage failures are logged and
-chat continues. Committed records survive restart, but an insert still in flight
-may be lost on process exit.
+branches, structural construction, fusion, and Evidence Assembly also save stage
+observations. [Evidence Assembly records](docs/evidence-assembly.md#chat-session-audit-trail)
+include selected and omitted chunk IDs, omission reasons, context use, and relevant
+coverage. Chat Agent guidance and answer stages are not yet captured. A missing
+record has no inferred outcome. Each insert runs in the background; storage
+failures are logged and chat continues. Committed records survive restart, but
+an insert still in flight may be lost on process exit.
 Records remain until the operator manages the database outside this command.
 
 ## Model deployments

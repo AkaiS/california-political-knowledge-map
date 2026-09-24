@@ -4,6 +4,9 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 
+from pydantic import JsonValue
+
+from knowledge_map.core.audit import observe_audit_metadata
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.retrieval import (
     AppliedContextLimits,
@@ -138,6 +141,7 @@ class EvidenceAssembler:
         if {entry.collection_id for entry in entries} != set(
             relevant_collection_ids
         ) or len(entries) != len(set(relevant_collection_ids)):
+            observe_audit_metadata(failure_kind="coverage")
             raise ValueError(
                 "each relevant collection must have one Coverage Description entry"
             )
@@ -176,14 +180,24 @@ class EvidenceAssembler:
         ordered = sorted(
             candidates, key=lambda candidate: (candidate.rank, candidate.chunk_id)
         )
-        for candidate in ordered:
+        omitted: list[JsonValue] = []
+        for index, candidate in enumerate(ordered):
             if selected_passage_count == limits.max_passages:
+                omitted.extend(
+                    {"chunk_id": remaining.chunk_id, "reason": "passage_limit"}
+                    for remaining in ordered[index:]
+                )
                 break
-            grounding = await self._load_grounding(candidate)
+            try:
+                grounding = await self._load_grounding(candidate)
+            except (EvidenceHydrationError, LookupError, OSError, ValueError):
+                observe_audit_metadata(failure_kind="hydration")
+                raise
             if (
                 grounding.chunk_id != candidate.chunk_id
                 or grounding.citation.source_article_id != candidate.source_article_id
             ):
+                observe_audit_metadata(failure_kind="provenance")
                 raise ValueError("hydrated evidence belongs to another candidate")
             passage = EvidencePassage(
                 source_article_id=candidate.source_article_id,
@@ -193,6 +207,7 @@ class EvidenceAssembler:
             )
             previous = sources.get(candidate.source_article_id)
             if previous and previous.citation != grounding.citation:
+                observe_audit_metadata(failure_kind="provenance")
                 raise ValueError("one Source Article has conflicting citations")
             proposed = dict(sources)
             proposed[candidate.source_article_id] = SourceArticleEvidence(
@@ -204,14 +219,21 @@ class EvidenceAssembler:
                 sources = proposed
                 package = proposal
                 selected_passage_count += 1
-        return package.model_copy(
-            update={
-                "context": AppliedContextLimits(
-                    unit="characters",
-                    limit=limits.character_limit,
-                    used=len(render_evidence_context(package)),
-                    max_passages=limits.max_passages,
-                    omitted_passages=package.context.omitted_passages,
+            else:
+                omitted.append(
+                    {"chunk_id": candidate.chunk_id, "reason": "character_limit"}
                 )
-            }
-        )
+        try:
+            context = AppliedContextLimits(
+                unit="characters",
+                limit=limits.character_limit,
+                used=len(render_evidence_context(package)),
+                max_passages=limits.max_passages,
+                omitted_passages=package.context.omitted_passages,
+            )
+        except ValueError:
+            observe_audit_metadata(failure_kind="budget")
+            raise
+        result = package.model_copy(update={"context": context})
+        observe_audit_metadata(omitted_candidates=omitted)
+        return result

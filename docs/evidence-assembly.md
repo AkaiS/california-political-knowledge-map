@@ -84,5 +84,28 @@ Assembly failure preserves the entire execution record and adds no failed
 retrieval branch. Assembly neither summarizes evidence nor makes another model
 decision, sufficiency judgement, disagreement verdict, or retrieval request.
 
+## Chat Session Audit Trail
+
+The retrieval coordinator records one `evidence_assembly` stage with its Chat
+Session audit ID, stage ID, timing, and result status. Successful records contain
+selected Article Chunk IDs in fused rank order, omitted IDs with
+`character_limit` or `passage_limit` reasons, applied context limits and measured
+use, and the relevant coverage and monthly detail supplied to the Chat Agent.
+The assembler observes omissions as it selects passages, so recording them does
+not load candidates beyond the passage limit or change selection.
+
+Failed records retain the applied limits and a safe diagnostic. Known failure
+kinds distinguish `hydration`, `provenance`, `coverage`, `budget`, and
+`deadline_exhausted`; other validation failures use `assembly`. Unexpected
+exceptions and cancellation retain the shared audit stage failure behavior.
+An empty selection is a successful stage when the mandatory context fits.
+
+This stage stores no passage wording, citations, candidate routes, provider
+payloads, or complete Evidence Package. Passage snapshots belong to the
+Retrieval Answer record. Assembly observations use the existing background
+audit writer and do not require a successful database insert to return.
+
 Behavior is covered by `tests/test_evidence.py` using in-memory storage functions.
-No database service, model service, or browser is required.
+`tests/test_chat_audit_evidence.py` drives real Chat Sessions through ASGI with
+scripted models and fake retrieval and storage, then inspects saved stages through
+the audit CLI. No database service, model service, or browser is required.

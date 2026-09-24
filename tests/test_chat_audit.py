@@ -353,4 +353,5 @@ def test_answer_proceeds_while_audit_insert_is_blocked_and_survives_write_failur
             "dense_search",
             "structural_search",
             "fusion",
+            "evidence_assembly",
         }

@@ -242,20 +242,59 @@ class RetrievalCoordinator:
                     )
                     raise TimeoutError
                 fused = fuse_candidates(execution, config=self._fusion_config)
-            if clock() >= deadline:
-                raise TimeoutError
-            async with asyncio.timeout(deadline - clock()):
-                result = await self._assembler.assemble(
-                    execution,
-                    fused,
-                    coverage=coverage,
-                    relevant_collection_ids=relevant_collection_ids,
-                    monthly_coverage=monthly_coverage,
-                    limits=self._context_limits,
-                )
-            if clock() >= deadline:
-                raise TimeoutError
-            return result
+            with audit_stage(audit, audit_session_id, "evidence_assembly") as stage:
+                stage.metadata["context"] = {
+                    "unit": "characters",
+                    "limit": self._context_limits.character_limit,
+                    "max_passages": self._context_limits.max_passages,
+                }
+                try:
+                    if clock() >= deadline:
+                        raise TimeoutError
+                    async with asyncio.timeout(deadline - clock()):
+                        result = await self._assembler.assemble(
+                            execution,
+                            fused,
+                            coverage=coverage,
+                            relevant_collection_ids=relevant_collection_ids,
+                            monthly_coverage=monthly_coverage,
+                            limits=self._context_limits,
+                        )
+                    if clock() >= deadline:
+                        raise TimeoutError
+                except TimeoutError:
+                    stage.metadata.update(
+                        failure_kind="deadline_exhausted",
+                        diagnostic="Evidence Assembly could not finish within the retrieval deadline.",
+                    )
+                    raise
+                if isinstance(result, EvidencePackage):
+                    selected = sorted(
+                        (
+                            passage.candidate
+                            for source in result.sources
+                            for passage in source.passages
+                        ),
+                        key=lambda candidate: (candidate.rank, candidate.chunk_id),
+                    )
+                    stage.metadata.update(
+                        selected_chunk_ids=[
+                            candidate.chunk_id for candidate in selected
+                        ],
+                        context=result.context.model_dump(mode="json"),
+                        coverage=result.coverage.model_dump(mode="json"),
+                        monthly_coverage=[
+                            month.model_dump(mode="json")
+                            for month in result.monthly_coverage
+                        ],
+                    )
+                else:
+                    stage.status = "failed"
+                    stage.metadata.setdefault("failure_kind", "assembly")
+                    stage.metadata["diagnostic"] = (
+                        "Grounding Evidence could not be assembled."
+                    )
+                return result
         except TimeoutError:
             logger.warning(
                 "evidence_assembly_deadline",

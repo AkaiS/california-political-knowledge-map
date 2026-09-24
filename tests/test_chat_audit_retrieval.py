@@ -43,7 +43,16 @@ from knowledge_map.web import create_app
 
 
 @contextmanager
-def retrieval_chat(tmp_path, branches, *, relational=True, **configuration):
+def retrieval_chat(
+    tmp_path,
+    branches,
+    *,
+    relational=True,
+    coverage=COVERAGE,
+    relevant_collection_ids=("reporting",),
+    monthly_coverage=(),
+    **configuration,
+):
     path = tmp_path / "audit.sqlite"
     writer = AuditWriter(SQLiteAuditStore(path))
     agent, rewriter = get_chat_agent(), rewriter_agent()
@@ -64,8 +73,9 @@ def retrieval_chat(tmp_path, branches, *, relational=True, **configuration):
             chat_agent=agent,
             rewriter=rewriter,
             retrieval=coordinator(branches, **configuration),
-            coverage=COVERAGE,
-            relevant_collection_ids=("reporting",),
+            coverage=coverage,
+            relevant_collection_ids=relevant_collection_ids,
+            monthly_coverage=monthly_coverage,
             audit=writer,
             audit_settings={},
         )
