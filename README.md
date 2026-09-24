@@ -127,7 +127,7 @@ uv run ca-map audit show AUDIT_ID --db /path/to/chat_audit.db
 ```
 
 The command prints the saved stages as JSON and opens the database read-only.
-The trail records session start, Query Rewrite proposals, question-policy and
+The trail records session start, Query Rewrite Proposals, question-policy and
 coverage assessments, correction feedback, and approval. Proposal records have
 one-based attempt numbers; assessment, correction, and approval records identify
 their proposal by stage ID. There is no separate rejection record. A later

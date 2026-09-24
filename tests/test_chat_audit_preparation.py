@@ -1,8 +1,9 @@
 """Question preparation observations saved through the chat ASGI boundary."""
 
 import json
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, contextmanager, redirect_stdout
 from datetime import UTC, datetime
+from io import StringIO
 
 import httpx
 import pytest
@@ -18,8 +19,10 @@ from test_query_preparation import rewriter_agent
 from test_retrieval import COVERAGE, Branch, coordinator
 
 from knowledge_map.adapters.audit import SQLiteAuditStore
+from knowledge_map.cli.main import main
 from knowledge_map.core.audit import AuditWriter
 from knowledge_map.core.chat import ChatSession, get_chat_agent
+from knowledge_map.schemas.audit import AuditStageRecord
 from knowledge_map.schemas.retrieval import RetrievalBranch
 from knowledge_map.web import create_app
 
@@ -84,7 +87,22 @@ def audit_chat(tmp_path, proposals, assessments):
         def read_trail():
             assert client.portal is not None
             client.portal.call(writer.wait_for_writes)
-            return store.read_trail(sessions[0].audit_session_id)
+            output = StringIO()
+            with redirect_stdout(output):
+                main(
+                    [
+                        "audit",
+                        "show",
+                        sessions[0].audit_session_id,
+                        "--db",
+                        str(tmp_path / "audit.sqlite"),
+                    ]
+                )
+            trail = json.loads(output.getvalue())
+            assert trail["session_id"] == sessions[0].audit_session_id
+            return tuple(
+                AuditStageRecord.model_validate(stage) for stage in trail["stages"]
+            )
 
         yield client, read_trail, branches
 

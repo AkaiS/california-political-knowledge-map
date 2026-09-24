@@ -82,11 +82,11 @@ not reconstruct browser history after restart.
 
 ### Chat Session Audit Trail frontier
 
-Ticket 01 establishes the local record and a minimal read path. Tickets 02–07
+Ticket 01 established the local record and a minimal read path. Tickets 02–07
 depend only on 01; each adds one independently inspectable part of the trail.
 
-- [01 Open and inspect a Chat Session Audit Trail](projects/chat-session-audit-trail/issues/01-open-and-inspect-a-chat-session-audit-trail.md), `ready-for-agent`.
-- [02 Record question preparation and approval](projects/chat-session-audit-trail/issues/02-record-question-preparation-and-approval.md), blocked by 01.
+- [01 Open and inspect a Chat Session Audit Trail](projects/chat-session-audit-trail/issues/01-open-and-inspect-a-chat-session-audit-trail.md), `completed`.
+- [02 Record question preparation and approval](projects/chat-session-audit-trail/issues/02-record-question-preparation-and-approval.md), `completed`.
 - [03 Record retrieval candidates and fusion](projects/chat-session-audit-trail/issues/03-record-retrieval-candidates-and-fusion.md), blocked by 01.
 - [04 Record structural construction](projects/chat-session-audit-trail/issues/04-record-structural-construction.md), blocked by 01.
 - [05 Record Evidence Assembly](projects/chat-session-audit-trail/issues/05-record-evidence-assembly.md), blocked by 01.
