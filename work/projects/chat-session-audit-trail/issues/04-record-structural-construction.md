@@ -1,6 +1,6 @@
 # 04 — Record structural construction
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -12,11 +12,11 @@ Expose the varying results inside typed structural retrieval. A maintainer shoul
 
 ## Acceptance criteria
 
-- [ ] Schema filtering, typed selection, wiring, binding, validated query construction, execution, and hydration each record their result or safe failure with their own stage ID and timing.
-- [ ] Saved metadata includes selected ontology pieces, wiring and binding decisions, validated query text and bound values, and database and hydration outcomes.
-- [ ] Stages that make model calls record token usage when available. The local audit excludes raw provider requests and responses, raw model output, and embedding vectors.
-- [ ] A structural-stage failure retains its stage, failure kind, and safe diagnostic. A failed structural branch does not erase completed full-text or dense evidence or change the browser's answer behavior.
-- [ ] ASGI-level tests drive a relational question through scripted structural agents and fake graph responses, then inspect the saved stages. Controlled failures show which structural step stopped without asserting private helper calls.
+- [x] Schema filtering, typed selection, wiring, binding, validated query construction, execution, and hydration each record their result or safe failure with their own stage ID and timing.
+- [x] Saved metadata includes selected ontology pieces, wiring and binding decisions, validated query text and bound values, and database and hydration outcomes.
+- [x] Stages that make model calls record token usage when available. The local audit excludes raw provider requests and responses, raw model output, and embedding vectors.
+- [x] A structural-stage failure retains its stage, failure kind, and safe diagnostic. A failed structural branch does not erase completed full-text or dense evidence or change the browser's answer behavior.
+- [x] ASGI-level tests drive a relational question through scripted structural agents and fake graph responses, then inspect the saved stages. Controlled failures show which structural step stopped without asserting private helper calls.
 
 ## Blocked by
 

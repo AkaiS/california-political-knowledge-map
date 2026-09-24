@@ -88,7 +88,7 @@ depend only on 01; each adds one independently inspectable part of the trail.
 - [01 Open and inspect a Chat Session Audit Trail](projects/chat-session-audit-trail/issues/01-open-and-inspect-a-chat-session-audit-trail.md), `completed`.
 - [02 Record question preparation and approval](projects/chat-session-audit-trail/issues/02-record-question-preparation-and-approval.md), `completed`.
 - [03 Record retrieval candidates and fusion](projects/chat-session-audit-trail/issues/03-record-retrieval-candidates-and-fusion.md), `completed`.
-- [04 Record structural construction](projects/chat-session-audit-trail/issues/04-record-structural-construction.md), blocked by 01.
+- [04 Record structural construction](projects/chat-session-audit-trail/issues/04-record-structural-construction.md), `completed`.
 - [05 Record Evidence Assembly](projects/chat-session-audit-trail/issues/05-record-evidence-assembly.md), blocked by 01.
 - [06 Record the Retrieval Answer](projects/chat-session-audit-trail/issues/06-record-the-retrieval-answer.md), blocked by 01.
 - [07 Find and export Chat Session Audit Trails](projects/chat-session-audit-trail/issues/07-find-and-export-audit-trails.md), blocked by 01.
