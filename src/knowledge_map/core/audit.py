@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AuditStage:
+    writer: "AuditWriter | None" = None
+    session_id: str | None = None
     status: Literal["succeeded", "failed", "skipped"] = "succeeded"
     metadata: dict[str, JsonValue] = field(default_factory=dict)
 
@@ -43,12 +45,41 @@ def observe_retrieval_failure(diagnostic: RetrievalFailureLog) -> None:
     )
 
 
+def dispatch_audit_stage(
+    name: str,
+    *,
+    started_at: datetime,
+    ended_at: datetime,
+    status: Literal["succeeded", "failed", "skipped"],
+    metadata: dict[str, JsonValue],
+) -> None:
+    stage = _current_stage.get()
+    if stage is None or stage.writer is None or stage.session_id is None:
+        return
+    try:
+        stage.writer.dispatch(
+            AuditStageRecord(
+                session_id=stage.session_id,
+                name=name,
+                started_at=started_at,
+                ended_at=ended_at,
+                status=status,
+                metadata=metadata,
+            )
+        )
+    except Exception:
+        logger.exception(
+            "chat_audit_dispatch_failed",
+            extra={"chat_audit_id": stage.session_id, "audit_stage_name": name},
+        )
+
+
 @contextmanager
 def audit_stage(
     writer: "AuditWriter | None", session_id: str | None, name: str
 ) -> Iterator[AuditStage]:
     started_at = datetime.now(UTC)
-    stage = AuditStage()
+    stage = AuditStage(writer=writer, session_id=session_id)
     token = _current_stage.set(stage)
     try:
         yield stage
@@ -61,24 +92,25 @@ def audit_stage(
         stage.metadata.setdefault("diagnostic", "The operation did not complete.")
         raise
     finally:
+        dispatch_audit_stage(
+            name,
+            started_at=started_at,
+            ended_at=datetime.now(UTC),
+            status=stage.status,
+            metadata=stage.metadata,
+        )
         _current_stage.reset(token)
-        if writer is not None and session_id is not None:
-            try:
-                writer.dispatch(
-                    AuditStageRecord(
-                        session_id=session_id,
-                        name=name,
-                        started_at=started_at,
-                        ended_at=datetime.now(UTC),
-                        status=stage.status,
-                        metadata=stage.metadata,
-                    )
-                )
-            except Exception:
-                logger.exception(
-                    "chat_audit_dispatch_failed",
-                    extra={"chat_audit_id": session_id, "audit_stage_name": name},
-                )
+
+
+@contextmanager
+def child_audit_stage(name: str) -> Iterator[AuditStage]:
+    parent = _current_stage.get()
+    with audit_stage(
+        parent.writer if parent else None,
+        parent.session_id if parent else None,
+        name,
+    ) as stage:
+        yield stage
 
 
 def code_revision() -> dict[str, JsonValue]:

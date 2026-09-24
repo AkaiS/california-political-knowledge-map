@@ -3,19 +3,28 @@
 import asyncio
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal, LiteralString, cast
 
 import httpx
 from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
+from pydantic import JsonValue
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage
 
-from knowledge_map.core.audit import observe_audit_metadata, observe_retrieval_failure
+from knowledge_map.core.audit import (
+    AuditStage,
+    child_audit_stage,
+    dispatch_audit_stage,
+    observe_audit_metadata,
+    observe_retrieval_failure,
+)
 from knowledge_map.core.structural import (
     CATALOG,
     HopBoundError,
@@ -52,6 +61,69 @@ from knowledge_map.utils.agents import create_agent
 logger = logging.getLogger(__name__)
 
 
+@contextmanager
+def _observe_stage(
+    name: str,
+    deadline: float,
+    usage: RunUsage | None = None,
+    validation: "ConstructionValidation | None" = None,
+) -> Iterator[AuditStage]:
+    requests, input_tokens, output_tokens = (
+        (usage.requests, usage.input_tokens, usage.output_tokens)
+        if usage is not None
+        else (0, 0, 0)
+    )
+    with child_audit_stage(f"structural_{name}") as observation:
+        try:
+            yield observation
+        except BaseException as error:
+            kind = "unexpected"
+            if isinstance(error, asyncio.CancelledError):
+                kind = (
+                    "deadline_exhausted"
+                    if asyncio.get_running_loop().time() >= deadline
+                    else "cancelled"
+                )
+            elif isinstance(error, TimeoutError):
+                kind = "deadline_exhausted"
+            elif isinstance(error, (ModelAPIError, httpx.TransportError)):
+                kind = "transport"
+            elif isinstance(error, UnexpectedModelBehavior):
+                kind = "model_output"
+                if (
+                    validation is not None
+                    and usage is not None
+                    and validation.rejected_request == usage.requests
+                ):
+                    kind = (
+                        "hop_bound_exhausted" if validation.hop_bound else "validation"
+                    )
+            elif isinstance(error, (DriverError, Neo4jError)):
+                kind = (
+                    "deadline_exhausted"
+                    if isinstance(error, Neo4jError)
+                    and ".Transaction.TransactionTimedOut" in error.code
+                    else "database"
+                )
+            elif isinstance(error, (KeyError, TypeError, ValueError)):
+                kind = "hydration" if name == "hydration" else "validation"
+            observation.metadata.update(
+                failure_stage=name,
+                failure_kind=kind,
+                diagnostic="Structural retrieval could not complete this stage.",
+            )
+            raise
+        finally:
+            if usage is not None:
+                observation.metadata["usage"] = {
+                    "requests": usage.requests - requests,
+                    "input_tokens": usage.input_tokens - input_tokens,
+                    "output_tokens": usage.output_tokens - output_tokens,
+                }
+            if name == "binding" and validation is not None:
+                validation.dispatch_query_observation()
+
+
 @dataclass
 class ConstructionValidation:
     check: Callable[[Any], object]
@@ -59,15 +131,47 @@ class ConstructionValidation:
     rejected_request: int = -1
     hop_bound: bool = False
     result: object | None = None
+    query_started_at: datetime | None = None
+    query_ended_at: datetime | None = None
+    query_failure_kind: str | None = None
+
+    def dispatch_query_observation(self) -> None:
+        if self.query_started_at is None or self.query_ended_at is None:
+            return
+        metadata: dict[str, JsonValue]
+        if self.query_failure_kind is None:
+            cypher, parameters = cast(tuple[str, dict[str, str]], self.result)
+            metadata = {"query": cypher, "parameters": dict(parameters)}
+        else:
+            metadata = {
+                "failure_stage": "validation",
+                "failure_kind": self.query_failure_kind,
+                "diagnostic": "Structural retrieval could not complete this stage.",
+            }
+        dispatch_audit_stage(
+            "structural_validation",
+            started_at=self.query_started_at,
+            ended_at=self.query_ended_at,
+            status="succeeded" if self.query_failure_kind is None else "failed",
+            metadata=metadata,
+        )
 
 
 def _validated_output(ctx: RunContext[ConstructionValidation], output: Any) -> Any:
+    if ctx.deps.stage == "validation":
+        ctx.deps.query_started_at = datetime.now(UTC)
+        ctx.deps.query_failure_kind = "unexpected"
     try:
         ctx.deps.result = ctx.deps.check(output)
+        ctx.deps.query_failure_kind = None
     except ValueError as error:
+        ctx.deps.query_failure_kind = "validation"
         ctx.deps.rejected_request = ctx.usage.requests
         ctx.deps.hop_bound = isinstance(error, HopBoundError)
         raise ModelRetry(str(error)) from error
+    finally:
+        if ctx.deps.stage == "validation":
+            ctx.deps.query_ended_at = datetime.now(UTC)
     return output
 
 
@@ -203,123 +307,153 @@ class Neo4jStructuralRetriever:
             async with asyncio.timeout_at(deadline):
                 attempts = 1
                 question = request.rewrite.question
-                await self.agents.ontology_filter.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "catalog": public_pieces(CATALOG),
-                        }
-                    ),
-                    usage=branch_usage,
-                    deps=validation,
-                )
-                catalog = cast(tuple[Piece, ...], validation.result)
+                with _observe_stage(
+                    stage, deadline, branch_usage, validation
+                ) as observation:
+                    selection = await self.agents.ontology_filter.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "catalog": public_pieces(CATALOG),
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    catalog = cast(tuple[Piece, ...], validation.result)
+                    observation.metadata["selection"] = selection.output.model_dump(
+                        mode="json"
+                    )
                 stage = "typed_selection"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: selected_pieces(output, catalog), stage
                 )
-                await self.agents.selector.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "catalog": public_pieces(catalog),
-                        }
-                    ),
-                    usage=branch_usage,
-                    deps=validation,
-                )
-                pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
+                with _observe_stage(
+                    stage, deadline, branch_usage, validation
+                ) as observation:
+                    selection = await self.agents.selector.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "catalog": public_pieces(catalog),
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    pieces = cast(dict[str, tuple[Piece, ...]], validation.result)
+                    observation.metadata["selection"] = selection.output.model_dump(
+                        mode="json"
+                    )
                 chosen = {kind: public_pieces(items) for kind, items in pieces.items()}
                 stage = "wiring"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: validate_wiring(output, pieces), stage
                 )
-                wiring = (
-                    await self.agents.wiring.run(
-                        json.dumps({"question": question, "pieces": chosen}),
-                        usage=branch_usage,
-                        deps=validation,
-                    )
-                ).output
+                with _observe_stage(
+                    stage, deadline, branch_usage, validation
+                ) as observation:
+                    wiring = (
+                        await self.agents.wiring.run(
+                            json.dumps({"question": question, "pieces": chosen}),
+                            usage=branch_usage,
+                            deps=validation,
+                        )
+                    ).output
+                    observation.metadata["wiring"] = wiring.model_dump(mode="json")
                 stage = "binding"
                 stage_start = branch_usage.requests
                 validation = ConstructionValidation(
                     lambda output: compile_query(pieces, wiring, output), "validation"
                 )
-                await self.agents.binder.run(
-                    json.dumps(
-                        {
-                            "question": question,
-                            "filters": [
-                                {
-                                    **public_pieces(
-                                        (pieces["filter"][item.filter_index],)
-                                    )[0],
-                                    "slot_index": index,
-                                    "role_index": item.role_index,
-                                }
-                                for index, item in enumerate(wiring.filters)
-                            ],
-                            "wiring": wiring.model_dump(),
-                            "pieces": chosen,
-                        }
-                    ),
-                    usage=branch_usage,
-                    deps=validation,
-                )
+                with _observe_stage(
+                    stage, deadline, branch_usage, validation
+                ) as observation:
+                    bindings = await self.agents.binder.run(
+                        json.dumps(
+                            {
+                                "question": question,
+                                "filters": [
+                                    {
+                                        **public_pieces(
+                                            (pieces["filter"][item.filter_index],)
+                                        )[0],
+                                        "slot_index": index,
+                                        "role_index": item.role_index,
+                                    }
+                                    for index, item in enumerate(wiring.filters)
+                                ],
+                                "wiring": wiring.model_dump(),
+                                "pieces": chosen,
+                            }
+                        ),
+                        usage=branch_usage,
+                        deps=validation,
+                    )
+                    observation.metadata["bindings"] = bindings.output.model_dump(
+                        mode="json"
+                    )
                 stage = "validation"
                 cypher, parameters = cast(tuple[str, dict[str, str]], validation.result)
                 stage = "cypher_execution"
                 stage_start = branch_usage.requests
-                async with self.driver.session(
-                    database=self.database, default_access_mode=READ_ACCESS
-                ) as session:
-                    result = await session.run(
-                        Query(
-                            cast(LiteralString, cypher), timeout=_remaining(deadline)
-                        ),
-                        parameters=parameters,
-                    )
-                    rows = await result.data()
-                stage = "hydration"
-                outcome = SuccessfulBranch(
-                    branch=RetrievalBranch.STRUCTURAL,
-                    candidates=tuple(
-                        BranchCandidate(
-                            chunk_id=row["chunk_id"],
-                            source_article_id=row["source_article_id"],
-                            ranking=BranchRanking(
-                                branch=RetrievalBranch.STRUCTURAL, rank=rank, score=None
+                with _observe_stage(stage, deadline) as observation:
+                    observation.metadata["database"] = self.database
+                    async with self.driver.session(
+                        database=self.database, default_access_mode=READ_ACCESS
+                    ) as session:
+                        result = await session.run(
+                            Query(
+                                cast(LiteralString, cypher),
+                                timeout=_remaining(deadline),
                             ),
-                            routes=(
-                                RetrievalRoute(
-                                    kind="typed_traversal",
-                                    matched_field=None,
-                                    entry_node=GraphNodeReference(
-                                        id=row["entry_id"],
-                                        label=pieces["role"][0].label,
-                                        element_id=row["element_id"],
-                                    ),
-                                    graph_claims=_claims(row, pieces),
-                                ),
-                            ),
-                            grounding=GroundingEvidence(
-                                chunk_id=row["chunk_id"],
-                                text=row["text"],
-                                citation=SourceArticleCitation(
-                                    source_article_id=row["source_article_id"],
-                                    title=row["title"],
-                                    url=row["url"],
-                                    published_date=row["published_date"],
-                                ),
-                            ),
+                            parameters=parameters,
                         )
-                        for rank, row in enumerate(rows, 1)
-                    ),
-                )
-                _remaining(deadline)
+                        rows = await result.data()
+                    observation.metadata["returned_row_count"] = len(rows)
+                stage = "hydration"
+                with _observe_stage(stage, deadline) as observation:
+                    outcome = SuccessfulBranch(
+                        branch=RetrievalBranch.STRUCTURAL,
+                        candidates=tuple(
+                            BranchCandidate(
+                                chunk_id=row["chunk_id"],
+                                source_article_id=row["source_article_id"],
+                                ranking=BranchRanking(
+                                    branch=RetrievalBranch.STRUCTURAL,
+                                    rank=rank,
+                                    score=None,
+                                ),
+                                routes=(
+                                    RetrievalRoute(
+                                        kind="typed_traversal",
+                                        matched_field=None,
+                                        entry_node=GraphNodeReference(
+                                            id=row["entry_id"],
+                                            label=pieces["role"][0].label,
+                                            element_id=row["element_id"],
+                                        ),
+                                        graph_claims=_claims(row, pieces),
+                                    ),
+                                ),
+                                grounding=GroundingEvidence(
+                                    chunk_id=row["chunk_id"],
+                                    text=row["text"],
+                                    citation=SourceArticleCitation(
+                                        source_article_id=row["source_article_id"],
+                                        title=row["title"],
+                                        url=row["url"],
+                                        published_date=row["published_date"],
+                                    ),
+                                ),
+                            )
+                            for rank, row in enumerate(rows, 1)
+                        ),
+                    )
+                    _remaining(deadline)
+                    observation.metadata["candidate_count"] = len(outcome.candidates)
                 return outcome
         except TimeoutError:
             stage, kind = "deadline", "deadline_exhausted"
