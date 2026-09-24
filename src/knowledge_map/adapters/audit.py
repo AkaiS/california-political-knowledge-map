@@ -48,17 +48,31 @@ class SQLiteAuditStore:
             )
 
     def read_trail(self, session_id: str) -> tuple[AuditStageRecord, ...]:
+        return self._read_stages(session_id)
+
+    def read_trails(self) -> dict[str, tuple[AuditStageRecord, ...]]:
+        trails: dict[str, list[AuditStageRecord]] = {}
+        for record in self._read_stages():
+            trails.setdefault(record.session_id, []).append(record)
+        return {session_id: tuple(records) for session_id, records in trails.items()}
+
+    def _read_stages(
+        self, session_id: str | None = None
+    ) -> tuple[AuditStageRecord, ...]:
         uri = self.path.resolve().as_uri() + "?mode=ro"
         with closing(sqlite3.connect(uri, uri=True)) as connection:
             connection.row_factory = sqlite3.Row
-            rows = connection.execute(
-                "SELECT * FROM audit_stages WHERE session_id = ? "
-                "ORDER BY started_at, stage_id",
-                (session_id,),
-            ).fetchall()
-        return tuple(
+            query = "SELECT * FROM audit_stages"
+            parameters = () if session_id is None else (session_id,)
+            if session_id is not None:
+                query += " WHERE session_id = ?"
+            rows = connection.execute(query, parameters).fetchall()
+        records = (
             AuditStageRecord.model_validate(
                 {**dict(row), "metadata": json.loads(row["metadata"])}
             )
             for row in rows
+        )
+        return tuple(
+            sorted(records, key=lambda record: (record.started_at, record.stage_id))
         )

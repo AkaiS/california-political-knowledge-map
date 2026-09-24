@@ -122,11 +122,43 @@ coverage counts with their observation time. The audit ID appears as
 Inspect a saved trail without starting chat, model clients, Neo4j, or Logfire:
 
 ```bash
+uv run ca-map audit list
+uv run ca-map audit list --since 2026-09-23T00:00:00Z --until 2026-09-24T00:00:00Z
+uv run ca-map audit list --has-answer no --failed-stage dense_search
+uv run ca-map audit list --code-revision COMMIT --model-deployment local:MODEL
 uv run ca-map audit show AUDIT_ID
 uv run ca-map audit show AUDIT_ID --db /path/to/chat_audit.db
+uv run ca-map audit export AUDIT_ID > trail.json
 ```
 
-The command prints the saved stages as JSON and opens the database read-only.
+All three commands print JSON to stdout and accept `--db`, which overrides
+`CHAT_AUDIT_DB_PATH`. They open the existing database read-only, without creating
+or migrating it. Missing, unreadable, or invalid databases produce an error on
+stderr and exit with code 1. `show` and `export` also report an unknown audit ID
+as an error.
+
+`list` returns session IDs, `observed_at`, and `has_retrieval_answer`, ordered by
+the earliest saved stage's start time. `observed_at` is that saved timestamp,
+so a trail whose session-start insert was lost remains findable. `--since` and
+`--until` compare this time inclusively and require an ISO 8601 timestamp with
+a timezone. `--has-answer yes` or `no` filters on the presence of a saved
+Retrieval Answer record, including answers with zero passages. Absence does
+not establish why an answer record is missing.
+
+Filters combine with AND. `--code-revision` matches the exact saved commit.
+`--model-deployment` takes `local:MODEL` or `openrouter:MODEL` and matches the
+exact kind and model in any saved role, including the Query Rewriter and Chat
+Agent. Endpoint, provider policy, and request settings remain available in
+`show` and `export`; the filter matches the kind and model only. A missing
+session-start record cannot match either settings filter. `--failed-stage`
+matches an exact saved stage name whose result is `failed`, such as
+`dense_search` or `evidence_assembly`.
+
+`show` and `export` print the same saved stage records and any Retrieval Answer
+snapshot, ordered by stage start time with stage ID breaking ties for display.
+The times retain overlapping intervals; the output adds no sequence number or
+session completion status. Redirect export to a separate file to retain the JSON.
+
 The trail records session start, Query Rewrite Proposals, question-policy and
 coverage assessments, correction feedback, and approval. Proposal records have
 one-based attempt numbers; assessment, correction, and approval records identify
