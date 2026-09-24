@@ -10,6 +10,7 @@ from typing import Protocol
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.adapters.full_text import extract_full_text_keywords
+from knowledge_map.core.audit import AuditWriter, audit_stage, observe_retrieval_failure
 from knowledge_map.core.evidence import EvidenceAssembler
 from knowledge_map.core.fusion import fuse_candidates
 from knowledge_map.schemas.evidence import EvidenceContextLimits
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    observe_retrieval_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -86,6 +88,31 @@ async def _run_branch(
                 safe_diagnostic="The retrieval branch could not complete.",
             )
         )
+
+
+async def _observe_branch(
+    branch: RetrievalBranch,
+    call: Callable[[], Awaitable[SuccessfulBranch | FailedBranch]],
+    deadline: float,
+    clock: Callable[[], float],
+    audit: AuditWriter | None,
+    session_id: str | None,
+    keywords: tuple[str, ...],
+) -> SuccessfulBranch | FailedBranch:
+    with audit_stage(audit, session_id, f"{branch.value}_search") as stage:
+        if branch == RetrievalBranch.FULL_TEXT:
+            stage.metadata["search_terms"] = list(keywords)
+        outcome = await _run_branch(branch, call, deadline, clock)
+        stage.status = outcome.status
+        stage.metadata["returned_candidate_count"] = (
+            len(outcome.candidates) if outcome.status == "succeeded" else 0
+        )
+        if outcome.status == "failed":
+            stage.metadata.setdefault("failure_kind", "unexpected")
+            stage.metadata.setdefault(
+                "diagnostic", "The retrieval branch could not complete."
+            )
+        return outcome
 
 
 class FullTextRetriever(Protocol):
@@ -144,6 +171,8 @@ class RetrievalCoordinator:
         relevant_collection_ids: tuple[str, ...],
         monthly_coverage: tuple[MonthlyCoverage, ...] = (),
         usage: RunUsage | None = None,
+        audit: AuditWriter | None = None,
+        audit_session_id: str | None = None,
     ) -> EvidencePackage | EvidenceAssemblyFailure:
         clock = self._clock or asyncio.get_running_loop().time
         deadline = clock() + self._deadline_seconds
@@ -169,7 +198,15 @@ class RetrievalCoordinator:
             outcomes: list[BranchOutcome] = list(
                 await asyncio.gather(
                     *(
-                        _run_branch(branch, call, deadline, clock)
+                        _observe_branch(
+                            branch,
+                            call,
+                            deadline,
+                            clock,
+                            audit,
+                            audit_session_id,
+                            keywords,
+                        )
                         for branch, call in zip(
                             request.expected_branches, calls, strict=True
                         )
@@ -190,11 +227,17 @@ class RetrievalCoordinator:
             )
         if not rewrite.relational:
             outcomes.append(SkippedBranch())
+            with audit_stage(audit, audit_session_id, "structural_search") as stage:
+                stage.status = "skipped"
+                stage.metadata.update(
+                    reason="non_relational", returned_candidate_count=0
+                )
         execution = RetrievalExecutionResult(request=request, outcomes=tuple(outcomes))
         try:
             if clock() >= deadline:
                 raise TimeoutError
-            fused = fuse_candidates(execution, config=self._fusion_config)
+            with audit_stage(audit, audit_session_id, "fusion"):
+                fused = fuse_candidates(execution, config=self._fusion_config)
             if clock() >= deadline:
                 raise TimeoutError
             async with asyncio.timeout(deadline - clock()):

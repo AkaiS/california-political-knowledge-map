@@ -342,9 +342,15 @@ def test_answer_proceeds_while_audit_insert_is_blocked_and_survives_write_failur
             for failure in failures
         )
     else:
-        assert [record.name for record in records] == [
+        assert [record.name for record in records[:4]] == [
             "session_start",
             "query_rewrite",
             "question_assessment",
             "query_approval",
         ]
+        assert {record.name for record in records[4:]} == {
+            "full_text_search",
+            "dense_search",
+            "structural_search",
+            "fusion",
+        }

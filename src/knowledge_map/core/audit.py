@@ -3,14 +3,83 @@
 import asyncio
 import logging
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from pydantic import JsonValue
 
 from knowledge_map.adapters.audit import SQLiteAuditStore
 from knowledge_map.schemas.audit import AuditStageRecord
+from knowledge_map.schemas.retrieval import RetrievalFailureLog
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AuditStage:
+    status: Literal["succeeded", "failed", "skipped"] = "succeeded"
+    metadata: dict[str, JsonValue] = field(default_factory=dict)
+
+
+_current_stage: ContextVar[AuditStage | None] = ContextVar("audit_stage", default=None)
+
+
+def observe_audit_metadata(**metadata: JsonValue) -> None:
+    stage = _current_stage.get()
+    if stage is not None:
+        stage.metadata.update(metadata)
+
+
+def observe_retrieval_failure(diagnostic: RetrievalFailureLog) -> None:
+    observe_audit_metadata(
+        failure_stage=diagnostic.stage,
+        failure_kind=diagnostic.failure_kind,
+        diagnostic=diagnostic.safe_diagnostic,
+    )
+
+
+@contextmanager
+def audit_stage(
+    writer: "AuditWriter | None", session_id: str | None, name: str
+) -> Iterator[AuditStage]:
+    started_at = datetime.now(UTC)
+    stage = AuditStage()
+    token = _current_stage.set(stage)
+    try:
+        yield stage
+    except BaseException as error:
+        stage.status = "failed"
+        stage.metadata.update(
+            failure_kind="cancelled"
+            if isinstance(error, asyncio.CancelledError)
+            else "unexpected",
+            diagnostic="The operation did not complete.",
+        )
+        raise
+    finally:
+        _current_stage.reset(token)
+        if writer is not None and session_id is not None:
+            try:
+                writer.dispatch(
+                    AuditStageRecord(
+                        session_id=session_id,
+                        name=name,
+                        started_at=started_at,
+                        ended_at=datetime.now(UTC),
+                        status=stage.status,
+                        metadata=stage.metadata,
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "chat_audit_dispatch_failed",
+                    extra={"chat_audit_id": session_id, "audit_stage_name": name},
+                )
 
 
 def code_revision() -> dict[str, JsonValue]:

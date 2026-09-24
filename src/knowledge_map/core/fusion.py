@@ -2,6 +2,9 @@
 
 from math import fsum
 
+from pydantic import JsonValue
+
+from knowledge_map.core.audit import observe_audit_metadata
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
@@ -31,6 +34,7 @@ def fuse_candidates(
     contributions: dict[str, list[BranchCandidate]] = {}
     best_ranks: dict[str, dict[RetrievalBranch, int]] = {}
     eligible: set[str] = set()
+    eligible_by_branch: dict[str, JsonValue] = {}
     for branch in RetrievalBranch:
         branch_ranks: dict[str, int] = {}
         for candidate in execution.evidence_by_branch.get(branch, ()):
@@ -40,11 +44,16 @@ def fuse_candidates(
                 ranks.get(branch, candidate.ranking.rank), candidate.ranking.rank
             )
             branch_ranks[candidate.chunk_id] = ranks[branch]
-        eligible.update(
-            sorted(branch_ranks, key=lambda chunk: (branch_ranks[chunk], chunk))[
-                : limits[branch]
-            ]
-        )
+        branch_ids = sorted(
+            branch_ranks, key=lambda chunk: (branch_ranks[chunk], chunk)
+        )[: limits[branch]]
+        eligible.update(branch_ids)
+        branch_metadata: dict[str, JsonValue] = {
+            "count": len(branch_ids),
+            "chunk_ids": list(branch_ids),
+        }
+        eligible_by_branch[branch.value] = branch_metadata
+    observe_audit_metadata(eligible_by_branch=eligible_by_branch)
     ranked = sorted(
         (
             (
@@ -60,7 +69,7 @@ def fuse_candidates(
         ),
         key=lambda item: (-item[1], item[0]),
     )
-    return tuple(
+    fused = tuple(
         FusedCandidate(
             chunk_id=chunk_id,
             rank=rank,
@@ -71,3 +80,5 @@ def fuse_candidates(
             ranked[: config.fused_candidate_limit], start=1
         )
     )
+    observe_audit_metadata(fused_chunk_ids=[candidate.chunk_id for candidate in fused])
+    return fused

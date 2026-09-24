@@ -14,6 +14,7 @@ from pydantic_ai.usage import RunUsage
 
 from knowledge_map.adapters.embedding import get_embedding_embedder
 from knowledge_map.config import settings
+from knowledge_map.core.audit import observe_audit_metadata, observe_retrieval_failure
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
     BranchRanking,
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    observe_retrieval_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -82,6 +84,13 @@ class Neo4jDenseRetriever:
                 if usage is not None:
                     usage.requests += 1
                 embedding = await self.embedder.embed_query(request.rewrite.question)
+                observe_audit_metadata(
+                    usage={
+                        "requests": 1,
+                        "input_tokens": embedding.usage.input_tokens,
+                        "output_tokens": embedding.usage.output_tokens,
+                    }
+                )
                 if usage is not None:
                     usage.incr(embedding.usage)
                 if len(embedding.embeddings) != 1:
@@ -154,6 +163,15 @@ class Neo4jDenseRetriever:
                 )
                 indexes = await result.data()
                 index = indexes[0] if indexes else None
+                observe_audit_metadata(
+                    indexes=[
+                        {
+                            "name": "chunk_vector_index",
+                            "type": index.get("type") if index is not None else None,
+                            "state": index.get("state") if index is not None else None,
+                        }
+                    ]
+                )
                 if (
                     index is None
                     or index["type"] != "VECTOR"

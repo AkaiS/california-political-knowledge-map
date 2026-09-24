@@ -173,13 +173,13 @@ def test_approval_identifies_the_deferred_query_rewrite_used_by_retrieval(tmp_pa
     assert "Complete roll calls are unavailable." in "".join(
         event["delta"] for event in answered if event["type"] == "text-delta"
     )
-    assert [record.name for record in records] == [
+    assert [record.name for record in records[:4]] == [
         "session_start",
         "query_rewrite",
         "question_assessment",
         "query_approval",
     ]
-    _, proposal, assessed, approved = records
+    _, proposal, assessed, approved = records[:4]
     assert assessed.metadata["assessment"] == assessment
     assert approved.status == "succeeded"
     assert approved.metadata == {
@@ -323,7 +323,7 @@ def test_correction_connects_numbered_proposals_to_the_approved_rewrite(
         events(client.post("/api/chat", json=approval_request(revised)))
         records = read_trail()
 
-    assert [record.name for record in records] == [
+    assert [record.name for record in records[:7]] == [
         "session_start",
         "query_rewrite",
         "question_assessment",
@@ -332,7 +332,7 @@ def test_correction_connects_numbered_proposals_to_the_approved_rewrite(
         "question_assessment",
         "query_approval",
     ]
-    _, proposal, _, corrected, revised_proposal, _, approved = records
+    _, proposal, _, corrected, revised_proposal, _, approved = records[:7]
     assert [proposal.metadata["attempt"], revised_proposal.metadata["attempt"]] == [
         1,
         2,
@@ -349,7 +349,7 @@ def test_correction_connects_numbered_proposals_to_the_approved_rewrite(
         "output_tokens": 7,
     }
     assert len({record.session_id for record in records}) == 1
-    assert len({record.stage_id for record in records}) == 7
+    assert len({record.stage_id for record in records}) == len(records)
     assert all(
         "attempt" not in record.metadata
         for record in records

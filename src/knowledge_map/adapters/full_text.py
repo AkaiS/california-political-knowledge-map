@@ -11,6 +11,7 @@ from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
 from pydantic import ValidationError
 
+from knowledge_map.core.audit import observe_audit_metadata, observe_retrieval_failure
 from knowledge_map.schemas.query_preparation import QueryRewrite
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    observe_retrieval_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -236,6 +238,16 @@ class Neo4jFullTextRetriever:
                     names=[channel.index_name for channel in _FULL_TEXT_CHANNELS],
                 )
                 indexes = {row["name"]: row for row in await result.data()}
+                observe_audit_metadata(
+                    indexes=[
+                        {
+                            "name": channel.index_name,
+                            "type": indexes.get(channel.index_name, {}).get("type"),
+                            "state": indexes.get(channel.index_name, {}).get("state"),
+                        }
+                        for channel in _FULL_TEXT_CHANNELS
+                    ]
+                )
                 for channel in _FULL_TEXT_CHANNELS:
                     index = indexes.get(channel.index_name)
                     if (

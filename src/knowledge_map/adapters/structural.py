@@ -15,6 +15,7 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage
 
+from knowledge_map.core.audit import observe_audit_metadata, observe_retrieval_failure
 from knowledge_map.core.structural import (
     CATALOG,
     HopBoundError,
@@ -341,6 +342,13 @@ class Neo4jStructuralRetriever:
         except (KeyError, TypeError, ValueError):
             kind = "hydration" if stage == "hydration" else "validation"
         finally:
+            observe_audit_metadata(
+                usage={
+                    "requests": branch_usage.requests,
+                    "input_tokens": branch_usage.input_tokens,
+                    "output_tokens": branch_usage.output_tokens,
+                }
+            )
             if caller_usage is not None:
                 caller_usage.incr(branch_usage)
             if attempts:
@@ -376,6 +384,7 @@ def _remaining(deadline: float) -> float:
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    observe_retrieval_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={

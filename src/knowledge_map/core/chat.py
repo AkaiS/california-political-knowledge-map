@@ -196,6 +196,8 @@ class ChatSession:
             relevant_collection_ids=self._relevant_collection_ids,
             monthly_coverage=self._monthly_coverage,
             usage=self._usage,
+            audit=self._audit,
+            audit_session_id=self.audit_session_id,
         )
         if isinstance(package, EvidenceAssemblyFailure):
             return package
