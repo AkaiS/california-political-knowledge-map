@@ -138,10 +138,11 @@ stderr and exit with code 1. `show` and `export` also report an unknown audit ID
 as an error.
 
 `list` returns session IDs, `observed_at`, and `has_retrieval_answer`, ordered by
-the earliest saved stage's start time. `observed_at` is that saved timestamp,
-so a trail whose session-start insert was lost remains findable. `--since` and
-`--until` compare this time inclusively and require an ISO 8601 timestamp with
-a timezone. `--has-answer yes` or `no` filters on the presence of a saved
+the earliest saved stage's start time. `observed_at` is the saved session-start
+time, or `null` when that record is missing; the trail remains findable.
+`--since` and `--until` compare known session-start times inclusively and require
+an ISO 8601 timestamp with a timezone. Trails without a saved session start do
+not match a time filter. `--has-answer yes` or `no` filters on the presence of a saved
 Retrieval Answer record, including answers with zero passages. Absence does
 not establish why an answer record is missing.
 

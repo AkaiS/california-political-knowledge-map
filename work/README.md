@@ -17,9 +17,6 @@ have not yet been shaped into executable work.
 
 ### Ready for agent
 
-- [Chat Session Audit Trail](projects/chat-session-audit-trail/PRD.md), `ready-for-agent` as of 2026-09-23.
-  A local SQLite trail records stage results and any Retrieval Answer for later
-  inspection through a maintainer CLI, without making chat depend on audit writes.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
@@ -82,15 +79,15 @@ not reconstruct browser history after restart.
 
 ### Chat Session Audit Trail frontier
 
-Ticket 01 established the local record and a minimal read path. Tickets 02–07
-depend only on 01; each adds one independently inspectable part of the trail.
+All seven tickets are complete. Ticket 01 established the local record and a
+minimal read path; tickets 02–07 added the other inspectable stages and CLI.
 
 - [01 Open and inspect a Chat Session Audit Trail](projects/chat-session-audit-trail/issues/01-open-and-inspect-a-chat-session-audit-trail.md), `completed`.
 - [02 Record question preparation and approval](projects/chat-session-audit-trail/issues/02-record-question-preparation-and-approval.md), `completed`.
 - [03 Record retrieval candidates and fusion](projects/chat-session-audit-trail/issues/03-record-retrieval-candidates-and-fusion.md), `completed`.
 - [04 Record structural construction](projects/chat-session-audit-trail/issues/04-record-structural-construction.md), `completed`.
 - [05 Record Evidence Assembly](projects/chat-session-audit-trail/issues/05-record-evidence-assembly.md), `completed`.
-- [06 Record the Retrieval Answer](projects/chat-session-audit-trail/issues/06-record-the-retrieval-answer.md), blocked by 01.
+- [06 Record the Retrieval Answer](projects/chat-session-audit-trail/issues/06-record-the-retrieval-answer.md), `completed`.
 - [07 Find and export Chat Session Audit Trails](projects/chat-session-audit-trail/issues/07-find-and-export-audit-trails.md), `completed`.
 
 ### Bill Designation Recovery frontier
@@ -192,9 +189,9 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Chat Session Audit Trail](projects/chat-session-audit-trail/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Chat Session Audit Trail](projects/chat-session-audit-trail/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record

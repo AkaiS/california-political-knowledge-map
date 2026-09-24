@@ -15,12 +15,11 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
 
-from knowledge_map.core.audit import AuditWriter, audit_stage
+from knowledge_map.core.audit import AuditWriter, audit_stage, record_audit_stage
 from knowledge_map.core.evidence import render_evidence_context
 from knowledge_map.core.question_preparation import QuestionPreparation
 from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.schemas import ModelDeployment
-from knowledge_map.schemas.audit import AuditStageRecord
 from knowledge_map.schemas.query_preparation import (
     QueryRewrite,
     QueryRewriteProposal,
@@ -109,27 +108,20 @@ class ChatSession:
         self.audit_session_id = str(uuid4())
         self._audit = audit
         if audit is not None and audit_settings is not None:
-            try:
-                observed_at = datetime.now(UTC)
-                audit.dispatch(
-                    AuditStageRecord(
-                        session_id=self.audit_session_id,
-                        name="session_start",
-                        started_at=observed_at,
-                        ended_at=observed_at,
-                        status="succeeded",
-                        metadata={
-                            **audit_settings,
-                            "original_question": original_question,
-                            "observed_at": observed_at.isoformat(),
-                        },
-                    )
-                )
-            except Exception:
-                logger.exception(
-                    "chat_audit_dispatch_failed",
-                    extra={"chat_audit_id": self.audit_session_id},
-                )
+            observed_at = datetime.now(UTC)
+            record_audit_stage(
+                "session_start",
+                writer=audit,
+                session_id=self.audit_session_id,
+                started_at=observed_at,
+                ended_at=observed_at,
+                status="succeeded",
+                metadata={
+                    **audit_settings,
+                    "original_question": original_question,
+                    "observed_at": observed_at.isoformat(),
+                },
+            )
         self._original_question = original_question
         self._agent = chat_agent
         self._retrieval = retrieval
@@ -186,37 +178,36 @@ class ChatSession:
             return
         try:
             observed_at = datetime.now(UTC)
-            self._audit.dispatch(
-                AuditStageRecord(
-                    session_id=self.audit_session_id,
-                    name="retrieval_answer",
-                    started_at=observed_at,
-                    ended_at=observed_at,
-                    status="succeeded",
-                    metadata={
-                        "rendered_text": rendered_text,
-                        "sources": [
-                            {
-                                "citation": source.citation.model_dump(mode="json"),
-                                "passages": [
-                                    {
-                                        "chunk_id": passage.candidate.chunk_id,
-                                        **passage.model_dump(
-                                            mode="json",
-                                            include={
-                                                "source_article_id",
-                                                "text",
-                                                "provenance",
-                                            },
-                                        ),
-                                    }
-                                    for passage in source.passages
-                                ],
-                            }
-                            for source in answer.evidence.sources
-                        ],
-                    },
-                )
+            record_audit_stage(
+                "retrieval_answer",
+                writer=self._audit,
+                session_id=self.audit_session_id,
+                started_at=observed_at,
+                ended_at=observed_at,
+                status="succeeded",
+                metadata={
+                    "rendered_text": rendered_text,
+                    "sources": [
+                        {
+                            "citation": source.citation.model_dump(mode="json"),
+                            "passages": [
+                                {
+                                    "chunk_id": passage.candidate.chunk_id,
+                                    **passage.model_dump(
+                                        mode="json",
+                                        include={
+                                            "source_article_id",
+                                            "text",
+                                            "provenance",
+                                        },
+                                    ),
+                                }
+                                for passage in source.passages
+                            ],
+                        }
+                        for source in answer.evidence.sources
+                    ],
+                },
             )
         except Exception:
             logger.exception(

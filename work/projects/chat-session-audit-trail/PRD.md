@@ -1,6 +1,6 @@
 # Product requirements: Chat Session Audit Trail
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 

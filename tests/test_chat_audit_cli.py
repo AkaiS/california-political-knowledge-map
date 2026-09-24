@@ -388,6 +388,13 @@ def test_a_trail_missing_session_start_remains_findable_without_inventing_settin
             metadata={"attempt": 1, "proposed_question": "Who supported AB 1?"},
         )
     )
+    main(["audit", "list", "--db", str(audit_database)])
+    sessions = json.loads(capsys.readouterr().out)["sessions"]
+    assert sessions[0] == {
+        "session_id": "partial-session",
+        "observed_at": None,
+        "has_retrieval_answer": False,
+    }
     main(
         [
             "audit",
@@ -398,15 +405,7 @@ def test_a_trail_missing_session_start_remains_findable_without_inventing_settin
             "2026-09-23T07:00:00Z",
         ]
     )
-    assert json.loads(capsys.readouterr().out) == {
-        "sessions": [
-            {
-                "session_id": "partial-session",
-                "observed_at": "2026-09-22T23:30:00-07:00",
-                "has_retrieval_answer": False,
-            }
-        ]
-    }
+    assert json.loads(capsys.readouterr().out) == {"sessions": []}
     for filters in (
         ["--code-revision", "abc123"],
         ["--model-deployment", "local:shared-model"],

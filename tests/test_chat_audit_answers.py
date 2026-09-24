@@ -7,6 +7,7 @@ import weakref
 from contextlib import asynccontextmanager, redirect_stdout
 from io import StringIO
 from threading import Event
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -38,6 +39,30 @@ def saved_trail(path, session_id):
     trail = json.loads(output.getvalue())
     assert set(trail) == {"session_id", "stages"}
     return trail
+
+
+def test_snapshot_failure_does_not_interrupt_answer_delivery(caplog):
+    class UnserializableCitation:
+        def model_dump(self, **kwargs):
+            raise ValueError("snapshot unavailable")
+
+    session = object.__new__(ChatSession)
+    session.audit_session_id = "session-1"
+    session._audit = object()
+    answer = SimpleNamespace(
+        evidence=SimpleNamespace(
+            sources=(SimpleNamespace(citation=UnserializableCitation()),)
+        )
+    )
+
+    session.record_retrieval_answer(answer, "Rendered answer")
+
+    assert any(
+        record.message == "chat_audit_dispatch_failed"
+        and record.chat_audit_id == "session-1"
+        and record.audit_stage_name == "retrieval_answer"
+        for record in caplog.records
+    )
 
 
 def test_guidance_retains_its_result_timing_and_own_model_usage(tmp_path):

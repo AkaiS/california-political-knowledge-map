@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
 from pydantic import JsonValue
 
@@ -45,21 +46,24 @@ def observe_retrieval_failure(diagnostic: RetrievalFailureLog) -> None:
     )
 
 
-def dispatch_audit_stage(
+def record_audit_stage(
     name: str,
     *,
+    writer: "AuditWriter | None",
+    session_id: str | None,
     started_at: datetime,
     ended_at: datetime,
     status: Literal["succeeded", "failed", "skipped"],
     metadata: dict[str, JsonValue],
+    stage_id: str | None = None,
 ) -> None:
-    stage = _current_stage.get()
-    if stage is None or stage.writer is None or stage.session_id is None:
+    if writer is None or session_id is None:
         return
     try:
-        stage.writer.dispatch(
+        writer.dispatch(
             AuditStageRecord(
-                session_id=stage.session_id,
+                stage_id=stage_id or str(uuid4()),
+                session_id=session_id,
                 name=name,
                 started_at=started_at,
                 ended_at=ended_at,
@@ -70,8 +74,30 @@ def dispatch_audit_stage(
     except Exception:
         logger.exception(
             "chat_audit_dispatch_failed",
-            extra={"chat_audit_id": stage.session_id, "audit_stage_name": name},
+            extra={"chat_audit_id": session_id, "audit_stage_name": name},
         )
+
+
+def dispatch_audit_stage(
+    name: str,
+    *,
+    started_at: datetime,
+    ended_at: datetime,
+    status: Literal["succeeded", "failed", "skipped"],
+    metadata: dict[str, JsonValue],
+) -> None:
+    stage = _current_stage.get()
+    if stage is None:
+        return
+    record_audit_stage(
+        name,
+        writer=stage.writer,
+        session_id=stage.session_id,
+        started_at=started_at,
+        ended_at=ended_at,
+        status=status,
+        metadata=metadata,
+    )
 
 
 @contextmanager

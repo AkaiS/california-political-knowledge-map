@@ -18,10 +18,9 @@ from pydantic_ai.exceptions import (
 )
 from pydantic_ai.usage import RunUsage
 
-from knowledge_map.core.audit import AuditWriter
+from knowledge_map.core.audit import AuditWriter, record_audit_stage
 from knowledge_map.core.exceptions import is_retryable_transport_failure
 from knowledge_map.schemas import ModelDeployment
-from knowledge_map.schemas.audit import AuditStageRecord
 from knowledge_map.schemas.query_preparation import (
     AwaitingQueryApproval,
     DeclinedQuestion,
@@ -278,25 +277,16 @@ class QuestionPreparation:
         stage_id: str | None = None,
         status: Literal["succeeded", "failed"] = "succeeded",
     ) -> None:
-        if self._audit is None or self._audit_session_id is None:
-            return
-        try:
-            self._audit.dispatch(
-                AuditStageRecord(
-                    stage_id=stage_id or str(uuid4()),
-                    session_id=self._audit_session_id,
-                    name=name,
-                    started_at=started_at,
-                    ended_at=datetime.now(UTC),
-                    status=status,
-                    metadata=metadata,
-                )
-            )
-        except Exception:
-            logger.exception(
-                "chat_audit_dispatch_failed",
-                extra={"chat_audit_id": self._audit_session_id},
-            )
+        record_audit_stage(
+            name,
+            writer=self._audit,
+            session_id=self._audit_session_id,
+            stage_id=stage_id,
+            started_at=started_at,
+            ended_at=datetime.now(UTC),
+            status=status,
+            metadata=metadata,
+        )
 
     def approve(self) -> QueryRewrite:
         """Release only the current proposal as the sole retrieval question."""

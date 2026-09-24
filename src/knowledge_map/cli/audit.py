@@ -84,8 +84,15 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     export.add_argument("--db", type=Path, default=audit_database_path())
 
 
+def _session_start(records: tuple[AuditStageRecord, ...]) -> AuditStageRecord | None:
+    return next((record for record in records if record.name == "session_start"), None)
+
+
 def _matches(records: tuple[AuditStageRecord, ...], args: argparse.Namespace) -> bool:
-    observed_at = records[0].started_at
+    start = _session_start(records)
+    observed_at = start.started_at if start is not None else None
+    if (args.since is not None or args.until is not None) and observed_at is None:
+        return False
     if args.code_revision is not None:
         codes = (
             record.metadata.get("code")
@@ -117,8 +124,8 @@ def _matches(records: tuple[AuditStageRecord, ...], args: argparse.Namespace) ->
         ):
             return False
     return not (
-        (args.since is not None and observed_at < args.since)
-        or (args.until is not None and observed_at > args.until)
+        (args.since is not None and observed_at is not None and observed_at < args.since)
+        or (args.until is not None and observed_at is not None and observed_at > args.until)
         or (
             args.has_answer is not None
             and any(record.name == "retrieval_answer" for record in records)
@@ -143,7 +150,11 @@ def dispatch(args: argparse.Namespace) -> None:
                 "sessions": [
                     {
                         "session_id": session_id,
-                        "observed_at": records[0].model_dump(mode="json")["started_at"],
+                        "observed_at": (
+                            start.model_dump(mode="json")["started_at"]
+                            if (start := _session_start(records)) is not None
+                            else None
+                        ),
                         "has_retrieval_answer": any(
                             record.name == "retrieval_answer" for record in records
                         ),
