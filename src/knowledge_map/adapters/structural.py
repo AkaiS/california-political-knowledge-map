@@ -26,6 +26,7 @@ from knowledge_map.core.structural import (
     validate_wiring,
 )
 from knowledge_map.ontology import news
+from knowledge_map.retrieval_telemetry import record_branch_failure
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
     BranchRanking,
@@ -385,6 +386,7 @@ def _remaining(deadline: float) -> float:
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    record_branch_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={

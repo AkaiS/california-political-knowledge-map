@@ -4,14 +4,17 @@ import asyncio
 import logging
 import math
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from functools import partial
 from typing import Protocol
 
+import logfire
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.adapters.full_text import extract_full_text_keywords
 from knowledge_map.core.evidence import EvidenceAssembler
 from knowledge_map.core.fusion import fuse_candidates
+from knowledge_map.retrieval_telemetry import active_branch_span, record_branch_failure
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.query_preparation import QueryRewrite
@@ -36,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    record_branch_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -86,6 +90,50 @@ async def _run_branch(
                 safe_diagnostic="The retrieval branch could not complete.",
             )
         )
+
+
+async def _trace_branch(
+    branch: RetrievalBranch,
+    call: Callable[[], Awaitable[SuccessfulBranch | FailedBranch]],
+    deadline: float,
+    clock: Callable[[], float],
+    chat_session_id: str | None,
+    keywords: tuple[str, ...],
+) -> SuccessfulBranch | FailedBranch:
+    with (
+        logfire.span(
+            "chat_session.retrieval_branch",
+            chat_session_id=chat_session_id,
+            audit_schema_version=1,
+            branch=branch.value,
+        )
+        if chat_session_id is not None
+        else nullcontext()
+    ) as span:
+        if span is not None and branch == RetrievalBranch.FULL_TEXT:
+            span.set_attribute("search_terms", keywords)
+        with active_branch_span(span):
+            outcome = await _run_branch(branch, call, deadline, clock)
+        if span is not None:
+            if isinstance(outcome, FailedBranch) and "failure_kind" not in (
+                span.attributes or {}
+            ):
+                span.set_attributes(
+                    {
+                        "failure_stage": "unavailable",
+                        "failure_kind": "unspecified",
+                        "diagnostic": "The retriever returned a failure without a diagnostic.",
+                    }
+                )
+            span.set_attributes(
+                {
+                    "status": outcome.status,
+                    "candidate_count": len(outcome.candidates)
+                    if isinstance(outcome, SuccessfulBranch)
+                    else 0,
+                }
+            )
+        return outcome
 
 
 class FullTextRetriever(Protocol):
@@ -144,6 +192,7 @@ class RetrievalCoordinator:
         relevant_collection_ids: tuple[str, ...],
         monthly_coverage: tuple[MonthlyCoverage, ...] = (),
         usage: RunUsage | None = None,
+        chat_session_id: str | None = None,
     ) -> EvidencePackage | EvidenceAssemblyFailure:
         clock = self._clock or asyncio.get_running_loop().time
         deadline = clock() + self._deadline_seconds
@@ -169,7 +218,9 @@ class RetrievalCoordinator:
             outcomes: list[BranchOutcome] = list(
                 await asyncio.gather(
                     *(
-                        _run_branch(branch, call, deadline, clock)
+                        _trace_branch(
+                            branch, call, deadline, clock, chat_session_id, keywords
+                        )
                         for branch, call in zip(
                             request.expected_branches, calls, strict=True
                         )
@@ -189,7 +240,16 @@ class RetrievalCoordinator:
                 },
             )
         if not rewrite.relational:
-            outcomes.append(SkippedBranch())
+            skipped = SkippedBranch()
+            outcomes.append(skipped)
+            if chat_session_id is not None:
+                logfire.info(
+                    "chat_session.retrieval_branch",
+                    chat_session_id=chat_session_id,
+                    audit_schema_version=1,
+                    candidate_count=0,
+                    **skipped.model_dump(mode="json"),
+                )
         execution = RetrievalExecutionResult(request=request, outcomes=tuple(outcomes))
         try:
             if clock() >= deadline:
