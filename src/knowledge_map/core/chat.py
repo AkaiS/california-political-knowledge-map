@@ -108,13 +108,14 @@ class ChatSession:
         self._relevant_collection_ids = relevant_collection_ids
         self._monthly_coverage = monthly_coverage
         self._usage = RunUsage()
+        self.chat_session_id = str(uuid4())
         self._preparation = QuestionPreparation(
             original_question,
             rewriter=rewriter,
             assess_question_policy_and_coverage=self._assess,
             usage=self._usage,
+            chat_session_id=self.chat_session_id,
         )
-        self.chat_session_id = str(uuid4())
         logfire.info(
             "chat_session.started",
             chat_session_id=self.chat_session_id,
@@ -139,11 +140,20 @@ class ChatSession:
         return result.output
 
     async def prepare(self) -> QuestionPreparationResult:
+        rejections = self._preparation.rejections
         with logfire.span(
-            "chat_session.prepare",
+            "chat_session.correct" if rejections else "chat_session.prepare",
             chat_session_id=self.chat_session_id,
             audit_schema_version=1,
         ):
+            if rejections:
+                logfire.info(
+                    "chat_session.rewrite_corrected",
+                    chat_session_id=self.chat_session_id,
+                    audit_schema_version=1,
+                    proposal_attempt=len(rejections),
+                    **rejections[-1].model_dump(exclude_none=True),
+                )
             result = await self._preparation.prepare()
             if result.status != "awaiting_approval":
                 self._log_usage()
@@ -153,11 +163,24 @@ class ChatSession:
         return self._preparation.reject(correction)
 
     async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure:
-        rewrite = self._preparation.approve()
-        try:
-            return await self._answer(rewrite)
-        finally:
-            self._log_usage()
+        with logfire.span(
+            "chat_session.approve",
+            chat_session_id=self.chat_session_id,
+            audit_schema_version=1,
+        ):
+            rewrite = self._preparation.approve()
+            logfire.info(
+                "chat_session.rewrite_approved",
+                chat_session_id=self.chat_session_id,
+                audit_schema_version=1,
+                proposal_attempt=len(self._preparation.rejections) + 1,
+                approved_question=rewrite.question,
+                relational=rewrite.relational,
+            )
+            try:
+                return await self._answer(rewrite)
+            finally:
+                self._log_usage()
 
     def _log_usage(self) -> None:
         logger.info(

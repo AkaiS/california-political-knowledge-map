@@ -83,12 +83,12 @@ not reconstruct browser history after restart.
 ### Logfire Chat Session Audit Trail frontier
 
 This project begins from the pre-audit `main` baseline. The prior SQLite audit
-implementation is preserved on a backup branch. Ticket 01 is complete; ticket
-02 is takeable and the remaining tickets declare their blockers.
+implementation is preserved on a backup branch. Tickets 01 and 02 are complete;
+ticket 03 is takeable and the remaining tickets declare their blockers.
 
 - [01 Start a searchable Chat Session trail](projects/logfire-chat-session-audit-trail/issues/01-start-a-searchable-chat-session-trail.md), `completed` on 2026-09-24. Accepted questions record an application ID, effective startup conditions, and preparation spans containing their model activity.
-- [02 Trace question preparation and approval](projects/logfire-chat-session-audit-trail/issues/02-trace-question-preparation-and-approval.md), takeable.
-- [03 Trace retrieval branch outcomes](projects/logfire-chat-session-audit-trail/issues/03-trace-retrieval-branch-outcomes.md), blocked by 02.
+- [02 Trace question preparation and approval](projects/logfire-chat-session-audit-trail/issues/02-trace-question-preparation-and-approval.md), `completed` on 2026-09-24. Proposal attempts, assessments, corrections, and approved wording remain joined across bounded request operations.
+- [03 Trace retrieval branch outcomes](projects/logfire-chat-session-audit-trail/issues/03-trace-retrieval-branch-outcomes.md), takeable.
 - [04 Trace structural construction](projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md), blocked by 03.
 - [05 Trace fusion and Evidence Assembly](projects/logfire-chat-session-audit-trail/issues/05-trace-fusion-and-evidence-assembly.md), blocked by 03.
 - [06 Trace the prepared Retrieval Answer](projects/logfire-chat-session-audit-trail/issues/06-trace-the-prepared-retrieval-answer.md), blocked by 05.

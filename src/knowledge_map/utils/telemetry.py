@@ -63,6 +63,11 @@ def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
     if match.path[:2] in {
         ("attributes", "chat_session_id"),
         ("attributes", "original_question"),
+        ("attributes", "question"),
+        ("attributes", "approved_question"),
+        ("attributes", "correction"),
+        ("attributes", "explanation"),
+        ("attributes", "recoverable_portion"),
         ("attributes", "model_deployments"),
         ("attributes", "coverage"),
     }:

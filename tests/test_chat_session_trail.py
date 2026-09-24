@@ -73,8 +73,15 @@ def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
             if span["attributes"].get("gen_ai.operation.name") == "invoke_agent"
         ]
         assert len(agent_spans) == 2
+        stages = {
+            span["context"]["span_id"]: span
+            for span in spans
+            if span["name"]
+            in {"chat_session.query_rewrite", "chat_session.question_assessment"}
+        }
         for span in agent_spans:
-            assert span["parent"]["span_id"] == preparation["context"]["span_id"]
+            stage = stages[span["parent"]["span_id"]]
+            assert stage["parent"]["span_id"] == preparation["context"]["span_id"]
             assert span["context"]["trace_id"] == preparation["context"]["trace_id"]
             assert span["end_time"] <= preparation["end_time"]
         assert any(event["type"] == "tool-approval-request" for event in prepared)
