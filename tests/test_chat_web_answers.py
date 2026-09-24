@@ -203,6 +203,9 @@ class AnswerSession:
         self.approvals += 1
         return self.outcome
 
+    def record_retrieval_answer(self, answer, rendered_text):
+        pass
+
     def reject(self, correction=None) -> RewriteRejection:
         pytest.fail("Rejection requires a correction from the composer")
 

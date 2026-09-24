@@ -354,4 +354,6 @@ def test_answer_proceeds_while_audit_insert_is_blocked_and_survives_write_failur
             "structural_search",
             "fusion",
             "evidence_assembly",
+            "chat_agent_guidance",
+            "retrieval_answer",
         }

@@ -136,10 +136,23 @@ Model stages retain timing, token usage, and safe failure metadata. Retrieval
 branches, structural construction, fusion, and Evidence Assembly also save stage
 observations. [Evidence Assembly records](docs/evidence-assembly.md#chat-session-audit-trail)
 include selected and omitted chunk IDs, omission reasons, context use, and relevant
-coverage. Chat Agent guidance and answer stages are not yet captured. A missing
-record has no inferred outcome. Each insert runs in the background; storage
-failures are logged and chat continues. Committed records survive restart, but
-an insert still in flight may be lost on process exit.
+coverage. The `chat_agent_guidance` stage saves validated guidance, timing, and
+the model usage available for that call. Failed guidance saves a safe diagnostic
+and failure kind.
+
+Before emitting a Retrieval Answer's browser text, chat dispatches one
+`retrieval_answer` record containing the exact rendered text and the selected
+passages and Source Article citations. Passage snapshots retain their Article
+Chunk IDs and `stored_chunk` provenance. They contain stored wording, which can
+include coreference resolution, and do not claim verbatim Publication wording.
+An answer with zero passages still gets a record. Evidence Assembly failure,
+Declined questions, unavailable rewrites, abandoned approvals, and failed
+guidance leave only the stages saved so far.
+
+A missing record has no inferred outcome. Each insert runs in the background;
+storage failures are logged and chat continues. The answer record does not
+confirm that a browser received or read the answer. Committed records survive
+restart, but an insert still in flight may be lost on process exit.
 Records remain until the operator manages the database outside this command.
 
 ## Model deployments

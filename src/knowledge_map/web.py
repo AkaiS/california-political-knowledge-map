@@ -76,6 +76,10 @@ class ChatSessionProtocol(Protocol):
 
     async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure: ...
 
+    def record_retrieval_answer(
+        self, answer: RetrievalAnswer, rendered_text: str
+    ) -> None: ...
+
 
 @dataclass
 class BrowserSession:
@@ -239,6 +243,8 @@ def create_app(
                     yield _encode_chunks(failure_chunks)
                     return
                 text = render_answer(result)
+                if isinstance(result, RetrievalAnswer):
+                    entry.session.record_retrieval_answer(result, text)
                 text_id = str(uuid4())
                 chunks: list[BaseChunk] = [
                     ToolOutputAvailableChunk(

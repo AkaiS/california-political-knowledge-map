@@ -2,17 +2,20 @@
 
 import json
 import logging
+from copy import copy
 from datetime import UTC, datetime
 from typing import cast
 from uuid import uuid4
 
+import httpx
 import logfire
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
 
-from knowledge_map.core.audit import AuditWriter
+from knowledge_map.core.audit import AuditWriter, audit_stage
 from knowledge_map.core.evidence import render_evidence_context
 from knowledge_map.core.question_preparation import QuestionPreparation
 from knowledge_map.core.retrieval import RetrievalCoordinator
@@ -175,6 +178,55 @@ class ChatSession:
             finally:
                 self._log_usage()
 
+    def record_retrieval_answer(
+        self, answer: RetrievalAnswer, rendered_text: str
+    ) -> None:
+        """Snapshot the response prepared for emission, without confirming delivery."""
+        if self._audit is None:
+            return
+        try:
+            observed_at = datetime.now(UTC)
+            self._audit.dispatch(
+                AuditStageRecord(
+                    session_id=self.audit_session_id,
+                    name="retrieval_answer",
+                    started_at=observed_at,
+                    ended_at=observed_at,
+                    status="succeeded",
+                    metadata={
+                        "rendered_text": rendered_text,
+                        "sources": [
+                            {
+                                "citation": source.citation.model_dump(mode="json"),
+                                "passages": [
+                                    {
+                                        "chunk_id": passage.candidate.chunk_id,
+                                        **passage.model_dump(
+                                            mode="json",
+                                            include={
+                                                "source_article_id",
+                                                "text",
+                                                "provenance",
+                                            },
+                                        ),
+                                    }
+                                    for passage in source.passages
+                                ],
+                            }
+                            for source in answer.evidence.sources
+                        ],
+                    },
+                )
+            )
+        except Exception:
+            logger.exception(
+                "chat_audit_dispatch_failed",
+                extra={
+                    "chat_audit_id": self.audit_session_id,
+                    "audit_stage_name": "retrieval_answer",
+                },
+            )
+
     def _log_usage(self) -> None:
         logger.info(
             "chat_total_usage",
@@ -201,26 +253,54 @@ class ChatSession:
         )
         if isinstance(package, EvidenceAssemblyFailure):
             return package
-        result = await self._agent.run(
-            render_evidence_context(package),
-            message_history=[
-                ModelRequest(parts=[UserPromptPart(self._original_question)])
-            ],
-            output_type=RetrievalGuidance,
-            usage=self._usage,
-        )
-        disclosures = list(package.failure_disclosures)
-        structural_empty = package.execution.structural_empty_disclosure
-        if structural_empty:
-            disclosures.append(structural_empty)
-        if rewrite.assessment.status == "deferred":
-            assert rewrite.assessment.explanation is not None
-            disclosures.append(rewrite.assessment.explanation)
-        if result.output.introduction:
-            disclosures.append(result.output.introduction)
-        return RetrievalAnswer(
-            evidence=package,
-            introduction="\n\n".join(disclosures) or None,
-            source_notes=result.output.source_notes,
-            disagreements=result.output.disagreements,
-        )
+        with audit_stage(
+            self._audit, self.audit_session_id, "chat_agent_guidance"
+        ) as stage:
+            usage_before = copy(self._usage)
+            try:
+                result = await self._agent.run(
+                    render_evidence_context(package),
+                    message_history=[
+                        ModelRequest(parts=[UserPromptPart(self._original_question)])
+                    ],
+                    output_type=RetrievalGuidance,
+                    usage=self._usage,
+                )
+                disclosures = list(package.failure_disclosures)
+                structural_empty = package.execution.structural_empty_disclosure
+                if structural_empty:
+                    disclosures.append(structural_empty)
+                if rewrite.assessment.status == "deferred":
+                    assert rewrite.assessment.explanation is not None
+                    disclosures.append(rewrite.assessment.explanation)
+                if result.output.introduction:
+                    disclosures.append(result.output.introduction)
+                answer = RetrievalAnswer(
+                    evidence=package,
+                    introduction="\n\n".join(disclosures) or None,
+                    source_notes=result.output.source_notes,
+                    disagreements=result.output.disagreements,
+                )
+                stage.metadata["guidance"] = result.output.model_dump(mode="json")
+                return answer
+            except Exception as error:
+                kind = "unexpected"
+                if isinstance(error, (ModelAPIError, httpx.TransportError)):
+                    kind = "transport"
+                elif isinstance(error, UnexpectedModelBehavior):
+                    kind = "model_response"
+                elif isinstance(error, ValidationError):
+                    kind = "validation"
+                stage.metadata.update(
+                    failure_kind=kind,
+                    diagnostic="The Chat Agent guidance did not complete.",
+                )
+                raise
+            finally:
+                stage.metadata["usage"] = {
+                    "requests": self._usage.requests - usage_before.requests,
+                    "input_tokens": self._usage.input_tokens
+                    - usage_before.input_tokens,
+                    "output_tokens": self._usage.output_tokens
+                    - usage_before.output_tokens,
+                }
