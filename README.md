@@ -111,6 +111,11 @@ The application shares its agents, retrieval dependencies, and coverage across
 in-memory Chat Sessions. Shutdown closes the Neo4j driver and the model and
 embedding HTTP clients that this application owns.
 
+Maintainers can inspect application decisions and related model traces through
+the [Chat Session trail guide](docs/chat-session-trails.md). It includes Logfire
+SQL for one question or a comparison across sessions, saved-search instructions,
+and the limits of retention and observed answer presence.
+
 ## Model deployments
 
 Operational guidance for choosing local llama.cpp or OpenRouter chat, configuring

@@ -83,8 +83,7 @@ not reconstruct browser history after restart.
 ### Logfire Chat Session Audit Trail frontier
 
 This project begins from the pre-audit `main` baseline. The prior SQLite audit
-implementation is preserved on a backup branch. Tickets 01 through 06 are complete;
-ticket 07 is takeable.
+implementation is preserved on a backup branch. Tickets 01 through 07 are complete.
 
 - [01 Start a searchable Chat Session trail](projects/logfire-chat-session-audit-trail/issues/01-start-a-searchable-chat-session-trail.md), `completed` on 2026-09-24. Accepted questions record an application ID, effective startup conditions, and preparation spans containing their model activity.
 - [02 Trace question preparation and approval](projects/logfire-chat-session-audit-trail/issues/02-trace-question-preparation-and-approval.md), `completed` on 2026-09-24. Proposal attempts, assessments, corrections, and approved wording remain joined across bounded request operations.
@@ -92,7 +91,7 @@ ticket 07 is takeable.
 - [04 Trace structural construction](projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md), `completed` on 2026-09-24. Structural stages record accepted construction, validated query text and values, database rows, hydration counts, and safe failures within the branch span.
 - [05 Trace fusion and Evidence Assembly](projects/logfire-chat-session-audit-trail/issues/05-trace-fusion-and-evidence-assembly.md), `completed` on 2026-09-24. Fusion records eligible and fused IDs; Evidence Assembly records selection, omission reasons, coverage, measured context use, and safe stage failures.
 - [06 Trace the prepared Retrieval Answer](projects/logfire-chat-session-audit-trail/issues/06-trace-the-prepared-retrieval-answer.md), `completed` on 2026-09-24. Guidance spans contain model activity; prepared answers record exact rendered text and selected stored passages with citations before text emission.
-- [07 Inspect and compare Chat Session trails](projects/logfire-chat-session-audit-trail/issues/07-inspect-and-compare-chat-session-trails.md), takeable.
+- [07 Inspect and compare Chat Session trails](projects/logfire-chat-session-audit-trail/issues/07-inspect-and-compare-chat-session-trails.md), `completed` on 2026-09-24. Documented Logfire queries find application stages, compare startup settings and observed answers, and identify failed stages; offline captured records verify the query fields and identities.
 
 ### Bill Designation Recovery frontier
 
