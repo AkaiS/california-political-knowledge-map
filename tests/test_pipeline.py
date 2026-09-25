@@ -640,8 +640,7 @@ def test_pipeline_with_neo4j_adapter():
         content="This is integration test content."
     )
     
-    with patch("knowledge_map.adapters.neo4j_db.Neo4jAdapter._ensure_vector_index"):
-        result = pipeline.run(article, dry_run=False)
+    result = pipeline.run(article, dry_run=False)
     
     assert isinstance(result, PipelineResult)
     assert mock_tx.run.call_count >= 2
@@ -1511,4 +1510,3 @@ def test_an_assignment_failure_is_routed_to_the_dlq_by_batch_ingestion():
     """The batch loop treats it as a Story-level failure, not a batch abort."""
 
     assert classify_exception(TopicAssignmentError(original_text="She signed it."))
-

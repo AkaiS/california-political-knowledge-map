@@ -348,33 +348,25 @@ class SourceArticleCitation(RetrievalValue):
 
 
 class GroundingEvidence(RetrievalValue):
-    """Stored chunk wording, still requiring original Story verification."""
+    """Stored chunk wording and its Source Article citation."""
 
     chunk_id: NonemptyText
     text: Annotated[str, Field(min_length=1)]
     citation: SourceArticleCitation
 
 
-class VerifiedPassage(RetrievalValue):
-    """An assembler-verified passage and its offsets in the original Story body."""
+class EvidencePassage(RetrievalValue):
+    """Stored Article Chunk wording selected by Evidence Assembly."""
 
     source_article_id: NonemptyText
     text: Annotated[str, Field(min_length=1)]
-    start: Count
-    end: Count
-    verification: Literal["original_story"]
+    provenance: Literal["stored_chunk"]
     candidate: FusedCandidate
-
-    @model_validator(mode="after")
-    def span_matches_passage_length(self) -> Self:
-        if self.end - self.start != len(self.text):
-            raise ValueError("original Story offsets must match the passage length")
-        return self
 
 
 class SourceArticleEvidence(RetrievalValue):
     citation: SourceArticleCitation
-    passages: Annotated[tuple[VerifiedPassage, ...], Field(min_length=1)]
+    passages: Annotated[tuple[EvidencePassage, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
     def passages_belong_to_cited_source(self) -> Self:
@@ -466,7 +458,7 @@ class EvidenceAssemblyFailure(RetrievalValue):
         structural_empty = self.execution.structural_empty_disclosure
         if structural_empty:
             disclosures.append(structural_empty)
-        disclosures.append("Grounding Evidence could not be assembled and verified.")
+        disclosures.append("Grounding Evidence could not be assembled.")
         return tuple(disclosures)
 
 

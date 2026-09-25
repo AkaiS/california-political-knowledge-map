@@ -26,8 +26,8 @@ approval:
 
 `BranchCandidate.grounding` carries optional hydrated Article Chunk text and a
 Source Article citation. Existing branch producers may leave it absent. This
-text is transformed ingestion text, not a verified quotation; original Story
-verification remains the Evidence Assembler's responsibility.
+text is transformed ingestion text, not a verbatim quotation from the
+Publication. Evidence Assembly packages the hydrated stored chunk directly.
 
 The implementation follows the atomic semantic constructor preserved at
 `511eaeee`. Models filter the News Ontology, select compiler-owned pieces,
@@ -143,6 +143,31 @@ hydration failure does not inherit another stage's correction count.
 `retrieval_model_usage` records requests and input/output tokens across the four
 stages, including completed usage before failure.
 
+## Chat Session observations
+
+When called within an observed Chat Session, structural retrieval emits
+`chat_session.structural_stage` spans under the structural branch, with the
+same Chat Session ID and audit schema version. The `stage` attribute identifies
+`schema_filtering`, `typed_selection`, `wiring`, `binding`, `validation`,
+`cypher_execution`, or `hydration`. Model activity stays within the stage that
+invoked it.
+
+Filtering and selection record `accepted_pieces`; wiring and binding record
+their validated typed outputs. Each compiler check occurs inside the binder's
+existing output validator, so its validation span remains within that model
+run's native span tree. A rejected check records a safe failure. A successful
+check records `validated_query` and `bound_values`, exactly as passed to the
+read-only Neo4j execution. A corrected binder can therefore contain failed
+validation spans followed by a successful one. Only its accepted binding is
+recorded on the binding span.
+
+Execution records the configured database and returned row count. Hydration
+records the produced candidate count. Failed stages carry `status=failed`,
+`failure_stage`, `failure_kind`, and a fixed safe diagnostic, including the
+stage interrupted by a shared deadline. Model messages, retries, and token use
+remain in Pydantic AI telemetry. Declared structural attributes preserve the
+ontology's Bill `session` property through Logfire scrubbing.
+
 ## Verification
 
 `tests/test_structural_retrieval.py` injects scripted models and external driver
@@ -150,6 +175,13 @@ faults through the recorded seams. It covers every initial model stage, compiler
 validation, correction exhaustion, the hop ceiling, invalid wiring and Bill
 assignments, database and hydration failures, deadlines, question isolation,
 usage accounting, and exact retention of stored wording.
+
+`tests/test_chat_structural_trail.py` uses `POST /api/chat` preparation and
+approval with real coordination, scripted structural agents, fake graph data,
+and an offline Logfire exporter. It checks accepted decisions, span ancestry
+and timing, correction outcomes, empty success, stage failures, and deadline
+cancellation without timing sleeps. This is the public seam selected for
+audit ticket 04; no new product API was needed.
 
 `tests/integration/test_structural_neo4j.py` executes compiled queries against the
 repository's disposable Neo4j fixture. Enable it with

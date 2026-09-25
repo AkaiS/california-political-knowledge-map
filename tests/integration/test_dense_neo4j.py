@@ -10,7 +10,6 @@ from pydantic_ai.embeddings.test import TestEmbeddingModel
 
 from knowledge_map.adapters.dense import Neo4jDenseRetriever
 from knowledge_map.adapters.embedding import get_embedding_embedder
-from knowledge_map.adapters.neo4j_db import Neo4jAdapter
 from knowledge_map.schemas.query_preparation import QueryRewrite, QuestionAssessment
 from knowledge_map.schemas.retrieval import (
     FailedBranch,
@@ -20,12 +19,10 @@ from knowledge_map.schemas.retrieval import (
 
 
 @pytest.fixture
-def dense_neo4j_uri(disposable_neo4j_uri):
-    with GraphDatabase.driver(disposable_neo4j_uri) as driver:
+def dense_neo4j_uri(neo4j_schema_uri):
+    with GraphDatabase.driver(neo4j_schema_uri) as driver:
         driver.execute_query("MATCH (n) DETACH DELETE n")
-        Neo4jAdapter(disposable_neo4j_uri, "neo4j", "unused", driver=driver).connect()
-        driver.execute_query("CALL db.awaitIndexes(30)")
-    return disposable_neo4j_uri
+    return neo4j_schema_uri
 
 
 def test_approved_rewrite_finds_ranked_chunks_without_extracted_relationships(

@@ -253,6 +253,14 @@ _Avoid_: Retrieval Orchestrator, Answering Agent
 The stateful interaction devoted to one political question, including any Query Rewrite rejection, correction, and approval before retrieval and the resulting Retrieval Answer. A new political question starts a new Chat Session; answers do not rely on context from an earlier one.
 _Avoid_: Multi-question chat, persistent conversation
 
+**Chat Session ID**:
+An application-generated identity assigned when a Chat Session accepts its first question. It joins observations across separate preparation and approval requests and is distinct from the browser conversation identity and individual trace IDs.
+_Avoid_: Conversation ID, trace ID, approval ID
+
+**Chat Session Audit Trail**:
+The best-effort observations of a Chat Session's application stages that reached Logfire, joined by its Chat Session ID and retained for the configured project's retention period. The trail connects application decisions with operational model telemetry; an absent or expired observation establishes no terminal outcome, and a prepared Retrieval Answer establishes no browser receipt or reading.
+_Avoid_: Durable audit log, complete transcript, delivery receipt
+
 **Evidence Assembler**:
 The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups passages by Source Article, supplies verified original wording and relevant coverage limits, and applies the context budget without interpreting or summarizing the evidence.
 _Avoid_: Answering Agent, Evidence Curator, context summarizer

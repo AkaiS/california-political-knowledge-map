@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import uuid4
 
+import logfire
 from fastapi import FastAPI
 from pydantic import ValidationError
 from pydantic_ai.ui.vercel_ai.request_types import (
@@ -70,6 +71,8 @@ def _chat_stream_response(content: AsyncIterator[str]) -> StreamingResponse:
 
 
 class ChatSessionProtocol(Protocol):
+    chat_session_id: str
+
     async def prepare(self) -> QuestionPreparationResult: ...
 
     def reject(self, correction: str | None = None) -> RewriteRejection: ...
@@ -239,6 +242,27 @@ def create_app(
                     yield _encode_chunks(failure_chunks)
                     return
                 text = render_answer(result)
+                if isinstance(result, RetrievalAnswer):
+                    logfire.info(
+                        "chat_session.answer_prepared",
+                        chat_session_id=entry.session.chat_session_id,
+                        audit_schema_version=1,
+                        rendered_text=text,
+                        selected_sources=[
+                            {
+                                "citation": source.citation.model_dump(mode="json"),
+                                "passages": [
+                                    {
+                                        "chunk_id": passage.candidate.chunk_id,
+                                        "text": passage.text,
+                                        "provenance": passage.provenance,
+                                    }
+                                    for passage in source.passages
+                                ],
+                            }
+                            for source in result.evidence.sources
+                        ],
+                    )
                 text_id = str(uuid4())
                 chunks: list[BaseChunk] = [
                     ToolOutputAvailableChunk(
@@ -341,8 +365,27 @@ def create_app(
 
         return _chat_stream_response(stream())
 
+    async def configure_frontend(request: Request) -> Response:
+        # The stock UI requires a first model even when Chat Sessions own deployment.
+        # An empty ID means no override and keeps its model picker hidden.
+        return JSONResponse(
+            {
+                "models": [
+                    {
+                        "id": "",
+                        "name": "Local retrieval",
+                        "builtinTools": [],
+                    }
+                ],
+                "builtinTools": [],
+            }
+        )
+
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     frontend = create_agent(name="local_chat_shell").to_web()
     frontend.router.routes.insert(0, Route("/api/chat", post_chat, methods=["POST"]))
+    frontend.router.routes.insert(
+        0, Route("/api/configure", configure_frontend, methods=["GET"])
+    )
     app.mount("/", frontend)
     return app

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import logfire
 from dotenv import load_dotenv
+from logfire.types import ExceptionCallbackHelper
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,18 @@ which of those a run is using.  To run without observability anyway, set
 
 class TelemetryNotConfiguredError(RuntimeError):
     """Raised when a run would be unobservable."""
+
+
+def scrub_chat_audit_attribute(match: logfire.ScrubMatch) -> object:
+    """Keep the generated audit join key searchable; scrub other matches."""
+    if match.path == ("attributes", "chat_session_id"):
+        return match.value
+    return None
+
+
+def omit_exception_events(helper: ExceptionCallbackHelper) -> None:
+    """Drop raw exception events, whose fields bypass Logfire scrubbing."""
+    helper.no_record_exception()
 
 
 def _is_testing() -> bool:
@@ -234,7 +247,8 @@ def setup_telemetry() -> None:
         logfire.configure(
             token=token,
             advanced=logfire.AdvancedOptions(
-                base_url="https://logfire-us.pydantic.dev"
+                base_url="https://logfire-us.pydantic.dev",
+                exception_callback=omit_exception_events,
             ),
             service_name="california-political-knowledge-map",
             service_version="0.1.0",
@@ -244,10 +258,11 @@ def setup_telemetry() -> None:
                 else os.environ.get("DEPLOYMENT_ENVIRONMENT", "development")
             ),
             send_to_logfire=False if is_testing else "if-token-present",
+            scrubbing=logfire.ScrubbingOptions(callback=scrub_chat_audit_attribute),
         )
 
         # This must follow configure() and precede Agent construction.
-        logfire.instrument_pydantic_ai()
+        logfire.instrument_pydantic_ai(include_content=False)
 
         # Model clients use HTTPX. Keep transport timing, status, and errors without
         # copying every request and response payload into low-level telemetry.

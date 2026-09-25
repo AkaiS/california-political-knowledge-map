@@ -29,6 +29,7 @@ from knowledge_map.schemas.retrieval import (
     CoverageEntry,
     EvidenceAssemblyFailure,
     EvidencePackage,
+    EvidencePassage,
     FailedBranch,
     FusedCandidate,
     GraphClaim,
@@ -45,7 +46,6 @@ from knowledge_map.schemas.retrieval import (
     SourceDisagreement,
     SourceRelevanceNote,
     SuccessfulBranch,
-    VerifiedPassage,
 )
 from knowledge_map.web import create_app
 
@@ -130,12 +130,10 @@ def selected_answer(*, dense_failed=False):
             SourceArticleEvidence(
                 citation=citation,
                 passages=(
-                    VerifiedPassage(
+                    EvidencePassage(
                         source_article_id=citation.source_article_id,
                         text=text,
-                        start=0,
-                        end=len(text),
-                        verification="original_story",
+                        provenance="stored_chunk",
                         candidate=FusedCandidate(
                             chunk_id=candidate.chunk_id,
                             rank=number,
@@ -192,6 +190,8 @@ def selected_answer(*, dense_failed=False):
 
 
 class AnswerSession:
+    chat_session_id = "test-session"
+
     def __init__(self, outcome=None):
         self.outcome = outcome or answer()
         self.approvals = 0
@@ -343,7 +343,7 @@ def test_search_details_remain_browser_presentation_outside_chat_agent_context_a
     assert tools == []
 
 
-def test_answer_numbers_source_links_and_shows_only_selected_verified_passages():
+def test_answer_numbers_source_links_and_shows_only_selected_passages():
     session = AnswerSession(selected_answer(dense_failed=True))
     with TestClient(
         create_app(startup=no_dependencies, session_factory=lambda *_: session),
@@ -356,12 +356,38 @@ def test_answer_numbers_source_links_and_shows_only_selected_verified_passages()
     )
     assert "1. [Union backs AB 1](<https://calmatters.org/article-1/>)" in text
     assert "2. [Chamber opposes AB 1](<https://calmatters.org/article-2/>)" in text
-    assert "> The union supported AB 1." in text
-    assert "> The chamber opposed AB 1." in text
+    assert text.count("Stored Article Chunk:") == 2
+    assert "The union supported AB 1." in text
+    assert "The chamber opposed AB 1." in text
+    assert "> The union supported AB 1." not in text
     assert "This report records the union's position." in text
     assert "These sources report different positions on the measure." in text
     assert "Dense retrieval could not be completed." in text
     assert "UNVERIFIED_CANDIDATE_WORDING" not in text
+
+
+def test_stored_passage_block_markdown_is_shown_as_source_text():
+    outcome = selected_answer()
+    source = outcome.evidence.sources[0]
+    passage = source.passages[0].model_copy(
+        update={"text": "# Heading\n> quotation\n- item\n1. item\n---\n~~~"}
+    )
+    source = source.model_copy(update={"passages": (passage,)})
+    evidence = outcome.evidence.model_copy(
+        update={"sources": (source, *outcome.evidence.sources[1:])}
+    )
+    session = AnswerSession(outcome.model_copy(update={"evidence": evidence}))
+    with TestClient(
+        create_app(startup=no_dependencies, session_factory=lambda *_: session),
+        base_url="http://localhost",
+    ) as client:
+        _, completed = approve_question(client, "Who backed AB 1?")
+
+    text = "".join(
+        event["delta"] for event in completed if event["type"] == "text-delta"
+    )
+    assert "Stored Article Chunk:\n\n\\# Heading" in text
+    assert "&gt; quotation\n\\- item\n1\\. item\n\\---\n\\~~~" in text
 
 
 def test_search_details_include_routes_branch_ranks_graph_claims_and_coverage():
@@ -516,7 +542,7 @@ def test_assembly_failure_discloses_limits_without_presenting_audit_candidates_a
     text = "".join(
         event["delta"] for event in completed if event["type"] == "text-delta"
     )
-    assert "Grounding Evidence could not be assembled and verified." in text
+    assert "Grounding Evidence could not be assembled." in text
     assert "Dense retrieval could not be completed." in text
     assert "Complete roll calls are not available." in text
     assert "The union supported AB 1." not in text

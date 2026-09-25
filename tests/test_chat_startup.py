@@ -2,7 +2,6 @@
 
 import json
 from functools import partial
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -13,7 +12,6 @@ from starlette.testclient import TestClient
 from test_chat_web import events, question_request
 from test_model_factory import chat_completion
 
-from knowledge_map.adapters.sqlite_db import init_db
 from knowledge_map.chat_startup import chat_dependencies
 from knowledge_map.schemas.query_preparation import AwaitingQueryApproval, QueryApproval
 from knowledge_map.utils.reachability import SKIP_MODEL_CHECK_ENV
@@ -47,11 +45,8 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
 
 
 @pytest.fixture
-def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def startup_dependencies(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv(SKIP_MODEL_CHECK_ENV, raising=False)
-    path = tmp_path / "stories.db"
-    init_db(str(path))
-    monkeypatch.setenv("SQLITE_DB_PATH", str(path))
     monkeypatch.setenv("QUERY_REWRITER_MODEL", "rewriter-test")
     monkeypatch.setenv("QUERY_REWRITER_DEPLOYMENT", "local")
     monkeypatch.setenv("QUERY_REWRITER_BASE_URL", "http://rewriter.test:8080/v1")
@@ -132,7 +127,7 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             clients.append(self)
 
     monkeypatch.setattr(httpx, "AsyncClient", Client)
-    return path, driver, drivers, clients, requests, failures, statuses, result
+    return None, driver, drivers, clients, requests, failures, statuses, result
 
 
 def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
@@ -145,6 +140,8 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
         received.append(dependencies)
 
         class Session:
+            chat_session_id = "test-session"
+
             async def prepare(self):
                 entry = dependencies.coverage.entries[0]
                 return AwaitingQueryApproval(
@@ -172,7 +169,11 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
             assert "CalMatters: 2 articles, 2025-03-02 to 2026-09-01." in json.dumps(
                 chunks
             )
-        assert client.get("/api/configure").json() == {"models": [], "builtinTools": []}
+        config = client.get("/api/configure").json()
+        assert len(config["models"]) == 1
+        assert config["models"][0]["id"] == ""
+        assert config["models"][0]["builtinTools"] == []
+        assert config["builtinTools"] == []
 
     assert received[0] is received[1]
     assert len(drivers) == 1
@@ -209,6 +210,8 @@ def test_startup_ignores_unparseable_publication_dates(
         received.append(dependencies)
 
         class Session:
+            chat_session_id = "test-session"
+
             async def prepare(self):
                 return AwaitingQueryApproval(
                     approval=QueryApproval(
@@ -285,7 +288,6 @@ def test_startup_does_not_probe_openrouter_deployments(
 @pytest.mark.parametrize(
     "failure, explanation",
     [
-        ("sqlite", "SQLite document store"),
         ("neo4j", "Neo4j"),
         ("rewriter", "Query Rewriter deployment"),
         ("chat", "Chat Agent deployment"),
@@ -303,9 +305,7 @@ def test_startup_names_the_unavailable_dependency_and_cleans_up(
 ):
     _, driver, drivers, clients, _, failures, _, result = startup_dependencies
     startup = chat_dependencies
-    if failure == "sqlite":
-        monkeypatch.setenv("SQLITE_DB_PATH", str(tmp_path / "missing.db"))
-    elif failure == "neo4j":
+    if failure == "neo4j":
         driver.verify_connectivity.side_effect = ServiceUnavailable("private detail")
     elif failure == "rewriter":
         failures.add("rewriter.test")

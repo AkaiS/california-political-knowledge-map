@@ -27,6 +27,22 @@ Use `--dry-run` to preview the setup, `--source PATH` to transfer local state
 from a different worktree, or `--skip-sync` when dependencies are already set
 up.
 
+## Setting up the databases
+
+After configuring `SQLITE_DB_PATH`, `NEO4J_URI`, `NEO4J_USERNAME`,
+`NEO4J_PASSWORD`, and optionally `NEO4J_DATABASE` in `.env`, run:
+
+```bash
+./scripts/setup-databases.sh
+```
+
+The script initializes or migrates the SQLite document store, then applies the
+versioned Cypher files under `schema/neo4j/`. The initial schema installs the
+full-text, ID, and Article Chunk vector indexes and waits for them to become
+online. Its `IF NOT EXISTS` statements make setup safe to rerun. Neo4j keeps
+the installed indexes current as ingestion changes graph data, so runtime
+adapters only validate or query them.
+
 ## Local chat
 
 Start local retrieval chat with:
@@ -94,6 +110,11 @@ until retrieval, where existing branch failures remain visible.
 The application shares its agents, retrieval dependencies, and coverage across
 in-memory Chat Sessions. Shutdown closes the Neo4j driver and the model and
 embedding HTTP clients that this application owns.
+
+Maintainers can inspect application decisions and related model traces through
+the [Chat Session trail guide](docs/chat-session-trails.md). It includes Logfire
+SQL for one question or a comparison across sessions, saved-search instructions,
+and the limits of retention and observed answer presence.
 
 ## Model deployments
 

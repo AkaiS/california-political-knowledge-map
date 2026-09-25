@@ -47,6 +47,19 @@ def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 
 
+def _escape_passage_block_syntax(text: str) -> str:
+    """Prevent stored wording from becoming Markdown structure in the answer."""
+    escaped = _escape_markdown_text(text)
+
+    def escape_leader(match: re.Match[str]) -> str:
+        indent, leader = match.groups()
+        if leader[0].isdigit():
+            return f"{indent}{leader[:-1]}\\{leader[-1]}"
+        return f"{indent}\\{leader}"
+
+    return re.sub(r"(?m)^([ \t]{0,3})([#>+\-=~]|\d{1,9}[.)])", escape_leader, escaped)
+
+
 def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
     if isinstance(result, EvidenceAssemblyFailure):
         disclosures = list(result.failure_disclosures)
@@ -78,10 +91,7 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
         )
         for passage in source.passages:
             paragraphs.append(
-                "\n".join(
-                    f"> {_escape_markdown_text(line)}"
-                    for line in passage.text.splitlines()
-                )
+                "Stored Article Chunk:\n\n" + _escape_passage_block_syntax(passage.text)
             )
     for disagreement in result.disagreements:
         numbers = ", ".join(
@@ -92,5 +102,5 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
             f"Sources {numbers}: {_escape_markdown_text(disagreement.description)}"
         )
     if not result.evidence.sources:
-        paragraphs.append("No verified passages were selected.")
+        paragraphs.append("No passages were selected.")
     return "\n\n".join(paragraphs)

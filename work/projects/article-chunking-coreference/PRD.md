@@ -58,7 +58,8 @@ We will build a pipeline that:
 - **Structural Links**: Connects each chunk to its article: `(Chunk)-[:BELONGS_TO]->(Article)`.
 - **Entity Provenance**: Connects extracted entities to the chunk they appeared in: `(Entity)-[:MENTIONED_IN]->(Chunk)`.
 - **Relationship Provenance**: Sets a `source_chunk_id` property on the relationship edge between extracted entities to trace it back to the specific chunk.
-- **Vector Index**: Automatically creates a Neo4j Vector Index (named `chunk_vector_index`) on the `embedding` property of the `(:Chunk)` label if it does not exist.
+- **Vector Index**: Database setup creates a Neo4j Vector Index named
+  `chunk_vector_index` on the `embedding` property of the `(:Chunk)` label.
 
 ---
 

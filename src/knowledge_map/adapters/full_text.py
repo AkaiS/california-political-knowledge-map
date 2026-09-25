@@ -11,6 +11,10 @@ from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
 from pydantic import ValidationError
 
+from knowledge_map.retrieval_telemetry import (
+    record_branch_failure,
+    record_branch_indexes,
+)
 from knowledge_map.schemas.query_preparation import QueryRewrite
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
@@ -29,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    record_branch_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -161,27 +166,6 @@ class Neo4jFullTextRetriever:
         self.driver = driver
         self.database = database
 
-    async def ensure_indexes(self, *, timeout_seconds: float = 30) -> None:
-        """Install retrieval indexes without imposing uniqueness on existing IDs."""
-        async with self.driver.session(database=self.database) as session:
-            for channel in _FULL_TEXT_CHANNELS:
-                result = await session.run(
-                    f"CREATE FULLTEXT INDEX {channel.index_name} IF NOT EXISTS "
-                    f"FOR (n:{'|'.join(channel.labels)}) "
-                    f"ON EACH [n.{channel.matched_field}]"
-                )
-                await result.consume()
-            for label in (*_ENTITY_LABELS, "NewsArticle", "Chunk"):
-                result = await session.run(
-                    f"CREATE RANGE INDEX {label.lower()}_id_index IF NOT EXISTS "
-                    f"FOR (n:{label}) ON (n.id)"
-                )
-                await result.consume()
-            result = await session.run(
-                "CALL db.awaitIndexes($timeout)", timeout=timeout_seconds
-            )
-            await result.consume()
-
     async def retrieve(
         self,
         request: RetrievalRequest,
@@ -257,6 +241,15 @@ class Neo4jFullTextRetriever:
                     names=[channel.index_name for channel in _FULL_TEXT_CHANNELS],
                 )
                 indexes = {row["name"]: row for row in await result.data()}
+                record_branch_indexes(
+                    self.database,
+                    {
+                        channel.index_name: indexes.get(channel.index_name, {}).get(
+                            "state"
+                        )
+                        for channel in _FULL_TEXT_CHANNELS
+                    },
+                )
                 for channel in _FULL_TEXT_CHANNELS:
                     index = indexes.get(channel.index_name)
                     if (

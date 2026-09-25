@@ -4,14 +4,21 @@ import asyncio
 import logging
 import math
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from functools import partial
 from typing import Protocol
 
+import logfire
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.adapters.full_text import extract_full_text_keywords
 from knowledge_map.core.evidence import EvidenceAssembler
 from knowledge_map.core.fusion import fuse_candidates
+from knowledge_map.retrieval_telemetry import (
+    active_branch_span,
+    record_branch_failure,
+    selection_stage,
+)
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.query_preparation import QueryRewrite
@@ -29,15 +36,14 @@ from knowledge_map.schemas.retrieval import (
     RetrievalFailureLog,
     RetrievalRequest,
     SkippedBranch,
-    SourceArticleCitation,
     SuccessfulBranch,
 )
-from knowledge_map.schemas.stories import Story
 
 logger = logging.getLogger(__name__)
 
 
 def _failed(diagnostic: RetrievalFailureLog) -> FailedBranch:
+    record_branch_failure(diagnostic)
     logger.warning(
         "retrieval_branch_failed",
         extra={
@@ -90,6 +96,50 @@ async def _run_branch(
         )
 
 
+async def _trace_branch(
+    branch: RetrievalBranch,
+    call: Callable[[], Awaitable[SuccessfulBranch | FailedBranch]],
+    deadline: float,
+    clock: Callable[[], float],
+    chat_session_id: str | None,
+    keywords: tuple[str, ...],
+) -> SuccessfulBranch | FailedBranch:
+    with (
+        logfire.span(
+            "chat_session.retrieval_branch",
+            chat_session_id=chat_session_id,
+            audit_schema_version=1,
+            branch=branch.value,
+        )
+        if chat_session_id is not None
+        else nullcontext()
+    ) as span:
+        if span is not None and branch == RetrievalBranch.FULL_TEXT:
+            span.set_attribute("search_terms", keywords)
+        with active_branch_span(span):
+            outcome = await _run_branch(branch, call, deadline, clock)
+        if span is not None:
+            if isinstance(outcome, FailedBranch) and "failure_kind" not in (
+                span.attributes or {}
+            ):
+                span.set_attributes(
+                    {
+                        "failure_stage": "unavailable",
+                        "failure_kind": "unspecified",
+                        "diagnostic": "The retriever returned a failure without a diagnostic.",
+                    }
+                )
+            span.set_attributes(
+                {
+                    "status": outcome.status,
+                    "candidate_count": len(outcome.candidates)
+                    if isinstance(outcome, SuccessfulBranch)
+                    else 0,
+                }
+            )
+        return outcome
+
+
 class FullTextRetriever(Protocol):
     async def retrieve(
         self,
@@ -118,7 +168,6 @@ class RetrievalCoordinator:
         dense: ModelRetriever,
         structural: ModelRetriever,
         load_grounding: Callable[[FusedCandidate], Awaitable[GroundingEvidence]],
-        load_story: Callable[[SourceArticleCitation], Awaitable[Story]],
         fusion_config: FusionConfig | None = None,
         context_limits: EvidenceContextLimits | None = None,
         deadline_seconds: float = 60,
@@ -133,9 +182,7 @@ class RetrievalCoordinator:
         self._full_text = full_text
         self._dense = dense
         self._structural = structural
-        self._assembler = EvidenceAssembler(
-            load_grounding=load_grounding, load_story=load_story
-        )
+        self._assembler = EvidenceAssembler(load_grounding=load_grounding)
         self._fusion_config = fusion_config or FusionConfig()
         self._context_limits = context_limits or EvidenceContextLimits()
         self._deadline_seconds = deadline_seconds
@@ -149,6 +196,7 @@ class RetrievalCoordinator:
         relevant_collection_ids: tuple[str, ...],
         monthly_coverage: tuple[MonthlyCoverage, ...] = (),
         usage: RunUsage | None = None,
+        chat_session_id: str | None = None,
     ) -> EvidencePackage | EvidenceAssemblyFailure:
         clock = self._clock or asyncio.get_running_loop().time
         deadline = clock() + self._deadline_seconds
@@ -174,7 +222,9 @@ class RetrievalCoordinator:
             outcomes: list[BranchOutcome] = list(
                 await asyncio.gather(
                     *(
-                        _run_branch(branch, call, deadline, clock)
+                        _trace_branch(
+                            branch, call, deadline, clock, chat_session_id, keywords
+                        )
                         for branch, call in zip(
                             request.expected_branches, calls, strict=True
                         )
@@ -194,25 +244,36 @@ class RetrievalCoordinator:
                 },
             )
         if not rewrite.relational:
-            outcomes.append(SkippedBranch())
+            skipped = SkippedBranch()
+            outcomes.append(skipped)
+            if chat_session_id is not None:
+                logfire.info(
+                    "chat_session.retrieval_branch",
+                    chat_session_id=chat_session_id,
+                    audit_schema_version=1,
+                    candidate_count=0,
+                    **skipped.model_dump(mode="json"),
+                )
         execution = RetrievalExecutionResult(request=request, outcomes=tuple(outcomes))
         try:
-            if clock() >= deadline:
-                raise TimeoutError
-            fused = fuse_candidates(execution, config=self._fusion_config)
-            if clock() >= deadline:
-                raise TimeoutError
-            async with asyncio.timeout(deadline - clock()):
-                result = await self._assembler.assemble(
-                    execution,
-                    fused,
-                    coverage=coverage,
-                    relevant_collection_ids=relevant_collection_ids,
-                    monthly_coverage=monthly_coverage,
-                    limits=self._context_limits,
-                )
-            if clock() >= deadline:
-                raise TimeoutError
+            with selection_stage("fusion", chat_session_id):
+                if clock() >= deadline:
+                    raise TimeoutError
+                fused = fuse_candidates(execution, config=self._fusion_config)
+                if clock() >= deadline:
+                    raise TimeoutError
+            with selection_stage("evidence_assembly", chat_session_id):
+                async with asyncio.timeout(deadline - clock()):
+                    result = await self._assembler.assemble(
+                        execution,
+                        fused,
+                        coverage=coverage,
+                        relevant_collection_ids=relevant_collection_ids,
+                        monthly_coverage=monthly_coverage,
+                        limits=self._context_limits,
+                    )
+                if clock() >= deadline:
+                    raise TimeoutError
             return result
         except TimeoutError:
             logger.warning(

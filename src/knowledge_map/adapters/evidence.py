@@ -1,9 +1,4 @@
-"""Hydrate selected Article Chunks and original Stories for Evidence Assembly."""
-
-import asyncio
-import sqlite3
-from contextlib import closing
-from pathlib import Path
+"""Hydrate selected Article Chunks for Evidence Assembly."""
 
 from neo4j import READ_ACCESS, AsyncDriver
 from neo4j.exceptions import DriverError, Neo4jError
@@ -14,7 +9,6 @@ from knowledge_map.schemas.retrieval import (
     GroundingEvidence,
     SourceArticleCitation,
 )
-from knowledge_map.schemas.stories import Story
 
 
 class EvidenceStore:
@@ -22,11 +16,9 @@ class EvidenceStore:
         self,
         driver: AsyncDriver,
         *,
-        story_db_path: str,
         database: str = "neo4j",
     ) -> None:
         self._driver = driver
-        self._story_db_path = Path(story_db_path).resolve().as_uri() + "?mode=ro"
         self._database = database
 
     async def load_grounding(self, candidate: FusedCandidate) -> GroundingEvidence:
@@ -66,34 +58,3 @@ class EvidenceStore:
                 published_date=row["published_date"],
             ),
         )
-
-    async def load_story(self, citation: SourceArticleCitation) -> Story:
-        try:
-            return await asyncio.to_thread(self._read_story, citation.source_article_id)
-        except sqlite3.Error as error:
-            raise EvidenceHydrationError(
-                "The original Story could not be loaded"
-            ) from error
-
-    def _read_story(self, url: str) -> Story:
-        # A cancelled coroutine cannot stop SQLite's worker from waiting on a lock.
-        with closing(
-            sqlite3.connect(self._story_db_path, uri=True, timeout=0)
-        ) as connection:
-            connection.row_factory = sqlite3.Row
-            row = connection.execute(
-                "SELECT id, title, url, category, author, published_date, summary, "
-                "content, status FROM stories WHERE url = ?",
-                (url,),
-            ).fetchone()
-            if row is None:
-                raise LookupError("The original Story is absent")
-            values = dict(row)
-            story_id = values.pop("id")
-            links = connection.execute(
-                "SELECT text, url FROM story_links WHERE story_id = ? ORDER BY id",
-                (story_id,),
-            ).fetchall()
-            return Story.model_validate(
-                {**values, "links": [dict(link) for link in links]}
-            )

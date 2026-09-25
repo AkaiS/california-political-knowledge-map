@@ -10,14 +10,15 @@ Specifically, the ingestion pipeline must:
 3. Connect each chunk to its article: `(Chunk)-[:BELONGS_TO]->(Article)`.
 4. Connect all entities extracted from a chunk to that chunk: `(Entity)-[:MENTIONED_IN]->(Chunk)`.
 5. Add a `source_chunk_id` property on the relationship edges between extracted entities to track which chunk supported the relationship.
-6. Automatically create a Neo4j Vector Index (named `chunk_vector_index`) on the `embedding` property of `(:Chunk)` if it does not already exist.
+6. Create a Neo4j Vector Index named `chunk_vector_index` on the `embedding`
+   property of `(:Chunk)` during database setup.
 
 ## Acceptance criteria
 
 - [x] Neo4j ingestion inserts `(:Article)` and `(:Chunk)` nodes and links them with `[:BELONGS_TO]`.
 - [x] Extracted entities are linked to their source chunk using `[:MENTIONED_IN]`.
 - [x] Relationship edges between extracted entities contain the correct `source_chunk_id` property.
-- [x] The Neo4j Vector Index is successfully created and verified on connection.
+- [x] The Neo4j Vector Index is successfully created and verified during database setup.
 - [x] Mocked Neo4j transactions in unit tests assert that all necessary Cypher statements are generated correctly.
 
 ## Blocked by
@@ -30,6 +31,11 @@ Specifically, the ingestion pipeline must:
 `src/knowledge_map/adapters/neo4j_db.py` (`_ensure_vector_index`,
 `ingest_article`, `ingest_chunk`, `ingest_chunk_extraction`), covered by
 `tests/test_graph_db.py` (23 passing). Relabeled `completed`.
+
+2026-09-22: Index ownership moved from `Neo4jAdapter.connect()` to the shared
+database setup path. `schema/neo4j/001_retrieval_indexes.cypher` now declares
+the vector, full-text, and ID indexes, and `scripts/setup-databases.sh` applies
+that schema before runtime adapters are used.
 
 ### Previously discussed — 2026-08-19 grilling session
 

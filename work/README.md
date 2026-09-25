@@ -48,10 +48,10 @@ have not yet been shaped into executable work.
 Issues 01 through 09 are complete. The approved-rewrite workflow, concrete
 retrieval and answer types, and full-text, dense, and bounded typed structural
 branches are available. Parameterized fusion supplies initial weights, candidate
-limits, and an unweighted measurement baseline. Evidence Assembly verifies
-original Story wording, retains provenance, and applies deterministic context
-limits. The coordinator runs enabled branches concurrently under one deadline
-and returns assembled evidence to the original Chat Agent. Later reranking
+limits, and an unweighted measurement baseline. Evidence Assembly packages
+stored Article Chunk wording, retains provenance, and applies deterministic
+context limits. The coordinator runs enabled branches concurrently under one
+deadline and returns assembled evidence to the original Chat Agent. Later reranking
 measurement does not block this project.
 
 - [01 Query Rewrite and approval](projects/graph-prioritized-retrieval/issues/01-query-rewrite-and-approval.md), `completed` on 2026-09-17. The separately configured Query Rewriter supplies the approval workflow, internal route, and rejection or unavailability outcomes.
@@ -61,8 +61,8 @@ measurement does not block this project.
 - [05 Typed structural retrieval to Grounding Evidence](projects/graph-prioritized-retrieval/issues/05-typed-structural-retrieval.md), `completed` on 2026-09-17. Typed construction retrieves entities and single relationships with claims, Grounding Evidence, preserved identity ambiguity, and distinct failure stages.
 - [06 Bounded multi-hop structural retrieval](projects/graph-prioritized-retrieval/issues/06-bounded-multi-hop-structural-retrieval.md), `completed` on 2026-09-17. Connected questions use at most three semantic relationships, each model stage has two corrections, and explicit Bill-slot assignments preserve multi-Bill intent.
 - [07 Graph-prioritized reciprocal-rank fusion](projects/graph-prioritized-retrieval/issues/07-graph-prioritized-reciprocal-rank-fusion.md), `completed` on 2026-09-17. Configurable weighted fusion ranks the candidate union, preserves every contribution, and supplies an unweighted measurement baseline.
-- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), `completed` on 2026-09-17. Exact Story verification, source grouping, route retention, relevant coverage, and measured context selection return a typed package or distinct assembly failure.
-- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), `completed` on 2026-09-17. Concurrent branches share one deadline, retain completed candidates on failure, and return verified evidence to the same Chat Agent with deterministic failure and Deferred disclosures.
+- [08 Deterministic Evidence Assembly](projects/graph-prioritized-retrieval/issues/08-deterministic-evidence-assembly.md), `completed` on 2026-09-17. Stored Chunk hydration, source grouping, route retention, relevant coverage, and measured context selection return a typed package or distinct assembly failure.
+- [09 Concurrent retrieval and Chat Agent handoff](projects/graph-prioritized-retrieval/issues/09-concurrent-retrieval-and-chat-agent-handoff.md), `completed` on 2026-09-17. Concurrent branches share one deadline, retain completed candidates on failure, and return assembled evidence to the same Chat Agent with deterministic failure and Deferred disclosures.
 
 ### Local Retrieval Chat frontier
 
@@ -76,6 +76,19 @@ not reconstruct browser history after restart.
 - [03 Approve and inspect a Retrieval Answer](projects/local-retrieval-chat/issues/03-approve-and-inspect-retrieval-answer.md), `completed` on 2026-09-18. Approval returns numbered verified evidence and safe expandable Search details.
 - [04 Reject and revise a Query Rewrite Proposal](projects/local-retrieval-chat/issues/04-reject-and-revise-query-rewrite.md), `completed` on 2026-09-18. Rejection waits for a correction and returns another separately approvable proposal.
 - [05 Enforce the one-question Chat Session lifecycle](projects/local-retrieval-chat/issues/05-enforce-one-question-chat-session-lifecycle.md), `completed` on 2026-09-18. Terminal and restarted conversations cannot continue, while active conversations remain isolated in memory.
+
+### Logfire Chat Session Audit Trail completed work
+
+This project begins from the pre-audit `main` baseline. The prior SQLite audit
+implementation is preserved on a backup branch. Tickets 01 through 07 are complete.
+
+- [01 Start a searchable Chat Session trail](projects/logfire-chat-session-audit-trail/issues/01-start-a-searchable-chat-session-trail.md), `completed` on 2026-09-24. Accepted questions record an application ID, effective startup conditions, and preparation spans containing their model activity.
+- [02 Trace question preparation and approval](projects/logfire-chat-session-audit-trail/issues/02-trace-question-preparation-and-approval.md), `completed` on 2026-09-24. Proposal attempts, assessments, corrections, and approved wording remain joined across bounded request operations.
+- [03 Trace retrieval branch outcomes](projects/logfire-chat-session-audit-trail/issues/03-trace-retrieval-branch-outcomes.md), `completed` on 2026-09-24. Concurrent branch spans record statuses, candidate counts, existing index observations, and safe failures; non-relational retrieval records an explicit structural skip.
+- [04 Trace structural construction](projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md), `completed` on 2026-09-24. Structural stages record accepted construction, validated query text and values, database rows, hydration counts, and safe failures within the branch span.
+- [05 Trace fusion and Evidence Assembly](projects/logfire-chat-session-audit-trail/issues/05-trace-fusion-and-evidence-assembly.md), `completed` on 2026-09-24. Fusion records eligible and fused IDs; Evidence Assembly records selection, omission reasons, coverage, measured context use, and safe stage failures.
+- [06 Trace the prepared Retrieval Answer](projects/logfire-chat-session-audit-trail/issues/06-trace-the-prepared-retrieval-answer.md), `completed` on 2026-09-24. Guidance spans contain model activity; prepared answers record exact rendered text and selected stored passages with citations before text emission.
+- [07 Inspect and compare Chat Session trails](projects/logfire-chat-session-audit-trail/issues/07-inspect-and-compare-chat-session-trails.md), `completed` on 2026-09-24. Documented Logfire queries find application stages, compare startup settings and observed answers, and identify failed stages; offline captured records verify the query fields and identities.
 
 ### Bill Designation Recovery frontier
 
@@ -178,7 +191,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record

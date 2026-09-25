@@ -106,3 +106,8 @@ provider warnings. All acceptance criteria remain satisfied and the
 `completed` triage label remains accurate. The supplied fixed-point SHA had an
 invalid suffix; review used its resolved repository commit,
 `f1899040f8ad67e7559a851cb941abb030ee2b28`.
+
+2026-09-22: Index ownership moved out of the retrieval adapter. The shared
+database setup script now applies the full-text, ID, and vector index inventory
+from `schema/neo4j/001_retrieval_indexes.cypher`; the retriever retains its
+read-time compatibility checks and no longer exposes `ensure_indexes()`.

@@ -21,12 +21,12 @@ requests and transport retry waits remain cancellable within the deadline.
 
 ## Index and candidates
 
-Retrieval uses the existing `chunk_vector_index` installed by the ingestion
-adapter on `Chunk.embedding`. It checks that the index is online, indexes the
-expected label and property, uses cosine similarity, and has the configured
-`settings.embedding.dimension`. Searches use a read session and do not create
-or alter indexes. The query embedding must have that dimension, finite values,
-and a nonzero norm.
+Retrieval uses the existing `chunk_vector_index` installed by
+`scripts/setup-databases.sh` from the checked-in Neo4j schema. It checks that
+the index is online, indexes the expected label and property, uses cosine
+similarity, and has the configured `settings.embedding.dimension`. Searches
+use a read session and do not create or alter indexes. The query embedding must
+have that dimension, finite values, and a nonzero norm.
 
 The configured limit is supplied to `db.index.vector.queryNodes`. Results reach
 their Source Article through `NewsArticle-HAS_CHUNK-Chunk`. No extracted entity,
@@ -39,8 +39,7 @@ Article ID, and database element ID. Each retains a one-based branch rank,
 native score, chunk and Source Article IDs, and a `chunk_embedding` route with
 matched field `embedding`. The route identifies the Chunk's internal and
 database element IDs and carries no graph claims. Scores remain local to the
-dense branch. Fusion and original Story wording verification belong to later
-project tickets.
+dense branch. Fusion and evidence packaging belong to later project tickets.
 
 ## Outcomes and failure logs
 
@@ -79,8 +78,9 @@ uv run --no-sync pytest -q tests/test_dense_retrieval.py
 ```
 
 The integration tests use the existing disposable Neo4j container fixture and
-the ingestion adapter's vector index setup. They use deterministic embeddings,
-require no model service, and never connect to the configured application graph:
+apply the same checked-in schema as database setup. They use deterministic
+embeddings, require no model service, and never connect to the configured
+application graph:
 
 ```sh
 RUN_NEO4J_INTEGRATION=1 uv run --no-sync pytest -q tests/integration/test_dense_neo4j.py

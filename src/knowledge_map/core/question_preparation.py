@@ -3,11 +3,17 @@
 import json
 import logging
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from typing import Literal, cast
 
 import httpx
+import logfire
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+from pydantic_ai.exceptions import (
+    ModelAPIError,
+    ModelHTTPError,
+    UnexpectedModelBehavior,
+)
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.core.exceptions import is_retryable_transport_failure
@@ -28,6 +34,17 @@ from knowledge_map.utils.deployments import query_rewriter_deployment_from_envir
 from knowledge_map.utils.models import get_chat_model
 
 logger = logging.getLogger(__name__)
+
+
+def model_failure_kind(error: Exception) -> str:
+    if isinstance(error, httpx.TransportError):
+        return "transport"
+    if isinstance(error, ModelAPIError):
+        return "provider"
+    if isinstance(error, UnexpectedModelBehavior):
+        return "model_output"
+    return "unexpected"
+
 
 QUERY_REWRITER_INSTRUCTIONS = """Rewrite the person's request as one concise
 natural-language question for California political retrieval. Do not answer it.
@@ -98,10 +115,12 @@ class QuestionPreparation:
             [QueryRewriteProposal], Awaitable[QuestionAssessment]
         ],
         usage: RunUsage | None = None,
+        chat_session_id: str | None = None,
     ) -> None:
         self._original_question = original_question
         self._rewriter = rewriter
         self._usage = usage
+        self._chat_session_id = chat_session_id
         self._assess_question_policy_and_coverage = assess_question_policy_and_coverage
         self._pending: QueryRewrite | None = None
         self._state: Literal["ready", "preparing", "awaiting_approval", "finished"] = (
@@ -128,6 +147,85 @@ class QuestionPreparation:
                 self._state = "finished"
 
     async def _prepare(self) -> QuestionPreparationResult:
+        with (
+            logfire.span(
+                "chat_session.query_rewrite",
+                chat_session_id=self._chat_session_id,
+                audit_schema_version=1,
+                proposal_attempt=len(self._rejections) + 1,
+            )
+            if self._chat_session_id is not None
+            else nullcontext()
+        ) as proposal_span:
+            try:
+                rewrite = await self._propose()
+            except Exception as error:
+                if proposal_span is not None:
+                    proposal_span.set_attributes(
+                        {
+                            "status": "failed",
+                            "failure_kind": model_failure_kind(error),
+                            "diagnostic": "The Query Rewriter could not prepare a proposal.",
+                        }
+                    )
+                raise
+            if isinstance(rewrite, RewriteUnavailable):
+                if proposal_span is not None:
+                    proposal_span.set_attributes(
+                        {
+                            "status": "unavailable",
+                            "failure_kind": "transport",
+                            "diagnostic": rewrite.message,
+                        }
+                    )
+                return rewrite
+            if proposal_span is not None:
+                proposal_span.set_attributes(
+                    {"status": "proposed", **rewrite.model_dump()}
+                )
+        with (
+            logfire.span(
+                "chat_session.question_assessment",
+                chat_session_id=self._chat_session_id,
+                audit_schema_version=1,
+                proposal_attempt=len(self._rejections) + 1,
+            )
+            if self._chat_session_id is not None
+            else nullcontext()
+        ) as assessment_span:
+            try:
+                assessment = await self._assess_question_policy_and_coverage(rewrite)
+            except Exception as error:
+                if assessment_span is not None:
+                    assessment_span.set_attributes(
+                        {
+                            "status": "failed",
+                            "failure_kind": model_failure_kind(error),
+                            "diagnostic": "The Chat Agent could not assess question policy and coverage.",
+                        }
+                    )
+                raise
+            if assessment_span is not None:
+                assessment_span.set_attributes(assessment.model_dump(exclude_none=True))
+        if assessment.status == "declined":
+            self._state = "finished"
+            assert assessment.explanation is not None
+            return DeclinedQuestion(message=assessment.explanation)
+        self._pending = QueryRewrite(
+            question=rewrite.question,
+            relational=rewrite.relational,
+            assessment=assessment,
+        )
+        self._state = "awaiting_approval"
+        return AwaitingQueryApproval(
+            approval=QueryApproval(
+                question=rewrite.question,
+                explanation=assessment.explanation,
+                recoverable_portion=assessment.recoverable_portion,
+            ),
+        )
+
+    async def _propose(self) -> QueryRewriteProposal | RewriteUnavailable:
         try:
             result = await self._rewriter.run(
                 json.dumps(
@@ -164,25 +262,7 @@ class QuestionPreparation:
                     "The question cannot be answered right now. Please try again later."
                 ),
             )
-        rewrite = result.output
-        assessment = await self._assess_question_policy_and_coverage(rewrite)
-        if assessment.status == "declined":
-            self._state = "finished"
-            assert assessment.explanation is not None
-            return DeclinedQuestion(message=assessment.explanation)
-        self._pending = QueryRewrite(
-            question=rewrite.question,
-            relational=rewrite.relational,
-            assessment=assessment,
-        )
-        self._state = "awaiting_approval"
-        return AwaitingQueryApproval(
-            approval=QueryApproval(
-                question=rewrite.question,
-                explanation=assessment.explanation,
-                recoverable_portion=assessment.recoverable_portion,
-            ),
-        )
+        return result.output
 
     def approve(self) -> QueryRewrite:
         """Release only the current proposal as the sole retrieval question."""
