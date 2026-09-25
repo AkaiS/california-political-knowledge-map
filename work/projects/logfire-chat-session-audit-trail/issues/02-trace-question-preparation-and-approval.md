@@ -16,7 +16,7 @@ Let a maintainer follow one original question through successive Query Rewrite P
 - [x] Each question assessment records its result and refers to the proposal it assessed, including Declined and Deferred explanations when present.
 - [x] A correction and an approval each refer to the applicable proposal. The approved wording is explicit, and retrieval continues to use only that approved Query Rewrite.
 - [x] Preparation, correction, and approval operations have separate bounded spans with the same Chat Session ID. Model calls appear beneath the application operation that invoked them; no span covers the person's waiting time.
-- [x] Returned unavailability and safe failure kinds are recorded even when no exception escapes. Custom attributes do not duplicate raw model messages, retries, or token details already emitted by Pydantic AI.
+- [x] Returned unavailability and safe failure kinds are recorded even when no exception escapes. Custom attributes do not duplicate model content, retries, or token details; Pydantic AI content capture is disabled.
 - [x] ASGI-level tests exercise an initial proposal, correction, second proposal, approval, Declined assessment, unavailable rewrite, and abandoned approval. Captured spans agree with browser outcomes without relying on a live Logfire project or a particular exporter schedule.
 
 ## Blocked by
@@ -49,7 +49,8 @@ production scrubber. Tests verify that the second approved wording reaches the
 embedding request, stale approvals are refused, model spans nest beneath their
 application stages, and separate request traces share the Chat Session ID.
 Declined, unavailable, failed, and abandoned requests retain only their observed
-stages. Legislative-session wording remains intact in declared audit fields.
+stages. The later PR review narrowed the scrubber exception to the generated
+Chat Session ID, so legislative-session wording may be redacted in audit fields.
 
 Validation: 115 focused chat and preparation tests and 13 agent observability
 tests passed. Changed-file Ruff, formatting, `ty 0.0.83`, and `git diff --check`

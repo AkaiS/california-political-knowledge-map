@@ -8,12 +8,12 @@ Labels: completed
 
 ## What to build
 
-Make the answer boundary inspectable after Evidence Assembly succeeds. A maintainer can see the Chat Agent guidance operation beside its model spans and inspect the exact Retrieval Answer text the application prepared for the browser, together with the selected stored passages and Source Article citations that informed it. The observation is made before text emission and does not claim delivery.
+Make the answer boundary inspectable after Evidence Assembly succeeds. A maintainer can see the Chat Agent guidance operation beside its model spans and inspect the Retrieval Answer text the application prepared for the browser, together with the selected stored passages and Source Article citations that informed it. Logfire may redact sensitive-looking text. The observation is made before text emission and does not claim delivery.
 
 ## Acceptance criteria
 
-- [x] A Chat Agent guidance span carries the Chat Session ID, result status, and safe failure kind when needed; existing Pydantic AI spans provide model messages, retries, and token use.
-- [x] Only a prepared Retrieval Answer emits an answer observation. It contains the exact rendered browser text, selected stored Article Chunk passages with their `stored_chunk` provenance marker, and Source Article citations.
+- [x] A Chat Agent guidance span carries the Chat Session ID, result status, and safe failure kind when needed; existing Pydantic AI spans provide model timing, retries, and token use without prompt, completion, or tool content.
+- [x] Only a prepared Retrieval Answer emits an answer observation. It contains rendered browser text, selected stored Article Chunk passages with their `stored_chunk` provenance marker, and Source Article citations, subject to Logfire scrubbing.
 - [x] A zero-passage Retrieval Answer still emits an answer observation with an empty selected-source snapshot. An Evidence Assembly failure emits none.
 - [x] The answer observation occurs after rendering and before browser text emission. Neither the observation nor its tests claim that the browser received, displayed, or read the text.
 - [x] A representative large answer is checked for readable structured attributes and Logfire ingest-size limits; required content is not silently shortened by application code.
@@ -35,16 +35,16 @@ emission. It establishes no browser receipt, display, or reading.
 `chat_session.guidance` contains the existing Chat Agent model run under
 `chat_session.approve`. It records success only after the Retrieval Answer
 validates, or a safe diagnostic with `transport`, `provider`, `model_output`,
-`validation`, or `unexpected` failure kind. The existing failure response and
-operational exception telemetry remain intact.
+`validation`, or `unexpected` failure kind. The existing failure response remains
+intact; Logfire exception events are suppressed after the PR privacy review.
 
 After rendering, `chat_session.answer_prepared` records `rendered_text` and
 `selected_sources`, grouped by Source Article citation. Each passage includes
-its Article Chunk ID, exact stored text, and `stored_chunk` provenance. The
+its Article Chunk ID, stored text, and `stored_chunk` provenance. The
 snapshot excludes candidates, ranking, routes, and raw model payloads. A
 zero-passage answer records an empty source list; assembly or guidance failure
-records no prepared answer. The declared attribute policy preserves political
-text containing `session` through Logfire scrubbing.
+records no prepared answer. Political text containing `session` may now be
+redacted by Logfire scrubbing.
 
 The browser session protocol now declares the Chat Session ID already exposed
 by the concrete session. The post-render event joins the bounded core approval
@@ -53,15 +53,14 @@ has returned before browser rendering. Guidance and model spans retain their
 native approval ancestry; this adds no retained trace-context API or span held
 open across requests.
 
-The twelve-source fixture uses 20,960 of the default 24,000 context characters.
-Its exact rendered answer is 15,864 UTF-8 bytes; the answer record is 32,967 bytes
-in an encoded OTLP request and its exported attributes occupy 37,348 JSON bytes.
-Logfire's [documented ingest limits](https://pydantic.dev/docs/logfire/reference/limits/),
-checked on 2026-09-24, allow 10 MB per record before shortening. The separate
-512-byte display-message limit affects only the stable event name here.
-These measurements verify this representative fixture, not every possible
-configured limit or model output. Application code does not truncate either
-snapshot field.
+The twelve-source fixture uses between 20,000 and 24,000 of the default 24,000
+context characters and produces an answer longer than 12,000 UTF-8 bytes. Its
+encoded OTLP record and exported attributes remain below Logfire's
+[documented 10 MB ingest limit](https://pydantic.dev/docs/logfire/reference/limits/),
+checked on 2026-09-24. The separate 512-byte display-message limit affects only
+the stable event name here. These measurements verify this representative
+fixture, not every possible configured limit or model output. Application code
+does not truncate either snapshot field.
 
 Eleven ASGI cases cover guidance and native model ancestry, five failure kinds,
 exact stored and rendered text, pre-emission timing, empty answers, assembly

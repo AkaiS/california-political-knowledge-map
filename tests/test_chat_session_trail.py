@@ -18,9 +18,14 @@ from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
 from test_chat_web import events, question_request
+from test_chat_web_corrections import correction_request, rejection_request
 
 from knowledge_map.chat_startup import chat_dependencies
-from knowledge_map.utils.telemetry import scrub_chat_audit_attribute, setup_telemetry
+from knowledge_map.utils.telemetry import (
+    omit_exception_events,
+    scrub_chat_audit_attribute,
+    setup_telemetry,
+)
 from knowledge_map.web import create_app
 
 
@@ -32,6 +37,7 @@ def chat_capture():
     logfire.configure(
         send_to_logfire=False,
         console=False,
+        advanced=logfire.AdvancedOptions(exception_callback=omit_exception_events),
         scrubbing=logfire.ScrubbingOptions(callback=scrub_chat_audit_attribute),
         additional_span_processors=[SimpleSpanProcessor(exporter)],
     )
@@ -45,7 +51,7 @@ def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
         prepared = events(
             client.post(
                 "/api/chat",
-                json=question_request("Who backed AB 1 in the 2025-2026 session?"),
+                json=question_request("Who backed AB 1 in 2025-2026?"),
             )
         )
         spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
@@ -58,8 +64,7 @@ def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
         assert session_id.replace("-", "") != f"{start['context']['trace_id']:032x}"
         assert start["attributes"]["audit_schema_version"] == 1
         assert (
-            start["attributes"]["original_question"]
-            == "Who backed AB 1 in the 2025-2026 session?"
+            start["attributes"]["original_question"] == "Who backed AB 1 in 2025-2026?"
         )
         preparation = next(
             span for span in spans if span["name"] == "chat_session.prepare"
@@ -73,6 +78,11 @@ def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
             if span["attributes"].get("gen_ai.operation.name") == "invoke_agent"
         ]
         assert len(agent_spans) == 2
+        assert all(
+            "gen_ai.input.messages" not in span["attributes"]
+            and "gen_ai.output.messages" not in span["attributes"]
+            for span in agent_spans
+        )
         stages = {
             span["context"]["span_id"]: span
             for span in spans
@@ -123,7 +133,7 @@ def test_audit_text_keeps_secret_scrubbing_even_when_it_mentions_a_session(
         assert secret not in json.dumps(probe["attributes"][field])
 
 
-def test_legislative_session_id_remains_in_the_recorded_question(
+def test_legislative_session_id_is_scrubbed_from_the_recorded_question(
     startup_dependencies, chat_capture
 ):
     question = "Which bill has legislative session ID 2025-2026?"
@@ -135,7 +145,88 @@ def test_legislative_session_id_remains_in_the_recorded_question(
         for span in chat_capture.exported_spans_as_dict(parse_json_attributes=True)
         if span["name"] == "chat_session.started"
     )
-    assert start["attributes"]["original_question"] == question
+    assert start["attributes"]["original_question"] != question
+    assert "2025-2026" not in start["attributes"]["original_question"]
+    assert UUID(start["attributes"]["chat_session_id"]).version == 4
+    assert start["attributes"]["logfire.scrubbed"] == [
+        {"path": ["attributes", "original_question"], "matched_substring": "session"}
+    ]
+
+
+@pytest.mark.parametrize("label", ["session ID:", "session_id=", "session-token:"])
+def test_session_credentials_are_scrubbed_without_changing_the_browser_response(
+    startup_dependencies, chat_capture, label
+):
+    secret = "opaque-credential-123"
+    question = f"Who backed AB 1? {label} {secret}"
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        prepared = events(client.post("/api/chat", json=question_request(question)))
+
+    spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+    start = next(span for span in spans if span["name"] == "chat_session.started")
+    assert UUID(start["attributes"]["chat_session_id"]).version == 4
+    assert secret not in json.dumps([span["attributes"] for span in spans])
+    assert any(
+        note["path"] == ["attributes", "original_question"]
+        for note in start["attributes"]["logfire.scrubbed"]
+    )
+    assert any(event["type"] == "tool-approval-request" for event in prepared)
+
+
+def test_session_id_credential_in_correction_is_scrubbed(
+    startup_dependencies, chat_capture
+):
+    secret = "opaque-credential-123"
+    with TestClient(create_app(), base_url="http://localhost") as client:
+        prepared = events(
+            client.post("/api/chat", json=question_request("Who backed AB 1?"))
+        )
+        events(client.post("/api/chat", json=rejection_request(prepared)))
+        events(
+            client.post(
+                "/api/chat",
+                json=correction_request(prepared, f"session ID: {secret}"),
+            )
+        )
+
+    spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+    corrected = next(
+        span for span in spans if span["name"] == "chat_session.rewrite_corrected"
+    )
+    assert secret not in json.dumps([span["attributes"] for span in spans])
+    assert any(
+        note["path"] == ["attributes", "correction"]
+        for note in corrected["attributes"]["logfire.scrubbed"]
+    )
+
+
+def test_audit_snapshot_does_not_exempt_mixed_or_nested_session_text(chat_capture):
+    secret = "opaque-credential-123"
+    logfire.info(
+        "audit redaction probe",
+        correction=f"Which bills were in the 2025-2026 session? session ID: {secret}",
+        rendered_text=f"Public session coverage; session ID: {secret}",
+        selected_sources=[
+            {
+                "citation": {"title": f"Session coverage; session ID: {secret}"},
+                "passages": [
+                    {"text": f"public session report; session ID: {secret}"},
+                    {"text": "another passage without secrets"},
+                ],
+            }
+        ],
+    )
+    probe = next(
+        span
+        for span in chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+        if span["name"] == "audit redaction probe"
+    )
+    assert secret not in json.dumps(probe["attributes"])
+    assert {note["path"][1] for note in probe["attributes"]["logfire.scrubbed"]} == {
+        "correction",
+        "rendered_text",
+        "selected_sources",
+    }
 
 
 def test_start_records_resolved_settings_and_already_measured_coverage(

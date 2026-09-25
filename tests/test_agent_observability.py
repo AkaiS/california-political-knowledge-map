@@ -21,7 +21,7 @@ def test_telemetry_configures_before_instrumenting_pydantic_ai(monkeypatch):
     monkeypatch.setattr(
         telemetry.logfire,
         "instrument_pydantic_ai",
-        lambda: calls.append(("pydantic_ai", {})),
+        lambda **kwargs: calls.append(("pydantic_ai", kwargs)),
     )
     monkeypatch.setattr(
         telemetry.logfire,
@@ -43,6 +43,7 @@ def test_telemetry_configures_before_instrumenting_pydantic_ai(monkeypatch):
         "system_metrics",
     ]
     assert dict(calls)["httpx"] == {"capture_all": False}
+    assert dict(calls)["pydantic_ai"] == {"include_content": False}
 
 
 def test_create_agent_sets_up_telemetry_before_construction(monkeypatch):
@@ -112,8 +113,12 @@ def test_allow_untraced_is_the_only_way_past_a_missing_token(monkeypatch):
     monkeypatch.setattr(telemetry, "_credential", None)
     monkeypatch.setattr(telemetry, "resolve_credential", lambda: None)
     monkeypatch.setenv(telemetry.ALLOW_UNTRACED, "1")
-    for name in ("configure", "instrument_pydantic_ai", "instrument_httpx",
-                 "instrument_system_metrics"):
+    for name in (
+        "configure",
+        "instrument_pydantic_ai",
+        "instrument_httpx",
+        "instrument_system_metrics",
+    ):
         monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
 
     telemetry.setup_telemetry()
@@ -202,8 +207,14 @@ def test_resolved_token_is_passed_to_configure(monkeypatch):
         lambda: telemetry.LogfireCredential("from-the-keychain", None, "keychain"),
     )
     seen: dict[str, object] = {}
-    monkeypatch.setattr(telemetry.logfire, "configure", lambda **kwargs: seen.update(kwargs))
-    for name in ("instrument_pydantic_ai", "instrument_httpx", "instrument_system_metrics"):
+    monkeypatch.setattr(
+        telemetry.logfire, "configure", lambda **kwargs: seen.update(kwargs)
+    )
+    for name in (
+        "instrument_pydantic_ai",
+        "instrument_httpx",
+        "instrument_system_metrics",
+    ):
         monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
 
     telemetry.setup_telemetry()
@@ -228,8 +239,12 @@ def test_the_configured_project_survives_a_source_changing_mid_run(monkeypatch):
             "token-at-startup", "https://logfire/reported-to", "keychain"
         ),
     )
-    for name in ("configure", "instrument_pydantic_ai", "instrument_httpx",
-                 "instrument_system_metrics"):
+    for name in (
+        "configure",
+        "instrument_pydantic_ai",
+        "instrument_httpx",
+        "instrument_system_metrics",
+    ):
         monkeypatch.setattr(telemetry.logfire, name, lambda *a, **k: None)
 
     telemetry.setup_telemetry()

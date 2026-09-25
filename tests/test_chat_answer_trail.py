@@ -142,10 +142,10 @@ def test_prepared_answer_snapshots_exact_rendered_text_and_stored_sources_before
     async def store(fused):
         return GroundingEvidence(
             chunk_id=fused.chunk_id,
-            text="  During the session, the union backed *AB 1*.\nBudget: $5 & more.  ",
+            text="  During the hearing, the union backed *AB 1*.\nBudget: $5 & more.  ",
             citation=SourceArticleCitation(
                 source_article_id=fused.source_article_id,
-                title="AB 1 [session] reporting",
+                title="AB 1 [hearing] reporting",
                 url=fused.source_article_id,
                 published_date="2026-09-01",
             ),
@@ -153,7 +153,7 @@ def test_prepared_answer_snapshots_exact_rendered_text_and_stored_sources_before
 
     async def exercise():
         app = answer_chat(
-            {"introduction": "Read the session reporting."}, load_grounding=store
+            {"introduction": "Read the hearing report."}, load_grounding=store
         )
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://localhost"
@@ -218,13 +218,13 @@ def test_prepared_answer_snapshots_exact_rendered_text_and_stored_sources_before
 
     rendered = asyncio.run(exercise())
     assert rendered == (
-        "Read the session reporting.\n\n"
-        "1. [AB 1 \\[session\\] reporting](<https://example.com/dense>)\n\n"
+        "Read the hearing report.\n\n"
+        "1. [AB 1 \\[hearing\\] reporting](<https://example.com/dense>)\n\n"
         "Stored Article Chunk:\n\n"
-        "  During the session, the union backed \\*AB 1\\*.\nBudget: $5 &amp; more.  \n\n"
-        "2. [AB 1 \\[session\\] reporting](<https://example.com/full_text>)\n\n"
+        "  During the hearing, the union backed \\*AB 1\\*.\nBudget: $5 &amp; more.  \n\n"
+        "2. [AB 1 \\[hearing\\] reporting](<https://example.com/full_text>)\n\n"
         "Stored Article Chunk:\n\n"
-        "  During the session, the union backed \\*AB 1\\*.\nBudget: $5 &amp; more.  "
+        "  During the hearing, the union backed \\*AB 1\\*.\nBudget: $5 &amp; more.  "
     )
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     observation = next(s for s in spans if s["name"] == "chat_session.answer_prepared")
@@ -233,14 +233,14 @@ def test_prepared_answer_snapshots_exact_rendered_text_and_stored_sources_before
         {
             "citation": {
                 "source_article_id": f"https://example.com/{chunk}",
-                "title": "AB 1 [session] reporting",
+                "title": "AB 1 [hearing] reporting",
                 "url": f"https://example.com/{chunk}",
                 "published_date": "2026-09-01",
             },
             "passages": [
                 {
                     "chunk_id": chunk,
-                    "text": "  During the session, the union backed *AB 1*.\nBudget: $5 & more.  ",
+                    "text": "  During the hearing, the union backed *AB 1*.\nBudget: $5 & more.  ",
                     "provenance": "stored_chunk",
                 }
             ],
@@ -331,14 +331,14 @@ def test_large_prepared_answer_keeps_readable_exact_attributes_within_ingest_lim
     stored = {}
 
     async def store(fused):
-        text = f"{fused.chunk_id}: " + "Session *AB 1* café & housing.\n" * 32
+        text = f"{fused.chunk_id}: " + "Hearing *AB 1* café & housing.\n" * 32
         stored[fused.chunk_id] = text
         return GroundingEvidence(
             chunk_id=fused.chunk_id,
             text=text,
             citation=SourceArticleCitation(
                 source_article_id=fused.source_article_id,
-                title="Session reporting on AB 1",
+                title="Hearing reporting on AB 1",
                 url=fused.source_article_id,
                 published_date="2026-09-01",
             ),
@@ -348,7 +348,7 @@ def test_large_prepared_answer_keeps_readable_exact_attributes_within_ingest_lim
     branches[RetrievalBranch.FULL_TEXT] = Branch(
         RetrievalBranch.FULL_TEXT,
         tuple(
-            candidate(RetrievalBranch.FULL_TEXT, f"session-{i:02}", i)
+            candidate(RetrievalBranch.FULL_TEXT, f"hearing-{i:02}", i)
             for i in range(1, 13)
         ),
     )

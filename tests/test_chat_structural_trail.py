@@ -223,7 +223,7 @@ def test_structural_failures_identify_the_stage_that_stopped(
     assert "sensitive" not in json.dumps([span["attributes"] for span in spans])
 
 
-def test_corrected_binding_records_only_approved_values_and_preserves_bill_session(
+def test_corrected_binding_uses_bill_session_while_scrubbing_query_text(
     chat_capture,
 ):
     outputs = relationship_outputs()
@@ -251,11 +251,12 @@ def test_corrected_binding_records_only_approved_values_and_preserves_bill_sessi
     assert "validated_query" not in validations[0]
     assert "bound_values" not in validations[0]
     execution = driver.session.return_value.__aenter__.return_value.run.call_args
-    assert validations[1]["validated_query"] == execution.args[0].text
+    assert "session" in execution.args[0].text
+    assert validations[1]["validated_query"] == "[Scrubbed due to 'session']"
     assert validations[1]["bound_values"] == execution.kwargs["parameters"]
     assert "2025-2026" in validations[1]["bound_values"].values()
     attrs = {span["attributes"]["stage"]: span["attributes"] for span in spans}
-    assert "FILTER__BILL__SESSION__EQ" in {
+    assert "[Scrubbed due to 'SESSION']" in {
         piece["id"] for piece in attrs["schema_filtering"]["accepted_pieces"]
     }
     assert (

@@ -39,8 +39,9 @@ its approved query and parameters or a safe failure. Validation remains inside
 the binder's output validator, preserving the existing correction boundary and
 Pydantic AI ancestry. Execution records database identity and row count;
 hydration records candidate count. Stage failures preserve stable kinds,
-including the actual stage interrupted by the shared deadline. Legitimate Bill
-`session` fields and validated query text survive Logfire's default scrubbing.
+including the actual stage interrupted by the shared deadline. The later PR
+review left legitimate Bill `session` values and validated query text subject
+to Logfire's default scrubbing.
 
 Seventeen ASGI cases cover relational Grounding Evidence, empty success,
 corrected binding, rejection exhaustion, all four model stages, database

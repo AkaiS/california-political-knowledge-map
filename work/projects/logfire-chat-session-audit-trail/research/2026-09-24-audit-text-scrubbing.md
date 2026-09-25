@@ -41,3 +41,20 @@ Use the existing offline ASGI and Logfire-export seam, asserting both captured a
 4. `rendered_text` and each nested `selected_sources[*].citation`/`passages[*].text` path are exercised with secret-like content, including an earlier benign `session` in the same string and a separate nested passage. Assert no raw credential occurs anywhere in the exported observation. [Answer snapshot contract](../issues/06-trace-the-prepared-retrieval-answer.md); [installed SDK recursive behavior](https://pydantic.dev/docs/logfire/instrument/python/scrubbing/).
 5. Record the deliberate false-positive case: `legislative session ID 2025-2026` is scrubbed under the conservative policy, with an appropriate scrub note; adjust the current exact-retention assertion and docs to match the chosen policy. [Current test](../../../../tests/test_chat_session_trail.py); [Logfire default patterns](https://pydantic.dev/docs/logfire/instrument/python/scrubbing/).
 6. Demonstrate the known false negative with a bare opaque value in a controlled offline test or document it plainly; do not assert that generic secret detection is complete. [Logfire LLM-content warning](https://pydantic.dev/docs/logfire/instrument/python/scrubbing/#llm-and-ai-messages); [OpenTelemetry sensitive-data guidance](https://opentelemetry.io/docs/security/handling-sensitive-data/).
+
+## Follow-up: exception status text
+
+A focused implementation review on 2026-09-25 found another route outside the
+audit-attribute callback. Logfire 4.37.0 treats `exception.message` and
+`exception.stacktrace` as safe keys, so its scrubber skips them. An exception
+that quotes `session ID: opaque-credential-123` can also put those bytes in the
+span status description. The exception callback can suppress exception events,
+but native Pydantic AI spans may set the raw status description after that
+callback runs. An offline reproduction confirmed this on both manual and model
+spans. The [Logfire SQL reference](https://pydantic.dev/docs/logfire/reference/sql/)
+exposes that description as `otel_status_message`. Complete protection for
+exception text requires filtering the exported status and event data before it
+reaches Logfire, for example through an
+[OpenTelemetry Collector](https://pydantic.dev/docs/logfire/instrument/python/otel-collector-scrubbing/).
+The narrowed audit callback closes the reported attribute leak, but does not
+claim that all telemetry from a failed run is free of private text.

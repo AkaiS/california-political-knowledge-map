@@ -12,7 +12,8 @@ Open the application's Logfire project and its SQL Workbench. Choose a time
 window that covers the question and the later approval. Replace
 `<chat-session-id>` with the ID from a `chat_session.started` record, then run
 this query. If the ID is unknown, use the cohort search below to find the
-original question and its observation time.
+original question and its observation time. A scrubbed question may not be
+searchable by its wording.
 
 ```sql
 -- single-session
@@ -205,7 +206,7 @@ Preparation, fusion, Evidence Assembly, and guidance identify the failed stage
 through `span_name`; their `failure_stage` can be NULL. Structural observations
 also expose `stage`, while branch failures identify their cause in
 `failure_stage`. Use `failure_kind` and the safe `diagnostic` to orient the
-investigation, then follow the trace for operational exception and model detail.
+investigation, then follow the trace for stage ancestry, model timing, and retries.
 
 Each row is an observation. A structural failure can appear both on its stage
 and on the enclosing branch. A rejected structural validation can be corrected
@@ -266,10 +267,18 @@ rendered its text before attempting emission. It proves no browser receipt,
 display, or reading. Its stored passages retain `stored_chunk` provenance and
 are not a claim of verbatim Publication quotations.
 
-Logfire's secret scrubber still applies to user-controlled audit text. If it
-detects a credential-shaped value, an affected question, answer, or selected
-source field may be redacted; inspect the recorded scrub note before treating
-that field as an exact snapshot.
+Logfire's default scrubber applies to all audit attributes except the
+application-generated `chat_session_id`. It may redact an entire question,
+answer, selected source field, Article Chunk ID, or structural query when it
+matches a word such as `session`. This includes benign legislative wording.
+Inspect `logfire.scrubbed` before treating a field as an exact snapshot. The
+scrubber can miss an unlabelled secret, so a field without a scrub note is not
+proof that it contains no private data. Pydantic AI spans retain model timing,
+retries, and token use, but omit prompt, completion, and tool content. Exception
+events are suppressed because Logfire does not scrub their fields. Logfire's
+span status description may still contain an exception message, including
+private text, so these traces need an export filter before they can be treated
+as free of private data.
 
 Logfire is the only audit destination for this version. The application has no
 local audit database, audit CLI, or custom Query API client. Saved searches do
@@ -290,4 +299,4 @@ These tests do not emulate Logfire ingestion or certify its query engine or
 current UI. SQL syntax and navigation were checked against the linked official
 documentation on 2026-09-24. No live project or browser verification is needed.
 The existing `test_chat_*_trail.py` tests cover concurrent branches, corrected
-proposals, native model ancestry, exact answer snapshots, and exporter failures.
+proposals, native model ancestry, safe answer snapshots, and exporter failures.

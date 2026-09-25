@@ -36,15 +36,16 @@ and the ordered typed fused result. `chat_session.evidence_assembly` records
 selected IDs in selection order, omitted IDs with `character_limit` or
 `passage_limit` reasons, relevant coverage and monthly detail, applied limits,
 and measured context use. Each span carries the shared Chat Session ID and
-schema version under approval. The declared attribute policy preserves valid
-Article Chunk IDs containing `session` through Logfire scrubbing.
+schema version under approval. After the PR review, Article Chunk IDs containing
+`session` may be redacted by Logfire's default scrubber.
 
 Returned assembly failures and raised stage errors record safe diagnostics and
 stable `hydration`, `validation`, `unexpected`, or `deadline_exhausted` kinds.
 The existing return and exception behavior is preserved, including a distinct
-Evidence Assembly failure without Chat Agent guidance. Native Logfire
-exception telemetry retains operational detail; custom application attributes
-contain no scores, routes, or stored passage text.
+Evidence Assembly failure without Chat Agent guidance. After the PR review,
+Logfire exception events are suppressed because their messages and stack traces
+bypass the scrubber. Custom application attributes contain no scores, routes,
+or stored passage text.
 
 Fourteen ASGI cases cover duplicate and over-limit branch candidates, reversed
 concurrent completion, both omission reasons, exact context measurement,

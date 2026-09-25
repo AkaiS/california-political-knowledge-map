@@ -95,7 +95,7 @@ def test_correction_and_approval_refer_to_the_proposal_used_by_retrieval(
                         "relational": True,
                     },
                     {
-                        "question": "Which articles discuss AB 1 in the 2025-2026 session?",
+                        "question": "Which articles discuss AB 1 in the 2025-2026 term?",
                         "relational": False,
                     },
                 ]
@@ -123,11 +123,11 @@ def test_correction_and_approval_refer_to_the_proposal_used_by_retrieval(
             client.post(
                 "/api/chat",
                 json=correction_request(
-                    first, "Find articles about the 2025-2026 session instead."
+                    first, "Find articles about the 2025-2026 term instead."
                 ),
             )
         )
-        assert "Which articles discuss AB 1 in the 2025-2026 session?" in json.dumps(
+        assert "Which articles discuss AB 1 in the 2025-2026 term?" in json.dumps(
             revised
         )
         assert client.post("/api/chat", json=approval_request(first)).status_code == 409
@@ -139,7 +139,7 @@ def test_correction_and_approval_refer_to_the_proposal_used_by_retrieval(
         if request.url.host == "unavailable-embedding.test"
     )
     assert json.loads(embedding.content)["input"] == [
-        "Which articles discuss AB 1 in the 2025-2026 session?"
+        "Which articles discuss AB 1 in the 2025-2026 term?"
     ]
     spans = observations(chat_capture)
     proposals = [s for s in spans if s["name"] == "chat_session.query_rewrite"]
@@ -147,19 +147,19 @@ def test_correction_and_approval_refer_to_the_proposal_used_by_retrieval(
     assert [s["attributes"]["relational"] for s in proposals] == [True, False]
     assert (
         proposals[1]["attributes"]["question"]
-        == "Which articles discuss AB 1 in the 2025-2026 session?"
+        == "Which articles discuss AB 1 in the 2025-2026 term?"
     )
     correction = next(s for s in spans if s["name"] == "chat_session.rewrite_corrected")
     assert correction["attributes"]["proposal_attempt"] == 1
     assert (
         correction["attributes"]["correction"]
-        == "Find articles about the 2025-2026 session instead."
+        == "Find articles about the 2025-2026 term instead."
     )
     approved = next(s for s in spans if s["name"] == "chat_session.rewrite_approved")
     assert approved["attributes"]["proposal_attempt"] == 2
     assert (
         approved["attributes"]["approved_question"]
-        == "Which articles discuss AB 1 in the 2025-2026 session?"
+        == "Which articles discuss AB 1 in the 2025-2026 term?"
     )
     assert approved["attributes"]["relational"] is False
     assessments = [s for s in spans if s["name"] == "chat_session.question_assessment"]
@@ -282,10 +282,7 @@ def test_declined_assessment_keeps_its_explanation_and_never_offers_approval(
     )
     assert assessment["attributes"]["proposal_attempt"] == 1
     assert assessment["attributes"]["status"] == "declined"
-    assert (
-        assessment["attributes"]["explanation"]
-        == "Predictions about the next legislative session are outside question policy."
-    )
+    assert assessment["attributes"]["explanation"] == "[Scrubbed due to 'session']"
     assert "recoverable_portion" not in assessment["attributes"]
     assert "failure_kind" not in assessment["attributes"]
 
@@ -371,7 +368,8 @@ def test_failed_preparation_stage_records_a_safe_kind_and_the_browser_stops(
         "This question could not be completed. Start a new chat to ask a question."
     ]
     assert not any(event["type"] == "tool-approval-request" for event in failed)
-    spans = observations(chat_capture)
+    all_spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+    spans = [s for s in all_spans if s["name"].startswith("chat_session.")]
     expected_names = {
         "chat_session.started",
         "chat_session.prepare",
@@ -389,7 +387,12 @@ def test_failed_preparation_stage_records_a_safe_kind_and_the_browser_stops(
         if stage == "query_rewrite"
         else "The Chat Agent could not assess question policy and coverage."
     )
-    assert "private diagnostic" not in json.dumps([s["attributes"] for s in spans])
+    assert "private diagnostic" not in json.dumps([s["attributes"] for s in all_spans])
+    assert not any(
+        event.name == "exception"
+        for span in chat_capture.exported_spans
+        for event in span.events
+    )
     assert "private diagnostic" not in json.dumps(failed)
     for span in spans:
         assert not (

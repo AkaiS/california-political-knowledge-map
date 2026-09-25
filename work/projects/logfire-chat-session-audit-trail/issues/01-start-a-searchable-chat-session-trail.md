@@ -41,8 +41,9 @@ in-process Logfire exporter. They cover invalid requests, distinct accepted
 sessions, unchanged browser preparation, nested agent spans, effective settings,
 unchanged corpus/model request counts, OpenRouter policy without credentials,
 unavailable Git metadata, and exporter failure. Capture also verifies that the
-default scrubber cannot redact the Chat Session ID or political questions about
-a legislative session; the exception applies only to declared audit fields.
+default scrubber cannot redact the application-generated Chat Session ID. After
+the PR review, political questions about a legislative session can be scrubbed;
+the exception applies only to the generated ID.
 
 Validation: 147 focused tests passed; changed-file Ruff and `ty 0.0.83` checks
 passed; `uv run --no-sync pytest -q` passed with 1,272 tests, 47 skipped, and the

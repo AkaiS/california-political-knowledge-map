@@ -193,7 +193,7 @@ def test_assembly_records_actual_selection_omission_reasons_and_measured_context
         RetrievalBranch.FULL_TEXT,
         tuple(
             candidate(RetrievalBranch.FULL_TEXT, chunk, rank)
-            for rank, chunk in enumerate(("large", "session-small", "tail"), 1)
+            for rank, chunk in enumerate(("large", "hearing-small", "tail"), 1)
         ),
     )
     loaded = []
@@ -234,17 +234,17 @@ def test_assembly_records_actual_selection_omission_reasons_and_measured_context
         )
     )
     assert search_details(completed)["outcome"] == "retrieval_answer"
-    assert loaded == ["large", "session-small"]
+    assert loaded == ["large", "hearing-small"]
     context = json.loads(prompts[-1])
     assert [
         passage["candidate"]["chunk_id"]
         for source in context["sources"]
         for passage in source["passages"]
-    ] == ["session-small"]
+    ] == ["hearing-small"]
     assembly = stage_spans(chat_capture)["chat_session.evidence_assembly"]
     attrs = assembly["attributes"]
     assert attrs["status"] == "succeeded"
-    assert attrs["selected_chunk_ids"] == ["session-small"]
+    assert attrs["selected_chunk_ids"] == ["hearing-small"]
     assert attrs["omitted_chunks"] == [
         {"chunk_id": "large", "reason": "character_limit"},
         {"chunk_id": "tail", "reason": "passage_limit"},
@@ -264,7 +264,7 @@ def test_assembly_records_actual_selection_omission_reasons_and_measured_context
     }
     assert 0 < attrs["context"]["used"] < 3000
     fusion = stage_spans(chat_capture)["chat_session.fusion"]
-    assert fusion["attributes"]["fused_chunk_ids"] == ["large", "session-small", "tail"]
+    assert fusion["attributes"]["fused_chunk_ids"] == ["large", "hearing-small", "tail"]
     assert assembly["parent"] == fusion["parent"]
     assert attrs["chat_session_id"] == fusion["attributes"]["chat_session_id"]
     assert attrs["audit_schema_version"] == 1
@@ -338,7 +338,7 @@ def test_zero_passage_assembly_accounts_for_empty_failed_and_skipped_branches(
     if has_candidate:
         branches[RetrievalBranch.FULL_TEXT] = Branch(
             RetrievalBranch.FULL_TEXT,
-            (candidate(RetrievalBranch.FULL_TEXT, "2025-2026-session"),),
+            (candidate(RetrievalBranch.FULL_TEXT, "2025-2026-term"),),
         )
 
     async def store(fused):
@@ -364,7 +364,7 @@ def test_zero_passage_assembly_accounts_for_empty_failed_and_skipped_branches(
     assert context["sources"] == []
     spans = stage_spans(chat_capture)
     fusion = spans["chat_session.fusion"]["attributes"]
-    ids = ["2025-2026-session"] if has_candidate else []
+    ids = ["2025-2026-term"] if has_candidate else []
     assert fusion["eligible_branches"] == {
         "full_text": {"count": int(has_candidate), "chunk_ids": ids},
         "dense": {"count": 0, "chunk_ids": []},
@@ -375,7 +375,7 @@ def test_zero_passage_assembly_accounts_for_empty_failed_and_skipped_branches(
     assert assembly["status"] == "succeeded"
     assert assembly["selected_chunk_ids"] == []
     assert assembly["omitted_chunks"] == (
-        [{"chunk_id": "2025-2026-session", "reason": "character_limit"}]
+        [{"chunk_id": "2025-2026-term", "reason": "character_limit"}]
         if has_candidate
         else []
     )
