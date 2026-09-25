@@ -40,6 +40,19 @@ identifier to its replacement so each entry still traces back to `## Loose
 Notes` in the immutable July 9 source note. Struck-through findings in that
 source remain intentionally omitted from this queue.
 
+## Telemetry privacy
+
+- **TP-01 · P0:** Prevent private text in exception status descriptions from
+  reaching Logfire. During [PR #25](https://github.com/AkaiS/california-political-knowledge-map/pull/25)
+  review, an offline failure with `session ID: opaque-credential-123` put that
+  value in `otel_status_message` on application and Pydantic AI spans. Logfire
+  4.37.0 does not scrub this field. The PR narrows audit-attribute exemptions,
+  disables model content capture, and suppresses exception events, but those
+  changes do not remove the status description. Decide how to filter exported
+  span status text without losing useful failure signals, then test failed
+  application and model spans before treating the trail as private-data safe.
+  See the [research note](projects/logfire-chat-session-audit-trail/research/2026-09-24-audit-text-scrubbing.md#follow-up-exception-status-text).
+
 ## Extraction and graph integrity
 
 - **IG-01 · P0:** Preserve multiple labels for extracted graph nodes.
