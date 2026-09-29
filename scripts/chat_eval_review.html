@@ -7,12 +7,12 @@
   <style>
     :root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; background: #f5f6f5; color: #192422; }
     * { box-sizing: border-box; }
-    body { margin: 0; }
+    body { margin: 0; overflow: hidden; }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
     a { color: #116963; overflow-wrap: anywhere; }
-    .layout { display: grid; grid-template-columns: minmax(270px, 330px) minmax(0, 1fr); min-height: 100vh; }
-    aside { border-right: 1px solid #dbe2df; background: #fff; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+    .layout { display: grid; grid-template-columns: minmax(270px, 330px) minmax(0, 1fr); height: 100vh; height: 100dvh; overflow: hidden; }
+    aside { border-right: 1px solid #dbe2df; background: #fff; min-height: 0; display: flex; flex-direction: column; }
     .side-head { padding: 20px; border-bottom: 1px solid #dbe2df; }
     .side-head h1 { margin: 0 0 6px; font-size: 18px; }
     .meta { color: #586c68; font-size: 12px; }
@@ -29,7 +29,7 @@
     .badge.pass { background: #dcf2e4; color: #126334; }
     .badge.fail { background: #fde6e3; color: #9d3022; }
     .badge.defer { background: #fff2d2; color: #865900; }
-    main { max-width: 1200px; width: 100%; margin: 0 auto; padding: 28px 38px 80px; }
+    main { max-width: 1200px; width: 100%; min-height: 0; margin: 0 auto; padding: 28px 38px 18px; display: flex; flex-direction: column; overflow: hidden; }
     .top { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
     .top h2 { margin: 5px 0 10px; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
     .links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
@@ -37,18 +37,20 @@
     .nav { display: flex; gap: 8px; }
     .nav button, .verdict button { border: 1px solid #c7d4d0; border-radius: 6px; background: white; padding: 7px 12px; }
     .nav button:disabled { color: #9cadab; cursor: default; }
-    .columns { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); gap: 20px; align-items: start; margin-top: 22px; }
+    .columns { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); gap: 20px; flex: 1; min-height: 0; overflow: hidden; margin-top: 22px; }
+    .trace-pane { min-height: 0; overflow-y: auto; padding-right: 8px; }
+    .review-pane { min-height: 0; display: flex; }
     section, .review-box { background: white; border: 1px solid #dbe2df; border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
     section h3, .review-box h3 { font-size: 15px; margin: 0 0 12px; }
     .answer { white-space: pre-wrap; overflow-wrap: anywhere; }
     .answer p { margin: 0 0 13px; }
     .answer p:last-child { margin-bottom: 0; }
     .answer .source-line { padding-left: 12px; border-left: 3px solid #b7d6ce; }
-    .review-box { position: sticky; top: 18px; }
+    .review-box { display: flex; flex: 1; flex-direction: column; min-height: 0; margin-bottom: 0; }
     .verdict { display: flex; flex-wrap: wrap; gap: 8px; }
     .verdict button.active { border-color: #177b70; background: #e7f5f1; color: #145f56; font-weight: 700; }
     .review-box label { display: block; margin: 17px 0 7px; font-weight: 650; }
-    textarea { width: 100%; min-height: 140px; resize: vertical; border: 1px solid #c7d4d0; border-radius: 6px; padding: 10px; }
+    textarea { width: 100%; flex: 1; min-height: 100px; resize: none; border: 1px solid #c7d4d0; border-radius: 6px; padding: 10px; }
     #save-status { font-size: 12px; color: #63736e; margin-top: 7px; min-height: 18px; }
     .stage { border-left: 4px solid #95b7af; background: #f7faf9; border-radius: 5px; padding: 9px 12px; margin: 8px 0; }
     .stage.failed, .stage.unavailable { border-left-color: #d15d50; background: #fff7f5; }
@@ -69,8 +71,8 @@
     .passage { margin: 10px 0 0 12px; padding: 10px 13px; border-left: 3px solid #c3dad5; background: #f8faf9; white-space: pre-wrap; }
     .empty { color: #697a75; font-style: italic; }
     .error { color: #a12f24; }
-    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; } .review-box { position: static; } }
-    @media (max-width: 680px) { .layout { display: block; } aside { position: static; height: auto; max-height: 300px; } main { padding: 22px 16px 60px; } .top { display: block; } .nav { margin-top: 14px; } }
+    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; } .review-box { max-height: 35vh; } textarea { min-height: 70px; } }
+    @media (max-width: 680px) { .layout { display: flex; flex-direction: column; } aside { flex: 0 0 180px; border-right: 0; border-bottom: 1px solid #dbe2df; } .side-head { padding: 10px 14px; } main { flex: 1; padding: 12px 14px 10px; } .top { display: block; } .top h2 { font-size: 19px; margin: 3px 0; } .nav { margin-top: 8px; } .columns { margin-top: 12px; } .review-box { max-height: 32vh; padding: 10px 12px; } }
   </style>
 </head>
 <body>
@@ -87,14 +89,14 @@
     </aside>
     <main>
       <div class="top"><div><div id="position" class="meta"></div><h2 id="question"></h2><div id="case-meta" class="meta"></div><div id="trace-links" class="links"></div></div><div class="nav"><button id="previous" title="Previous case (left arrow)">Previous</button><button id="next" title="Next case (right arrow)">Next</button></div></div>
-      <div class="columns"><div>
+      <div class="columns"><div class="trace-pane">
         <section><h3>Answer shown to the voter</h3><div id="answer" class="answer"></div></section>
         <section><h3>Question preparation</h3><div id="preparation"></div></section>
         <section><h3>Retrieval branches</h3><div id="branches"></div></section>
         <section><h3>Selected grounding evidence and citations</h3><div id="evidence"></div></section>
         <section><h3>Application stages</h3><div id="stages"></div></section>
         <section><h3>Model messages and complete case data</h3><div id="raw"></div></section>
-      </div><div><div class="review-box"><h3>Your case review</h3><div class="verdict"><button data-verdict="pass" title="1">Pass</button><button data-verdict="fail" title="2">Fail</button><button data-verdict="defer" title="D">Defer</button><button data-verdict="clear" title="U">Clear</button></div><label for="note">Critique or observation</label><textarea id="note" placeholder="What did retrieval, citation, or answer do well or poorly?"></textarea><div id="save-status"></div><div class="meta">Arrow keys navigate. 1 pass, 2 fail, D defer, U clear, Cmd/Ctrl+Enter saves and moves on.</div></div></div></div>
+      </div><div class="review-pane"><div class="review-box"><h3>Your case review</h3><div class="verdict"><button data-verdict="pass" title="1">Pass</button><button data-verdict="fail" title="2">Fail</button><button data-verdict="defer" title="D">Defer</button><button data-verdict="clear" title="U">Clear</button></div><label for="note">Critique or observation</label><textarea id="note" placeholder="What did retrieval, citation, or answer do well or poorly?"></textarea><div id="save-status"></div><div class="meta">Arrow keys navigate. 1 pass, 2 fail, D defer, U clear, Cmd/Ctrl+Enter saves and moves on.</div></div></div></div>
     </main>
   </div>
   <script>
@@ -147,7 +149,7 @@
       $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining`;
       for (const item of filteredCases()) {
         const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
-        row.type = 'button'; row.onclick = () => { flushSave(); index = cases.indexOf(item); render(); };
+        row.type = 'button'; row.onclick = () => { flushSave(); index = cases.indexOf(item); render(true); };
         add(row, 'span', caseQuestion(item), 'name');
         const status = reviewFor(item).verdict || 'unreviewed';
         add(row, 'span', `${item.name} · ${object(item.metadata).cohort || 'unknown cohort'} · ${object(item.output).failure ? 'execution failed · ' : ''}${status}`, 'sub');
@@ -286,7 +288,7 @@
       if (item.inputs) detail(container, 'Case input', item.inputs);
       if (item.attributes) detail(container, 'Case metadata', item.attributes);
     }
-    function render() {
+    function render(resetTrace = false) {
       const item = selection(); if (!item) return;
       const output = object(item.output), attributes = object(item.attributes), review = reviewFor(item);
       $('position').textContent = `Case ${index + 1} of ${cases.length}`;
@@ -305,6 +307,7 @@
       $('save-status').textContent = '';
       $('previous').disabled = index === 0; $('next').disabled = index === cases.length - 1;
       renderList();
+      if (resetTrace) document.querySelector('.trace-pane').scrollTop = 0;
     }
     function updateReview() {
       const item = selection();
@@ -323,7 +326,7 @@
         .catch(error => { $('save-status').textContent = error.message; });
       return saveChain;
     }
-    function navigate(delta) { flushSave(); index = Math.max(0, Math.min(cases.length - 1, index + delta)); render(); }
+    function navigate(delta) { flushSave(); index = Math.max(0, Math.min(cases.length - 1, index + delta)); render(true); }
     for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => {
       const item = selection(); reviews[item.name] = {...reviewFor(item), verdict: button.dataset.verdict === 'clear' ? null : button.dataset.verdict, note: $('note').value};
       render(); flushSave();
@@ -349,7 +352,7 @@
         for (const value of [...new Set(cases.map(item => object(item.metadata).cohort).filter(Boolean))].sort()) {
           const option = add($('cohort'), 'option', value.replaceAll('_', ' ')); option.value = value;
         }
-        if (cases.length) render(); else $('question').textContent = 'This report has no cases.';
+        if (cases.length) render(true); else $('question').textContent = 'This report has no cases.';
       }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; });
   </script>
 </body>
