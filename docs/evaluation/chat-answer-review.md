@@ -27,19 +27,24 @@ commit and dirty state, Model Deployment, each case's output and metadata, and
 the run and case trace IDs. A case can finish with a stage failure; that failure
 is part of the review material, not a pass/fail answer grade.
 
-Open one report in the local reviewer:
+Start the local reviewer:
 
 ```bash
-uv run python scripts/review_chat_eval.py evals/reports/chat/<report-file>.json
+uv run python scripts/review_chat_eval.py
 ```
 
-Then visit `http://127.0.0.1:8765/`. The reviewer displays one case at a time.
+Then visit `http://127.0.0.1:8765/`. The landing page lists recent chat
+evaluation runs from `evals/reports/chat/`, newest first, with the number of
+cases reviewed and Pass, Fail, and Defer counts. Select a run to open its case
+reviewer. The list discovers new reports while the server is running and reads
+saved review files when opened, so returning to the list shows current progress.
+The reviewer displays one case at a time.
 Use the list or arrow keys to move between cases, search by question or ID, and
 filter by review verdict. It saves each **Pass**, **Fail**, or **Defer** verdict
 and free-text critique to `<report-file>.reviews.json`. `1`, `2`, `D`, and `U`
 set Pass, Fail, Defer, and clear the verdict. The note saves as you type. Use
-`--reviews <path>` to choose another review file and `--port <port>` to change
-the local port. The reviewer binds to loopback.
+`--reports-dir <path>` to browse a different report directory and `--port
+<port>` to change the local port. The reviewer binds to loopback.
 
 ## Read one case
 

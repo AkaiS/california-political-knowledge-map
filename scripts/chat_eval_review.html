@@ -15,6 +15,7 @@
     aside { border-right: 1px solid #dbe2df; background: #fff; min-height: 0; display: flex; flex-direction: column; }
     .side-head { padding: 20px; border-bottom: 1px solid #dbe2df; }
     .side-head h1 { margin: 0 0 6px; font-size: 18px; }
+    .back-link { display: inline-block; margin-bottom: 10px; font-size: 13px; }
     .meta { color: #586c68; font-size: 12px; }
     .filters { display: flex; gap: 7px; margin-top: 15px; }
     .filters input { width: 100%; min-width: 0; }
@@ -79,6 +80,7 @@
   <div class="layout">
     <aside>
       <div class="side-head">
+        <a id="all-runs" class="back-link" href="/">← All runs</a>
         <h1>Chat evaluation review</h1>
         <div id="run-meta" class="meta"></div>
         <div id="progress" class="meta"></div>
@@ -101,7 +103,9 @@
   </div>
   <script>
     'use strict';
-    let report, cases = [], reviews = {}, index = 0, saveTimer, saveChain = Promise.resolve();
+    let report, cases = [], reviews = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
+    const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
+    const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
     const $ = id => document.getElementById(id);
     const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     const string = value => value == null ? '' : String(value);
@@ -327,9 +331,9 @@
       clearTimeout(saveTimer);
       const item = selection(); if (!item || !reviews[item.name]) return saveChain;
       const name = item.name, review = {...reviews[name]};
-      saveChain = saveChain.then(() => fetch('/api/reviews', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})}))
-        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); $('save-status').textContent = 'Saved'; })
-        .catch(error => { $('save-status').textContent = error.message; });
+      saveChain = saveChain.then(() => fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})}))
+        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); $('save-status').textContent = 'Saved'; return true; })
+        .catch(error => { $('save-status').textContent = error.message; return false; });
       return saveChain;
     }
     function navigate(delta) { flushSave(); index = Math.max(0, Math.min(cases.length - 1, index + delta)); render(true); }
@@ -338,10 +342,11 @@
       render(); flushSave();
     };
     $('note').addEventListener('input', updateReview);
+    $('all-runs').onclick = event => { event.preventDefault(); flushSave().then(saved => { if (saved) location.href = '/'; }); };
     $('previous').onclick = () => navigate(-1); $('next').onclick = () => navigate(1);
     $('search').oninput = renderList; $('filter').onchange = renderList; $('cohort').onchange = renderList;
     document.addEventListener('keydown', event => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); flushSave().then(() => navigate(1)); return; }
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); flushSave().then(saved => { if (saved) navigate(1); }); return; }
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
       if (event.key === 'ArrowLeft') navigate(-1);
       if (event.key === 'ArrowRight') navigate(1);
@@ -351,7 +356,7 @@
         document.querySelector(`[data-verdict="${verdict}"]`).click();
       }
     });
-    Promise.all([fetch('/api/report').then(r => r.json()), fetch('/api/reviews').then(r => r.json())])
+    Promise.all([fetch(`${apiBase}/report`).then(r => { if (!r.ok) throw new Error(`Report ${r.status}`); return r.json(); }), fetch(`${apiBase}/reviews`).then(r => { if (!r.ok) throw new Error(`Reviews ${r.status}`); return r.json(); })])
       .then(([loadedReport, loadedReviews]) => {
         report = loadedReport; reviews = loadedReviews; cases = report.report.cases;
         $('run-meta').textContent = `${report.ran_at || ''} · ${report.deployment?.model || report.model || ''} · ${cases.length} cases`;
