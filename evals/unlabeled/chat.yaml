@@ -1,0 +1,589 @@
+task: chat
+description: Current training set for end-to-end Chat Session error analysis. The 25 concrete questions
+  are copied unchanged from the existing populated-graph target set, with all 11 Declined and Deferred
+  controls from the broader target set. References describe earlier graph observations, not human answer
+  labels. Every case is training; no held-out accuracy is estimated. The driver automatically approves
+  the first proposal, which reviewers must inspect for preserved intent.
+cases:
+- id: C-E1-01
+  description: Entity dossier over recorded mentions, without demanding a complete biography.
+  split: training
+  task_input:
+    question: What stored reporting mentions Steve Hilton?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E1-01
+    family: E1
+    cohort: populated_graph
+    scope_note: Entity dossier over recorded mentions, without demanding a complete biography.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E1
+  - populated_graph
+- id: C-E1-02
+  description: A second named Politician; no vote is inferred from being a bill proponent.
+  split: training
+  task_input:
+    question: What stored reporting mentions Gail Pellerin?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E1-02
+    family: E1
+    cohort: populated_graph
+    scope_note: A second named Politician; no vote is inferred from being a bill proponent.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E1
+  - populated_graph
+- id: C-E2-01
+  description: The session is explicit so seed resolution does not require guessing.
+  split: training
+  task_input:
+    question: What reporting is attached to SB 9 in the 2025-2026 legislative session?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E2-01
+    family: E2
+    cohort: populated_graph
+    scope_note: The session is explicit so seed resolution does not require guessing.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E2
+  - populated_graph
+- id: C-E2-02
+  description: Retrieves the currently recorded proposition and reporting, not every historical measure
+    numbered 38.
+  split: training
+  task_input:
+    question: What stored reporting is attached to Proposition 38?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E2-02
+    family: E2
+    cohort: populated_graph
+    scope_note: Retrieves the currently recorded proposition and reporting, not every historical measure
+      numbered 38.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E2
+  - populated_graph
+- id: C-E3-01
+  description: Uses article-level topic assignments and an explicit half-open publication window.
+  split: training
+  task_input:
+    question: Which stored articles discuss housing and community development in July 2026?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E3-01
+    family: E3
+    cohort: populated_graph
+    scope_note: Uses article-level topic assignments and an explicit half-open publication window.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E3
+  - populated_graph
+- id: C-E3-02
+  description: A second temporal sweep; published_date is stored as a string.
+  split: training
+  task_input:
+    question: Which stored articles discuss labor and employment in July 2026?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E3-02
+    family: E3
+    cohort: populated_graph
+    scope_note: A second temporal sweep; published_date is stored as a string.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E3
+  - populated_graph
+- id: C-E3-03
+  description: Counts stored article assignments. Each entry chunk navigates to its source article; it
+    is not an independent chunk-level topic classification.
+  split: training
+  task_input:
+    question: How many stored articles discuss each policy area? Include the source articles behind every
+      count.
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-E3-03
+    family: E3
+    cohort: populated_graph
+    scope_note: Counts stored article assignments. Each entry chunk navigates to its source article; it
+      is not an independent chunk-level topic classification.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - E3
+  - populated_graph
+- id: C-R1-01
+  description: The text supplies the position; no missing alignment property is filtered or inferred.
+  split: training
+  task_input:
+    question: Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what
+      reporting states that position?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R1-01
+    family: R1
+    cohort: populated_graph
+    scope_note: The text supplies the position; no missing alignment property is filtered or inferred.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R1
+  - populated_graph
+- id: C-R1-02
+  description: Uses explicit endorsement edges; duplicate graph nodes may share one project id.
+  split: training
+  task_input:
+    question: Which organizations are reported to have endorsed the Steve Hilton campaign?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R1-02
+    family: R1
+    cohort: populated_graph
+    scope_note: Uses explicit endorsement edges; duplicate graph nodes may share one project id.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R1
+  - populated_graph
+- id: C-R2-01
+  description: The attached reporting describes support by studio and union lobbyists.
+  split: training
+  task_input:
+    question: Which organizations are recorded as lobbying in favor of AB 186 in the 2025-2026 session?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R2-01
+    family: R2
+    cohort: populated_graph
+    scope_note: The attached reporting describes support by studio and union lobbyists.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R2
+  - populated_graph
+- id: C-R2-02
+  description: The stored relationship records opposition; retrieve its reporting rather than inventing
+    a lobbying amount.
+  split: training
+  task_input:
+    question: Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R2-02
+    family: R2
+    cohort: populated_graph
+    scope_note: The stored relationship records opposition; retrieve its reporting rather than inventing
+      a lobbying amount.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R2
+  - populated_graph
+- id: C-R3-01
+  description: News funding links exist. Amount and date are absent from the Claim Key, so this asks for
+    entities and reporting.
+  split: training
+  task_input:
+    question: Which organizations are recorded as funding the Yes on Proposition 38 campaign, and what
+      reporting supports those links?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R3-01
+    family: R3
+    cohort: populated_graph
+    scope_note: News funding links exist. Amount and date are absent from the Claim Key, so this asks
+      for entities and reporting.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R3
+  - populated_graph
+- id: C-R3-02
+  description: The reporting describes campaign support by a super PAC; this does not assert a direct
+    candidate contribution.
+  split: training
+  task_input:
+    question: Which PACs are recorded as funding the Ed Musgrove campaign, and what reporting supports
+      those links?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-R3-02
+    family: R3
+    cohort: populated_graph
+    scope_note: The reporting describes campaign support by a super PAC; this does not assert a direct
+      candidate contribution.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - R3
+  - populated_graph
+- id: C-M1-01
+  description: Follows observed lobbying and article-grounded Bill topic edges; does not infer causal
+    influence.
+  split: training
+  task_input:
+    question: Which policy areas are connected to Catalina Media Development LLC through Bills it has
+      a recorded lobbying relationship with?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M1-01
+    family: M1
+    cohort: populated_graph
+    scope_note: Follows observed lobbying and article-grounded Bill topic edges; does not infer causal
+      influence.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M1
+  - populated_graph
+- id: C-M1-02
+  description: A second populated policy footprint. Duplicate stored ids are deduplicated in reference
+    rows.
+  split: training
+  task_input:
+    question: Which policy areas are connected to Stand With Survivors through Bills it has a recorded
+      lobbying relationship with?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M1-02
+    family: M1
+    cohort: populated_graph
+    scope_note: A second populated policy footprint. Duplicate stored ids are deduplicated in reference
+      rows.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M1
+  - populated_graph
+- id: C-M2-01
+  description: Same-side intersection uses two explicit LOBBIED_FOR edges, preserving the category without
+    missing stance alignment.
+  split: training
+  task_input:
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the
+      2025-2026 session?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M2-01
+    family: M2
+    cohort: populated_graph
+    scope_note: Same-side intersection uses two explicit LOBBIED_FOR edges, preserving the category without
+      missing stance alignment.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M2
+  - populated_graph
+- id: C-M2-02
+  description: A second seed tests the same intersection with separate claim provenance.
+  split: training
+  task_input:
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists
+      Agency in the 2025-2026 session?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M2-02
+    family: M2
+    cohort: populated_graph
+    scope_note: A second seed tests the same intersection with separate claim provenance.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M2
+  - populated_graph
+- id: C-M3-01
+  description: Co-mention means sharing a Chunk; it does not imply a financial or political relationship.
+  split: training
+  task_input:
+    question: Which organizations appear in the same stored reporting chunks as Steve Hilton?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M3-01
+    family: M3
+    cohort: populated_graph
+    scope_note: Co-mention means sharing a Chunk; it does not imply a financial or political relationship.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M3
+  - populated_graph
+- id: C-M3-02
+  description: Names the source article to make the subject and reporting scope resolvable.
+  split: training
+  task_input:
+    question: Which organizations appear in the same reporting chunks as Gavin Newsom in the article titled
+      Newsom pushes environmental carve-out for campaign donor’s Santa Monica project?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M3-02
+    family: M3
+    cohort: populated_graph
+    scope_note: Names the source article to make the subject and reporting scope resolvable.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M3
+  - populated_graph
+- id: C-M4-01
+  description: Populated two-hop influence-chain prefix. The original extension from candidate to Bill
+    has zero matches.
+  split: training
+  task_input:
+    question: Which candidates are connected to California Leads through campaigns it is recorded as funding?
+      Include the campaign and reporting for each link.
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M4-01
+    family: M4
+    cohort: populated_graph
+    scope_note: Populated two-hop influence-chain prefix. The original extension from candidate to Bill
+      has zero matches.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M4
+  - populated_graph
+- id: C-M4-02
+  description: Same two-hop chain with the Prop arm of CAMPAIGN_FOR. No causal influence or funding total
+    is inferred.
+  split: training
+  task_input:
+    question: Which ballot measures are connected to Michelson Center For Public Policy through campaigns
+      it is recorded as funding? Include the campaign and reporting for each link.
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M4-02
+    family: M4
+    cohort: populated_graph
+    scope_note: Same two-hop chain with the Prop arm of CAMPAIGN_FOR. No causal influence or funding total
+      is inferred.
+    grounding: structure-derived
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M4
+  - populated_graph
+- id: C-M5-01
+  description: An individually reported vote using the News Ontology shortcut; no complete roll call or
+    event date is assumed.
+  split: training
+  task_input:
+    question: What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session, and
+      which reporting states it?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M5-01
+    family: M5
+    cohort: populated_graph
+    scope_note: An individually reported vote using the News Ontology shortcut; no complete roll call
+      or event date is assumed.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M5
+  - populated_graph
+- id: C-M5-02
+  description: The attached quote explicitly says he voted no. The stored event sub-label is Hearing,
+    so matching only Vote would miss it.
+  split: training
+  task_input:
+    question: What vote is recorded for Scott Wiener on SB 1229 in the 2025-2026 session, and which reporting
+      states it?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-M5-02
+    family: M5
+    cohort: populated_graph
+    scope_note: The attached quote explicitly says he voted no. The stored event sub-label is Hearing,
+      so matching only Vote would miss it.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - M5
+  - populated_graph
+- id: C-C1-01
+  description: The original committee-hearing question is narrowed to the populated referral relationship.
+  split: training
+  task_input:
+    question: Which Bills from the 2025-2026 session are recorded as referred to the Senate Appropriations
+      Committee?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-C1-01
+    family: C1
+    cohort: populated_graph
+    scope_note: The original committee-hearing question is narrowed to the populated referral relationship.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - C1
+  - populated_graph
+- id: C-C1-02
+  description: Reverse lookup of the same recorded referrals. Does not silently call referrals hearings.
+  split: training
+  task_input:
+    question: Which committees is AB 2540 in the 2025-2026 session recorded as having been referred to?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
+    source_case_id: C-C1-02
+    family: C1
+    cohort: populated_graph
+    scope_note: Reverse lookup of the same recorded referrals. Does not silently call referrals hearings.
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+  tags:
+  - C1
+  - populated_graph
+- id: Q-D-01
+  description: Out of domain
+  split: training
+  task_input:
+    question: What did the Texas legislature do about housing this year?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Out of domain
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-02
+  description: Narrative or motive
+  split: training
+  task_input:
+    question: Why did Newsom really sign the Uber ballot-measure deal?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Narrative or motive
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-03
+  description: Normative
+  split: training
+  task_input:
+    question: Should I vote yes on Proposition 38?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Normative
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-04
+  description: Predictive
+  split: training
+  task_input:
+    question: Will the HOA fee cap bill pass?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Predictive
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-05
+  description: Beyond-evidence inference
+  split: training
+  task_input:
+    question: Which California legislators are bought by tech money?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Beyond-evidence inference
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-06
+  description: Private individuals
+  split: training
+  task_input:
+    question: Who are the family members of a given legislator?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Private individuals
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-D-07
+  description: Absence over an open universe
+  split: training
+  task_input:
+    question: Which organizations did not fund the campaign against Proposition 38?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Absence over an open universe
+    cohort: declined_control
+    scope_note: Permanent decline target from the authored question set; review the actual rewrite and
+      assessment.
+  tags:
+  - declined_control
+- id: Q-F-01
+  description: Roll-call votes
+  split: training
+  task_input:
+    question: How did each senator vote on the ADA lawsuit bill?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Roll-call votes
+    cohort: deferred_control
+    scope_note: 'Coverage control from the authored question set. What closes it: Open States ingestion
+      (outcome 5)'
+  tags:
+  - deferred_control
+- id: Q-F-02
+  description: Campaign finance
+  split: training
+  task_input:
+    question: Who were the largest donors to the 2026 governor's race?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Campaign finance
+    cohort: deferred_control
+    scope_note: 'Coverage control from the authored question set. What closes it: CAL-ACCESS ingestion
+      (outcome 5)'
+  tags:
+  - deferred_control
+- id: Q-F-03
+  description: District history
+  split: training
+  task_input:
+    question: Who represented Assembly District 52 before and after the 2021 redistricting?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: District history
+    cohort: deferred_control
+    scope_note: 'Coverage control from the authored question set. What closes it: `District`, `RedistrictingCycle`,
+      and `LegislativeTenure`, none of which the News Ontology produces'
+  tags:
+  - deferred_control
+- id: Q-F-04
+  description: Negation over a closed universe
+  split: training
+  task_input:
+    question: Which Assembly members did not vote on AB 1165?
+  metadata:
+    source: work/initiatives/useful-graph-retrieval/question-set.md
+    family: Negation over a closed universe
+    cohort: deferred_control
+    scope_note: 'Coverage control from the authored question set. What closes it: The roll-call layer.
+      Every member is enumerable and every non-vote is recorded, so the complement is finite and meaningful
+      — which is exactly what distinguishes this from absence above.'
+  tags:
+  - deferred_control

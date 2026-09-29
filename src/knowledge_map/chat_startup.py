@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -14,6 +14,7 @@ import httpx
 from dotenv import load_dotenv
 from neo4j import READ_ACCESS, AsyncGraphDatabase
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
@@ -112,7 +113,10 @@ def _required(dependency: str) -> Iterator[None]:
 
 @asynccontextmanager
 async def chat_dependencies(
-    *, coverage_path: Path | None = None
+    *,
+    coverage_path: Path | None = None,
+    chat_deployment: ModelDeployment | None = None,
+    capabilities: Sequence[AbstractCapability] = (),
 ) -> AsyncIterator[ChatDependencies]:
     load_dotenv()
     code_revision, worktree_dirty = code_state()
@@ -179,16 +183,20 @@ async def chat_dependencies(
             coverage_observed_at = datetime.now(UTC)
         with _required("Query Rewriter deployment"):
             rewrite_deployment = query_rewriter_deployment_from_environment()
-            rewriter = get_query_rewriter(rewrite_deployment, cache_model=False)
+            rewriter = get_query_rewriter(
+                rewrite_deployment, cache_model=False, capabilities=capabilities
+            )
             assert isinstance(rewriter.model, OpenAIChatModel)
             resources.push_async_callback(rewriter.model.client.close)
         with _required("Chat Agent deployment"):
-            chat_deployment = deployment_from_environment(
+            chat_deployment = chat_deployment or deployment_from_environment(
                 os.environ.get("CHAT_DEPLOYMENT", "local"),
                 default_local_model=DEFAULT_LOCAL_CHAT_MODEL,
                 command_name="Chat Agent",
             )
-            chat_agent = get_chat_agent(chat_deployment, cache_model=False)
+            chat_agent = get_chat_agent(
+                chat_deployment, cache_model=False, capabilities=capabilities
+            )
             assert isinstance(chat_agent.model, OpenAIChatModel)
             resources.push_async_callback(chat_agent.model.client.close)
         if not model_reachability_check_skipped():
@@ -210,6 +218,7 @@ async def chat_dependencies(
             selection_model=chat_agent.model,
             wiring_model=chat_agent.model,
             binding_model=chat_agent.model,
+            capabilities=capabilities,
         )
         store = EvidenceStore(driver, database=database)
         fusion = FusionConfig()

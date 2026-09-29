@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic_evals.evaluators import Evaluator
+from pydantic_evals.lifecycle import CaseLifecycle
 
 from knowledge_map.schemas import ModelDeployment
 
@@ -67,6 +68,8 @@ class EvaluationTask:
     here -- instructions rendered per case vary by input, and what varies
     with them is the Data Set, which a report already names.
     """
+    case_lifecycle: type[CaseLifecycle] | None = None
+    """Optional case evidence capture through Pydantic Evals' lifecycle."""
 
     @property
     def data_set_stem(self) -> str:

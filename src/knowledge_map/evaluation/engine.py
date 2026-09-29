@@ -22,7 +22,7 @@ from knowledge_map.utils.telemetry import setup_telemetry
 from .data_set import EvaluationCase, EvaluationDataSet, EvaluationSplit
 
 
-class _EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
+class EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
     """Attach case-scoped evidence at the framework lifecycle boundary."""
 
     async def prepare_context(self, ctx: EvaluatorContext) -> EvaluatorContext:
@@ -83,6 +83,7 @@ def run_data_set(
     split: EvaluationSplit | None = None,
     max_concurrency: int = 1,
     experiment_metadata: Mapping[str, Any] | None = None,
+    case_lifecycle: type[CaseLifecycle] | None = None,
 ) -> EvaluationReport[Any, Any, Any]:
     """Execute every case in ``data_set`` against ``task``.
 
@@ -107,7 +108,7 @@ def run_data_set(
         metadata=dict(experiment_metadata) if experiment_metadata else None,
         progress=False,
         max_concurrency=max_concurrency,
-        lifecycle=_EvaluationCaseLifecycle,
+        lifecycle=case_lifecycle or EvaluationCaseLifecycle,
     )
 
 

@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import Any, Literal, LiteralString, cast
@@ -13,6 +13,7 @@ import logfire
 from neo4j import READ_ACCESS, AsyncDriver, Query
 from neo4j.exceptions import DriverError, Neo4jError
 from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from pydantic_ai.models import Model
 from pydantic_ai.usage import RunUsage
@@ -188,6 +189,7 @@ def get_structural_agents(
     selection_model: Model,
     wiring_model: Model,
     binding_model: Model,
+    capabilities: Sequence[AbstractCapability] = (),
 ) -> StructuralAgents:
     agents = StructuralAgents(
         ontology_filter=cast(
@@ -199,6 +201,7 @@ def get_structural_agents(
                 deps_type=ConstructionValidation,
                 output_type=OntologySelection,
                 instructions=STRUCTURAL_INSTRUCTIONS["structural_ontology_filter"],
+                capabilities=capabilities,
             ),
         ),
         selector=cast(
@@ -210,6 +213,7 @@ def get_structural_agents(
                 deps_type=ConstructionValidation,
                 output_type=PieceSelection,
                 instructions=STRUCTURAL_INSTRUCTIONS["structural_selector"],
+                capabilities=capabilities,
             ),
         ),
         wiring=cast(
@@ -221,6 +225,7 @@ def get_structural_agents(
                 deps_type=ConstructionValidation,
                 output_type=SemanticWiring,
                 instructions=STRUCTURAL_INSTRUCTIONS["structural_wiring"],
+                capabilities=capabilities,
             ),
         ),
         binder=cast(
@@ -232,6 +237,7 @@ def get_structural_agents(
                 deps_type=ConstructionValidation,
                 output_type=PositionalBindings,
                 instructions=STRUCTURAL_INSTRUCTIONS["structural_binder"],
+                capabilities=capabilities,
             ),
         ),
     )

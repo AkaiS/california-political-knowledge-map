@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat evaluation runs</title>
+  <style>
+    :root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; background: #f5f6f5; color: #192422; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1020px; margin: 0 auto; padding: 46px 28px; }
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 36px); line-height: 1.2; }
+    .intro { color: #586c68; margin: 0 0 30px; }
+    .heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; }
+    h2 { font-size: 17px; margin: 0; }
+    .count { color: #586c68; font-size: 13px; }
+    #runs { display: grid; gap: 12px; }
+    .run { display: block; color: inherit; text-decoration: none; background: white; border: 1px solid #dbe2df; border-radius: 10px; padding: 18px 20px; }
+    .run:hover, .run:focus-visible { border-color: #188476; box-shadow: 0 3px 14px #123f3214; }
+    .run-top { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
+    .run-title { font-weight: 700; font-size: 18px; }
+    .date, .details { color: #586c68; font-size: 13px; }
+    .details { margin-top: 4px; overflow-wrap: anywhere; }
+    .progress { margin-top: 15px; display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 650; }
+    .bar { height: 8px; border-radius: 20px; background: #e5eeeb; overflow: hidden; margin-top: 7px; }
+    .fill { height: 100%; background: #188476; }
+    .breakdown { color: #586c68; font-size: 12px; margin-top: 7px; }
+    .empty { color: #586c68; border: 1px dashed #c7d4d0; border-radius: 10px; padding: 22px; background: #fff; }
+    @media (max-width: 600px) { main { padding: 24px 15px; } .run-top { display: block; } .date { display: block; margin-top: 3px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Chat evaluation runs</h1>
+    <p class="intro">Choose a run to inspect its case traces and continue your review.</p>
+    <div class="heading"><h2>Recent runs</h2><span id="count" class="count"></span></div>
+    <div id="runs"><div class="empty">Loading runs…</div></div>
+  </main>
+  <script>
+    'use strict';
+    const runsNode = document.getElementById('runs');
+    const add = (parent, tag, value, className) => {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (value != null) element.textContent = String(value);
+      parent.append(element);
+      return element;
+    };
+    const dateLabel = value => {
+      if (!value) return 'Date unavailable';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+    };
+    fetch('/api/runs').then(response => {
+      if (!response.ok) throw new Error(`Could not load runs (${response.status})`);
+      return response.json();
+    }).then(runs => {
+      runsNode.replaceChildren();
+      document.getElementById('count').textContent = `${runs.length} run${runs.length === 1 ? '' : 's'}`;
+      if (!runs.length) {
+        add(runsNode, 'div', 'No chat evaluation reports yet. Run ca-map eval run chat to create one.', 'empty');
+        return;
+      }
+      for (const run of runs) {
+        const link = add(runsNode, 'a', null, 'run');
+        link.href = `/runs/${encodeURIComponent(run.id)}`;
+        const top = add(link, 'div', null, 'run-top');
+        add(top, 'span', run.model || 'Unknown model', 'run-title');
+        add(top, 'time', dateLabel(run.ran_at), 'date');
+        add(link, 'div', `${run.deployment || 'unknown deployment'} · ${run.split || 'unknown split'} · ${run.id}`, 'details');
+        const progress = add(link, 'div', null, 'progress');
+        add(progress, 'span', `${run.reviewed_count} of ${run.case_count} reviewed`);
+        add(progress, 'span', `${run.case_count ? Math.round(100 * run.reviewed_count / run.case_count) : 0}%`);
+        const bar = add(link, 'div', null, 'bar');
+        add(bar, 'div', null, 'fill').style.width = `${run.case_count ? 100 * run.reviewed_count / run.case_count : 0}%`;
+        add(link, 'div', `${run.pass_count} pass · ${run.fail_count} fail · ${run.defer_count} defer`, 'breakdown');
+      }
+    }).catch(error => { runsNode.replaceChildren(); add(runsNode, 'div', error.message, 'empty'); });
+  </script>
+</body>
+</html>
