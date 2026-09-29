@@ -5,10 +5,11 @@ from __future__ import annotations
 import dataclasses
 import json
 from datetime import UTC, datetime
+from statistics import fmean
 from typing import Any, Literal
 from urllib.parse import quote
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
 from pydantic_ai.capabilities.hooks import Hooks
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
@@ -86,6 +87,81 @@ class ChatOutput(BaseModel):
     settings: dict[str, Any] = Field(default_factory=dict)
     coverage: CoverageDescription | None = None
     messages: list[dict[str, Any]] = Field(default_factory=list)
+
+    @field_serializer("answer", "retrieval")
+    def serialize_retrieval_result(
+        self, value: RetrievalAnswer | EvidenceAssemblyFailure | EvidencePackage | None
+    ) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        return compact_retrieval_for_report(value.model_dump(mode="json"))
+
+
+def compact_retrieval_for_report(document: dict[str, Any]) -> dict[str, Any]:
+    """Keep the full result in memory and bound its full-text report payload.
+
+    Selected Grounding Evidence retains its own candidate contributions, even
+    when a contribution falls below the branch-list cutoff.
+    """
+    evidence = document.get("evidence", document)
+    execution = evidence.get("execution", document.get("execution"))
+    if execution is None:
+        return document
+    outcomes = execution.get("outcomes", ())
+    dense = next(
+        (
+            outcome
+            for outcome in outcomes
+            if outcome["branch"] == "dense" and outcome["status"] == "succeeded"
+        ),
+        None,
+    )
+    keep_count = len(dense["candidates"]) if dense is not None else 0
+    full_text = next(
+        (
+            outcome
+            for outcome in outcomes
+            if outcome["branch"] == "full_text" and outcome["status"] == "succeeded"
+        ),
+        None,
+    )
+    if full_text is None:
+        return document
+    if "candidate_summary" in full_text:
+        return document
+
+    candidates = sorted(
+        full_text["candidates"],
+        key=lambda candidate: (candidate["ranking"]["rank"], candidate["chunk_id"]),
+    )
+    unlisted = candidates[keep_count:]
+    scores = [
+        candidate["ranking"]["score"]
+        for candidate in candidates
+        if candidate["ranking"]["score"] is not None
+    ]
+    unlisted_scores = [
+        candidate["ranking"]["score"]
+        for candidate in unlisted
+        if candidate["ranking"]["score"] is not None
+    ]
+    unlisted_ranks = [candidate["ranking"]["rank"] for candidate in unlisted]
+    full_text["candidates"] = candidates[:keep_count]
+    full_text["candidate_summary"] = {
+        "total_retrieved": len(candidates),
+        "dense_retrieved": keep_count,
+        "retained_count": len(full_text["candidates"]),
+        "unlisted_count": len(unlisted),
+        "scored_count": len(scores),
+        "unlisted_scored_count": len(unlisted_scores),
+        "all_avg_score": fmean(scores) if scores else None,
+        "unlisted_avg_score": fmean(unlisted_scores) if unlisted_scores else None,
+        "unlisted_min_score": min(unlisted_scores, default=None),
+        "unlisted_max_score": max(unlisted_scores, default=None),
+        "unlisted_rank_min": min(unlisted_ranks, default=None),
+        "unlisted_rank_max": max(unlisted_ranks, default=None),
+    }
+    return document
 
 
 def capture_messages(records: list[dict[str, Any]]) -> Hooks:

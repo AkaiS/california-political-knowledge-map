@@ -14,7 +14,7 @@ from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC041
 from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
-from test_retrieval import COVERAGE, Branch, coordinator
+from test_retrieval import COVERAGE, Branch, candidate, coordinator
 
 from knowledge_map.chat_startup import ChatDependencies, chat_dependencies
 from knowledge_map.chat_telemetry import ChatSessionSettings
@@ -37,7 +37,11 @@ from knowledge_map.schemas.query_preparation import (
     QueryRewriteProposal,
     QuestionAssessment,
 )
-from knowledge_map.schemas.retrieval import RetrievalAnswer, RetrievalBranch
+from knowledge_map.schemas.retrieval import (
+    BranchScore,
+    RetrievalAnswer,
+    RetrievalBranch,
+)
 
 DEPLOYMENT = ModelDeployment(kind=DeploymentKind.LOCAL, model="test-chat")
 
@@ -193,6 +197,111 @@ def test_report_contains_rendered_answer_sources_requests_and_stage_outcomes(
     assert saved["label_quality"] == "unlabeled"
     assert saved["report"]["cases"][0]["output"]["messages"]
     assert "private database diagnostic" not in path.read_text()
+
+
+def test_report_keeps_only_dense_count_of_full_text_candidates(
+    monkeypatch, chat_capture, tmp_path
+):
+    branches = fake_dependencies(monkeypatch)
+    full_text = RetrievalBranch.FULL_TEXT
+    dense = RetrievalBranch.DENSE
+
+    def scored(rank: int, score: float):
+        found = candidate(full_text, chunk=f"ft-{rank}", rank=rank)
+        return found.model_copy(
+            update={
+                "ranking": found.ranking.model_copy(
+                    update={"score": BranchScore(score)}
+                )
+            }
+        )
+
+    branches[full_text].candidates = (
+        scored(4, 4.0),
+        scored(1, 10.0),
+        scored(3, 6.0),
+        scored(2, 8.0),
+    )
+    branches[dense].candidates = (
+        candidate(dense, chunk="dense-1", rank=1),
+        candidate(dense, chunk="dense-2", rank=2),
+    )
+
+    report = run_one()
+    output = report.cases[0].output
+    original = next(
+        outcome
+        for outcome in output.answer.evidence.execution.outcomes
+        if outcome.branch == full_text
+    )
+    assert len(original.candidates) == 4
+
+    path = write_report(
+        report,
+        task="chat",
+        deployment=DEPLOYMENT,
+        data_set_path="evals/unlabeled/chat.yaml",
+        label_quality=LabelQuality.UNLABELED,
+        root=tmp_path,
+    )
+    saved = json.loads(path.read_text())["report"]["cases"][0]["output"]
+    branch = next(
+        outcome
+        for outcome in saved["answer"]["evidence"]["execution"]["outcomes"]
+        if outcome["branch"] == "full_text"
+    )
+    assert [item["ranking"]["rank"] for item in branch["candidates"]] == [1, 2]
+    assert branch["candidate_summary"] == {
+        "total_retrieved": 4,
+        "dense_retrieved": 2,
+        "retained_count": 2,
+        "unlisted_count": 2,
+        "scored_count": 4,
+        "unlisted_scored_count": 2,
+        "all_avg_score": 7.0,
+        "unlisted_avg_score": 5.0,
+        "unlisted_min_score": 4.0,
+        "unlisted_max_score": 6.0,
+        "unlisted_rank_min": 3,
+        "unlisted_rank_max": 4,
+    }
+    assert any(
+        passage["candidate"]["chunk_id"] == "ft-3"
+        for source in saved["answer"]["evidence"]["sources"]
+        for passage in source["passages"]
+    )
+
+
+def test_report_summarizes_unscored_full_text_candidates_when_dense_fails():
+    document = {
+        "execution": {
+            "outcomes": [
+                {
+                    "branch": "full_text",
+                    "status": "succeeded",
+                    "candidates": [
+                        {"chunk_id": "a", "ranking": {"rank": 1, "score": None}},
+                        {"chunk_id": "b", "ranking": {"rank": 2, "score": 4.0}},
+                    ],
+                },
+                {"branch": "dense", "status": "failed"},
+            ]
+        }
+    }
+
+    result = task_module.compact_retrieval_for_report(document)
+    full_text = result["execution"]["outcomes"][0]
+
+    assert full_text["candidates"] == []
+    assert full_text["candidate_summary"]["total_retrieved"] == 2
+    assert full_text["candidate_summary"]["dense_retrieved"] == 0
+    assert full_text["candidate_summary"]["unlisted_count"] == 2
+    assert full_text["candidate_summary"]["unlisted_scored_count"] == 1
+    assert full_text["candidate_summary"]["unlisted_avg_score"] == 4.0
+    assert task_module.compact_retrieval_for_report(result) is result
+    assert (
+        result["execution"]["outcomes"][0]["candidate_summary"]["total_retrieved"] == 2
+    )
 
 
 def test_declined_question_is_retained_without_retrieval(monkeypatch, chat_capture):

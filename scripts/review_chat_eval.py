@@ -10,6 +10,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from knowledge_map.evaluation.tasks.chat import compact_retrieval_for_report
+
 
 def load_report(path: Path) -> dict[str, Any]:
     report = json.loads(path.read_text())
@@ -17,6 +19,13 @@ def load_report(path: Path) -> dict[str, Any]:
         report.get("report", {}).get("cases"), list
     ):
         raise ValueError("expected a chat evaluation report with report.cases")
+    for case in report["report"]["cases"]:
+        output = case.get("output")
+        if not isinstance(output, dict):
+            continue
+        for key in ("answer", "retrieval"):
+            if isinstance(output.get(key), dict):
+                compact_retrieval_for_report(output[key])
     return report
 
 

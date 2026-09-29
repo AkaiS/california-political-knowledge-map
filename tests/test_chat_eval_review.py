@@ -35,3 +35,63 @@ def test_reviewer_rejects_non_chat_report(tmp_path):
 
     with pytest.raises(ValueError, match="chat evaluation report"):
         review_server.load_report(path)
+
+
+def test_reviewer_compacts_legacy_report_without_changing_it(tmp_path):
+    path = tmp_path / "report.json"
+    report = {
+        "task": "chat",
+        "report": {
+            "cases": [
+                {
+                    "name": "case-1",
+                    "output": {
+                        "answer": {
+                            "evidence": {
+                                "execution": {
+                                    "outcomes": [
+                                        {
+                                            "branch": "full_text",
+                                            "status": "succeeded",
+                                            "candidates": [
+                                                {
+                                                    "chunk_id": f"ft-{rank}",
+                                                    "ranking": {
+                                                        "rank": rank,
+                                                        "score": float(rank),
+                                                    },
+                                                }
+                                                for rank in (1, 2, 3)
+                                            ],
+                                        },
+                                        {
+                                            "branch": "dense",
+                                            "status": "succeeded",
+                                            "candidates": [{"chunk_id": "dense-1"}],
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                }
+            ]
+        },
+    }
+    path.write_text(json.dumps(report))
+
+    loaded = review_server.load_report(path)
+    full_text = loaded["report"]["cases"][0]["output"]["answer"]["evidence"][
+        "execution"
+    ]["outcomes"][0]
+
+    assert len(full_text["candidates"]) == 1
+    assert full_text["candidate_summary"]["total_retrieved"] == 3
+    assert (
+        len(
+            json.loads(path.read_text())["report"]["cases"][0]["output"]["answer"][
+                "evidence"
+            ]["execution"]["outcomes"][0]["candidates"]
+        )
+        == 3
+    )

@@ -47,7 +47,7 @@ Read the case from the voter's question outward:
 
 1. **Answer shown to the voter.** Did the response direct the reader to useful sources, state coverage limits, and avoid claims its citations do not support? A Declined or Deferred control may have no retrieval answer.
 2. **Question preparation.** Did the Query Rewrite preserve the named people, measures, relationship, time scope, and requested result? Was the policy and coverage assessment appropriate?
-3. **Retrieval branches.** Check the full-text, dense, and structural outcomes. Expand candidates to see ranks and routes. A failed branch can coexist with a prepared answer from other branches.
+3. **Retrieval branches.** Check the full-text, dense, and structural outcomes. The report lists only the top full-text candidates up to the number returned by dense retrieval. It records the total full-text count and aggregate scores and rank range for candidates left off that list. Expand retained candidates to see ranks and routes. Selected Grounding Evidence keeps its own candidate contributions even when a supporting passage came from below the list cutoff. A failed branch can coexist with a prepared answer from other branches.
 4. **Selected Grounding Evidence.** Read the stored passages under each Source Article citation. Check whether the specific passage supports the answer's wording, and whether relevant material was dropped by Evidence Assembly's context limit.
 5. **Application stages and model messages.** Expand stage observations for the rewrite, assessment, branch work, fusion, Evidence Assembly, and guidance. Model messages show the requests and responses captured for this evaluation case, including retries or failed requests where available.
 
@@ -80,3 +80,7 @@ The JSON report and review file are local artifacts. Review their captured
 question, passage, and model-message content before sharing them. Commit a
 report and its associated review when it becomes evidence for a later change,
 so a reader can compare cases and critiques against the exact run.
+
+The local reviewer also applies this display limit when opening an older report
+that stored every full-text candidate. It leaves the committed report and its
+existing review notes unchanged.

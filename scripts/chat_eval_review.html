@@ -215,13 +215,19 @@
         add(heading, 'strong', outcome.branch || 'branch'); add(heading, 'span', outcome.status || 'unknown', `badge ${outcome.status || ''}`);
         if (outcome.reason) add(block, 'div', `Reason: ${outcome.reason}`);
         const count = Array.isArray(outcome.candidates) ? outcome.candidates.length : 0;
+        const summary = object(outcome.candidate_summary);
+        if (summary.total_retrieved != null) {
+          const score = value => typeof value === 'number' ? value.toFixed(3) : 'unavailable';
+          add(block, 'div', `${summary.total_retrieved} retrieved · ${summary.retained_count} retained (dense count ${summary.dense_retrieved}) · ${summary.unlisted_count} summarized`, 'meta');
+          if (summary.unlisted_count) add(block, 'div', `Average score: all ${score(summary.all_avg_score)}, summarized ${score(summary.unlisted_avg_score)} · summarized score range ${score(summary.unlisted_min_score)}–${score(summary.unlisted_max_score)} · ranks ${summary.unlisted_rank_min}–${summary.unlisted_rank_max}`, 'meta');
+        }
         if (count) {
           const preview = add(block, 'div');
           for (const candidate of outcome.candidates.slice(0, 10)) {
             const rank = object(candidate.ranking), route = Array.isArray(candidate.routes) ? candidate.routes.map(item => item.kind).join(', ') : '';
             add(preview, 'div', `#${rank.rank ?? '?'} · ${candidate.chunk_id || 'unknown chunk'}${rank.score != null ? ' · score ' + Number(rank.score).toFixed(3) : ''}${route ? ' · ' + route : ''}`, 'meta');
           }
-          detail(block, `All ${count} candidates, ranks, and routes`, outcome.candidates);
+          detail(block, `${summary.total_retrieved != null ? 'Retained' : 'All'} ${count} candidates, ranks, and routes`, outcome.candidates);
         }
       }
     }
