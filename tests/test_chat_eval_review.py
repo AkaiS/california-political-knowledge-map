@@ -2,6 +2,9 @@
 
 import importlib.util
 import json
+import os
+import subprocess
+import sys
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -15,6 +18,29 @@ SPEC = importlib.util.spec_from_file_location("review_chat_eval", SCRIPT)
 assert SPEC and SPEC.loader
 review_server = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(review_server)
+
+
+def test_reviewer_uses_its_own_checkout_when_an_older_package_is_on_path(tmp_path):
+    for package in (
+        "knowledge_map",
+        "knowledge_map/evaluation",
+        "knowledge_map/evaluation/tasks",
+    ):
+        directory = tmp_path / package
+        directory.mkdir(parents=True)
+        (directory / "__init__.py").write_text("")
+    environment = {**os.environ, "PYTHONPATH": str(tmp_path)}
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--help"],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        env=environment,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_review_file_preserves_case_verdict_and_note(tmp_path):

@@ -6,12 +6,17 @@ import argparse
 import json
 import os
 import re
+import sys
 import tempfile
 from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
+
+# A script launched with another checkout's editable install must still use the
+# report model shipped beside this reviewer.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from knowledge_map.evaluation.tasks.chat import compact_retrieval_for_report
 
