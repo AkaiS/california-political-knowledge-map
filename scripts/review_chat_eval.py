@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -114,6 +115,7 @@ def save_reviews(path: Path, reviews: dict[str, Any]) -> None:
 def make_handler(
     reports_dir: Path, runs_page: bytes, reviewer_page: bytes
 ) -> type[BaseHTTPRequestHandler]:
+    reviews_lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, status: int, body: bytes, content_type: str) -> None:
@@ -124,7 +126,15 @@ def make_handler(
             self.end_headers()
             self.wfile.write(body)
 
+        def _trusted_host(self) -> bool:
+            if self.headers.get("Host") == f"127.0.0.1:{self.server.server_port}":
+                return True
+            self._send(403, b"Invalid host", "text/plain; charset=utf-8")
+            return False
+
         def do_GET(self) -> None:
+            if not self._trusted_host():
+                return
             path = urlsplit(self.path).path
             if path == "/":
                 self._send(200, runs_page, "text/html; charset=utf-8")
@@ -160,6 +170,20 @@ def make_handler(
                     self._send(404, b"Not found", "text/plain; charset=utf-8")
 
         def do_POST(self) -> None:
+            if not self._trusted_host():
+                return
+            origin = self.headers.get("Origin")
+            if origin and origin != f"http://127.0.0.1:{self.server.server_port}":
+                self._send(403, b"Invalid origin", "text/plain; charset=utf-8")
+                return
+            content_type = (
+                self.headers.get("Content-Type", "").partition(";")[0].strip().lower()
+            )
+            if content_type != "application/json":
+                self._send(
+                    415, b"Expected application/json", "text/plain; charset=utf-8"
+                )
+                return
             parts = [
                 unquote(part) for part in urlsplit(self.path).path.strip("/").split("/")
             ]
@@ -190,9 +214,10 @@ def make_handler(
                     raise ValueError("invalid verdict")
                 if not isinstance(review["note"], str) or len(review["note"]) > 20_000:
                     raise ValueError("invalid note")
-                reviews = load_reviews(reviews_path)
-                reviews[name] = review
-                save_reviews(reviews_path, reviews)
+                with reviews_lock:
+                    reviews = load_reviews(reviews_path)
+                    reviews[name] = review
+                    save_reviews(reviews_path, reviews)
             except (ValueError, TypeError, json.JSONDecodeError) as error:
                 self._send(400, str(error).encode(), "text/plain; charset=utf-8")
                 return

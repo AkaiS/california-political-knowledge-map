@@ -103,7 +103,7 @@
   </div>
   <script>
     'use strict';
-    let report, cases = [], reviews = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
+    let report, cases = [], reviews = {}, saveStatuses = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
     const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
     const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
     const $ = id => document.getElementById(id);
@@ -147,18 +147,33 @@
           (caseQuestion(item).toLowerCase().includes(query) || item.name.toLowerCase().includes(query));
       });
     }
+    function nextIndex(delta) {
+      const matching = filteredCases().map(item => cases.indexOf(item));
+      return delta < 0 ? matching.filter(position => position < index).at(-1) : matching.find(position => position > index);
+    }
+    function caseRow(list, item, outsideFilter = false) {
+      const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
+      row.type = 'button'; row.onclick = () => { flushSave(); index = cases.indexOf(item); render(true); };
+      add(row, 'span', caseQuestion(item), 'name');
+      const status = reviewFor(item).verdict || 'unreviewed';
+      add(row, 'span', `${item.name} · ${object(item.metadata).cohort || 'unknown cohort'} · ${object(item.output).failure ? 'execution failed · ' : ''}${status}${outsideFilter ? ' · outside filter' : ''}`, 'sub');
+    }
     function renderList() {
       const list = clear('case-list');
       const done = cases.filter(item => reviewFor(item).verdict).length;
       $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining`;
-      for (const item of filteredCases()) {
-        const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
-        row.type = 'button'; row.onclick = () => { flushSave(); index = cases.indexOf(item); render(true); };
-        add(row, 'span', caseQuestion(item), 'name');
-        const status = reviewFor(item).verdict || 'unreviewed';
-        add(row, 'span', `${item.name} · ${object(item.metadata).cohort || 'unknown cohort'} · ${object(item.output).failure ? 'execution failed · ' : ''}${status}`, 'sub');
-      }
-      if (!list.childNodes.length) add(list, 'p', 'No cases match this filter.', 'empty');
+      const matching = filteredCases();
+      if (selection() && !matching.includes(selection())) caseRow(list, selection(), true);
+      for (const item of matching) caseRow(list, item);
+      if (!matching.length) add(list, 'p', 'No cases match this filter.', 'empty');
+      $('previous').disabled = nextIndex(-1) === undefined;
+      $('next').disabled = nextIndex(1) === undefined;
+    }
+    function applyFilters() {
+      const matching = filteredCases();
+      if (matching.length && !matching.includes(selection())) {
+        flushSave(); index = cases.indexOf(matching[0]); render(true);
+      } else renderList();
     }
     function answerText(parent, text) {
       if (!text) { add(parent, 'p', 'No answer was prepared for this case.', 'empty'); return; }
@@ -314,15 +329,14 @@
       renderPreparation(output, item); renderBranches(output); renderEvidence(output); renderStages(item); renderRaw(item);
       $('note').value = review.note || '';
       for (const button of document.querySelectorAll('[data-verdict]')) button.classList.toggle('active', button.dataset.verdict === review.verdict);
-      $('save-status').textContent = '';
-      $('previous').disabled = index === 0; $('next').disabled = index === cases.length - 1;
+      $('save-status').textContent = saveStatuses[item.name] || '';
       renderList();
       if (resetTrace) document.querySelector('.trace-pane').scrollTop = 0;
     }
     function updateReview() {
       const item = selection();
       reviews[item.name] = {...reviewFor(item), note: $('note').value};
-      $('save-status').textContent = 'Saving…';
+      saveStatuses[item.name] = 'Saving…'; $('save-status').textContent = 'Saving…';
       clearTimeout(saveTimer);
       saveTimer = setTimeout(flushSave, 350);
       renderList();
@@ -331,12 +345,14 @@
       clearTimeout(saveTimer);
       const item = selection(); if (!item || !reviews[item.name]) return saveChain;
       const name = item.name, review = {...reviews[name]};
+      saveStatuses[name] = 'Saving…';
+      if (selection()?.name === name) $('save-status').textContent = 'Saving…';
       saveChain = saveChain.then(() => fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})}))
-        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); $('save-status').textContent = 'Saved'; return true; })
-        .catch(error => { $('save-status').textContent = error.message; return false; });
+        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); saveStatuses[name] = 'Saved'; if (selection()?.name === name) $('save-status').textContent = 'Saved'; return true; })
+        .catch(error => { saveStatuses[name] = error.message; if (selection()?.name === name) $('save-status').textContent = error.message; return false; });
       return saveChain;
     }
-    function navigate(delta) { flushSave(); index = Math.max(0, Math.min(cases.length - 1, index + delta)); render(true); }
+    function navigate(delta) { const target = nextIndex(delta); if (target === undefined) return; flushSave(); index = target; render(true); }
     for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => {
       const item = selection(); reviews[item.name] = {...reviewFor(item), verdict: button.dataset.verdict === 'clear' ? null : button.dataset.verdict, note: $('note').value};
       render(); flushSave();
@@ -344,7 +360,7 @@
     $('note').addEventListener('input', updateReview);
     $('all-runs').onclick = event => { event.preventDefault(); flushSave().then(saved => { if (saved) location.href = '/'; }); };
     $('previous').onclick = () => navigate(-1); $('next').onclick = () => navigate(1);
-    $('search').oninput = renderList; $('filter').onchange = renderList; $('cohort').onchange = renderList;
+    $('search').oninput = applyFilters; $('filter').onchange = applyFilters; $('cohort').onchange = applyFilters;
     document.addEventListener('keydown', event => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); flushSave().then(saved => { if (saved) navigate(1); }); return; }
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;

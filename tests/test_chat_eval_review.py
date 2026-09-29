@@ -6,6 +6,8 @@ import os
 import subprocess
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -18,6 +20,20 @@ SPEC = importlib.util.spec_from_file_location("review_chat_eval", SCRIPT)
 assert SPEC and SPEC.loader
 review_server = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(review_server)
+
+
+@contextmanager
+def serve_reviewer(reports_dir):
+    handler = review_server.make_handler(reports_dir, b"runs page", b"review page")
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
 
 
 def test_reviewer_uses_its_own_checkout_when_an_older_package_is_on_path(tmp_path):
@@ -180,12 +196,7 @@ def test_run_routes_keep_reviews_with_their_report(tmp_path):
         (tmp_path / f"{run_id}.json").write_text(
             json.dumps({"task": "chat", "report": {"cases": [{"name": "case-1"}]}})
         )
-    handler = review_server.make_handler(tmp_path, b"runs page", b"review page")
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base = f"http://127.0.0.1:{server.server_port}"
-    try:
+    with serve_reviewer(tmp_path) as base:
         assert urlopen(f"{base}/").read() == b"runs page"
         assert urlopen(f"{base}/runs/first").read() == b"review page"
         assert json.load(urlopen(f"{base}/api/runs/first/report"))["task"] == "chat"
@@ -210,7 +221,92 @@ def test_run_routes_keep_reviews_with_their_report(tmp_path):
         with pytest.raises(HTTPError) as error:
             urlopen(f"{base}/api/runs/%2e%2e/report")
         assert error.value.code == 404
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join()
+
+
+def test_reviewer_rejects_cross_origin_and_plain_text_writes(tmp_path):
+    (tmp_path / "run.json").write_text(
+        json.dumps({"task": "chat", "report": {"cases": [{"name": "case-1"}]}})
+    )
+    payload = json.dumps(
+        {"name": "case-1", "review": {"verdict": "fail", "note": "Wrong answer"}}
+    ).encode()
+    with serve_reviewer(tmp_path) as base:
+        url = f"{base}/api/runs/run/reviews"
+        for headers, expected_status in (
+            ({"Content-Type": "text/plain", "Origin": "https://other.example"}, 403),
+            (
+                {"Content-Type": "application/json", "Origin": "https://other.example"},
+                403,
+            ),
+            ({"Content-Type": "text/plain", "Origin": base}, 415),
+            ({"Content-Type": "application/json", "Host": "other.example"}, 403),
+        ):
+            with pytest.raises(HTTPError) as error:
+                urlopen(Request(url, data=payload, headers=headers))
+            assert error.value.code == expected_status
+            assert not (tmp_path / "run.reviews.json").exists()
+
+        response = urlopen(
+            Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json", "Origin": base},
+            )
+        )
+        assert response.status == 200
+        assert (
+            review_server.load_reviews(tmp_path / "run.reviews.json")["case-1"][
+                "verdict"
+            ]
+            == "fail"
+        )
+
+
+def test_concurrent_review_saves_preserve_different_cases(tmp_path, monkeypatch):
+    (tmp_path / "run.json").write_text(
+        json.dumps(
+            {"task": "chat", "report": {"cases": [{"name": "a"}, {"name": "b"}]}}
+        )
+    )
+    original_load = review_server.load_reviews
+    first_read = threading.Event()
+    second_read = threading.Event()
+    count_lock = threading.Lock()
+    read_count = 0
+
+    def delayed_load(path):
+        nonlocal read_count
+        result = original_load(path)
+        with count_lock:
+            read_count += 1
+            order = read_count
+        if order == 1:
+            first_read.set()
+            second_read.wait(timeout=1)
+        elif order == 2:
+            second_read.set()
+        return result
+
+    monkeypatch.setattr(review_server, "load_reviews", delayed_load)
+    with serve_reviewer(tmp_path) as base:
+
+        def post(name):
+            payload = json.dumps(
+                {"name": name, "review": {"verdict": "pass", "note": name}}
+            ).encode()
+            return urlopen(
+                Request(
+                    f"{base}/api/runs/run/reviews",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+            ).status
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first = executor.submit(post, "a")
+            assert first_read.wait(timeout=3)
+            second = executor.submit(post, "b")
+            assert first.result(timeout=5) == 200
+            assert second.result(timeout=5) == 200
+
+    assert set(original_load(tmp_path / "run.reviews.json")) == {"a", "b"}
