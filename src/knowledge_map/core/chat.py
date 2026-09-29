@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import cast
@@ -10,6 +11,7 @@ from uuid import uuid4
 import logfire
 from pydantic import ValidationError
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
 
@@ -31,6 +33,7 @@ from knowledge_map.schemas.query_preparation import (
 from knowledge_map.schemas.retrieval import (
     CoverageDescription,
     EvidenceAssemblyFailure,
+    EvidencePackage,
     MonthlyCoverage,
     NonemptyText,
     RetrievalAnswer,
@@ -85,6 +88,7 @@ def get_chat_agent(
     deployment: ModelDeployment | None = None,
     *,
     cache_model: bool = True,
+    capabilities: Sequence[AbstractCapability] = (),
 ) -> Agent[None, QuestionAssessment]:
     return cast(
         Agent[None, QuestionAssessment],
@@ -94,6 +98,7 @@ def get_chat_agent(
             output_type=QuestionAssessment,
             retries=0,
             instructions=CHAT_INSTRUCTIONS,
+            capabilities=capabilities,
         ),
     )
 
@@ -118,6 +123,7 @@ class ChatSession:
         self._relevant_collection_ids = relevant_collection_ids
         self._monthly_coverage = monthly_coverage
         self._usage = RunUsage()
+        self._retrieval_result: EvidencePackage | EvidenceAssemblyFailure | None = None
         self.chat_session_id = str(uuid4())
         self._preparation = QuestionPreparation(
             original_question,
@@ -135,6 +141,11 @@ class ChatSession:
             coverage=coverage.model_dump(mode="json"),
             **(asdict(start_settings) if start_settings is not None else {}),
         )
+
+    @property
+    def retrieval_result(self) -> EvidencePackage | EvidenceAssemblyFailure | None:
+        """Keep retrieved evidence inspectable when later guidance fails."""
+        return self._retrieval_result
 
     async def _assess(self, rewrite: QueryRewriteProposal) -> QuestionAssessment:
         result = await self._agent.run(
@@ -214,6 +225,7 @@ class ChatSession:
             usage=self._usage,
             chat_session_id=self.chat_session_id,
         )
+        self._retrieval_result = package
         if isinstance(package, EvidenceAssemblyFailure):
             return package
         with logfire.span(

@@ -290,7 +290,7 @@ A succinct account of verified available material and its known coverage limits,
 _Avoid_: Search result, answer confidence
 
 **Evaluation Data Set**:
-Every labeled example for one component operation, authored as one YAML file under `evals/`. The file is the Data Set; there is no database copy, no construction factory, and no immutable revision beyond the commit the file is read at. Revising it is editing the file and committing; reviewing a revision is reading the diff. Reading it validates every case against the task's own Pydantic types, so a mislabeled field is caught at read time rather than at run time. Every Data Set is a Gold Set or a Silver Set, and the two are never one population: the umbrella names what they have in common and nothing more.
+An authored collection of Evaluation Cases for one task. It may carry human labels (Gold Set), model labels (Silver Set), or no expected outputs (Unlabeled Set). An Unlabeled Set supplies inputs for inspecting whole executions and collecting human observations; running it produces no answer-quality score. A Data Set's revision is the commit that contains it.
 _Avoid_: Test fixtures, benchmark data, dataset, "the gold set" as a catch-all
 
 **Gold Set**:
@@ -301,8 +301,12 @@ _Avoid_: Ground truth, the gold standard, reference set
 An Evaluation Data Set a model labeled against a written annotation guideline, under `evals/silver/`, with a human reviewing rather than authoring the labels. A score against one is agreement with another model's reading of that guideline: a case the annotator got wrong scores a correct answer as a miss, and a ceiling below 1.0 is expected rather than a defect. Coreference, extraction, Policy Area Classification and Topic Assignment are all measured this way, so a Silver Set score is read as a direction of travel and never compared against a Gold Set score as though the two measured the same thing.
 _Avoid_: Gold set, ground truth, weak labels, pseudo-labels
 
+**Unlabeled Set**:
+An Evaluation Data Set with authored inputs and no expected outputs, under `evals/unlabeled/`. It supports error discovery from complete cases. A case may later inform a labeled set, but an Unlabeled Set run alone cannot establish accuracy or failure prevalence.
+_Avoid_: Gold Set, Silver Set, answer benchmark
+
 **Label Quality**:
-Which of the two a Data Set is, recorded in three places that must agree: the directory the file sits in, the `label_quality` its cases carry, and the `label_quality` written into every Evaluation Report. Declared rather than inferred, because a report read a year later has only what it says.
+Whether a Data Set has human-authored labels, model-authored labels, or no labels. Its directory and each Evaluation Report declare this value so a reader knows what a score, or the absence of one, can mean.
 _Avoid_: Confidence, label source, annotation tier
 
 **Evaluation Case**:
@@ -314,7 +318,7 @@ Exactly one role the author assigns to each Evaluation Case: `training` supplies
 _Avoid_: Dataset partition, fold, case label, hashed assignment
 
 **Evaluation Suite**:
-The evaluators run against one Data Set: the `pydantic_evals` case evaluators every case is scored by, and the report evaluators applied to the aggregate. A suite is assembled in the code that runs the task, not declared as a stored definition.
+The evaluators run against one Data Set, when that task has defined evaluators. An Unlabeled Set can run with no answer evaluators while its cases are reviewed. A suite is assembled in the code that runs the task, not declared as a stored definition.
 _Avoid_: Test suite, evaluator registry, suite definition
 
 **Evaluation Rubric**:

@@ -2,13 +2,14 @@
 
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import nullcontext
 from typing import Literal, cast
 
 import httpx
 import logfire
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
@@ -86,6 +87,7 @@ def get_query_rewriter(
     deployment: ModelDeployment | None = None,
     *,
     cache_model: bool = True,
+    capabilities: Sequence[AbstractCapability] = (),
 ) -> Agent[None, QueryRewriteProposal]:
     """Construct the Query Rewriter through the shared observable factory."""
 
@@ -99,6 +101,7 @@ def get_query_rewriter(
             name="query_rewriter",
             output_type=QueryRewriteProposal,
             instructions=QUERY_REWRITER_INSTRUCTIONS,
+            capabilities=capabilities,
         ),
     )
 

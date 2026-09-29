@@ -98,6 +98,13 @@ def add_parser(subparsers: Any) -> None:
     )
     run.add_argument("--max-concurrency", type=_positive_int, default=1)
     run.add_argument(
+        "--case",
+        action="append",
+        default=None,
+        dest="case_ids",
+        help="Run one authored case ID; repeat to select several cases",
+    )
+    run.add_argument(
         "--no-report",
         action="store_true",
         help="Print the report without writing a file",
@@ -200,6 +207,15 @@ def _run(args: argparse.Namespace) -> None:
         metadata_type=task.metadata_type,
     )
     split = EvaluationSplit(args.split) if args.split else None
+    case_ids = getattr(args, "case_ids", None)
+    if case_ids:
+        selected = set(case_ids)
+        unknown = selected - {case.id for case in data_set.cases}
+        if unknown:
+            sys.exit("Unknown case IDs: " + ", ".join(sorted(unknown)))
+        data_set = data_set.model_copy(
+            update={"cases": tuple(case for case in data_set.cases if case.id in selected)}
+        )
 
     admission_scope = (
         openrouter_admission_ceiling(args.max_concurrency)
@@ -211,6 +227,7 @@ def _run(args: argparse.Namespace) -> None:
             data_set,
             task=task.build(deployment, data_set),
             evaluators=task.evaluators,
+            case_lifecycle=getattr(task, "case_lifecycle", None),
             split=split,
             max_concurrency=args.max_concurrency,
             experiment_metadata={
@@ -221,6 +238,7 @@ def _run(args: argparse.Namespace) -> None:
                 "data_set": str(path),
                 "label_quality": task.label_quality.value,
                 "split": split.value if split else None,
+                "case_ids": case_ids,
             },
         )
     report.print(include_input=False, include_output=False)

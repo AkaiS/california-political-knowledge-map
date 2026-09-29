@@ -13,17 +13,17 @@ Reach a decision-ready, repository-wide evaluation strategy and implementation r
 - Evaluation is for regression detection first and model comparison second. Run affected deterministic checks on pull requests; require broad non-deterministic suites before releases.
 - Human-labeled, versioned Gold Sets are authoritative. Promote reviewed production failures, ambiguous inputs, and model-disagreement cases into versioned training, calibration, or held-out test splits.
 - Relevance human labels are binary. `INCONCLUSIVE` is an automated review-routing status, and relevance release gates prioritize recall of `RELEVANT` articles.
-- Evaluation records use relational links between datasets, cases, runs, and controlled artifacts. Raw inputs/outputs stay outside the evaluation database, subject to retention controls.
-- Component order: Relevance Filter; selector healing; coreference; Entity Extraction. Embedding and GraphRAG evaluation are in scope but await a defined retrieval/answering contract.
+- Evaluation Data Sets and reports are versioned files under `evals/`, as decided in [ADR 0017](../../../docs/adr/0017-git-is-the-evaluation-versioning-system.md).
+- Component evaluations cover Relevance Filter, coreference, Entity Extraction, Policy Area Classification, and Topic Assignment. The Chat Session path now has a retrieval and answer contract and an unlabeled training set for error analysis.
 
 ## Decisions so far
 
-- Shared evaluation runtime: use `pydantic-evals` for dataset/case execution and scoring, Pydantic AI as the provider-neutral task seam, existing Logfire instrumentation for traces/LLM telemetry, relational persistence for run metadata and case outcomes, and CI artifacts for serialized reports/raw artifact manifests. See [01-validate-shared-evaluation-runtime.md](issues/01-validate-shared-evaluation-runtime.md).
-- Shared evaluation contract: use immutable, versioned authored definitions; suite-owned case/report evaluator configuration; mandatory report evaluation; frozen run manifests and secret-free configuration fingerprints; typed task/evaluator outcomes; versioned Metric Definitions and comparison operations; content-addressed artifacts; and an incremental relational execution ledger. See [the completed contract issue](issues/02-define-shared-evaluation-contract.md) and [ready-for-agent specification](../../projects/shared-evaluation-contract/PRD.md).
+- Shared evaluation runtime: use `pydantic-evals` for case execution, Pydantic AI as the model task boundary, and Logfire for operational traces. Git versions Data Sets and JSON reports. [ADR 0017](../../../docs/adr/0017-git-is-the-evaluation-versioning-system.md) supersedes the earlier relational-ledger design in issues 01 and 02.
+- Chat Session error analysis: run the existing concrete target questions and Declined/Deferred controls as an unlabeled training set. Review preparation, retrieval branches, Grounding Evidence, citations, answer guidance, and failures case by case before defining answer evaluators. See [the review guide](../../../docs/evaluation/chat-answer-review.md).
 
 ## Not yet specified
 
-- Define retrieval and answer evaluation for the future GraphRAG agent, including context relevance, answer relevance, groundedness/faithfulness, and time to first token once its retrieval and response contract exists.
+- Review initial Chat Session cases, record observed retrieval, citation, and answer failures, and use those observations to define labels and evaluators. No answer-quality metric exists yet.
 - Define embedding evaluation once the downstream retrieval task and ground-truth relevance judgments are available.
 - Calibrate component quality floors and tolerated regression margins from baseline runs rather than selecting them in advance.
 

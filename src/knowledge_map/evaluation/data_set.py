@@ -1,11 +1,9 @@
 """Evaluation Data Sets authored as version-controlled YAML files.
 
-A Data Set is one file under ``evals/gold/`` or ``evals/silver/``, and which
-of the two it is says who wrote the labels: a human for a Gold Set, a model
-working to an annotation guideline for a Silver Set. The directory carries
-that, so no reader has to infer it from a description. Its revision is a
-commit; see ADR 0017. Nothing here persists to a database, and nothing here
-computes an identity: a case's ``id`` and ``split`` are authored by hand.
+A Data Set is one file under ``evals/``. Gold labels come from a human,
+silver labels come from a model, and unlabeled questions support initial
+trace review. Its revision is a commit; see ADR 0017. A case's ``id`` and
+``split`` are authored by hand.
 """
 
 from __future__ import annotations
@@ -29,11 +27,13 @@ class LabelQuality(str, Enum):
     A `GOLD` score is agreement with a person. A `SILVER` score is agreement
     with another model's reading of a guideline, so a case the annotator got
     wrong scores a correct answer as a miss, and the two must never be
-    compared as though they measured the same thing.
+    compared as though they measured the same thing. `UNLABELED` cases have
+    no answer labels and support case review before evaluators are chosen.
     """
 
     GOLD = "gold"
     SILVER = "silver"
+    UNLABELED = "unlabeled"
 
 
 class EvaluationSplit(str, Enum):

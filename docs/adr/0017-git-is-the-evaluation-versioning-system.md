@@ -105,3 +105,17 @@ every report, and reports written before this amendment were rewritten to
 name the file they actually ran against. Earlier `evals/gold/` paths in
 committed history are the old layout, not a claim that those labels were
 human.
+
+## Amendment: unlabeled cases precede answer evaluators
+
+The Chat Session path now has an executable question set, but no reviewed
+answer labels or settled failure categories. Its first Evaluation Data Set is
+therefore under `evals/unlabeled/`. It reuses authored target questions as
+training cases and records complete case outputs for human review. The task
+has no answer evaluators and its report makes no answer-quality claim.
+
+This extends Label Quality with `unlabeled`; it does not change the repository
+as the versioning system. The YAML question set, JSON Evaluation Report, and
+human review file can each be committed and compared through Git. Once reviews
+identify repeatable failure modes, evaluators can be added against labeled
+cases without treating the initial trace collection as a benchmark.
