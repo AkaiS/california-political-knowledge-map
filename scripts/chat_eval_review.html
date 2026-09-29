@@ -103,7 +103,7 @@
   </div>
   <script>
     'use strict';
-    let report, cases = [], reviews = {}, saveStatuses = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
+    let report, cases = [], reviews = {}, saveStatuses = {}, saveRevisions = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
     const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
     const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
     const $ = id => document.getElementById(id);
@@ -333,10 +333,20 @@
       renderList();
       if (resetTrace) document.querySelector('.trace-pane').scrollTop = 0;
     }
+    function setSaveStatus(name, revision, status) {
+      if ((saveRevisions[name] || 0) !== revision) return;
+      saveStatuses[name] = status;
+      if (selection()?.name === name) $('save-status').textContent = status;
+    }
+    function markEdited(name) {
+      const revision = (saveRevisions[name] || 0) + 1;
+      saveRevisions[name] = revision;
+      setSaveStatus(name, revision, 'Saving…');
+    }
     function updateReview() {
       const item = selection();
       reviews[item.name] = {...reviewFor(item), note: $('note').value};
-      saveStatuses[item.name] = 'Saving…'; $('save-status').textContent = 'Saving…';
+      markEdited(item.name);
       clearTimeout(saveTimer);
       saveTimer = setTimeout(flushSave, 350);
       renderList();
@@ -344,17 +354,17 @@
     function flushSave() {
       clearTimeout(saveTimer);
       const item = selection(); if (!item || !reviews[item.name]) return saveChain;
-      const name = item.name, review = {...reviews[name]};
-      saveStatuses[name] = 'Saving…';
-      if (selection()?.name === name) $('save-status').textContent = 'Saving…';
+      const name = item.name, review = {...reviews[name]}, revision = saveRevisions[name] || 0;
+      setSaveStatus(name, revision, 'Saving…');
       saveChain = saveChain.then(() => fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})}))
-        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); saveStatuses[name] = 'Saved'; if (selection()?.name === name) $('save-status').textContent = 'Saved'; return true; })
-        .catch(error => { saveStatuses[name] = error.message; if (selection()?.name === name) $('save-status').textContent = error.message; return false; });
+        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); setSaveStatus(name, revision, 'Saved'); return true; })
+        .catch(error => { setSaveStatus(name, revision, error.message); return false; });
       return saveChain;
     }
     function navigate(delta) { const target = nextIndex(delta); if (target === undefined) return; flushSave(); index = target; render(true); }
     for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => {
       const item = selection(); reviews[item.name] = {...reviewFor(item), verdict: button.dataset.verdict === 'clear' ? null : button.dataset.verdict, note: $('note').value};
+      markEdited(item.name);
       render(); flushSave();
     };
     $('note').addEventListener('input', updateReview);
