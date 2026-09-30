@@ -10,7 +10,7 @@ California Political Knowledge Map is a web application that reduces voting fric
 - Orchestration: synchronous Story Pipeline (`src/knowledge_map/core/pipeline.py:182`) + CLI `ca-map scrape-archive` / `ca-map update-sources` via external cron/launchd (`CONTEXT.md:48-53,170-172`)
 - DB: SQLite document store (`document_store.db`, `src/knowledge_map/adapters/sqlite_db.py:15`) + Neo4j graph
 - LLM Tooling: logfire + pydantic-evals + chonkie + crawl4ai (see `pyproject.toml`)
-- CI/CD: none — local deterministic pytest suite
+- CI: GitHub Actions runs the deterministic pytest suite on pull requests (see `.github/workflows/ci.yml`).
 
 ## A note from me
 We have a shared vocabulary that we have defined in our domain docs. We should be working with this domain language in mind, not as a frozen vocabulary but as an agreed upon source of meaning.

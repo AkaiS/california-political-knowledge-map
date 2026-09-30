@@ -346,7 +346,12 @@ async def _test_probe_429_recloses_without_releasing_waiting_burst(monkeypatch):
 
 
 def test_interrupted_probe_keeps_waiting_callers_held(monkeypatch):
-    asyncio.run(_test_interrupted_probe_keeps_waiting_callers_held(monkeypatch))
+    asyncio.run(
+        asyncio.wait_for(
+            _test_interrupted_probe_keeps_waiting_callers_held(monkeypatch),
+            timeout=5,
+        )
+    )
 
 
 async def _test_interrupted_probe_keeps_waiting_callers_held(monkeypatch):
@@ -428,16 +433,24 @@ async def _test_interrupted_probe_keeps_waiting_callers_held(monkeypatch):
     ]
     clock.advance(10)
     await first_probe_started.wait()
-    first_result = await tasks[0]
+    # Admission order can differ from task creation order.
+    done, pending = await asyncio.wait(
+        tasks, return_when=asyncio.FIRST_COMPLETED, timeout=2
+    )
+    assert len(done) == 1
+    assert len(pending) == 2
+    first_result = next(iter(done)).result()
     assert isinstance(first_result, ModelAPIError)
     await second_probe_started.wait()
     for _ in range(100):
         await asyncio.sleep(0)
-    assert waiting_starts == ["openai/wait-0", "openai/wait-1"]
+    assert len(waiting_starts) == 2
+    assert len(set(waiting_starts)) == 2
 
     release_second_probe.set()
     results = await asyncio.gather(*tasks)
-    assert not isinstance(results[1], BaseException)
-    assert not isinstance(results[2], BaseException)
-    assert results[1].output == "resolved"
-    assert results[2].output == "resolved"
+    errors = [result for result in results if isinstance(result, ModelAPIError)]
+    successful = [result for result in results if not isinstance(result, BaseException)]
+    assert len(errors) == 1
+    assert len(successful) == 2
+    assert all(result.output == "resolved" for result in successful)
