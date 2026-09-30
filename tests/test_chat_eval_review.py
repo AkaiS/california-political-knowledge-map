@@ -310,3 +310,123 @@ def test_concurrent_review_saves_preserve_different_cases(tmp_path, monkeypatch)
             assert second.result(timeout=5) == 200
 
     assert set(original_load(tmp_path / "run.reviews.json")) == {"a", "b"}
+
+
+def test_markdown_renders_native_content_without_model_html_or_tracking():
+    rendered = review_server.render_markdown(
+        "**Evidence** [source](https://example.org)\n\n"
+        "| Claim | Status |\n| --- | --- |\n| A | Recorded |\n\n"
+        '```python\nprint("safe")\n```\n\n'
+        "<script>alert(1)</script>\n\n"
+        "![tracking](https://example.org/pixel) "
+        '<img src="https://example.org/html-pixel"> '
+        "[unsafe](javascript:alert(1)) [local](file:///secret)"
+    )
+    assert "<strong>Evidence</strong>" in rendered
+    assert "<table>" in rendered
+    assert '<pre class="code-highlight"><code>' in rendered
+    assert "<pre><code><div" not in rendered
+    assert "<script" not in rendered
+    assert "<img" not in rendered
+    assert 'href="javascript:' not in rendered
+    assert 'href="file:' not in rendered
+    assert 'rel="noopener noreferrer"' in rendered
+
+
+def test_reference_content_selects_source_case_and_rejects_escape(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(review_server, "REPOSITORY", tmp_path)
+    artifact = tmp_path / "reference.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "interpretation": "Stored retrieval",
+                "cases": [
+                    {"id": "source-1", "rows": [1]},
+                    {"id": "other", "rows": [2]},
+                ],
+            }
+        )
+    )
+    case = {
+        "name": "case-1",
+        "metadata": {
+            "source_case_id": "source-1",
+            "reference_artifact": "reference.json",
+        },
+    }
+    result = review_server.reference_content(case)
+    assert result["content"]["cases"] == [{"id": "source-1", "rows": [1]}]
+    assert result["content"]["interpretation"] == "Stored retrieval"
+    for reference in ("../outside.md", str(artifact), "secret.env"):
+        case["metadata"]["reference_artifact"] = reference
+        assert "error" in review_server.reference_content(case)
+    outside = tmp_path.parent / "outside.md"
+    outside.write_text("private content")
+    (tmp_path / "linked.md").symlink_to(outside)
+    case["metadata"]["reference_artifact"] = "linked.md"
+    assert "error" in review_server.reference_content(case)
+
+
+def test_presentation_renders_decoded_model_content_and_structural_query():
+    report = {
+        "report": {
+            "cases": [
+                {
+                    "name": "case-1",
+                    "output": {
+                        "messages": [
+                            {
+                                "messages": [
+                                    {
+                                        "parts": [
+                                            {
+                                                "content": '{"explanation":"**Relevant**"}'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "attributes": {
+                        "stage_observations": [
+                            {
+                                "attributes": {
+                                    "validated_query": "MATCH (a:Article) RETURN a"
+                                }
+                            }
+                        ]
+                    },
+                }
+            ]
+        }
+    }
+    presentation = review_server.presentation_for(report)
+    assert "<strong>Relevant</strong>" in presentation["html"]["**Relevant**"]
+    assert "code-highlight" in presentation["code"]["MATCH (a:Article) RETURN a"]
+
+
+def test_review_write_failure_returns_retryable_server_error(tmp_path, monkeypatch):
+    (tmp_path / "run.json").write_text(
+        json.dumps({"task": "chat", "report": {"cases": [{"name": "case-1"}]}})
+    )
+
+    def fail_write(*args):
+        raise OSError("Disk unavailable")
+
+    monkeypatch.setattr(review_server, "save_reviews", fail_write)
+    with serve_reviewer(tmp_path) as base:
+        payload = json.dumps(
+            {"name": "case-1", "review": {"verdict": "pass", "note": ""}}
+        ).encode()
+        with pytest.raises(HTTPError) as error:
+            urlopen(
+                Request(
+                    f"{base}/api/runs/run/reviews",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+            )
+        assert error.value.code == 500

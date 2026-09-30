@@ -42,7 +42,21 @@ The reviewer displays one case at a time.
 Use the list or arrow keys to move between cases, search by question or ID, and
 filter by review verdict. It saves each **Pass**, **Fail**, or **Defer** verdict
 and free-text critique to `<report-file>.reviews.json`. `1`, `2`, `D`, and `U`
-set Pass, Fail, Defer, and clear the verdict. The note saves as you type. Use
+set Pass, Fail, Defer, and undo the last annotation action. Undo restores the
+previous verdict or note, including an action on another case, during the current
+page session. The separate Clear verdict button keeps the note. Cmd/Ctrl+S saves
+while the note field is focused, and Cmd/Ctrl+Enter saves and advances. Plain
+annotation and arrow shortcuts leave text entry alone.
+
+The note saves as you type. Each edit also creates a synchronous browser-local
+draft, so reloading or closing before the file save finishes preserves the edit.
+Reopening the same run at the same server address recovers and retries those
+drafts. Saved review files remain the durable review artifact. If a file save
+fails, the interface shows the affected case IDs, retains browser drafts, and
+keeps the selected case until Save / retry succeeds. A browser storage failure
+warns you to keep the page open until the file save succeeds.
+
+Use
 `--reports-dir <path>` to browse a different report directory and `--port
 <port>` to change the local port. The reviewer binds to loopback.
 
@@ -50,11 +64,12 @@ set Pass, Fail, Defer, and clear the verdict. The note saves as you type. Use
 
 Read the case from the voter's question outward:
 
-1. **Answer shown to the voter.** Did the response direct the reader to useful sources, state coverage limits, and avoid claims its citations do not support? A Declined or Deferred control may have no retrieval answer.
+1. **Prepared answer.** This evaluation does not verify browser delivery. Did the response direct the reader to useful sources, state coverage limits, and avoid claims its citations do not support? A Declined or Deferred control may have no retrieval answer.
 2. **Question preparation.** Did the Query Rewrite preserve the named people, measures, relationship, time scope, and requested result? Was the policy and coverage assessment appropriate?
 3. **Retrieval branches.** Check the full-text, dense, and structural outcomes. The report lists only the top full-text candidates up to the number returned by dense retrieval. It records the total full-text count and aggregate scores and rank range for candidates left off that list. Expand retained candidates to see ranks and routes. Selected Grounding Evidence keeps its own candidate contributions even when a supporting passage came from below the list cutoff. A failed branch can coexist with a prepared answer from other branches.
 4. **Selected Grounding Evidence.** Read the stored passages under each Source Article citation. Check whether the specific passage supports the answer's wording, and whether relevant material was dropped by Evidence Assembly's context limit.
-5. **Application stages and model messages.** Expand stage observations for the rewrite, assessment, branch work, fusion, Evidence Assembly, and guidance. Model messages show the requests and responses captured for this evaluation case, including retries or failed requests where available.
+5. **Application stages and model messages.** Expand stage observations for the rewrite, assessment, branch work, fusion, Evidence Assembly, and guidance. Recorded decisions have structured views, with syntax highlighting for validated structural queries and a separate raw record. Model messages show the requests and responses captured for this Evaluation Case, including retries or failed requests where available. System instructions have their own collapsed section. Tool calls and results share a group by call ID within each captured request, so repeated message history stays attached to its request.
+6. **Case reference and scope.** Open the reference panel for the authored scope note and grounding type. Repository-relative reference artifacts show their contents; a reference containing case records selects the authored source case ID. The current reference query results describe the stored graph and are not a Gold Set. An expected output appears only when the report actually supplies one.
 
 Mark the **whole case** Pass, Fail, or Defer. Write what happened and where the
 failure seems to arise. For example: "The structural branch retrieved the right
@@ -89,3 +104,31 @@ so a reader can compare cases and critiques against the exact run.
 The local reviewer also applies this display limit when opening an older report
 that stored every full-text candidate. It leaves the committed report and its
 existing review notes unchanged.
+
+## Verify the reviewer
+
+Prepared answers and model text render Markdown, tables, links, and highlighted
+fenced code through markdown-it-py and Pygments on the local server. The renderer
+strips model HTML and images, and permits only HTTP/HTTPS links. Stored Article
+Chunk passages remain literal source text. Structured message arguments and
+results have readable fields and tables, with raw JSON available separately.
+The reviewer does not require a CDN or a network connection to render content.
+
+Run the deterministic server and rendering checks with:
+
+```bash
+uv run pytest tests/test_chat_eval_review.py tests/test_chat_eval_task.py
+```
+
+The Playwright workflow tests are opt-in because the default deterministic suite
+does not install browser binaries. Install Chromium and run:
+
+```bash
+uv run playwright install chromium
+RUN_REVIEW_BROWSER_TESTS=1 uv run pytest tests/test_chat_eval_review_browser.py
+```
+
+These tests use temporary reports and review files. They cover verdicts, notes,
+undo, navigation, focused save shortcuts, counters, reload persistence,
+instructions and tool exchanges, safe rendering, and recovery after save failures.
+They also save desktop and narrow screenshots under `.scratch/review-interface/`.
