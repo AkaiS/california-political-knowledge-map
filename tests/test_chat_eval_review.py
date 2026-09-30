@@ -201,7 +201,13 @@ def test_run_routes_keep_reviews_with_their_report(tmp_path):
         assert urlopen(f"{base}/runs/first").read() == b"review page"
         assert json.load(urlopen(f"{base}/api/runs/first/report"))["task"] == "chat"
         payload = json.dumps(
-            {"name": "case-1", "review": {"verdict": "pass", "note": "Supported"}}
+            {
+                "name": "case-1",
+                "review": {"verdict": "pass", "note": "Supported"},
+                "review_identity": review_server.report_for(tmp_path / "first.json")[
+                    "review_identity"
+                ],
+            }
         ).encode()
         response = urlopen(
             Request(
@@ -228,7 +234,13 @@ def test_reviewer_rejects_cross_origin_and_plain_text_writes(tmp_path):
         json.dumps({"task": "chat", "report": {"cases": [{"name": "case-1"}]}})
     )
     payload = json.dumps(
-        {"name": "case-1", "review": {"verdict": "fail", "note": "Wrong answer"}}
+        {
+            "name": "case-1",
+            "review": {"verdict": "fail", "note": "Wrong answer"},
+            "review_identity": review_server.report_for(tmp_path / "run.json")[
+                "review_identity"
+            ],
+        }
     ).encode()
     with serve_reviewer(tmp_path) as base:
         url = f"{base}/api/runs/run/reviews"
@@ -292,7 +304,13 @@ def test_concurrent_review_saves_preserve_different_cases(tmp_path, monkeypatch)
 
         def post(name):
             payload = json.dumps(
-                {"name": name, "review": {"verdict": "pass", "note": name}}
+                {
+                    "name": name,
+                    "review": {"verdict": "pass", "note": name},
+                    "review_identity": review_server.report_for(tmp_path / "run.json")[
+                        "review_identity"
+                    ],
+                }
             ).encode()
             return urlopen(
                 Request(
@@ -310,3 +328,186 @@ def test_concurrent_review_saves_preserve_different_cases(tmp_path, monkeypatch)
             assert second.result(timeout=5) == 200
 
     assert set(original_load(tmp_path / "run.reviews.json")) == {"a", "b"}
+
+
+def test_markdown_renders_native_content_without_model_html_or_tracking():
+    rendered = review_server.render_markdown(
+        "**Evidence** [source](https://example.org)\n\n"
+        "| Claim | Status |\n| --- | --- |\n| A | Recorded |\n\n"
+        '```python\nprint("safe")\n```\n\n'
+        "<script>alert(1)</script>\n\n"
+        "![tracking](https://example.org/pixel) "
+        '<img src="https://example.org/html-pixel"> '
+        "[unsafe](javascript:alert(1)) [local](file:///secret)"
+    )
+    assert "<strong>Evidence</strong>" in rendered
+    assert "<table>" in rendered
+    assert '<pre class="code-highlight"><code>' in rendered
+    assert "<pre><code><div" not in rendered
+    assert "<script" not in rendered
+    assert "<img" not in rendered
+    assert 'href="javascript:' not in rendered
+    assert 'href="file:' not in rendered
+    assert 'rel="noopener noreferrer"' in rendered
+
+
+def test_reference_content_selects_source_case_and_rejects_escape(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(review_server, "REPOSITORY", tmp_path)
+    artifact = tmp_path / "reference.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "interpretation": "Stored retrieval",
+                "cases": [
+                    {"id": "source-1", "rows": [1]},
+                    {"id": "other", "rows": [2]},
+                ],
+            }
+        )
+    )
+    case = {
+        "name": "case-1",
+        "metadata": {
+            "source_case_id": "source-1",
+            "reference_artifact": "reference.json",
+        },
+    }
+    result = review_server.reference_content(case)
+    assert result["content"]["cases"] == [{"id": "source-1", "rows": [1]}]
+    assert result["content"]["interpretation"] == "Stored retrieval"
+    for reference in ("../outside.md", str(artifact), "secret.env"):
+        case["metadata"]["reference_artifact"] = reference
+        assert "error" in review_server.reference_content(case)
+    outside = tmp_path.parent / "outside.md"
+    outside.write_text("private content")
+    (tmp_path / "linked.md").symlink_to(outside)
+    case["metadata"]["reference_artifact"] = "linked.md"
+    assert "error" in review_server.reference_content(case)
+
+
+def test_presentation_renders_decoded_model_content_and_structural_query():
+    report = {
+        "report": {
+            "cases": [
+                {
+                    "name": "case-1",
+                    "output": {
+                        "messages": [
+                            {
+                                "messages": [
+                                    {
+                                        "parts": [
+                                            {
+                                                "content": '{"explanation":"**Relevant**"}'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "attributes": {
+                        "stage_observations": [
+                            {
+                                "attributes": {
+                                    "validated_query": "MATCH (a:Article) RETURN a"
+                                }
+                            }
+                        ]
+                    },
+                }
+            ]
+        }
+    }
+    presentation = review_server.presentation_for(report)
+    assert "<strong>Relevant</strong>" in presentation["html"]["**Relevant**"]
+    assert "code-highlight" in presentation["code"]["MATCH (a:Article) RETURN a"]
+
+
+def test_review_write_failure_returns_retryable_server_error(tmp_path, monkeypatch):
+    (tmp_path / "run.json").write_text(
+        json.dumps({"task": "chat", "report": {"cases": [{"name": "case-1"}]}})
+    )
+
+    def fail_write(*args):
+        raise OSError("Disk unavailable")
+
+    monkeypatch.setattr(review_server, "save_reviews", fail_write)
+    with serve_reviewer(tmp_path) as base:
+        payload = json.dumps(
+            {
+                "name": "case-1",
+                "review": {"verdict": "pass", "note": ""},
+                "review_identity": review_server.report_for(tmp_path / "run.json")[
+                    "review_identity"
+                ],
+            }
+        ).encode()
+        with pytest.raises(HTTPError) as error:
+            urlopen(
+                Request(
+                    f"{base}/api/runs/run/reviews",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+            )
+        assert error.value.code == 500
+
+
+@pytest.mark.parametrize("entry", [None, "invalid", 7, []])
+def test_malformed_reference_is_a_display_error(tmp_path, monkeypatch, entry):
+    monkeypatch.setattr(review_server, "REPOSITORY", tmp_path)
+    (tmp_path / "reference.json").write_text(
+        json.dumps({"cases": [entry, {"id": "case-1", "rows": []}]})
+    )
+    case = {"name": "case-1", "metadata": {"reference_artifact": "reference.json"}}
+
+    presentation = review_server.presentation_for({"report": {"cases": [case]}})
+
+    assert "error" in presentation["references"]["case-1"]
+
+
+def test_review_identity_distinguishes_report_path_and_contents(tmp_path):
+    report = {"task": "chat", "report": {"cases": [{"name": "case-1"}]}}
+    first = tmp_path / "first" / "run.json"
+    second = tmp_path / "second" / "run.json"
+    for path in (first, second):
+        path.parent.mkdir()
+        path.write_text(json.dumps(report))
+
+    original = review_server.report_for(first)["review_identity"]
+    assert review_server.report_for(first)["review_identity"] == original
+    assert review_server.report_for(second)["review_identity"] != original
+    report["report"]["cases"][0]["inputs"] = {"question": "A different question"}
+    first.write_text(json.dumps(report))
+    assert review_server.report_for(first)["review_identity"] != original
+
+
+@pytest.mark.parametrize("identity", ["missing", "stale"])
+def test_replaced_report_rejects_unbound_or_stale_review(tmp_path, identity):
+    path = tmp_path / "run.json"
+    report = {"task": "chat", "report": {"cases": [{"name": "case-1"}]}}
+    path.write_text(json.dumps(report))
+    original_id = review_server.report_for(path)["review_identity"]
+    report["report"]["cases"][0]["inputs"] = {"question": "New question"}
+    path.write_text(json.dumps(report))
+    reviews_path = path.with_suffix(".reviews.json")
+    existing = {"case-1": {"verdict": "pass", "note": "New report review"}}
+    review_server.save_reviews(reviews_path, existing)
+    payload = {"name": "case-1", "review": {"verdict": "fail", "note": "Old draft"}}
+    if identity == "stale":
+        payload["review_identity"] = original_id
+
+    with serve_reviewer(tmp_path) as base:
+        with pytest.raises(HTTPError) as error:
+            urlopen(
+                Request(
+                    f"{base}/api/runs/run/reviews",
+                    data=json.dumps(payload).encode(),
+                    headers={"Content-Type": "application/json"},
+                )
+            )
+        assert error.value.code == (409 if identity == "stale" else 400)
+    assert review_server.load_reviews(reviews_path) == existing

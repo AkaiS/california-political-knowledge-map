@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
+import io
 import json
 import os
 import re
@@ -15,19 +18,164 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
+import yaml
+from markdown_it import MarkdownIt
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import TextLexer, get_lexer_by_name
+from pygments.util import ClassNotFound
+
 # A script launched with another checkout's editable install must still use the
 # report model shipped beside this reviewer.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from knowledge_map.evaluation.tasks.chat import compact_retrieval_for_report
 
+REPOSITORY = Path(__file__).resolve().parents[1]
+
+
+def render_markdown(text: str) -> str:
+    """Render captured text without model HTML, images, or unsafe links."""
+    formatter = HtmlFormatter(nowrap=True)
+
+    def code(source: str, language: str, _attributes: str) -> str:
+        try:
+            lexer = get_lexer_by_name(language)
+        except ClassNotFound:
+            lexer = TextLexer()
+        return (
+            '<pre class="code-highlight"><code>'
+            + highlight(source, lexer, formatter)
+            + "</code></pre>"
+        )
+
+    parser = MarkdownIt("commonmark", {"html": True, "highlight": code}).enable("table")
+    parser.renderer.rules["html_inline"] = lambda *_: ""
+    parser.renderer.rules["html_block"] = lambda *_: ""
+    parser.renderer.rules["image"] = lambda *_: ""
+
+    def link(tokens, index, options, env):
+        token = tokens[index]
+        try:
+            scheme = urlsplit(token.attrGet("href") or "").scheme
+        except ValueError:
+            scheme = ""
+        if scheme not in ("http", "https"):
+            token.attrs.pop("href", None)
+        else:
+            token.attrSet("target", "_blank")
+            token.attrSet("rel", "noopener noreferrer")
+        return parser.renderer.renderToken(tokens, index, options, env)
+
+    parser.renderer.rules["link_open"] = link
+    return parser.render(text)
+
+
+def reference_content(case: dict[str, Any]) -> dict[str, Any] | None:
+    reference = case.get("metadata", {}).get("reference_artifact")
+    if not isinstance(reference, str) or not reference:
+        return None
+    path = (REPOSITORY / reference).resolve()
+    if (
+        Path(reference).is_absolute()
+        or not path.is_relative_to(REPOSITORY)
+        or path.suffix.lower() not in (".json", ".md", ".txt", ".csv", ".yaml", ".yml")
+    ):
+        return {
+            "path": reference,
+            "error": "Reference must be a repository-relative text artifact.",
+        }
+    try:
+        if path.stat().st_size > 1_000_000:
+            raise ValueError("Reference exceeds the 1 MB display limit.")
+        text = path.read_text()
+        content: Any = text
+        if path.suffix.lower() == ".json":
+            content = json.loads(text)
+            if isinstance(content, dict) and isinstance(content.get("cases"), list):
+                if any(not isinstance(item, dict) for item in content["cases"]):
+                    raise ValueError("Reference cases must contain JSON objects.")
+                source_id = (
+                    case.get("metadata", {}).get("source_case_id") or case["name"]
+                )
+                matches = [
+                    item for item in content["cases"] if item.get("id") == source_id
+                ]
+                if not matches:
+                    return {
+                        "path": reference,
+                        "error": f"No reference entry for {source_id}.",
+                    }
+                content = {
+                    **{k: v for k, v in content.items() if k != "cases"},
+                    "cases": matches,
+                }
+        elif path.suffix.lower() == ".csv":
+            content = list(csv.DictReader(io.StringIO(text)))
+        elif path.suffix.lower() in (".yaml", ".yml"):
+            content = json.loads(json.dumps(yaml.safe_load(text), default=str))
+        return {"path": reference, "content": content}
+    except (OSError, UnicodeError, ValueError, TypeError, yaml.YAMLError) as error:
+        return {"path": reference, "error": str(error)}
+
+
+def presentation_for(report: dict[str, Any]) -> dict[str, Any]:
+    rendered: dict[str, str] = {}
+    code = {}
+
+    def collect(value: Any, depth: int = 0) -> None:
+        if depth > 30:
+            return
+        if isinstance(value, str):
+            if value not in rendered:
+                rendered[value] = render_markdown(value)
+                try:
+                    decoded = json.loads(value)
+                except (ValueError, TypeError):
+                    return
+                if isinstance(decoded, (dict, list)):
+                    collect(decoded, depth + 1)
+        elif isinstance(value, dict):
+            for child in value.values():
+                collect(child, depth + 1)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child, depth + 1)
+
+    references = {}
+    for case in report["report"]["cases"]:
+        output = case.get("output") or {}
+        collect(output.get("rendered_text"))
+        collect(output.get("messages", []))
+        collect(case.get("attributes", {}))
+        for stage in case.get("attributes", {}).get("stage_observations", []):
+            query = stage.get("attributes", {}).get("validated_query")
+            if isinstance(query, str):
+                code[query] = render_markdown("```cypher\n" + query + "\n```")
+        collect(case.get("metadata", {}))
+        collect(case.get("expected_output"))
+        reference = reference_content(case)
+        if reference:
+            references[case["name"]] = reference
+            collect(reference.get("content"))
+    return {
+        "html": rendered,
+        "references": references,
+        "code": code,
+        "code_css": HtmlFormatter().get_style_defs(".code-highlight"),
+    }
+
 
 def load_report(path: Path) -> dict[str, Any]:
-    report = json.loads(path.read_text())
+    content = path.read_bytes()
+    report = json.loads(content)
     if report.get("task") != "chat" or not isinstance(
         report.get("report", {}).get("cases"), list
     ):
         raise ValueError("expected a chat evaluation report with report.cases")
+    report["review_identity"] = hashlib.sha256(
+        str(path.resolve()).encode() + b"\0" + content
+    ).hexdigest()
     for case in report["report"]["cases"]:
         output = case.get("output")
         if not isinstance(output, dict):
@@ -44,6 +192,7 @@ def _cached_report(path: Path, mtime_ns: int, size: int) -> dict[str, Any]:
 
 
 def report_for(path: Path) -> dict[str, Any]:
+    path = path.resolve()
     stat = path.stat()
     return _cached_report(path, stat.st_mtime_ns, stat.st_size)
 
@@ -166,6 +315,11 @@ def make_handler(
                         ensure_ascii=False,
                     ).encode()
                     self._send(200, body, "application/json; charset=utf-8")
+                elif parts[3] == "presentation":
+                    body = json.dumps(
+                        presentation_for(report_for(report_path)), ensure_ascii=False
+                    ).encode()
+                    self._send(200, body, "application/json; charset=utf-8")
                 else:
                     self._send(404, b"Not found", "text/plain; charset=utf-8")
 
@@ -200,8 +354,12 @@ def make_handler(
                 if size < 1 or size > 1_000_000:
                     raise ValueError("invalid review payload size")
                 payload = json.loads(self.rfile.read(size))
-                if not isinstance(payload, dict) or set(payload) != {"name", "review"}:
-                    raise ValueError("expected name and review")
+                if not isinstance(payload, dict) or set(payload) != {
+                    "name",
+                    "review",
+                    "review_identity",
+                }:
+                    raise ValueError("expected name, review, and review_identity")
                 name, review = payload["name"], payload["review"]
                 case_names = {
                     case["name"] for case in report_for(report_path)["report"]["cases"]
@@ -215,11 +373,26 @@ def make_handler(
                 if not isinstance(review["note"], str) or len(review["note"]) > 20_000:
                     raise ValueError("invalid note")
                 with reviews_lock:
+                    if (
+                        payload["review_identity"]
+                        != report_for(report_path)["review_identity"]
+                    ):
+                        self._send(
+                            409,
+                            b"Report changed; reload before reviewing",
+                            "text/plain; charset=utf-8",
+                        )
+                        return
                     reviews = load_reviews(reviews_path)
                     reviews[name] = review
                     save_reviews(reviews_path, reviews)
             except (ValueError, TypeError, json.JSONDecodeError) as error:
                 self._send(400, str(error).encode(), "text/plain; charset=utf-8")
+                return
+            except OSError:
+                self._send(
+                    500, b"Could not write review file", "text/plain; charset=utf-8"
+                )
                 return
             self._send(200, b"{}", "application/json; charset=utf-8")
 

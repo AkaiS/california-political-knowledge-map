@@ -6,6 +6,7 @@
   <title>Chat evaluation review</title>
   <style>
     :root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; background: #f5f6f5; color: #192422; }
+    html { overflow: clip; }
     * { box-sizing: border-box; }
     body { margin: 0; overflow: hidden; }
     button, input, select, textarea { font: inherit; }
@@ -31,7 +32,7 @@
     .badge.fail { background: #fde6e3; color: #9d3022; }
     .badge.defer { background: #fff2d2; color: #865900; }
     main { max-width: 1200px; width: 100%; min-height: 0; margin: 0 auto; padding: 28px 38px 18px; display: flex; flex-direction: column; overflow: hidden; }
-    .top { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+    .top { display: flex; flex-shrink: 0; justify-content: space-between; gap: 20px; align-items: start; }
     .top h2 { margin: 5px 0 10px; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
     .links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
     .links a { border: 1px solid #c6ded8; padding: 5px 9px; border-radius: 6px; text-decoration: none; background: white; }
@@ -43,13 +44,39 @@
     .review-pane { min-height: 0; display: flex; }
     section, .review-box { background: white; border: 1px solid #dbe2df; border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
     section h3, .review-box h3 { font-size: 15px; margin: 0 0 12px; }
-    .answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .answer, .rich-text { overflow-wrap: anywhere; }
+    .rich-text p { margin: 6px 0 12px; }
+    .rich-text h1, .rich-text h2, .rich-text h3 { font-size: 17px; }
+    .rich-text table, .structured table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .rich-text th, .rich-text td, .structured th, .structured td { border: 1px solid #dbe2df; padding: 6px 8px; text-align: left; vertical-align: top; }
+    .structured th { min-width: 110px; overflow-wrap: normal; }
+    .structured td { min-width: 140px; }
+    .table-scroll { overflow-x: auto; }
+    .structured dl { margin: 8px 0; }
+    .structured dt { font-weight: 650; color: #586c68; margin-top: 9px; }
+    .structured dd { margin: 3px 0 9px 12px; }
+    .structured { min-width: 0; overflow-wrap: anywhere; }
+    .tool-group { border: 1px solid #e6cda8; border-left: 4px solid #c28745; border-radius: 5px; margin: 12px 0; padding: 8px 12px; }
+    .message.system { border-left-color: #9474ae; background: #faf7fd; }
+    .message.user { border-left-color: #7292be; }
+    #reference-panel { background: #f7faf9; }
+    #reference-panel > summary { margin-bottom: 10px; }
+    .review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .review-actions button { border: 1px solid #c7d4d0; border-radius: 6px; background: white; padding: 5px 10px; }
+    .review-actions button:disabled { color: #9cadab; cursor: default; }
     .answer p { margin: 0 0 13px; }
     .answer p:last-child { margin-bottom: 0; }
     .answer .source-line { padding-left: 12px; border-left: 3px solid #b7d6ce; }
     .review-box { display: flex; flex: 1; flex-direction: column; min-height: 0; margin-bottom: 0; }
     .verdict { display: flex; flex-wrap: wrap; gap: 8px; }
-    .verdict button.active { border-color: #177b70; background: #e7f5f1; color: #145f56; font-weight: 700; }
+    .verdict button { font-weight: 700; min-width: 72px; }
+    .verdict button[data-verdict="pass"] { background: #dcf2e4; border-color: #58a577; color: #126334; }
+    .verdict button[data-verdict="fail"] { background: #fde6e3; border-color: #cd776c; color: #9d3022; }
+    .verdict button[data-verdict="defer"] { background: #fff2d2; border-color: #c4a454; color: #865900; }
+    .verdict button.active { box-shadow: 0 0 0 2px #192422; }
+    .verdict button[data-verdict="pass"].active { background: #126334; color: white; }
+    .verdict button[data-verdict="fail"].active { background: #9d3022; color: white; }
+    .verdict button[data-verdict="defer"].active { background: #865900; color: white; }
     .review-box label { display: block; margin: 17px 0 7px; font-weight: 650; }
     textarea { width: 100%; flex: 1; min-height: 100px; resize: none; border: 1px solid #c7d4d0; border-radius: 6px; padding: 10px; }
     #save-status { font-size: 12px; color: #63736e; margin-top: 7px; min-height: 18px; }
@@ -59,7 +86,7 @@
     .message { border-left: 4px solid #7292be; background: #f8faff; margin: 10px 0; padding: 8px 12px; }
     .message.response { border-left-color: #3d9d74; background: #f6fbf8; }
     .message.tool { border-left-color: #c28745; background: #fffaf3; }
-    .message .content { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0 10px; }
+    .message .content { overflow-wrap: anywhere; margin: 4px 0 10px; }
     .stage-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .stage-time { color: #71817c; font-size: 12px; }
     details { border-top: 1px solid #e6ece9; padding: 10px 0; }
@@ -72,8 +99,26 @@
     .passage { margin: 10px 0 0 12px; padding: 10px 13px; border-left: 3px solid #c3dad5; background: #f8faf9; white-space: pre-wrap; }
     .empty { color: #697a75; font-style: italic; }
     .error { color: #a12f24; }
-    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; } .review-box { max-height: 35vh; } textarea { min-height: 70px; } }
-    @media (max-width: 680px) { .layout { display: flex; flex-direction: column; } aside { flex: 0 0 180px; border-right: 0; border-bottom: 1px solid #dbe2df; } .side-head { padding: 10px 14px; } main { flex: 1; padding: 12px 14px 10px; } .top { display: block; } .top h2 { font-size: 19px; margin: 3px 0; } .nav { margin-top: 8px; } .columns { margin-top: 12px; } .review-box { max-height: 32vh; padding: 10px 12px; } }
+    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 1fr) auto; overflow-y: auto; } .review-pane, .review-box { min-height: min-content; } .review-box { max-height: none; } textarea { flex: none; height: 90px; min-height: 70px; } }
+    @media (max-width: 960px) and (max-height: 650px) {
+      main { overflow-y: auto; }
+      .top { flex-shrink: 0; }
+      .columns { flex: none; overflow: visible; grid-template-rows: minmax(160px, 55vh) auto; }
+    }
+    @media (max-width: 680px) {
+      html { overflow: visible; }
+      body { overflow-y: auto; }
+      .layout { display: flex; flex-direction: column; height: auto; min-height: 100dvh; overflow: visible; }
+      aside { border-right: 0; border-bottom: 1px solid #dbe2df; }
+      .side-head { padding: 10px 14px; }
+      #case-list { max-height: 100px; flex: none; }
+      main { padding: 12px 14px 10px; overflow: visible; }
+      .top { display: block; } .top h2 { font-size: 19px; margin: 3px 0; }
+      .nav { margin-top: 8px; }
+      .columns { margin-top: 12px; overflow: visible; grid-template-rows: minmax(300px, 55vh) auto; flex: none; }
+      .review-box { max-height: none; padding: 14px; }
+      textarea { min-height: 100px; resize: vertical; }
+    }
   </style>
 </head>
 <body>
@@ -92,18 +137,22 @@
     <main>
       <div class="top"><div><div id="position" class="meta"></div><h2 id="question"></h2><div id="case-meta" class="meta"></div><div id="trace-links" class="links"></div></div><div class="nav"><button id="previous" title="Previous case (left arrow)">Previous</button><button id="next" title="Next case (right arrow)">Next</button></div></div>
       <div class="columns"><div class="trace-pane">
-        <section><h3>Answer shown to the voter</h3><div id="answer" class="answer"></div></section>
+        <section><h3>Prepared answer</h3><div id="answer" class="answer rich-text"></div><p class="meta">This evaluation approves the first Query Rewrite Proposal automatically. A prepared answer does not verify browser delivery.</p></section>
+        <section><details id="reference-panel"><summary>Case reference and scope</summary><div id="reference"></div></details></section>
         <section><h3>Question preparation</h3><div id="preparation"></div></section>
         <section><h3>Retrieval branches</h3><div id="branches"></div></section>
         <section><h3>Selected grounding evidence and citations</h3><div id="evidence"></div></section>
         <section><h3>Application stages</h3><div id="stages"></div></section>
         <section><h3>Model messages and complete case data</h3><div id="raw"></div></section>
-      </div><div class="review-pane"><div class="review-box"><h3>Your case review</h3><div class="verdict"><button data-verdict="pass" title="1">Pass</button><button data-verdict="fail" title="2">Fail</button><button data-verdict="defer" title="D">Defer</button><button data-verdict="clear" title="U">Clear</button></div><label for="note">Critique or observation</label><textarea id="note" placeholder="What did retrieval, citation, or answer do well or poorly?"></textarea><div id="save-status"></div><div class="meta">Arrow keys navigate. 1 pass, 2 fail, D defer, U clear, Cmd/Ctrl+Enter saves and moves on.</div></div></div></div>
+      </div><div class="review-pane"><div class="review-box"><h3>Your case review</h3><div class="verdict"><button data-verdict="pass" title="1">Pass</button><button data-verdict="fail" title="2">Fail</button><button data-verdict="defer" title="D">Defer</button></div><label for="note">Critique or observation</label><textarea id="note" placeholder="What did retrieval, citation, or answer do well or poorly?"></textarea><div id="save-status" role="status" aria-live="polite"></div><div class="review-actions"><button id="undo" title="Undo last annotation action (U)">Undo</button><button id="clear-verdict">Clear verdict</button><button id="retry-save">Save / retry</button></div><div class="meta">Arrows navigate. 1 Pass, 2 Fail, D Defer, U Undo. Cmd/Ctrl+S saves. Cmd/Ctrl+Enter saves and moves on.</div></div></div></div>
     </main>
   </div>
   <script>
     'use strict';
-    let report, cases = [], reviews = {}, saveStatuses = {}, saveRevisions = {}, index = 0, saveTimer, saveChain = Promise.resolve(true);
+    let report, presentation = {html: {}, references: {}}, cases = [], reviews = {}, saveStatuses = {}, saveRevisions = {}, drafts = {}, history = [], index = 0, saveTimer, saveChain = Promise.resolve(true);
+    const pendingSaves = new Map();
+    let navigationChain = Promise.resolve(), navigationGeneration = 0, draftKey;
+    let draftStorageFailed = false;
     const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
     const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
     const $ = id => document.getElementById(id);
@@ -153,7 +202,7 @@
     }
     function caseRow(list, item, outsideFilter = false) {
       const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
-      row.type = 'button'; row.onclick = () => { flushSave(); index = cases.indexOf(item); render(true); };
+      row.type = 'button'; row.onclick = () => moveTo(cases.indexOf(item));
       add(row, 'span', caseQuestion(item), 'name');
       const status = reviewFor(item).verdict || 'unreviewed';
       add(row, 'span', `${item.name} · ${object(item.metadata).cohort || 'unknown cohort'} · ${object(item.output).failure ? 'execution failed · ' : ''}${status}${outsideFilter ? ' · outside filter' : ''}`, 'sub');
@@ -161,7 +210,7 @@
     function renderList() {
       const list = clear('case-list');
       const done = cases.filter(item => reviewFor(item).verdict).length;
-      $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining`;
+      $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining${Object.keys(drafts).length ? ' · ' + Object.keys(drafts).length + ' pending save' : ''}`;
       const matching = filteredCases();
       if (selection() && !matching.includes(selection())) caseRow(list, selection(), true);
       for (const item of matching) caseRow(list, item);
@@ -172,23 +221,82 @@
     function applyFilters() {
       const matching = filteredCases();
       if (matching.length && !matching.includes(selection())) {
-        flushSave(); index = cases.indexOf(matching[0]); render(true);
+        moveTo(cases.indexOf(matching[0]));
       } else renderList();
+    }
+    function richText(parent, value) {
+      const content = add(parent, 'div', null, 'rich-text');
+      try {
+        if (['http:', 'https:'].includes(new URL(value).protocol)) { safeLink(content, value, value); return content; }
+      } catch (_) {}
+      // Only the local server's sanitized Markdown renderer produces this HTML.
+      if (Object.hasOwn(presentation.html, value)) content.innerHTML = presentation.html[value];
+      else content.textContent = string(value);
+      for (const table of content.querySelectorAll('table')) {
+        const wrapper = document.createElement('div'); wrapper.className = 'table-scroll';
+        table.before(wrapper); wrapper.append(table);
+      }
+      return content;
+    }
+    function structured(parent, value, depth = 0) {
+      if (typeof value === 'string') {
+        try { const decoded = JSON.parse(value); if (decoded && typeof decoded === 'object') return structured(parent, decoded, depth); } catch (_) {}
+        return richText(parent, value);
+      }
+      if (value == null || typeof value !== 'object') return add(parent, 'span', value == null ? 'None' : value);
+      if (depth >= 3) return detail(parent, 'Nested data', value);
+      const container = add(parent, 'div', null, 'structured');
+      if (Array.isArray(value)) {
+        if (value.length && value.every(row => row && typeof row === 'object' && !Array.isArray(row))) {
+          const wrapper = add(container, 'div', null, 'table-scroll'), table = add(wrapper, 'table');
+          const keys = [...new Set(value.flatMap(row => Object.keys(row)))];
+          const header = add(add(table, 'thead'), 'tr');
+          keys.forEach(key => add(header, 'th', key.replaceAll('_', ' ')));
+          const body = add(table, 'tbody');
+          for (const row of value) { const tr = add(body, 'tr'); keys.forEach(key => structured(add(tr, 'td'), row[key], depth + 1)); }
+        } else {
+          const list = add(container, 'ul'); value.forEach(item => structured(add(list, 'li'), item, depth + 1));
+        }
+      } else {
+        const list = add(container, 'dl');
+        for (const [key, content] of Object.entries(value)) {
+          add(list, 'dt', key.replaceAll('_', ' ')); const field = add(list, 'dd');
+          if (key === 'validated_query' && presentation.code?.[content]) field.innerHTML = presentation.code[content];
+          else structured(field, content, depth + 1);
+        }
+      }
+      return container;
     }
     function answerText(parent, text) {
       if (!text) { add(parent, 'p', 'No answer was prepared for this case.', 'empty'); return; }
-      for (const paragraph of string(text).split(/\n\s*\n/)) {
-        const line = add(parent, 'p', null, /^\d+\. /.test(paragraph) ? 'source-line' : '');
-        // Render citation links as DOM nodes; never inject model output as HTML.
-        const pattern = /\[([^\]]+)\]\(<?(https?:\/\/[^\s)>]+)>?\)/g;
-        let cursor = 0, match;
-        while ((match = pattern.exec(paragraph))) {
-          add(line, 'span', paragraph.slice(cursor, match.index));
-          safeLink(line, match[1], match[2]);
-          cursor = pattern.lastIndex;
+      richText(parent, text);
+    }
+    function renderReference(item) {
+      const container = clear('reference'), metadata = object(item.metadata);
+      if (metadata.grounding) add(container, 'span', metadata.grounding, 'badge');
+      if (metadata.scope_note) { add(container, 'h4', 'Question scope'); richText(container, metadata.scope_note); }
+      if (item.expected_output != null) { add(container, 'h4', 'Expected output'); structured(container, item.expected_output); }
+      else add(container, 'p', 'This case has no expected answer. Reference retrieval results describe stored data, not an answer grade.', 'meta');
+      const reference = presentation.references[item.name];
+      if (reference) {
+        add(container, 'h4', 'Reference artifact'); add(container, 'p', reference.path, 'meta');
+        if (reference.error) add(container, 'p', reference.error, 'empty');
+        else {
+          const record = object(reference.content);
+          if (Array.isArray(record.cases)) {
+            if (record.interpretation) richText(container, record.interpretation);
+            for (const sourceCase of record.cases) {
+              add(container, 'h4', sourceCase.question || sourceCase.id || 'Reference case');
+              add(container, 'div', `${sourceCase.id || ''}${sourceCase.row_count != null ? ' · ' + sourceCase.row_count + ' recorded rows' : ''}`, 'meta');
+              structured(container, sourceCase.rows ?? sourceCase);
+              detail(container, 'Reference case details', sourceCase);
+            }
+            detail(container, 'Artifact metadata', Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'cases')));
+          } else structured(container, reference.content);
+          detail(container, 'Complete reference data', reference.content);
         }
-        add(line, 'span', paragraph.slice(cursor));
       }
+      detail(container, 'Authored case metadata', metadata);
     }
     function traceURL(traceId) {
       if (!report.trace_url || !traceId) return null;
@@ -286,32 +394,50 @@
         if (attributes.failure_stage) add(head, 'span', `failure: ${attributes.failure_stage}`, 'badge fail');
         if (stage.started_at) add(block, 'div', stage.started_at, 'stage-time');
         if (attributes.diagnostic) add(block, 'div', attributes.diagnostic, 'error');
-        detail(block, 'Recorded decisions and IDs', stage);
+        const decisions = add(block, 'details'); add(decisions, 'summary', 'Recorded decisions and IDs'); structured(decisions, attributes);
+        detail(block, 'Raw stage observation', stage);
       }
     }
     function renderRaw(item) {
       const container = clear('raw'), output = object(item.output);
       const calls = Array.isArray(output.messages) ? output.messages : [];
-      if (calls.length) for (const call of calls) {
+      for (const call of calls) {
+        const toolGroups = new Map();
         const panel = add(container, 'details');
         add(panel, 'summary', `${call.component || 'model'} · ${call.status || 'unknown'} · request ${call.request_index ?? '?'}`);
+        const instructions = object(call.request_parameters).instruction_parts || [];
+        if (instructions.length) {
+          const block = add(panel, 'details', null, 'message system'); add(block, 'summary', 'System instructions');
+          for (const part of instructions) structured(block, part.content ?? part);
+        }
         const messages = Array.isArray(call.messages) ? call.messages : [];
-        for (const message of messages) {
-          const messageBlock = add(panel, 'div', null, `message ${message.kind === 'response' ? 'response' : ''}`);
-          add(messageBlock, 'div', message.kind || 'message', 'meta');
-          for (const part of message.parts || []) {
-            const kind = part.part_kind || part.kind || 'part';
-            const partBlock = add(messageBlock, 'div', null, kind.includes('tool') ? 'message tool' : '');
-            add(partBlock, 'strong', `${kind}${part.tool_name ? ' · ' + part.tool_name : ''}`);
-            const content = part.content ?? part.args ?? part.content_delta ?? part;
-            add(partBlock, 'div', typeof content === 'string' ? content : pretty(content), 'content');
+        for (const message of messages) for (const part of message.parts || []) {
+          const kind = part.part_kind || part.kind || 'part';
+          const role = kind.includes('tool') ? 'tool' : kind.includes('system') ? 'system' : message.kind === 'response' ? 'response' : 'user';
+          const callId = part.tool_call_id;
+          let parent = panel;
+          if (role === 'tool' && callId) {
+            const groupKey = `${call.run_id || call.component || ''}:${callId}`;
+            if (!toolGroups.has(groupKey)) {
+              const group = add(panel, 'details', null, 'tool-group');
+              add(group, 'summary', `Tool exchange · ${part.tool_name || 'tool'} · ${callId}`);
+              toolGroups.set(groupKey, group);
+            }
+            parent = toolGroups.get(groupKey);
           }
+          const block = add(parent, role === 'system' ? 'details' : 'div', null, `message ${role}`);
+          add(block, role === 'system' ? 'summary' : 'strong', `${role === 'response' ? 'Assistant' : role === 'user' ? 'User' : role === 'system' ? 'System' : 'Tool'} · ${kind}${part.tool_name ? ' · ' + part.tool_name : ''}${callId ? ' · ' + callId : ''}`);
+          const content = part.content ?? part.args ?? part.content_delta ?? part;
+          if (role === 'tool' || kind.includes('thinking')) {
+            const data = add(block, 'details'); add(data, 'summary', kind.includes('tool-call') ? 'Arguments' : 'Content'); structured(data, content);
+          } else structured(block, content);
+          detail(block, 'Raw message part', part);
         }
         detail(panel, 'Complete request record', call);
       }
       detail(container, 'Complete case output', output);
       if (item.inputs) detail(container, 'Case input', item.inputs);
-      if (item.attributes) detail(container, 'Case metadata', item.attributes);
+      if (item.attributes) detail(container, 'Case attributes', item.attributes);
     }
     function render(resetTrace = false) {
       const item = selection(); if (!item) return;
@@ -326,70 +452,152 @@
       clear('answer');
       if (output.failure) add($('answer'), 'p', `Failed at ${output.failure.stage || 'unknown stage'}: ${output.failure.diagnostic || output.failure.exception_type || ''}`, 'error');
       answerText($('answer'), output.rendered_text);
-      renderPreparation(output, item); renderBranches(output); renderEvidence(output); renderStages(item); renderRaw(item);
+      renderReference(item); renderPreparation(output, item); renderBranches(output); renderEvidence(output); renderStages(item); renderRaw(item);
       $('note').value = review.note || '';
-      for (const button of document.querySelectorAll('[data-verdict]')) button.classList.toggle('active', button.dataset.verdict === review.verdict);
-      $('save-status').textContent = saveStatuses[item.name] || '';
+      for (const button of document.querySelectorAll('[data-verdict]')) {
+        button.classList.toggle('active', button.dataset.verdict === review.verdict);
+        button.setAttribute('aria-pressed', String(button.dataset.verdict === review.verdict));
+      }
+      showSaveStatus();
+      $('undo').disabled = !history.length;
       renderList();
-      if (resetTrace) document.querySelector('.trace-pane').scrollTop = 0;
+      if (resetTrace) { document.querySelector('.trace-pane').scrollTop = 0; document.querySelector('main').scrollTop = 0; }
+    }
+    function showSaveStatus() {
+      const name = selection()?.name;
+      const failed = Object.keys(drafts).filter(key => /failed/i.test(saveStatuses[key] || ''));
+      $('save-status').textContent = failed.length ? failed.map(key => `${key}: ${saveStatuses[key]}`).join(' ') : saveStatuses[name] || '';
+      $('save-status').classList.toggle('error', !!failed.length);
+    }
+    function persistDrafts() {
+      if (!draftKey) return;
+      try {
+        if (Object.keys(drafts).length) localStorage.setItem(draftKey, JSON.stringify({review_identity: report.review_identity, reviews: drafts}));
+        else localStorage.removeItem(draftKey);
+        draftStorageFailed = false;
+      } catch (_) { draftStorageFailed = true; }
     }
     function setSaveStatus(name, revision, status) {
       if ((saveRevisions[name] || 0) !== revision) return;
       saveStatuses[name] = status;
-      if (selection()?.name === name) $('save-status').textContent = status;
+      showSaveStatus();
     }
     function markEdited(name) {
       const revision = (saveRevisions[name] || 0) + 1;
       saveRevisions[name] = revision;
-      setSaveStatus(name, revision, 'Saving…');
+      drafts[name] = {...reviews[name]}; persistDrafts();
+      setSaveStatus(name, revision, draftStorageFailed ? 'Local backup failed. Keep this page open until saved.' : 'Saved locally; saving to review file…');
+    }
+    function changeReview(name, review) {
+      const before = {...reviewFor({name})};
+      if (before.verdict === review.verdict && before.note === review.note) return;
+      history.push({name, before}); reviews[name] = review;
+      markEdited(name); $('undo').disabled = false; renderList();
     }
     function updateReview() {
       const item = selection();
-      reviews[item.name] = {...reviewFor(item), note: $('note').value};
-      markEdited(item.name);
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(flushSave, 350);
-      renderList();
+      changeReview(item.name, {...reviewFor(item), note: $('note').value});
+      clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 350);
     }
-    function flushSave() {
-      clearTimeout(saveTimer);
-      const item = selection(); if (!item || !reviews[item.name]) return saveChain;
-      const name = item.name, review = {...reviews[name]}, revision = saveRevisions[name] || 0;
-      setSaveStatus(name, revision, 'Saving…');
-      saveChain = saveChain.then(() => fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})}))
-        .then(response => { if (!response.ok) throw new Error(`Save failed: ${response.status}`); setSaveStatus(name, revision, 'Saved'); return true; })
-        .catch(error => { setSaveStatus(name, revision, error.message); return false; });
-      return saveChain;
+    function saveCase(name) {
+      if (!drafts[name]) return Promise.resolve(true);
+      const review = {...reviews[name]}, revision = saveRevisions[name] || 0, key = `${name}:${revision}`;
+      if (pendingSaves.has(key)) return pendingSaves.get(key);
+      setSaveStatus(name, revision, 'Saving to review file…');
+      const operation = saveChain.then(async () => {
+        try {
+          const response = await fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review, review_identity: report.review_identity})});
+          if (response.status === 409) throw new Error('Save failed: report changed. Reload to review the current report');
+          if (!response.ok) throw new Error(`Save failed: ${response.status}`);
+          if ((saveRevisions[name] || 0) === revision) { delete drafts[name]; persistDrafts(); }
+          setSaveStatus(name, revision, 'Saved to review file'); renderList(); return true;
+        } catch (error) {
+          setSaveStatus(name, revision, `${error.message}. ${draftStorageFailed ? 'Keep this page open.' : 'Edits kept in this browser.'} Use Save / retry.`);
+          return false;
+        } finally { pendingSaves.delete(key); }
+      });
+      pendingSaves.set(key, operation); saveChain = operation; return operation;
     }
-    function navigate(delta) { const target = nextIndex(delta); if (target === undefined) return; flushSave(); index = target; render(true); }
-    for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => {
-      const item = selection(); reviews[item.name] = {...reviewFor(item), verdict: button.dataset.verdict === 'clear' ? null : button.dataset.verdict, note: $('note').value};
-      markEdited(item.name);
-      render(); flushSave();
-    };
+    async function flushSave() {
+      clearTimeout(saveTimer);
+      while (Object.keys(drafts).length) {
+        const results = await Promise.all(Object.keys(drafts).map(saveCase));
+        if (!results.every(Boolean)) return false;
+      }
+      return true;
+    }
+    function moveTo(target) {
+      const generation = navigationGeneration;
+      navigationChain = navigationChain.then(async () => {
+        if (generation !== navigationGeneration) return;
+        const destination = typeof target === 'function' ? target() : target;
+        if (!await flushSave()) return;
+        if (generation !== navigationGeneration || destination === undefined || destination === index) return;
+        index = destination; render(true);
+      });
+      return navigationChain;
+    }
+    function navigate(delta) { return moveTo(() => nextIndex(delta)); }
+    function undo() {
+      const action = history.pop(); if (!action) return;
+      // Keep the restored case selected when an earlier navigation finishes saving.
+      navigationGeneration++;
+      reviews[action.name] = action.before; markEdited(action.name);
+      index = cases.findIndex(item => item.name === action.name);
+      render(true); flushSave();
+    }
+    function setVerdict(verdict) {
+      const item = selection(); if (!item) return;
+      changeReview(item.name, {...reviewFor(item), verdict, note: $('note').value}); render(); flushSave();
+    }
+    for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => setVerdict(button.dataset.verdict);
+    $('undo').onclick = undo; $('clear-verdict').onclick = () => setVerdict(null); $('retry-save').onclick = flushSave;
     $('note').addEventListener('input', updateReview);
     $('all-runs').onclick = event => { event.preventDefault(); flushSave().then(saved => { if (saved) location.href = '/'; }); };
     $('previous').onclick = () => navigate(-1); $('next').onclick = () => navigate(1);
     $('search').oninput = applyFilters; $('filter').onchange = applyFilters; $('cohort').onchange = applyFilters;
+    window.addEventListener('beforeunload', event => {
+      persistDrafts();
+      if (draftStorageFailed && Object.keys(drafts).length) { event.preventDefault(); event.returnValue = ''; }
+    });
+    window.addEventListener('online', flushSave);
     document.addEventListener('keydown', event => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); flushSave().then(saved => { if (saved) navigate(1); }); return; }
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); navigate(1); return; }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); flushSave(); return; }
+      if (event.metaKey || event.ctrlKey || event.altKey || event.isComposing) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable) return;
+      const key = event.key.toLowerCase();
+      if (['ArrowLeft', 'ArrowRight'].includes(event.key) || ['1', '2', 'd', 'u'].includes(key)) event.preventDefault();
       if (event.key === 'ArrowLeft') navigate(-1);
       if (event.key === 'ArrowRight') navigate(1);
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); flushSave(); return; }
-      if (event.key === '1' || event.key === '2' || ['d', 'u'].includes(event.key.toLowerCase())) {
-        const verdict = event.key === '1' ? 'pass' : event.key === '2' ? 'fail' : event.key.toLowerCase() === 'd' ? 'defer' : 'clear';
-        document.querySelector(`[data-verdict="${verdict}"]`).click();
-      }
+      if (key === '1') setVerdict('pass');
+      if (key === '2') setVerdict('fail');
+      if (key === 'd') setVerdict('defer');
+      if (key === 'u') undo();
     });
-    Promise.all([fetch(`${apiBase}/report`).then(r => { if (!r.ok) throw new Error(`Report ${r.status}`); return r.json(); }), fetch(`${apiBase}/reviews`).then(r => { if (!r.ok) throw new Error(`Reviews ${r.status}`); return r.json(); })])
-      .then(([loadedReport, loadedReviews]) => {
-        report = loadedReport; reviews = loadedReviews; cases = report.report.cases;
+    Promise.all([fetch(`${apiBase}/report`).then(r => { if (!r.ok) throw new Error(`Report ${r.status}`); return r.json(); }), fetch(`${apiBase}/reviews`).then(r => { if (!r.ok) throw new Error(`Reviews ${r.status}`); return r.json(); }), fetch(`${apiBase}/presentation`).then(r => { if (!r.ok) throw new Error(`Presentation ${r.status}`); return r.json(); })])
+      .then(([loadedReport, loadedReviews, loadedPresentation]) => {
+        report = loadedReport; reviews = loadedReviews; presentation = loadedPresentation; cases = report.report.cases;
+        if (!report.review_identity) throw new Error('Report identity is missing. Reload after restarting the reviewer.');
+        draftKey = `chat-review-drafts:${runId}:${report.review_identity}`;
+        add(document.head, 'style', presentation.code_css);
+        try {
+          const stored = object(JSON.parse(localStorage.getItem(draftKey) || '{}'));
+          const recovered = stored.review_identity === report.review_identity ? object(stored.reviews) : {};
+          for (const item of cases) {
+            const draft = recovered[item.name];
+            if (draft && [null, 'pass', 'fail', 'defer'].includes(draft.verdict) && typeof draft.note === 'string') {
+              reviews[item.name] = draft; drafts[item.name] = draft; saveRevisions[item.name] = 1;
+              saveStatuses[item.name] = 'Recovered browser edits; saving to review file…';
+            }
+          }
+        } catch (_) { draftStorageFailed = true; }
+        persistDrafts();
         $('run-meta').textContent = `${report.ran_at || ''} · ${report.deployment?.model || report.model || ''} · ${cases.length} cases`;
         for (const value of [...new Set(cases.map(item => object(item.metadata).cohort).filter(Boolean))].sort()) {
           const option = add($('cohort'), 'option', value.replaceAll('_', ' ')); option.value = value;
         }
-        if (cases.length) render(true); else $('question').textContent = 'This report has no cases.';
+        if (cases.length) { render(true); flushSave(); } else $('question').textContent = 'This report has no cases.';
       }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; });
   </script>
 </body>
