@@ -47,7 +47,9 @@ previous verdict or note, including an action on another case, during the curren
 page session. The separate Clear verdict button keeps the note. Cmd/Ctrl+S saves
 while the note field is focused, and Cmd/Ctrl+Enter saves and advances. Plain
 annotation and arrow shortcuts leave text entry alone.
-Rapid arrow or button navigation applies each action in order after saving.
+Rapid arrow, button, or save-and-advance navigation applies each action in order
+after saving. Undo selects the case whose annotation it restores and cancels
+navigation requested before that Undo, including navigation waiting for a save.
 
 The note saves as you type. Each edit also creates a synchronous browser-local
 draft, so reloading or closing before the file save finishes preserves the edit.
@@ -140,4 +142,5 @@ undo, navigation, focused save shortcuts, counters, reload persistence,
 instructions and tool exchanges, safe rendering, and recovery after save failures.
 They also save desktop and narrow screenshots under `.scratch/review-interface/`.
 Regression checks cover report replacement and directory changes, malformed
-reference records, short tablet viewports, and queued navigation during a save.
+reference records, short tablet viewports, queued navigation during a save, and
+Undo while navigation is waiting for a save.

@@ -491,3 +491,43 @@ def test_rapid_navigation_retains_each_action(browser_page, control):
     delayed[0].continue_()
 
     expect(page.locator("#position")).to_have_text("Case 3 of 3")
+
+
+@pytest.mark.parametrize("control", ["arrows", "buttons", "save-and-next"])
+def test_undo_cancels_pending_navigation(browser_page, reviewer, control):
+    page, expect = browser_page
+    delayed = []
+
+    def hold_first_write(route):
+        if route.request.method == "POST" and not delayed:
+            delayed.append(route)
+        else:
+            route.continue_()
+
+    page.route("**/api/runs/run/reviews", hold_first_write)
+    page.locator("#note").fill("Undo this pending edit")
+    page.keyboard.press("Control+s")
+    expect(page.locator("#save-status")).to_have_text("Saving to review file…")
+    blur(page)
+    for _ in range(2):
+        if control == "arrows":
+            page.keyboard.press("ArrowRight")
+        elif control == "buttons":
+            page.get_by_role("button", name="Next", exact=True).click()
+        else:
+            page.keyboard.press("Control+Enter")
+    page.get_by_role("button", name="Undo", exact=True).click()
+    expect(page.locator("#note")).to_have_value("")
+    delayed[0].continue_()
+    # Wait for both saves and navigation before checking the restored selection.
+    page.evaluate("async () => { await flushSave(); await navigationChain; }")
+    expect(page.locator("#position")).to_have_text("Case 1 of 3")
+    saved(page, expect, reviewer[1], "case-a", None)
+    page.get_by_role("button", name="Next", exact=True).click()
+    expect(page.locator("#position")).to_have_text("Case 2 of 3")
+    page.get_by_role("button", name="Next", exact=True).click()
+    expect(page.locator("#position")).to_have_text("Case 3 of 3")
+    page.locator("#note").fill("Save on the last case")
+    page.keyboard.press("Control+Enter")
+    saved(page, expect, reviewer[1], "case-c", None, "Save on the last case")
+    expect(page.locator("#position")).to_have_text("Case 3 of 3")
