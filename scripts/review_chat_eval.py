@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 import os
@@ -92,6 +93,8 @@ def reference_content(case: dict[str, Any]) -> dict[str, Any] | None:
         if path.suffix.lower() == ".json":
             content = json.loads(text)
             if isinstance(content, dict) and isinstance(content.get("cases"), list):
+                if any(not isinstance(item, dict) for item in content["cases"]):
+                    raise ValueError("Reference cases must contain JSON objects.")
                 source_id = (
                     case.get("metadata", {}).get("source_case_id") or case["name"]
                 )
@@ -164,11 +167,15 @@ def presentation_for(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_report(path: Path) -> dict[str, Any]:
-    report = json.loads(path.read_text())
+    content = path.read_bytes()
+    report = json.loads(content)
     if report.get("task") != "chat" or not isinstance(
         report.get("report", {}).get("cases"), list
     ):
         raise ValueError("expected a chat evaluation report with report.cases")
+    report["review_identity"] = hashlib.sha256(
+        str(path.resolve()).encode() + b"\0" + content
+    ).hexdigest()
     for case in report["report"]["cases"]:
         output = case.get("output")
         if not isinstance(output, dict):
@@ -185,6 +192,7 @@ def _cached_report(path: Path, mtime_ns: int, size: int) -> dict[str, Any]:
 
 
 def report_for(path: Path) -> dict[str, Any]:
+    path = path.resolve()
     stat = path.stat()
     return _cached_report(path, stat.st_mtime_ns, stat.st_size)
 
@@ -346,8 +354,12 @@ def make_handler(
                 if size < 1 or size > 1_000_000:
                     raise ValueError("invalid review payload size")
                 payload = json.loads(self.rfile.read(size))
-                if not isinstance(payload, dict) or set(payload) != {"name", "review"}:
-                    raise ValueError("expected name and review")
+                if not isinstance(payload, dict) or set(payload) != {
+                    "name",
+                    "review",
+                    "review_identity",
+                }:
+                    raise ValueError("expected name, review, and review_identity")
                 name, review = payload["name"], payload["review"]
                 case_names = {
                     case["name"] for case in report_for(report_path)["report"]["cases"]
@@ -361,6 +373,16 @@ def make_handler(
                 if not isinstance(review["note"], str) or len(review["note"]) > 20_000:
                     raise ValueError("invalid note")
                 with reviews_lock:
+                    if (
+                        payload["review_identity"]
+                        != report_for(report_path)["review_identity"]
+                    ):
+                        self._send(
+                            409,
+                            b"Report changed; reload before reviewing",
+                            "text/plain; charset=utf-8",
+                        )
+                        return
                     reviews = load_reviews(reviews_path)
                     reviews[name] = review
                     save_reviews(reviews_path, reviews)

@@ -378,3 +378,116 @@ def test_navigation_waits_for_edits_made_during_a_save(browser_page, reviewer):
         json.loads((reviewer[1] / "run.reviews.json").read_text())["case-a"]["note"]
         == "Latest version"
     )
+
+
+@pytest.mark.parametrize("replacement", ["directory", "contents"])
+def test_drafts_do_not_overwrite_another_report(
+    browser_page, reviewer, monkeypatch, replacement
+):
+    page, expect = browser_page
+    directory = reviewer[1]
+    pattern = "**/api/runs/run/reviews"
+
+    def reject_writes(route):
+        if route.request.method == "POST":
+            route.fulfill(status=503, body="Unavailable")
+        else:
+            route.continue_()
+
+    page.route(pattern, reject_writes)
+    page.locator("#note").fill("Draft for the original report")
+    expect(page.locator("#save-status")).to_contain_text("Save failed: 503")
+    content = (directory / "run.json").read_text()
+    if replacement == "directory":
+        destination = directory / "different-reports"
+        destination.mkdir()
+        (destination / "run.json").write_text(content)
+        original_run_path = review_server.run_path
+        monkeypatch.setattr(
+            review_server,
+            "run_path",
+            lambda _reports_dir, run_id: original_run_path(destination, run_id),
+        )
+    else:
+        destination = directory
+        report = json.loads(content)
+        report["report"]["cases"][0]["output"]["rendered_text"] = "Replacement answer"
+        (destination / "run.json").write_text(json.dumps(report))
+    existing = {"case-a": {"verdict": "pass", "note": "Review of the new report"}}
+    (destination / "run.reviews.json").write_text(json.dumps(existing))
+    page.unroute(pattern, reject_writes)
+    page.get_by_role("button", name="Save / retry", exact=True).click()
+    expect(page.locator("#save-status")).to_contain_text("report changed")
+    assert json.loads((destination / "run.reviews.json").read_text()) == existing
+
+    page.reload()
+
+    expect(page.locator("#note")).to_have_value("Review of the new report")
+    page.get_by_role("button", name="Fail", exact=True).click()
+    saved(page, expect, destination, "case-a", "fail", "Review of the new report")
+    assert page.evaluate(
+        "Object.values(localStorage).some(value => value.includes('Draft for the original report'))"
+    )
+    if replacement == "directory":
+        monkeypatch.setattr(review_server, "run_path", original_run_path)
+        page.reload()
+        expect(page.locator("#note")).to_have_value("Draft for the original report")
+        saved(page, expect, directory, "case-a", None, "Draft for the original report")
+
+
+def test_malformed_reference_does_not_block_annotation(browser_page, reviewer):
+    page, expect = browser_page
+    (reviewer[1] / "reference.json").write_text(json.dumps({"cases": [None]}))
+
+    page.reload()
+
+    expect(page.locator("#position")).to_have_text("Case 1 of 3")
+    page.locator("#reference-panel > summary").click()
+    expect(page.locator("#reference .empty")).to_contain_text("Reference")
+    page.get_by_role("button", name="Pass", exact=True).click()
+    saved(page, expect, reviewer[1], "case-a", "pass")
+
+
+@pytest.mark.parametrize("width,height", [(820, 480), (960, 600)])
+def test_short_tablet_can_scroll_to_annotation_controls(browser_page, width, height):
+    page, expect = browser_page
+    page.set_viewport_size({"width": width, "height": height})
+    page.locator("#question").evaluate(
+        """el => { el.textContent = 'Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025–2026 session?'; }"""
+    )
+    page.mouse.move(width - 10, height - 10)
+    page.mouse.wheel(0, 10000)
+    for selector in ("#retry-save", ".review-box .meta", "#note"):
+        expect(page.locator(selector)).to_be_in_viewport(ratio=1)
+    screenshots = Path(__file__).resolve().parents[1] / ".scratch/review-interface"
+    screenshots.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(screenshots / f"review-fix-tablet-{width}-{height}.png"))
+    page.mouse.wheel(0, -10000)
+    expect(page.locator("#position")).to_be_in_viewport(ratio=1)
+
+
+@pytest.mark.parametrize("control", ["arrows", "buttons"])
+def test_rapid_navigation_retains_each_action(browser_page, control):
+    page, expect = browser_page
+    delayed = []
+
+    def hold_first_write(route):
+        if route.request.method == "POST" and not delayed:
+            delayed.append(route)
+        else:
+            route.continue_()
+
+    page.route("**/api/runs/run/reviews", hold_first_write)
+    page.locator("#note").fill("Pending note")
+    page.keyboard.press("Control+s")
+    expect(page.locator("#save-status")).to_have_text("Saving to review file…")
+    blur(page)
+    for _ in range(2):
+        if control == "arrows":
+            page.keyboard.press("ArrowRight")
+        else:
+            page.get_by_role("button", name="Next", exact=True).click()
+    expect(page.locator("#position")).to_have_text("Case 1 of 3")
+    delayed[0].continue_()
+
+    expect(page.locator("#position")).to_have_text("Case 3 of 3")

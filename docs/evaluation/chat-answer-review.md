@@ -47,13 +47,20 @@ previous verdict or note, including an action on another case, during the curren
 page session. The separate Clear verdict button keeps the note. Cmd/Ctrl+S saves
 while the note field is focused, and Cmd/Ctrl+Enter saves and advances. Plain
 annotation and arrow shortcuts leave text entry alone.
+Rapid arrow or button navigation applies each action in order after saving.
 
 The note saves as you type. Each edit also creates a synchronous browser-local
 draft, so reloading or closing before the file save finishes preserves the edit.
-Reopening the same run at the same server address recovers and retries those
-drafts. Saved review files remain the durable review artifact. If a file save
-fails, the interface shows the affected case IDs, retains browser drafts, and
-keeps the selected case until Save / retry succeeds. A browser storage failure
+Reopening the same report at the same server address recovers and retries those
+drafts. Recovery requires the same resolved file path and file contents, so
+switching report directories or replacing a report cannot apply another report's
+drafts. Previous drafts remain stored for their original report version. Older
+drafts without a report identity are retained but are not recovered automatically.
+The server also rejects saves from an open page after its report changes; reload
+to review the current report. Saved review files remain the durable review
+artifact. If a file save fails, the interface shows the affected case IDs,
+retains browser drafts, and keeps the selected case until Save / retry succeeds.
+A browser storage failure
 warns you to keep the page open until the file save succeeds.
 
 Use
@@ -132,3 +139,5 @@ These tests use temporary reports and review files. They cover verdicts, notes,
 undo, navigation, focused save shortcuts, counters, reload persistence,
 instructions and tool exchanges, safe rendering, and recovery after save failures.
 They also save desktop and narrow screenshots under `.scratch/review-interface/`.
+Regression checks cover report replacement and directory changes, malformed
+reference records, short tablet viewports, and queued navigation during a save.

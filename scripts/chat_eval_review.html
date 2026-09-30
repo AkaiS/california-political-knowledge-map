@@ -99,7 +99,12 @@
     .passage { margin: 10px 0 0 12px; padding: 10px 13px; border-left: 3px solid #c3dad5; background: #f8faf9; white-space: pre-wrap; }
     .empty { color: #697a75; font-style: italic; }
     .error { color: #a12f24; }
-    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; } .review-box { max-height: none; } textarea { flex: none; height: 90px; min-height: 70px; } }
+    @media (max-width: 960px) { .columns { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 1fr) auto; overflow-y: auto; } .review-pane, .review-box { min-height: min-content; } .review-box { max-height: none; } textarea { flex: none; height: 90px; min-height: 70px; } }
+    @media (max-width: 960px) and (max-height: 650px) {
+      main { overflow-y: auto; }
+      .top { flex-shrink: 0; }
+      .columns { flex: none; overflow: visible; grid-template-rows: minmax(160px, 55vh) auto; }
+    }
     @media (max-width: 680px) {
       html { overflow: visible; }
       body { overflow-y: auto; }
@@ -146,10 +151,10 @@
     'use strict';
     let report, presentation = {html: {}, references: {}}, cases = [], reviews = {}, saveStatuses = {}, saveRevisions = {}, drafts = {}, history = [], index = 0, saveTimer, saveChain = Promise.resolve(true);
     const pendingSaves = new Map();
+    let navigationChain = Promise.resolve(), draftKey;
     let draftStorageFailed = false;
     const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
     const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
-    const draftKey = `chat-review-drafts:${runId}`;
     const $ = id => document.getElementById(id);
     const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     const string = value => value == null ? '' : String(value);
@@ -465,8 +470,9 @@
       $('save-status').classList.toggle('error', !!failed.length);
     }
     function persistDrafts() {
+      if (!draftKey) return;
       try {
-        if (Object.keys(drafts).length) localStorage.setItem(draftKey, JSON.stringify(drafts));
+        if (Object.keys(drafts).length) localStorage.setItem(draftKey, JSON.stringify({review_identity: report.review_identity, reviews: drafts}));
         else localStorage.removeItem(draftKey);
         draftStorageFailed = false;
       } catch (_) { draftStorageFailed = true; }
@@ -500,7 +506,8 @@
       setSaveStatus(name, revision, 'Saving to review file…');
       const operation = saveChain.then(async () => {
         try {
-          const response = await fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review})});
+          const response = await fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review, review_identity: report.review_identity})});
+          if (response.status === 409) throw new Error('Save failed: report changed. Reload to review the current report');
           if (!response.ok) throw new Error(`Save failed: ${response.status}`);
           if ((saveRevisions[name] || 0) === revision) { delete drafts[name]; persistDrafts(); }
           setSaveStatus(name, revision, 'Saved to review file'); renderList(); return true;
@@ -519,12 +526,16 @@
       }
       return true;
     }
-    async function moveTo(target) {
-      if (target === undefined || target === index) return;
-      if (!await flushSave()) return;
-      index = target; render(true);
+    function moveTo(target) {
+      navigationChain = navigationChain.then(async () => {
+        const destination = typeof target === 'function' ? target() : target;
+        if (destination === undefined || destination === index) return;
+        if (!await flushSave()) return;
+        index = destination; render(true);
+      });
+      return navigationChain;
     }
-    function navigate(delta) { return moveTo(nextIndex(delta)); }
+    function navigate(delta) { return moveTo(() => nextIndex(delta)); }
     function undo() {
       const action = history.pop(); if (!action) return;
       reviews[action.name] = action.before; markEdited(action.name);
@@ -563,9 +574,12 @@
     Promise.all([fetch(`${apiBase}/report`).then(r => { if (!r.ok) throw new Error(`Report ${r.status}`); return r.json(); }), fetch(`${apiBase}/reviews`).then(r => { if (!r.ok) throw new Error(`Reviews ${r.status}`); return r.json(); }), fetch(`${apiBase}/presentation`).then(r => { if (!r.ok) throw new Error(`Presentation ${r.status}`); return r.json(); })])
       .then(([loadedReport, loadedReviews, loadedPresentation]) => {
         report = loadedReport; reviews = loadedReviews; presentation = loadedPresentation; cases = report.report.cases;
+        if (!report.review_identity) throw new Error('Report identity is missing. Reload after restarting the reviewer.');
+        draftKey = `chat-review-drafts:${runId}:${report.review_identity}`;
         add(document.head, 'style', presentation.code_css);
         try {
-          const recovered = object(JSON.parse(localStorage.getItem(draftKey) || '{}'));
+          const stored = object(JSON.parse(localStorage.getItem(draftKey) || '{}'));
+          const recovered = stored.review_identity === report.review_identity ? object(stored.reviews) : {};
           for (const item of cases) {
             const draft = recovered[item.name];
             if (draft && [null, 'pass', 'fail', 'defer'].includes(draft.verdict) && typeof draft.note === 'string') {
