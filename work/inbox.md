@@ -97,6 +97,12 @@ source remain intentionally omitted from this queue.
   metadata.
 - **ME-05 · P1:** Keep deterministic contract tests distinct from model-quality
   evaluations.
+- **ME-06 · P3:** Cover retrieval failure and low-relevance context in RAG
+  retrieval-specific evaluations. Keep these out of the scenario dimension for
+  end-to-end Chat Session synthetic inputs, which varies request and evidence
+  conditions. A required data source not yet ingested is a coverage condition,
+  distinct from retrieval failing to return relevant evidence that is available.
+  Captured on 2026-09-30 during synthetic Evaluation Case planning.
 
 This category covers whether the models themselves are good and dependable.
 Whether the evaluation framework that measures them is itself correct is a
