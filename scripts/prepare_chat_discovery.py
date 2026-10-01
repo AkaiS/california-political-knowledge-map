@@ -36,20 +36,78 @@ def save(path, value):
     path.write_text(pretty(value) + "\n")
 
 
+def validate_retained_anchors(data_dir: Path, records):
+    """Reject regenerated evidence that changes the meaning of saved notes."""
+    blocks = {
+        (record["id"], block["id"]): block
+        for record in records
+        for block in record["blocks"]
+    }
+    old_path = data_dir / "records.json"
+    old_records = json.loads(old_path.read_text()) if old_path.exists() else []
+    old_blocks = {
+        (record["id"], block["id"]): block
+        for record in old_records
+        for block in record["blocks"]
+    }
+    for name in ("annotations", "suggestions"):
+        path = data_dir / f"{name}.json"
+        for item in json.loads(path.read_text()) if path.exists() else []:
+            key = (item["record_id"], item["block_id"])
+            block = blocks.get(key)
+            old = old_blocks.get(key)
+            start, end = item["start"], item["end"]
+            if block is None:
+                raise ValueError(
+                    f"Saved {name} anchor {item['id']} lost its content block"
+                )
+            visible = block["anchor_text"].encode("utf-16-le")
+            changed = (
+                not isinstance(start, int)
+                or not isinstance(end, int)
+                or not 0 <= start < end <= len(visible) // 2
+                or visible[2 * start : 2 * end].decode("utf-16-le") != item["quote"]
+            )
+            if old is not None:
+                changed |= any(
+                    old.get(field) != block.get(field)
+                    for field in ("section", "label", "role", "anchor_text")
+                )
+            if changed:
+                raise ValueError(
+                    f"Evidence changed at saved {name} anchor {item['id']}; "
+                    "use a new data directory"
+                )
+
+
 def prepare(report_path: Path, data_dir: Path, telemetry_path: Path | None):
     report_bytes = report_path.read_bytes()
     report = json.loads(report_bytes)
     digest = hashlib.sha256(report_bytes).hexdigest()
+    previous = {}
     if (data_dir / "manifest.json").exists():
         previous = json.loads((data_dir / "manifest.json").read_text())
         if previous["report_sha256"] != digest:
             raise ValueError("Use a new data directory for a different report")
     cases = report["report"]["cases"]
     evidence_path = ROOT / cases[0]["metadata"]["reference_artifact"]
-    evidence = json.loads(evidence_path.read_text())
+    evidence_bytes = evidence_path.read_bytes()
+    evidence = json.loads(evidence_bytes)
     references = {c["id"]: c for c in evidence["cases"]}
     chunks = {e["id"]: e for e in evidence["evidence"]}
-    telemetry = json.loads(telemetry_path.read_text()) if telemetry_path else None
+    telemetry_bytes = telemetry_path.read_bytes() if telemetry_path else None
+    telemetry = json.loads(telemetry_bytes) if telemetry_bytes is not None else None
+    input_hashes = {
+        "reference_sha256": hashlib.sha256(evidence_bytes).hexdigest(),
+        "telemetry_sha256": hashlib.sha256(telemetry_bytes).hexdigest()
+        if telemetry_bytes is not None
+        else None,
+    }
+    for name, digest_value in input_hashes.items():
+        if name in previous and previous[name] != digest_value:
+            raise ValueError(
+                "Use a new data directory for different reference evidence or telemetry"
+            )
     remote = telemetry["results"]["operational_details"]["rows"] if telemetry else []
     repeated = Counter(
         m.get("instructions", "")
@@ -368,6 +426,10 @@ def prepare(report_path: Path, data_dir: Path, telemetry_path: Path | None):
         )
         records.append(record)
 
+    # Older workspaces have only a report hash. Check their retained anchors
+    # before replacing any files, including when the display cache is absent.
+    validate_retained_anchors(data_dir, records)
+
     # Only one flag per genuine upper-tail structural outlier; ties at the cutoff
     # do not turn a common outcome into an outlier.
     raw = np.asarray(raw_features)
@@ -478,6 +540,7 @@ def prepare(report_path: Path, data_dir: Path, telemetry_path: Path | None):
         {
             "report": str(report_path.relative_to(ROOT)),
             "report_sha256": digest,
+            **input_hashes,
             "case_count": len(records),
             "model": report["model"],
             "trace_url": report["trace_url"],

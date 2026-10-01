@@ -25,6 +25,7 @@ observation. Enter saves; Shift+Enter adds a line. Notes appear beside their
 highlighted passages. Add case note anchors a general observation to the
 original question. Notes save to `annotations.json` and have a browser-local
 backup for pending file saves. Failed saves remain queued and can be retried.
+Edits to an existing note remain drafts until Save. Cancel discards the draft.
 
 Read from the original question through the prepared output, preparation,
 retrieval and selected evidence, corpus reference, and model exchanges. Model
@@ -49,7 +50,11 @@ The server uses the Python standard library. Preparation uses the NumPy,
 scikit-learn and Markdown renderer already available in the project environment.
 Preparation preserves saved samples, annotations, patterns and suggestions.
 Use a new directory for a different report. `records.json` is a regenerable
-display cache; the report hash in `manifest.json` binds annotations to their run.
+display cache. The hashes in `manifest.json` bind a workspace to its report,
+corpus reference, and optional telemetry. Use a new directory when any of those
+inputs change. Older workspaces with only a report hash must pass retained-anchor
+checks before regeneration; preparation leaves existing files untouched when a
+saved anchor no longer matches or its cached block content changes.
 Commit human observations and their taxonomy when using them as evidence for a
 change. The captured report and corpus evidence remain the original artifacts.
 
