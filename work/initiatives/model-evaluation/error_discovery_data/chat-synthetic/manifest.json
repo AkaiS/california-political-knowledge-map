@@ -1,0 +1,29 @@
+{
+  "report": "evals/reports/chat/20261001T000642Z-e17ffc5-local-gemma4-26b-1499ceec2201.json",
+  "report_sha256": "135d47d6bc138046a6332026b920d8e662bc5633a24ca59efc8a398194d734d3",
+  "case_count": 100,
+  "model": "gemma4:26b",
+  "trace_url": "https://logfire-us.pydantic.dev/akais/california-political-knowledge-map?q=trace_id%3D%2701a0f4b134ef6d7c5f9de3bc8d0e596f%27",
+  "ran_at": "2026-10-01T00:06:42.614563+00:00",
+  "outcomes": {
+    "answer_prepared": 41,
+    "declined": 54,
+    "stage_failure": 5
+  },
+  "constant_fields": [
+    "deployment",
+    "model",
+    "approval_mode",
+    "label_quality"
+  ],
+  "content": "question, preparation, output, selected evidence, corpus references, model exchanges",
+  "dimensions": "authored feature/scenario/familiarity, stage outcome, length, exchanges, passages, duration",
+  "hypotheses_to_inspect": [
+    "rewrite changes the requested result or time scope",
+    "coverage explanation claims absence before retrieval",
+    "policy blocks a source-supported reporting question",
+    "selected passages fail to satisfy the question",
+    "guidance cannot pass output validation"
+  ],
+  "hypotheses_are_labels": false
+}

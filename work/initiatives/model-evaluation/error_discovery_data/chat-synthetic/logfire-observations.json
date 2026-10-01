@@ -1,0 +1,3713 @@
+{
+  "project": "akais/california-political-knowledge-map",
+  "trace_id": "01a0f4b134ef6d7c5f9de3bc8d0e596f",
+  "queries": {
+    "errors": "SELECT start_timestamp, span_id, parent_span_id, span_name, exception_type, exception_message, attributes->>'chat_session_id' AS chat_session_id FROM records WHERE trace_id = '01a0f4b134ef6d7c5f9de3bc8d0e596f' AND is_exception ORDER BY start_timestamp LIMIT 100",
+    "branch_failures": "SELECT span_name, attributes->>'failure_kind' AS failure_kind, attributes->>'exception_type' AS exception_type, count(*) AS count FROM records WHERE trace_id = '01a0f4b134ef6d7c5f9de3bc8d0e596f' AND span_name = 'retrieval_branch_failed' GROUP BY span_name, attributes->>'failure_kind', attributes->>'exception_type' LIMIT 20",
+    "case_spans": "SELECT span_id, parent_span_id, span_name, start_timestamp, duration FROM records WHERE trace_id = '01a0f4b134ef6d7c5f9de3bc8d0e596f' AND span_name LIKE 'case:%' ORDER BY start_timestamp LIMIT 110",
+    "operational_details": "SELECT start_timestamp, span_id, parent_span_id, span_name, message, attributes FROM records WHERE trace_id = '01a0f4b134ef6d7c5f9de3bc8d0e596f' AND (span_name = 'retrieval_branch_failed' OR span_name = 'chat_session.guidance') ORDER BY start_timestamp LIMIT 100",
+    "SYN-T14-04-errors": "SELECT start_timestamp, span_name, message, http_response_status_code, exception_type, exception_message, attributes->>'error.type' AS error_type, attributes->>'http.response.status_code' AS response_status FROM records WHERE trace_id = '01a0f4b134ef6d7c5f9de3bc8d0e596f' AND (http_response_status_code >= 400 OR level >= 17 OR exception_type IS NOT NULL) ORDER BY start_timestamp LIMIT 40"
+  },
+  "results": {
+    "errors": {
+      "columns": [
+        {
+          "name": "start_timestamp",
+          "datatype": {
+            "Timestamp": [
+              "Microsecond",
+              "UTC"
+            ]
+          },
+          "nullable": false
+        },
+        {
+          "name": "span_id",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "parent_span_id",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "span_name",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "exception_type",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "exception_message",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "chat_session_id",
+          "datatype": "Utf8",
+          "nullable": true
+        }
+      ],
+      "rows": []
+    },
+    "branch_failures": {
+      "columns": [
+        {
+          "name": "span_name",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "failure_kind",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "exception_type",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "count",
+          "datatype": "Int64",
+          "nullable": false
+        }
+      ],
+      "rows": [
+        {
+          "span_name": "retrieval_branch_failed",
+          "failure_kind": "transport",
+          "exception_type": null,
+          "count": 31
+        }
+      ]
+    },
+    "case_spans": {
+      "columns": [
+        {
+          "name": "span_id",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "parent_span_id",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "span_name",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "start_timestamp",
+          "datatype": {
+            "Timestamp": [
+              "Microsecond",
+              "UTC"
+            ]
+          },
+          "nullable": false
+        },
+        {
+          "name": "duration",
+          "datatype": "Float64",
+          "nullable": true
+        }
+      ],
+      "rows": [
+        {
+          "span_id": "72ee9fab02f55d57",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:40:49.274575Z",
+          "duration": 32.580762
+        },
+        {
+          "span_id": "f88afda4d7664674",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:41:21.886563Z",
+          "duration": 3.303243
+        },
+        {
+          "span_id": "55925f08d8f14368",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:41:25.195866Z",
+          "duration": 34.013947
+        },
+        {
+          "span_id": "1ea215c66ce8d550",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:41:59.239832Z",
+          "duration": 3.087263
+        },
+        {
+          "span_id": "b0460a76d18a625e",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:42:02.331134Z",
+          "duration": 31.88125
+        },
+        {
+          "span_id": "2f47efa3caf669cf",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:42:34.248999Z",
+          "duration": 27.627436
+        },
+        {
+          "span_id": "06a40eeb2e9b9bfc",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:43:01.907768Z",
+          "duration": 31.782472
+        },
+        {
+          "span_id": "416b04e9818064c3",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:43:33.723380Z",
+          "duration": 4.070614
+        },
+        {
+          "span_id": "c23f3cc448d4047d",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:43:37.798513Z",
+          "duration": 4.248006
+        },
+        {
+          "span_id": "2d4bdc7c159aeac0",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:43:42.052401Z",
+          "duration": 28.333711
+        },
+        {
+          "span_id": "12d79969dbe7efe1",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:44:10.417296Z",
+          "duration": 3.169602
+        },
+        {
+          "span_id": "6e41d78b728ead3a",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:44:13.591035Z",
+          "duration": 2.870972
+        },
+        {
+          "span_id": "fd9b39407ced676b",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:44:16.466058Z",
+          "duration": 26.08512
+        },
+        {
+          "span_id": "7dc17bfee02e8e97",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:44:42.577650Z",
+          "duration": 26.813049
+        },
+        {
+          "span_id": "80752a5f46f907da",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:45:09.422064Z",
+          "duration": 32.122469
+        },
+        {
+          "span_id": "d328fcda502694ea",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:45:41.574222Z",
+          "duration": 30.652411
+        },
+        {
+          "span_id": "d68460d5b2e72878",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:46:12.260993Z",
+          "duration": 28.95294
+        },
+        {
+          "span_id": "0a88a2af1a354162",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:46:41.251288Z",
+          "duration": 4.434497
+        },
+        {
+          "span_id": "98216448b3ac6948",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:46:45.690084Z",
+          "duration": 31.051473
+        },
+        {
+          "span_id": "3ebb4b0f232a19f2",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:16.774166Z",
+          "duration": 3.830182
+        },
+        {
+          "span_id": "536d62d72cdafd7c",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:20.610712Z",
+          "duration": 2.950533
+        },
+        {
+          "span_id": "805f6ae7e48fe5ae",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:23.565370Z",
+          "duration": 2.784898
+        },
+        {
+          "span_id": "08b11802224fee04",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:26.358204Z",
+          "duration": 3.418187
+        },
+        {
+          "span_id": "b6015ad24d5b8472",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:29.784850Z",
+          "duration": 2.889688
+        },
+        {
+          "span_id": "e520185f48b4d6f2",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:32.679787Z",
+          "duration": 2.944595
+        },
+        {
+          "span_id": "d97b0b93f99f011b",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:35.628231Z",
+          "duration": 3.973356
+        },
+        {
+          "span_id": "b6e9d1244184b17b",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:39.606102Z",
+          "duration": 2.996364
+        },
+        {
+          "span_id": "2ebae6b3e82e2df1",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:42.608502Z",
+          "duration": 3.94873
+        },
+        {
+          "span_id": "90ec93b7ce2f5e92",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:47:46.566296Z",
+          "duration": 27.124098
+        },
+        {
+          "span_id": "a8463a65cf1f54a0",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:13.722615Z",
+          "duration": 3.937081
+        },
+        {
+          "span_id": "0ea0d9effcc2f1f8",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:17.664105Z",
+          "duration": 4.012717
+        },
+        {
+          "span_id": "b66357ff146adc73",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:21.681446Z",
+          "duration": 2.822453
+        },
+        {
+          "span_id": "0800d5b7a59ffe5f",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:24.508171Z",
+          "duration": 2.879635
+        },
+        {
+          "span_id": "89aa9f4ff2fc5770",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:27.393174Z",
+          "duration": 28.438864
+        },
+        {
+          "span_id": "176de7b43c6952ad",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:48:55.864831Z",
+          "duration": 25.680301
+        },
+        {
+          "span_id": "8f1614b55dba24c5",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:49:21.577234Z",
+          "duration": 4.207109
+        },
+        {
+          "span_id": "6e7136b142f451e5",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:49:25.789442Z",
+          "duration": 24.40346
+        },
+        {
+          "span_id": "4a5e6d5902ef1957",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:49:50.226546Z",
+          "duration": 3.831042
+        },
+        {
+          "span_id": "8370adb4daf9f67c",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:49:54.063235Z",
+          "duration": 28.117454
+        },
+        {
+          "span_id": "d117b1206434f30d",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:50:22.218751Z",
+          "duration": 2.994739
+        },
+        {
+          "span_id": "6aed35870f7aba13",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:50:25.218103Z",
+          "duration": 28.915313
+        },
+        {
+          "span_id": "0a30d61d8ccf4923",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:50:54.162314Z",
+          "duration": 5.283021
+        },
+        {
+          "span_id": "7097849cf527954e",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:50:59.449611Z",
+          "duration": 26.050944
+        },
+        {
+          "span_id": "813019216eb2a391",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:51:25.534026Z",
+          "duration": 27.698256
+        },
+        {
+          "span_id": "dde33987143a6cc0",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:51:53.266867Z",
+          "duration": 25.321971
+        },
+        {
+          "span_id": "a2134082db13d7df",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:52:18.620247Z",
+          "duration": 4.443397
+        },
+        {
+          "span_id": "82c16c8934a1a430",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:52:23.070724Z",
+          "duration": 27.452491
+        },
+        {
+          "span_id": "b69ba81b518aea77",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:52:50.554841Z",
+          "duration": 29.913301
+        },
+        {
+          "span_id": "b89c66c6b4a5ecca",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:53:20.499161Z",
+          "duration": 31.152772
+        },
+        {
+          "span_id": "ad030080c7be368e",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:53:51.683939Z",
+          "duration": 29.859182
+        },
+        {
+          "span_id": "9e1874b715427ae9",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:21.571803Z",
+          "duration": 3.621758
+        },
+        {
+          "span_id": "e1505318da2340e4",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:25.198596Z",
+          "duration": 3.68509
+        },
+        {
+          "span_id": "1726c9b79f41348f",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:28.890744Z",
+          "duration": 4.062314
+        },
+        {
+          "span_id": "ebe955f8ac8bb8c7",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:32.957357Z",
+          "duration": 3.864655
+        },
+        {
+          "span_id": "78e5e0ab8df1b700",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:36.826549Z",
+          "duration": 4.021301
+        },
+        {
+          "span_id": "5ede061d70a11cef",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:40.852281Z",
+          "duration": 3.6399
+        },
+        {
+          "span_id": "79cfee0aae0f0afc",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:44.497290Z",
+          "duration": 4.81826
+        },
+        {
+          "span_id": "bfeaf5c864f60f33",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:49.320112Z",
+          "duration": 4.132004
+        },
+        {
+          "span_id": "cf036b6cb4b58df0",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:54:53.456236Z",
+          "duration": 31.05401
+        },
+        {
+          "span_id": "81109e2551574142",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:55:24.543542Z",
+          "duration": 34.690552
+        },
+        {
+          "span_id": "610625af3fe71751",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:55:59.266943Z",
+          "duration": 3.964811
+        },
+        {
+          "span_id": "a5eb76e74e977dbf",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:03.239715Z",
+          "duration": 4.436776
+        },
+        {
+          "span_id": "01c5b02d82d842cc",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:07.682294Z",
+          "duration": 3.481578
+        },
+        {
+          "span_id": "d8852e073f25e425",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:11.170356Z",
+          "duration": 3.093992
+        },
+        {
+          "span_id": "b2c6aaada81f1546",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:14.268746Z",
+          "duration": 3.208186
+        },
+        {
+          "span_id": "200aa10da7445e83",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:17.481876Z",
+          "duration": 29.240418
+        },
+        {
+          "span_id": "bf3a8d2067e2b057",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:46.753397Z",
+          "duration": 4.079404
+        },
+        {
+          "span_id": "c121dcc00b5de5ed",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:50.837861Z",
+          "duration": 4.146439
+        },
+        {
+          "span_id": "739e9812614eae14",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:56:54.991553Z",
+          "duration": 34.249698
+        },
+        {
+          "span_id": "f9cb79b85fae7bf7",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:57:29.275680Z",
+          "duration": 5.200243
+        },
+        {
+          "span_id": "2b6a3b4ca22633d9",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:57:34.482442Z",
+          "duration": 4.441871
+        },
+        {
+          "span_id": "b3ed7dce156ee3d1",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:57:38.931399Z",
+          "duration": 29.242465
+        },
+        {
+          "span_id": "849445cdc55d0e6a",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:58:08.203179Z",
+          "duration": 5.374489
+        },
+        {
+          "span_id": "d9ef767550759626",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:58:13.582866Z",
+          "duration": 28.062542
+        },
+        {
+          "span_id": "a24dabfe4df902d9",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:58:41.679983Z",
+          "duration": 4.444081
+        },
+        {
+          "span_id": "2aef72130ade5d73",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:58:46.132993Z",
+          "duration": 4.148236
+        },
+        {
+          "span_id": "6f22c561c86454ab",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:58:50.285358Z",
+          "duration": 28.513986
+        },
+        {
+          "span_id": "bf69d615a6c1c7e0",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:59:18.830490Z",
+          "duration": 4.272071
+        },
+        {
+          "span_id": "47228ba36545b673",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:59:23.107604Z",
+          "duration": 29.025413
+        },
+        {
+          "span_id": "98fb18a1a122465b",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:59:52.165702Z",
+          "duration": 5.325114
+        },
+        {
+          "span_id": "cae1045b1a95db62",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-09-30T23:59:57.495253Z",
+          "duration": 25.874169
+        },
+        {
+          "span_id": "df3914a64eb07058",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:00:23.399613Z",
+          "duration": 28.687886
+        },
+        {
+          "span_id": "2c903cb8ec25c238",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:00:52.121197Z",
+          "duration": 28.834353
+        },
+        {
+          "span_id": "1a3483e68bf56685",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:01:20.991848Z",
+          "duration": 4.142688
+        },
+        {
+          "span_id": "852e267764d6a347",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:01:25.138808Z",
+          "duration": 4.488777
+        },
+        {
+          "span_id": "e6a83bfe1074cc93",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:01:29.633993Z",
+          "duration": 30.938343
+        },
+        {
+          "span_id": "f99d03f7cf19d381",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:02:00.602155Z",
+          "duration": 30.72764
+        },
+        {
+          "span_id": "f43ed1e5a12fb471",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:02:31.362794Z",
+          "duration": 25.618469
+        },
+        {
+          "span_id": "8859dbd9ed16c1e5",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:02:57.007504Z",
+          "duration": 3.632421
+        },
+        {
+          "span_id": "c5006cceed5931f5",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:03:00.644224Z",
+          "duration": 31.739896
+        },
+        {
+          "span_id": "6b11d692b342b0f4",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:03:32.415474Z",
+          "duration": 29.602429
+        },
+        {
+          "span_id": "a823e2b5a7336a7e",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:04:02.049941Z",
+          "duration": 27.770355
+        },
+        {
+          "span_id": "d00bb9f98b036678",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:04:29.853986Z",
+          "duration": 28.486033
+        },
+        {
+          "span_id": "946a75d40367b0dd",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:04:58.369966Z",
+          "duration": 4.140094
+        },
+        {
+          "span_id": "40ed7f1c76a99208",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:05:02.517714Z",
+          "duration": 3.027998
+        },
+        {
+          "span_id": "59c5d8539d4a8ae4",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:05:05.550482Z",
+          "duration": 29.041348
+        },
+        {
+          "span_id": "2099625cc2466107",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:05:34.624092Z",
+          "duration": 3.916175
+        },
+        {
+          "span_id": "257af5ead66b7d19",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:05:38.547942Z",
+          "duration": 4.822723
+        },
+        {
+          "span_id": "879692d027a22fa5",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:05:43.375483Z",
+          "duration": 31.205416
+        },
+        {
+          "span_id": "52157e8591e70985",
+          "parent_span_id": "58afdb8bc57179bc",
+          "span_name": "case: {case_name}",
+          "start_timestamp": "2026-10-01T00:06:14.611477Z",
+          "duration": 27.933378
+        }
+      ]
+    },
+    "operational_details": {
+      "columns": [
+        {
+          "name": "start_timestamp",
+          "datatype": {
+            "Timestamp": [
+              "Microsecond",
+              "UTC"
+            ]
+          },
+          "nullable": false
+        },
+        {
+          "name": "span_id",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "parent_span_id",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "span_name",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "message",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "attributes",
+          "datatype": "JSON",
+          "nullable": true
+        }
+      ],
+      "rows": [
+        {
+          "start_timestamp": "2026-09-30T23:40:58.988388Z",
+          "span_id": "78a6d14a72ea39f4",
+          "parent_span_id": "ad768e82ca7d8678",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "bec4781c-91c6-4b87-a1e4-79d4c9e042c3",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8505
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 134
+                  }
+                ],
+                "total": 8639
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:41:29.313988Z",
+          "span_id": "dbe545d4cacb71c9",
+          "parent_span_id": "b3b1cde8d4b134d1",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "0b9ca281-9d17-433f-b290-2500051872e6",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 9632
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 330
+                  }
+                ],
+                "total": 9962
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:42:09.493226Z",
+          "span_id": "47601b5f495ee4f9",
+          "parent_span_id": "674eb8b5a02e1d70",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:42:09.875646Z",
+          "span_id": "b2b63bde998eabd8",
+          "parent_span_id": "c32d25012c9e39df",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "67e450b4-90c9-418d-8fad-96845f2b61b6",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8832
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 162
+                  }
+                ],
+                "total": 8994
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:42:40.902363Z",
+          "span_id": "91ed4de934e2dc43",
+          "parent_span_id": "98189d95a4b5a2cc",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:42:41.285401Z",
+          "span_id": "f3d100c01dcb704f",
+          "parent_span_id": "3604b097db969afd",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "0d3d71a8-1957-46e1-862a-dcadc291ab61",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8502
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8514
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:43:09.164196Z",
+          "span_id": "f09c351017a86c9b",
+          "parent_span_id": "22602cbe12bcc7e4",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:43:09.528251Z",
+          "span_id": "7a4af578ec122803",
+          "parent_span_id": "10d6bda3bed8fbe6",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "f28ba9da-f988-47be-99b5-2931eafaf237",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+            "failure_kind": "validation",
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8635
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 185
+                  }
+                ],
+                "total": 8820
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "failed"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:43:48.899861Z",
+          "span_id": "6d728e2db237c0ee",
+          "parent_span_id": "eddd51b2c0acd9b4",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:43:49.238537Z",
+          "span_id": "9b263d6fc32ed92b",
+          "parent_span_id": "78886a66d52751e8",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "a56a5abb-a684-40e1-9506-a4a94cfa9a77",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8695
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8707
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:44:20.628613Z",
+          "span_id": "a7968c786e5e8a0f",
+          "parent_span_id": "ded997caa2ca92a1",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "7bf9a000-297a-471f-9e08-2eb21f695d2e",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8912
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8924
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:44:46.883191Z",
+          "span_id": "3d7d714e9a6eb37f",
+          "parent_span_id": "9c601e71c10020aa",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "b2b6a656-9ff1-4ce3-a6c8-7cbfe1543019",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8506
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 120
+                  }
+                ],
+                "total": 8626
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:45:16.175240Z",
+          "span_id": "197998a57e4743e3",
+          "parent_span_id": "1090e0b6060bc052",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:45:16.492220Z",
+          "span_id": "8cb0e731d1efd6f9",
+          "parent_span_id": "274313dccbf4f4b3",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "6d0d611b-378c-4d94-a8b5-cbd6659f112e",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 9128
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 121
+                  }
+                ],
+                "total": 9249
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:45:46.576833Z",
+          "span_id": "20e76ad35a6c99ab",
+          "parent_span_id": "156a16a88c13fa88",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "15d9255f-ad11-4a2d-8303-d9ea87e7df12",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8876
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 122
+                  }
+                ],
+                "total": 8998
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:46:20.045057Z",
+          "span_id": "1990b832a406e4ac",
+          "parent_span_id": "af24e3753659b1f2",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:46:20.348375Z",
+          "span_id": "2377b9c4cb0e5365",
+          "parent_span_id": "9224c473b1128101",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "29bafd50-1d59-44f3-876e-fb34909abcab",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8550
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8562
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:46:53.087115Z",
+          "span_id": "baebcd65b95e068c",
+          "parent_span_id": "aea0c5ea625fb9c6",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:46:53.480509Z",
+          "span_id": "d0c1cca51bd3bbc9",
+          "parent_span_id": "5214c367fab0d640",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "b3b278f1-3c6f-4ae4-80d6-d262f153385c",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8378
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 181
+                  }
+                ],
+                "total": 8559
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:47:50.694691Z",
+          "span_id": "b7e689e064dd74ab",
+          "parent_span_id": "01f29cd4c98e05f6",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "f28500b5-0eac-430e-a87a-4a01d83b130c",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8570
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 131
+                  }
+                ],
+                "total": 8701
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:48:31.425421Z",
+          "span_id": "7e640471142aa8c3",
+          "parent_span_id": "13b7f9d050939233",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "c974af97-6785-466c-8598-6aadca7307e3",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8797
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 155
+                  }
+                ],
+                "total": 8952
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:49:00.468799Z",
+          "span_id": "cef9cc439b1c1fdf",
+          "parent_span_id": "ee607f756d9907ef",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "383a7196-f51e-484d-afc9-da00390f2cc0",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8652
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8664
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:49:29.468866Z",
+          "span_id": "3e0f1471c746e31f",
+          "parent_span_id": "51013734248f6867",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "074a4eb2-f954-4917-9740-d0be4ed1a39c",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8605
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8617
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:49:58.039921Z",
+          "span_id": "f1b9f50ba8b8cbc6",
+          "parent_span_id": "e17374fbc0485892",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "bffa03d1-ca47-4a2b-ae29-e256136a5a08",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8907
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 143
+                  }
+                ],
+                "total": 9050
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:50:32.814487Z",
+          "span_id": "bcef85b9f57674fc",
+          "parent_span_id": "274bf6d2dcc5b625",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:50:33.193117Z",
+          "span_id": "3655110b96372a57",
+          "parent_span_id": "3a65f831546f23e9",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "9921b5a2-6df6-404b-b3fd-6224a289b14e",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8605
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8617
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:51:03.756486Z",
+          "span_id": "6bc0ec1ca6904931",
+          "parent_span_id": "5954fea78c8c1c56",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "c9eb4341-b718-4828-b1a6-f11a5b803f6e",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8184
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 141
+                  }
+                ],
+                "total": 8325
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:51:30.305159Z",
+          "span_id": "23c9b81dcca93bf9",
+          "parent_span_id": "c99f9b80a06fda95",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "c29ee004-bae9-4fb2-9fef-eb8b81768204",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8713
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 111
+                  }
+                ],
+                "total": 8824
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:51:57.837534Z",
+          "span_id": "52bdc89d85e02a51",
+          "parent_span_id": "806e1899f6e3d9c3",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "03a99759-b65d-4a03-ab08-8c971b8e0322",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8550
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8562
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:52:30.464034Z",
+          "span_id": "0fd60eb2c1feaa04",
+          "parent_span_id": "684161489d96a2c8",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:52:30.783018Z",
+          "span_id": "070ee20f010ad204",
+          "parent_span_id": "d20333ef5fe63ada",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "bfd1065c-0a17-45c9-89a0-616c13e16846",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8295
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8307
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:52:58.085237Z",
+          "span_id": "ed46cbe104e3b12b",
+          "parent_span_id": "a87cdb6f1edd5b73",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:52:58.411152Z",
+          "span_id": "c1b32e015ee31443",
+          "parent_span_id": "39708c8b0964242d",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "2ad2ba92-4595-4013-9a74-099495b2fdc1",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8250
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 147
+                  }
+                ],
+                "total": 8397
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:53:28.820901Z",
+          "span_id": "de90b663c256c573",
+          "parent_span_id": "2b6b5d2804346600",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:53:29.094310Z",
+          "span_id": "467d333775c257a3",
+          "parent_span_id": "ebfee8d15d4c5c4a",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "a09f8912-8c8a-449e-9b76-0a9fc0564703",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8577
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 110
+                  }
+                ],
+                "total": 8687
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:53:58.770964Z",
+          "span_id": "d73fe8a9bbf75542",
+          "parent_span_id": "6958ed8eadd1406b",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:53:59.085695Z",
+          "span_id": "b0506c95204261b0",
+          "parent_span_id": "686b5ec21a6f0cc0",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "894c63e6-081f-48a8-b28a-eaf0b698e31f",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+            "failure_kind": "validation",
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8417
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 110
+                  }
+                ],
+                "total": 8527
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "failed"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:55:00.301978Z",
+          "span_id": "5161f34244286d33",
+          "parent_span_id": "dad68561d9520da7",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:55:00.742456Z",
+          "span_id": "1171ff943a9034f0",
+          "parent_span_id": "b42df8c2a7da073f",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "5132550d-33e1-4e85-9b85-26ae554c4ab2",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8571
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 113
+                  }
+                ],
+                "total": 8684
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:55:32.851803Z",
+          "span_id": "7a36243c01141728",
+          "parent_span_id": "d7025c90c735e1ed",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:55:33.160942Z",
+          "span_id": "e71b812317b1225e",
+          "parent_span_id": "406b97631d97ec23",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "66e64099-49cb-406e-a587-dada2576028f",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 9293
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 134
+                  }
+                ],
+                "total": 9427
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:56:25.122089Z",
+          "span_id": "9a5dcac08874c693",
+          "parent_span_id": "2a7b94adac69c745",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:56:25.555903Z",
+          "span_id": "ca33fb2786084484",
+          "parent_span_id": "f77b7b99235e33cf",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "b5ae4795-cdb3-4f49-b711-be5f10628e53",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8457
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8469
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:02.475656Z",
+          "span_id": "b0a81a282ffcb04c",
+          "parent_span_id": "6ff49474a41986fc",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:02.738483Z",
+          "span_id": "6b0daacb6393c3c7",
+          "parent_span_id": "4ee731aa6fc7a879",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "ac9e332e-81f9-458b-9ed9-94f36770ce7e",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 9240
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 162
+                  }
+                ],
+                "total": 9402
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:46.251415Z",
+          "span_id": "86be2d3834ff8545",
+          "parent_span_id": "652db92086d92cd9",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:46.572202Z",
+          "span_id": "5310ef2362b3b8c8",
+          "parent_span_id": "7e7a6c9471ec0c92",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "73d52bbc-0424-45b6-9e0d-d05f18dc8078",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8859
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8871
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:58:21.007770Z",
+          "span_id": "c22e24409863e365",
+          "parent_span_id": "387493b4f7dd1c09",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:58:21.308309Z",
+          "span_id": "52f4aa8081f50a92",
+          "parent_span_id": "6edd55b806a9538f",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "398b3032-2dc6-47e9-bcde-d2d5903eff14",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8461
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8473
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:58:57.668254Z",
+          "span_id": "a588b44170d33277",
+          "parent_span_id": "dfe10ba460eb513c",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:58:57.980642Z",
+          "span_id": "7d0543d2fd9ad418",
+          "parent_span_id": "5eac991803bc5d46",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "72037d1d-f8ba-44d9-84ca-7fd4db718dc5",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8589
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8601
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:59:30.319090Z",
+          "span_id": "15365e798e4c3669",
+          "parent_span_id": "a09a7ae541a22a9b",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-09-30T23:59:30.698247Z",
+          "span_id": "3a9a70e0bcdcb943",
+          "parent_span_id": "b929f7f6da3de862",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "09d3d2dd-d641-4c18-88f5-9ec98d49292b",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8795
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8807
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:00:02.487329Z",
+          "span_id": "3b9cfbe2faea1853",
+          "parent_span_id": "75b98b6a743f4651",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "5d6761dc-0bbd-4786-92a6-1f6d332785ab",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8627
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8639
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:00:31.472671Z",
+          "span_id": "e5217cdc9d4f0016",
+          "parent_span_id": "628df3485fc2bf3d",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:00:31.746968Z",
+          "span_id": "0a11baab7cbaa84f",
+          "parent_span_id": "eee0cd159337c524",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "4d1c93bb-e33c-48ce-b4b9-903f3a4e6a81",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8400
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8412
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:00:59.829785Z",
+          "span_id": "b3c1d1982284a7e9",
+          "parent_span_id": "0dcbab110eb1c7bc",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:01:00.142950Z",
+          "span_id": "65be28a9daa302ca",
+          "parent_span_id": "5a2194c371e0d3c9",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "bba8a6bb-4f53-4b82-ac65-1e4c03ee71b0",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8598
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8610
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:01:36.452679Z",
+          "span_id": "a9f95ef9181fa80b",
+          "parent_span_id": "c6c9ee93522f4888",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:01:36.649689Z",
+          "span_id": "2ac0bf82b67e80ad",
+          "parent_span_id": "3fa072d621c20c68",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "f6510657-5559-4d53-b0e0-3d50daec5cf0",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+            "failure_kind": "validation",
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8619
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 175
+                  }
+                ],
+                "total": 8794
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "failed"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:02:07.369501Z",
+          "span_id": "58ba6f2098be477c",
+          "parent_span_id": "88dc57416df3dfb6",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:02:07.640684Z",
+          "span_id": "f748b1bc98d13438",
+          "parent_span_id": "ec361f31fc30093a",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "8743ea65-2d8a-4e0a-be98-06a0977b29f6",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+            "failure_kind": "validation",
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8792
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 136
+                  }
+                ],
+                "total": 8928
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "failed"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:02:35.201803Z",
+          "span_id": "f485a332cf4ded93",
+          "parent_span_id": "7761f5114bd20653",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "6ceda6a1-a075-40ea-981a-76a21a22f033",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+            "failure_kind": "validation",
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8336
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 105
+                  }
+                ],
+                "total": 8441
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "failed"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:03:08.407345Z",
+          "span_id": "83bf0553a07da7e5",
+          "parent_span_id": "c37ba659f7ac781c",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:03:09.452928Z",
+          "span_id": "c782a17a957c620a",
+          "parent_span_id": "949b9566dd31c200",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "34e6acae-d320-4d26-8f32-13f0c2f4b663",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8622
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 123
+                  }
+                ],
+                "total": 8745
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:03:40.095304Z",
+          "span_id": "0c0b53bb11dde435",
+          "parent_span_id": "04062f17dbbc6c28",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:03:40.379459Z",
+          "span_id": "0f3320c1c06f3f89",
+          "parent_span_id": "b6c72c1f6c02d821",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "70bd73ab-34bb-4dd4-8f07-eac3dcdd54aa",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8198
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 123
+                  }
+                ],
+                "total": 8321
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:04:09.479499Z",
+          "span_id": "42f8728dd93759f3",
+          "parent_span_id": "f6d6c9d69577dabf",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:04:10.013555Z",
+          "span_id": "65ff9e0cc3f1cafd",
+          "parent_span_id": "0da28b792c5d7f05",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "79e4a477-a675-4695-9bcf-9446cd57a86d",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8253
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8265
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:04:37.670059Z",
+          "span_id": "e2ce2767141625c5",
+          "parent_span_id": "eaad5afd0fde3580",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:04:37.974660Z",
+          "span_id": "2e2d6ccd7df6bff3",
+          "parent_span_id": "9a980d756461cd6f",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "3455e890-0c9f-4f6f-877b-d01eb2af6e91",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8439
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8451
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:05:12.097803Z",
+          "span_id": "47ac1b5e01c059dc",
+          "parent_span_id": "811c36aa1347b58b",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:05:12.425352Z",
+          "span_id": "592518c1247bc3df",
+          "parent_span_id": "d433abfefa8ee115",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "ec823d11-36a4-4332-9e7c-b89f361abead",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8360
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 131
+                  }
+                ],
+                "total": 8491
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:05:50.629453Z",
+          "span_id": "d0f48892d0842c56",
+          "parent_span_id": "c713ee288e691d19",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:05:50.936730Z",
+          "span_id": "12fcad0a05abed57",
+          "parent_span_id": "87248cf31fe43148",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "bdbd876f-81ce-44ef-be2e-db9ba00c9d6f",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8556
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 174
+                  }
+                ],
+                "total": 8730
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:06:21.849502Z",
+          "span_id": "06cb78948a93d70c",
+          "parent_span_id": "a11b68be8c0c8d7c",
+          "span_name": "retrieval_branch_failed",
+          "message": "retrieval_branch_failed",
+          "attributes": {
+            "attempts_consumed": 1,
+            "branch": "structural",
+            "code.filepath": "/Users/akaisenghor/.codex/worktrees/49d3/main/src/knowledge_map/adapters/structural.py",
+            "code.function": "_failed",
+            "code.lineno": 512,
+            "deadline_exhausted": false,
+            "event": "retrieval_branch_failed",
+            "failure_kind": "transport",
+            "logfire.logger_name": "knowledge_map.adapters.structural",
+            "logfire.msg_template": "retrieval_branch_failed",
+            "safe_diagnostic": "Structural retrieval could not complete this stage.",
+            "stage": "schema_filtering"
+          }
+        },
+        {
+          "start_timestamp": "2026-10-01T00:06:22.154483Z",
+          "span_id": "ba6df871af447392",
+          "parent_span_id": "fa8ded8c82a3496b",
+          "span_name": "chat_session.guidance",
+          "message": "chat_session.guidance",
+          "attributes": {
+            "audit_schema_version": 1,
+            "chat_session_id": "698dfbcc-6ba8-46e7-bc48-d0ab28280f9d",
+            "code.filepath": "src/knowledge_map/core/chat.py",
+            "code.function": "ChatSession._answer",
+            "code.lineno": 231,
+            "logfire.metrics": {
+              "gen_ai.client.token.usage": {
+                "details": [
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "input"
+                    },
+                    "total": 8492
+                  },
+                  {
+                    "attributes": {
+                      "gen_ai.operation.name": "chat",
+                      "gen_ai.provider.name": "openai",
+                      "gen_ai.request.model": "gemma4:26b",
+                      "gen_ai.response.model": "gemma4:26b",
+                      "gen_ai.system": "openai",
+                      "gen_ai.token.type": "output"
+                    },
+                    "total": 12
+                  }
+                ],
+                "total": 8504
+              }
+            },
+            "logfire.msg_template": "chat_session.guidance",
+            "status": "succeeded"
+          }
+        }
+      ]
+    },
+    "SYN-T14-04-errors": {
+      "window": [
+        "2026-09-30T23:56:54Z",
+        "2026-09-30T23:57:30Z"
+      ],
+      "columns": [
+        {
+          "name": "start_timestamp",
+          "datatype": {
+            "Timestamp": [
+              "Microsecond",
+              "UTC"
+            ]
+          },
+          "nullable": false
+        },
+        {
+          "name": "span_name",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "message",
+          "datatype": "Utf8",
+          "nullable": false
+        },
+        {
+          "name": "http_response_status_code",
+          "datatype": "UInt16",
+          "nullable": true
+        },
+        {
+          "name": "exception_type",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "exception_message",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "error_type",
+          "datatype": "Utf8",
+          "nullable": true
+        },
+        {
+          "name": "response_status",
+          "datatype": "Utf8",
+          "nullable": true
+        }
+      ],
+      "rows": [
+        {
+          "start_timestamp": "2026-09-30T23:56:59.406284Z",
+          "span_name": "chat_session.structural_stage",
+          "message": "chat_session.structural_stage",
+          "http_response_status_code": null,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        },
+        {
+          "start_timestamp": "2026-09-30T23:56:59.411745Z",
+          "span_name": "invoke_agent structural_ontology_filter",
+          "message": "structural_ontology_filter run",
+          "http_response_status_code": null,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        },
+        {
+          "start_timestamp": "2026-09-30T23:56:59.414848Z",
+          "span_name": "chat gemma4:26b",
+          "message": "chat gemma4:26b",
+          "http_response_status_code": null,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        },
+        {
+          "start_timestamp": "2026-09-30T23:56:59.416716Z",
+          "span_name": "POST",
+          "message": "POST localhost/v1/chat/completions",
+          "http_response_status_code": 400,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:00.430233Z",
+          "span_name": "POST",
+          "message": "POST localhost/v1/chat/completions",
+          "http_response_status_code": 400,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        },
+        {
+          "start_timestamp": "2026-09-30T23:57:02.449517Z",
+          "span_name": "POST",
+          "message": "POST localhost/v1/chat/completions",
+          "http_response_status_code": 400,
+          "exception_type": null,
+          "exception_message": null,
+          "error_type": null,
+          "response_status": null
+        }
+      ]
+    }
+  }
+}

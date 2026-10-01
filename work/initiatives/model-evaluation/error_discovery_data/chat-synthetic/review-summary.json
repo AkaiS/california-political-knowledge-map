@@ -1,0 +1,187 @@
+{
+  "updated_at_utc": "2026-10-01T16:53:09.822655+00:00",
+  "annotation_count": 291,
+  "cases_with_notes": 86,
+  "direct_human_note_count": 46,
+  "accepted_suggestion_note_count": 245,
+  "suggestion_decisions": {
+    "accepted": 245,
+    "dismissed": 1
+  },
+  "failure_mode_count": 17,
+  "design_question_count": 2,
+  "scope": "Review notes and accepted suggestions, not estimates of failure prevalence. Accepted notes retain their original provisional wording.",
+  "mode_counts": [
+    {
+      "id": "chunks-as-output",
+      "name": "Raw chunks replace source navigation",
+      "count": 42,
+      "confirmed_record_count": 41,
+      "human_note_count": 2,
+      "accepted_suggestion_count": 40,
+      "suggested_count": 0
+    },
+    {
+      "id": "irrelevant-selected-evidence",
+      "name": "Irrelevant passages survive evidence selection",
+      "count": 69,
+      "confirmed_record_count": 36,
+      "human_note_count": 14,
+      "accepted_suggestion_count": 55,
+      "suggested_count": 0
+    },
+    {
+      "id": "structural-search-failed",
+      "name": "Structural graph search fails before query construction",
+      "count": 31,
+      "confirmed_record_count": 31,
+      "human_note_count": 2,
+      "accepted_suggestion_count": 29,
+      "suggested_count": 0
+    },
+    {
+      "id": "false-absence-question",
+      "name": "A factual request is treated as an absence question",
+      "count": 30,
+      "confirmed_record_count": 30,
+      "human_note_count": 4,
+      "accepted_suggestion_count": 26,
+      "suggested_count": 0
+    },
+    {
+      "id": "coverage-as-evidence",
+      "name": "Coverage assessment claims available reporting is missing",
+      "count": 32,
+      "confirmed_record_count": 30,
+      "human_note_count": 4,
+      "accepted_suggestion_count": 28,
+      "suggested_count": 0
+    },
+    {
+      "id": "recoverable-task-drift",
+      "name": "Recoverable portion changes the requested task",
+      "count": 21,
+      "confirmed_record_count": 21,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 20,
+      "suggested_count": 0
+    },
+    {
+      "id": "ambiguity-misclassified",
+      "name": "Ambiguity is classified as missing evidence or absence",
+      "count": 10,
+      "confirmed_record_count": 10,
+      "human_note_count": 2,
+      "accepted_suggestion_count": 8,
+      "suggested_count": 0
+    },
+    {
+      "id": "past-period-as-future",
+      "name": "A past reporting period is treated as a future prediction",
+      "count": 9,
+      "confirmed_record_count": 9,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 8,
+      "suggested_count": 0
+    },
+    {
+      "id": "reported-views-as-motives",
+      "name": "Reported perspectives are mistaken for motive inference",
+      "count": 9,
+      "confirmed_record_count": 9,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 8,
+      "suggested_count": 0
+    },
+    {
+      "id": "partial-coverage-decline",
+      "name": "Partial coverage causes a full decline",
+      "count": 8,
+      "confirmed_record_count": 8,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 7,
+      "suggested_count": 0
+    },
+    {
+      "id": "ambiguity-retrieval-continues",
+      "name": "Retrieval continues despite unresolved ambiguity",
+      "count": 7,
+      "confirmed_record_count": 6,
+      "human_note_count": 3,
+      "accepted_suggestion_count": 4,
+      "suggested_count": 0
+    },
+    {
+      "id": "rewrite-clarity",
+      "name": "Rewrite makes the evidence-checking question less clear",
+      "count": 5,
+      "confirmed_record_count": 5,
+      "human_note_count": 2,
+      "accepted_suggestion_count": 3,
+      "suggested_count": 0
+    },
+    {
+      "id": "validation-diagnostic-gap",
+      "name": "Validation failures lack actionable diagnostics",
+      "count": 5,
+      "confirmed_record_count": 5,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 4,
+      "suggested_count": 0
+    },
+    {
+      "id": "rewrite-date-scope",
+      "name": "Rewrite may weaken publication-date constraints",
+      "count": 4,
+      "confirmed_record_count": 4,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 3,
+      "suggested_count": 0
+    },
+    {
+      "id": "rewrite-value-question",
+      "name": "Review question: does rewriting improve retrieval?",
+      "count": 3,
+      "confirmed_record_count": 3,
+      "human_note_count": 3,
+      "accepted_suggestion_count": 0,
+      "suggested_count": 0
+    },
+    {
+      "id": "rewrite-bounded-request",
+      "name": "Rewrite drops bounded-result intent",
+      "count": 2,
+      "confirmed_record_count": 2,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 1,
+      "suggested_count": 0
+    },
+    {
+      "id": "decision-status-mismatch",
+      "name": "Decision status contradicts its explanation",
+      "count": 2,
+      "confirmed_record_count": 2,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 1,
+      "suggested_count": 0
+    },
+    {
+      "id": "coverage-timing-question",
+      "name": "Review question: when should coverage be assessed?",
+      "count": 1,
+      "confirmed_record_count": 1,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 0,
+      "suggested_count": 0
+    },
+    {
+      "id": "rewrite-order-dropped",
+      "name": "Rewrite drops requested chronological order",
+      "count": 1,
+      "confirmed_record_count": 1,
+      "human_note_count": 1,
+      "accepted_suggestion_count": 0,
+      "suggested_count": 0
+    }
+  ]
+}
