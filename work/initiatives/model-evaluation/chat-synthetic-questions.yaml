@@ -1,22 +1,24 @@
 title: Synthetic Chat Session questions
 created: '2026-09-30'
-status: draft_for_review
+status: corpus_validated_draft
 purpose: 100 authored synthetic inputs, five for each of the 20 user-reviewed dimension tuples. No model
   answers or human answer labels are generated.
 format_note: This review draft is not the executable chat Evaluation Data Set. Its dimension and evidence-requirement
   fields have not been wired into the chat task's metadata schema.
-scenario_validation: pending_corpus_review
+scenario_validation: verified_against_captured_collection_and_question_policy
 review_notes:
 - Scenarios describe intended request and evidence conditions, not observed pipeline outcomes. A sufficient-evidence
   case remains a happy-path case when the current system fails it.
-- Evidence requirements are assumptions to verify against the corpus or a deliberately controlled source
-  collection before interpreting results by scenario. No sources, quotations, or contradictions are fabricated
-  here.
+- Each case now records evidence_validation against the captured source collection, Coverage Description,
+  or question policy. These checks validate scenario conditions, not Chat Agent answers or political facts
+  independently of reporting.
 - The historical source-case references identify related subjects and traversals. They do not establish
   that the new request is fully answerable, that a conflict exists, or that the current corpus meets its
   evidence requirement.
-- Genuine conflicting reporting requires incompatible accounts of the same fact, identity, period, and
-  event. Opposing opinions, omissions, corrections, and different event stages are not automatically contradictions.
+- Conflicting reporting cases now use explicit incompatible attributed accounts or allegations and denials
+  present in stored reporting. Both accounts may occur within one Source Article; no case asserts two
+  independent articles. Opposing preferences, omissions, corrections, or different event stages alone
+  do not establish a conflict.
 - Required data not ingested means an absent public-record collection, not retrieval failure or low-relevance
   Grounding Evidence. Those retrieval-specific cases remain captured in work/inbox.md as ME-06.
 - Each question starts an independent Chat Session. Ambiguous cases cannot use unstated context from another
@@ -30,6 +32,16 @@ review_notes:
   and requested presentation may differ.
 - All questions are development and error-discovery material, not held-out evidence. The file has not
   been run through the Chat Agent.
+- Validation is bounded to the September 30, 2026 source snapshot and authored coverage. Missing public-record
+  collections are intentional controls, not invalid cases to remove. No source collection was modified.
+- SB 9 housing questions use the source-established 2021 identity. The stored graph's inferred 2025-2026
+  session and some extracted lobbying directions disagree with source wording; graph rows alone were not
+  treated as answer evidence.
+- Case IDs and the 20 feature/scenario/familiarity tuples are retained. Replaced question wording and
+  evidence assumptions are recorded with reasons in the validation artifact.
+- For partial coverage, an absent mention or extraction is not a real-world negative. Corpus searches
+  record their terms and complete match inventory; coverage claims are limited to the captured source
+  text and missing record collections.
 references:
   dimension_method: https://hamel.dev/blog/posts/llm-judge/
   historical_construction_cases: work/initiatives/useful-graph-retrieval/query-construction/cases.yaml
@@ -59,8 +71,9 @@ dimensions:
       credible alternatives.
     partial_coverage: Available reporting supports part of the request while identifiable portions remain
       unsupported.
-    conflicting_reporting: Available sources contain incompatible accounts of a materially identical claim;
-      a useful Retrieval Answer preserves the disagreement.
+    conflicting_reporting: Stored reporting contains explicitly incompatible attributed accounts about
+      the same claim, including allegations and denials. Accounts may be reported within one Source Article;
+      a useful Retrieval Answer preserves attribution and uncertainty without adjudicating.
     required_data_not_ingested: A legitimate request depends on a public-record collection absent from
       current coverage, making it Deferred.
     outside_permitted_scope: The requested outcome is permanently outside the application's question policy,
@@ -86,6 +99,14 @@ tuples:
     source_case_ids:
     - C-E1-01
     paired_case_id: SYN-T02-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+      - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18
+      scope_note: Candidacy and Reform California's endorsement are explicitly reported; do not expand
+        to an entire biography.
   - id: SYN-T01-02
     question: What can you tell me about Gail Pellerin from the news?
     evidence_requirement: Reporting identifies Gail Pellerin and describes her public legislative activity.
@@ -93,14 +114,30 @@ tuples:
     source_case_ids:
     - C-E1-02
     paired_case_id: SYN-T02-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+      scope_note: The source calls Pellerin a proponent of AB 2624. It does not establish sponsorship
+        or her vote.
   - id: SYN-T01-03
-    question: What does California's Senate Bill 9 from 2025 do, according to news stories?
-    evidence_requirement: Reporting explains provisions of SB 9 in the 2025-2026 session; a mention alone
-      is insufficient.
+    question: What does California's 2021 Senate Bill 9 do, according to the housing news stories you
+      have?
+    evidence_requirement: Stored reporting identifies SB 9 as a 2021 law and describes lot splitting and
+      duplex construction; its graph node's inferred 2025-2026 session is not source evidence.
     hop_requirement: entity_lookup
+    paired_case_id: SYN-T02-03
     source_case_ids:
     - C-E2-01
-    paired_case_id: SYN-T02-03
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+      scope_note: Use the source's 2021 identity and described housing provisions, not the graph's inferred
+        session.
   - id: SYN-T01-04
     question: What is the Proposition 38 campaign about in the California stories you have?
     evidence_requirement: The relevant Proposition 38 campaign is uniquely identifiable in available coverage,
@@ -109,15 +146,33 @@ tuples:
     source_case_ids:
     - C-E2-02
     paired_case_id: SYN-T02-04
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+      scope_note: The 2026 report identifies the covered campaign and supplies medical-research funding
+        provisions and arguments.
   - id: SYN-T01-05
-    question: What issues has Catalina Media Development been trying to change through bills it's pushed
-      for or against in California?
-    evidence_requirement: Reporting connects the organization to specific bills and those bills to Policy
-      Areas; no causal influence is inferred.
+    question: Which bill has Catalina Media Development been lobbying on, and what housing issues does
+      the news connect it to?
+    evidence_requirement: Reporting names Catalina Media Development LLC's lobbying on AB 1740 and describes
+      that bill's Santa Monica local coastal planning subject; a for/against position is not required
+      or inferred.
     hop_requirement: multi_hop
+    paired_case_id: SYN-T02-05
     source_case_ids:
     - C-M1-01
-    paired_case_id: SYN-T02-05
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10
+      scope_note: The lobbying link and bill subject are supported; a lobbying-for/against stance is not.
 - id: T02
   feature: entity_information
   scenario: sufficient_evidence
@@ -132,6 +187,14 @@ tuples:
     source_case_ids:
     - C-E1-01
     paired_case_id: SYN-T01-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+      - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_22
+      scope_note: Distinguish Reform California's endorsement from Uber's reported giving and independent
+        support for other candidates.
   - id: SYN-T02-02
     question: Which legislative roles does reporting attribute to Gail Pellerin? Distinguish bill sponsorship
       from recorded floor votes.
@@ -141,15 +204,30 @@ tuples:
     source_case_ids:
     - C-E1-02
     paired_case_id: SYN-T01-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+      scope_note: A reported proponent role is available; sponsorship and a Pellerin vote are not established
+        by the witness.
   - id: SYN-T02-03
-    question: Which provisions of SB 9 in the 2025-2026 legislative session are described in California
-      reporting?
-    evidence_requirement: Reporting explains provisions of SB 9 in the 2025-2026 session; a mention alone
-      is insufficient.
+    question: Which lot-splitting and housing-density provisions of California's 2021 SB 9 are described
+      in reporting?
+    evidence_requirement: Reporting explicitly identifies the 2021 SB 9 and describes its housing provisions.
+      Preserve that identity despite the graph's inferred session.
     hop_requirement: entity_lookup
+    paired_case_id: SYN-T01-03
     source_case_ids:
     - C-E2-01
-    paired_case_id: SYN-T01-03
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+      scope_note: The two sources describe the housing provisions and the 2021 identity despite the faulty
+        graph session.
   - id: SYN-T02-04
     question: What does reporting say the Proposition 38 campaign advocates? Distinguish the measure's
       reported provisions from advocates' claims about their effects.
@@ -159,39 +237,77 @@ tuples:
     source_case_ids:
     - C-E2-02
     paired_case_id: SYN-T01-04
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_22
+      scope_note: The report distinguishes funding provisions, campaign claims, and researcher objections.
   - id: SYN-T02-05
-    question: Which Policy Areas are connected to Catalina Media Development LLC through bills it is reported
-      as lobbying for or against?
-    evidence_requirement: Each organization-to-bill and bill-to-Policy-Area connection has Grounding Evidence;
-      lobbying does not establish causal influence.
+    question: Which Policy Areas are connected to Catalina Media Development LLC through AB 1740, the
+      bill it is reported as lobbying on?
+    evidence_requirement: Reporting supports the organization-to-AB-1740 connection and the bill's local
+      coastal planning subject. Stored ABOUT_TOPIC claims connect AB 1740 to Housing & Community Development
+      and Local Government; no lobbying direction is inferred.
     hop_requirement: multi_hop
+    paired_case_id: SYN-T01-05
     source_case_ids:
     - C-M1-01
-    paired_case_id: SYN-T01-05
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10
+      scope_note: Source text supports the lobbying connection and local coastal planning subject; stored
+        article-grounded Bill Policy Areas were inspected separately.
 - id: T03
   feature: entity_information
   scenario: ambiguous_request
   domain_familiarity: familiar
   questions:
   - id: SYN-T03-01
-    question: What does SB 9 do?
-    evidence_requirement: At least two plausible California SB 9 identities from different sessions are
-      available; the question supplies no session.
+    question: What does the housing bill do?
+    evidence_requirement: Several stored California housing measures are plausible, including AB 1751
+      and SB 1090; no identifier or prior Chat Session identifies one.
     hop_requirement: unspecified
-    source_case_ids:
-    - C-E2-01
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      scope_note: AB 1751 and SB 1090 are distinct covered housing measures; no session history is invented.
   - id: SYN-T03-02
-    question: Can you tell me about the Proposition 38 campaign?
-    evidence_requirement: More than one historical Proposition 38 campaign is a credible referent, and
-      no election year is supplied.
+    question: Can you tell me about that ballot measure?
+    evidence_requirement: The independent Chat Session supplies no referent for 'that ballot measure';
+      reporting discusses multiple measures, including Propositions 28 and 38.
     hop_requirement: unspecified
-    source_case_ids:
-    - C-E2-02
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_2
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      scope_note: Multiple measures are covered, but 'that' has no antecedent in the independent Chat
+        Session.
   - id: SYN-T03-03
     question: What's this year's housing bill?
     evidence_requirement: Multiple housing bills are plausible in 2026; no title, author, provision, or
       bill number identifies one.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      scope_note: 2026 coverage includes multiple housing bills; the date is anchored to the draft's September
+        30, 2026 review context.
   - id: SYN-T03-04
     question: What has been reported about the Appropriations Committee's role in the bill?
     evidence_requirement: The chamber and bill are unspecified; no earlier Chat Session supplies either
@@ -200,23 +316,52 @@ tuples:
     source_case_ids:
     - C-C1-01
     - C-C1-02
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_21
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+      scope_note: Assembly and Senate Appropriations stages are both in the reporting; 'the bill' and
+        chamber are unset.
   - id: SYN-T03-05
-    question: What is the California teachers union's position on housing legislation?
-    evidence_requirement: More than one teachers union and more than one housing measure are plausible;
-      neither is uniquely identified.
+    question: What is the construction union's position on the housing bill?
+    evidence_requirement: Reporting contains opposed positions from the State Building and Construction
+      Trades Council and California's unionized carpenters on AB 1751; neither the union nor bill is identified.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_9
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6
+      scope_note: Actual construction-union positions establish plausible alternatives; no teachers-union
+        housing stance is assumed.
 - id: T04
   feature: entity_information
   scenario: partial_coverage
   domain_familiarity: layperson
   questions:
   - id: SYN-T04-01
-    question: What's Steve Hilton's full work history, and what do recent news stories say about him?
-    evidence_requirement: Reporting covers some public activity but does not provide a complete employment
-      history.
-    hop_requirement: entity_lookup
+    question: What does the news say about Steve Hilton's governor campaign, and can you show every contribution
+      it received during 2026?
+    evidence_requirement: Reporting identifies Hilton's gubernatorial candidacy and organizational support,
+      but the collection has no complete campaign-contribution ledger for 2026.
+    hop_requirement: unspecified
     source_case_ids:
     - C-E1-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+      - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18
+      scope_note: Hilton's candidacy and organizational support are explicitly reported; the collection
+        does not supply every 2026 campaign contribution.
+      unsupported_portion: Complete 2026 campaign-contribution ledger
+      corpus_searches:
+      - hilton_mentions
   - id: SYN-T04-02
     question: Tell me about Gail Pellerin's work on bills and every vote she's cast since taking office.
     evidence_requirement: Reporting describes some legislative activity; complete roll-call records across
@@ -224,6 +369,14 @@ tuples:
     hop_requirement: unspecified
     source_case_ids:
     - C-E1-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+      scope_note: The Pellerin proponent passage is present, but news reporting is not a complete roll-call
+        record.
+      unsupported_portion: Complete roll-call history
   - id: SYN-T04-03
     question: What does Catalina Media Development do in California politics, and who owns the company?
     evidence_requirement: Reporting supports some political activity but no available source establishes
@@ -231,14 +384,35 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M1-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+      scope_note: The source supports lobbying on AB 1740. Its damaged affiliation wording does not establish
+        company ownership.
+      unsupported_portion: Company ownership evidence
+      corpus_searches:
+      - catalina_mentions
   - id: SYN-T04-04
-    question: Which candidates has California Leads helped pay to elect, and how much has it given each
-      one?
-    evidence_requirement: Reporting establishes campaign-to-candidate funding connections but lacks complete
-      amounts and disclosure records.
+    question: Which candidate does the news say California Leads helped pay to elect, and can you show
+      all its 2026 independent expenditures with dates and amounts?
+    evidence_requirement: Reporting names Ed Musgrove and $1.3 million in support from California Leads,
+      but the collection has no complete transaction-level independent-expenditure filings.
     hop_requirement: multi_hop
     source_case_ids:
     - C-M4-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+      scope_note: One independent-support amount is reported; this is not a full, dated expenditure ledger
+        or a direct contribution record.
+      unsupported_portion: Complete 2026 independent-expenditure ledger
+      corpus_searches:
+      - california_leads_mentions
   - id: SYN-T04-05
     question: What's the Yes on Proposition 38 campaign trying to do, and where did all its money come
       from?
@@ -248,6 +422,15 @@ tuples:
     source_case_ids:
     - C-E2-02
     - C-R3-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      scope_note: Reported funders and provisions are supported, but the Coverage Description does not
+        supply complete campaign-finance records.
+      unsupported_portion: Complete campaign-finance record
 - id: T05
   feature: entity_information
   scenario: outside_permitted_scope
@@ -258,26 +441,61 @@ tuples:
     evidence_requirement: The request concerns Texas state politics and contains no California political
       information need.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request concerns Texas state politics and contains no California
+        political information need.
   - id: SYN-T05-02
     question: What is Gavin Newsom's private home address?
     evidence_requirement: The request seeks a private residential address rather than public political
       activity.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request seeks a private residential address rather than public political
+        activity.
   - id: SYN-T05-03
     question: Who are Gail Pellerin's family members, and what do they do in their private lives?
     evidence_requirement: The request concerns private individuals without a public political activity
       question.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request concerns private individuals without a public political activity
+        question.
   - id: SYN-T05-04
     question: What has the British prime minister been doing about housing in the UK?
     evidence_requirement: The request concerns UK politics and contains no California political information
       need.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request concerns UK politics and contains no California political
+        information need.
   - id: SYN-T05-05
     question: Tell me about Scott Wiener's private romantic life.
     evidence_requirement: The request seeks private personal information outside the application's political
       scope.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request seeks private personal information outside the application's
+        political scope.
 - id: T06
   feature: topic_discovery
   scenario: sufficient_evidence
@@ -290,6 +508,13 @@ tuples:
       wages.
     hop_requirement: source_discovery
     paired_case_id: SYN-T07-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1
+      scope_note: Both June articles concern housing construction and the proposed wage floor.
   - id: SYN-T06-02
     question: What are people in California arguing about when it comes to AI being used at work?
     evidence_requirement: Reporting describes workplace AI proposals and the arguments made by involved
@@ -299,6 +524,14 @@ tuples:
     - C-R1-01
     - C-R2-02
     paired_case_id: SYN-T07-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+      scope_note: The sources report workplace AI proposals, union positions, and employer or business
+        opposition.
   - id: SYN-T06-03
     question: What's been in the news about tax breaks for making movies in California?
     evidence_requirement: Reporting discusses California film tax-credit legislation and its stated purposes.
@@ -306,11 +539,25 @@ tuples:
     source_case_ids:
     - C-R2-01
     paired_case_id: SYN-T07-03
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_2
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_9
+      scope_note: The film-credit report describes AB 186's provisions.
   - id: SYN-T06-04
     question: I'd like to read about proposals to keep homeowners association fees down in California.
     evidence_requirement: Reporting discusses California homeowners association fee-cap proposals.
     hop_requirement: source_discovery
     paired_case_id: SYN-T07-04
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_2
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_6
+      scope_note: The SB 1007 report explicitly describes an HOA fee-increase cap.
   - id: SYN-T06-05
     question: Where can I start reading about money in California's 2026 race for governor?
     evidence_requirement: Reporting discusses campaign funding in the 2026 governor's race; the request
@@ -319,6 +566,13 @@ tuples:
     source_case_ids:
     - C-E1-01
     paired_case_id: SYN-T07-05
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_22
+      scope_note: The governor-race report describes Uber and Teamsters funding of independent support
+        for Porter.
 - id: T07
   feature: topic_discovery
   scenario: sufficient_evidence
@@ -330,6 +584,13 @@ tuples:
       wages.
     hop_requirement: source_discovery
     paired_case_id: SYN-T06-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1
+      scope_note: Both June articles concern housing construction and the proposed wage floor.
   - id: SYN-T07-02
     question: Which issues appear in reporting on California workplace AI protections?
     evidence_requirement: Reporting describes workplace AI proposals and the arguments made by involved
@@ -339,6 +600,14 @@ tuples:
     - C-R1-01
     - C-R2-02
     paired_case_id: SYN-T06-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+      scope_note: The sources report workplace AI proposals, union positions, and employer or business
+        opposition.
   - id: SYN-T07-03
     question: Show me coverage of California film tax-credit proposals.
     evidence_requirement: Reporting discusses California film tax-credit legislation and its stated purposes.
@@ -346,11 +615,25 @@ tuples:
     source_case_ids:
     - C-R2-01
     paired_case_id: SYN-T06-03
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_2
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_9
+      scope_note: The film-credit report describes AB 186's provisions.
   - id: SYN-T07-04
     question: What reporting covers California homeowners association fee caps?
     evidence_requirement: Reporting discusses California homeowners association fee-cap proposals.
     hop_requirement: source_discovery
     paired_case_id: SYN-T06-04
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_2
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_6
+      scope_note: The SB 1007 report explicitly describes an HOA fee-increase cap.
   - id: SYN-T07-05
     question: Which campaign-finance issues are discussed in reporting on California's 2026 gubernatorial
       election?
@@ -360,41 +643,83 @@ tuples:
     source_case_ids:
     - C-E1-01
     paired_case_id: SYN-T06-05
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_22
+      scope_note: The governor-race report describes Uber and Teamsters funding of independent support
+        for Porter.
 - id: T08
   feature: topic_discovery
   scenario: ambiguous_request
   domain_familiarity: expert
   questions:
   - id: SYN-T08-01
-    question: Find reporting on SB 9's housing-policy implications.
-    evidence_requirement: Multiple SB 9 sessions are plausible; the policy descriptor alone does not establish
-      the intended session.
+    question: Find reporting on the AI bill's workplace protections.
+    evidence_requirement: Reporting discusses several workplace AI bills, including AB 1018 and SB 947;
+      the question does not select a bill.
     hop_requirement: unspecified
-    source_case_ids:
-    - C-E2-01
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+      scope_note: AB 1018 and SB 947 are both named with distinct protections; neither is selected by
+        the request.
   - id: SYN-T08-02
-    question: What reporting covers tax policy during the session?
-    evidence_requirement: No legislative session is supplied, and reporting spans more than one plausible
-      session.
+    question: What reporting covers the tax changes in that proposal?
+    evidence_requirement: The independent request identifies no proposal; stored reporting covers AB 186
+      film tax credits and the Proposition 40 billionaire-tax proposal.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_2
+      - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_1
+      scope_note: The proposal has no antecedent; film credits and the billionaire-tax proposition are
+        two covered tax-policy alternatives.
   - id: SYN-T08-03
-    question: Show articles on labor and employment published in July.
-    evidence_requirement: Reporting includes July articles from more than one year; no year or accepted
-      default resolves the scope.
+    question: Show articles on labor and employment published during that month.
+    evidence_requirement: No month is established in the independent Chat Session; the source inventory
+      includes Labor & Employment articles published in June and July 2026.
     hop_requirement: unspecified
-    source_case_ids:
-    - C-E3-02
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_0
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_1
+      scope_note: The month has no antecedent; June and July Labor & Employment Source Articles exist
+        in the inventory.
   - id: SYN-T08-04
-    question: Find coverage of Proposition 38's fiscal implications.
-    evidence_requirement: Multiple historical measures numbered 38 are plausible; the election year is
-      absent.
+    question: Find coverage of that proposition's fiscal implications.
+    evidence_requirement: No proposition is identified; stored reporting includes the funding provisions
+      of Propositions 28 and 38.
     hop_requirement: unspecified
-    source_case_ids:
-    - C-E2-02
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_2
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_17
+      scope_note: The proposition has no antecedent; Propositions 28 and 38 both have funding-related
+        reporting.
   - id: SYN-T08-05
-    question: Find reporting on public-health financing in the region.
-    evidence_requirement: No region is identified, and the independent Chat Session has no location context.
+    question: Find reporting on the health measure we discussed.
+    evidence_requirement: This independent Chat Session contains no earlier discussion; AB 2540 and Proposition
+      38 are both covered health-related measures.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_1
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      scope_note: AB 2540 and Proposition 38 are covered health measures; the assumed earlier conversation
+        does not exist.
 - id: T09
   feature: topic_discovery
   scenario: required_data_not_ingested
@@ -406,39 +731,83 @@ tuples:
     evidence_requirement: Official legislative roll-call records are required and absent from the Coverage
       Description.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T09-02
     question: What do statewide campaign-finance filings show about contributions from housing developers
       in California in 2026?
     evidence_requirement: Statewide campaign-finance filings are required; news mentions do not provide
       the requested disclosure collection.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T09-03
     question: Find California lobbying disclosures covering AI bills in the 2025-2026 session.
     evidence_requirement: The relevant lobbying-disclosure collection is not ingested; reporting about
       lobbying is not a substitute.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T09-04
     question: I'd like official records of Assembly District 52's representation around the 2021 redistricting.
     evidence_requirement: District history and legislative-tenure records are not ingested.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T09-05
     question: Show official hearing transcripts about California cardroom legislation from the 2025-2026
       session.
     evidence_requirement: Official hearing transcripts are not ingested, even if news reporting discusses
       the hearings.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
 - id: T10
   feature: comparison
   scenario: sufficient_evidence
   domain_familiarity: familiar
   questions:
   - id: SYN-T10-01
-    question: How do studios and labor unions describe the benefits of AB 186 in the 2025-2026 session?
-    evidence_requirement: Reporting contains statements from both groups about the same bill, not merely
-      lists of their names.
+    question: Compare Creative Artists Agency's argument for AB 186 with the film unions' description
+      of the tax-credit compromise in the 2025-2026 session.
+    evidence_requirement: Bryan Lourd's attributed statement for Creative Artists Agency and Shane Gusman's
+      statement for SAG-AFTRA and Teamsters describe the same AB 186 compromise; no studio-specific argument
+      is invented from a support list.
     hop_requirement: single_hop
     source_case_ids:
     - C-R2-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_11
+      scope_note: CAA's letter and the union lobbyist's compromise explanation are separately attributed.
   - id: SYN-T10-02
     question: Compare Walt Disney's and Creative Artists Agency's reported support for AB 186 in the 2025-2026
       session.
@@ -448,15 +817,31 @@ tuples:
     source_case_ids:
     - C-M2-01
     - C-M2-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      scope_note: CAA's letter and a separate studio-support passage support both organizations; this
+        does not show coordination.
   - id: SYN-T10-03
-    question: How do union arguments about AB 1018 compare with objections to SB 947 in the 2025-2026
-      session?
-    evidence_requirement: Reporting gives the substance of union arguments about AB 1018 and objections
-      to SB 947, preserving the different bills.
+    question: Compare the workplace AI protections reporting describes in AB 1018 and SB 947 in the 2025-2026
+      session. Keep the bills distinct.
+    evidence_requirement: Reporting describes AB 1018's worker-notification provisions and SB 947's restriction
+      on relying solely on AI for discipline or dismissal; no detailed business objection is inferred
+      from opposition alone.
     hop_requirement: single_hop
     source_case_ids:
     - C-R1-01
     - C-R2-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+      scope_note: Compare stated protections, not detailed opposition arguments the text does not supply.
   - id: SYN-T10-04
     question: Compare what reporting says about Catherine Blakespear's vote on SB 1007 and Scott Wiener's
       vote on SB 1229 in the 2025-2026 session.
@@ -466,59 +851,124 @@ tuples:
     source_case_ids:
     - C-M5-01
     - C-M5-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18
+      - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_7
+      scope_note: Each source explicitly states the named politician's no vote on its own bill; preserve
+        both identities and events.
   - id: SYN-T10-05
     question: What differences are reported between supporters' and opponents' arguments about California's
       construction minimum-wage proposal?
     evidence_requirement: Reporting includes identifiable arguments on both sides of the same proposal,
       with enough information to resolve the measure.
     hop_requirement: single_hop
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_5
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_27
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_29
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_30
+      scope_note: The source provides the author's argument, Trades objections, and carpenters' counterargument
+        about the same wage proposal.
 - id: T11
   feature: comparison
   scenario: conflicting_reporting
   domain_familiarity: expert
   questions:
   - id: SYN-T11-01
-    question: Compare accounts of Scott Wiener's vote on SB 1229 in the 2025-2026 session. Do they describe
-      the same vote and outcome?
-    evidence_requirement: Two available sources make incompatible claims about the same legislative event;
-      different votes or event labels alone are not contradictions.
-    hop_requirement: multi_hop
-    source_case_ids:
-    - C-M5-02
+    question: Compare Kaiser nurses' accounts of call time affecting their performance scores with Kaiser's
+      response. Where do the accounts disagree?
+    evidence_requirement: Nurses say call time factors into performance scores; Kaiser explicitly says
+      it does not use Average Handle Time to assess performance or enforce call-time metrics. These attributed
+      accounts concern the same performance practice.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_1
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_12
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_13
+      scope_note: Nurses say call time factors into performance scores; Kaiser explicitly says it does
+        not use Average Handle Time to assess performance or enforce call-time metrics. These attributed
+        accounts concern the same performance practice. Both accounts are available in one Source Article;
+        no second independent article is asserted.
   - id: SYN-T11-02
-    question: Where do accounts of Catherine Blakespear's vote on SB 1007 in the 2025-2026 session agree
-      or disagree?
-    evidence_requirement: At least two sources disagree about the same vote, with matched bill, session,
-      and event.
-    hop_requirement: multi_hop
-    source_case_ids:
-    - C-M5-01
+    question: Compare Austin Beutner's allegation about Los Angeles Unified's use of Proposition 28 money
+      with the district's response. Preserve the allegation and denial.
+    evidence_requirement: The same passage reports Beutner's allegation that LAUSD replaced existing arts
+      programs using Proposition 28 money and the district's denial. A pending lawsuit does not establish
+      guilt.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_2
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_3
+      scope_note: The same passage reports Beutner's allegation that LAUSD replaced existing arts programs
+        using Proposition 28 money and the district's denial. A pending lawsuit does not establish guilt.
+        Both accounts are available in one Source Article; no second independent article is asserted.
   - id: SYN-T11-03
-    question: Compare reporting on the campaigns California Leads funded in 2026. Which funding claims
-      differ between sources?
-    evidence_requirement: Sources make incompatible claims about a specific campaign-funding link in the
-      same period; omissions alone are not conflicts.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-M4-01
+    question: Compare the lawsuit's allegation about Kalibrate coordinating California gasoline prices
+      with Kalibrate's response, as reported in July 2026.
+    evidence_requirement: The stored report attributes the algorithmic price-coordination allegation to
+      a federal lawsuit and explicitly records Kalibrate's denial of those allegations. Preserve the claim's
+      legal and evidentiary status.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_7
+      - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_8
+      scope_note: The stored report attributes the algorithmic price-coordination allegation to a federal
+        lawsuit and explicitly records Kalibrate's denial of those allegations. Preserve the claim's legal
+        and evidentiary status. Both accounts are available in one Source Article; no second independent
+        article is asserted.
   - id: SYN-T11-04
-    question: Compare accounts of AB 2540's referral to the Senate Appropriations Committee in the 2025-2026
-      session.
-    evidence_requirement: Sources disagree about the same referral event; reports from different stages
-      of the bill are not treated as contradictory.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-C1-01
-    - C-C1-02
+    question: Compare CalMatters' analysis that the 2026 Proposition 38 criteria were tailored to one
+      institute with the Yes on Proposition 38 campaign's response.
+    evidence_requirement: CalMatters' analysis says the criteria were tailored to very likely exclude
+      all but one named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring
+      to that institute. Preserve qualifiers and attribution, without treating the campaign response as
+      independent corroboration.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_4
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19
+      scope_note: CalMatters' analysis says the criteria were tailored to very likely exclude all but
+        one named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring to
+        that institute. Preserve qualifiers and attribution, without treating the campaign response as
+        independent corroboration. Both accounts are available in one Source Article; no second independent
+        article is asserted.
   - id: SYN-T11-05
-    question: Compare sources on whether Catalina Media Development LLC lobbied for or against AB 186
-      in the 2025-2026 session.
-    evidence_requirement: Sources explicitly assign incompatible lobbying positions to the same organization
-      on the same bill version and period.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-M1-01
-    - C-R2-01
+    question: Compare Los Angeles County's allegations about State Farm's smoke-damage claims response
+      after the 2025 fires with State Farm's reported response.
+    evidence_requirement: The county's lawsuit alleges unfair handling of smoke-damage claims and unsafe
+      cleaning; State Farm's response explicitly strongly disagrees with the lawsuit's characterization.
+      This is an attributed dispute, not proof or an item-by-item rebuttal of every allegation.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_10
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_11
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_12
+      scope_note: The county's lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning;
+        State Farm's response explicitly strongly disagrees with the lawsuit's characterization. This
+        is an attributed dispute, not proof or an item-by-item rebuttal of every allegation. Both accounts
+        are available in one Source Article; no second independent article is asserted.
 - id: T12
   feature: comparison
   scenario: partial_coverage
@@ -529,21 +979,57 @@ tuples:
     evidence_requirement: Reporting establishes a housing position for one person but does not establish
       a comparable position for the other; silence is not opposition.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20
+      scope_note: Only two stored Hilton passages exist, neither establishes a housing position; Newsom's
+        housing proposal is covered. This is bounded to the captured collection.
+      unsupported_portion: Hilton housing position in this collection
+      corpus_searches:
+      - hilton_mentions
   - id: SYN-T12-02
-    question: What do news stories say people like and dislike about Proposition 38?
-    evidence_requirement: The campaign is uniquely identified; reporting describes arguments on one side
-      but lacks comparable arguments from the other.
+    question: What do the news stories say people like and dislike about Proposition 38, and how much
+      has every group on each side raised and spent?
+    evidence_requirement: Reporting provides supporters' and opponents' arguments about the same 2026
+      Proposition 38, but no complete campaign-finance collection establishes every group's fundraising
+      and spending.
     hop_requirement: unspecified
     source_case_ids:
     - C-E2-02
+    - C-R3-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_14
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      scope_note: Both sides' arguments exist; the unsupported portion is the requested complete finance
+        totals, not missing opposition arguments.
+      unsupported_portion: Complete fundraising and spending for every group
   - id: SYN-T12-03
-    question: How do unions and tech companies compare on AI being used at work in California?
-    evidence_requirement: Reporting describes one group's position on identifiable workplace AI proposals
-      but leaves the other group's position unestablished.
-    hop_requirement: unspecified
+    question: How do the nurses' union and Kaiser compare on the workplace AI rules in AB 1018, and how
+      much did each spend lobbying on it?
+    evidence_requirement: Reporting explicitly records California Nurses Association support and Kaiser
+      Permanente opposition to AB 1018, but gives no bill-specific lobbying expenditure totals for each
+      organization.
+    hop_requirement: single_hop
     source_case_ids:
     - C-R1-01
-    - C-R2-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      scope_note: The source names CNA endorsement and Kaiser opposition but does not report either organization's
+        bill-specific lobbying total.
+      unsupported_portion: Bill-specific lobbying totals for both organizations
+      corpus_searches:
+      - ab1018_mentions
   - id: SYN-T12-04
     question: Compare which campaigns California Leads and the Michelson Center for Public Policy helped
       pay for, and how much each spent.
@@ -553,15 +1039,35 @@ tuples:
     source_case_ids:
     - C-M4-01
     - C-M4-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      scope_note: California Leads support for Musgrove and combined Michelson/center donations are reported;
+        they are not comparable complete spending totals.
+      unsupported_portion: Comparable complete spending totals
   - id: SYN-T12-05
-    question: How do California's Senate Bill 9 and Assembly Bill 2540 from 2025 differ, and where does
-      each stand now?
-    evidence_requirement: Reporting describes some provisions or referrals, but the corpus lacks current
-      status for at least one bill as of 2026-09-30.
+    question: How do California's 2021 Senate Bill 9 and Assembly Bill 2540 from the 2025-2026 session
+      differ, and what is the latest official status of each as of September 30, 2026?
+    evidence_requirement: Reporting describes the 2021 housing SB 9 and the 2025-2026 AB 2540's medication-abortion
+      access provisions and committee stages, but is not an official, current bill-status collection.
     hop_requirement: unspecified
     source_case_ids:
     - C-E2-01
     - C-C1-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_1
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+      scope_note: The reporting supports provisions and some stages, but not an official status record
+        current to the review date.
+      unsupported_portion: Current official status records
 - id: T13
   feature: comparison
   scenario: outside_permitted_scope
@@ -572,6 +1078,13 @@ tuples:
     evidence_requirement: The requested result is a political recommendation rather than a comparison
       of supported reporting.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The requested result is a political recommendation rather than a comparison
+        of supported reporting.
   - id: SYN-T13-02
     question: Compare Walt Disney and Creative Artists Agency to tell me which one bought legislators'
       votes on AB 186 in the 2025-2026 session.
@@ -581,22 +1094,49 @@ tuples:
     source_case_ids:
     - C-M2-01
     - C-M2-02
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request demands an unsupported corruption inference; documented lobbying
+        does not establish purchased votes.
   - id: SYN-T13-03
     question: Will proposals like SB 947 or AB 1018 face greater legislative resistance in California's
       next session?
     evidence_requirement: The requested comparison predicts future political outcomes rather than retrieving
       reported events.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The requested comparison predicts future political outcomes rather than
+        retrieving reported events.
   - id: SYN-T13-04
     question: Compare the housing legislation enacted by the Texas and Florida legislatures in 2025.
     evidence_requirement: Both subjects are outside California politics; missing ingestion would not resolve
       the policy boundary.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. Both subjects are outside California politics; missing ingestion would
+        not resolve the policy boundary.
   - id: SYN-T13-05
     question: Compare Gavin Newsom's and Scott Wiener's secret personal motives for their public political
       positions.
     evidence_requirement: The request asks for unreported private motives beyond available evidence.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: question_policy
+      evidence_ids: []
+      scope_note: Validate the requested outcome against the application's question policy, not against
+        a missing search result. The request asks for unreported private motives beyond available evidence.
 - id: T14
   feature: change_over_time
   scenario: sufficient_evidence
@@ -610,13 +1150,31 @@ tuples:
     hop_requirement: unspecified
     source_case_ids:
     - C-R2-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_4
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_6
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_9
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      scope_note: The report orders last year's expansion, July's cap, and AB 186's later compromise;
+        it does not supply exact dates for every event.
   - id: SYN-T14-02
-    question: How did reported union positions on AB 1018 develop during the 2025-2026 session?
-    evidence_requirement: Dated reporting contains comparable statements from identified unions at multiple
-      times; changes are asserted only when statements establish them.
+    question: How did the State Building and Construction Trades Council's reported position on AB 1751
+      change when its wage provision was removed?
+    evidence_requirement: June reporting records Trades Council opposition to AB 1751's wage provision,
+      its removal at the Senate Housing Committee hearing, and the council becoming neutral afterward.
     hop_requirement: single_hop
-    source_case_ids:
-    - C-R1-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6
+      scope_note: The reported position changes from opposition to neutral after wage-language removal;
+        do not generalize to unrelated unions.
   - id: SYN-T14-03
     question: What chronology of committee referrals for AB 2540 in the 2025-2026 session can be established
       from reporting?
@@ -625,18 +1183,46 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-C1-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_21
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+      scope_note: Explicit May 6/May 14 and June 10/July 2 stages are in the text, independently of the
+        article's publication date.
   - id: SYN-T14-04
-    question: How did public arguments about California's construction minimum-wage proposal develop during
-      2026? Include the dated statements behind any reported change.
-    evidence_requirement: Multiple reports identify dated statements about the same proposal and distinguish
-      changes in a speaker's position from differences between speakers.
+    question: What sequence of changes to AB 1751's construction-wage proposal is described in the June
+      4 and June 25, 2026 reporting? Distinguish publication dates from event dates.
+    evidence_requirement: Reporting names the February townhouse-only introduction, April addition of
+      wage language, and later removal in the Senate Housing Committee. Publication dates identify reports
+      and are not substituted for event dates.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_16
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_6
+      scope_note: The source states February introduction, April wage addition, and removal at a later
+        Senate Housing hearing; publication dates do not date every event.
   - id: SYN-T14-05
-    question: Trace the developments in California's Uber insurance legislation that reporting describes
-      during the 2025-2026 session.
-    evidence_requirement: Dated reporting resolves the legislation and supports a sequence of at least
-      two developments; chronology does not establish hidden motives.
+    question: Trace the reported sequence from the competing Uber and attorneys' ballot measures to Newsom
+      signing SB 623 in June 2026. State which dates or ordering the reporting actually gives.
+    evidence_requirement: Reporting states that the parties qualified competing measures, then reached
+      an agreement, and Newsom signed SB 623; preserve the reported sequence without inventing an exact
+      date for each stage.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_0
+      - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_2
+      - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/#chunk_4
+      scope_note: Qualification, agreement, and signing are explicitly ordered; the exact signing date
+        is limited to what the dated report and text establish.
 - id: T15
   feature: change_over_time
   scenario: partial_coverage
@@ -649,6 +1235,17 @@ tuples:
     hop_requirement: unspecified
     source_case_ids:
     - C-R2-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_55
+      - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+      scope_note: Only two articles mention SB 947; they describe a reintroduced proposal and restrictions,
+        not a complete amendment or final-text history.
+      unsupported_portion: Complete amendment and final-text history
+      corpus_searches:
+      - sb947_mentions
   - id: SYN-T15-02
     question: How did unions' positions on AB 1018 evolve throughout the 2025-2026 session?
     evidence_requirement: Reporting contains dated union positions for only part of the requested period;
@@ -656,6 +1253,16 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-R1-01
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      scope_note: The sole AB 1018 article supplies CNA endorsement but not a dated position history through
+        the whole session.
+      unsupported_portion: Full-session dated endorsement history
+      corpus_searches:
+      - ab1018_mentions
   - id: SYN-T15-03
     question: Trace how organizational support for Steve Hilton's campaign changed from 2025 through September
       2026.
@@ -664,6 +1271,16 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-R1-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+      scope_note: The August Hilton passage supplies organizational support, not comparable endorsements
+        across the entire 2025-September 2026 period.
+      unsupported_portion: Endorsement history spanning 2025 through September 2026
+      corpus_searches:
+      - hilton_mentions
   - id: SYN-T15-04
     question: What happened to AB 2540 after the committee referrals reported in the 2025-2026 session?
     evidence_requirement: Referral reporting is available, but later developments are only partly covered
@@ -671,12 +1288,32 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-C1-02
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+      scope_note: The sole AB 2540 article ends with July 2 referral; it supplies no later terminal outcome.
+      unsupported_portion: Post-July-2 developments
+      corpus_searches:
+      - ab2540_mentions
   - id: SYN-T15-05
     question: How did California's construction minimum-wage proposal develop from its first draft through
       September 2026?
     evidence_requirement: Reporting covers an intermediate stage but lacks the first draft or the late-September
       outcome needed for a complete chronology.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: source_text_and_bounded_coverage_limit
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_16
+      - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_1
+      scope_note: Two AB 1751 reports describe initial focus and wage-language removal, not complete first-draft
+        text or the late-September outcome.
+      unsupported_portion: Complete first-draft-to-September history
+      corpus_searches:
+      - ab1751_mentions
 - id: T16
   feature: change_over_time
   scenario: required_data_not_ingested
@@ -688,42 +1325,85 @@ tuples:
     evidence_requirement: District boundary history and legislative-tenure records are required and not
       ingested.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T16-02
     question: Can you show every vote Scott Wiener cast on housing bills during 2025 and 2026, in date
       order?
     evidence_requirement: Complete dated roll-call records across bills are required; individual news
       reports cannot establish the full history.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T16-03
     question: I'd like to follow every donation to Steve Hilton's 2026 governor campaign, with the amount
       and date each came in.
     evidence_requirement: Complete transaction-level campaign-finance records are required and not ingested;
       independent spending must not be recast as direct donations.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T16-04
     question: How did each California senator vote at each stage of Senate Bill 947 in 2025 and 2026?
     evidence_requirement: Complete dated legislative-event and roll-call records are required and not
       ingested.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
   - id: SYN-T16-05
     question: Show how much each group paid lobbyists to work on California film tax credits from January
       2025 through September 2026, with the payment dates.
     evidence_requirement: Dated lobbying-payment disclosures for the full period are required and not
       ingested; reporting about lobbying is insufficient.
     hop_requirement: unspecified
+    evidence_validation:
+      status: verified
+      basis: coverage_description_and_collection_inventory
+      evidence_ids: []
+      scope_note: The active chat collection is selected CalMatters reporting. It is not the official
+        records, complete disclosures, district history, or complete roll-call collection this request
+        needs. Individual reported votes or disclosure amounts do not satisfy that collection requirement.
 - id: T17
   feature: evidence_checking
   scenario: sufficient_evidence
   domain_familiarity: layperson
   questions:
   - id: SYN-T17-01
-    question: I heard companies helped pay for the Yes on Proposition 38 campaign. Is there news reporting
-      that backs that up?
-    evidence_requirement: Reporting names at least one organization funding the uniquely identifiable
-      campaign.
+    question: I heard the Michelson Center for Public Policy helped pay for the Yes on Proposition 38
+      campaign in 2026. Is there news reporting that backs that up?
+    evidence_requirement: Reporting names the Michelson Center for Public Policy and Gary K. Michelson
+      as contributors to the campaign, with a combined amount; do not allocate that total to the center
+      alone.
     hop_requirement: single_hop
     source_case_ids:
     - C-R3-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      scope_note: A contribution is explicitly reported, but the combined donor amount cannot be assigned
+        to the center alone.
   - id: SYN-T17-02
     question: Did Scott Wiener vote against California's Senate Bill 1229 in 2025 or 2026? I'd like to
       see where that was reported.
@@ -732,6 +1412,14 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M5-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_7
+      - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8
+      scope_note: The passage explicitly states Wiener's no vote on SB 1229; no motive or unrelated vote
+        is inferred.
   - id: SYN-T17-03
     question: I was told Walt Disney pushed for California's Assembly Bill 186 in 2025 or 2026. What reporting
       supports that?
@@ -740,6 +1428,12 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-M2-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      scope_note: Disney lobbyists are explicitly listed as supporting AB 186 at the hearing.
   - id: SYN-T17-04
     question: Is there reporting showing which candidates California Leads helped pay to elect?
     evidence_requirement: Reporting supports both an organization-to-campaign funding link and the campaign-to-candidate
@@ -747,6 +1441,13 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M4-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+      scope_note: Reporting explicitly names Musgrove and support from California Leads; the erroneous
+        intermediate Campaign node in the historical graph is not needed to validate this wording.
   - id: SYN-T17-05
     question: Has Gail Pellerin been mentioned in news about California bills? Can you show me the passages?
     evidence_requirement: Reporting mentions Gail Pellerin in a legislative context; a mention is not
@@ -754,54 +1455,107 @@ tuples:
     hop_requirement: entity_lookup
     source_case_ids:
     - C-E1-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+      scope_note: The Pellerin passage is a legislative mention and proponent statement, not a roll-call
+        claim.
 - id: T18
   feature: evidence_checking
   scenario: conflicting_reporting
   domain_familiarity: familiar
   questions:
   - id: SYN-T18-01
-    question: Do reports agree that Scott Wiener voted no on SB 1229 in the 2025-2026 session?
-    evidence_requirement: Two available sources disagree about the same vote; different legislative events
-      or bill versions are not treated as conflicting.
-    hop_requirement: multi_hop
-    source_case_ids:
-    - C-M5-02
+    question: Do Kaiser nurses and Kaiser Permanente agree on whether call time is used to assess nurse
+      performance? Show the reported accounts without deciding which is true.
+    evidence_requirement: Nurses say call time factors into performance scores; Kaiser explicitly says
+      it does not use Average Handle Time to assess performance or enforce call-time metrics. These attributed
+      accounts concern the same performance practice.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_1
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_12
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_13
+      scope_note: Nurses say call time factors into performance scores; Kaiser explicitly says it does
+        not use Average Handle Time to assess performance or enforce call-time metrics. These attributed
+        accounts concern the same performance practice. Both accounts are available in one Source Article;
+        no second independent article is asserted.
   - id: SYN-T18-02
-    question: Does reporting consistently place AB 2540 with the Senate Appropriations Committee in the
-      2025-2026 session?
-    evidence_requirement: Two accounts disagree about the same committee referral at the same stage; later
-      movement between committees is not a contradiction.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-C1-01
-    - C-C1-02
+    question: Does reporting establish that Los Angeles Unified replaced existing arts funding with Proposition
+      28 money, or is that allegation disputed?
+    evidence_requirement: The same passage reports Beutner's allegation that LAUSD replaced existing arts
+      programs using Proposition 28 money and the district's denial. A pending lawsuit does not establish
+      guilt.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_2
+      - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_3
+      scope_note: The same passage reports Beutner's allegation that LAUSD replaced existing arts programs
+        using Proposition 28 money and the district's denial. A pending lawsuit does not establish guilt.
+        Both accounts are available in one Source Article; no second independent article is asserted.
   - id: SYN-T18-03
-    question: Was California Leads a funder of Ed Musgrove's campaign? What reporting supports or disputes
-      that connection?
-    evidence_requirement: One source supports and another explicitly disputes the same campaign-funding
-      claim; direct contributions and independent spending are distinguished.
-    hop_requirement: multi_hop
-    source_case_ids:
-    - C-R3-02
-    - C-M4-01
+    question: What reporting supports or disputes the allegation that Kalibrate used algorithms and competitor
+      data to keep California pump prices artificially high?
+    evidence_requirement: The stored report attributes the algorithmic price-coordination allegation to
+      a federal lawsuit and explicitly records Kalibrate's denial of those allegations. Preserve the claim's
+      legal and evidentiary status.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_7
+      - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/#chunk_8
+      scope_note: The stored report attributes the algorithmic price-coordination allegation to a federal
+        lawsuit and explicitly records Kalibrate's denial of those allegations. Preserve the claim's legal
+        and evidentiary status. Both accounts are available in one Source Article; no second independent
+        article is asserted.
   - id: SYN-T18-04
-    question: Was Catalina Media Development LLC lobbying in favor of AB 186 in the 2025-2026 session?
-      Which reports support that and which disagree?
-    evidence_requirement: Sources explicitly give incompatible lobbying positions for the same organization,
-      bill version, and period.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-M1-01
-    - C-R2-01
+    question: Is the claim that the 2026 Proposition 38 criteria were uniquely tailored to the California
+      Institute for Immunology and Immunotherapy disputed in reporting? Show both accounts.
+    evidence_requirement: CalMatters' analysis says the criteria were tailored to very likely exclude
+      all but one named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring
+      to that institute. Preserve qualifiers and attribution, without treating the campaign response as
+      independent corroboration.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_4
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19
+      scope_note: CalMatters' analysis says the criteria were tailored to very likely exclude all but
+        one named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring to
+        that institute. Preserve qualifiers and attribution, without treating the campaign response as
+        independent corroboration. Both accounts are available in one Source Article; no second independent
+        article is asserted.
   - id: SYN-T18-05
-    question: What evidence supports or disputes the claim that the Michelson Center for Public Policy
-      funded the Yes on Proposition 38 campaign?
-    evidence_requirement: Available sources disagree about the same uniquely identified campaign-funding
-      link; the existing reference establishes only a related traversal.
-    hop_requirement: single_hop
-    source_case_ids:
-    - C-M4-02
-    - C-R3-01
+    question: What does reporting say Los Angeles County alleges about State Farm's smoke-damage claims
+      handling, and how does State Farm respond?
+    evidence_requirement: The county's lawsuit alleges unfair handling of smoke-damage claims and unsafe
+      cleaning; State Farm's response explicitly strongly disagrees with the lawsuit's characterization.
+      This is an attributed dispute, not proof or an item-by-item rebuttal of every allegation.
+    hop_requirement: source_discovery
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_10
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_11
+      - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_12
+      scope_note: The county's lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning;
+        State Farm's response explicitly strongly disagrees with the lawsuit's characterization. This
+        is an attributed dispute, not proof or an item-by-item rebuttal of every allegation. Both accounts
+        are available in one Source Article; no second independent article is asserted.
 - id: T19
   feature: intersection_of_constraints
   scenario: sufficient_evidence
@@ -815,6 +1569,14 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M2-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_11
+      scope_note: The passage names Disney, SkyDance, SAG-AFTRA, and additional union representation.
+        Do not infer coordination or an exhaustive supporter list.
   - id: SYN-T19-02
     question: For AB 186 in the 2025-2026 session, which organizations share Creative Artists Agency's
       reported lobbying-for position?
@@ -823,6 +1585,14 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M2-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+      - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      scope_note: CAA's letter and separately named studio/union support concern AB 186; distinguish attribution
+        from a shared graph edge.
   - id: SYN-T19-03
     question: Which labor unions have a reported stance on AB 1018 in the 2025-2026 session? Preserve
       the distinction between supporting and opposing it.
@@ -831,6 +1601,13 @@ tuples:
     hop_requirement: single_hop
     source_case_ids:
     - C-R1-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+      scope_note: CNA is explicitly named as endorsing AB 1018. No opposing union is supplied by the source,
+        and missing stance values are not inferred.
   - id: SYN-T19-04
     question: In the article titled 'Newsom pushes environmental carve-out for campaign donor’s Santa
       Monica project', which organizations are mentioned in the same passages as Gavin Newsom?
@@ -839,6 +1616,14 @@ tuples:
     hop_requirement: multi_hop
     source_case_ids:
     - C-M3-02
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+      - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+      scope_note: Literal chunks co-mention Newsom and named organizations, including the Privacy Protection
+        Agency Board, High-Speed Rail Authority, and Catalina; co-mention is not a new relationship claim.
   - id: SYN-T19-05
     question: Find reporting published in July 2026 that discusses Housing & Community Development. Use
       publication dates for the date filter.
@@ -847,38 +1632,87 @@ tuples:
     hop_requirement: source_discovery
     source_case_ids:
     - C-E3-01
+    evidence_validation:
+      status: verified
+      basis: source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+      - https://calmatters.org/housing/2026/07/road-housing-california-federal/#chunk_0
+      scope_note: July 2026 Source Articles have Housing & Community Development assignments; the full
+        matching article inventory is recorded in the audit. Use publication dates.
 - id: T20
   feature: intersection_of_constraints
   scenario: ambiguous_request
   domain_familiarity: layperson
   questions:
   - id: SYN-T20-01
-    question: Which groups backed the same bill as Disney last year?
-    evidence_requirement: Several bills are plausible; Disney and the 2025 period alone do not uniquely
-      identify the intended bill.
+    question: Which groups backed the housing bill, excluding the union that opposed it?
+    evidence_requirement: Neither the housing bill nor the excluded union is identified. Stored reporting
+      covers AB 1751 and SB 1090 and records different construction-union positions on AB 1751; preserve
+      the exclusion after scope is resolved.
     hop_requirement: multi_hop
-    source_case_ids:
-    - C-M2-01
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_9
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      scope_note: The request leaves the bill and excluded union unset. This validates ambiguity, not
+        an exhaustive supporter set.
   - id: SYN-T20-02
-    question: Show stories about housing from July that mention our governor.
-    evidence_requirement: The year and governor referent are not established by an independent Chat Session;
-      multiple plausible scopes remain.
+    question: Show stories about housing from that month that mention our governor.
+    evidence_requirement: The month has no referent in this independent Chat Session; June and July 2026
+      housing reporting both mention Gavin Newsom. Do not manufacture ambiguity about the current governor.
     hop_requirement: source_discovery
-    source_case_ids:
-    - C-E3-01
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_20
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26
+      scope_note: June and July housing reporting mention Newsom; only the missing month is asserted as
+        unresolved.
   - id: SYN-T20-03
-    question: Which politicians backed the cleanup bill and got campaign money from the groups behind
-      it?
-    evidence_requirement: No cleanup bill is identified, and 'behind it' could mean sponsorship, lobbying,
-      or funding; all requested links need clarification.
+    question: Which politicians opposed the bill and got campaign money from the groups supporting it?
+    evidence_requirement: No bill or supporting group is identified; stored reporting contains opposed
+      votes on different bills. Preserve both requested relationships after clarification without assuming
+      a supported funding path.
     hop_requirement: multi_hop
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18
+      - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_7
+      scope_note: Multiple opposed-vote bills are covered, but no bill identifies the intended traversal.
+        No funding path is presumed.
   - id: SYN-T20-04
     question: Which unions opposed the wage bill and also supported the other housing proposal?
     evidence_requirement: Neither measure is uniquely identified; stance constraints must survive clarification
       rather than collapse into general housing coverage.
     hop_requirement: multi_hop
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2
+      - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_9
+      - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+      scope_note: The wage-bill context exists, but 'the other housing proposal' has no antecedent; no
+        union intersection is assumed.
   - id: SYN-T20-05
     question: Which groups supported that ballot measure and also helped pay for that candidate's campaign?
     evidence_requirement: Neither the ballot measure nor the candidate has a referent in this independent
       Chat Session.
     hop_requirement: multi_hop
+    evidence_validation:
+      status: verified
+      basis: request_scope_and_source_text
+      evidence_ids:
+      - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+      - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+      scope_note: The measure and candidate are both unset. Available subjects do not establish an organization
+        satisfying both requested constraints.
+validation_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json

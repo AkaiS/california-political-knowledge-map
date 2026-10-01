@@ -1,0 +1,2424 @@
+task: chat
+description: 100 corpus-validated synthetic Chat Session questions for development and error discovery.
+  All cases are unlabeled training material. Only question text reaches the production task; scenario
+  assumptions and evidence checks remain review metadata. The driver automatically approves the first
+  Query Rewrite Proposal. No answer quality or failure prevalence is estimated. Source validation is recorded
+  in work/initiatives/model-evaluation/chat-synthetic-evidence.json.
+cases:
+- id: SYN-T01-01
+  description: entity_information / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Who is Steve Hilton, and what California election campaign is he involved in? I'd like to
+      read a few news stories about him.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T01-01
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      identifies Steve Hilton''s candidacy and campaign affiliation. Validation scope: Candidacy and Reform
+      California''s endorsement are explicitly reported; do not expand to an entire biography.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T01
+  - entity_information
+  - sufficient_evidence
+  - layperson
+  - entity_lookup
+- id: SYN-T01-02
+  description: entity_information / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: What can you tell me about Gail Pellerin from the news?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T01-02
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      identifies Gail Pellerin and describes her public legislative activity. Validation scope: The source
+      calls Pellerin a proponent of AB 2624. It does not establish sponsorship or her vote.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T01
+  - entity_information
+  - sufficient_evidence
+  - layperson
+  - entity_lookup
+- id: SYN-T01-03
+  description: entity_information / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: What does California's 2021 Senate Bill 9 do, according to the housing news stories you
+      have?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T01-03
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Stored
+      reporting identifies SB 9 as a 2021 law and describes lot splitting and duplex construction; its
+      graph node''s inferred 2025-2026 session is not source evidence. Validation scope: Use the source''s
+      2021 identity and described housing provisions, not the graph''s inferred session.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T01
+  - entity_information
+  - sufficient_evidence
+  - layperson
+  - entity_lookup
+- id: SYN-T01-04
+  description: entity_information / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: What is the Proposition 38 campaign about in the California stories you have?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T01-04
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: The
+      relevant Proposition 38 campaign is uniquely identifiable in available coverage, and reporting explains
+      its subject. Validation scope: The 2026 report identifies the covered campaign and supplies medical-research
+      funding provisions and arguments.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T01
+  - entity_information
+  - sufficient_evidence
+  - layperson
+  - entity_lookup
+- id: SYN-T01-05
+  description: entity_information / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Which bill has Catalina Media Development been lobbying on, and what housing issues does
+      the news connect it to?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T01-05
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      names Catalina Media Development LLC''s lobbying on AB 1740 and describes that bill''s Santa Monica
+      local coastal planning subject; a for/against position is not required or inferred. Validation scope:
+      The lobbying link and bill subject are supported; a lobbying-for/against stance is not.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T01
+  - entity_information
+  - sufficient_evidence
+  - layperson
+  - multi_hop
+- id: SYN-T02-01
+  description: entity_information / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: What does reporting establish about Steve Hilton's candidacy and campaign affiliations in
+      California?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T02-01
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      identifies Steve Hilton''s candidacy and at least one campaign affiliation; an endorsement is distinguished
+      from a financial contribution. Validation scope: Distinguish Reform California''s endorsement from
+      Uber''s reported giving and independent support for other candidates.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T02
+  - entity_information
+  - sufficient_evidence
+  - expert
+  - entity_lookup
+- id: SYN-T02-02
+  description: entity_information / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Which legislative roles does reporting attribute to Gail Pellerin? Distinguish bill sponsorship
+      from recorded floor votes.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T02-02
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      identifies Gail Pellerin and describes her public legislative activity; sponsorship is not treated
+      as a recorded vote. Validation scope: A reported proponent role is available; sponsorship and a
+      Pellerin vote are not established by the witness.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T02
+  - entity_information
+  - sufficient_evidence
+  - expert
+  - entity_lookup
+- id: SYN-T02-03
+  description: entity_information / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Which lot-splitting and housing-density provisions of California's 2021 SB 9 are described
+      in reporting?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T02-03
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      explicitly identifies the 2021 SB 9 and describes its housing provisions. Preserve that identity
+      despite the graph''s inferred session. Validation scope: The two sources describe the housing provisions
+      and the 2021 identity despite the faulty graph session.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T02
+  - entity_information
+  - sufficient_evidence
+  - expert
+  - entity_lookup
+- id: SYN-T02-04
+  description: entity_information / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: What does reporting say the Proposition 38 campaign advocates? Distinguish the measure's
+      reported provisions from advocates' claims about their effects.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T02-04
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: The
+      campaign is uniquely identifiable, and reporting describes the measure''s provisions and advocates''
+      claims without requiring the agent to verify predicted effects. Validation scope: The report distinguishes
+      funding provisions, campaign claims, and researcher objections.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T02
+  - entity_information
+  - sufficient_evidence
+  - expert
+  - entity_lookup
+- id: SYN-T02-05
+  description: entity_information / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Which Policy Areas are connected to Catalina Media Development LLC through AB 1740, the
+      bill it is reported as lobbying on?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T02-05
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      supports the organization-to-AB-1740 connection and the bill''s local coastal planning subject.
+      Stored ABOUT_TOPIC claims connect AB 1740 to Housing & Community Development and Local Government;
+      no lobbying direction is inferred. Validation scope: Source text supports the lobbying connection
+      and local coastal planning subject; stored article-grounded Bill Policy Areas were inspected separately.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T02
+  - entity_information
+  - sufficient_evidence
+  - expert
+  - multi_hop
+- id: SYN-T03-01
+  description: entity_information / ambiguous_request / familiar
+  split: training
+  task_input:
+    question: What does the housing bill do?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T03-01
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: familiar. Evidence requirement: Several
+      stored California housing measures are plausible, including AB 1751 and SB 1090; no identifier or
+      prior Chat Session identifies one. Validation scope: AB 1751 and SB 1090 are distinct covered housing
+      measures; no session history is invented.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T03
+  - entity_information
+  - ambiguous_request
+  - familiar
+  - unspecified
+- id: SYN-T03-02
+  description: entity_information / ambiguous_request / familiar
+  split: training
+  task_input:
+    question: Can you tell me about that ballot measure?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T03-02
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: familiar. Evidence requirement: The
+      independent Chat Session supplies no referent for ''that ballot measure''; reporting discusses multiple
+      measures, including Propositions 28 and 38. Validation scope: Multiple measures are covered, but
+      ''that'' has no antecedent in the independent Chat Session.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T03
+  - entity_information
+  - ambiguous_request
+  - familiar
+  - unspecified
+- id: SYN-T03-03
+  description: entity_information / ambiguous_request / familiar
+  split: training
+  task_input:
+    question: What's this year's housing bill?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T03-03
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: familiar. Evidence requirement: Multiple
+      housing bills are plausible in 2026; no title, author, provision, or bill number identifies one.
+      Validation scope: 2026 coverage includes multiple housing bills; the date is anchored to the draft''s
+      September 30, 2026 review context.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T03
+  - entity_information
+  - ambiguous_request
+  - familiar
+  - unspecified
+- id: SYN-T03-04
+  description: entity_information / ambiguous_request / familiar
+  split: training
+  task_input:
+    question: What has been reported about the Appropriations Committee's role in the bill?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T03-04
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: familiar. Evidence requirement: The
+      chamber and bill are unspecified; no earlier Chat Session supplies either referent. Validation scope:
+      Assembly and Senate Appropriations stages are both in the reporting; ''the bill'' and chamber are
+      unset.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T03
+  - entity_information
+  - ambiguous_request
+  - familiar
+  - unspecified
+- id: SYN-T03-05
+  description: entity_information / ambiguous_request / familiar
+  split: training
+  task_input:
+    question: What is the construction union's position on the housing bill?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T03-05
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: familiar. Evidence requirement: Reporting
+      contains opposed positions from the State Building and Construction Trades Council and California''s
+      unionized carpenters on AB 1751; neither the union nor bill is identified. Validation scope: Actual
+      construction-union positions establish plausible alternatives; no teachers-union housing stance
+      is assumed.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T03
+  - entity_information
+  - ambiguous_request
+  - familiar
+  - unspecified
+- id: SYN-T04-01
+  description: entity_information / partial_coverage / layperson
+  split: training
+  task_input:
+    question: What does the news say about Steve Hilton's governor campaign, and can you show every contribution
+      it received during 2026?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T04-01
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      identifies Hilton''s gubernatorial candidacy and organizational support, but the collection has
+      no complete campaign-contribution ledger for 2026. Validation scope: Hilton''s candidacy and organizational
+      support are explicitly reported; the collection does not supply every 2026 campaign contribution.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T04
+  - entity_information
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T04-02
+  description: entity_information / partial_coverage / layperson
+  split: training
+  task_input:
+    question: Tell me about Gail Pellerin's work on bills and every vote she's cast since taking office.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T04-02
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      describes some legislative activity; complete roll-call records across her tenure are not ingested.
+      Validation scope: The Pellerin proponent passage is present, but news reporting is not a complete
+      roll-call record.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T04
+  - entity_information
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T04-03
+  description: entity_information / partial_coverage / layperson
+  split: training
+  task_input:
+    question: What does Catalina Media Development do in California politics, and who owns the company?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T04-03
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      supports some political activity but no available source establishes company ownership. Validation
+      scope: The source supports lobbying on AB 1740. Its damaged affiliation wording does not establish
+      company ownership.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T04
+  - entity_information
+  - partial_coverage
+  - layperson
+  - multi_hop
+- id: SYN-T04-04
+  description: entity_information / partial_coverage / layperson
+  split: training
+  task_input:
+    question: Which candidate does the news say California Leads helped pay to elect, and can you show
+      all its 2026 independent expenditures with dates and amounts?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T04-04
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      names Ed Musgrove and $1.3 million in support from California Leads, but the collection has no complete
+      transaction-level independent-expenditure filings. Validation scope: One independent-support amount
+      is reported; this is not a full, dated expenditure ledger or a direct contribution record.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T04
+  - entity_information
+  - partial_coverage
+  - layperson
+  - multi_hop
+- id: SYN-T04-05
+  description: entity_information / partial_coverage / layperson
+  split: training
+  task_input:
+    question: What's the Yes on Proposition 38 campaign trying to do, and where did all its money come
+      from?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T04-05
+    family: entity_information
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      explains the campaign and names some funders; a complete finance record is unavailable. Validation
+      scope: Reported funders and provisions are supported, but the Coverage Description does not supply
+      complete campaign-finance records.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T04
+  - entity_information
+  - partial_coverage
+  - layperson
+  - single_hop
+- id: SYN-T05-01
+  description: entity_information / outside_permitted_scope / familiar
+  split: training
+  task_input:
+    question: Tell me about Greg Abbott's record as governor of Texas.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T05-01
+    family: entity_information
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: familiar. Evidence requirement:
+      The request concerns Texas state politics and contains no California political information need.
+      Validation scope: Validate the requested outcome against the application''s question policy, not
+      against a missing search result. The request concerns Texas state politics and contains no California
+      political information need.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T05
+  - entity_information
+  - outside_permitted_scope
+  - familiar
+  - unspecified
+- id: SYN-T05-02
+  description: entity_information / outside_permitted_scope / familiar
+  split: training
+  task_input:
+    question: What is Gavin Newsom's private home address?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T05-02
+    family: entity_information
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: familiar. Evidence requirement:
+      The request seeks a private residential address rather than public political activity. Validation
+      scope: Validate the requested outcome against the application''s question policy, not against a
+      missing search result. The request seeks a private residential address rather than public political
+      activity.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T05
+  - entity_information
+  - outside_permitted_scope
+  - familiar
+  - unspecified
+- id: SYN-T05-03
+  description: entity_information / outside_permitted_scope / familiar
+  split: training
+  task_input:
+    question: Who are Gail Pellerin's family members, and what do they do in their private lives?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T05-03
+    family: entity_information
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: familiar. Evidence requirement:
+      The request concerns private individuals without a public political activity question. Validation
+      scope: Validate the requested outcome against the application''s question policy, not against a
+      missing search result. The request concerns private individuals without a public political activity
+      question.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T05
+  - entity_information
+  - outside_permitted_scope
+  - familiar
+  - unspecified
+- id: SYN-T05-04
+  description: entity_information / outside_permitted_scope / familiar
+  split: training
+  task_input:
+    question: What has the British prime minister been doing about housing in the UK?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T05-04
+    family: entity_information
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: familiar. Evidence requirement:
+      The request concerns UK politics and contains no California political information need. Validation
+      scope: Validate the requested outcome against the application''s question policy, not against a
+      missing search result. The request concerns UK politics and contains no California political information
+      need.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T05
+  - entity_information
+  - outside_permitted_scope
+  - familiar
+  - unspecified
+- id: SYN-T05-05
+  description: entity_information / outside_permitted_scope / familiar
+  split: training
+  task_input:
+    question: Tell me about Scott Wiener's private romantic life.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T05-05
+    family: entity_information
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: familiar. Evidence requirement:
+      The request seeks private personal information outside the application''s political scope. Validation
+      scope: Validate the requested outcome against the application''s question policy, not against a
+      missing search result. The request seeks private personal information outside the application''s
+      political scope.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T05
+  - entity_information
+  - outside_permitted_scope
+  - familiar
+  - unspecified
+- id: SYN-T06-01
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Find me a few news stories about building homes in California and what construction workers
+      get paid.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-01
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Relevant
+      reporting covers housing construction and proposed construction-worker wages. Validation scope:
+      Both June articles concern housing construction and the proposed wage floor.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T06-02
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: What are people in California arguing about when it comes to AI being used at work?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-02
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      describes workplace AI proposals and the arguments made by involved parties. Validation scope: The
+      sources report workplace AI proposals, union positions, and employer or business opposition.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T06-03
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: What's been in the news about tax breaks for making movies in California?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-03
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      discusses California film tax-credit legislation and its stated purposes. Validation scope: The
+      film-credit report describes AB 186''s provisions.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T06-04
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: I'd like to read about proposals to keep homeowners association fees down in California.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-04
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      discusses California homeowners association fee-cap proposals. Validation scope: The SB 1007 report
+      explicitly describes an HOA fee-increase cap.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T06-05
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Where can I start reading about money in California's 2026 race for governor?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-05
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      discusses campaign funding in the 2026 governor''s race; the request does not require complete finance
+      disclosures. Validation scope: The governor-race report describes Uber and Teamsters funding of
+      independent support for Porter.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T07-01
+  description: topic_discovery / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Find reporting on California housing legislation and construction-worker wages.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T07-01
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Relevant
+      reporting covers housing construction and proposed construction-worker wages. Validation scope:
+      Both June articles concern housing construction and the proposed wage floor.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T07
+  - topic_discovery
+  - sufficient_evidence
+  - familiar
+  - source_discovery
+- id: SYN-T07-02
+  description: topic_discovery / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Which issues appear in reporting on California workplace AI protections?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T07-02
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      describes workplace AI proposals and the arguments made by involved parties. Validation scope: The
+      sources report workplace AI proposals, union positions, and employer or business opposition.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T07
+  - topic_discovery
+  - sufficient_evidence
+  - familiar
+  - source_discovery
+- id: SYN-T07-03
+  description: topic_discovery / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Show me coverage of California film tax-credit proposals.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T07-03
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      discusses California film tax-credit legislation and its stated purposes. Validation scope: The
+      film-credit report describes AB 186''s provisions.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T07
+  - topic_discovery
+  - sufficient_evidence
+  - familiar
+  - source_discovery
+- id: SYN-T07-04
+  description: topic_discovery / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: What reporting covers California homeowners association fee caps?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T07-04
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      discusses California homeowners association fee-cap proposals. Validation scope: The SB 1007 report
+      explicitly describes an HOA fee-increase cap.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T07
+  - topic_discovery
+  - sufficient_evidence
+  - familiar
+  - source_discovery
+- id: SYN-T07-05
+  description: topic_discovery / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Which campaign-finance issues are discussed in reporting on California's 2026 gubernatorial
+      election?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T07-05
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      discusses campaign funding in the 2026 governor''s race; the request does not require complete finance
+      disclosures. Validation scope: The governor-race report describes Uber and Teamsters funding of
+      independent support for Porter.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T07
+  - topic_discovery
+  - sufficient_evidence
+  - familiar
+  - source_discovery
+- id: SYN-T08-01
+  description: topic_discovery / ambiguous_request / expert
+  split: training
+  task_input:
+    question: Find reporting on the AI bill's workplace protections.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T08-01
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: expert. Evidence requirement: Reporting
+      discusses several workplace AI bills, including AB 1018 and SB 947; the question does not select
+      a bill. Validation scope: AB 1018 and SB 947 are both named with distinct protections; neither is
+      selected by the request.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T08
+  - topic_discovery
+  - ambiguous_request
+  - expert
+  - unspecified
+- id: SYN-T08-02
+  description: topic_discovery / ambiguous_request / expert
+  split: training
+  task_input:
+    question: What reporting covers the tax changes in that proposal?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T08-02
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: expert. Evidence requirement: The independent
+      request identifies no proposal; stored reporting covers AB 186 film tax credits and the Proposition
+      40 billionaire-tax proposal. Validation scope: The proposal has no antecedent; film credits and
+      the billionaire-tax proposition are two covered tax-policy alternatives.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T08
+  - topic_discovery
+  - ambiguous_request
+  - expert
+  - unspecified
+- id: SYN-T08-03
+  description: topic_discovery / ambiguous_request / expert
+  split: training
+  task_input:
+    question: Show articles on labor and employment published during that month.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T08-03
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: expert. Evidence requirement: No month
+      is established in the independent Chat Session; the source inventory includes Labor & Employment
+      articles published in June and July 2026. Validation scope: The month has no antecedent; June and
+      July Labor & Employment Source Articles exist in the inventory.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T08
+  - topic_discovery
+  - ambiguous_request
+  - expert
+  - unspecified
+- id: SYN-T08-04
+  description: topic_discovery / ambiguous_request / expert
+  split: training
+  task_input:
+    question: Find coverage of that proposition's fiscal implications.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T08-04
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: expert. Evidence requirement: No proposition
+      is identified; stored reporting includes the funding provisions of Propositions 28 and 38. Validation
+      scope: The proposition has no antecedent; Propositions 28 and 38 both have funding-related reporting.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T08
+  - topic_discovery
+  - ambiguous_request
+  - expert
+  - unspecified
+- id: SYN-T08-05
+  description: topic_discovery / ambiguous_request / expert
+  split: training
+  task_input:
+    question: Find reporting on the health measure we discussed.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T08-05
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: expert. Evidence requirement: This independent
+      Chat Session contains no earlier discussion; AB 2540 and Proposition 38 are both covered health-related
+      measures. Validation scope: AB 2540 and Proposition 38 are covered health measures; the assumed
+      earlier conversation does not exist.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T08
+  - topic_discovery
+  - ambiguous_request
+  - expert
+  - unspecified
+- id: SYN-T09-01
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: Show official roll-call records for housing bills in California's 2025-2026 legislative
+      session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-01
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      Official legislative roll-call records are required and absent from the Coverage Description. Validation
+      scope: The active chat collection is selected CalMatters reporting. It is not the official records,
+      complete disclosures, district history, or complete roll-call collection this request needs. Individual
+      reported votes or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T09-02
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: What do statewide campaign-finance filings show about contributions from housing developers
+      in California in 2026?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-02
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      Statewide campaign-finance filings are required; news mentions do not provide the requested disclosure
+      collection. Validation scope: The active chat collection is selected CalMatters reporting. It is
+      not the official records, complete disclosures, district history, or complete roll-call collection
+      this request needs. Individual reported votes or disclosure amounts do not satisfy that collection
+      requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T09-03
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: Find California lobbying disclosures covering AI bills in the 2025-2026 session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-03
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      The relevant lobbying-disclosure collection is not ingested; reporting about lobbying is not a substitute.
+      Validation scope: The active chat collection is selected CalMatters reporting. It is not the official
+      records, complete disclosures, district history, or complete roll-call collection this request needs.
+      Individual reported votes or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T09-04
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: I'd like official records of Assembly District 52's representation around the 2021 redistricting.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-04
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      District history and legislative-tenure records are not ingested. Validation scope: The active chat
+      collection is selected CalMatters reporting. It is not the official records, complete disclosures,
+      district history, or complete roll-call collection this request needs. Individual reported votes
+      or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T09-05
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: Show official hearing transcripts about California cardroom legislation from the 2025-2026
+      session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-05
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      Official hearing transcripts are not ingested, even if news reporting discusses the hearings. Validation
+      scope: The active chat collection is selected CalMatters reporting. It is not the official records,
+      complete disclosures, district history, or complete roll-call collection this request needs. Individual
+      reported votes or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T10-01
+  description: comparison / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Compare Creative Artists Agency's argument for AB 186 with the film unions' description
+      of the tax-credit compromise in the 2025-2026 session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T10-01
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Bryan
+      Lourd''s attributed statement for Creative Artists Agency and Shane Gusman''s statement for SAG-AFTRA
+      and Teamsters describe the same AB 186 compromise; no studio-specific argument is invented from
+      a support list. Validation scope: CAA''s letter and the union lobbyist''s compromise explanation
+      are separately attributed.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T10
+  - comparison
+  - sufficient_evidence
+  - familiar
+  - single_hop
+- id: SYN-T10-02
+  description: comparison / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Compare Walt Disney's and Creative Artists Agency's reported support for AB 186 in the 2025-2026
+      session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T10-02
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Each
+      organization''s support has its own Grounding Evidence; shared support does not establish coordination.
+      Validation scope: CAA''s letter and a separate studio-support passage support both organizations;
+      this does not show coordination.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T10
+  - comparison
+  - sufficient_evidence
+  - familiar
+  - multi_hop
+- id: SYN-T10-03
+  description: comparison / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Compare the workplace AI protections reporting describes in AB 1018 and SB 947 in the 2025-2026
+      session. Keep the bills distinct.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T10-03
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      describes AB 1018''s worker-notification provisions and SB 947''s restriction on relying solely
+      on AI for discipline or dismissal; no detailed business objection is inferred from opposition alone.
+      Validation scope: Compare stated protections, not detailed opposition arguments the text does not
+      supply.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T10
+  - comparison
+  - sufficient_evidence
+  - familiar
+  - single_hop
+- id: SYN-T10-04
+  description: comparison / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: Compare what reporting says about Catherine Blakespear's vote on SB 1007 and Scott Wiener's
+      vote on SB 1229 in the 2025-2026 session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T10-04
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Both
+      reported votes are supported through their respective legislative events; the bill identities remain
+      distinct. Validation scope: Each source explicitly states the named politician''s no vote on its
+      own bill; preserve both identities and events.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T10
+  - comparison
+  - sufficient_evidence
+  - familiar
+  - multi_hop
+- id: SYN-T10-05
+  description: comparison / sufficient_evidence / familiar
+  split: training
+  task_input:
+    question: What differences are reported between supporters' and opponents' arguments about California's
+      construction minimum-wage proposal?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T10-05
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: familiar. Evidence requirement: Reporting
+      includes identifiable arguments on both sides of the same proposal, with enough information to resolve
+      the measure. Validation scope: The source provides the author''s argument, Trades objections, and
+      carpenters'' counterargument about the same wage proposal.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T10
+  - comparison
+  - sufficient_evidence
+  - familiar
+  - single_hop
+- id: SYN-T11-01
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare Kaiser nurses' accounts of call time affecting their performance scores with Kaiser's
+      response. Where do the accounts disagree?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-01
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: Nurses
+      say call time factors into performance scores; Kaiser explicitly says it does not use Average Handle
+      Time to assess performance or enforce call-time metrics. These attributed accounts concern the same
+      performance practice. Validation scope: Nurses say call time factors into performance scores; Kaiser
+      explicitly says it does not use Average Handle Time to assess performance or enforce call-time metrics.
+      These attributed accounts concern the same performance practice. Both accounts are available in
+      one Source Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T11-02
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare Austin Beutner's allegation about Los Angeles Unified's use of Proposition 28 money
+      with the district's response. Preserve the allegation and denial.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-02
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: The
+      same passage reports Beutner''s allegation that LAUSD replaced existing arts programs using Proposition
+      28 money and the district''s denial. A pending lawsuit does not establish guilt. Validation scope:
+      The same passage reports Beutner''s allegation that LAUSD replaced existing arts programs using
+      Proposition 28 money and the district''s denial. A pending lawsuit does not establish guilt. Both
+      accounts are available in one Source Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T11-03
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare the lawsuit's allegation about Kalibrate coordinating California gasoline prices
+      with Kalibrate's response, as reported in July 2026.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-03
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: The
+      stored report attributes the algorithmic price-coordination allegation to a federal lawsuit and
+      explicitly records Kalibrate''s denial of those allegations. Preserve the claim''s legal and evidentiary
+      status. Validation scope: The stored report attributes the algorithmic price-coordination allegation
+      to a federal lawsuit and explicitly records Kalibrate''s denial of those allegations. Preserve the
+      claim''s legal and evidentiary status. Both accounts are available in one Source Article; no second
+      independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T11-04
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare CalMatters' analysis that the 2026 Proposition 38 criteria were tailored to one
+      institute with the Yes on Proposition 38 campaign's response.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-04
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: CalMatters''
+      analysis says the criteria were tailored to very likely exclude all but one named institute; campaign
+      spokesperson Claudia Briggs explicitly denies unique tailoring to that institute. Preserve qualifiers
+      and attribution, without treating the campaign response as independent corroboration. Validation
+      scope: CalMatters'' analysis says the criteria were tailored to very likely exclude all but one
+      named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring to that
+      institute. Preserve qualifiers and attribution, without treating the campaign response as independent
+      corroboration. Both accounts are available in one Source Article; no second independent article
+      is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T11-05
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare Los Angeles County's allegations about State Farm's smoke-damage claims response
+      after the 2025 fires with State Farm's reported response.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-05
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: The
+      county''s lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning; State Farm''s
+      response explicitly strongly disagrees with the lawsuit''s characterization. This is an attributed
+      dispute, not proof or an item-by-item rebuttal of every allegation. Validation scope: The county''s
+      lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning; State Farm''s response
+      explicitly strongly disagrees with the lawsuit''s characterization. This is an attributed dispute,
+      not proof or an item-by-item rebuttal of every allegation. Both accounts are available in one Source
+      Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T12-01
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: How do Steve Hilton and Gavin Newsom compare on housing, based on the news?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-01
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      establishes a housing position for one person but does not establish a comparable position for the
+      other; silence is not opposition. Validation scope: Only two stored Hilton passages exist, neither
+      establishes a housing position; Newsom''s housing proposal is covered. This is bounded to the captured
+      collection.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T12-02
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: What do the news stories say people like and dislike about Proposition 38, and how much
+      has every group on each side raised and spent?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-02
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      provides supporters'' and opponents'' arguments about the same 2026 Proposition 38, but no complete
+      campaign-finance collection establishes every group''s fundraising and spending. Validation scope:
+      Both sides'' arguments exist; the unsupported portion is the requested complete finance totals,
+      not missing opposition arguments.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T12-03
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: How do the nurses' union and Kaiser compare on the workplace AI rules in AB 1018, and how
+      much did each spend lobbying on it?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-03
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      explicitly records California Nurses Association support and Kaiser Permanente opposition to AB
+      1018, but gives no bill-specific lobbying expenditure totals for each organization. Validation scope:
+      The source names CNA endorsement and Kaiser opposition but does not report either organization''s
+      bill-specific lobbying total.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - single_hop
+- id: SYN-T12-04
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: Compare which campaigns California Leads and the Michelson Center for Public Policy helped
+      pay for, and how much each spent.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-04
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      names funded campaigns for both organizations but does not establish comparable spending amounts.
+      Validation scope: California Leads support for Musgrove and combined Michelson/center donations
+      are reported; they are not comparable complete spending totals.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - single_hop
+- id: SYN-T12-05
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: How do California's 2021 Senate Bill 9 and Assembly Bill 2540 from the 2025-2026 session
+      differ, and what is the latest official status of each as of September 30, 2026?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-05
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      describes the 2021 housing SB 9 and the 2025-2026 AB 2540''s medication-abortion access provisions
+      and committee stages, but is not an official, current bill-status collection. Validation scope:
+      The reporting supports provisions and some stages, but not an official status record current to
+      the review date.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T13-01
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Should I support Steve Hilton or Gavin Newsom based on their housing positions?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-01
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The requested result is a political recommendation rather than a comparison of supported reporting.
+      Validation scope: Validate the requested outcome against the application''s question policy, not
+      against a missing search result. The requested result is a political recommendation rather than
+      a comparison of supported reporting.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T13-02
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Compare Walt Disney and Creative Artists Agency to tell me which one bought legislators'
+      votes on AB 186 in the 2025-2026 session.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-02
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The request demands an unsupported corruption inference; documented lobbying does not establish
+      purchased votes. Validation scope: Validate the requested outcome against the application''s question
+      policy, not against a missing search result. The request demands an unsupported corruption inference;
+      documented lobbying does not establish purchased votes.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T13-03
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Will proposals like SB 947 or AB 1018 face greater legislative resistance in California's
+      next session?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-03
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The requested comparison predicts future political outcomes rather than retrieving reported events.
+      Validation scope: Validate the requested outcome against the application''s question policy, not
+      against a missing search result. The requested comparison predicts future political outcomes rather
+      than retrieving reported events.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T13-04
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Compare the housing legislation enacted by the Texas and Florida legislatures in 2025.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-04
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      Both subjects are outside California politics; missing ingestion would not resolve the policy boundary.
+      Validation scope: Validate the requested outcome against the application''s question policy, not
+      against a missing search result. Both subjects are outside California politics; missing ingestion
+      would not resolve the policy boundary.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T13-05
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Compare Gavin Newsom's and Scott Wiener's secret personal motives for their public political
+      positions.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-05
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The request asks for unreported private motives beyond available evidence. Validation scope: Validate
+      the requested outcome against the application''s question policy, not against a missing search result.
+      The request asks for unreported private motives beyond available evidence.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T14-01
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: What sequence of proposals and amendments does reporting describe for California film tax
+      credits during the 2025-2026 session? Distinguish event dates from publication dates.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-01
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Dated
+      reporting establishes at least two stages of the same proposal, including which changes occurred
+      when. Validation scope: The report orders last year''s expansion, July''s cap, and AB 186''s later
+      compromise; it does not supply exact dates for every event.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - unspecified
+- id: SYN-T14-02
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: How did the State Building and Construction Trades Council's reported position on AB 1751
+      change when its wage provision was removed?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-02
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: June
+      reporting records Trades Council opposition to AB 1751''s wage provision, its removal at the Senate
+      Housing Committee hearing, and the council becoming neutral afterward. Validation scope: The reported
+      position changes from opposition to neutral after wage-language removal; do not generalize to unrelated
+      unions.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - single_hop
+- id: SYN-T14-03
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: What chronology of committee referrals for AB 2540 in the 2025-2026 session can be established
+      from reporting?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-03
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      provides at least two referral events with event dates or explicit temporal ordering; article dates
+      alone are insufficient. Validation scope: Explicit May 6/May 14 and June 10/July 2 stages are in
+      the text, independently of the article''s publication date.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - single_hop
+- id: SYN-T14-04
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: What sequence of changes to AB 1751's construction-wage proposal is described in the June
+      4 and June 25, 2026 reporting? Distinguish publication dates from event dates.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-04
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      names the February townhouse-only introduction, April addition of wage language, and later removal
+      in the Senate Housing Committee. Publication dates identify reports and are not substituted for
+      event dates. Validation scope: The source states February introduction, April wage addition, and
+      removal at a later Senate Housing hearing; publication dates do not date every event.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - unspecified
+- id: SYN-T14-05
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Trace the reported sequence from the competing Uber and attorneys' ballot measures to Newsom
+      signing SB 623 in June 2026. State which dates or ordering the reporting actually gives.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-05
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      states that the parties qualified competing measures, then reached an agreement, and Newsom signed
+      SB 623; preserve the reported sequence without inventing an exact date for each stage. Validation
+      scope: Qualification, agreement, and signing are explicitly ordered; the exact signing date is limited
+      to what the dated report and text establish.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - unspecified
+- id: SYN-T15-01
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: How did SB 947 change between its introduction and its final version in the 2025-2026 session?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-01
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Reporting
+      describes some amendments but does not establish all stages or the final enacted or terminal text.
+      Validation scope: Only two articles mention SB 947; they describe a reintroduced proposal and restrictions,
+      not a complete amendment or final-text history.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - unspecified
+- id: SYN-T15-02
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: How did unions' positions on AB 1018 evolve throughout the 2025-2026 session?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-02
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Reporting
+      contains dated union positions for only part of the requested period; missing periods do not establish
+      an unchanged stance. Validation scope: The sole AB 1018 article supplies CNA endorsement but not
+      a dated position history through the whole session.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - single_hop
+- id: SYN-T15-03
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: Trace how organizational support for Steve Hilton's campaign changed from 2025 through September
+      2026.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-03
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Some
+      dated endorsements are reported, but one end of the requested period is absent from coverage. Validation
+      scope: The August Hilton passage supplies organizational support, not comparable endorsements across
+      the entire 2025-September 2026 period.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - single_hop
+- id: SYN-T15-04
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: What happened to AB 2540 after the committee referrals reported in the 2025-2026 session?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-04
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Referral
+      reporting is available, but later developments are only partly covered or absent; no terminal outcome
+      can be inferred. Validation scope: The sole AB 2540 article ends with July 2 referral; it supplies
+      no later terminal outcome.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - single_hop
+- id: SYN-T15-05
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: How did California's construction minimum-wage proposal develop from its first draft through
+      September 2026?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-05
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Reporting
+      covers an intermediate stage but lacks the first draft or the late-September outcome needed for
+      a complete chronology. Validation scope: Two AB 1751 reports describe initial focus and wage-language
+      removal, not complete first-draft text or the late-September outcome.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - unspecified
+- id: SYN-T16-01
+  description: change_over_time / required_data_not_ingested / layperson
+  split: training
+  task_input:
+    question: How did Assembly District 52's boundaries change in 2021, and who represented it before
+      and after?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T16-01
+    family: change_over_time
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: layperson. Evidence requirement:
+      District boundary history and legislative-tenure records are required and not ingested. Validation
+      scope: The active chat collection is selected CalMatters reporting. It is not the official records,
+      complete disclosures, district history, or complete roll-call collection this request needs. Individual
+      reported votes or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T16
+  - change_over_time
+  - required_data_not_ingested
+  - layperson
+  - unspecified
+- id: SYN-T16-02
+  description: change_over_time / required_data_not_ingested / layperson
+  split: training
+  task_input:
+    question: Can you show every vote Scott Wiener cast on housing bills during 2025 and 2026, in date
+      order?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T16-02
+    family: change_over_time
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: layperson. Evidence requirement:
+      Complete dated roll-call records across bills are required; individual news reports cannot establish
+      the full history. Validation scope: The active chat collection is selected CalMatters reporting.
+      It is not the official records, complete disclosures, district history, or complete roll-call collection
+      this request needs. Individual reported votes or disclosure amounts do not satisfy that collection
+      requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T16
+  - change_over_time
+  - required_data_not_ingested
+  - layperson
+  - unspecified
+- id: SYN-T16-03
+  description: change_over_time / required_data_not_ingested / layperson
+  split: training
+  task_input:
+    question: I'd like to follow every donation to Steve Hilton's 2026 governor campaign, with the amount
+      and date each came in.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T16-03
+    family: change_over_time
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: layperson. Evidence requirement:
+      Complete transaction-level campaign-finance records are required and not ingested; independent spending
+      must not be recast as direct donations. Validation scope: The active chat collection is selected
+      CalMatters reporting. It is not the official records, complete disclosures, district history, or
+      complete roll-call collection this request needs. Individual reported votes or disclosure amounts
+      do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T16
+  - change_over_time
+  - required_data_not_ingested
+  - layperson
+  - unspecified
+- id: SYN-T16-04
+  description: change_over_time / required_data_not_ingested / layperson
+  split: training
+  task_input:
+    question: How did each California senator vote at each stage of Senate Bill 947 in 2025 and 2026?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T16-04
+    family: change_over_time
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: layperson. Evidence requirement:
+      Complete dated legislative-event and roll-call records are required and not ingested. Validation
+      scope: The active chat collection is selected CalMatters reporting. It is not the official records,
+      complete disclosures, district history, or complete roll-call collection this request needs. Individual
+      reported votes or disclosure amounts do not satisfy that collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T16
+  - change_over_time
+  - required_data_not_ingested
+  - layperson
+  - unspecified
+- id: SYN-T16-05
+  description: change_over_time / required_data_not_ingested / layperson
+  split: training
+  task_input:
+    question: Show how much each group paid lobbyists to work on California film tax credits from January
+      2025 through September 2026, with the payment dates.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T16-05
+    family: change_over_time
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: layperson. Evidence requirement:
+      Dated lobbying-payment disclosures for the full period are required and not ingested; reporting
+      about lobbying is insufficient. Validation scope: The active chat collection is selected CalMatters
+      reporting. It is not the official records, complete disclosures, district history, or complete roll-call
+      collection this request needs. Individual reported votes or disclosure amounts do not satisfy that
+      collection requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T16
+  - change_over_time
+  - required_data_not_ingested
+  - layperson
+  - unspecified
+- id: SYN-T17-01
+  description: evidence_checking / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: I heard the Michelson Center for Public Policy helped pay for the Yes on Proposition 38
+      campaign in 2026. Is there news reporting that backs that up?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T17-01
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      names the Michelson Center for Public Policy and Gary K. Michelson as contributors to the campaign,
+      with a combined amount; do not allocate that total to the center alone. Validation scope: A contribution
+      is explicitly reported, but the combined donor amount cannot be assigned to the center alone.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T17
+  - evidence_checking
+  - sufficient_evidence
+  - layperson
+  - single_hop
+- id: SYN-T17-02
+  description: evidence_checking / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Did Scott Wiener vote against California's Senate Bill 1229 in 2025 or 2026? I'd like to
+      see where that was reported.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T17-02
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      explicitly states the no vote and connects the same event to SB 1229 in the 2025-2026 session. Validation
+      scope: The passage explicitly states Wiener''s no vote on SB 1229; no motive or unrelated vote is
+      inferred.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T17
+  - evidence_checking
+  - sufficient_evidence
+  - layperson
+  - multi_hop
+- id: SYN-T17-03
+  description: evidence_checking / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: I was told Walt Disney pushed for California's Assembly Bill 186 in 2025 or 2026. What reporting
+      supports that?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T17-03
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      explicitly states Walt Disney''s lobbying support for AB 186 in the 2025-2026 session. Validation
+      scope: Disney lobbyists are explicitly listed as supporting AB 186 at the hearing.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T17
+  - evidence_checking
+  - sufficient_evidence
+  - layperson
+  - single_hop
+- id: SYN-T17-04
+  description: evidence_checking / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Is there reporting showing which candidates California Leads helped pay to elect?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T17-04
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      supports both an organization-to-campaign funding link and the campaign-to-candidate link; spending
+      is described according to the source. Validation scope: Reporting explicitly names Musgrove and
+      support from California Leads; the erroneous intermediate Campaign node in the historical graph
+      is not needed to validate this wording.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T17
+  - evidence_checking
+  - sufficient_evidence
+  - layperson
+  - multi_hop
+- id: SYN-T17-05
+  description: evidence_checking / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Has Gail Pellerin been mentioned in news about California bills? Can you show me the passages?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T17-05
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      mentions Gail Pellerin in a legislative context; a mention is not interpreted as a vote or endorsement.
+      Validation scope: The Pellerin passage is a legislative mention and proponent statement, not a roll-call
+      claim.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T17
+  - evidence_checking
+  - sufficient_evidence
+  - layperson
+  - entity_lookup
+- id: SYN-T18-01
+  description: evidence_checking / conflicting_reporting / familiar
+  split: training
+  task_input:
+    question: Do Kaiser nurses and Kaiser Permanente agree on whether call time is used to assess nurse
+      performance? Show the reported accounts without deciding which is true.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T18-01
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: familiar. Evidence requirement:
+      Nurses say call time factors into performance scores; Kaiser explicitly says it does not use Average
+      Handle Time to assess performance or enforce call-time metrics. These attributed accounts concern
+      the same performance practice. Validation scope: Nurses say call time factors into performance scores;
+      Kaiser explicitly says it does not use Average Handle Time to assess performance or enforce call-time
+      metrics. These attributed accounts concern the same performance practice. Both accounts are available
+      in one Source Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T18
+  - evidence_checking
+  - conflicting_reporting
+  - familiar
+  - source_discovery
+- id: SYN-T18-02
+  description: evidence_checking / conflicting_reporting / familiar
+  split: training
+  task_input:
+    question: Does reporting establish that Los Angeles Unified replaced existing arts funding with Proposition
+      28 money, or is that allegation disputed?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T18-02
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: familiar. Evidence requirement:
+      The same passage reports Beutner''s allegation that LAUSD replaced existing arts programs using
+      Proposition 28 money and the district''s denial. A pending lawsuit does not establish guilt. Validation
+      scope: The same passage reports Beutner''s allegation that LAUSD replaced existing arts programs
+      using Proposition 28 money and the district''s denial. A pending lawsuit does not establish guilt.
+      Both accounts are available in one Source Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T18
+  - evidence_checking
+  - conflicting_reporting
+  - familiar
+  - source_discovery
+- id: SYN-T18-03
+  description: evidence_checking / conflicting_reporting / familiar
+  split: training
+  task_input:
+    question: What reporting supports or disputes the allegation that Kalibrate used algorithms and competitor
+      data to keep California pump prices artificially high?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T18-03
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: familiar. Evidence requirement:
+      The stored report attributes the algorithmic price-coordination allegation to a federal lawsuit
+      and explicitly records Kalibrate''s denial of those allegations. Preserve the claim''s legal and
+      evidentiary status. Validation scope: The stored report attributes the algorithmic price-coordination
+      allegation to a federal lawsuit and explicitly records Kalibrate''s denial of those allegations.
+      Preserve the claim''s legal and evidentiary status. Both accounts are available in one Source Article;
+      no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T18
+  - evidence_checking
+  - conflicting_reporting
+  - familiar
+  - source_discovery
+- id: SYN-T18-04
+  description: evidence_checking / conflicting_reporting / familiar
+  split: training
+  task_input:
+    question: Is the claim that the 2026 Proposition 38 criteria were uniquely tailored to the California
+      Institute for Immunology and Immunotherapy disputed in reporting? Show both accounts.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T18-04
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: familiar. Evidence requirement:
+      CalMatters'' analysis says the criteria were tailored to very likely exclude all but one named institute;
+      campaign spokesperson Claudia Briggs explicitly denies unique tailoring to that institute. Preserve
+      qualifiers and attribution, without treating the campaign response as independent corroboration.
+      Validation scope: CalMatters'' analysis says the criteria were tailored to very likely exclude all
+      but one named institute; campaign spokesperson Claudia Briggs explicitly denies unique tailoring
+      to that institute. Preserve qualifiers and attribution, without treating the campaign response as
+      independent corroboration. Both accounts are available in one Source Article; no second independent
+      article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T18
+  - evidence_checking
+  - conflicting_reporting
+  - familiar
+  - source_discovery
+- id: SYN-T18-05
+  description: evidence_checking / conflicting_reporting / familiar
+  split: training
+  task_input:
+    question: What does reporting say Los Angeles County alleges about State Farm's smoke-damage claims
+      handling, and how does State Farm respond?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T18-05
+    family: evidence_checking
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: familiar. Evidence requirement:
+      The county''s lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning; State
+      Farm''s response explicitly strongly disagrees with the lawsuit''s characterization. This is an
+      attributed dispute, not proof or an item-by-item rebuttal of every allegation. Validation scope:
+      The county''s lawsuit alleges unfair handling of smoke-damage claims and unsafe cleaning; State
+      Farm''s response explicitly strongly disagrees with the lawsuit''s characterization. This is an
+      attributed dispute, not proof or an item-by-item rebuttal of every allegation. Both accounts are
+      available in one Source Article; no second independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T18
+  - evidence_checking
+  - conflicting_reporting
+  - familiar
+  - source_discovery
+- id: SYN-T19-01
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Which organizations are reported as lobbying for AB 186 alongside Walt Disney in the 2025-2026
+      session, excluding Disney itself?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-01
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Grounding
+      Evidence supports both organizations'' lobbying-for links to the same session-specific bill; shared
+      support is not coordination. Validation scope: The passage names Disney, SkyDance, SAG-AFTRA, and
+      additional union representation. Do not infer coordination or an exhaustive supporter list.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - multi_hop
+- id: SYN-T19-02
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: For AB 186 in the 2025-2026 session, which organizations share Creative Artists Agency's
+      reported lobbying-for position?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-02
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Each
+      returned organization and Creative Artists Agency have separately supported lobbying-for links to
+      the same bill. Validation scope: CAA''s letter and separately named studio/union support concern
+      AB 186; distinguish attribution from a shared graph edge.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - multi_hop
+- id: SYN-T19-03
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Which labor unions have a reported stance on AB 1018 in the 2025-2026 session? Preserve
+      the distinction between supporting and opposing it.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-03
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Each
+      result is a labor union with a source-stated stance on the correct bill and session; no missing
+      stance value is inferred. Validation scope: CNA is explicitly named as endorsing AB 1018. No opposing
+      union is supplied by the source, and missing stance values are not inferred.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - single_hop
+- id: SYN-T19-04
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: In the article titled 'Newsom pushes environmental carve-out for campaign donor’s Santa
+      Monica project', which organizations are mentioned in the same passages as Gavin Newsom?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-04
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: The
+      named article contains shared passages; co-mention is not presented as a political or financial
+      relationship. Validation scope: Literal chunks co-mention Newsom and named organizations, including
+      the Privacy Protection Agency Board, High-Speed Rail Authority, and Catalina; co-mention is not
+      a new relationship claim.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - multi_hop
+- id: SYN-T19-05
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Find reporting published in July 2026 that discusses Housing & Community Development. Use
+      publication dates for the date filter.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-05
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Matching
+      Source Articles have the Policy Area assignment and July 2026 publication dates; event dates are
+      not substituted. Validation scope: July 2026 Source Articles have Housing & Community Development
+      assignments; the full matching article inventory is recorded in the audit. Use publication dates.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - source_discovery
+- id: SYN-T20-01
+  description: intersection_of_constraints / ambiguous_request / layperson
+  split: training
+  task_input:
+    question: Which groups backed the housing bill, excluding the union that opposed it?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T20-01
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: layperson. Evidence requirement: Neither
+      the housing bill nor the excluded union is identified. Stored reporting covers AB 1751 and SB 1090
+      and records different construction-union positions on AB 1751; preserve the exclusion after scope
+      is resolved. Validation scope: The request leaves the bill and excluded union unset. This validates
+      ambiguity, not an exhaustive supporter set.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T20
+  - intersection_of_constraints
+  - ambiguous_request
+  - layperson
+  - multi_hop
+- id: SYN-T20-02
+  description: intersection_of_constraints / ambiguous_request / layperson
+  split: training
+  task_input:
+    question: Show stories about housing from that month that mention our governor.
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T20-02
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: layperson. Evidence requirement: The
+      month has no referent in this independent Chat Session; June and July 2026 housing reporting both
+      mention Gavin Newsom. Do not manufacture ambiguity about the current governor. Validation scope:
+      June and July housing reporting mention Newsom; only the missing month is asserted as unresolved.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T20
+  - intersection_of_constraints
+  - ambiguous_request
+  - layperson
+  - source_discovery
+- id: SYN-T20-03
+  description: intersection_of_constraints / ambiguous_request / layperson
+  split: training
+  task_input:
+    question: Which politicians opposed the bill and got campaign money from the groups supporting it?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T20-03
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: layperson. Evidence requirement: No
+      bill or supporting group is identified; stored reporting contains opposed votes on different bills.
+      Preserve both requested relationships after clarification without assuming a supported funding path.
+      Validation scope: Multiple opposed-vote bills are covered, but no bill identifies the intended traversal.
+      No funding path is presumed.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T20
+  - intersection_of_constraints
+  - ambiguous_request
+  - layperson
+  - multi_hop
+- id: SYN-T20-04
+  description: intersection_of_constraints / ambiguous_request / layperson
+  split: training
+  task_input:
+    question: Which unions opposed the wage bill and also supported the other housing proposal?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T20-04
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: layperson. Evidence requirement: Neither
+      measure is uniquely identified; stance constraints must survive clarification rather than collapse
+      into general housing coverage. Validation scope: The wage-bill context exists, but ''the other housing
+      proposal'' has no antecedent; no union intersection is assumed.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T20
+  - intersection_of_constraints
+  - ambiguous_request
+  - layperson
+  - multi_hop
+- id: SYN-T20-05
+  description: intersection_of_constraints / ambiguous_request / layperson
+  split: training
+  task_input:
+    question: Which groups supported that ballot measure and also helped pay for that candidate's campaign?
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T20-05
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: ambiguous_request. Domain familiarity: layperson. Evidence requirement: Neither
+      the ballot measure nor the candidate has a referent in this independent Chat Session. Validation
+      scope: The measure and candidate are both unset. Available subjects do not establish an organization
+      satisfying both requested constraints.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T20
+  - intersection_of_constraints
+  - ambiguous_request
+  - layperson
+  - multi_hop
