@@ -32,6 +32,8 @@ from knowledge_map.core.validation import (
     ILLEGITIMATE_ANCESTORS
 )
 
+from knowledge_map.prompts import load_prompt
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -262,22 +264,7 @@ def get_generator_agent(
 ) -> Agent:
     model = _get_model(deployment)
     instructions = (
-        "You are an expert web scraping agent.\n"
-        "Your task is to analyze the cleaned HTML structure of a news article page and propose CSS selectors to extract four specific fields:\n"
-        "1. title: The article's headline/title.\n"
-        "2. author: The author(s) name(s).\n"
-        "3. date: The publication date.\n"
-        "4. body: The main body text of the article (excluding sidebars, ads, headers, footers, and other navigation).\n\n"
-        "To guide you, we have programmatically located the ground-truth elements in the HTML and annotated them with helper attributes:\n"
-        "- 'data-is-title-gt=\"true\"' marks the article title.\n"
-        "- 'data-is-author-gt=\"true\"' marks the author byline.\n"
-        "- 'data-is-date-gt=\"true\"' marks the publication date.\n\n"
-        "You MUST prioritize targeting these annotated elements when generating selectors for title, author, and date. YOU MAY NOT hardcode any of these attributes into your selectors.\n"
-        "Assume that the entire body can be captured with a single selector.\n"
-        "Keep your selectors simple, precise, and resilient, avoiding overly specific structures like absolute XPath-style CSS (e.g. 'div > div > span') if simpler class-based or ID selectors work. \n"
-        "Do not use identifiers that are unique to the current page such as postid-12345, post-12345, article_12345, etc."
-        "Avoid sections meant to direct the reader to another page. They include phrases such as: READ NEXT, More News, More of, Learn more about..., Most Popular, etc.\n"
-        "Output the selectors as CSS selectors in the structured format matching the output schema."
+        load_prompt("selector-healing/generator-instructions", version=1)
     )
     return create_agent(
         model,
@@ -295,21 +282,7 @@ def get_critic_agent(
 ) -> Agent:
     model = _get_model(deployment)
     instructions = (
-        "You are an expert QA Web Scraping Critic.\n"
-        "Your task is to validate the CSS selectors proposed by the Generator.\n"
-        "You will be provided with:\n"
-        "- The cleaned HTML structure of the article.\n"
-        "- The ground-truth target metadata (headline, datePublished, authors, wordCount).\n"
-        "- The proposed CSS selectors.\n"
-        "- The content extracted from the cleaned HTML using the proposed CSS selectors.\n\n"
-        "Validate the proposed selectors and extracted content against the following criteria:\n"
-        "1. Presence: Check that title, author, date, and body selectors successfully extracted non-empty content.\n"
-        "2. Cleanliness: Check that the extracted title, author, date, and body do not contain HTML, navigation links, header/footer boilerplate, or ad text.\n"
-        "3. Length and Coverage: The body text must contain actual paragraphs of the article and have a length consistent with a full news article (if ground-truth wordCount is present, check that the extracted body word count is close/reasonable, usually within 95-105% ratio).\n\n"
-        "4. Inclusive: Ensure that proposed CSS selectors do not contain unique post or article IDs or slugs."
-        "Return structured feedback:\n"
-        "- is_valid: True if selectors successfully extract clean, correct content. False otherwise.\n"
-        "- issues: A list of specific issues found if is_valid is False (e.g. 'Extracted title was empty', 'Extracted body contained header links'). If is_valid is True, this must be empty."
+        load_prompt("selector-healing/critic-instructions", version=1)
     )
     return create_agent(
         model,
@@ -392,23 +365,26 @@ async def run_selector_healing_flow(
         # Prepare negative selectors context if available
         negative_selectors_str = ""
         if retry_negative_selectors:
-            negative_selectors_str = f"Avoid using these previously failing selectors: {retry_negative_selectors}\n"
+            negative_selectors_str = load_prompt(
+                "selector-healing/negative-selectors", version=1
+            ).format(retry_negative_selectors=retry_negative_selectors)
 
         custom_context_str = ""
         if custom_context:
-            custom_context_str = f"Developer Guidance/Hint: {custom_context}\n"
+            custom_context_str = load_prompt(
+                "selector-healing/developer-guidance", version=1
+            ).format(custom_context=custom_context)
 
         # Initial prompt for generator
-        prompt = (
-            f"Generate CSS selectors for the article at {tripping_article_url}.\n"
-            f"Cleaned HTML:\n{cleaned_html}\n\n"
-            f"Target Metadata (Ground Truth):\n"
-            f"- Headline: {gt.get('headline', '')}\n"
-            f"- Publication Date: {gt.get('datePublished', '')}\n"
-            f"- Authors: {', '.join(gt.get('authors', []))}\n"
-            f"- Expected Word Count: {gt.get('wordCount', '')}\n\n"
-            f"{negative_selectors_str}"
-            f"{custom_context_str}"
+        prompt = load_prompt("selector-healing/generation-request", version=1).format(
+            tripping_article_url=tripping_article_url,
+            cleaned_html=cleaned_html,
+            headline=gt.get("headline", ""),
+            publication_date=gt.get("datePublished", ""),
+            authors=", ".join(gt.get("authors", [])),
+            expected_word_count=gt.get("wordCount", ""),
+            negative_selectors_str=negative_selectors_str,
+            custom_context_str=custom_context_str,
         )
 
         confirmed_selectors = {
@@ -432,10 +408,14 @@ async def run_selector_healing_flow(
             
             # If we have confirmed selectors, instruct the generator to retain them
             if any(confirmed_selectors.values()):
-                locked_selectors_str = (
-                    "\n\nIMPORTANT: The following selectors have already been VERIFIED AS CORRECT. "
-                    "You MUST keep these selectors EXACTLY as they are in your output:\n"
-                    + "\n".join(f"- {field}: '{sel}'" for field, sel in confirmed_selectors.items() if sel)
+                locked_selectors_str = load_prompt(
+                    "selector-healing/locked-selectors-instructions", version=1
+                ) + "\n".join(
+                    load_prompt("selector-healing/locked-selector", version=1).format(
+                        field=field, sel=sel
+                    )
+                    for field, sel in confirmed_selectors.items()
+                    if sel
                 )
                 current_prompt += locked_selectors_str
 
@@ -455,7 +435,7 @@ async def run_selector_healing_flow(
             try:
                 extracted = extract_fields(raw_html, last_selectors)
             except Exception as e:
-                prompt = f"An error occurred when parsing with your selectors: {e}. Please correct them and try again."
+                prompt = load_prompt("selector-healing/parsing-retry", version=1).format(e=e)
                 continue
 
             # Run programmatic validation
@@ -473,26 +453,25 @@ async def run_selector_healing_flow(
             gt_word_count = gt.get("wordCount")
             ratio_str = ""
             if gt_word_count and gt_word_count > 0:
-                ratio_str = f" ({ext_word_count / gt_word_count * 100:.1f}% of expected)"
+                ratio_str = load_prompt("selector-healing/word-count-ratio", version=1).format(
+                    percentage=ext_word_count / gt_word_count * 100
+                )
 
-            critic_input = (
-                f"Validation request:\n"
-                f"Proposed Selectors:\n"
-                f"- title selector: {last_selectors.title}\n"
-                f"- author selector: {last_selectors.author}\n"
-                f"- date selector: {last_selectors.date}\n"
-                f"- body selector: {last_selectors.body}\n\n"
-                f"Extracted Content:\n"
-                f"- Extracted Title: '{extracted.get('title', '')}'\n"
-                f"- Extracted Author: '{extracted.get('author', '')}'\n"
-                f"- Extracted Date: '{extracted.get('date', '')}'\n"
-                f"- Extracted Body: '{ext_body}'\n"
-                f"- Extracted Word Count: {ext_word_count}{ratio_str}\n\n"
-                f"Ground-Truth Metadata:\n"
-                f"- Headline: {gt.get('headline', '')}\n"
-                f"- Publication Date: {gt.get('datePublished', '')}\n"
-                f"- Authors: {', '.join(gt.get('authors', []))}\n"
-                f"- Expected Word Count: {gt_word_count or 'N/A'}\n"
+            critic_input = load_prompt("selector-healing/critic-request", version=1).format(
+                title_selector=last_selectors.title,
+                author_selector=last_selectors.author,
+                date_selector=last_selectors.date,
+                body_selector=last_selectors.body,
+                extracted_title=extracted.get("title", ""),
+                extracted_author=extracted.get("author", ""),
+                extracted_date=extracted.get("date", ""),
+                ext_body=ext_body,
+                ext_word_count=ext_word_count,
+                ratio_str=ratio_str,
+                headline=gt.get("headline", ""),
+                publication_date=gt.get("datePublished", ""),
+                authors=", ".join(gt.get("authors", [])),
+                expected_word_count=gt_word_count or "N/A",
             )
 
             critic_result = await critic.run(critic_input)
@@ -516,13 +495,18 @@ async def run_selector_healing_flow(
                 feedback_messages = []
                 for field, err in field_errors.items():
                     if err:
-                        feedback_messages.append(f"- Programmatic validation error for '{field}': {err}")
+                        feedback_messages.append(
+                            load_prompt("selector-healing/programmatic-feedback", version=1).format(
+                                field=field, err=err
+                            )
+                        )
                 for issue in critic_issues:
-                    feedback_messages.append(f"- Critic feedback: {issue}")
+                    feedback_messages.append(
+                        load_prompt("selector-healing/critic-feedback", version=1).format(issue=issue)
+                    )
 
                 prompt = (
-                    "Some proposed selectors failed validation. Please adjust the CSS selectors and try again.\n"
-                    "Errors encountered:\n"
+                    load_prompt("selector-healing/validation-retry-instructions", version=1)
                     + "\n".join(feedback_messages)
                 )
 

@@ -1,0 +1,1 @@
+Resolve the references in the Source Article shown above. It is presented as numbered sentences; copy a visible sentence label into each Mention Span.

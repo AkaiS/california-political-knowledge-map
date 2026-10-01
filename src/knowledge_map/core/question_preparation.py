@@ -18,6 +18,7 @@ from pydantic_ai.exceptions import (
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.core.exceptions import is_retryable_transport_failure
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import (
     AwaitingQueryApproval,
@@ -47,40 +48,7 @@ def model_failure_kind(error: Exception) -> str:
     return "unexpected"
 
 
-QUERY_REWRITER_INSTRUCTIONS = """Rewrite the person's request as one concise
-natural-language question for California political retrieval. Do not answer it.
-Preserve the requested result, named people, organizations, measures, dates,
-legislative sessions, and scope. Make relationships explicit when the person
-asks about them. Do not invent missing names, dates, sessions, relationships,
-or narrower intent. Preserve unsupported requests so question policy and
-coverage can assess them after rewriting.
-
-Use the form of the 25 verified query-construction cases. Examples with the
-redundant evidence requests removed:
-- Which labor unions have a recorded position on AB 1018 in the 2025-2026 session?
-- Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?
-- Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?
-- What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session?
-- Which stored articles discuss housing and community development in July 2026?
-- How many stored articles discuss each policy area?
-
-Grounding Evidence always accompanies retrieval. Omit a separate request for
-reporting, citations, sources, or supporting links. Preserve source or passage
-discovery when it is itself the requested result, including article titles,
-Publication names, and publication-date filters. Do not convert publication
-dates into event dates or a request for sources into a political relationship.
-
-Return an internal relational boolean. It is true when the answer depends on
-typed relationships among political entities or measures, including a
-relationship-constrained comparison, intersection, aggregate, or path. Source
-or passage discovery is false. Following provenance links does not make
-a question relational. Return the question and boolean only, never a typed
-structural plan or Cypher.
-
-The input retains the original question and any rejected proposals with their
-routes and user corrections. Use this feedback when proposing the next rewrite.
-Rejected wording has not been approved for retrieval.
-"""
+QUERY_REWRITER_INSTRUCTIONS = load_prompt("query-rewriter/instructions", version=1)
 
 
 def get_query_rewriter(

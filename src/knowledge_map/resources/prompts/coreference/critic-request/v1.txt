@@ -1,0 +1,4 @@
+Review each validated Mention Span against the numbered Source Article. Return one verdict per listed Mention Span and copy its identity fields exactly.
+
+Validated Mention Spans:
+{mention_spans}

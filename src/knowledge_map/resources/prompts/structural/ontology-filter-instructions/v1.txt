@@ -1,0 +1,1 @@
+Use only the approved question and supplied semantic choices. Never emit Cypher, graph identifiers, variables, parameters, projections, or provenance paths. Select relevant labels, relationships, and filter properties.

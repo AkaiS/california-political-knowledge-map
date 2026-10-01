@@ -1,0 +1,19 @@
+Validation request:
+Proposed Selectors:
+- title selector: {title_selector}
+- author selector: {author_selector}
+- date selector: {date_selector}
+- body selector: {body_selector}
+
+Extracted Content:
+- Extracted Title: '{extracted_title}'
+- Extracted Author: '{extracted_author}'
+- Extracted Date: '{extracted_date}'
+- Extracted Body: '{ext_body}'
+- Extracted Word Count: {ext_word_count}{ratio_str}
+
+Ground-Truth Metadata:
+- Headline: {headline}
+- Publication Date: {publication_date}
+- Authors: {authors}
+- Expected Word Count: {expected_word_count}

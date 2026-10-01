@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
+from knowledge_map.prompts import load_prompt
+
 
 class Node(BaseModel):
     name: str = Field(..., description="Canonical name of the entity")
@@ -38,15 +40,15 @@ class Relationship(BaseModel):
     choice.
     """
 
-    source: str = Field(..., description="Source node name. Do NOT name this key 'source_name', it must be 'source'.")
-    target: str = Field(..., description="Target node name. Do NOT name this key 'target_name', it must be 'target'.")
+    source: str = Field(..., description=load_prompt("extraction/source-key-guidance", version=1))
+    target: str = Field(..., description=load_prompt("extraction/target-key-guidance", version=1))
     relationship_type: str = Field(..., description="Relationship type")
     properties: dict[str, Any] = Field(default_factory=dict, description="Relationship metadata")
     source_label: str | None = Field(
-        default=None, description="Label of the source node, exactly as that node declares it."
+        default=None, description=load_prompt("extraction/source-label-guidance", version=1)
     )
     target_label: str | None = Field(
-        default=None, description="Label of the target node, exactly as that node declares it."
+        default=None, description=load_prompt("extraction/target-label-guidance", version=1)
     )
 
     @field_validator("source", "target", mode="before")
@@ -93,13 +95,12 @@ class StanceAlignmentVerdict(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    source: str = Field(..., description="Source node name, copied from the claim.")
-    target: str = Field(..., description="Target node name, copied from the claim.")
+    source: str = Field(..., description=load_prompt("stance-alignment/source-guidance", version=1))
+    target: str = Field(..., description=load_prompt("stance-alignment/target-guidance", version=1))
     alignment: Literal["POSITIVE", "NEGATIVE", "NEUTRAL", "NO_STANCE_STATED"] = Field(
         ...,
         description=(
-            "The direction of the stance the passage states, or "
-            "NO_STANCE_STATED where it states none."
+            load_prompt("stance-alignment/verdict-guidance", version=1)
         ),
     )
 

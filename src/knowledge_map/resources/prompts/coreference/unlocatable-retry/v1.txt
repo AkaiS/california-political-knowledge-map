@@ -1,0 +1,4 @@
+None of the Mention Spans you returned could be located in the numbered Source Article. Copy `sentence_label` from a label shown at the start of a sentence line, copy `mention_text` verbatim from that sentence, and set `occurrence` to a one-based index that exists there. Return the corrected Mention Spans.
+
+Unlocatable Mention Spans:
+{reported}

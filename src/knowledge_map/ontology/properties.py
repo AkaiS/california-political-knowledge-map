@@ -14,6 +14,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from knowledge_map.prompts import load_prompt
+
 _MAGNITUDES = {
     "k": 1_000.0, "thousand": 1_000.0,
     "m": 1_000_000.0, "mm": 1_000_000.0, "million": 1_000_000.0,
@@ -117,7 +119,8 @@ def enum_spec(name: str, *allowed: str, entailed: bool = False) -> PropertySpec:
     return PropertySpec(
         name=name,
         normalize=enum_of(*allowed),
-        form="exactly one of " + ", ".join(f"`{item}`" for item in allowed),
+        form=load_prompt("extraction/enum-property-form", version=1)
+        + ", ".join(f"`{item}`" for item in allowed),
         example=allowed[0],
         entailed=entailed,
     )

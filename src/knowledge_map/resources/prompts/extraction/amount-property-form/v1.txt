@@ -1,0 +1,1 @@
+a dollar figure, either digits (`6000000`) or a magnitude phrase (`$6 million`)

@@ -1,0 +1,1 @@
+The direction of the stance the passage states, or NO_STANCE_STATED where it states none.

@@ -1,0 +1,1 @@
+a calendar date as `YYYY-MM-DD`; a year alone is not a date

@@ -1,0 +1,1 @@
+One-based occurrence of the mention text within the sentence.

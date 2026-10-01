@@ -21,6 +21,7 @@ from collections.abc import Sequence
 
 from pydantic_ai import Agent
 
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas import (
     ModelDeployment,
     Relationship,
@@ -36,36 +37,7 @@ ALIGNMENT_PROPERTY = "alignment"
 
 
 CRITIC_INSTRUCTIONS = (
-    "You are a Stance Alignment Critic.\n"
-    "You are shown one Article Chunk and the DECLARED_STANCE claims another "
-    "agent already extracted from it. Each claim records that the source "
-    "entity took a position on the target. Your only job is to say which "
-    "direction that position runs, or that the passage does not say.\n\n"
-    "You must:\n"
-    "1. Return one verdict for every listed claim;\n"
-    "2. copy its `source` and `target` exactly as listed; and\n"
-    "3. set `alignment` to exactly one of POSITIVE, NEGATIVE, NEUTRAL, or "
-    "NO_STANCE_STATED.\n\n"
-    "POSITIVE is the source supporting, endorsing, authoring, sponsoring, "
-    "voting for, or praising the target. NEGATIVE is the source opposing, "
-    "criticising, vetoing, voting against, or working to block it. NEUTRAL is "
-    "for a position the passage states and leaves genuinely undecided or "
-    "hedged -- the source has a stated position and it sits between the two "
-    "directions.\n\n"
-    "NO_STANCE_STATED is for everything you cannot read off the passage. Use "
-    "it when the chunk names both entities but never says what the source "
-    "thinks of the target; when the source's position appears elsewhere in the "
-    "article but not here; when the passage reports something about the target "
-    "rather than a position on it, such as what a bill would do, who it "
-    "affects, or an analysis of its cost; and when the source is connected to "
-    "the target only by adjacency, such as authoring a different bill. Prefer "
-    "NO_STANCE_STATED to a direction you had to infer.\n\n"
-    "Judge the source's position on the target, not the mood of the passage. "
-    "An author who is angry that their own bill was blocked still supports it, "
-    "and a critic who welcomes a bill's defeat still opposes it.\n\n"
-    "Judge only from the Article Chunk shown. Do not add claims, drop claims, "
-    "rewrite endpoints, or comment on whether a claim should have been "
-    "extracted. Return only the structured list of per-claim verdicts."
+    load_prompt("stance-alignment/critic-instructions", version=1)
 )
 
 #: The verdict that supplies no alignment.  Kept out of the ontology's
@@ -87,7 +59,9 @@ def format_stance_claims(relationships: Sequence[Relationship]) -> str:
     """Render stance claims as the compact input to the Stance Alignment Critic."""
 
     return "\n".join(
-        f"- source={relationship.source!r}, target={relationship.target!r}"
+        load_prompt("stance-alignment/claim", version=1).format(
+            source=relationship.source, target=relationship.target
+        )
         for relationship in relationships
     )
 
@@ -95,11 +69,8 @@ def format_stance_claims(relationships: Sequence[Relationship]) -> str:
 def critic_prompt(chunk_text: str, relationships: Sequence[Relationship]) -> str:
     """Ask for one alignment per listed claim, against the chunk it came from."""
 
-    return (
-        "Article Chunk:\n"
-        f"{chunk_text}\n\n"
-        "DECLARED_STANCE claims extracted from that Article Chunk:\n"
-        f"{format_stance_claims(relationships)}"
+    return load_prompt("stance-alignment/critic-request", version=1).format(
+        chunk_text=chunk_text, claims=format_stance_claims(relationships)
     )
 
 
@@ -181,7 +152,7 @@ class StanceAlignmentResult:
     ``aligned_count``, which also absorbs verdicts dropped for not matching.
     """
 
-    __slots__ = ("relationships", "call_count", "aligned_count", "abstained_count")
+    __slots__ = ("abstained_count", "aligned_count", "call_count", "relationships")
 
     def __init__(
         self,

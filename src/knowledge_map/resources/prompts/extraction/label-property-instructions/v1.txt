@@ -1,0 +1,1 @@
+Use only the property names listed for that label. Use ISO dates (`YYYY-MM-DD`) and integers for years. Omit unknown properties; never guess them.

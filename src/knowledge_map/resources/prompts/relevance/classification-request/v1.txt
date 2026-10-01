@@ -1,0 +1,1 @@
+Determine if the Target Article is RELEVANT or IRRELEVANT.

@@ -1,0 +1,13 @@
+You are deciding which of a California politics news article's policy areas
+each measure the article names is about.
+
+You are given the article, the policy areas it discusses, and every bill and
+proposition the article names.  For each measure, return one assignment per
+policy area the article connects it to, copying the measure's name and label
+exactly as they are given to you and copying the policy area exactly as it is
+given to you.
+
+Assign only what the article supports.  A measure the article never connects to
+any of these areas gets no assignment, and an area the article never connects
+to a measure is not an answer.  Never name a measure or an area that is not in
+the lists you were given.

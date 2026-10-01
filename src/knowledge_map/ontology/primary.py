@@ -2,8 +2,14 @@
 
 from dataclasses import dataclass, field
 
+from knowledge_map.prompts import load_prompt
+
 from .properties import (
-    PropertySpec, enum_spec, normalize_amount, normalize_date, normalize_text
+    PropertySpec,
+    enum_spec,
+    normalize_amount,
+    normalize_date,
+    normalize_text,
 )
 
 
@@ -31,18 +37,22 @@ class RelationshipShape:
 #: Declared in the relationship table of ``ontology.md``.
 _FUNDED_PROPERTIES = (
     PropertySpec(
-        "amount", normalize_amount,
-        form="a dollar figure, either digits (`6000000`) or a magnitude phrase (`$6 million`)",
+        "amount",
+        normalize_amount,
+        form=load_prompt("extraction/amount-property-form", version=1),
         example="$6 million",
     ),
     PropertySpec(
-        "date", normalize_date,
-        form="a calendar date as `YYYY-MM-DD`; a year alone is not a date",
+        "date",
+        normalize_date,
+        form=load_prompt("extraction/date-property-form", version=1),
         example="2024-01-15",
     ),
     PropertySpec(
-        "transaction_id", normalize_text,
-        form="the filing identifier exactly as printed", example="FPPC-2024-0198",
+        "transaction_id",
+        normalize_text,
+        form=load_prompt("extraction/transaction-property-form", version=1),
+        example="FPPC-2024-0198",
     ),
 )
 #: A stance's direction is entailed by the stance: prose that states support or
