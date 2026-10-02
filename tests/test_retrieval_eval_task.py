@@ -13,6 +13,7 @@ from test_chat_eval_task import DEPLOYMENT, fake_dependencies
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
 from test_retrieval import COVERAGE, Branch, candidate, coordinator, rewrite
 
+from knowledge_map.core.evidence import render_evidence_context
 from knowledge_map.evaluation import load_data_set, run_data_set, write_report
 from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
 from knowledge_map.evaluation.tasks import chat, task_named
@@ -205,7 +206,9 @@ def test_all_25_cases_preserve_questions_provenance_routing_and_article_grain():
 def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
     monkeypatch, chat_capture, tmp_path
 ):
-    branches = fake_dependencies(monkeypatch, failed_branch=RetrievalBranch.STRUCTURAL)
+    branches = fake_dependencies(
+        monkeypatch, failed_branch=RetrievalBranch.STRUCTURAL, prepare_question=False
+    )
     branches[RetrievalBranch.FULL_TEXT].candidates = tuple(
         candidate(RetrievalBranch.FULL_TEXT, chunk=f"ft-{rank}", rank=rank)
         for rank in range(1, 6)
@@ -241,7 +244,23 @@ def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
     assert case.scores["fused_recall_at_5"].value == 0.5
     assert case.scores["context_recall"].value == 1
     assert case.assertions["structural_completed"].value is False
-    assert not case.output.messages  # No rewrite, assessment or guidance call.
+    assert case.output.answer.evidence is case.output.result
+    assert "Read the available reporting." in case.output.rendered_text
+    assert case.assertions["answer_generated"].value is True
+    assert len(case.output.messages) == 1  # Guidance only; no rewrite or assessment.
+    exchange = case.output.messages[0]
+    assert exchange["component"] == "chat_agent"
+    prompts = [
+        p["content"]
+        for m in exchange["messages"]
+        for p in m["parts"]
+        if p["part_kind"] == "user-prompt"
+    ]
+    assert prompts == [
+        rewrite(True).question,
+        render_evidence_context(case.output.result),
+    ]
+    assert "relevant_ids" not in json.dumps(exchange)
     assert branches[RetrievalBranch.FULL_TEXT].requests[0][0].rewrite == rewrite(True)
     path = write_report(
         report,
@@ -255,8 +274,56 @@ def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
     saved = document["report"]["cases"][0]["output"]
     assert len(saved["branches"][0]["candidates"]) == 5
     assert "fused" not in saved
+    assert saved["answer"]["introduction"] == case.output.answer.introduction
+    assert "evidence" not in saved["answer"]
+    assert saved["rendered_text"] == case.output.rendered_text
     assert document["retrieval_report"]["configurations"][0]["fusion_settings"]
     assert "stage_observations" not in document["report"]["cases"][0]["attributes"]
+
+
+def test_generation_failure_keeps_retrieval_metrics_and_context(
+    monkeypatch, chat_capture
+):
+    fake_dependencies(
+        monkeypatch,
+        prepare_question=False,
+        guidance={
+            "source_notes": [
+                {"source_article_id": "unselected", "note": "Invalid citation"}
+            ]
+        },
+    )
+    monkeypatch.setattr(task_module, "chat_dependencies", chat.chat_dependencies)
+    import asyncio
+
+    output = asyncio.run(task_module.build_task(DEPLOYMENT, None)(rewrite(True)))
+    assert output.failure.stage == "guidance"
+    assert output.answer is None
+    assert output.rendered_text is None
+    assert output.result.sources
+    scores = evaluate(output, expectation(("full_text", "dense")), relational=True)
+    assert scores["retrieval_attempt_completed"] is True
+    assert scores["evidence_assembled"] is True
+    assert scores["answer_generated"] is False
+    assert scores["fused_recall_at_5"] == 1
+    assert scores["context_recall"] == 1
+
+
+def test_assembly_failure_does_not_call_generation(monkeypatch, chat_capture):
+    fake_dependencies(monkeypatch, prepare_question=False)
+
+    async def fail_grounding(*args, **kwargs):
+        raise LookupError("Unavailable grounding")
+
+    monkeypatch.setattr("test_retrieval.load_grounding", fail_grounding)
+    monkeypatch.setattr(task_module, "chat_dependencies", chat.chat_dependencies)
+    import asyncio
+
+    output = asyncio.run(task_module.build_task(DEPLOYMENT, None)(rewrite(True)))
+    assert isinstance(output.result, EvidenceAssemblyFailure)
+    assert not output.messages
+    assert output.answer is None
+    assert evaluate(output, expectation(), relational=True)["answer_generated"] is False
 
 
 def test_builder_rejects_mismatched_reference_and_preserves_dataset(tmp_path):
@@ -273,3 +340,29 @@ def test_builder_rejects_mismatched_reference_and_preserves_dataset(tmp_path):
     target.write_text(json.dumps(reference))
     with pytest.raises(ValueError, match="do not match"):
         build_document(REFERENCE_DIR / "cases.yaml", target)
+
+
+def test_reference_precision_counts_matching_chunk_slots_and_uses_k_denominator():
+    scores = values(
+        retrieval_scores(
+            ("noise", "a", "b"), expectation(), prefix="fused", ks=(1, 2, 5)
+        )
+    )
+    assert scores["fused_precision_at_1"] == 0
+    assert scores["fused_precision_at_2"] == 0.5
+    assert scores["fused_precision_at_5"] == 0.4
+    assert (
+        values(retrieval_scores((), expectation(), prefix="fused", ks=(5,)))[
+            "fused_precision_at_5"
+        ]
+        == 0
+    )
+    article = expectation(("article",), grain="source_article")
+    scores = values(
+        retrieval_scores(
+            ("article", "article", "noise"), article, prefix="dense", ks=(2, 5)
+        )
+    )
+    assert scores["dense_precision_at_2"] == 1
+    assert scores["dense_precision_at_5"] == 0.4
+    assert scores["dense_recall_at_2"] == 1

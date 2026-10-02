@@ -14,14 +14,14 @@ VERDICTS = (None, "pass", "fail", "defer")
 CUTOFFS = (1, 5, 10, 50)
 METRICS = {
     "recall": "Recall@k",
-    "precision": "Precision@k",
+    "precision": "Reference precision@k",
     "reciprocal_rank": "MRR within 50 chunks",
     "ndcg": "NDCG@k",
     "two_hop_recall": "Two-hop Recall@k",
 }
 DEFINITIONS = {
     "recall": "Reference identities recovered within the first k unique chunks. Article coverage is measured after applying the chunk budget.",
-    "precision": "Relevant results divided by k. Requires complete relevance judgments; unlisted silver witnesses cannot be assumed irrelevant.",
+    "precision": "Top-k unique chunks matching the reference labels, divided by k. For article-grain references, each chunk from a listed article counts. Missing slots count as zero. Unlisted chunks may still be useful; this measures agreement with provisional references, not exhaustive relevance.",
     "reciprocal_rank": "Mean reciprocal rank of the first reference-relevant result within 50 unique chunks. A case shows reciprocal rank, not a mean.",
     "ndcg": "Discounted graded relevance normalized by the ideal ranking. Requires graded relevance judgments.",
     "two_hop_recall": "Fraction of two-hop reference answers with a witness for each of their two evidence groups within k chunks. Alternatives within a group are interchangeable.",
@@ -57,7 +57,7 @@ def validate_review(review: dict[str, Any], case: dict[str, Any]) -> None:
 
 def review_complete(review: dict[str, Any], case: dict[str, Any]) -> bool:
     axes = required_axes(case)
-    return bool(axes) and all(review.get(axis) in VERDICTS[1:] for axis in axes)
+    return bool(axes) and all(review.get(axis) in ("pass", "fail") for axis in axes)
 
 
 def _evidence(output: dict[str, Any]) -> dict[str, Any]:
@@ -94,9 +94,14 @@ def _metric_rows(
     expected = case.get("expected_output") or {}
     branches = output.get("branches") or []
     answers = expected.get("answers") or []
+    relevant = set(expected.get("relevant_ids") or [])
     two_hop = bool(answers) and all(len(answer["groups"]) == 2 for answer in answers)
     fused = []
-    if two_hop and branches:
+    replayable = "branches" in output and expected.get("grain") in (
+        "article_chunk",
+        "source_article",
+    )
+    if replayable and branches:
         settings = configurations[output["configuration_index"]]
         fused = replay_fusion(
             branches, FusionConfig.model_validate(settings["fusion_settings"])
@@ -113,7 +118,9 @@ def _metric_rows(
                 score = scores.get(name)
                 value = score.get("value") if isinstance(score, dict) else None
                 reason = score.get("reason") if isinstance(score, dict) else None
-                if metric == "two_hop_recall" and two_hop and branches:
+                if (
+                    metric == "precision" and value is None and replayable and relevant
+                ) or (metric == "two_hop_recall" and two_hop and branches):
                     records = (
                         fused
                         if branch == "fused"
@@ -134,17 +141,27 @@ def _metric_rows(
                     ordered = sorted(
                         records, key=lambda record: (record["rank"], record["chunk_id"])
                     )
-                    found = {record[key] for record in ordered[:k]}
-                    value = mean(
-                        all(
-                            found.intersection(group["ids"])
-                            for group in answer["groups"]
+                    if metric == "precision":
+                        matches = sum(record[key] in relevant for record in ordered[:k])
+                        value = matches / k
+                        reason = (
+                            f"Reference-based {expected['grain']} precision: "
+                            f"{matches}/{k} chunk slots match the reference set. "
+                            "Computed from this execution's retained ranks; "
+                            "unlisted chunks may still be useful."
                         )
-                        for answer in answers
-                    )
+                    else:
+                        found = {record[key] for record in ordered[:k]}
+                        value = mean(
+                            all(
+                                found.intersection(group["ids"])
+                                for group in answer["groups"]
+                            )
+                            for answer in answers
+                        )
                 if value is None:
                     reason = {
-                        "precision": "Unavailable: complete relevance judgments are not recorded.",
+                        "precision": "Unavailable: this run has neither a recorded precision score nor reference labels with replayable ranks.",
                         "ndcg": "Unavailable: graded relevance judgments are not recorded.",
                         "two_hop_recall": "Unavailable: no two-hop reference groups with replayable ranks.",
                     }.get(
@@ -198,11 +215,10 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
             or case["name"]
         )
         generation = output.get("rendered_text")
+        failure = output.get("failure") or {}
         # A failure/decline message is not a generated Retrieval Answer.
         has_generation = bool(
-            generation
-            and output.get("answer")
-            and (output["answer"].get("introduction") is not None)
+            generation and output.get("answer") and "introduction" in output["answer"]
         )
         cases.append(
             {
@@ -217,6 +233,12 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                     "generation": generation if has_generation else None,
                     "has_context": any(source["passages"] for source in sources),
                     "has_generation": has_generation,
+                    "generation_failure": {
+                        key: failure.get(key)
+                        for key in ("stage", "exception_type", "diagnostic")
+                    }
+                    if failure.get("stage") in ("guidance", "rendering")
+                    else None,
                 },
             }
         )

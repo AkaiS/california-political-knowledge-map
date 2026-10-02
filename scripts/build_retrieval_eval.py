@@ -30,7 +30,8 @@ def build_document(cases_path: Path, reference_path: Path) -> dict:
             "25 existing Cypher questions with Codex-derived provisional silver retrieval labels. "
             "Labels describe stored graph evidence, not independently verified political facts. "
             "All cases are training because they have already informed query construction. "
-            "Question rewriting, assessment and answer generation are evaluated separately by chat."
+            "The task generates final guidance from the selected evidence for human review. "
+            "Question rewriting and assessment are evaluated separately by chat."
         ),
         "cases": [],
     }

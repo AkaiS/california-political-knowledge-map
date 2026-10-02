@@ -1,4 +1,4 @@
-"""Measure retrieval against reference evidence without rewriting the question."""
+"""Measure retrieval and generate an answer to the fixed approved question."""
 
 from __future__ import annotations
 
@@ -8,11 +8,14 @@ from typing import Annotated, Any, Literal, Self
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_ai.usage import RunUsage
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from knowledge_map.adapters.structural import STRUCTURAL_INSTRUCTIONS
+from knowledge_map.chat_presentation import render_answer
 from knowledge_map.chat_startup import chat_dependencies
+from knowledge_map.core.chat import CHAT_INSTRUCTIONS, generate_retrieval_answer
 from knowledge_map.core.fusion import fuse_candidates
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import QueryRewrite
@@ -21,6 +24,7 @@ from knowledge_map.schemas.retrieval import (
     EvidencePackage,
     FusedCandidate,
     NonemptyText,
+    RetrievalAnswer,
     RetrievalRequest,
 )
 
@@ -84,6 +88,8 @@ class RetrievalOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     result: EvidencePackage | EvidenceAssemblyFailure | None = None
+    answer: RetrievalAnswer | None = None
+    rendered_text: str | None = None
     chat_session_id: str | None = None
     fused: tuple[FusedCandidate, ...] = ()
     failure: ChatFailure | None = None
@@ -100,6 +106,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
         # Reference labels never enter a retrieval or model request.
         RetrievalRequest(rewrite=rewrite)
         output = RetrievalOutput()
+        usage = RunUsage()
         stage = "startup"
         try:
             async with chat_dependencies(
@@ -116,6 +123,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     coverage=dependencies.coverage,
                     relevant_collection_ids=("calmatters",),
                     chat_session_id=output.chat_session_id,
+                    usage=usage,
                 )
                 # Reuse production fusion on the complete execution, including
                 # candidates omitted by Evidence Assembly's context budget.
@@ -123,13 +131,24 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     output.result.execution,
                     config=dependencies.start_settings.fusion_settings,
                 )
+                if isinstance(output.result, EvidencePackage):
+                    stage = "guidance"
+                    output.answer = await generate_retrieval_answer(
+                        dependencies.chat_agent,
+                        output.result,
+                        original_question=rewrite.question,
+                        chat_session_id=output.chat_session_id,
+                        usage=usage,
+                    )
+                    stage = "rendering"
+                    output.rendered_text = render_answer(output.answer)
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Keep unavailable cases in the population.
             output.failure = ChatFailure(
                 stage=stage,
                 kind="execution",
                 exception_type=type(error).__name__,
-                diagnostic=f"Retrieval evaluation could not complete {stage}.",
+                diagnostic=f"RAG evaluation could not complete {stage}.",
             )
         return output
 
@@ -183,6 +202,15 @@ def retrieval_scores(
         scores[f"{prefix}_recall_at_{k}"] = EvaluationReason(
             value=len(relevant & selected) / len(relevant),
             reason=f"{expected.grain}; {len(missing)} missing reference IDs: {missing[:10]}",
+        )
+        matches = sum(id in relevant for id in found[:k])
+        scores[f"{prefix}_precision_at_{k}"] = EvaluationReason(
+            value=matches / k,
+            reason=(
+                f"Reference-based {expected.grain} precision: {matches}/{k} chunk slots "
+                "match the reference set. Missing slots count as zero; "
+                "unlisted chunks may still be useful."
+            ),
         )
         complete = sum(
             all(selected.intersection(g.ids) for g in answer.groups)
@@ -261,7 +289,11 @@ class RetrievedReferenceEvidence(Evaluator):
         ]
         scores["evidence_assembled"] = EvaluationReason(value=package is not None)
         scores["retrieval_attempt_completed"] = EvaluationReason(
-            value=output.failure is None
+            value=output.result is not None
+        )
+        scores["answer_generated"] = EvaluationReason(
+            value=output.answer is not None,
+            reason="A validated Chat Agent answer was produced; this does not judge its relevance or faithfulness.",
         )
         return scores
 
@@ -277,6 +309,6 @@ RETRIEVAL_TASK = register(
         evaluators=(RetrievedReferenceEvidence(),),
         case_lifecycle=RetrievalCaseLifecycle,
         default_model=default_model(),
-        prompts=lambda: STRUCTURAL_INSTRUCTIONS,
+        prompts=lambda: {**STRUCTURAL_INSTRUCTIONS, "chat_agent": CHAT_INSTRUCTIONS},
     )
 )

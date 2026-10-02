@@ -168,7 +168,17 @@ existing `.reviews.json` format. Both modes reuse the tested editing interface
 for draft recovery, autosave, undo and navigation.
 
 Missing judgment inputs remain unjudgeable. Missing reference metrics remain
-unavailable. Precision and NDCG require relevance judgments the initial silver
-witness set does not provide. Two-hop coverage is shown only for references
+unavailable. Reference precision@k measures matching chunk slots against the
+same provisional silver labels used for recall, divided by k. It does not
+claim exhaustive relevance judgments. Existing compact runs derive it from
+retained ranks without rewriting the execution record. NDCG still requires
+relevance grades absent from the initial references. Two-hop coverage is shown only for references
 with two explicit evidence groups, with the reference-answer unit stated.
 The reviewer does not combine context and generation from different executions.
+
+New retrieval evaluations also call the production final Chat Agent with the
+approved question and that run's Evidence Package. The eval and Chat Session
+share answer generation, citation validation and rendering. Question preparation
+remains outside this focused task. Generation failures preserve retrieval
+measurements and selected context. Compact reports retain generated guidance
+and rendered output without duplicating the evidence execution under the answer.

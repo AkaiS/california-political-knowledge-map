@@ -70,7 +70,12 @@ def test_current_training_cases_copy_targets_without_inventing_answer_labels():
 
 
 def fake_dependencies(
-    monkeypatch, *, assessment=None, guidance=None, failed_branch=None
+    monkeypatch,
+    *,
+    assessment=None,
+    guidance=None,
+    failed_branch=None,
+    prepare_question=True,
 ):
     branches = {branch: Branch(branch) for branch in RetrievalBranch}
     if failed_branch:
@@ -95,7 +100,11 @@ def fake_dependencies(
         chat = Agent(
             scripted_model(
                 [
-                    assessment or {"status": "allowed"},
+                    *(
+                        [assessment or {"status": "allowed"}]
+                        if prepare_question
+                        else []
+                    ),
                     guidance or {"introduction": "Read the available reporting."},
                 ]
             ),

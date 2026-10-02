@@ -67,6 +67,26 @@ def raw_document(result, expected, *, settings=None):
     }
 
 
+def test_compaction_retains_guidance_and_rendered_answer_without_duplicate_execution():
+    ft = RetrievalBranch.FULL_TEXT
+    doc = raw_document(execution((candidate(ft),)), expectation())
+    output = doc["report"]["cases"][0]["output"]
+    output["answer"] = {
+        "introduction": None,
+        "source_notes": [
+            {"source_article_id": "article", "note": "Relevant reporting"}
+        ],
+        "disagreements": [],
+        "evidence": {"execution": "discard this duplicate candidate tree"},
+    }
+    output["rendered_text"] = "Relevant reporting and citations"
+    compacted = compact_retrieval_report(doc)["report"]["cases"][0]["output"]
+    assert compacted["answer"]["source_notes"] == output["answer"]["source_notes"]
+    assert compacted["rendered_text"] == output["rendered_text"]
+    assert "evidence" not in compacted["answer"]
+    assert "discard" not in json.dumps(compacted)
+
+
 @pytest.mark.parametrize("limit", [2, 50, 75])
 def test_compact_ranks_reproduce_fusion_with_cross_branch_tail_and_ties(limit):
     ft = RetrievalBranch.FULL_TEXT

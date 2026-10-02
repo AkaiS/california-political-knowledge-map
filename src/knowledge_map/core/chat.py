@@ -70,6 +70,56 @@ class RetrievalGuidance(RetrievalValue):
     disagreements: tuple[SourceDisagreement, ...] = ()
 
 
+async def generate_retrieval_answer(
+    agent: Agent[None, QuestionAssessment],
+    package: EvidencePackage,
+    *,
+    original_question: str,
+    chat_session_id: str,
+    usage: RunUsage,
+) -> RetrievalAnswer:
+    """Generate and validate guidance against the exact assembled evidence."""
+    rewrite = package.execution.request.rewrite
+    with logfire.span(
+        "chat_session.guidance",
+        chat_session_id=chat_session_id,
+        audit_schema_version=1,
+    ) as span:
+        try:
+            result = await agent.run(
+                render_evidence_context(package),
+                message_history=[ModelRequest(parts=[UserPromptPart(original_question)])],
+                output_type=RetrievalGuidance,
+                usage=usage,
+            )
+            disclosures = list(package.failure_disclosures)
+            structural_empty = package.execution.structural_empty_disclosure
+            if structural_empty:
+                disclosures.append(structural_empty)
+            if rewrite.assessment.status == "deferred":
+                assert rewrite.assessment.explanation is not None
+                disclosures.append(rewrite.assessment.explanation)
+            if result.output.introduction:
+                disclosures.append(result.output.introduction)
+            answer = RetrievalAnswer(
+                evidence=package,
+                introduction="\n\n".join(disclosures) or None,
+                source_notes=result.output.source_notes,
+                disagreements=result.output.disagreements,
+            )
+        except Exception as error:
+            span.set_attributes(
+                {
+                    "status": "failed",
+                    "failure_kind": _guidance_failure_kind(error),
+                    "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+                }
+            )
+            raise
+        span.set_attribute("status", "succeeded")
+        return answer
+
+
 def get_chat_agent(
     deployment: ModelDeployment | None = None,
     *,
@@ -214,43 +264,10 @@ class ChatSession:
         self._retrieval_result = package
         if isinstance(package, EvidenceAssemblyFailure):
             return package
-        with logfire.span(
-            "chat_session.guidance",
+        return await generate_retrieval_answer(
+            self._agent,
+            package,
+            original_question=self._original_question,
             chat_session_id=self.chat_session_id,
-            audit_schema_version=1,
-        ) as span:
-            try:
-                result = await self._agent.run(
-                    render_evidence_context(package),
-                    message_history=[
-                        ModelRequest(parts=[UserPromptPart(self._original_question)])
-                    ],
-                    output_type=RetrievalGuidance,
-                    usage=self._usage,
-                )
-                disclosures = list(package.failure_disclosures)
-                structural_empty = package.execution.structural_empty_disclosure
-                if structural_empty:
-                    disclosures.append(structural_empty)
-                if rewrite.assessment.status == "deferred":
-                    assert rewrite.assessment.explanation is not None
-                    disclosures.append(rewrite.assessment.explanation)
-                if result.output.introduction:
-                    disclosures.append(result.output.introduction)
-                answer = RetrievalAnswer(
-                    evidence=package,
-                    introduction="\n\n".join(disclosures) or None,
-                    source_notes=result.output.source_notes,
-                    disagreements=result.output.disagreements,
-                )
-            except Exception as error:
-                span.set_attributes(
-                    {
-                        "status": "failed",
-                        "failure_kind": _guidance_failure_kind(error),
-                        "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
-                    }
-                )
-                raise
-            span.set_attribute("status", "succeeded")
-            return answer
+            usage=self._usage,
+        )

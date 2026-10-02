@@ -16,6 +16,7 @@ from knowledge_map.evaluation.rag_review import (
     AXES,
     project_report,
     required_axes,
+    review_complete,
     validate_review,
 )
 from knowledge_map.schemas.fusion import FusionConfig
@@ -134,10 +135,13 @@ def test_projection_excludes_all_pipeline_internals_and_keeps_exact_selected_tex
         == 60
     )
     precision = [m for m in projected["metrics"] if m["metric"] == "precision"]
-    assert all(
-        m["value"] is None and "complete relevance judgments" in m["reason"]
-        for m in precision
+    assert all(m["value"] is not None for m in precision)
+    full_text_precision = next(
+        m for m in precision if m["branch"] == "full_text" and m["k"] == 5
     )
+    assert full_text_precision["value"] == 0.2
+    assert full_text_precision["label"] == "Reference precision@k"
+    assert "unlisted chunks may still be useful" in full_text_precision["reason"]
     ndcg = [m for m in projected["metrics"] if m["metric"] == "ndcg"]
     assert all(m["value"] is None and "graded" in m["reason"] for m in ndcg)
     two_hop = next(
@@ -187,6 +191,32 @@ def test_chat_review_uses_approved_question_and_same_execution_context():
     assert "<strong>Supported</strong>" in rendered
     assert "<script>" not in rendered
     assert "<img" not in rendered
+
+
+def test_compact_retrieval_answer_without_introduction_enables_generation_axes():
+    raw = report("retrieval", generation=True)
+    output = raw["report"]["cases"][0]["output"]
+    evidence = output["answer"].pop("evidence")
+    output["evidence"] = evidence
+    output["answer"]["introduction"] = None
+    projected = project_report(raw)
+    case = projected["report"]["cases"][0]
+    assert required_axes(case) == AXES
+    assert case["output"]["generation"] == output["rendered_text"]
+
+
+def test_generation_failure_exposes_only_answer_diagnostic_and_keeps_context_judgeable():
+    raw = report()
+    raw["report"]["cases"][0]["output"]["failure"] = {
+        "stage": "guidance",
+        "exception_type": "ValidationError",
+        "diagnostic": "RAG evaluation could not complete guidance.",
+        "private": "secret",
+    }
+    case = project_report(raw)["report"]["cases"][0]
+    assert required_axes(case) == ("context_relevance",)
+    assert case["output"]["generation_failure"]["stage"] == "guidance"
+    assert "secret" not in json.dumps(case)
 
 
 def test_unavailable_answers_cannot_receive_fabricated_judgments():
@@ -291,3 +321,71 @@ def test_focused_page_contains_axis_rubrics_and_no_pipeline_panels():
         "Critique or observation",
     ):
         assert forbidden not in page
+
+
+def test_rag_judgments_allow_any_order_and_partial_reviews():
+    case = project_report(report("chat", generation=True))["report"]["cases"][0]
+    labels = review()
+    labels["answer_relevance"] = "fail"
+    labels["answer_relevance_note"] = "Answers a different question."
+    validate_review(labels, case)
+    assert not review_complete(labels, case)
+    labels["faithfulness"] = "pass"
+    validate_review(labels, case)
+    assert labels["context_relevance"] is None
+    labels["context_relevance"] = "defer"
+    assert not review_complete(labels, case)
+    labels["context_relevance"] = "pass"
+    assert review_complete(labels, case)
+
+
+def test_historical_reference_precision_uses_rank_and_article_grain_chunk_slots():
+    raw = report()
+    case = raw["report"]["cases"][0]
+    case["expected_output"]["grain"] = "source_article"
+    case["expected_output"]["relevant_ids"] = ["article"]
+    case["expected_output"]["answers"] = [{"groups": [{"ids": ["article"]}]}]
+    case["output"]["branches"][0]["candidates"] = [
+        {"chunk_id": "noise", "source_article_id": "other", "rank": 3},
+        {"chunk_id": "b", "source_article_id": "article", "rank": 2},
+        {"chunk_id": "a", "source_article_id": "article", "rank": 1},
+    ]
+    projected = project_report(raw)
+    rows = projected["report"]["cases"][0]["metrics"]
+    precision = {
+        r["k"]: r["value"]
+        for r in rows
+        if r["branch"] == "full_text" and r["metric"] == "precision"
+    }
+    assert precision == {1: 1, 5: 0.4, 10: 0.2, 50: 0.04}
+    fused = next(
+        r
+        for r in rows
+        if r["branch"] == "fused" and r["metric"] == "precision" and r["k"] == 5
+    )
+    assert fused["value"] == 0.4
+    assert not any("precision" in name for name in case["scores"])
+
+
+def test_precision_without_references_remains_unavailable_and_recorded_scores_survive():
+    raw = report("chat", generation=True)
+    case = raw["report"]["cases"][0]
+    case.pop("expected_output")
+    case["scores"]["full_text_precision_at_5"] = {"value": 0.8, "reason": "Recorded"}
+    rows = project_report(raw)["report"]["cases"][0]["metrics"]
+    assert (
+        next(
+            r["value"]
+            for r in rows
+            if r["branch"] == "full_text" and r["metric"] == "precision" and r["k"] == 5
+        )
+        == 0.8
+    )
+    assert (
+        next(
+            r["value"]
+            for r in rows
+            if r["branch"] == "dense" and r["metric"] == "precision" and r["k"] == 5
+        )
+        is None
+    )

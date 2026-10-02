@@ -278,6 +278,12 @@ def compact_retrieval_report(
             "failure": output.get("failure"),
             "branches": branches,
             "evidence": evidence,
+            # Selected passages live in evidence once. The answer retains only
+            # generated guidance, alongside the exact production presentation.
+            "answer": {k: v for k, v in output["answer"].items() if k != "evidence"}
+            if output.get("answer") is not None
+            else None,
+            "rendered_text": output.get("rendered_text"),
             "model_corrections": _corrections(output.get("messages", [])),
         }
         if rescore:

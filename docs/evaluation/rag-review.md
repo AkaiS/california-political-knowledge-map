@@ -15,9 +15,10 @@ Open `http://127.0.0.1:8765/`. The run list includes retrieval and chat reports.
 Use `--reports-dir evals/reports/retrieval` to show only retrieval reports,
 or `--port 8766` when another reviewer is already running.
 
-A retrieval report supplies selected context and retrieval reference metrics.
-It has no final generation, so answer relevance and faithfulness are unavailable.
-A chat report supplies the context and final generation from its own execution.
+A new retrieval report supplies selected context, retrieval reference metrics
+and the final Chat Agent answer from the same execution. Older retrieval-only
+reports have no generation and must be rerun to judge answer relevance and
+faithfulness. A chat report supplies context and final generation from its own execution.
 Existing unlabeled chat runs have no reference retrieval scores. The reviewer
 never joins context from one run to an answer from another, or treats an absent
 measurement as zero.
@@ -28,18 +29,20 @@ Each case shows the approved retrieval question, scope, selected passage wording
 and citations, and the final rendered generation when present. It does not serve
 rewrites, assessments, branch candidates, model messages or application spans
 through the focused report API. The run specifications and metric dashboard are
-visible immediately above these inputs.
+visible immediately above these inputs in an initially expanded, collapsible
+panel. The case list scrolls independently of the evidence and answer.
 
-Record three independent binary judgments, with Uncertain available when the
-inputs do not let you decide:
+Record three independent binary judgments as High or Low. Each has a description;
+no category depends on a judgment in another category. Leave a selection blank
+when the inputs do not let you decide:
 
-| Judgment | Pass criterion |
+| Judgment | High criterion |
 | --- | --- |
 | Context relevance | Selected passages address the question's subjects, session and relationship without substantial off-topic material. |
 | Answer relevance | The generation addresses the approved question's requested focus. |
 | Answer faithfulness | Factual claims and citations have support in the selected passages, without invention or misinterpretation. |
 
-Each axis has a short judgment-evidence field. Quote the passage or answer claim
+Each category has a short Description field. Quote the passage or answer claim
 that explains the decision. There is no whole-case verdict, general critique,
 or separate omission label. Reference recall measures coverage separately.
 Missing context or generation disables the affected judgments. Cases with no
@@ -66,12 +69,17 @@ and a chunk that supports both hops. The dashboard states that unit explicitly.
 General complete-evidence coverage is not relabeled as two-hop recall when the
 reference has a different shape.
 
-Precision@k and NDCG@k are visible, with their requirements in the metric
-specifications. Current silver references list positive witnesses rather than
-exhaustive relevance judgments or relevance grades. These metrics therefore
-show Unavailable. An unlisted passage cannot be assumed irrelevant. A run that
-records those metrics can display them directly; the reviewer does not invent
-negative labels or grades.
+Reference precision@k counts reference-matching chunk slots among the first k
+unique chunks, divided by k. Missing slots count as zero. For article-grain
+references, each chunk from a listed Source Article counts. Like recall, this
+measures agreement with provisional silver references; other useful passages
+may be absent from those labels. It is distinct from human judgments of chunk
+relevance. Existing bounded reports can compute it from retained ranks without
+rerunning retrieval or rewriting the saved report. New runs record it directly.
+
+NDCG@k remains unavailable when relevance grades are absent. Runs without either
+reference labels and replayable ranks or a recorded precision score also leave
+precision unavailable. An unavailable metric is not zero.
 
 Specs include dataset, label quality, split, revision, metric version, chunk
 budget, RRF weights and candidate limits, and Evidence Assembly limits when
@@ -86,10 +94,13 @@ of the end-to-end `<report>.reviews.json`. Both may be committed with the report
 The updated shared editor supplies autosave, report-bound browser drafts, recovery,
 undo and save-before-navigation. Changed reports reject stale writes.
 
-Choose an axis, then use `1` for Pass, `2` for Fail or `D` for Uncertain. `U`
+Choose a category, then use `1` for High or `2` for Low. `U`
 undoes the last label or note edit. Arrow keys navigate; Cmd/Ctrl+S saves;
 Cmd/Ctrl+Enter saves and advances. These annotation shortcuts leave text editing
-alone. A clear action clears one axis while retaining its evidence note.
+alone. A clear action clears one category while retaining its description.
+Stored High and Low labels use `pass` and `fail` respectively for compatibility
+with existing reviews. Older `defer` labels remain readable but count as
+incomplete until replaced with a binary judgment.
 
 Deterministic checks:
 

@@ -1,10 +1,11 @@
 # Evaluate retrieval evidence
 
 The `retrieval` task runs the production full-text, dense and structural
-branches, weighted fusion and Evidence Assembly. It starts with an authored
-Query Rewrite. It does not run the Query Rewriter, question assessment or final
-Chat Agent guidance. The [chat task](chat-answer-review.md) exercises those
-stages separately, including their failures.
+branches, weighted fusion, Evidence Assembly and final Chat Agent guidance.
+It starts with an authored, approved Query Rewrite, then passes the assembled
+evidence to the production answer function and renderer. It skips the Query
+Rewriter and question assessment. The [chat task](chat-answer-review.md)
+exercises those preparation stages as part of the whole Chat Session.
 
 The first Data Set preserves all 25 questions and IDs from the
 [Cypher construction set](../../work/initiatives/useful-graph-retrieval/query-construction/cases.yaml).
@@ -202,9 +203,14 @@ chunk budget. Fifty chunks from one article cover one article, even if chunk
 Chunk identities.
 Retrieving another passage from the same article does not satisfy a chunk
 label. Recall against reference IDs is agreement with the stored reference,
-not proof that every unlisted passage is irrelevant. Precision and NDCG are
-omitted until exhaustive or graded relevance judgements exist. Fusion is
-weighted reciprocal rank fusion, not a learned reranker.
+not proof that every unlisted passage is irrelevant. Reference precision@k
+counts chunk slots matching these same labels, divided by k. Missing result
+slots count as zero. For E3, each retrieved chunk from a listed Source Article
+counts as a reference match, even when several chunks share that article.
+Reference precision measures agreement with provisional labels; unlisted
+chunks may still be useful. NDCG is unavailable until graded relevance
+judgments exist. Fusion is weighted reciprocal rank fusion, not a learned
+reranker.
 
 `complete_evidence_at_k` scores the fraction of reference answer rows with at
 least one witness from every evidence group. Multiple IDs inside a group are
@@ -313,7 +319,7 @@ Source Articles instead of requiring every chunk. Author new calibration and
 held-out questions from real usage with those labels; do not relabel these
 already-used training cases as held-out. Keep model-authored labels silver.
 
-## Evaluate generation separately
+## Review generation from the same run
 
 Use [RAG review](rag-review.md) to judge selected context and final generation
 without the end-to-end Chat Session panels. The run dashboard shows retrieval
@@ -321,8 +327,29 @@ specifications, measured scores and explicitly unavailable metrics. Each case
 records context relevance, answer relevance and answer faithfulness separately;
 there is no general critique or omission label in this view.
 
-Run the chat task on matching IDs and open those reports in RAG mode. For every
-case, record separate binary observations, with the exact
+New `retrieval` runs include final generation from the same selected evidence.
+The existing command runs all 25 cases, including the answer call:
+
+```sh
+uv run ca-map eval run retrieval --deployment local --model gemma4:26b
+uv run python scripts/review_chat_eval.py --mode rag
+```
+
+Use `--case C-R1-01` for a smoke run. Older retrieval reports remain evidence-only;
+rerun them to obtain answers. Reference labels never enter the model request.
+The report retains generated guidance and the rendered answer, with bounded
+branch ranks and selected context. It stores no duplicate answer evidence tree.
+`answer_generated` records validated output, not semantic quality. A generation
+failure retains retrieval scores and context, with its guidance-stage diagnostic.
+
+The [October 2 run](../../evals/reports/retrieval/20261002T233848Z-e237389-local-gemma4-26b-1499ceec2201.json)
+used local `gemma4:26b` on all 25 training cases. All 25 retained assembled
+evidence and retrieval scores; 23 produced validated, rendered answers.
+`C-M1-01` and `C-C1-01` failed validation in the guidance stage. Their answer
+relevance and faithfulness remain unjudgeable, while context relevance remains
+available. The run records execution results, not semantic quality judgments.
+
+For every case, record separate binary observations, with the exact
 passage or model claim that explains a failure:
 
 - Faithfulness passes when every factual guidance claim is supported by the
