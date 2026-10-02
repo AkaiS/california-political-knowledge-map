@@ -32,6 +32,11 @@
     .badge.fail { background: #fde6e3; color: #9d3022; }
     .badge.defer { background: #fff2d2; color: #865900; }
     main { max-width: 1200px; width: 100%; min-height: 0; margin: 0 auto; padding: 28px 38px 18px; display: flex; flex-direction: column; overflow: hidden; }
+    .run-loading { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 14px 18px; margin-bottom: 16px; border-radius: 8px; background: #e9f5f2; color: #116963; }
+    .run-loading[hidden] { display: none; }
+    .loading-spinner { width: 18px; height: 18px; border: 2px solid #b7d6ce; border-top-color: #188476; border-radius: 50%; animation: loading-spin .9s linear infinite; }
+    @keyframes loading-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
     .top { display: flex; flex-shrink: 0; justify-content: space-between; gap: 20px; align-items: start; }
     .top h2 { margin: 5px 0 10px; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
     .links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
@@ -135,6 +140,7 @@
       <div id="case-list"></div>
     </aside>
     <main>
+      <div id="run-loading" class="run-loading" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span>Loading run…</span></div>
       <div class="top"><div><div id="position" class="meta"></div><h2 id="question"></h2><div id="case-meta" class="meta"></div><div id="trace-links" class="links"></div></div><div class="nav"><button id="previous" title="Previous case (left arrow)">Previous</button><button id="next" title="Next case (right arrow)">Next</button></div></div>
       <div class="columns"><div class="trace-pane">
         <section><h3>Prepared answer</h3><div id="answer" class="answer rich-text"></div><p class="meta">This evaluation approves the first Query Rewrite Proposal automatically. A prepared answer does not verify browser delivery.</p></section>
@@ -147,12 +153,9 @@
       </div><div class="review-pane"><div class="review-box"><h3>Your case review</h3><div class="verdict"><button data-verdict="pass" title="1">Pass</button><button data-verdict="fail" title="2">Fail</button><button data-verdict="defer" title="D">Defer</button></div><label for="note">Critique or observation</label><textarea id="note" placeholder="What did retrieval, citation, or answer do well or poorly?"></textarea><div id="save-status" role="status" aria-live="polite"></div><div class="review-actions"><button id="undo" title="Undo last annotation action (U)">Undo</button><button id="clear-verdict">Clear verdict</button><button id="retry-save">Save / retry</button></div><div class="meta">Arrows navigate. 1 Pass, 2 Fail, D Defer, U Undo. Cmd/Ctrl+S saves. Cmd/Ctrl+Enter saves and moves on.</div></div></div></div>
     </main>
   </div>
-  <script>
-    'use strict';
-    let report, presentation = {html: {}, references: {}}, cases = [], reviews = {}, saveStatuses = {}, saveRevisions = {}, drafts = {}, history = [], index = 0, saveTimer, saveChain = Promise.resolve(true);
-    const pendingSaves = new Map();
-    let navigationChain = Promise.resolve(), navigationGeneration = 0, draftKey;
-    let draftStorageFailed = false;
+  <script type="module">
+    import {createReviewEditor} from '/assets/chat_eval_review_editing.mjs';
+    let report, presentation = {html: {}, references: {}}, cases = [], editor, editingState;
     const runId = decodeURIComponent(location.pathname.split('/')[2] || '');
     const apiBase = `/api/runs/${encodeURIComponent(runId)}`;
     const $ = id => document.getElementById(id);
@@ -185,8 +188,8 @@
       const output = object(item.output), inputs = object(item.inputs);
       return output.question || inputs.question || item.name;
     }
-    function selection() { return cases[index]; }
-    function reviewFor(item) { return reviews[item.name] || {verdict: null, note: ''}; }
+    function selection() { return cases.find(item => item.name === editingState?.selectedCase); }
+    function reviewFor(item) { return editingState?.reviews[item.name] || {verdict: null, note: ''}; }
     function filteredCases() {
       const query = $('search').value.toLowerCase(), filter = $('filter').value, cohort = $('cohort').value;
       return cases.filter(item => {
@@ -196,13 +199,9 @@
           (caseQuestion(item).toLowerCase().includes(query) || item.name.toLowerCase().includes(query));
       });
     }
-    function nextIndex(delta) {
-      const matching = filteredCases().map(item => cases.indexOf(item));
-      return delta < 0 ? matching.filter(position => position < index).at(-1) : matching.find(position => position > index);
-    }
     function caseRow(list, item, outsideFilter = false) {
       const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
-      row.type = 'button'; row.onclick = () => moveTo(cases.indexOf(item));
+      row.type = 'button'; row.onclick = () => editor.selectCase(item.name);
       add(row, 'span', caseQuestion(item), 'name');
       const status = reviewFor(item).verdict || 'unreviewed';
       add(row, 'span', `${item.name} · ${object(item.metadata).cohort || 'unknown cohort'} · ${object(item.output).failure ? 'execution failed · ' : ''}${status}${outsideFilter ? ' · outside filter' : ''}`, 'sub');
@@ -210,18 +209,20 @@
     function renderList() {
       const list = clear('case-list');
       const done = cases.filter(item => reviewFor(item).verdict).length;
-      $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining${Object.keys(drafts).length ? ' · ' + Object.keys(drafts).length + ' pending save' : ''}`;
+      const pending = editingState?.pendingDraftCount || 0;
+      $('progress').textContent = `${done} reviewed · ${cases.length - done} remaining${pending ? ' · ' + pending + ' pending save' : ''}`;
       const matching = filteredCases();
       if (selection() && !matching.includes(selection())) caseRow(list, selection(), true);
       for (const item of matching) caseRow(list, item);
       if (!matching.length) add(list, 'p', 'No cases match this filter.', 'empty');
-      $('previous').disabled = nextIndex(-1) === undefined;
-      $('next').disabled = nextIndex(1) === undefined;
+      const matchingNames = matching.map(item => item.name);
+      $('previous').disabled = !editor?.canNavigate(-1, matchingNames);
+      $('next').disabled = !editor?.canNavigate(1, matchingNames);
     }
     function applyFilters() {
       const matching = filteredCases();
       if (matching.length && !matching.includes(selection())) {
-        moveTo(cases.indexOf(matching[0]));
+        editor.selectCase(matching[0].name).then(renderList);
       } else renderList();
     }
     function richText(parent, value) {
@@ -442,7 +443,7 @@
     function render(resetTrace = false) {
       const item = selection(); if (!item) return;
       const output = object(item.output), attributes = object(item.attributes), review = reviewFor(item);
-      $('position').textContent = `Case ${index + 1} of ${cases.length}`;
+      $('position').textContent = `Case ${cases.indexOf(item) + 1} of ${cases.length}`;
       $('question').textContent = caseQuestion(item);
       const metadata = object(item.metadata);
       $('case-meta').textContent = `${item.name}${metadata.family ? ' · ' + metadata.family : ''}${metadata.cohort ? ' · ' + metadata.cohort : ''}${attributes.chat_session_id ? ' · session ' + attributes.chat_session_id : ''}`;
@@ -454,116 +455,44 @@
       answerText($('answer'), output.rendered_text);
       renderReference(item); renderPreparation(output, item); renderBranches(output); renderEvidence(output); renderStages(item); renderRaw(item);
       $('note').value = review.note || '';
-      for (const button of document.querySelectorAll('[data-verdict]')) {
-        button.classList.toggle('active', button.dataset.verdict === review.verdict);
-        button.setAttribute('aria-pressed', String(button.dataset.verdict === review.verdict));
-      }
-      showSaveStatus();
-      $('undo').disabled = !history.length;
+      renderReviewControls();
       renderList();
       if (resetTrace) { document.querySelector('.trace-pane').scrollTop = 0; document.querySelector('main').scrollTop = 0; }
     }
-    function showSaveStatus() {
-      const name = selection()?.name;
-      const failed = Object.keys(drafts).filter(key => /failed/i.test(saveStatuses[key] || ''));
-      $('save-status').textContent = failed.length ? failed.map(key => `${key}: ${saveStatuses[key]}`).join(' ') : saveStatuses[name] || '';
-      $('save-status').classList.toggle('error', !!failed.length);
-    }
-    function persistDrafts() {
-      if (!draftKey) return;
-      try {
-        if (Object.keys(drafts).length) localStorage.setItem(draftKey, JSON.stringify({review_identity: report.review_identity, reviews: drafts}));
-        else localStorage.removeItem(draftKey);
-        draftStorageFailed = false;
-      } catch (_) { draftStorageFailed = true; }
-    }
-    function setSaveStatus(name, revision, status) {
-      if ((saveRevisions[name] || 0) !== revision) return;
-      saveStatuses[name] = status;
-      showSaveStatus();
-    }
-    function markEdited(name) {
-      const revision = (saveRevisions[name] || 0) + 1;
-      saveRevisions[name] = revision;
-      drafts[name] = {...reviews[name]}; persistDrafts();
-      setSaveStatus(name, revision, draftStorageFailed ? 'Local backup failed. Keep this page open until saved.' : 'Saved locally; saving to review file…');
-    }
-    function changeReview(name, review) {
-      const before = {...reviewFor({name})};
-      if (before.verdict === review.verdict && before.note === review.note) return;
-      history.push({name, before}); reviews[name] = review;
-      markEdited(name); $('undo').disabled = false; renderList();
-    }
-    function updateReview() {
-      const item = selection();
-      changeReview(item.name, {...reviewFor(item), note: $('note').value});
-      clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 350);
-    }
-    function saveCase(name) {
-      if (!drafts[name]) return Promise.resolve(true);
-      const review = {...reviews[name]}, revision = saveRevisions[name] || 0, key = `${name}:${revision}`;
-      if (pendingSaves.has(key)) return pendingSaves.get(key);
-      setSaveStatus(name, revision, 'Saving to review file…');
-      const operation = saveChain.then(async () => {
-        try {
-          const response = await fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, review, review_identity: report.review_identity})});
-          if (response.status === 409) throw new Error('Save failed: report changed. Reload to review the current report');
-          if (!response.ok) throw new Error(`Save failed: ${response.status}`);
-          if ((saveRevisions[name] || 0) === revision) { delete drafts[name]; persistDrafts(); }
-          setSaveStatus(name, revision, 'Saved to review file'); renderList(); return true;
-        } catch (error) {
-          setSaveStatus(name, revision, `${error.message}. ${draftStorageFailed ? 'Keep this page open.' : 'Edits kept in this browser.'} Use Save / retry.`);
-          return false;
-        } finally { pendingSaves.delete(key); }
-      });
-      pendingSaves.set(key, operation); saveChain = operation; return operation;
-    }
-    async function flushSave() {
-      clearTimeout(saveTimer);
-      while (Object.keys(drafts).length) {
-        const results = await Promise.all(Object.keys(drafts).map(saveCase));
-        if (!results.every(Boolean)) return false;
+    function renderReviewControls() {
+      const review = editingState.reviews[editingState.selectedCase];
+      for (const button of document.querySelectorAll('[data-verdict]')) {
+        button.classList.toggle('active', button.dataset.verdict === review?.verdict);
+        button.setAttribute('aria-pressed', String(button.dataset.verdict === review?.verdict));
       }
-      return true;
+      $('save-status').textContent = editingState.saveStatus;
+      $('save-status').classList.toggle('error', editingState.saveFailed);
+      $('undo').disabled = !editingState.canUndo;
     }
-    function moveTo(target) {
-      const generation = navigationGeneration;
-      navigationChain = navigationChain.then(async () => {
-        if (generation !== navigationGeneration) return;
-        const destination = typeof target === 'function' ? target() : target;
-        if (!await flushSave()) return;
-        if (generation !== navigationGeneration || destination === undefined || destination === index) return;
-        index = destination; render(true);
-      });
-      return navigationChain;
+    function editingChanged(state, change) {
+      editingState = state;
+      if (change === 'selection' || change === 'undo') render(true);
+      else { renderReviewControls(); renderList(); }
     }
-    function navigate(delta) { return moveTo(() => nextIndex(delta)); }
-    function undo() {
-      const action = history.pop(); if (!action) return;
-      // Keep the restored case selected when an earlier navigation finishes saving.
-      navigationGeneration++;
-      reviews[action.name] = action.before; markEdited(action.name);
-      index = cases.findIndex(item => item.name === action.name);
-      render(true); flushSave();
-    }
-    function setVerdict(verdict) {
-      const item = selection(); if (!item) return;
-      changeReview(item.name, {...reviewFor(item), verdict, note: $('note').value}); render(); flushSave();
-    }
+    function navigate(delta) { return editor?.navigate(delta, () => filteredCases().map(item => item.name)); }
+    function setVerdict(verdict) { return editor?.setVerdict(verdict); }
+    function undo() { return editor?.undo(); }
     for (const button of document.querySelectorAll('[data-verdict]')) button.onclick = () => setVerdict(button.dataset.verdict);
-    $('undo').onclick = undo; $('clear-verdict').onclick = () => setVerdict(null); $('retry-save').onclick = flushSave;
-    $('note').addEventListener('input', updateReview);
-    $('all-runs').onclick = event => { event.preventDefault(); flushSave().then(saved => { if (saved) location.href = '/'; }); };
+    $('undo').onclick = undo; $('clear-verdict').onclick = () => setVerdict(null); $('retry-save').onclick = () => editor?.flush();
+    $('note').addEventListener('input', () => editor?.editNote($('note').value));
+    $('all-runs').onclick = event => {
+      if (!editor) return;
+      event.preventDefault(); editor.flush().then(saved => { if (saved) location.href = '/'; });
+    };
     $('previous').onclick = () => navigate(-1); $('next').onclick = () => navigate(1);
     $('search').oninput = applyFilters; $('filter').onchange = applyFilters; $('cohort').onchange = applyFilters;
     window.addEventListener('beforeunload', event => {
-      persistDrafts();
-      if (draftStorageFailed && Object.keys(drafts).length) { event.preventDefault(); event.returnValue = ''; }
+      if (editor?.prepareForUnload()) { event.preventDefault(); event.returnValue = ''; }
     });
-    window.addEventListener('online', flushSave);
+    window.addEventListener('online', () => editor?.flush());
     document.addEventListener('keydown', event => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); navigate(1); return; }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); flushSave(); return; }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); editor?.flush(); return; }
       if (event.metaKey || event.ctrlKey || event.altKey || event.isComposing) return;
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable) return;
       const key = event.key.toLowerCase();
@@ -577,28 +506,33 @@
     });
     Promise.all([fetch(`${apiBase}/report`).then(r => { if (!r.ok) throw new Error(`Report ${r.status}`); return r.json(); }), fetch(`${apiBase}/reviews`).then(r => { if (!r.ok) throw new Error(`Reviews ${r.status}`); return r.json(); }), fetch(`${apiBase}/presentation`).then(r => { if (!r.ok) throw new Error(`Presentation ${r.status}`); return r.json(); })])
       .then(([loadedReport, loadedReviews, loadedPresentation]) => {
-        report = loadedReport; reviews = loadedReviews; presentation = loadedPresentation; cases = report.report.cases;
+        report = loadedReport; presentation = loadedPresentation; cases = report.report.cases;
         if (!report.review_identity) throw new Error('Report identity is missing. Reload after restarting the reviewer.');
-        draftKey = `chat-review-drafts:${runId}:${report.review_identity}`;
+        editor = createReviewEditor({
+          caseNames: cases.map(item => item.name), reviews: loadedReviews,
+          runId, reviewIdentity: report.review_identity,
+          persistReview: async payload => {
+            const response = await fetch(`${apiBase}/reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+            if (!response.ok) throw Object.assign(new Error(`Save failed: ${response.status}`), {status: response.status});
+          },
+          storage: {
+            getItem: key => localStorage.getItem(key),
+            setItem: (key, value) => localStorage.setItem(key, value),
+            removeItem: key => localStorage.removeItem(key),
+          },
+          scheduler: {setTimeout: (callback, delay) => setTimeout(callback, delay), clearTimeout: timer => clearTimeout(timer)},
+          onChange: editingChanged,
+        });
+        editingState = editor.state;
         add(document.head, 'style', presentation.code_css);
-        try {
-          const stored = object(JSON.parse(localStorage.getItem(draftKey) || '{}'));
-          const recovered = stored.review_identity === report.review_identity ? object(stored.reviews) : {};
-          for (const item of cases) {
-            const draft = recovered[item.name];
-            if (draft && [null, 'pass', 'fail', 'defer'].includes(draft.verdict) && typeof draft.note === 'string') {
-              reviews[item.name] = draft; drafts[item.name] = draft; saveRevisions[item.name] = 1;
-              saveStatuses[item.name] = 'Recovered browser edits; saving to review file…';
-            }
-          }
-        } catch (_) { draftStorageFailed = true; }
-        persistDrafts();
         $('run-meta').textContent = `${report.ran_at || ''} · ${report.deployment?.model || report.model || ''} · ${cases.length} cases`;
         for (const value of [...new Set(cases.map(item => object(item.metadata).cohort).filter(Boolean))].sort()) {
           const option = add($('cohort'), 'option', value.replaceAll('_', ' ')); option.value = value;
         }
-        if (cases.length) { render(true); flushSave(); } else $('question').textContent = 'This report has no cases.';
-      }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; });
+        if (cases.length) render(true);
+        else { $('question').textContent = 'This report has no cases.'; renderReviewControls(); renderList(); }
+      }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; })
+      .finally(() => { $('run-loading').hidden = true; });
   </script>
 </body>
 </html>

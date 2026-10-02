@@ -123,14 +123,54 @@ Chunk passages remain literal source text. Structured message arguments and
 results have readable fields and tables, with raw JSON available separately.
 The reviewer does not require a CDN or a network connection to render content.
 
-Run the deterministic server and rendering checks with:
+[`chat_eval_review_editing.mjs`](../../scripts/chat_eval_review_editing.mjs)
+owns review values, selected Evaluation Case, local draft recovery, the
+350-millisecond note debounce, serialized saves, save-before-navigation, and
+Undo. The page calls its public commands and renders copied state. The page
+owns filter matching, keyboard handling, focus, and trace rendering, and supplies
+the module's persistence, browser storage, and scheduling dependencies.
+
+Use Node 22 and prepare the Python environment from the repository root:
 
 ```bash
-uv run pytest tests/test_chat_eval_review.py tests/test_chat_eval_task.py
+uv python install
+uv sync --locked --dev
 ```
 
-The Playwright workflow tests are opt-in because the default deterministic suite
-does not install browser binaries. Install Chromium and run:
+Run the deterministic editing checks with Node's built-in test runner:
+
+```bash
+uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs
+```
+
+These tests use the same editing interface as the page. Controlled saves,
+scheduling, and draft storage cover recovery, failures, stale completions,
+navigation ordering, and Undo without a browser or npm packages. Normal
+pull-request CI installs Node 22 explicitly and requires these checks to pass.
+
+Run the focused server, rendering, module-delivery, and Evaluation Run checks:
+
+```bash
+uv run --no-sync pytest -q tests/test_chat_eval_review.py tests/test_chat_eval_task.py
+```
+
+Run the full deterministic Python suite, also required by normal CI:
+
+```bash
+uv run --no-sync pytest -q tests
+```
+
+These deterministic checks require no browser, model service, or database
+service. Keep browser and live-service opt-in variables unset when running the
+full suite. HTTP tests start temporary loopback servers, so a restricted sandbox
+must allow local socket binding.
+
+The deterministic tests do not establish browser focus and caret preservation,
+keyboard event handling, filter controls, DOM updates, trace presentation, or
+viewport layout. Those behaviors still require browser verification. The
+retained Playwright workflows are opt-in because the default suite does not
+install browser binaries. For a separately requested browser check, install
+Chromium and run:
 
 ```bash
 uv run playwright install chromium
