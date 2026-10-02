@@ -1,6 +1,6 @@
 # Evaluation Case review editing
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem statement
 
@@ -202,3 +202,18 @@ authorization rather than introducing another approval checkpoint.
    integrates the module, delivery route, page adapter, and deterministic checks.
 2. [Run review editing checks on every pull request](issues/02-enforce-review-editing-checks.md)
    adds CI enforcement and documents verification after issue 01 is complete.
+
+## Comments
+
+2026-10-02: Both tickets are complete. Ticket 01 concentrated review editing
+behind the public module and deterministic tests, and its independent Standards
+and Spec reviews resolved the navigation-rule duplication. Ticket 02 added
+required Node 22 checks to normal pull-request CI and documented module ownership,
+local commands, and the limits of deterministic verification. Its independent
+Standards and Spec reviews found no issues. Each ticket records its verification
+evidence. The parent label and work index now reflect the completed project.
+
+Browser workflows were retained and not executed. Local passing checks do not
+establish browser focus, caret, or visual behavior. The conductor will record
+actual pull-request CI evidence after the final sequence review and PR creation;
+no remote CI result is claimed here.
