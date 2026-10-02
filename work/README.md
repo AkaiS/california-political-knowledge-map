@@ -29,6 +29,10 @@ decisions; unresolved contracts are not agent-ready implementation requirements.
 
 ### Ready for agent
 
+- [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md),
+  `ready-for-agent` as of 2026-10-02. Concentrates draft recovery, edit durability,
+  ordered saves, navigation, and Undo behind one interface used by the reviewer
+  page and deterministic tests. The two-ticket frontier is below.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
@@ -54,6 +58,14 @@ decisions; unresolved contracts are not agent-ready implementation requirements.
   narrowed exceptions. Broken into six tickets on 2026-08-20; the frontier is
   below.
 - [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md), specifying [Useful Graph Retrieval issue 01](initiatives/useful-graph-retrieval/issues/01-populate-graph-with-settled-ontology.md). Broken into eight issues on 2026-08-05; the frontier is below.
+
+### Evaluation Case review editing frontier
+
+Two ordered tickets preserve the current reviewer behavior while moving its
+ordering checks into normal CI.
+
+- [01 Concentrate Evaluation Case review editing](projects/evaluation-case-review-editing/issues/01-concentrate-review-editing.md), no blockers. Integrates the module, exact asset route, page adapter, and deterministic checks.
+- [02 Run review editing checks on every pull request](projects/evaluation-case-review-editing/issues/02-enforce-review-editing-checks.md), blocked by 01. Adds an explicit Node runtime and test command to CI and documents verification.
 
 ### Graph-Prioritized Retrieval frontier
 
@@ -201,7 +213,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
