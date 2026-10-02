@@ -29,6 +29,7 @@ from knowledge_map.core.structural import (
     validate_wiring,
 )
 from knowledge_map.ontology import news
+from knowledge_map.prompts import load_prompt
 from knowledge_map.retrieval_telemetry import record_branch_failure, structural_stage
 from knowledge_map.schemas.retrieval import (
     BranchCandidate,
@@ -149,37 +150,15 @@ class StructuralAgents:
     binder: Agent[ConstructionValidation, PositionalBindings]
 
 
-_STRUCTURAL_INSTRUCTION_PREFIX = (
-    "Use only the approved question and supplied semantic choices. "
-    "Never emit Cypher, graph identifiers, variables, parameters, projections, "
-    "or provenance paths. "
-)
+
 
 STRUCTURAL_INSTRUCTIONS = {
-    "structural_ontology_filter": _STRUCTURAL_INSTRUCTION_PREFIX
-    + "Select relevant labels, relationships, and filter properties.",
-    "structural_selector": (
-        _STRUCTURAL_INSTRUCTION_PREFIX
-        + "Select only supplied piece IDs, keeping separate occurrences for "
-        "each role. For a same-reporting-chunk question, select the requested result "
-        "entity first, the named entity second, and an optional Source Article third;"
-        " select no question-semantic relationship for those fixed provenance paths."
+    "structural_ontology_filter": load_prompt(
+        "structural/ontology-filter-instructions", version=1
     ),
-    "structural_wiring": (
-        _STRUCTURAL_INSTRUCTION_PREFIX
-        + "Wire selected occurrences by zero-based numeric index. Use each "
-        "filter and relationship once. Use distinct_roles for questions asking for "
-        "other or different entities. A same-reporting-chunk question has no triples;"
-        " wire its entity and optional Source Article filters to the selected roles."
-    ),
-    "structural_binder": (
-        _STRUCTURAL_INSTRUCTION_PREFIX
-        + "Return question values in supplied filter order. Preserve Bill names"
-        " for deterministic parsing. When several filters bind Bill names, put null "
-        "in those positional values and supply one bill_names assignment with "
-        "slot_index and value for each. Assign each bill to its wired role; never "
-        "repeat one designation across the slots. Other values remain positional."
-    ),
+    "structural_selector": (load_prompt("structural/selector-instructions", version=1)),
+    "structural_wiring": (load_prompt("structural/wiring-instructions", version=1)),
+    "structural_binder": (load_prompt("structural/binder-instructions", version=1)),
 }
 
 

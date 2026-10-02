@@ -1,0 +1,5 @@
+Article Chunk:
+{chunk_text}
+
+DECLARED_STANCE claims extracted from that Article Chunk:
+{claims}

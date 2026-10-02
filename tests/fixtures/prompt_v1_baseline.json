@@ -1,0 +1,437 @@
+{
+  "chat/instructions": {
+    "line": 50,
+    "sha256": "df8970c50404884949b9ca2165f65c2d894fbf90e70d19e6f715030e23b5ee64",
+    "source": "src/knowledge_map/core/chat.py"
+  },
+  "chat/question-policy": {
+    "line": 64,
+    "sha256": "1ebad5d632fd0dc53bfc42bdad477d042b7cb8a40abe4bfaeac8c7ecc482530e",
+    "source": "src/knowledge_map/core/chat.py"
+  },
+  "coreference/annotation-request": {
+    "line": 355,
+    "sha256": "0724a4395037c7be918ca589f53b55c981ac81a10b5fa16a905dc58d5e5b77c1",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/annotator-instructions": {
+    "line": 309,
+    "sha256": "99ff405489e989694c5c904c6ea7cdc7992b9c67a0f91f39881d2576950f7964",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/critic-instructions": {
+    "line": 339,
+    "sha256": "92d95a9764318055bebd81f1bc5054e442cb869c1b78406e6bb329b62390cfa3",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/critic-request": {
+    "line": 641,
+    "sha256": "989e41d07e145c932a0895477ca8fd61c1f3b06ccd6f9ab4e7e12bf453a238fe",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/critic-retry": {
+    "line": 658,
+    "sha256": "07d5c6b1686f53d7f0679c3a106c8b3a23e61fcd3745ae93ce156116dc8d6f93",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/discard-reason": {
+    "line": 371,
+    "sha256": "f04ceeb9b062be28fdbda2e394fe4284972b5b821432cbfdda3105f970dc4511",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/mention-span": {
+    "line": 245,
+    "sha256": "a8d40fc5a0743375eddee19d728cc273cab706801ef9b3970738471b6bcd6af5",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/mention-text-guidance": {
+    "line": 39,
+    "sha256": "61180d4832d38d932e67d27494dd83f9d17e1dda0ec15fd22674a05f4f830593",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "coreference/numbered-article": {
+    "line": 278,
+    "sha256": "39b813cdb1120500a4bd29b4396609af6f31d0ecca3f443d5cc8f63dea023ed4",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/occurrence-guidance": {
+    "line": 44,
+    "sha256": "c7b34fe521de583c92f2b3bb38f9d21c7b4eed63830fa0474c252e6deb5b396e",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "coreference/rejected-span-reason": {
+    "line": 654,
+    "sha256": "19ce289bac869d1f9eed75f301b4b8fe31fa2360f7791de85175265adaeea515",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/sentence-label-guidance": {
+    "line": 144,
+    "sha256": "2627d63847018a651ef3f0c759484458618145b8abeae4352291d32dfc741f4b",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "coreference/unlocatable-retry": {
+    "line": 375,
+    "sha256": "b361ba4245f279818b7bc50357489d7f2e261fd28008185ade897ddf4e9c7f30",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "coreference/verdict-mention-guidance": {
+    "line": 149,
+    "sha256": "db0047fa1978ea2b56bfc7a05861b7e25c34464580b8299bc46224c718431a5f",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "coreference/verdict-occurrence-guidance": {
+    "line": 154,
+    "sha256": "c3420c6b67aacde90647a66c01a27191bc2123e2e42ff5f3c44706d9e49309f9",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "coreference/verdict-reason-guidance": {
+    "line": 162,
+    "sha256": "8f939938536ff16f30bae2626d806d149c5d7b953574789d6cad4a32acdec2f1",
+    "source": "src/knowledge_map/schemas/coreference.py"
+  },
+  "extraction/amount-property-form": {
+    "line": 35,
+    "sha256": "438a24af55fe2f8e08fa724d74b7f74345497c14f4fa54daad64103a99d1271a",
+    "source": "src/knowledge_map/ontology/primary.py"
+  },
+  "extraction/date-property-form": {
+    "line": 40,
+    "sha256": "7a4132fc344a6d82ba040edbb7683e714bbdee6c951c551ca4bbd7d95c57e585",
+    "source": "src/knowledge_map/ontology/primary.py"
+  },
+  "extraction/entailed-property-instructions": {
+    "line": 38,
+    "sha256": "6c0942b0417496807a1926230500771ea78eb4af908be1b939e562a95e4ffdef",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/enum-property-form": {
+    "line": 120,
+    "sha256": "098eec26ba4488200b3c481b8751c098be1843798650c6d72ad445477ed71c20",
+    "source": "src/knowledge_map/ontology/properties.py"
+  },
+  "extraction/fallback-instructions": {
+    "line": 63,
+    "sha256": "975a4a85ae38fa9091c6c06c50e9c42babe1d92e8973d5bc3097eaa89035a220",
+    "source": "src/knowledge_map/adapters/extraction.py"
+  },
+  "extraction/instructions": {
+    "line": 1,
+    "sha256": "673f4d5431268b64ef719979084f26c615e25a99eb8aec6dccd82ba75bcd9cb7",
+    "source": "src/knowledge_map/resources/extraction_prompt.txt"
+  },
+  "extraction/label-instructions": {
+    "line": 67,
+    "sha256": "db9a50c63b036687c55320a883d2bb4f82a906d8b70ff9b6858f6d4f6298d69c",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/label-properties": {
+    "line": 80,
+    "sha256": "f627b772a2f864c06d9dc8f26953a5b2e4af651fff6508a24556e33626245cfc",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/label-properties-heading": {
+    "line": 77,
+    "sha256": "4eba598eb01fe26bcf8291f5325d01f06da011d24986083971e00bb78161c7a8",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/label-property-instructions": {
+    "line": 86,
+    "sha256": "c49abcdc9529378e2e67c3a3b1c0dece78b1e2ea94c8ede204213a7d0d4d81c6",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/ontology-heading": {
+    "line": 65,
+    "sha256": "65186e774b2c5b73d5a878bdc8c6fe60c825dd810733db2e06f898b411d13a94",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/optional-sub-label": {
+    "line": 74,
+    "sha256": "e133576c20148bbca6e9a11fbc7fb5f5e23c86b50023373a81e12b5f7ba7b60b",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-heading": {
+    "line": 35,
+    "sha256": "1b21e7caf34da24c1a356f4ae6f6f2279e752a5124dae200eebb5cdcb53a208a",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-instructions": {
+    "line": 92,
+    "sha256": "4f702b08077a56d845ada2fcc9c2481e521841af3a2fdc36180eed033fe16202",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-properties-heading": {
+    "line": 27,
+    "sha256": "057523b11627625eb35f3fb4d796d05a3f684ff19921403c2f11c7a60c9c895f",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-properties-instructions": {
+    "line": 29,
+    "sha256": "653b4e10565a6ecc8dbd76aacd8dac96654a3c256842b2172c95a61085c59919",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-property": {
+    "line": 44,
+    "sha256": "878188c330e40881bd8b324808cef087fac376535d908ef134adc0cf97a15860",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationship-shape": {
+    "line": 98,
+    "sha256": "35795bc19e5c7692b1b75637ce079fe99031acc0bba197da65b125f897371758",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/relationships-heading": {
+    "line": 90,
+    "sha256": "c11a905595e15c7026e4ae1e3486cd7479f11c1efde82ab9003ff0bef91a5f26",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/required-sub-label": {
+    "line": 74,
+    "sha256": "41480f3ed26eef9609e1bcaa5f239db9bd118b3733ee64598c5c1d85fd00cf01",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/source-key-guidance": {
+    "line": 41,
+    "sha256": "29ac37fd4699728c709eaceb8e1882629d25347ea37c452c6083445bae1dd7a7",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "extraction/source-label-guidance": {
+    "line": 48,
+    "sha256": "473869cf9f8797460fe22854d8cc6e51ba36ed47cc6521852e225f5b68589993",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "extraction/sub-label-rule": {
+    "line": 75,
+    "sha256": "d6cb860fd86cd4ba20b7d9d833bad4026b2ff050cd59e91a236e5557e8f9bd2c",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/sub-labels-heading": {
+    "line": 71,
+    "sha256": "bd7a4871c42e74ade3ade8c97f09b84a9091c974bcdc8308973d6a24366de138",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "extraction/target-key-guidance": {
+    "line": 42,
+    "sha256": "44dc8ac6677fa361770e836f9cc1fc91f6ee6538ba7fd0595b32c21c7d0c0f1b",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "extraction/target-label-guidance": {
+    "line": 51,
+    "sha256": "75f6ddf24b7308ba59b29a67ff423988df164b125e535efa579a0eb5cecd37ad",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "extraction/transaction-property-form": {
+    "line": 45,
+    "sha256": "bd7a96ca000be6a3b2085e2cdbac428fadd08e8235e996c112200ef2955fe392",
+    "source": "src/knowledge_map/ontology/primary.py"
+  },
+  "extraction/unknown-property-instructions": {
+    "line": 50,
+    "sha256": "99ec64003ab041f24172a324573e40069daeda42baf4994b14acba940e1feef6",
+    "source": "src/knowledge_map/ontology/extraction_prompt.py"
+  },
+  "policy-areas/assignment-instructions": {
+    "line": 113,
+    "sha256": "6a1eb66b95084cb67de13d24ea578b687d75d6261182b25dacd64d5c2896524c",
+    "source": "src/knowledge_map/adapters/policy_areas.py"
+  },
+  "policy-areas/assignment-request": {
+    "line": 146,
+    "sha256": "468ccfb8861f38a5acf437897277e9283614cf42c914987ce849e3076245a26e",
+    "source": "src/knowledge_map/adapters/policy_areas.py"
+  },
+  "policy-areas/classification-instructions": {
+    "line": 50,
+    "sha256": "407e472533179b60813b6497eac80e9e7365ac0ba2f22c99b05a8276e781fbad",
+    "source": "src/knowledge_map/adapters/policy_areas.py"
+  },
+  "query-rewriter/instructions": {
+    "line": 50,
+    "sha256": "6e4bd27ed95ea1f1069bb460cd56d7315ec1888c3504cd9ecd4efbb789c9f374",
+    "source": "src/knowledge_map/core/question_preparation.py"
+  },
+  "relevance/article-content": {
+    "line": 48,
+    "sha256": "3322b019d70c2e10c6579439c471662ec2cf562ae20cd41be871df5371ad22c3",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/article-title": {
+    "line": 67,
+    "sha256": "5fb9cee63b6634b8e6482c7b4b0364c3864dae51625c9f7359931a224ad61192",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/classification-request": {
+    "line": 70,
+    "sha256": "3e3eb1a58bc8f02f4874b2ade73a1ec96544a1f623e96d9325659af6ac200875",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/example-instructions": {
+    "line": 39,
+    "sha256": "35966f4f1b241771d35e173c1a61092b3494b97ebea9fd17a8c696665ba15290",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/instructions": {
+    "line": 22,
+    "sha256": "e6ef5d42140309a50453b9fc77313b623fa1d7547e01dc2b27948dce2288d360",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/negative-classification": {
+    "line": 60,
+    "sha256": "101a6c0378085d691289212dadcba911a6ad6c37d66c91ad2089ba3b142d1a56",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/negative-examples-heading": {
+    "line": 55,
+    "sha256": "8529b1a7a4a0d794eeda846fa2749e0995dd20cd5700f0ef8824beaee7d4284e",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/positive-classification": {
+    "line": 49,
+    "sha256": "be3b01491c84d5f2b27efcb5f25131ba8d55b0d1d197f539bf87bc03ade06a08",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/positive-examples-heading": {
+    "line": 44,
+    "sha256": "79c6e5ff8d55a308719f62542864f10c7131b68fb18c70f55e544cbc78237090",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/target-body": {
+    "line": 68,
+    "sha256": "44ce21b7b36de6a8197ea0257b48f4123be26e1b90418917a14f396fe83c5860",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "relevance/target-heading": {
+    "line": 66,
+    "sha256": "4395bf028805d8dcde9680f4da8c7ff6a8b9609e7ad079931695f08018bfb2c2",
+    "source": "src/knowledge_map/core/relevance_agent.py"
+  },
+  "selector-healing/critic-feedback": {
+    "line": 521,
+    "sha256": "deba1a218c742ad4bd5eb1993f1a779ffd327338dec7db7d71c399935eddbf26",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/critic-instructions": {
+    "line": 298,
+    "sha256": "b900d2d1789592e00592de9f7224b39f11938e8ffa50d3732f81676312f798c2",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/critic-request": {
+    "line": 479,
+    "sha256": "94a4c308dce92c34cb65ac464e079d6d2737372305b7eaf818dc057e7c6fa583",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/developer-guidance": {
+    "line": 399,
+    "sha256": "5b421ec618c74b1380c6343873027b761ffb6c8b48c348ac83397853435f0bf4",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/generation-request": {
+    "line": 403,
+    "sha256": "c90ea8ccd05439339104013c268064e759f12b50b1e9caf8f8bf542c00835a26",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/generator-instructions": {
+    "line": 265,
+    "sha256": "ab339b9761c4270cdeb85d8dad5e2052a2c3af0c6b40f60af796049d79b0392a",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/locked-selector": {
+    "line": 438,
+    "sha256": "fea61b680a5b725df6c4626e5daad174704c27544425354afbdbf7f14b32a399",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/locked-selectors-instructions": {
+    "line": 436,
+    "sha256": "fb475270365ef763c75be1617dd4c7e52f57fada7d8ae7ccb2a36170be6f411d",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/negative-selectors": {
+    "line": 395,
+    "sha256": "fd44e99e295ac612e0ebf1232e55cf362efd22855dfd76b0dc1e1f28f4f9d84a",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/parsing-retry": {
+    "line": 458,
+    "sha256": "b432c3d738ec15fc5975b1c110efe266c9246eb108952c921530811be1455771",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/programmatic-feedback": {
+    "line": 519,
+    "sha256": "6c06ce34f977c176580b3513e8b546b741baf0377e0c83f15aa4d284a929b3e3",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/validation-retry-instructions": {
+    "line": 524,
+    "sha256": "3a02dac1360764aa0b5464ec5b5402894b0e87050c647a4beb120b7120c3cb54",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "selector-healing/word-count-ratio": {
+    "line": 476,
+    "sha256": "5a86a0c5f7d6c8e3269b3637590f2d940bf94eed10fe5be33833ef50a38ffce9",
+    "source": "src/knowledge_map/core/healing.py"
+  },
+  "shared/health-check": {
+    "line": 1316,
+    "sha256": "2a56b903071a6bff95aefd5045876c6e3a5a7002e695f4b159e753a16e59cacd",
+    "source": "src/knowledge_map/adapters/coreference.py"
+  },
+  "stance-alignment/claim": {
+    "line": 90,
+    "sha256": "fa907b300ff4a63cfd421b3c90e25f4e0bf283d8d280f1c7f34a6807a4a83798",
+    "source": "src/knowledge_map/adapters/stance_alignment.py"
+  },
+  "stance-alignment/critic-instructions": {
+    "line": 39,
+    "sha256": "80c289300d531c54b7428920304c19ba09d0e3e5fa548089e6bb5728d7b84dc2",
+    "source": "src/knowledge_map/adapters/stance_alignment.py"
+  },
+  "stance-alignment/critic-request": {
+    "line": 99,
+    "sha256": "92439426006a2c2d73963dc737a4bb861cb76689ee59ed0193388f9dd46c9e07",
+    "source": "src/knowledge_map/adapters/stance_alignment.py"
+  },
+  "stance-alignment/source-guidance": {
+    "line": 98,
+    "sha256": "cbf6f1770fd5ef412cb91772156ffadd8b8e34caf1f91ecbffc866e112e64ba2",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "stance-alignment/target-guidance": {
+    "line": 99,
+    "sha256": "33fe7ec76ad36d4bd3736603902185e503c3bbb4a7fa4862445df18498984b1d",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "stance-alignment/verdict-guidance": {
+    "line": 103,
+    "sha256": "5af9c80d5138137a27f37e7329a3b0e09ca4169bef797844971a4b571a829ea6",
+    "source": "src/knowledge_map/schemas/extraction.py"
+  },
+  "structural/binder-instructions": {
+    "line": 176,
+    "sha256": "95cc8090c2e9b392a6cc35d09ca805405fe40ca710818ac5d3cea5253c060116",
+    "source": "src/knowledge_map/adapters/structural.py"
+  },
+  "structural/ontology-filter-instructions": {
+    "line": 159,
+    "sha256": "d626f8ae641e27cf610fe97185d2e51336719ff0f1f575070bd28a8d225fef21",
+    "source": "src/knowledge_map/adapters/structural.py"
+  },
+  "structural/relationship-limit-guidance": {
+    "line": 37,
+    "sha256": "bbc0a640279bba9e87430c53f276fed5be6641c932a3366a276f7b60d7cd5128",
+    "source": "src/knowledge_map/schemas/structural.py"
+  },
+  "structural/role-limit-guidance": {
+    "line": 34,
+    "sha256": "6964354a8f265b8bcfdbb04a6b9e759aeef069a9d376982f692f5c50081de34c",
+    "source": "src/knowledge_map/schemas/structural.py"
+  },
+  "structural/selector-instructions": {
+    "line": 162,
+    "sha256": "dee5909a8c75c40016f3bb655d3a734b01f7a907cea2ae30012c8ceba0625cb5",
+    "source": "src/knowledge_map/adapters/structural.py"
+  },
+  "structural/wiring-instructions": {
+    "line": 169,
+    "sha256": "112b9fcb1658d5ea5ff5290637699157c7bec1913bdab1d493afaab675ff7c8e",
+    "source": "src/knowledge_map/adapters/structural.py"
+  }
+}

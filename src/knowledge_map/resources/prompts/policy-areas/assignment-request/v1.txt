@@ -1,0 +1,10 @@
+Article title: {title}
+
+Article:
+{content}
+
+Policy areas this article discusses:
+{rendered_areas}
+
+Measures this article names:
+{rendered_measures}

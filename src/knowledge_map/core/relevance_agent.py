@@ -9,6 +9,8 @@ from knowledge_map.schemas import ModelDeployment
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
+from knowledge_map.prompts import load_prompt
+
 logger = logging.getLogger(__name__)
 
 # 1. Structured Pydantic output model
@@ -19,10 +21,7 @@ class RelevanceClassification(BaseModel):
     )
 
 RELEVANCE_AGENT_INSTRUCTIONS = (
-    "You are a California Politics Relevance Classifier.\n"
-    "Your job is to determine whether a news article is relevant to California politics, policy, elections, lobbying, or state/local governance.\n\n"
-    "Examine the title and body of the target article and classify it as either 'RELEVANT' or 'IRRELEVANT'\n"
-    "If example classifications are provided, use them to guide your decision."
+    load_prompt("relevance/instructions", version=1)
 )
 
 def get_relevance_agent_prompt(
@@ -36,38 +35,50 @@ def get_relevance_agent_prompt(
     
     if positive_examples or negative_examples:
         prompt_lines.extend([
-            "Instructions: Classify the target article below based on the examples provided.",
+            load_prompt("relevance/example-instructions", version=1),
             ""
         ])
         
     if positive_examples:
-        prompt_lines.append("--- Examples of RELEVANT California Politics Articles ---")
+        prompt_lines.append(load_prompt("relevance/positive-examples-heading", version=1))
         for ex in positive_examples:
-            prompt_lines.extend([
-                f"Title: {ex.get('title', '')}",
-                f"Content: {ex.get('content', '')}",
-                "Classification: RELEVANT",
-                "---"
-            ])
+            prompt_lines.extend(
+                [
+                    load_prompt("relevance/article-title", version=1).format(
+                        title=ex.get("title", "")
+                    ),
+                    load_prompt("relevance/article-content", version=1).format(
+                        content=ex.get("content", "")
+                    ),
+                    load_prompt("relevance/positive-classification", version=1),
+                    "---",
+                ]
+            )
         prompt_lines.append("")
 
     if negative_examples:
-        prompt_lines.append("--- Examples of IRRELEVANT Articles ---")
+        prompt_lines.append(load_prompt("relevance/negative-examples-heading", version=1))
         for ex in negative_examples:
-            prompt_lines.extend([
-                f"Title: {ex.get('title', '')}",
-                f"Content: {ex.get('content', '')}",
-                "Classification: IRRELEVANT",
-                "---"
-            ])
+            prompt_lines.extend(
+                [
+                    load_prompt("relevance/article-title", version=1).format(
+                        title=ex.get("title", "")
+                    ),
+                    load_prompt("relevance/article-content", version=1).format(
+                        content=ex.get("content", "")
+                    ),
+                    load_prompt("relevance/negative-classification", version=1),
+                    "---",
+                ]
+            )
         prompt_lines.append("")
 
     prompt_lines.extend([
-        "--- Target Article to Classify ---",
-        f"Title: {title}",
-        f"Body: {body}",
+        load_prompt("relevance/target-heading", version=1),
+        load_prompt("relevance/article-title", version=1).format(title=title),
+        load_prompt("relevance/target-body", version=1).format(body=body),
         "",
-        "Determine if the Target Article is RELEVANT or IRRELEVANT."
+        load_prompt("relevance/classification-request", version=1)
     ])
 
     return "\n".join(prompt_lines)

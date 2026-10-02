@@ -4,6 +4,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas.retrieval import NonemptyText, RetrievalValue
 
 type SemanticLabel = Literal[
@@ -31,10 +33,10 @@ class OntologySelection(RetrievalValue):
 
 class PieceSelection(RetrievalValue):
     role_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=1)] = Field(
-        description="At most four connected role occurrences."
+        description=load_prompt("structural/role-limit-guidance", version=1)
     )
     relationship_ids: tuple[NonemptyText, ...] = Field(
-        description="At most three question-semantic relationship occurrences."
+        description=load_prompt("structural/relationship-limit-guidance", version=1)
     )
     filter_ids: Annotated[tuple[NonemptyText, ...], Field(max_length=8)]
 

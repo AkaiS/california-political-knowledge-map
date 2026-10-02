@@ -43,5 +43,10 @@ Uses the "single-context" layout, with a single `CONTEXT.md` and `docs/adr/` at 
 - Comments exist to describe the problem the code is solving. When a function is moved, so should the comments.
 - The place to document architectural decisions is never directly in the code.
 
+## Prompts
+- Store authored LLM instructions and message templates in versioned text resources; modules load an explicit version. No prompt text belongs in a module.
+- Prompt versions are immutable. Every text change, including whitespace, creates a new version. Preserve existing versions and update callers to select the new version explicitly.
+- Before adding or changing a prompt, read [prompt versions](docs/adr/0022-prompts-are-immutable-versioned-text-resources.md) for storage, rendering, and verification rules.
+
 ## Additional
 - Don't verify with the browser or computer use unless asked for by the dev.

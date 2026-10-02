@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from knowledge_map.prompts import load_prompt
+
 
 def _strip_label_brackets(value: object) -> object:
     """Normalise a sentence label the model copied verbatim from its prompt.
@@ -31,17 +33,17 @@ class MentionSpan(BaseModel):
     sentence_label: str = Field(
         ...,
         min_length=1,
-        description="The label of the numbered sentence containing the mention.",
+        description=load_prompt("coreference/sentence-label-guidance", version=1),
     )
     mention_text: str = Field(
         ...,
         min_length=1,
-        description="The mention exactly as it appears in the numbered sentence.",
+        description=load_prompt("coreference/mention-text-guidance", version=1),
     )
     occurrence: int = Field(
         default=1,
         ge=1,
-        description="One-based occurrence of the mention text within the sentence.",
+        description=load_prompt("coreference/occurrence-guidance", version=1),
     )
     canonical_entity_name: str = Field(
         ...,
@@ -141,17 +143,17 @@ class CriticVerdict(BaseModel):
     sentence_label: str = Field(
         ...,
         min_length=1,
-        description="The label of the numbered sentence containing the mention.",
+        description=load_prompt("coreference/sentence-label-guidance", version=1),
     )
     mention_text: str = Field(
         ...,
         min_length=1,
-        description="The verbatim mention text being judged.",
+        description=load_prompt("coreference/verdict-mention-guidance", version=1),
     )
     occurrence: int = Field(
         default=1,
         ge=1,
-        description="The one-based occurrence of the mention within its sentence.",
+        description=load_prompt("coreference/verdict-occurrence-guidance", version=1),
     )
     accepted: bool = Field(
         ...,
@@ -159,7 +161,7 @@ class CriticVerdict(BaseModel):
     )
     reason: str | None = Field(
         default=None,
-        description="A short explanation required when the Mention Span is rejected.",
+        description=load_prompt("coreference/verdict-reason-guidance", version=1),
     )
 
     @field_validator("sentence_label", mode="before")

@@ -1,0 +1,11 @@
+Generate CSS selectors for the article at {tripping_article_url}.
+Cleaned HTML:
+{cleaned_html}
+
+Target Metadata (Ground Truth):
+- Headline: {headline}
+- Publication Date: {publication_date}
+- Authors: {authors}
+- Expected Word Count: {expected_word_count}
+
+{negative_selectors_str}{custom_context_str}

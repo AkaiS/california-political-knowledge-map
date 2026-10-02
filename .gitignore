@@ -11,3 +11,4 @@ manual_checks/*
 .logfire/*
 .claude/*
 .codex/*
+.DS_Store

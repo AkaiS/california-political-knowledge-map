@@ -1,0 +1,1 @@
+Attach any property the text supports. The properties below have a fixed form: when you do supply one, write it exactly this way, so the same value reported by two articles is recognisably the same value.

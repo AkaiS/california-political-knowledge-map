@@ -1,7 +1,6 @@
 import hashlib
 import json
 import logging
-import os
 from typing import Any
 
 from pydantic import ValidationError
@@ -15,17 +14,13 @@ from knowledge_map.ontology.extraction_conformance import (
     conform_extraction_result,
 )
 from knowledge_map.ontology.extraction_prompt import render_extraction_ontology
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas import AdherenceReport, ExtractionResult, ModelDeployment
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-PROMPT_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "resources",
-    "extraction_prompt.txt"
-)
 ONTOLOGY_PLACEHOLDER = "{{NEWS_ONTOLOGY}}"
 
 #: Caught by the adapter and reported as an extraction failure.  Transport
@@ -51,16 +46,15 @@ def log_model_retries(ctx: RunContext, /, *, output_context: Any, output: Any, e
     raise error
 
 def load_instructions() -> str:
-    if os.path.exists(PROMPT_PATH):
-        with open(PROMPT_PATH, "r", encoding="utf-8") as f:
-            prompt = f.read()
-        if prompt.count(ONTOLOGY_PLACEHOLDER) != 1:
-            raise ValueError(
-                f"Extraction prompt must contain exactly one {ONTOLOGY_PLACEHOLDER} placeholder"
-            )
-        return prompt.replace(ONTOLOGY_PLACEHOLDER, render_extraction_ontology())
-    else:
-        return "Extract entities and relationships from California politics stories."
+    try:
+        prompt = load_prompt("extraction/instructions", version=1)
+    except FileNotFoundError:
+        return load_prompt("extraction/fallback-instructions", version=1)
+    if prompt.count(ONTOLOGY_PLACEHOLDER) != 1:
+        raise ValueError(
+            f"Extraction prompt must contain exactly one {ONTOLOGY_PLACEHOLDER} placeholder"
+        )
+    return prompt.replace(ONTOLOGY_PLACEHOLDER, render_extraction_ontology())
 
 def get_extraction_agent(
     deployment: ModelDeployment | None = None,
@@ -194,7 +188,7 @@ class PydanticAIEntityExtractionAdapter:
         try:
             agent = self.agent
             result = agent.run_sync(
-                "health_check",
+                load_prompt("shared/health-check", version=1),
                 output_type=str,
                 model_settings={"max_tokens": 1}
             )

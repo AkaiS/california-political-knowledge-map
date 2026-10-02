@@ -1,0 +1,933 @@
+{
+  "cluster_count": 8,
+  "method": "KMeans on standardized features; PCA 2D projection",
+  "seed": 20260930,
+  "feature_names": [
+    "log question length",
+    "log output length",
+    "log exchange count",
+    "log selected chunks",
+    "log duration",
+    "log failed branch count",
+    "change_over_time",
+    "comparison",
+    "entity_information",
+    "evidence_checking",
+    "intersection_of_constraints",
+    "topic_discovery",
+    "ambiguous_request",
+    "conflicting_reporting",
+    "outside_permitted_scope",
+    "partial_coverage",
+    "required_data_not_ingested",
+    "sufficient_evidence",
+    "expert",
+    "familiar",
+    "layperson",
+    "answer_prepared",
+    "declined",
+    "stage_failure"
+  ],
+  "points": [
+    {
+      "id": "SYN-T01-01",
+      "question": "Who is Steve Hilton, and what California election campaign is he involved in? I'd like to read a few news stories about him.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.164402196066028,
+      "y": -0.8980371928446984
+    },
+    {
+      "id": "SYN-T01-02",
+      "question": "What can you tell me about Gail Pellerin from the news?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.066956542630467,
+      "y": -1.177355322944101
+    },
+    {
+      "id": "SYN-T01-03",
+      "question": "What does California's 2021 Senate Bill 9 do, according to the housing news stories you have?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.1768622814240883,
+      "y": -1.198941171093115
+    },
+    {
+      "id": "SYN-T01-04",
+      "question": "What is the Proposition 38 campaign about in the California stories you have?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.0160003394955495,
+      "y": -0.8611631890314796
+    },
+    {
+      "id": "SYN-T01-05",
+      "question": "Which bill has Catalina Media Development been lobbying on, and what housing issues does the news connect it to?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.2277644637062597,
+      "y": -0.6469756766620849
+    },
+    {
+      "id": "SYN-T02-01",
+      "question": "What does reporting establish about Steve Hilton's candidacy and campaign affiliations in California?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 2.8374646855950307,
+      "y": -0.16776753775367356
+    },
+    {
+      "id": "SYN-T02-02",
+      "question": "Which legislative roles does reporting attribute to Gail Pellerin? Distinguish bill sponsorship from recorded floor votes.",
+      "scenario": "sufficient_evidence",
+      "outcome": "stage_failure",
+      "cluster": 4,
+      "x": 1.572121236962169,
+      "y": 3.8677518941619295
+    },
+    {
+      "id": "SYN-T02-03",
+      "question": "Which lot-splitting and housing-density provisions of California's 2021 SB 9 are described in reporting?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.1390748436835767,
+      "y": -0.019840272688430246
+    },
+    {
+      "id": "SYN-T02-04",
+      "question": "What does reporting say the Proposition 38 campaign advocates? Distinguish the measure's reported provisions from advocates' claims about their effects.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.97009998117061,
+      "y": 0.22229232410340116
+    },
+    {
+      "id": "SYN-T02-05",
+      "question": "Which Policy Areas are connected to Catalina Media Development LLC through AB 1740, the bill it is reported as lobbying on?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 2.8973854064559963,
+      "y": 0.012173306728705171
+    },
+    {
+      "id": "SYN-T03-01",
+      "question": "What does the housing bill do?",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.33837467327922,
+      "y": -2.01063299122421
+    },
+    {
+      "id": "SYN-T03-02",
+      "question": "Can you tell me about that ballot measure?",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.3133142591198737,
+      "y": -1.6737170114658493
+    },
+    {
+      "id": "SYN-T03-03",
+      "question": "What's this year's housing bill?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 1.6079975587349544,
+      "y": -2.381697986437577
+    },
+    {
+      "id": "SYN-T03-04",
+      "question": "What has been reported about the Appropriations Committee's role in the bill?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 1.8857186615805779,
+      "y": -1.6149221756530898
+    },
+    {
+      "id": "SYN-T03-05",
+      "question": "What is the construction union's position on the housing bill?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.8943767660339845,
+      "y": -1.4089212356926117
+    },
+    {
+      "id": "SYN-T04-01",
+      "question": "What does the news say about Steve Hilton's governor campaign, and can you show every contribution it received during 2026?",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.1620313031271285,
+      "y": -1.1336396446126178
+    },
+    {
+      "id": "SYN-T04-02",
+      "question": "Tell me about Gail Pellerin's work on bills and every vote she's cast since taking office.",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.1666239780754584,
+      "y": -1.0906329211024641
+    },
+    {
+      "id": "SYN-T04-03",
+      "question": "What does Catalina Media Development do in California politics, and who owns the company?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.8666079318912514,
+      "y": -1.0110654561320276
+    },
+    {
+      "id": "SYN-T04-04",
+      "question": "Which candidate does the news say California Leads helped pay to elect, and can you show all its 2026 independent expenditures with dates and amounts?",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.201697607385381,
+      "y": -0.6237188070239366
+    },
+    {
+      "id": "SYN-T04-05",
+      "question": "What's the Yes on Proposition 38 campaign trying to do, and where did all its money come from?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.9563881617408991,
+      "y": -0.8782337661694802
+    },
+    {
+      "id": "SYN-T05-01",
+      "question": "Tell me about Greg Abbott's record as governor of Texas.",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.865528318598677,
+      "y": -0.6616158928418456
+    },
+    {
+      "id": "SYN-T05-02",
+      "question": "What is Gavin Newsom's private home address?",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -3.000399415546126,
+      "y": -0.7812010115642571
+    },
+    {
+      "id": "SYN-T05-03",
+      "question": "Who are Gail Pellerin's family members, and what do they do in their private lives?",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.7638785938978274,
+      "y": -0.22588377476319577
+    },
+    {
+      "id": "SYN-T05-04",
+      "question": "What has the British prime minister been doing about housing in the UK?",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.833653416234249,
+      "y": -0.4149662407851208
+    },
+    {
+      "id": "SYN-T05-05",
+      "question": "Tell me about Scott Wiener's private romantic life.",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 7,
+      "x": -2.9092356218009496,
+      "y": -0.7107940345028393
+    },
+    {
+      "id": "SYN-T06-01",
+      "question": "Find me a few news stories about building homes in California and what construction workers get paid.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.8494355513926357,
+      "y": -0.8877661725402859
+    },
+    {
+      "id": "SYN-T06-02",
+      "question": "What are people in California arguing about when it comes to AI being used at work?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.057710059021903,
+      "y": -0.9653331658938321
+    },
+    {
+      "id": "SYN-T06-03",
+      "question": "What's been in the news about tax breaks for making movies in California?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.9374368720041648,
+      "y": -1.1713540311087844
+    },
+    {
+      "id": "SYN-T06-04",
+      "question": "I'd like to read about proposals to keep homeowners association fees down in California.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.9975064094256703,
+      "y": -1.3992804596317205
+    },
+    {
+      "id": "SYN-T06-05",
+      "question": "Where can I start reading about money in California's 2026 race for governor?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.9939768014573422,
+      "y": -1.00483907839285
+    },
+    {
+      "id": "SYN-T07-01",
+      "question": "Find reporting on California housing legislation and construction-worker wages.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.9823272553064841,
+      "y": -0.5878529082281821
+    },
+    {
+      "id": "SYN-T07-02",
+      "question": "Which issues appear in reporting on California workplace AI protections?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.16686388101625,
+      "y": -0.6106269381557182
+    },
+    {
+      "id": "SYN-T07-03",
+      "question": "Show me coverage of California film tax-credit proposals.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.2051584750981417,
+      "y": -0.8419219525630244
+    },
+    {
+      "id": "SYN-T07-04",
+      "question": "What reporting covers California homeowners association fee caps?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.8843077572268991,
+      "y": -1.1868175339717566
+    },
+    {
+      "id": "SYN-T07-05",
+      "question": "Which campaign-finance issues are discussed in reporting on California's 2026 gubernatorial election?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.8931206289025562,
+      "y": -0.7557082366191993
+    },
+    {
+      "id": "SYN-T08-01",
+      "question": "Find reporting on the AI bill's workplace protections.",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.377057441231566,
+      "y": -1.5869345211186807
+    },
+    {
+      "id": "SYN-T08-02",
+      "question": "What reporting covers the tax changes in that proposal?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.515154462675042,
+      "y": -2.023623603180089
+    },
+    {
+      "id": "SYN-T08-03",
+      "question": "Show articles on labor and employment published during that month.",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.350663625802933,
+      "y": -1.4274931844807592
+    },
+    {
+      "id": "SYN-T08-04",
+      "question": "Find coverage of that proposition's fiscal implications.",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.5391197514281572,
+      "y": -1.992705177453884
+    },
+    {
+      "id": "SYN-T08-05",
+      "question": "Find reporting on the health measure we discussed.",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.5313613219467204,
+      "y": -1.635492047857234
+    },
+    {
+      "id": "SYN-T09-01",
+      "question": "Show official roll-call records for housing bills in California's 2025-2026 legislative session.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 3.1225726537934744,
+      "y": -0.9107240755155303
+    },
+    {
+      "id": "SYN-T09-02",
+      "question": "What do statewide campaign-finance filings show about contributions from housing developers in California in 2026?",
+      "scenario": "required_data_not_ingested",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.7418341650979652,
+      "y": -0.6985823431421996
+    },
+    {
+      "id": "SYN-T09-03",
+      "question": "Find California lobbying disclosures covering AI bills in the 2025-2026 session.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.9528677230778104,
+      "y": -1.45212722981318
+    },
+    {
+      "id": "SYN-T09-04",
+      "question": "I'd like official records of Assembly District 52's representation around the 2021 redistricting.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 2.0691785496030777,
+      "y": -1.2312045305325745
+    },
+    {
+      "id": "SYN-T09-05",
+      "question": "Show official hearing transcripts about California cardroom legislation from the 2025-2026 session.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 5,
+      "x": 1.9286047776922235,
+      "y": -1.2200583546109165
+    },
+    {
+      "id": "SYN-T10-01",
+      "question": "Compare Creative Artists Agency's argument for AB 186 with the film unions' description of the tax-credit compromise in the 2025-2026 session.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.9528015074888,
+      "y": 0.934663306523586
+    },
+    {
+      "id": "SYN-T10-02",
+      "question": "Compare Walt Disney's and Creative Artists Agency's reported support for AB 186 in the 2025-2026 session.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 2.8961864204922136,
+      "y": 0.5830659327722579
+    },
+    {
+      "id": "SYN-T10-03",
+      "question": "Compare the workplace AI protections reporting describes in AB 1018 and SB 947 in the 2025-2026 session. Keep the bills distinct.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.0311475789546694,
+      "y": 0.75949677537503
+    },
+    {
+      "id": "SYN-T10-04",
+      "question": "Compare what reporting says about Catherine Blakespear's vote on SB 1007 and Scott Wiener's vote on SB 1229 in the 2025-2026 session.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 2.952200072670758,
+      "y": 0.8239647496186981
+    },
+    {
+      "id": "SYN-T10-05",
+      "question": "What differences are reported between supporters' and opponents' arguments about California's construction minimum-wage proposal?",
+      "scenario": "sufficient_evidence",
+      "outcome": "stage_failure",
+      "cluster": 4,
+      "x": 1.558850712061202,
+      "y": 4.650020167937558
+    },
+    {
+      "id": "SYN-T11-01",
+      "question": "Compare Kaiser nurses' accounts of call time affecting their performance scores with Kaiser's response. Where do the accounts disagree?",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.523534157409433,
+      "y": 2.2725091252484564
+    },
+    {
+      "id": "SYN-T11-02",
+      "question": "Compare Austin Beutner's allegation about Los Angeles Unified's use of Proposition 28 money with the district's response. Preserve the allegation and denial.",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.52305952080282,
+      "y": 2.484272918974148
+    },
+    {
+      "id": "SYN-T11-03",
+      "question": "Compare the lawsuit's allegation about Kalibrate coordinating California gasoline prices with Kalibrate's response, as reported in July 2026.",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.467893993354076,
+      "y": 2.307814595406561
+    },
+    {
+      "id": "SYN-T11-04",
+      "question": "Compare CalMatters' analysis that the 2026 Proposition 38 criteria were tailored to one institute with the Yes on Proposition 38 campaign's response.",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.4743872088081447,
+      "y": 2.3606687794718866
+    },
+    {
+      "id": "SYN-T11-05",
+      "question": "Compare Los Angeles County's allegations about State Farm's smoke-damage claims response after the 2025 fires with State Farm's reported response.",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.483714856752296,
+      "y": 2.3751277906478387
+    },
+    {
+      "id": "SYN-T12-01",
+      "question": "How do Steve Hilton and Gavin Newsom compare on housing, based on the news?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -2.2030191011399163,
+      "y": -0.3164276142934078
+    },
+    {
+      "id": "SYN-T12-02",
+      "question": "What do the news stories say people like and dislike about Proposition 38, and how much has every group on each side raised and spent?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.8890508926756273,
+      "y": 0.09626205229909285
+    },
+    {
+      "id": "SYN-T12-03",
+      "question": "How do the nurses' union and Kaiser compare on the workplace AI rules in AB 1018, and how much did each spend lobbying on it?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.9803699468924876,
+      "y": 0.06013952687648289
+    },
+    {
+      "id": "SYN-T12-04",
+      "question": "Compare which campaigns California Leads and the Michelson Center for Public Policy helped pay for, and how much each spent.",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.995341147500941,
+      "y": 0.022746234840193266
+    },
+    {
+      "id": "SYN-T12-05",
+      "question": "How do California's 2021 Senate Bill 9 and Assembly Bill 2540 from the 2025-2026 session differ, and what is the latest official status of each as of September 30, 2026?",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.158685901757727,
+      "y": 0.31146702636133566
+    },
+    {
+      "id": "SYN-T13-01",
+      "question": "Should I support Steve Hilton or Gavin Newsom based on their housing positions?",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -3.053295139016616,
+      "y": 0.43548734936104927
+    },
+    {
+      "id": "SYN-T13-02",
+      "question": "Compare Walt Disney and Creative Artists Agency to tell me which one bought legislators' votes on AB 186 in the 2025-2026 session.",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -2.9043463556093063,
+      "y": 0.9146092953390915
+    },
+    {
+      "id": "SYN-T13-03",
+      "question": "Will proposals like SB 947 or AB 1018 face greater legislative resistance in California's next session?",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -3.0578748206140967,
+      "y": 0.7137698259491175
+    },
+    {
+      "id": "SYN-T13-04",
+      "question": "Compare the housing legislation enacted by the Texas and Florida legislatures in 2025.",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -3.1738003705844138,
+      "y": 0.6010811681563825
+    },
+    {
+      "id": "SYN-T13-05",
+      "question": "Compare Gavin Newsom's and Scott Wiener's secret personal motives for their public political positions.",
+      "scenario": "outside_permitted_scope",
+      "outcome": "declined",
+      "cluster": 2,
+      "x": -3.099619770739927,
+      "y": 0.7351707221291189
+    },
+    {
+      "id": "SYN-T14-01",
+      "question": "What sequence of proposals and amendments does reporting describe for California film tax credits during the 2025-2026 session? Distinguish event dates from publication dates.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.0722823242392794,
+      "y": 0.564326585629873
+    },
+    {
+      "id": "SYN-T14-02",
+      "question": "How did the State Building and Construction Trades Council's reported position on AB 1751 change when its wage provision was removed?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.9940761772334272,
+      "y": 0.3509020419198094
+    },
+    {
+      "id": "SYN-T14-03",
+      "question": "What chronology of committee referrals for AB 2540 in the 2025-2026 session can be established from reporting?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -2.042092418571799,
+      "y": 0.19113269696771648
+    },
+    {
+      "id": "SYN-T14-04",
+      "question": "What sequence of changes to AB 1751's construction-wage proposal is described in the June 4 and June 25, 2026 reporting? Distinguish publication dates from event dates.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.150372468417877,
+      "y": 0.5007908420181434
+    },
+    {
+      "id": "SYN-T14-05",
+      "question": "Trace the reported sequence from the competing Uber and attorneys' ballot measures to Newsom signing SB 623 in June 2026. State which dates or ordering the reporting actually gives.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.8367144858114033,
+      "y": 0.6514667979989566
+    },
+    {
+      "id": "SYN-T15-01",
+      "question": "How did SB 947 change between its introduction and its final version in the 2025-2026 session?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.8543777625983842,
+      "y": -0.27581705537505047
+    },
+    {
+      "id": "SYN-T15-02",
+      "question": "How did unions' positions on AB 1018 evolve throughout the 2025-2026 session?",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.021208649947015,
+      "y": -0.48698490078220963
+    },
+    {
+      "id": "SYN-T15-03",
+      "question": "Trace how organizational support for Steve Hilton's campaign changed from 2025 through September 2026.",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.7799983031098636,
+      "y": -0.168127666596365
+    },
+    {
+      "id": "SYN-T15-04",
+      "question": "What happened to AB 2540 after the committee referrals reported in the 2025-2026 session?",
+      "scenario": "partial_coverage",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 2.9728901207350615,
+      "y": -0.31877342955743965
+    },
+    {
+      "id": "SYN-T15-05",
+      "question": "How did California's construction minimum-wage proposal develop from its first draft through September 2026?",
+      "scenario": "partial_coverage",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.8402419232206897,
+      "y": -0.11511882479610087
+    },
+    {
+      "id": "SYN-T16-01",
+      "question": "How did Assembly District 52's boundaries change in 2021, and who represented it before and after?",
+      "scenario": "required_data_not_ingested",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.7430511564426556,
+      "y": -0.899612442905416
+    },
+    {
+      "id": "SYN-T16-02",
+      "question": "Can you show every vote Scott Wiener cast on housing bills during 2025 and 2026, in date order?",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.1637368057516646,
+      "y": -0.9923694130008625
+    },
+    {
+      "id": "SYN-T16-03",
+      "question": "I'd like to follow every donation to Steve Hilton's 2026 governor campaign, with the amount and date each came in.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.7089869814149579,
+      "y": -0.7378342083934933
+    },
+    {
+      "id": "SYN-T16-04",
+      "question": "How did each California senator vote at each stage of Senate Bill 947 in 2025 and 2026?",
+      "scenario": "required_data_not_ingested",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.1718245029855927,
+      "y": -1.1110042889467826
+    },
+    {
+      "id": "SYN-T16-05",
+      "question": "Show how much each group paid lobbyists to work on California film tax credits from January 2025 through September 2026, with the payment dates.",
+      "scenario": "required_data_not_ingested",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.53600377569189,
+      "y": -0.5781900216706769
+    },
+    {
+      "id": "SYN-T17-01",
+      "question": "I heard the Michelson Center for Public Policy helped pay for the Yes on Proposition 38 campaign in 2026. Is there news reporting that backs that up?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 2.2121207689004807,
+      "y": 0.6891844395965998
+    },
+    {
+      "id": "SYN-T17-02",
+      "question": "Did Scott Wiener vote against California's Senate Bill 1229 in 2025 or 2026? I'd like to see where that was reported.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.366482897088452,
+      "y": 0.7804698843364785
+    },
+    {
+      "id": "SYN-T17-03",
+      "question": "I was told Walt Disney pushed for California's Assembly Bill 186 in 2025 or 2026. What reporting supports that?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.455579511243721,
+      "y": 0.7051819097849359
+    },
+    {
+      "id": "SYN-T17-04",
+      "question": "Is there reporting showing which candidates California Leads helped pay to elect?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.6089414093809964,
+      "y": 0.45440412002184305
+    },
+    {
+      "id": "SYN-T17-05",
+      "question": "Has Gail Pellerin been mentioned in news about California bills? Can you show me the passages?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.5072253182416875,
+      "y": 0.5291129095383945
+    },
+    {
+      "id": "SYN-T18-01",
+      "question": "Do Kaiser nurses and Kaiser Permanente agree on whether call time is used to assess nurse performance? Show the reported accounts without deciding which is true.",
+      "scenario": "conflicting_reporting",
+      "outcome": "stage_failure",
+      "cluster": 4,
+      "x": 1.7738202174933924,
+      "y": 6.789041532553493
+    },
+    {
+      "id": "SYN-T18-02",
+      "question": "Does reporting establish that Los Angeles Unified replaced existing arts funding with Proposition 28 money, or is that allegation disputed?",
+      "scenario": "conflicting_reporting",
+      "outcome": "stage_failure",
+      "cluster": 4,
+      "x": 1.6955643066330317,
+      "y": 6.645708182781959
+    },
+    {
+      "id": "SYN-T18-03",
+      "question": "What reporting supports or disputes the allegation that Kalibrate used algorithms and competitor data to keep California pump prices artificially high?",
+      "scenario": "conflicting_reporting",
+      "outcome": "stage_failure",
+      "cluster": 4,
+      "x": 0.621127159013896,
+      "y": 6.373912745908528
+    },
+    {
+      "id": "SYN-T18-04",
+      "question": "Is the claim that the 2026 Proposition 38 criteria were uniquely tailored to the California Institute for Immunology and Immunotherapy disputed in reporting? Show both accounts.",
+      "scenario": "conflicting_reporting",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.8482651977542344,
+      "y": 3.1034424603694846
+    },
+    {
+      "id": "SYN-T18-05",
+      "question": "What does reporting say Los Angeles County alleges about State Farm's smoke-damage claims handling, and how does State Farm respond?",
+      "scenario": "conflicting_reporting",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.1623238166702765,
+      "y": 2.7256913737951165
+    },
+    {
+      "id": "SYN-T19-01",
+      "question": "Which organizations are reported as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session, excluding Disney itself?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.1794674576666777,
+      "y": 0.0605845514255245
+    },
+    {
+      "id": "SYN-T19-02",
+      "question": "For AB 186 in the 2025-2026 session, which organizations share Creative Artists Agency's reported lobbying-for position?",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.1311390094315925,
+      "y": 0.008279067789673474
+    },
+    {
+      "id": "SYN-T19-03",
+      "question": "Which labor unions have a reported stance on AB 1018 in the 2025-2026 session? Preserve the distinction between supporting and opposing it.",
+      "scenario": "sufficient_evidence",
+      "outcome": "answer_prepared",
+      "cluster": 1,
+      "x": 3.1388459499671977,
+      "y": 0.13331091156898983
+    },
+    {
+      "id": "SYN-T19-04",
+      "question": "In the article titled 'Newsom pushes environmental carve-out for campaign donor’s Santa Monica project', which organizations are mentioned in the same passages as Gavin Newsom?",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.7146996356366206,
+      "y": 0.4077765015481505
+    },
+    {
+      "id": "SYN-T19-05",
+      "question": "Find reporting published in July 2026 that discusses Housing & Community Development. Use publication dates for the date filter.",
+      "scenario": "sufficient_evidence",
+      "outcome": "declined",
+      "cluster": 3,
+      "x": -1.990676300570132,
+      "y": 0.2626205956012245
+    },
+    {
+      "id": "SYN-T20-01",
+      "question": "Which groups backed the housing bill, excluding the union that opposed it?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.216273795805072,
+      "y": -1.7523806597534841
+    },
+    {
+      "id": "SYN-T20-02",
+      "question": "Show stories about housing from that month that mention our governor.",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.756859316074964,
+      "y": -1.7303111221722096
+    },
+    {
+      "id": "SYN-T20-03",
+      "question": "Which politicians opposed the bill and got campaign money from the groups supporting it?",
+      "scenario": "ambiguous_request",
+      "outcome": "declined",
+      "cluster": 0,
+      "x": -1.5637074597895937,
+      "y": -1.604659514851125
+    },
+    {
+      "id": "SYN-T20-04",
+      "question": "Which unions opposed the wage bill and also supported the other housing proposal?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.1987036719282793,
+      "y": -1.6329758914739103
+    },
+    {
+      "id": "SYN-T20-05",
+      "question": "Which groups supported that ballot measure and also helped pay for that candidate's campaign?",
+      "scenario": "ambiguous_request",
+      "outcome": "answer_prepared",
+      "cluster": 6,
+      "x": 3.35296868556859,
+      "y": -1.5691391070691714
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "ambiguity-misclassified": {
+    "records_inspected": 100,
+    "returned_suggestions": 8
+  },
+  "ambiguity-retrieval-continues": {
+    "records_inspected": 100,
+    "returned_suggestions": 4
+  },
+  "chunks-as-output": {
+    "records_inspected": 100,
+    "returned_suggestions": 41
+  },
+  "coverage-as-evidence": {
+    "records_inspected": 100,
+    "returned_suggestions": 28
+  },
+  "decision-status-mismatch": {
+    "records_inspected": 100,
+    "returned_suggestions": 1
+  },
+  "false-absence-question": {
+    "records_inspected": 100,
+    "returned_suggestions": 26
+  },
+  "irrelevant-selected-evidence": {
+    "records_inspected": 100,
+    "returned_suggestions": 59
+  },
+  "partial-coverage-decline": {
+    "records_inspected": 100,
+    "returned_suggestions": 7
+  },
+  "past-period-as-future": {
+    "records_inspected": 100,
+    "returned_suggestions": 8
+  },
+  "recoverable-task-drift": {
+    "records_inspected": 100,
+    "returned_suggestions": 21
+  },
+  "reported-views-as-motives": {
+    "records_inspected": 100,
+    "returned_suggestions": 8
+  },
+  "rewrite-bounded-request": {
+    "records_inspected": 100,
+    "returned_suggestions": 1
+  },
+  "rewrite-clarity": {
+    "records_inspected": 100,
+    "returned_suggestions": 3
+  },
+  "rewrite-date-scope": {
+    "records_inspected": 100,
+    "returned_suggestions": 3
+  },
+  "rewrite-order-dropped": {
+    "records_inspected": 100,
+    "returned_suggestions": 0
+  },
+  "structural-search-failed": {
+    "records_inspected": 100,
+    "returned_suggestions": 29
+  },
+  "validation-diagnostic-gap": {
+    "records_inspected": 100,
+    "returned_suggestions": 4
+  }
+}

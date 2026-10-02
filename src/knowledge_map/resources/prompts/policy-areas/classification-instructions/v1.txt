@@ -1,0 +1,11 @@
+You are classifying one California politics news article by the policy areas it
+discusses.
+
+Choose from this closed vocabulary, copying a name exactly as written:
+
+{vocabulary}
+
+Return every area the article discusses and no others.  An area belongs in the
+answer when the article's discussion is about it, not when a word from its name
+merely appears.  There is no minimum and no maximum: an article the vocabulary
+does not cover returns an empty list.

@@ -19,6 +19,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from knowledge_map.adapters.coreference import get_agent_metadata
 from knowledge_map.ontology import news
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas import (
     ModelDeployment,
     Node,
@@ -47,19 +48,9 @@ def render_policy_area_vocabulary() -> str:
     return "\n".join(f"- {area.name}" for area in news.POLICY_AREAS)
 
 
-CLASSIFICATION_INSTRUCTIONS = f"""\
-You are classifying one California politics news article by the policy areas it
-discusses.
-
-Choose from this closed vocabulary, copying a name exactly as written:
-
-{render_policy_area_vocabulary()}
-
-Return every area the article discusses and no others.  An area belongs in the
-answer when the article's discussion is about it, not when a word from its name
-merely appears.  There is no minimum and no maximum: an article the vocabulary
-does not cover returns an empty list.
-"""
+CLASSIFICATION_INSTRUCTIONS = load_prompt(
+    "policy-areas/classification-instructions", version=1
+).format(vocabulary=render_policy_area_vocabulary())
 
 
 def _get_stage_agent(
@@ -110,21 +101,7 @@ def get_classification_agent(
     )
 
 
-ASSIGNMENT_INSTRUCTIONS = """\
-You are deciding which of a California politics news article's policy areas
-each measure the article names is about.
-
-You are given the article, the policy areas it discusses, and every bill and
-proposition the article names.  For each measure, return one assignment per
-policy area the article connects it to, copying the measure's name and label
-exactly as they are given to you and copying the policy area exactly as it is
-given to you.
-
-Assign only what the article supports.  A measure the article never connects to
-any of these areas gets no assignment, and an area the article never connects
-to a measure is not an answer.  Never name a measure or an area that is not in
-the lists you were given.
-"""
+ASSIGNMENT_INSTRUCTIONS = load_prompt("policy-areas/assignment-instructions", version=1)
 
 
 def render_assignment_request(
@@ -142,11 +119,11 @@ def render_assignment_request(
     rendered_measures = "\n".join(
         f"- {measure.name} ({measure.label})" for measure in measures
     )
-    return (
-        f"Article title: {article.title or ''}\n\n"
-        f"Article:\n{article.content}\n\n"
-        f"Policy areas this article discusses:\n{rendered_areas}\n\n"
-        f"Measures this article names:\n{rendered_measures}\n"
+    return load_prompt("policy-areas/assignment-request", version=1).format(
+        title=article.title or "",
+        content=article.content,
+        rendered_areas=rendered_areas,
+        rendered_measures=rendered_measures,
     )
 
 
@@ -292,7 +269,9 @@ class PydanticAIPolicyAreaAdapter:
 
         for agent in (self.agent, self.assignment_agent):
             try:
-                result = agent.run_sync("health_check", model_settings={"max_tokens": 1})
+                result = agent.run_sync(
+                    load_prompt("shared/health-check", version=1), model_settings={"max_tokens": 1}
+                )
             except Exception:
                 return False
             if result is None:

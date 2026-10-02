@@ -1,0 +1,4 @@
+Correct only the rejected Mention Spans listed below. Return only replacement Mention Spans for those targets, and do not return accepted or unrelated Mention Spans.
+
+Rejected Mention Spans and Critic Reasons:
+{rejected}

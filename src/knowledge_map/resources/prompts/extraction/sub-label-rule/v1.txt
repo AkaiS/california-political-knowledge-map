@@ -1,0 +1,1 @@
+- `{label}`: {requirement}. Allowed sub-labels: {allowed}.

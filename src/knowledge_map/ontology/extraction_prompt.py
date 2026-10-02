@@ -1,6 +1,7 @@
 """Render the model-extractable portion of the News Ontology for the prompt."""
 
 from knowledge_map.ontology import news, primary
+from knowledge_map.prompts import load_prompt
 
 
 def _relationship_property_lines(relationships: dict) -> list[str]:
@@ -24,33 +25,33 @@ def _relationship_property_lines(relationships: dict) -> list[str]:
 
     lines = [
         "",
-        "### Relationship properties",
+        load_prompt("extraction/relationship-properties-heading", version=1),
         "",
-        "Attach any property the text supports. The properties below have a fixed "
-        "form: when you do supply one, write it exactly this way, so the same value "
-        "reported by two articles is recognisably the same value.",
+        load_prompt("extraction/relationship-properties-instructions", version=1),
         "",
     ]
     for relationship_type, specs in described.items():
-        lines.append(f"- `{relationship_type}`:")
+        lines.append(
+            load_prompt("extraction/relationship-heading", version=1).format(
+                relationship_type=relationship_type
+            )
+        )
         for spec in specs:
             entailed = (
-                " Always write this one: a passage that states the claim has already "
-                "stated this value."
+                load_prompt("extraction/entailed-property-instructions", version=1)
                 if spec.entailed
                 else ""
             )
             lines.append(
-                f"  - `{spec.name}`: {spec.form}. Example: `{spec.example}`.{entailed}"
+                load_prompt("extraction/relationship-property", version=1).format(
+                    name=spec.name, form=spec.form, example=spec.example, entailed=entailed
+                )
             )
 
     lines.extend(
         [
             "",
-            "Apart from those, write a value only where the article states one. Never "
-            "estimate, round, convert, or carry a value over from elsewhere in the "
-            "text. An omitted value is recorded as unknown; an invented one is "
-            "recorded as fact.",
+            load_prompt("extraction/unknown-property-instructions", version=1),
         ]
     )
     return lines
@@ -62,40 +63,55 @@ def render_extraction_ontology() -> str:
     relationships = news.EXTRACTED_RELATIONSHIPS
 
     lines = [
-        "## Closed ontology",
+        load_prompt("extraction/ontology-heading", version=1),
         "",
-        "Use exactly one of these base labels for each entity; never invent another:",
+        load_prompt("extraction/label-instructions", version=1),
     ]
     lines.extend(f"- `{label}`" for label in sorted(labels))
 
-    lines.extend(["", "### Sub-label rules", ""])
+    lines.extend(["", load_prompt("extraction/sub-labels-heading", version=1), ""])
     for label in sorted(news.SUB_LABELS.keys() & labels):
         allowed = ", ".join(f"`{item}`" for item in sorted(news.SUB_LABELS[label]))
-        requirement = "exactly one is required" if label in news.REQUIRED_SUB_LABELS else "optional; use one or more when supported"
-        lines.append(f"- `{label}`: {requirement}. Allowed sub-labels: {allowed}.")
+        requirement = (
+            load_prompt("extraction/required-sub-label", version=1)
+            if label in news.REQUIRED_SUB_LABELS
+            else load_prompt("extraction/optional-sub-label", version=1)
+        )
+        lines.append(
+            load_prompt("extraction/sub-label-rule", version=1).format(
+                label=label, requirement=requirement, allowed=allowed
+            )
+        )
 
-    lines.extend(["", "### Properties by label", ""])
+    lines.extend(["", load_prompt("extraction/label-properties-heading", version=1), ""])
     for label in sorted(labels):
         properties = ", ".join(f"`{item}`" for item in sorted(news.PROPERTIES[label])) or "none"
-        lines.append(f"- `{label}`: {properties}.")
+        lines.append(
+            load_prompt("extraction/label-properties", version=1).format(
+                label=label, properties=properties
+            )
+        )
 
     lines.extend(
         [
             "",
             (
-                "Use only the property names listed for that label. Use ISO dates "
-                "(`YYYY-MM-DD`) and integers for years. Omit unknown properties; never guess them."
+                load_prompt("extraction/label-property-instructions", version=1)
             ),
             "",
-            "## Allowed relationships",
+            load_prompt("extraction/relationships-heading", version=1),
             "",
-            "Emit only these relationship types and endpoint label combinations:",
+            load_prompt("extraction/relationship-instructions", version=1),
         ]
     )
     for relationship_type, shape in sorted(relationships.items()):
         sources = " or ".join(f"`{item}`" for item in sorted(shape.source_labels))
         targets = " or ".join(f"`{item}`" for item in sorted(shape.target_labels))
-        lines.append(f"- `{relationship_type}`: {sources} -> {targets}")
+        lines.append(
+            load_prompt("extraction/relationship-shape", version=1).format(
+                relationship_type=relationship_type, sources=sources, targets=targets
+            )
+        )
 
     lines.extend(_relationship_property_lines(relationships))
     return "\n".join(lines)

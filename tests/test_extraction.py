@@ -120,7 +120,7 @@ def test_load_instructions(tmp_path):
     prompt_content = "Please extract carefully.\n\n{{NEWS_ONTOLOGY}}"
     prompt_file.write_text(prompt_content)
     
-    with patch("knowledge_map.adapters.extraction.PROMPT_PATH", str(prompt_file)):
+    with patch("knowledge_map.adapters.extraction.load_prompt", return_value=prompt_content):
         instructions = load_instructions()
         assert "Please extract carefully." in instructions
         assert "{{NEWS_ONTOLOGY}}" not in instructions

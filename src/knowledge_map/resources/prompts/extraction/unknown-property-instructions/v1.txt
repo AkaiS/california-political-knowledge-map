@@ -1,0 +1,1 @@
+Apart from those, write a value only where the article states one. Never estimate, round, convert, or carry a value over from elsewhere in the text. An omitted value is recorded as unknown; an invented one is recorded as fact.

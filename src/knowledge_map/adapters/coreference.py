@@ -13,6 +13,7 @@ from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from knowledge_map.config import settings
+from knowledge_map.prompts import load_prompt
 from knowledge_map.schemas import (
     CoreferenceResolutionRun,
     CriticVerdict,
@@ -242,11 +243,12 @@ def format_mention_spans(mention_spans: Sequence[MentionSpan]) -> str:
     """Render Mention Spans as the compact input to the Coreference Critic."""
 
     return "\n".join(
-        "- "
-        f"sentence_label={mention_span.sentence_label!r}, "
-        f"mention_text={mention_span.mention_text!r}, "
-        f"occurrence={mention_span.occurrence}, "
-        f"canonical_entity_name={mention_span.canonical_entity_name!r}"
+        load_prompt("coreference/mention-span", version=1).format(
+            sentence_label=mention_span.sentence_label,
+            mention_text=mention_span.mention_text,
+            occurrence=mention_span.occurrence,
+            canonical_entity_name=mention_span.canonical_entity_name,
+        )
         for mention_span in mention_spans
     )
 
@@ -274,9 +276,8 @@ class CoreferenceDeps:
 def numbered_article_instructions(ctx: RunContext[CoreferenceDeps]) -> str:
     """Render the numbered Source Article, for both agents and nowhere else."""
 
-    return (
-        "Numbered Source Article:\n"
-        f"{format_numbered_sentences(ctx.deps.sentences)}"
+    return load_prompt("coreference/numbered-article", version=1).format(
+        numbered_sentences=format_numbered_sentences(ctx.deps.sentences)
     )
 
 
@@ -306,55 +307,17 @@ def annotator_output_tokens(content: str) -> int:
 
 
 ANNOTATOR_INSTRUCTIONS = (
-    "You are an expert Coreference Resolution annotator."
-    "Identify ambiguous pronouns and referring expressions in the numbered Source Article and map each one to its canonical entity name.\n\n"
-    "Return only a structured list of Mention Spans. For every Mention Span:\n"
-    "- copy `sentence_label` from the label at the start of the sentence line;\n"
-    "- copy `mention_text` verbatim, including its capitalization. Ensure `mention_text` contains only the pronoun, noun phrase, or referring expression itself, and never include adjacent verbs, prepositions, or non-referential words;\n"
-    "- return a separate Mention Span for every occurrence of a mention, including repeats within one sentence: number them with `occurrence` 1, 2, 3 and so on in the order they appear. `occurrence` is one-based and must always be explicitly included in every Mention Span, even when it is 1. Occurrences are counted over the exact `mention_text`, so `He` and `he` are counted separately; and\n"
-    "- provide the canonical, fully expanded `canonical_entity_name`.\n\n"
-    "Return only Mention Spans; never return the Source Article itself. Return an empty list when there are no references to resolve.\n\n"
-    "`canonical_entity_name` is an identifier, not a description. Every "
-    "mention you give the same name to becomes the same thing, and every "
-    "difference in spelling makes a new one, so write the name the same way "
-    "every time it appears in this article.\n\n"
-    "For a person, use their first name, their last name, and their middle "
-    "name when the article gives one: `Gary K. Michelson`, `Sarah Hill`. Not "
-    "`Michelson`, not `the donor`, and not a title or role.\n\n"
-    "For an organisation, a ballot measure, or any other named thing, use the "
-    "name the article gives it: `California Institute for Immunology and "
-    "Immunotherapy`, `Proposition 38`, `UCLA`. Not `the institute`, not `the "
-    "measure`, not `the $4.2 billion institute`.\n\n"
-    "Do not copy the phrase out of the sentence you found the mention in, and "
-    "do not add anything the name does not need. `the other half of the bond "
-    "money` and `the $120 million contribution to the institute` are "
-    "descriptions of a moment in the article, not names.\n\n"
-    "Some entities genuinely have no name: `voters`, `the average voter`, "
-    "`factory farms`. Name those with the shortest phrase that identifies the "
-    "same thing everywhere it appears."
+    load_prompt("coreference/annotator-instructions", version=1)
 )
 
 
 CRITIC_INSTRUCTIONS = (
-    "You are a Coreference Critic.\n"
-    "Review the numbered Source Article and the validated Mention Spans "
-    "listed below it. The Source Article appears exactly once. Judge each "
-    "listed Mention Span independently.\n\n"
-    "You must:\n"
-    "1. Return one verdict for every validated Mention Span;\n"
-    "2. copy its `sentence_label`, `mention_text`, and `occurrence` exactly;\n"
-    "3. set `accepted` to true only when its canonical entity is correct; and\n"
-    "4. provide a short, specific `reason` whenever `accepted` is false.\n\n"
-    "Return only the structured list of per-Mention-Span verdicts. Do not "
-    "return an article-level pass/fail value, and do not invent verdicts "
-    "for Mention Spans that were not listed."
+    load_prompt("coreference/critic-instructions", version=1)
 )
 
 
 ANNOTATION_PROMPT = (
-    "Resolve the references in the Source Article shown above. It is "
-    "presented as numbered sentences; copy a visible sentence label "
-    "into each Mention Span."
+    load_prompt("coreference/annotation-request", version=1)
 )
 """What the annotator is asked for, in every path that asks it.
 
@@ -368,17 +331,13 @@ def _unlocatable_retry_message(discards: Sequence[MentionSpanDiscard]) -> str:
     """Tell the annotator why nothing it returned could be located."""
 
     reported = "\n".join(
-        f"{format_mention_spans([discard.mention_span])}\n  Reason: {discard.reason}"
+        load_prompt("coreference/discard-reason", version=1).format(
+            mention_span=format_mention_spans([discard.mention_span]), reason=discard.reason
+        )
         for discard in discards
     )
     return (
-        "None of the Mention Spans you returned could be located in the "
-        "numbered Source Article. Copy `sentence_label` from a label shown at "
-        "the start of a sentence line, copy `mention_text` verbatim from that "
-        "sentence, and set `occurrence` to a one-based index that exists "
-        "there. Return the corrected Mention Spans.\n\n"
-        "Unlocatable Mention Spans:\n"
-        f"{reported}"
+        load_prompt("coreference/unlocatable-retry", version=1).format(reported=reported)
     )
 
 
@@ -637,12 +596,8 @@ def _log_contested_locations(mention_spans: Sequence[MentionSpan]) -> None:
 def _critic_prompt(mention_spans: Sequence[MentionSpan]) -> str:
     """Ask for one verdict per Mention Span; the article is in the instructions."""
 
-    return (
-        "Review each validated Mention Span against the numbered Source "
-        "Article. Return one verdict per listed Mention Span and copy its "
-        "identity fields exactly.\n\n"
-        "Validated Mention Spans:\n"
-        f"{format_mention_spans(mention_spans)}"
+    return load_prompt("coreference/critic-request", version=1).format(
+        mention_spans=format_mention_spans(mention_spans)
     )
 
 
@@ -651,15 +606,13 @@ def _retry_prompt(rejected_spans: Sequence[tuple[MentionSpan, str]]) -> str:
 
     # Each reason stays attached to its own Mention Span.
     rejected = "\n".join(
-        f"{format_mention_spans([mention_span])}\n  Critic reason: {reason}"
+        load_prompt("coreference/rejected-span-reason", version=1).format(
+            mention_span=format_mention_spans([mention_span]), reason=reason
+        )
         for mention_span, reason in rejected_spans
     )
     return (
-        "Correct only the rejected Mention Spans listed below. Return only "
-        "replacement Mention Spans for those targets, and do not return "
-        "accepted or unrelated Mention Spans.\n\n"
-        "Rejected Mention Spans and Critic Reasons:\n"
-        f"{rejected}"
+        load_prompt("coreference/critic-retry", version=1).format(rejected=rejected)
     )
 
 
@@ -1313,8 +1266,8 @@ class PydanticAICoreferenceAdapter:
         try:
             agent = self.annotator_agent
             result = agent.run_sync(
-                "health_check",
-                deps=CoreferenceDeps.for_content("health_check"),
+                load_prompt("shared/health-check", version=1),
+                deps=CoreferenceDeps.for_content(load_prompt("shared/health-check", version=1)),
                 model_settings={"max_tokens": 1},
             )
             return result is not None

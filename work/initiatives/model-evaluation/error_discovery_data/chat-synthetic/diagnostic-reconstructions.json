@@ -1,0 +1,124 @@
+[
+  {
+    "record_id": "SYN-T02-02",
+    "guidance_block_id": "block-69",
+    "basis": "Recorded guidance and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources only; no model or retrieval rerun and no full EvidencePackage revalidation",
+    "selected_source_article_ids": [
+      "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/",
+      "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/",
+      "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+      "https://calmatters.org/politics/2026/09/newsom-lame-duck-session/",
+      "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+      "https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/",
+      "https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/",
+      "https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/"
+    ],
+    "guidance": {
+      "disagreements": [
+        {
+          "source_article_ids": [
+            "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/",
+            "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+          ],
+          "description": "The request to distinguish between bill sponsorship and recorded floor votes is deferred. While reporting identifies Gail Pellerin as a proponent of Assembly Bill 2624 and notes her participation in a floor vote, the available evidence does not provide a complete or definitive record of all legislative roles, sponsorships, or roll call votes required to establish a comprehensive distinction."
+        }
+      ]
+    },
+    "validator_message": "disagreements must refer to distinct selected sources",
+    "duplicate_disagreement_refs": true,
+    "unselected_refs": []
+  },
+  {
+    "record_id": "SYN-T10-05",
+    "guidance_block_id": "block-68",
+    "basis": "Recorded guidance and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources only; no model or retrieval rerun and no full EvidencePackage revalidation",
+    "selected_source_article_ids": [
+      "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/",
+      "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+      "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+    ],
+    "guidance": {
+      "disagreements": [
+        {
+          "source_article_ids": [
+            "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/",
+            "https://calmatters.org/housing/2026/ab-1751-trades-carpenters-fight/"
+          ],
+          "description": "There is a dispute regarding whether the proposed minimum wage would undermine existing prevailing wage rates or if it would act as a pay cut for certain workers."
+        }
+      ]
+    },
+    "validator_message": "disagreements must refer to distinct selected sources",
+    "duplicate_disagreement_refs": false,
+    "unselected_refs": [
+      "https://calmatters.org/housing/2026/ab-1751-trades-carpenters-fight/"
+    ]
+  },
+  {
+    "record_id": "SYN-T18-01",
+    "guidance_block_id": "block-64",
+    "basis": "Recorded guidance and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources only; no model or retrieval rerun and no full EvidencePackage revalidation",
+    "selected_source_article_ids": [
+      "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+    ],
+    "guidance": {
+      "disagreements": [
+        {
+          "source_article_ids": [
+            "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+            "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+          ],
+          "description": "Nurses report that call time factors into monthly performance scores and that exceeding 15 minutes on a call can lead to criticism or performance evaluation meetings. Conversely, Kaiser Permanente states it does not use 'Average Handle Time' to assess agent performance or enforce call time metrics."
+        }
+      ]
+    },
+    "validator_message": "disagreements must refer to distinct selected sources",
+    "duplicate_disagreement_refs": true,
+    "unselected_refs": []
+  },
+  {
+    "record_id": "SYN-T18-02",
+    "guidance_block_id": "block-61",
+    "basis": "Recorded guidance and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources only; no model or retrieval rerun and no full EvidencePackage revalidation",
+    "selected_source_article_ids": [
+      "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+      "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/"
+    ],
+    "guidance": {
+      "disagreements": [
+        {
+          "source_article_ids": [
+            "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+            "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/"
+          ],
+          "description": "The reporting notes that Austin Beutner filed a lawsuit in 2025 alleging that Los Angeles Unified cut existing arts programs and replaced them with Proposition 28 money, an allegation which the district denies."
+        }
+      ]
+    },
+    "validator_message": "disagreements must refer to distinct selected sources",
+    "duplicate_disagreement_refs": true,
+    "unselected_refs": []
+  },
+  {
+    "record_id": "SYN-T18-03",
+    "guidance_block_id": "block-60",
+    "basis": "Recorded guidance and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources only; no model or retrieval rerun and no full EvidencePackage revalidation",
+    "selected_source_article_ids": [
+      "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/"
+    ],
+    "guidance": {
+      "disagreements": [
+        {
+          "source_article_ids": [
+            "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/",
+            "https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/"
+          ],
+          "description": "The reporting notes that Kalibrate has denied allegations of using algorithms and competitor data to keep prices high."
+        }
+      ]
+    },
+    "validator_message": "disagreements must refer to distinct selected sources",
+    "duplicate_disagreement_refs": true,
+    "unselected_refs": []
+  }
+]

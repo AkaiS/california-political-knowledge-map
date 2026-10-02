@@ -1,0 +1,2 @@
+Some proposed selectors failed validation. Please adjust the CSS selectors and try again.
+Errors encountered:

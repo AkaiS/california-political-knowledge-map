@@ -1,0 +1,13 @@
+{
+  "record_id": "SYN-T18-02",
+  "basis": "Recorded guidance JSON and selected source IDs replayed through RetrievalAnswer.guidance_refers_to_selected_sources; no model or retrieval rerun",
+  "source_article_ids": [
+    "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+    "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/"
+  ],
+  "selected_source_article_ids": [
+    "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/",
+    "https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/"
+  ],
+  "validator_message": "disagreements must refer to distinct selected sources"
+}
