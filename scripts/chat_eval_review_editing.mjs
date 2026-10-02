@@ -135,14 +135,18 @@ export function createReviewEditor({
     return navigationChain;
   }
   function selectCase(name) { return moveTo(() => name); }
+  function navigationDestination(delta, matchingCases) {
+    const matching = new Set(matchingCases);
+    const index = names.indexOf(selectedCase);
+    const positions = names.map((name, position) => matching.has(name) ? position : -1).filter(position => position >= 0);
+    const destination = delta < 0 ? positions.filter(position => position < index).at(-1) : positions.find(position => position > index);
+    return names[destination];
+  }
+  function canNavigate(delta, matchingCases) {
+    return navigationDestination(delta, matchingCases) !== undefined;
+  }
   function navigate(delta, matchingCases) {
-    return moveTo(() => {
-      const matching = new Set(matchingCases());
-      const index = names.indexOf(selectedCase);
-      const positions = names.map((name, position) => matching.has(name) ? position : -1).filter(position => position >= 0);
-      const destination = delta < 0 ? positions.filter(position => position < index).at(-1) : positions.find(position => position > index);
-      return names[destination];
-    });
+    return moveTo(() => navigationDestination(delta, matchingCases()));
   }
   function prepareForUnload() {
     persistDrafts();
@@ -164,5 +168,5 @@ export function createReviewEditor({
   } catch (_) { storageFailed = true; }
   persistDrafts();
   if (drafts.size) Promise.resolve().then(flush);
-  return {get state() { return state(); }, editNote, setVerdict, undo, flush, selectCase, navigate, prepareForUnload};
+  return {get state() { return state(); }, editNote, setVerdict, undo, flush, selectCase, canNavigate, navigate, prepareForUnload};
 }

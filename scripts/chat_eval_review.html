@@ -193,11 +193,6 @@
           (caseQuestion(item).toLowerCase().includes(query) || item.name.toLowerCase().includes(query));
       });
     }
-    function nextIndex(delta) {
-      const index = cases.indexOf(selection());
-      const matching = filteredCases().map(item => cases.indexOf(item));
-      return delta < 0 ? matching.filter(position => position < index).at(-1) : matching.find(position => position > index);
-    }
     function caseRow(list, item, outsideFilter = false) {
       const row = add(list, 'button', null, `case-row${item === selection() ? ' selected' : ''}`);
       row.type = 'button'; row.onclick = () => editor.selectCase(item.name);
@@ -214,8 +209,9 @@
       if (selection() && !matching.includes(selection())) caseRow(list, selection(), true);
       for (const item of matching) caseRow(list, item);
       if (!matching.length) add(list, 'p', 'No cases match this filter.', 'empty');
-      $('previous').disabled = nextIndex(-1) === undefined;
-      $('next').disabled = nextIndex(1) === undefined;
+      const matchingNames = matching.map(item => item.name);
+      $('previous').disabled = !editor.canNavigate(-1, matchingNames);
+      $('next').disabled = !editor.canNavigate(1, matchingNames);
     }
     function applyFilters() {
       const matching = filteredCases();

@@ -111,6 +111,10 @@ test('relative navigation preserves each action and uses selection and filter me
   const persistence = controlledPersistence();
   const {editor, changes} = fixture(persistence);
   let matching = ['case-a', 'case-b', 'case-c'];
+  assert.equal(editor.canNavigate(-1, matching), false);
+  assert.equal(editor.canNavigate(1, matching), true);
+  assert.equal(editor.canNavigate(1, ['case-a']), false);
+  assert.equal(editor.state.selectedCase, 'case-a');
   editor.editNote('Save before moving');
   const first = editor.navigate(1, () => matching);
   const second = editor.navigate(1, () => matching);
@@ -121,6 +125,8 @@ test('relative navigation preserves each action and uses selection and filter me
   assert.equal(await first, true);
   assert.equal(await second, true);
   assert.equal(editor.state.selectedCase, 'case-c');
+  assert.equal(editor.canNavigate(-1, matching), true);
+  assert.equal(editor.canNavigate(1, matching), false);
   assert.equal(changes.some(state => state.selectedCase === 'case-b'), true);
   assert.deepEqual(write.payload.review, {verdict: null, note: 'Save before moving'});
   assert.equal(await editor.selectCase('case-a'), true);
@@ -379,6 +385,7 @@ test('empty reports allow save and unload without editing errors', async () => {
   assert.equal(await editor.flush(), true);
   assert.equal(editor.prepareForUnload(), false);
   assert.equal(editor.state.selectedCase, null);
+  assert.equal(editor.canNavigate(1, []), false);
   assert.equal(editor.state.pendingDraftCount, 0);
   assert.equal(editor.state.canUndo, false);
   assert.deepEqual(writes, []);
