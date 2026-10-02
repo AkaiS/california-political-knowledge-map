@@ -460,7 +460,7 @@ test('page filters work while report loading is pending and navigation becomes a
   const elements = new Map(), requests = [];
   function element() {
     return {
-      value: '', textContent: '', children: [], disabled: false,
+      value: '', textContent: '', children: [], disabled: false, hidden: false,
       classList: {toggle() {}},
       append(child) { this.children.push(child); },
       replaceChildren() { this.children = []; },
@@ -490,6 +490,7 @@ test('page filters work while report loading is pending and navigation becomes a
     fetch: url => new Promise(resolve => requests.push({url, resolve})),
   });
   assert.equal(requests.length, 3);
+  assert.equal(getElement('run-loading').hidden, false);
   getElement('search').value = 'case';
   getElement('search').oninput();
   getElement('filter').value = 'unreviewed';
@@ -508,6 +509,7 @@ test('page filters work while report loading is pending and navigation becomes a
   }
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(getElement('question').textContent, 'case-a');
+  assert.equal(getElement('run-loading').hidden, true);
   assert.equal(getElement('previous').disabled, true);
   assert.equal(getElement('next').disabled, false);
   assert.equal(getElement('search').value, 'case');

@@ -32,6 +32,11 @@
     .badge.fail { background: #fde6e3; color: #9d3022; }
     .badge.defer { background: #fff2d2; color: #865900; }
     main { max-width: 1200px; width: 100%; min-height: 0; margin: 0 auto; padding: 28px 38px 18px; display: flex; flex-direction: column; overflow: hidden; }
+    .run-loading { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 14px 18px; margin-bottom: 16px; border-radius: 8px; background: #e9f5f2; color: #116963; }
+    .run-loading[hidden] { display: none; }
+    .loading-spinner { width: 18px; height: 18px; border: 2px solid #b7d6ce; border-top-color: #188476; border-radius: 50%; animation: loading-spin .9s linear infinite; }
+    @keyframes loading-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
     .top { display: flex; flex-shrink: 0; justify-content: space-between; gap: 20px; align-items: start; }
     .top h2 { margin: 5px 0 10px; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
     .links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
@@ -135,6 +140,7 @@
       <div id="case-list"></div>
     </aside>
     <main>
+      <div id="run-loading" class="run-loading" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span>Loading run…</span></div>
       <div class="top"><div><div id="position" class="meta"></div><h2 id="question"></h2><div id="case-meta" class="meta"></div><div id="trace-links" class="links"></div></div><div class="nav"><button id="previous" title="Previous case (left arrow)">Previous</button><button id="next" title="Next case (right arrow)">Next</button></div></div>
       <div class="columns"><div class="trace-pane">
         <section><h3>Prepared answer</h3><div id="answer" class="answer rich-text"></div><p class="meta">This evaluation approves the first Query Rewrite Proposal automatically. A prepared answer does not verify browser delivery.</p></section>
@@ -525,7 +531,8 @@
         }
         if (cases.length) render(true);
         else { $('question').textContent = 'This report has no cases.'; renderReviewControls(); renderList(); }
-      }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; });
+      }).catch(error => { $('question').textContent = 'Could not load report'; $('answer').textContent = error.message; })
+      .finally(() => { $('run-loading').hidden = true; });
   </script>
 </body>
 </html>
