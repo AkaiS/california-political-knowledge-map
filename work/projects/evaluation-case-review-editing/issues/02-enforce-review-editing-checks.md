@@ -15,15 +15,15 @@ and can distinguish these checks from the optional browser workflows.
 
 ## Acceptance criteria
 
-- [ ] Normal pull-request CI explicitly installs Node 22 and runs the review
+- [x] Normal pull-request CI explicitly installs Node 22 and runs the review
       editing tests with Node's built-in runner. Tests are required to pass and
       are not conditional on a browser opt-in variable or a preinstalled runtime.
-- [ ] Existing deterministic pytest still runs through uv. The new checks require
+- [x] Existing deterministic pytest still runs through uv. The new checks require
       no browser, npm package installation, model service, or database service.
-- [ ] Reviewer documentation explains the editing module's ownership and gives
+- [x] Reviewer documentation explains the editing module's ownership and gives
       the exact local Node and uv test commands. It retains the optional browser
       command and states which behaviors still require browser verification.
-- [ ] The Node review-editing checks, focused reviewer Python checks, and full
+- [x] The Node review-editing checks, focused reviewer Python checks, and full
       deterministic Python suite pass. Record counts, commands, and any existing
       skips or warnings accurately. Browser tests remain unexecuted.
 - [ ] The final diff preserves review files, report identity, public review JSON,
@@ -43,3 +43,39 @@ Run the same Node command used by CI and the repository's full deterministic
 pytest command through uv. Inspect the workflow and retained browser tests
 without launching a browser. The final green pull request supplies CI evidence;
 do not call checks green while required runs are still pending.
+
+## Comments
+
+2026-10-02: Added Node 22 setup and the required review-editing test step to the
+normal pull-request workflow. The action is pinned to the commit attached to
+the official [setup-node v7.0.0 release](https://github.com/actions/setup-node/releases/tag/v7.0.0).
+The workflow retains `uv run --no-sync pytest -q tests` and adds no browser or
+npm installation. The reviewer guide now explains editing-module and page
+ownership, exact local setup and test commands, and what still needs browser
+verification. The optional browser commands remain documented.
+
+Verification used `UV_CACHE_DIR=/private/tmp/ca-map-review-uv-cache` for each uv
+command to keep cache writes inside the sandbox's writable paths:
+
+- `uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs`:
+  22 passed, no skips or warnings, with Node v22.23.1. This is the CI command.
+- `uv run --no-sync pytest -q tests/test_chat_eval_review.py tests/test_chat_eval_task.py`:
+  29 passed, one existing `pydantic_evals` event-loop deprecation warning.
+- `RUN_REVIEW_BROWSER_TESTS=0 RUN_NEO4J_INTEGRATION=0 uv run --no-sync pytest -q tests`:
+  1409 passed, 61 skipped, one existing OpenRouter sampling-parameter warning.
+  The opt-in browser and Neo4j checks remained disabled. Both Python runs used
+  approved sandbox escalation for temporary HTTP servers' loopback sockets.
+- The workflow parsed as YAML, and `git diff --check` passed. No Python type
+  checker is configured in this repository. This ticket changes no Python or
+  JavaScript implementation.
+
+Browser workflows were inspected and retained but not executed. The changes
+since `4dec0b6a92819a64bc11f1a04652346967d35c51` affect only CI and documentation,
+so they introduce no page access to mutable module state and no review-file,
+report-identity, JSON, shortcut, or trace-presentation changes.
+
+The final two criteria remain open for Standards and Spec review and the
+resulting project reconciliation. The conductor will record final pull-request
+CI evidence after opening the PR; local passing checks do not establish that
+future CI run's result. The ticket, parent PRD, and work index retain their
+current triage state until that handoff is complete.
