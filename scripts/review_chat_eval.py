@@ -265,6 +265,9 @@ def make_handler(
     reports_dir: Path, runs_page: bytes, reviewer_page: bytes
 ) -> type[BaseHTTPRequestHandler]:
     reviews_lock = threading.Lock()
+    review_editing_module = Path(__file__).with_name(
+        "chat_eval_review_editing.mjs"
+    ).read_bytes()
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, status: int, body: bytes, content_type: str) -> None:
@@ -290,6 +293,10 @@ def make_handler(
             elif path == "/api/runs":
                 body = json.dumps(list_runs(reports_dir), ensure_ascii=False).encode()
                 self._send(200, body, "application/json; charset=utf-8")
+            elif path == "/assets/chat_eval_review_editing.mjs":
+                self._send(
+                    200, review_editing_module, "text/javascript; charset=utf-8"
+                )
             else:
                 parts = [unquote(part) for part in path.strip("/").split("/")]
                 if not (

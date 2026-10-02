@@ -36,6 +36,35 @@ def serve_reviewer(reports_dir):
         thread.join()
 
 
+def test_review_editing_module_is_served_only_at_its_exact_trusted_host_route(tmp_path):
+    with serve_reviewer(tmp_path) as base:
+        with urlopen(f"{base}/assets/chat_eval_review_editing.mjs") as response:
+            assert response.read() == SCRIPT.with_name(
+                "chat_eval_review_editing.mjs"
+            ).read_bytes()
+            assert response.headers.get_content_type() == "text/javascript"
+            assert response.headers["Cache-Control"] == "no-store"
+
+        request = Request(
+            f"{base}/assets/chat_eval_review_editing.mjs",
+            headers={"Host": "untrusted.example"},
+        )
+        with pytest.raises(HTTPError) as rejected:
+            urlopen(request)
+        assert rejected.value.code == 403
+
+        for path in (
+            "/assets/",
+            "/assets/other.mjs",
+            "/assets/chat_eval_review_editing.mjs/",
+            "/assets/%63hat_eval_review_editing.mjs",
+            "/assets/../review_chat_eval.py",
+        ):
+            with pytest.raises(HTTPError) as missing:
+                urlopen(f"{base}{path}")
+            assert missing.value.code == 404
+
+
 def test_reviewer_uses_its_own_checkout_when_an_older_package_is_on_path(tmp_path):
     for package in (
         "knowledge_map",

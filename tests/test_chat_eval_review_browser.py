@@ -519,10 +519,9 @@ def test_undo_cancels_pending_navigation(browser_page, reviewer, control):
     page.get_by_role("button", name="Undo", exact=True).click()
     expect(page.locator("#note")).to_have_value("")
     delayed[0].continue_()
-    # Wait for both saves and navigation before checking the restored selection.
-    page.evaluate("async () => { await flushSave(); await navigationChain; }")
-    expect(page.locator("#position")).to_have_text("Case 1 of 3")
     saved(page, expect, reviewer[1], "case-a", None)
+    expect(page.locator("#progress")).not_to_contain_text("pending save")
+    expect(page.locator("#position")).to_have_text("Case 1 of 3")
     page.get_by_role("button", name="Next", exact=True).click()
     expect(page.locator("#position")).to_have_text("Case 2 of 3")
     page.get_by_role("button", name="Next", exact=True).click()
