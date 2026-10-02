@@ -119,3 +119,39 @@ as the versioning system. The YAML question set, JSON Evaluation Report, and
 human review file can each be committed and compared through Git. Once reviews
 identify repeatable failure modes, evaluators can be added against labeled
 cases without treating the initial trace collection as a benchmark.
+
+## Amendment: retain evidence for bounded retrieval decisions
+
+Retrieval reports retain the first 50 unique Article Chunks per branch as
+chunk ID, Source Article ID and best branch rank. Production fusion determines
+eligibility from configured branch budgets but can use deeper ranks from other
+branches for an eligible chunk. Reports retain only those additional ranks,
+including explicit eligibility when configured production budgets exceed 50.
+This reproduces current RRF scores and ordering without changing production
+fusion or storing complete candidate tails.
+
+Run configuration is stored once per distinct configuration. Case outputs keep
+selected passages and citations, branch status, concise failure diagnostics,
+useful preceding counts and model correction feedback. Deep candidate routes,
+claims, repeated contributions, fused objects, catalogs and cumulative prompts
+do not belong in the evaluation report. Full operational traces remain in
+Logfire. Pydantic Evals continues to own execution, scores and usage metrics;
+this is a task-specific projection in the existing report writer.
+
+Recall cutoffs and reciprocal rank use a budget of unique chunks. Article-grain
+cases measure article coverage inside that chunk budget, rather than searching
+deeper for the first k distinct articles. Reciprocal rank is bounded to 50.
+Reports record the metric definition so these corrected numbers cannot be
+mistaken for the earlier identity-budget measurement.
+
+The user requested compaction of the three initial, uncommitted retrieval
+reports. Their originals are recoverable under `.scratch`, their migration
+provenance records source hashes and the old metric definition, and changed
+legacy scores are labeled outside current scores. The migration rescores those
+same executions; it does not represent another model run. Other historical
+reports are unchanged.
+
+Larger retrospective candidate budgets, arbitrary discarded-candidate review
+and every historical ranking experiment after graph changes require rerunning
+retrieval. Those are accepted losses. Branch failures, reference misses within
+budget, fusion loss and context-selection loss remain explainable.

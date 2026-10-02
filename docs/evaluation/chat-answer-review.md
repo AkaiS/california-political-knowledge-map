@@ -71,6 +71,10 @@ Use
 
 ## Read one case
 
+For component-level retrieval scores over the existing 25 Cypher cases, see
+[Evaluate retrieval evidence](retrieval.md). That guide also defines separate
+faithfulness and relevance observations for the critique below.
+
 Read the case from the voter's question outward:
 
 1. **Prepared answer.** This evaluation does not verify browser delivery. Did the response direct the reader to useful sources, state coverage limits, and avoid claims its citations do not support? A Declined or Deferred control may have no retrieval answer.

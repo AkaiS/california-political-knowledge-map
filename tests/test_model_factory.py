@@ -11,11 +11,12 @@ import json
 
 import httpx
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic_ai import Agent
 
 from knowledge_map.config import TransportSettings, settings
 from knowledge_map.schemas import DeploymentKind, ModelDeployment, ModelRequestSettings
+from knowledge_map.schemas.structural import OntologySelection
 from knowledge_map.utils.models import (
     get_chat_model,
     llama_cpp_model_profile,
@@ -563,6 +564,52 @@ def test_the_response_schema_carries_no_refs(monkeypatch):
     assert "$ref" not in schema
     assert "$defs" not in schema
     assert "accepted" in schema
+
+
+def test_ontology_selection_dictionary_keys_are_self_contained_on_the_wire():
+    bodies: list[dict] = []
+    selection = {
+        "labels": ["LaborUnion", "Bill"],
+        "relationships": ["DECLARED_STANCE"],
+        "filter_properties": {"Bill": ["name", "session"]},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=chat_completion(json.dumps(selection)))
+
+    model = get_chat_model(local_deployment(), transport=httpx.MockTransport(handler))
+    output = (
+        Agent(model, output_type=OntologySelection)
+        .run_sync("Which labor unions have a recorded position on AB 1018?")
+        .output
+    )
+
+    assert output.filter_properties == {"Bill": ("name", "session")}
+    schema = bodies[0]["response_format"]["json_schema"]["schema"]
+    assert schema["properties"]["filter_properties"]["propertyNames"] == {
+        "enum": [
+            "Politician",
+            "Organization",
+            "LaborUnion",
+            "PAC",
+            "Bill",
+            "Prop",
+            "Campaign",
+            "LegislativeEvent",
+            "Committee",
+            "NewsArticle",
+            "PolicyArea",
+        ],
+        "type": "string",
+    }
+    assert "$ref" not in json.dumps(schema)
+    assert "$defs" not in json.dumps(schema)
+
+    with pytest.raises(ValidationError):
+        OntologySelection.model_validate(
+            {**selection, "filter_properties": {"Bill.name": ["name"]}}
+        )
 
 
 def test_typed_local_deployment_preserves_the_structured_output_profile(monkeypatch):
