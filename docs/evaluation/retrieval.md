@@ -315,8 +315,14 @@ already-used training cases as held-out. Keep model-authored labels silver.
 
 ## Evaluate generation separately
 
-Run the chat task on matching IDs and use the existing case reviewer. For every
-case, record separate binary observations in the critique, with the exact
+Use [RAG review](rag-review.md) to judge selected context and final generation
+without the end-to-end Chat Session panels. The run dashboard shows retrieval
+specifications, measured scores and explicitly unavailable metrics. Each case
+records context relevance, answer relevance and answer faithfulness separately;
+there is no general critique or omission label in this view.
+
+Run the chat task on matching IDs and open those reports in RAG mode. For every
+case, record separate binary observations, with the exact
 passage or model claim that explains a failure:
 
 - Faithfulness passes when every factual guidance claim is supported by the
@@ -326,8 +332,6 @@ passage or model claim that explains a failure:
 - Relevance passes when the selected sources and guidance address the approved
   question's named subjects, session and requested relationship. A caveat alone
   does not explain relevant reporting when that reporting is available.
-- Record omissions separately when answer-bearing context was supplied but the
-  guidance ignored it. Record rewrite and policy problems separately too.
 
 An assembly failure or absent generated answer is unjudgeable for semantic
 faithfulness and relevance; record its execution failure instead of a pass.

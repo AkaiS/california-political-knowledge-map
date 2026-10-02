@@ -1,5 +1,10 @@
 # Review Chat Session answers
 
+For judgments confined to selected evidence and final generation, use
+[RAG review](rag-review.md): `uv run python scripts/review_chat_eval.py --mode rag`.
+That view records context relevance, answer relevance and faithfulness separately.
+The default chat view below continues to review the whole Chat Session.
+
 The first chat Evaluation Data Set is an **unlabeled training set**. It runs 25
 concrete questions from the populated-graph query-construction targets and 11
 Declined or Deferred controls from the broader [Target Question Set](../../work/initiatives/useful-graph-retrieval/question-set.md). The concrete cases have retrievable subjects and executed reference queries; some broader targets still depend on data that has not been ingested or use placeholders. Those broader targets remain the source for future cases. No case has an expected answer or an automatic answer-quality score.

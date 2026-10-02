@@ -22,5 +22,5 @@ jobs:
       - run: uv python install
       - run: uv sync --locked --dev
       - name: Test review editing
-        run: uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs
+        run: uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs
       - run: uv run --no-sync pytest -q tests

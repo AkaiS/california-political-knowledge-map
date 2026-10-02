@@ -155,3 +155,20 @@ Larger retrospective candidate budgets, arbitrary discarded-candidate review
 and every historical ranking experiment after graph changes require rerunning
 retrieval. Those are accepted losses. Branch failures, reference misses within
 budget, fusion loss and context-selection loss remain explainable.
+
+## Amendment: RAG judgments have a focused review boundary
+
+The reviewer has a separate RAG mode that projects each run to the approved
+question, selected evidence, citations, final generation and retrieval
+measurement specifications. It serves no intermediate pipeline records through
+that mode's report API. Human labels are context relevance, answer relevance
+and answer faithfulness, with an evidence note per axis. They are saved in a
+separate `.rag-reviews.json` sidecar; whole-case chat critiques retain their
+existing `.reviews.json` format. Both modes reuse the tested editing interface
+for draft recovery, autosave, undo and navigation.
+
+Missing judgment inputs remain unjudgeable. Missing reference metrics remain
+unavailable. Precision and NDCG require relevance judgments the initial silver
+witness set does not provide. Two-hop coverage is shown only for references
+with two explicit evidence groups, with the reference-answer unit stated.
+The reviewer does not combine context and generation from different executions.
