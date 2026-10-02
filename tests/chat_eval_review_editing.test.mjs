@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
 import {createReviewEditor} from '../scripts/chat_eval_review_editing.mjs';
 
 const draftKey = 'chat-review-drafts:run:report-identity';
@@ -452,4 +454,63 @@ test('absolute selection keeps its requested destination behind an earlier move'
   assert.equal(await next, true);
   assert.equal(await selected, true);
   assert.equal(editor.state.selectedCase, 'case-a');
+});
+
+test('page filters work while report loading is pending and navigation becomes available after loading', async () => {
+  const elements = new Map(), requests = [];
+  function element() {
+    return {
+      value: '', textContent: '', children: [], disabled: false,
+      classList: {toggle() {}},
+      append(child) { this.children.push(child); },
+      replaceChildren() { this.children = []; },
+      addEventListener() {}, setAttribute() {}, querySelectorAll() { return []; },
+    };
+  }
+  function getElement(id) {
+    if (!elements.has(id)) elements.set(id, element());
+    return elements.get(id);
+  }
+  getElement('filter').value = 'all';
+  getElement('cohort').value = 'all';
+  const document = {
+    getElementById: getElement, createElement: element, head: element(),
+    querySelectorAll: () => [], querySelector: () => element(), addEventListener() {},
+  };
+  const storage = new Map();
+  const page = readFileSync(new URL('../scripts/chat_eval_review.html', import.meta.url), 'utf8');
+  const script = page.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+  runInNewContext(script.replace(/import \{createReviewEditor\} from [^;]+;/, ''), {
+    createReviewEditor, document, location: {pathname: '/runs/run'},
+    window: {addEventListener() {}}, URL, setTimeout, clearTimeout,
+    localStorage: {
+      getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value),
+      removeItem: key => storage.delete(key),
+    },
+    fetch: url => new Promise(resolve => requests.push({url, resolve})),
+  });
+  assert.equal(requests.length, 3);
+  getElement('search').value = 'case';
+  getElement('search').oninput();
+  getElement('filter').value = 'unreviewed';
+  getElement('filter').onchange();
+  getElement('cohort').value = 'controls';
+  getElement('cohort').onchange();
+  assert.equal(getElement('previous').disabled, true);
+  assert.equal(getElement('next').disabled, true);
+
+  for (const request of requests) {
+    const data = request.url.endsWith('/report') ? {
+      review_identity: 'report-identity',
+      report: {cases: ['case-a', 'case-b'].map(name => ({name, metadata: {cohort: 'controls'}}))},
+    } : request.url.endsWith('/presentation') ? {html: {}, references: {}} : {};
+    request.resolve({ok: true, json: async () => data});
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(getElement('question').textContent, 'case-a');
+  assert.equal(getElement('previous').disabled, true);
+  assert.equal(getElement('next').disabled, false);
+  assert.equal(getElement('search').value, 'case');
+  assert.equal(getElement('filter').value, 'unreviewed');
+  assert.equal(getElement('cohort').value, 'controls');
 });

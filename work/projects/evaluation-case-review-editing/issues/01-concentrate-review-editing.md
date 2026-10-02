@@ -114,3 +114,21 @@ command because the sandbox could not initialize the default cache:
   are not typing checks.
 
 The acceptance checkboxes and `completed` label reflect this evidence.
+
+2026-10-02: Accepted the external PR 30 P2 about filter events during initial
+report loading. Guarded the page's two navigation-availability queries so
+pre-load filter handling disables the buttons until the editor exists. A Node
+regression executes the actual page adapter with controlled requests and a DOM
+fixture, reproduces the original exception, and verifies all three filter
+handlers plus navigation
+availability and retained filter values after loading. This is deterministic
+adapter evidence, without browser verification.
+
+Standards and Spec rechecks each found zero remaining issues and confirmed
+closure of both this P2 and the prior navigation-duplication P3. The Node checks
+now pass 23 tests. Focused Python passed 29 with its existing event-loop warning;
+the full deterministic suite ran once after the reviewed fix and passed 1409,
+with 61 skips and the existing sampling warning. Commands, cache, approved
+loopback permission, and disabled browser/Neo4j opt-ins match the
+[review ledger](../review-ledger.md). All acceptance criteria remain complete;
+CI for this correction will be checked by the conductor after publication.

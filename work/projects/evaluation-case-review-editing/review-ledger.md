@@ -62,3 +62,35 @@ caret, keyboard, filter-control, DOM, trace, or visual behavior. Those browser
 workflows remain opt-in and unexecuted. Actual pull-request CI evidence belongs
 to the conductor's handoff after PR creation; these local passes do not claim a
 remote CI result. There are no unresolved review findings or local blockers.
+
+## Post-PR review correction
+
+The follow-up fixed point is `3fc3661a9f6122481306ffa66e229e43a4f19490`.
+Greptile reported one P2 in [PR 30](https://github.com/AkaiS/california-political-knowledge-map/pull/30#discussion_r4164076763):
+filter events during the initial report requests reached `renderList` before
+the editor existed and threw while querying navigation availability. Accepted
+and fixed with optional editor queries. Pre-load filter handling disables
+Previous and Next until initialization, then availability uses the existing
+shared navigation calculation.
+
+The Node regression executes the actual page adapter with a small DOM fixture
+and controlled pending requests. It invokes Search, verdict, and cohort filter
+handlers before loading, checks disabled navigation, then resolves the report
+and checks normal availability and retained filter values. Before the fix,
+22 tests passed and the regression failed with the reported `canNavigate`
+TypeError. After the fix, all 23 passed. This is deterministic adapter evidence;
+real-browser focus, caret, layout, and event delivery remain unverified.
+
+Independent Standards and Spec rechecks each reported zero remaining findings.
+Both explicitly confirmed closure of this P2 and the earlier P3 navigation-rule
+duplication. No extra scope change or unresolved finding remains.
+Both evidence checks requested more precise button-state wording; corrected to
+describe pre-load filter handling.
+
+Final checks used the same cache and commands above: Node 23 passed; focused
+Python 29 passed with the existing event-loop warning; full deterministic Python
+1409 passed, 61 skipped, with the existing sampling warning. Python runs disabled
+browser and Neo4j opt-ins and used approved loopback permission. The full suite
+ran once after the reviewed fix. `git diff --check` passed. The conductor will
+publish this correction and record its new PR checks; these local results do
+not claim CI success for the correction before publication.

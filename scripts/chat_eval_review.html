@@ -210,8 +210,8 @@
       for (const item of matching) caseRow(list, item);
       if (!matching.length) add(list, 'p', 'No cases match this filter.', 'empty');
       const matchingNames = matching.map(item => item.name);
-      $('previous').disabled = !editor.canNavigate(-1, matchingNames);
-      $('next').disabled = !editor.canNavigate(1, matchingNames);
+      $('previous').disabled = !editor?.canNavigate(-1, matchingNames);
+      $('next').disabled = !editor?.canNavigate(1, matchingNames);
     }
     function applyFilters() {
       const matching = filteredCases();
