@@ -17,7 +17,8 @@ execution. Production retrieval and dependencies are unchanged.
 Schema probabilities were captured once and replayed at .7 and .8. Every
 downstream call was fresh. Structural, property, and reporting-intent cutoffs
 were .52; subtype refinement required a winning-option probability of .8.
-The launcher below defaults to schema .8 and makes fresh schema calls.
+The launcher below defaults to schema .8 and makes fresh schema calls. These
+saved scores describe the frozen implementation, before the review repairs below.
 
 | Set | Schema cutoff | Semantic exact /25 | Evidence exact /25 | Evidence F1 | Evidence precision | Evidence recall | Required schema retained | Conditional availability |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -57,11 +58,25 @@ failures are excluded from this PR and were not reviewed for this experiment.
 
 The previous prototype lives at Git commit
 `104d626000ba189b1beafe306a186f167ff98e4a`. `bootstrap.py` restores its `src`
-and development references under `.scratch/jev-staged-runtime`, then overlays
-the exact frozen implementation files in [source-manifest.json](source-manifest.json).
-The peer-wording and reporting-gate wrappers are the same files used in the eval.
+and development references, then overlays the exact frozen implementation files
+in [source-manifest.json](source-manifest.json). It applies the separate
+[runtime-v2.patch](runtime-v2.patch) and verifies every active source and prompt
+against [runtime-v2-manifest.json](runtime-v2-manifest.json). The result lives in
+`.scratch/jev-staged-runtime-v2`; an existing historical runtime is preserved.
 The bootstrap never changes the checkout or production modules. A shallow clone
 must fetch that historical commit before restoration.
+
+The review repairs move authored prompt text into immutable, explicitly versioned
+resources under `src/knowledge_map/resources/prompts/jev-staged`. Synthetic rendering
+comparisons verify that the text sent to models is unchanged. Compiler-owned Article
+selections now use the staged selector's validated occurrence indices, allowing two
+same-label topic roles to remain distinct and keep their own filter attachments.
+Invalid attachments still stop execution. This wiring repair changes behavior and
+has not been rerun on dev or held-out evaluations; the tables above remain historical.
+
+Default `uv run pytest` discovery is restricted to the production `tests` directory.
+The experimental suite must be selected explicitly, so its restored imports and
+optional dependencies cannot affect the production suite.
 
 From the repository root, run:
 
@@ -75,8 +90,11 @@ uv run --with typesafe-sdk==0.7.2 --with cyver==2.0.2 pytest -q "$experiment/tes
 The offline checks use synthetic inputs. They cover personhood, schema closure,
 subtype abstention, parent-role distinctness, property attachment, deterministic
 hydration, unchanged fragment shapes, and the reporting gate's failure behavior.
-They make no hosted-model, local-model, or graph calls. The frozen source files
-remain byte-for-byte unchanged; bootstrap and test path adaptations are new.
+They also cover repeated Article-topic roles, rejected invalid wiring, binding and
+execution with synthetic service stubs, and exact prompt rendering against the
+frozen sources. They make no hosted-model, local-model, or graph calls. The frozen
+source files remain byte-for-byte unchanged. The separately recorded repairs do not
+inspect held-out questions, gold, traces, or individual failures.
 
 ## Run against the development graph
 
@@ -91,7 +109,7 @@ uv run --with typesafe-sdk==0.7.2 --with cyver==2.0.2 python "$experiment/run.py
 
 This sends the development questions and schema/fragment descriptions to Jev,
 calls the configured local model, and reads Neo4j. Reports and events stay in
-`.scratch/jev-staged-runtime/results`. CLI overrides such as `--case`, `--output`,
+`.scratch/jev-staged-runtime-v2/results`. CLI overrides such as `--case`, `--output`,
 and `--raw-events` pass through to the original runner. A fresh graph or model
 version can change results. Reference scoring happens after the execution batch.
 Protected held-out inputs and saved schema probabilities remain local; this

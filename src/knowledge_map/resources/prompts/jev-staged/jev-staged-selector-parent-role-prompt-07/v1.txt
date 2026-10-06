@@ -1,0 +1,1 @@
+Subtype restrictions and property constraints are separate later decisions.

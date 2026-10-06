@@ -1,0 +1,1 @@
+Stored reporting joins are automatic. Do not infer claim edges from reporting wording.

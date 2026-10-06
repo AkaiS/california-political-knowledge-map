@@ -1,0 +1,1 @@
+Does the question specify a date or time window that requires an exclusive upper bound on {value_0}?

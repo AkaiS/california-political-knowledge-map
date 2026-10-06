@@ -1,0 +1,1 @@
+The individual's name, usable to restrict results to a named person.

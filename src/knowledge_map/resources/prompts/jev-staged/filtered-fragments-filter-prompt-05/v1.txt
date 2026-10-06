@@ -1,0 +1,1 @@
+Do not infer a condition from schema availability alone.

@@ -1,0 +1,1 @@
+A generic organization role includes PACs and LaborUnions. Do not infer subtype from a name or political activity.

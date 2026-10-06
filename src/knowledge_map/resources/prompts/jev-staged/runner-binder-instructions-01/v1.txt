@@ -1,0 +1,1 @@
+Return the concrete question values in the exact supplied order. Return only the values list. Do not name fields or parameters, change semantic structure, choose output fields, or write query syntax. Dates are ISO YYYY-MM-DD boundaries. Use an allowed value when the item supplies a closed set.

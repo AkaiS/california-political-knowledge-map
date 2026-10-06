@@ -1,0 +1,1 @@
+A topic-related element is unnecessary unless it could participate in answering the question.

@@ -1,0 +1,1 @@
+Automatic reporting joins do not eliminate the need to select the entity that anchors those joins.

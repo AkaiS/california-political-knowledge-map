@@ -1,0 +1,1 @@
+A person or measure mentioned only inside a named campaign does not require a CAMPAIGN_FOR relationship. Funding a named campaign can be answered with the campaign name and FUNDED relationship alone.

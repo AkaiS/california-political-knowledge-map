@@ -1,0 +1,1 @@
+Organization covers general organizations; LaborUnion and PAC are specialized organization types.

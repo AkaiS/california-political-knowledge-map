@@ -1,0 +1,3 @@
+
+
+Filter attachment rules derived after fragment selection:

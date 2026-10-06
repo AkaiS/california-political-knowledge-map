@@ -36,6 +36,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 pythonpath = ["src", "classifier/src"]
 filterwarnings = [
     "ignore::DeprecationWarning:pydantic_ai.*",

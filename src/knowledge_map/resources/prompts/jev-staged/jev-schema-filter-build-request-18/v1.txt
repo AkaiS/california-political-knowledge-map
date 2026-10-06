@@ -1,0 +1,1 @@
+Does `question` specify an individual person's name that could restrict results, including a named person used as a question anchor?

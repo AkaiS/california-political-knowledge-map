@@ -1,0 +1,1 @@
+Stored reporting about an entity is automatic and does not imply a semantic claim relationship.

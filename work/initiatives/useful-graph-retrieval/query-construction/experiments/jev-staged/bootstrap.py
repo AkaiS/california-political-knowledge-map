@@ -1,4 +1,4 @@
-"""Restore the historical experiment dependencies and apply frozen source files."""
+"""Restore frozen dependencies, then apply the separately recorded review repairs."""
 
 import hashlib
 import io
@@ -12,8 +12,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPOSITORY = HERE.parents[5]
-RUNTIME = REPOSITORY / ".scratch/jev-staged-runtime"
+RUNTIME = REPOSITORY / ".scratch/jev-staged-runtime-v2"
 MANIFEST = json.loads((HERE / "source-manifest.json").read_text())
+RUNTIME_MANIFEST = json.loads((HERE / "runtime-v2-manifest.json").read_text())
 
 
 def prepare() -> Path:
@@ -21,13 +22,15 @@ def prepare() -> Path:
     for name, expected in MANIFEST["files"].items():
         if hashlib.sha256((HERE / name).read_bytes()).hexdigest() != expected:
             raise ValueError(f"Frozen experimental source changed: {name}")
-    marker = RUNTIME / "source-manifest.json"
+    patch = HERE / "runtime-v2.patch"
+    if hashlib.sha256(patch.read_bytes()).hexdigest() != RUNTIME_MANIFEST["patch_sha256"]:
+        raise ValueError("The reviewed runtime patch changed")
+    marker = RUNTIME / "runtime-v2-manifest.json"
     if marker.exists():
         if marker.read_bytes() != (HERE / marker.name).read_bytes():
             raise ValueError("Existing runtime belongs to a different experiment snapshot")
-        for name, expected in MANIFEST["files"].items():
-            relative = name.removeprefix("overlay/")
-            installed = RUNTIME / "src" / relative if name.startswith("overlay/") else RUNTIME / relative
+        for relative, expected in RUNTIME_MANIFEST["files"].items():
+            installed = RUNTIME / relative
             if hashlib.sha256(installed.read_bytes()).hexdigest() != expected:
                 raise ValueError(f"Existing runtime source changed: {relative}")
         return RUNTIME
@@ -48,6 +51,19 @@ def prepare() -> Path:
             destination = restored / "src" / relative if name.startswith("overlay/") else restored / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(HERE / name, destination)
+        subprocess.run(
+            ["git", "apply", "--unidiff-zero", f"--directory={restored.relative_to(REPOSITORY)}", str(patch)],
+            cwd=REPOSITORY,
+            check=True,
+        )
+        for relative, expected in RUNTIME_MANIFEST["files"].items():
+            destination = restored / relative
+            if relative == "src/knowledge_map/prompts.py" or relative.startswith("src/knowledge_map/resources/"):
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(REPOSITORY / relative, destination)
+            if hashlib.sha256(destination.read_bytes()).hexdigest() != expected:
+                raise ValueError(f"Reviewed runtime differs from its manifest: {relative}")
+        shutil.copyfile(HERE / "source-manifest.json", restored / "source-manifest.json")
         shutil.copyfile(HERE / marker.name, restored / marker.name)
         restored.rename(RUNTIME)
     return RUNTIME

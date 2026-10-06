@@ -1,0 +1,1 @@
+Could answering `question` require an entity of type {value_0}, as a result, question anchor, or intermediate entity?

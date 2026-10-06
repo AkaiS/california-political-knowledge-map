@@ -1,0 +1,1 @@
+A named or otherwise explicit value counts whether the entity is returned or used to restrict the result.

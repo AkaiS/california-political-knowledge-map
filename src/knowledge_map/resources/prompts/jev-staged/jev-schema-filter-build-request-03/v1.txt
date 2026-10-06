@@ -1,0 +1,1 @@
+Politician is the graph's person slot. Recognize individual people without inferring political status or graph membership.

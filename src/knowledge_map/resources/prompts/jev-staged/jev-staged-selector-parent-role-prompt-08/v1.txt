@@ -1,0 +1,1 @@
+A person or measure mentioned inside a campaign's name does not require its own role unless the question asks for that entity or a relationship to it.

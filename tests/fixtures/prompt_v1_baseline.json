@@ -229,6 +229,646 @@
     "sha256": "99ec64003ab041f24172a324573e40069daeda42baf4994b14acba940e1feef6",
     "source": "src/knowledge_map/ontology/extraction_prompt.py"
   },
+  "jev-staged/catalog-pieces-01": {
+    "line": 173,
+    "sha256": "2e39df8ac57a7a8af54d80ee0600bb9ec33fa5c29dda75408bfa8c70036f1d51",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/catalog-pieces-02": {
+    "line": 85,
+    "sha256": "0e351b8f5d9e1579aa5dc48a6c49ce8f0b403e333fafb2b7fea5c2abb2b23286",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/catalog-pieces-03": {
+    "line": 127,
+    "sha256": "b4502d1a00111b0fb3b3ca1075cc3598a78f911d56604c4aa2d14365ee760f58",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/catalog-pieces-04": {
+    "line": 164,
+    "sha256": "bbb2592a4200c3d04d19d24dc58552d21192da8789003064f75620685ec0828f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/catalog-pieces-05": {
+    "line": 153,
+    "sha256": "4c42dd63cd14ca8346279ebcd59b5f0e953998ec832abe6442499cc2967ceeb9",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/catalog-pieces-06": {
+    "line": 100,
+    "sha256": "9615f43e41258b3e8e5cc215ab49cfa5bd68b0aa45121a0e62b9b5693317054a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
+  },
+  "jev-staged/filtered-fragments-filter-attachment-rules-01": {
+    "line": 190,
+    "sha256": "b637c421df85ff2a0334f537e468e8fa500fdd837f088c31d5033d4a79d38e8f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-attachment-rules-02": {
+    "line": 192,
+    "sha256": "e85d65137131603152de3d36082c60a042ee6c7ae273d8a5c4cf7152457baa68",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-attachment-rules-03": {
+    "line": 194,
+    "sha256": "f4e9e4113bd4bc786c92f7038f2508c671502efa04da06caef9dc7edc159085a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-attachment-rules-04": {
+    "line": 196,
+    "sha256": "0da8f98fe541cae6f3d313c334fd1f929e318c304967b513deecf228681cf1eb",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-01": {
+    "line": 130,
+    "sha256": "76a3e09d8909fdd5a3048f6c98814b259c4e54fe13ad7e3ee42e1f5445d12e40",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-02": {
+    "line": 133,
+    "sha256": "c39cb0e6eb6b99797ca591455a0c43125e5e6cda5455ee201a6ffdd0d51b0767",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-03": {
+    "line": 148,
+    "sha256": "760c495acb29fef53721147b28fec831ed2efb87a4e2650300f015e2281d4663",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-04": {
+    "line": 149,
+    "sha256": "d89816f79831d6116e7fcff32148dd2283c50705ee249600f734e01cf0cd10cc",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-05": {
+    "line": 150,
+    "sha256": "7f126093ee0f4c3f411fdfe8aff17abaff3fb21137ff7940a0328911bdfad161",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-06": {
+    "line": 136,
+    "sha256": "9fcd37a3339dbe6cc610576dad49f66433d9f49e7c2509433f38c68912cc6e33",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-07": {
+    "line": 139,
+    "sha256": "10eb4234d87d7766ba3da183d7cc4065cf1b4436db29b4ea551b2b48347772a8",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-08": {
+    "line": 141,
+    "sha256": "98abb4a145ba6fe98be4f713ac36d47b610f8736d4397382a4e27127e849426c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-09": {
+    "line": 143,
+    "sha256": "4d135b5de17cfd8c978837e02354df474d086b8313f5be2ecfcfe22da1e9097c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-10": {
+    "line": 154,
+    "sha256": "350e1bc8219f8559e7e84068a67f4f419c0d316843988e2b04ce84b8021069c8",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/filtered-fragments-filter-prompt-11": {
+    "line": 162,
+    "sha256": "ae60ae13ede8529fbb348ce78ac9c453de3bc09c073484c048cbbfbfeb256f95",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/filtered_fragments.py"
+  },
+  "jev-staged/fragment-selector-aggregate-fragments-01": {
+    "line": 213,
+    "sha256": "cfd65cd5ecbfa0947e153a66a884478271689a18cbef7e2e6ba851800730fb95",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-entity-fragments-01": {
+    "line": 75,
+    "sha256": "8c0967955b74e6299c1ded2c8260aee70c6987e6385df4f1a309ddc1386d6570",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-entity-fragments-02": {
+    "line": 80,
+    "sha256": "dcc3ba05725ab57df594a0360c95d2e14c43b638ed2b0e8aa6ab3896143b8cdd",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-filter-fragments-01": {
+    "line": 187,
+    "sha256": "3f3ad7d73ab0bf1b88c5b8d759e366cfa19f5735e380eb8c662bca32a73bf816",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-filter-fragments-02": {
+    "line": 196,
+    "sha256": "ae60ae13ede8529fbb348ce78ac9c453de3bc09c073484c048cbbfbfeb256f95",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-prompt-01": {
+    "line": 56,
+    "sha256": "0de80501840f1ec8d5f904bd7b5b14c0e3de64f64db0a9d89bdec977e4a1ac3c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-prompt-02": {
+    "line": 60,
+    "sha256": "509654a3e9863d2cb516040945318223d33da94543f0efd5739e5796a87723fd",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-prompt-03": {
+    "line": 61,
+    "sha256": "680d87e87e9cb1ec9dfcd85f66c0bbe61b6925772a0c662e056392a95ee4a9e4",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-prompt-04": {
+    "line": 62,
+    "sha256": "dc8cdb3d9fd621b946db2748e6c934bea6ef14c93e3743373f81f8650e133aee",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-relationship-description-01": {
+    "line": 102,
+    "sha256": "3276c5f619d97fbe157983564f8623d042e32e40c25e60f6627c5ef5d6a3f2ea",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-relationship-description-02": {
+    "line": 92,
+    "sha256": "915da010e7cfd715e3f45c8e0feb3dff116b18d4f7ab7ae62ed761a72396864b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/fragment-selector-relationship-description-03": {
+    "line": 98,
+    "sha256": "b6ac2e4f81f5e2c22405b34c5957bbb8d989f446e09dd72567902d66c25e850e",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/fragment_selector.py"
+  },
+  "jev-staged/jev-filtered-selector-guidance-01": {
+    "line": 31,
+    "sha256": "aed1e5702903ebb5c7bd48cc9aff2bc17630350a8f3fb779ccb640778c089a58",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py"
+  },
+  "jev-staged/jev-filtered-selector-select-pieces-01": {
+    "line": 111,
+    "sha256": "451b3e55676324c0970e81eca79591bf06d248f7b48cf39294e9d5946a06c260",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py"
+  },
+  "jev-staged/jev-filtered-selector-select-pieces-02": {
+    "line": 112,
+    "sha256": "2cd1b1656c1bbc149f60a735437c4a8b17d9cd011a4cf58ad73d91e61a0e4ee2",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py"
+  },
+  "jev-staged/jev-filtered-selector-select-pieces-03": {
+    "line": 150,
+    "sha256": "7ba0341633fe50510c8561f3a0d5621ad71048a6c139e11ee4242136024cb173",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-01": {
+    "line": 108,
+    "sha256": "6b8407d69ddfaa2a24461bbf1e3685c03e1ff3acb10415608f836b08bf728614",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-02": {
+    "line": 109,
+    "sha256": "a069dbb79b538c633600d6a3940e88ed2bcee43c503ced506d00b91feb4a29cf",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-03": {
+    "line": 110,
+    "sha256": "2a66173815b85dd3733ec60caec5d824f0baa9a05e78ed203aeb8798e2388e3b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-04": {
+    "line": 111,
+    "sha256": "b7a72893631e4ee7e115f49b0aee167857464c68f60cf1cef2f553795188d019",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-05": {
+    "line": 112,
+    "sha256": "60f682a65b1768479f3eb725049c17f2b87f1044555cc5bffc1bd60416d97c64",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-06": {
+    "line": 113,
+    "sha256": "76164a20ba8e01f7144fa2be32abec113fa250a94a73862fd71be5f3242f4e60",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-07": {
+    "line": 114,
+    "sha256": "8b753cb23873081cf433067dff0c559a152b665a893ddfb5edae8a63db7a0115",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-08": {
+    "line": 115,
+    "sha256": "da5a2c0029a7ee3909312743dcc093346dbb602babafe317804e685f94dd5571",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-09": {
+    "line": 116,
+    "sha256": "c4f1c8a9642fdf955dd302d8d5522363b865c8f75613c4724fd2b6025db40879",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-10": {
+    "line": 117,
+    "sha256": "0e3b8686ce63ed136d52b21bb6e76a9e32851c551ffe4eccd0f8c9a30a54abbd",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-11": {
+    "line": 118,
+    "sha256": "b86d1cb833719f782ff2ff58fe3e890b8022f444f8e033ef0c08c903b9225e7f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-12": {
+    "line": 119,
+    "sha256": "50b83c333987ef99840b55d131870c754cce543d1b7ad03164650331e127d9cf",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-13": {
+    "line": 128,
+    "sha256": "69b3c34afc6367d9311b15bc59c9ca0206dcd216b237838053b3db425dbea8ec",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-14": {
+    "line": 133,
+    "sha256": "d41847630e752def6d41dc626f4ab37a7cc0ae3749e348c49a80f2750a541fc9",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-15": {
+    "line": 139,
+    "sha256": "6bea29913d2f50cae5972e0fa1c74ffa113f7dba7c97dee1acdc1492d55be946",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-16": {
+    "line": 156,
+    "sha256": "29a5d73151ecbdb5b8b64b27594e02a0af09128dd7eaf8a613580564d3b5b7ca",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-17": {
+    "line": 157,
+    "sha256": "bf229166e895e774e43f95c033f5a06bae95fd31ca05ee21357e3a8ca976d226",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-18": {
+    "line": 145,
+    "sha256": "cb58d84eb9bbe2db5b1d8510396b1f112ef2b9ce3e17204f405a9c973a5cb350",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-build-request-19": {
+    "line": 150,
+    "sha256": "6e007165b1107ff7bab9fcbf1325420083cb89341b9dd38d4e59650c5df7fe9a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-schema-candidates-01": {
+    "line": 60,
+    "sha256": "df56f68026371ca370eeec69c275b5db0cca622682acf10e98b9752cfc8ea32b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-schema-filter-schema-candidates-02": {
+    "line": 95,
+    "sha256": "807776c0b02d606e90774b8dab6df9bc2335e26c5e47509dce75764cf11d237f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py"
+  },
+  "jev-staged/jev-selector-binary-criteria-01": {
+    "line": 37,
+    "sha256": "d436623c3df8f2a90177ecf9d65417ae356be056aed2bce20dd5d85b8c415ba4",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-binary-criteria-02": {
+    "line": 38,
+    "sha256": "990e18967b2882dee6da024bd81e11cf05c2f415110a665aa146bf1440040019",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-count-criteria-01": {
+    "line": 30,
+    "sha256": "d436623c3df8f2a90177ecf9d65417ae356be056aed2bce20dd5d85b8c415ba4",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-count-criteria-02": {
+    "line": 31,
+    "sha256": "07dff57402578f58a5de5c0c8a7fd9c346e74c83c361a8020b9b72013650193c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-count-criteria-03": {
+    "line": 32,
+    "sha256": "daac5c882bbf9fdd018d1d06f7f9881726acc4d0e024524a8cf6dcbb41407441",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-count-criteria-04": {
+    "line": 33,
+    "sha256": "e44ab6b4fdf7be2e76627f1b9168d7aed7194e175590fdb399d4b6b540b1a750",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-question-01": {
+    "line": 49,
+    "sha256": "f6ecc1d2cfa716080eb873c28f722d099d62a82fc7f014077f7560db64b98958",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-question-02": {
+    "line": 53,
+    "sha256": "0c02caa4522d8782c3a92fe86db8e7ac2fad80c8eacfb1862481cc51cf909881",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-question-03": {
+    "line": 54,
+    "sha256": "fa09adf0bd455a5bf595ecbac94b4c473a8f7977ae745e12c83e4edb27c49fcd",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-question-04": {
+    "line": 55,
+    "sha256": "bac7e1c5ca54ea2ba113f8b8f179057720d01e0601bb98aae88263540b0df985",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-select-pieces-01": {
+    "line": 75,
+    "sha256": "6ae3cada594d2f90e6fc730f7149b09e18b13148cf0c35dc21bf654e39dd9cfc",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-select-pieces-02": {
+    "line": 118,
+    "sha256": "7ba0341633fe50510c8561f3a0d5621ad71048a6c139e11ee4242136024cb173",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-select-pieces-03": {
+    "line": 127,
+    "sha256": "a79a4b99f95944b1f75b1c636bef4ed116e3ba25aa55c28d058516d97741711b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-selector-select-pieces-04": {
+    "line": 133,
+    "sha256": "4dd28a8c1eb10fcffd48bbe2388af2bd356d6e3f7b7ed70bb8c0c27333b9e24a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-01": {
+    "line": 55,
+    "sha256": "a8cc4cff3f4fc90df20bb3855b6e271aa553d6646a0427107163aa1b2c9b1dec",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-02": {
+    "line": 57,
+    "sha256": "a8b29ca67743a8093f38e15af66f02bdd103be881b339d3af6e496e630d0ba9d",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-03": {
+    "line": 60,
+    "sha256": "d9102f815ee7a8940d8d059214002f5ef18d19766a3628297f1105966ff2037b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-04": {
+    "line": 63,
+    "sha256": "2215104345d0ffd7e2c61dea1fd75ebae4bececad318de26ecafe20e7f3ee4f9",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-05": {
+    "line": 64,
+    "sha256": "7a497cbbc2faf65ef71aad2c31ab077d052b45e86df2bbf15778c89f44df82f3",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-06": {
+    "line": 65,
+    "sha256": "9d449fe4efe93a7c7a982a19cfd3d97c360529c0e9d63df2354b4467b1f1cb2f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-07": {
+    "line": 66,
+    "sha256": "782174bfd23bc34389110ce609704a9fa4b04a754e359af694b128b2bb137d88",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-08": {
+    "line": 67,
+    "sha256": "6eb8c3f250f7a9c0c3f2b10067618af063f541a86a7d176ddebfdfca78e7040f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-parent-role-prompt-09": {
+    "line": 68,
+    "sha256": "bf0ccc8505e381546041f49c1160a1ccd8671f6b4930ed586dc8641a2ca9ed71",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-01": {
+    "line": 301,
+    "sha256": "786c93f5d304dbafee2e4f7193be9b340dc39a895b9b733d387a4fe11fc45256",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-02": {
+    "line": 302,
+    "sha256": "8bfa33ba1993fd0fa969e4c31641c97055269f96d2f2ad6af686e55a1ab584e1",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-03": {
+    "line": 305,
+    "sha256": "27288b6d82c499496d6fd0d9767d63740ad2166907a946b29463324f115b10d9",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-04": {
+    "line": 306,
+    "sha256": "727f5d272b60ce4816dd72d0d309c1cc46ba35c17bbeaae04f89da1ac31107b5",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-05": {
+    "line": 307,
+    "sha256": "7c81ae02adeed929dc139136bba21fdb0dcf33d6c6b11c246b3352f62d108985",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-06": {
+    "line": 308,
+    "sha256": "cca159fdc0a7ca8073b9f2296d2dc4d5ca941566213338005649d7b41ea4ef23",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-07": {
+    "line": 504,
+    "sha256": "1d93f3ea2b5f2e22222ffcf4874d54f68764a4a197a0641d8a4d8675c1423b8c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-08": {
+    "line": 318,
+    "sha256": "dc8dfe5efbb922861278923d50cb96f98ab2655515e3de2bf2cbdcb2d8a89983",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-09": {
+    "line": 319,
+    "sha256": "3ce7e49d2cf606972bb5c5651d35694bd86ec4ddf055a4d665a2e4c51931f2ca",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-10": {
+    "line": 351,
+    "sha256": "ca4f3eeec4c5c0c1c3d532543624d6ac7c52f22ed9a2e20f6c9ad0cc45faccd6",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-11": {
+    "line": 363,
+    "sha256": "47aceae3088a1f0f1eb257587125f7bed8dbe5f31cc4f0e4ddb96d109a8fe0aa",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-12": {
+    "line": 364,
+    "sha256": "ea7d57a4e49e010c7cdbeb8d00e6212cd332fd59b90650416eef1c39a11fc3a3",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-13": {
+    "line": 365,
+    "sha256": "29c278212f61f41f648c9983b80092b910babe04017a2309e72ec0b928666d6d",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-14": {
+    "line": 366,
+    "sha256": "52480da17d23bcc13a532eb9587813949a37f10163727fb32294fe491e625f9a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-15": {
+    "line": 409,
+    "sha256": "7ecc0638d0fdf5b92ec3e47a85b9add0e40e04ff25a3533a7683ba63d6a04730",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-16": {
+    "line": 427,
+    "sha256": "4220dcd5b0b0c464d57f8bc71013a7298040559ca9a1429f977eadbf1aa0701c",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-17": {
+    "line": 428,
+    "sha256": "d1be8bfe30295977e33a5b1c9270b7ab1b0f99e13fa6f15a0da316e0d8612bdf",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-18": {
+    "line": 429,
+    "sha256": "e9a94261b96efa264acb4757fee1804cd25083bb601a8ee9c242a183acc84a34",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-19": {
+    "line": 355,
+    "sha256": "dfa0fc33ab89e64e715ed966003248085964fd1727ffc8b93f898a2909bce50f",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-20": {
+    "line": 356,
+    "sha256": "6387255ca39cad4e0f722b8541e6b689ea7a7aafe8ecdad43e2e74df86a3b3cf",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-21": {
+    "line": 357,
+    "sha256": "05e54aac9d28d3a628ca67525f06671fea8636acdfc326d7e9bfce0f5543a9b1",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-22": {
+    "line": 358,
+    "sha256": "4e4d3a208e598e2c987e69b46a1681c740388ed63dbb012437c36d1f9d2e8f42",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-23": {
+    "line": 359,
+    "sha256": "056c1db7d9d8bd1a9c41264161efca83f690e3a31381e201bf66a3e0d7bebb93",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-24": {
+    "line": 435,
+    "sha256": "8c27cdc39de983dd92257f9573bf612bc190e4f0aaeb831f14adb29eaf6f9463",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-select-pieces-25": {
+    "line": 436,
+    "sha256": "8425ca42ee5f8b6bfa334bc87f8d8e67bbb3649be45c98c0e9ac862351c0d3d4",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-structural-prompt-01": {
+    "line": 80,
+    "sha256": "5c16bef9628cf56dc9bc4b0064dce442d82d9d71a1d5b5b45ddffe983f1918b8",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-structural-prompt-02": {
+    "line": 81,
+    "sha256": "fa0a65867d8d0cc126529b26a11e52b8ab6b5f5649b07940369ca1a88fb05b0e",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-structural-prompt-03": {
+    "line": 85,
+    "sha256": "8b8eddda2c541ff35ac6e50847e9c974527fec89d8721d68879658037e9e8776",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-structural-prompt-04": {
+    "line": 86,
+    "sha256": "5220c9bdd38d49b204d465d8334e56b4d797cb38142c687abcd576ba5d4a70a7",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/jev-staged-selector-structural-prompt-05": {
+    "line": 87,
+    "sha256": "bfa9af227d8f189e9f508c562b9663207dad6a48ac47cfab8e63443c27ce12ae",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
+  },
+  "jev-staged/reporting-keyword-gate-gate-criteria-01": {
+    "line": 15,
+    "sha256": "7596f5ce672c771e5a7b544a3bd6260a908b1ede1da0fe52ff111d1cd8f06221",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/reporting_keyword_gate.py"
+  },
+  "jev-staged/reporting-keyword-gate-gate-criteria-02": {
+    "line": 16,
+    "sha256": "c31c328daa92a6c0008abc16c5cce08f38c132789cbcf784988b4b1800bcbe05",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/reporting_keyword_gate.py"
+  },
+  "jev-staged/reporting-keyword-gate-gate-decision-01": {
+    "line": 10,
+    "sha256": "1895cc82eb31faa5f6d40a919cc49f259b2dc9948115ab0956fbd6ca8f7d620d",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/reporting_keyword_gate.py"
+  },
+  "jev-staged/runner-binder-instructions-01": {
+    "line": 115,
+    "sha256": "ec73a98542ff5737e349977bd9981826d5e50bf970ed7130af0741600dbc8faa",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-binding-prompt-01": {
+    "line": 573,
+    "sha256": "0dfe5eca149ef7735aac2a56a0a1a41c2e96834ea3bc89fc7fc1e43836eca1b4",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-binding-prompt-02": {
+    "line": 578,
+    "sha256": "1e03ec1c8c594f9daace5044854a2f78acb7a19e56db9e052d93e712f659fa3b",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-composer-instructions-01": {
+    "line": 113,
+    "sha256": "4bfc4b68cfca1c45e0b960c4ba2564bf1bb00ab11895689ce2d0507c79a1e08a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-composer-prompt-01": {
+    "line": 335,
+    "sha256": "e6a761bfac9f5b50c1783ea315f9d9c480a507eff4e24dba6fd2f4613269b645",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-composer-prompt-02": {
+    "line": 340,
+    "sha256": "1cf04dfe9c6070abb47a709f5dc408e5a3cb48cecb83df3ca1303683d81859dd",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-composer-prompt-03": {
+    "line": 347,
+    "sha256": "beb80dc7415e53a66e7257474e9b6e802daa6cf5fd4c32ae6ec4619da3ec711e",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-composer-prompt-04": {
+    "line": 345,
+    "sha256": "24762123cdebaa88d0111a7a60d1d4a654ae061947553a253844a03202c45e76",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-filter-instructions-01": {
+    "line": 109,
+    "sha256": "73dce6cbbe0622774194a089f5d86956a3fbf18edb7e8ab4881f450b1e0ba792",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-filter-request": {
+    "line": 210,
+    "sha256": "818be7f53c0c333f2a6797e9dc8f21e36af98b3ae68ac216c474663f4896ec14",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-selector-instructions-01": {
+    "line": 111,
+    "sha256": "b9d86ef85f5dd5bc79eebff1aa8bcd4a4fd5f2b759909445903fc24e269fd6c8",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-selector-prompt-01": {
+    "line": 233,
+    "sha256": "80baee952953d3f87b4a33537c9bc4ea8a38dd816e2c23b117816b7144d56e7a",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-selector-prompt-02": {
+    "line": 237,
+    "sha256": "ece1eb77f8f93845725067a0434adaa3245f4e85245444a0c6fdec8b07827864",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
+  "jev-staged/runner-selector-prompt-03": {
+    "line": 231,
+    "sha256": "aa23ab79b07aa2a313a387d2db654c31461705a728fc66e7e14e84c71a083e88",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
   "policy-areas/assignment-instructions": {
     "line": 113,
     "sha256": "6a1eb66b95084cb67de13d24ea578b687d75d6261182b25dacd64d5c2896524c",

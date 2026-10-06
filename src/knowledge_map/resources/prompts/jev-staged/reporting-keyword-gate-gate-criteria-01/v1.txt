@@ -1,0 +1,1 @@
+The question requests a reporting lookup about the selected entities or shared reporting co-occurrence.

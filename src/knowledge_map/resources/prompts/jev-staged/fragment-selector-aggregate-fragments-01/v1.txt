@@ -1,0 +1,1 @@
+Group Policy Areas, count distinct stored News Articles that discuss each area, and retain the source articles behind the count.

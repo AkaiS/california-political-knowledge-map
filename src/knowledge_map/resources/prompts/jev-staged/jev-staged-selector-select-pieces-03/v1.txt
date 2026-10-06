@@ -1,0 +1,1 @@
+Select the minimal required semantic pattern, not plausible additional paths.

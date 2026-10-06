@@ -1,0 +1,1 @@
+Articles that discuss a policy area use DISCUSSES_TOPIC. Entity policy classification uses ABOUT_TOPIC.

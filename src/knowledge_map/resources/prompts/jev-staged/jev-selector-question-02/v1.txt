@@ -1,0 +1,1 @@
+Count semantic roles, relationships, filters, constraints, and aggregates only.

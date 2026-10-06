@@ -1,0 +1,1 @@
+When a question asks what vote was recorded without specifying an outcome, all three possible vote relationships could be needed; do not predict the recorded outcome.
