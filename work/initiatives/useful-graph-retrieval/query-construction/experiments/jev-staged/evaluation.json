@@ -1,0 +1,430 @@
+{
+  "date": "2026-10-06",
+  "runs": [
+    {
+      "split": "development",
+      "schema_cutoff": 0.7,
+      "metrics": {
+        "cases": 25,
+        "executed": 24,
+        "nonempty": 24,
+        "semantic_exact": 23,
+        "semantic_precision": 0.984,
+        "semantic_recall": 0.9919354838709677,
+        "evidence_exact": 24,
+        "evidence_f1": 0.9992348890589136,
+        "evidence_precision": 1.0,
+        "evidence_recall": 0.9984709480122325,
+        "combined_f1": 0.9844380403458213,
+        "combined_exact": 5,
+        "elapsed_seconds": 174.15,
+        "requests": 120,
+        "tokens": 209288,
+        "stages": {
+          "schema_filter": {
+            "requests": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "latency_ms": 0.0
+          },
+          "selector": {
+            "requests": 70,
+            "input_tokens": 161305,
+            "output_tokens": 9679,
+            "total_tokens": 170984,
+            "latency_ms": 10025.3
+          },
+          "composer": {
+            "requests": 24,
+            "input_tokens": 26453,
+            "output_tokens": 5011,
+            "total_tokens": 31464,
+            "latency_ms": 129195.8
+          },
+          "binder": {
+            "requests": 26,
+            "input_tokens": 5923,
+            "output_tokens": 917,
+            "total_tokens": 6840,
+            "latency_ms": 28841.3
+          }
+        },
+        "selector_candidates": {
+          "total": 207,
+          "median": 5,
+          "range": [
+            1,
+            19
+          ]
+        },
+        "failures_by_stage": {
+          "none": 5,
+          "semantic_retrieval": 19,
+          "composer_or_prebinding_validation": 1
+        },
+        "semantic_f1": 0.9879518072289156,
+        "required_schema_parts": 121,
+        "initial_schema_retained": 121,
+        "conditional_schema_available": 121,
+        "abstention_count": 0
+      },
+      "report_sha256": "0610cc53ccf73cb64fbdd387bfd35ab990b8324e6c477c9d4b2bf243b93f33bb"
+    },
+    {
+      "split": "development",
+      "schema_cutoff": 0.8,
+      "metrics": {
+        "cases": 25,
+        "executed": 24,
+        "nonempty": 24,
+        "semantic_exact": 24,
+        "semantic_precision": 0.9841269841269841,
+        "semantic_recall": 1.0,
+        "evidence_exact": 24,
+        "evidence_f1": 0.9992348890589136,
+        "evidence_precision": 1.0,
+        "evidence_recall": 0.9984709480122325,
+        "combined_f1": 0.9844380403458213,
+        "combined_exact": 5,
+        "elapsed_seconds": 163.98,
+        "requests": 119,
+        "tokens": 208247,
+        "stages": {
+          "schema_filter": {
+            "requests": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "latency_ms": 0.0
+          },
+          "selector": {
+            "requests": 70,
+            "input_tokens": 160602,
+            "output_tokens": 9571,
+            "total_tokens": 170173,
+            "latency_ms": 8971.3
+          },
+          "composer": {
+            "requests": 24,
+            "input_tokens": 26535,
+            "output_tokens": 5023,
+            "total_tokens": 31558,
+            "latency_ms": 122889.3
+          },
+          "binder": {
+            "requests": 25,
+            "input_tokens": 5630,
+            "output_tokens": 886,
+            "total_tokens": 6516,
+            "latency_ms": 26327.2
+          }
+        },
+        "selector_candidates": {
+          "total": 204,
+          "median": 5,
+          "range": [
+            1,
+            19
+          ]
+        },
+        "failures_by_stage": {
+          "none": 5,
+          "semantic_retrieval": 19,
+          "composer_or_prebinding_validation": 1
+        },
+        "semantic_f1": 0.9919999999999999,
+        "required_schema_parts": 121,
+        "initial_schema_retained": 121,
+        "conditional_schema_available": 121,
+        "abstention_count": 0
+      },
+      "report_sha256": "938623e8a885cfb9656362b5eb32a70315e5715c7fc27c0c87d07842a95c701e"
+    },
+    {
+      "split": "heldout",
+      "schema_cutoff": 0.7,
+      "metrics": {
+        "cases": 25,
+        "executed": 18,
+        "nonempty": 15,
+        "semantic_exact": 12,
+        "semantic_precision": 0.8853503184713376,
+        "semantic_recall": 0.8424242424242424,
+        "evidence_exact": 13,
+        "evidence_f1": 0.748091603053435,
+        "evidence_precision": 0.9333333333333333,
+        "evidence_recall": 0.6242038216560509,
+        "combined_f1": 0.7606635071090048,
+        "combined_exact": 13,
+        "elapsed_seconds": 200.27,
+        "requests": 109,
+        "tokens": 271977,
+        "stages": {
+          "schema_filter": {
+            "requests": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "latency_ms": 0.0
+          },
+          "selector": {
+            "requests": 63,
+            "input_tokens": 205536,
+            "output_tokens": 15203,
+            "total_tokens": 220739,
+            "latency_ms": 9990.9
+          },
+          "composer": {
+            "requests": 21,
+            "input_tokens": 36443,
+            "output_tokens": 6323,
+            "total_tokens": 42766,
+            "latency_ms": 152787.5
+          },
+          "binder": {
+            "requests": 25,
+            "input_tokens": 7423,
+            "output_tokens": 1049,
+            "total_tokens": 8472,
+            "latency_ms": 30778.1
+          }
+        },
+        "selector_candidates": {
+          "total": 367,
+          "median": 9,
+          "range": [
+            1,
+            51
+          ]
+        },
+        "failures_by_stage": {
+          "none": 13,
+          "selector": 2,
+          "semantic_retrieval": 2,
+          "composer_or_prebinding_validation": 2,
+          "empty_result": 3,
+          "selector_abstention": 1,
+          "binder_or_binding_contract": 2
+        },
+        "semantic_f1": 0.8633540372670808,
+        "required_schema_parts": 135,
+        "initial_schema_retained": 135,
+        "conditional_schema_available": 129,
+        "abstention_count": 1
+      },
+      "report_sha256": "4dc1be14eced6ec94d123605b48b470f559bafd314edd350b124d0c42bfb3676"
+    },
+    {
+      "split": "heldout",
+      "schema_cutoff": 0.8,
+      "metrics": {
+        "cases": 25,
+        "executed": 18,
+        "nonempty": 16,
+        "semantic_exact": 14,
+        "semantic_precision": 0.9266666666666666,
+        "semantic_recall": 0.8424242424242424,
+        "evidence_exact": 15,
+        "evidence_f1": 0.809437386569873,
+        "evidence_precision": 0.9409282700421941,
+        "evidence_recall": 0.7101910828025477,
+        "combined_f1": 0.8100113765642776,
+        "combined_exact": 15,
+        "elapsed_seconds": 210.41,
+        "requests": 115,
+        "tokens": 259299,
+        "stages": {
+          "schema_filter": {
+            "requests": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "latency_ms": 0.0
+          },
+          "selector": {
+            "requests": 63,
+            "input_tokens": 190704,
+            "output_tokens": 13350,
+            "total_tokens": 204054,
+            "latency_ms": 9094.4
+          },
+          "composer": {
+            "requests": 25,
+            "input_tokens": 39165,
+            "output_tokens": 6958,
+            "total_tokens": 46123,
+            "latency_ms": 163860.30000000002
+          },
+          "binder": {
+            "requests": 27,
+            "input_tokens": 8008,
+            "output_tokens": 1114,
+            "total_tokens": 9122,
+            "latency_ms": 31965.0
+          }
+        },
+        "selector_candidates": {
+          "total": 323,
+          "median": 9,
+          "range": [
+            1,
+            39
+          ]
+        },
+        "failures_by_stage": {
+          "none": 15,
+          "semantic_retrieval": 1,
+          "composer_or_prebinding_validation": 2,
+          "empty_result": 2,
+          "selector_abstention": 1,
+          "binder_or_binding_contract": 3,
+          "selector": 1
+        },
+        "semantic_f1": 0.8825396825396825,
+        "required_schema_parts": 135,
+        "initial_schema_retained": 134,
+        "conditional_schema_available": 129,
+        "abstention_count": 1
+      },
+      "report_sha256": "b2c7ba0763dae00a1c7be90484ba7dcc8ce0a086229be4269a814b0b362e3256"
+    }
+  ],
+  "controls_at_0.8": {
+    "development": {
+      "cases": 25,
+      "executed": 24,
+      "nonempty": 24,
+      "semantic_exact": 24,
+      "semantic_precision": 0.9841269841269841,
+      "semantic_recall": 1.0,
+      "evidence_exact": 24,
+      "evidence_f1": 0.9992348890589136,
+      "evidence_precision": 1.0,
+      "evidence_recall": 0.9984709480122325,
+      "combined_f1": 0.9844380403458213,
+      "combined_exact": 5,
+      "elapsed_seconds": 173.5,
+      "requests": 113,
+      "tokens": 206757,
+      "stages": {
+        "schema_filter": {
+          "requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "latency_ms": 0.0
+        },
+        "selector": {
+          "requests": 64,
+          "input_tokens": 159239,
+          "output_tokens": 9439,
+          "total_tokens": 168678,
+          "latency_ms": 9011.4
+        },
+        "composer": {
+          "requests": 24,
+          "input_tokens": 26539,
+          "output_tokens": 5024,
+          "total_tokens": 31563,
+          "latency_ms": 129536.4
+        },
+        "binder": {
+          "requests": 25,
+          "input_tokens": 5630,
+          "output_tokens": 886,
+          "total_tokens": 6516,
+          "latency_ms": 28146.7
+        }
+      },
+      "selector_candidates": {
+        "total": 204,
+        "median": 5,
+        "range": [
+          1,
+          19
+        ]
+      },
+      "failures_by_stage": {
+        "none": 5,
+        "semantic_retrieval": 19,
+        "composer_or_prebinding_validation": 1
+      },
+      "semantic_f1": 0.9919999999999999,
+      "required_schema_parts": 121,
+      "initial_schema_retained": 121,
+      "conditional_schema_available": 121,
+      "abstention_count": 0
+    },
+    "heldout": {
+      "cases": 25,
+      "executed": 17,
+      "nonempty": 15,
+      "semantic_exact": 13,
+      "semantic_precision": 0.9271523178807947,
+      "semantic_recall": 0.8484848484848485,
+      "evidence_exact": 12,
+      "evidence_f1": 0.7579737335834896,
+      "evidence_precision": 0.9223744292237442,
+      "evidence_recall": 0.643312101910828,
+      "combined_f1": 0.7679814385150812,
+      "combined_exact": 12,
+      "elapsed_seconds": 231.05,
+      "requests": 110,
+      "tokens": 259330,
+      "stages": {
+        "schema_filter": {
+          "requests": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "latency_ms": 0.0
+        },
+        "selector": {
+          "requests": 59,
+          "input_tokens": 191590,
+          "output_tokens": 13262,
+          "total_tokens": 204852,
+          "latency_ms": 8054.7
+        },
+        "composer": {
+          "requests": 25,
+          "input_tokens": 38495,
+          "output_tokens": 7162,
+          "total_tokens": 45657,
+          "latency_ms": 181195.6
+        },
+        "binder": {
+          "requests": 26,
+          "input_tokens": 7747,
+          "output_tokens": 1074,
+          "total_tokens": 8821,
+          "latency_ms": 34423.9
+        }
+      },
+      "selector_candidates": {
+        "total": 323,
+        "median": 9,
+        "range": [
+          1,
+          39
+        ]
+      },
+      "failures_by_stage": {
+        "none": 12,
+        "composer_or_prebinding_validation": 3,
+        "semantic_retrieval": 3,
+        "empty_result": 2,
+        "selector_abstention": 1,
+        "binder_or_binding_contract": 3,
+        "selector": 1
+      },
+      "semantic_f1": 0.8860759493670887,
+      "required_schema_parts": 135,
+      "initial_schema_retained": 134,
+      "conditional_schema_available": 128,
+      "abstention_count": 1
+    }
+  },
+  "policy": "aggregate-only held-out review; fixed captured schema probabilities, fresh downstream calls"
+}

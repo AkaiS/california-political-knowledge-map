@@ -1,0 +1,13 @@
+[lint]
+select = ["E4", "E7", "E9", "F", "I", "BLE"]
+
+# Archived implementation files retain their evaluated bytes and SHA-256 hashes.
+# These exceptions cover existing style only; new launcher and test code is checked.
+[lint.per-file-ignores]
+"overlay/**/*.py" = ["I001"]
+"overlay/**/runner.py" = ["E731"]
+"overlay/**/jev_selector.py" = ["BLE001"]
+"peer_wording.py" = ["I001"]
+"filtered_fragments.py" = ["I001"]
+"reporting_keyword_gate.py" = ["I001"]
+"reporting_keyword_gate_validation.py" = ["I001"]

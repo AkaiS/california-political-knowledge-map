@@ -1,0 +1,25 @@
+{
+  "base_commit": "104d626000ba189b1beafe306a186f167ff98e4a",
+  "files": {
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py": "a90f5a3dde46c89f58da9f814f0bd6ee8228c07f4dfd32819b2408476bec262d",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/compiler.py": "85861a206121345ec88748d396da5b3440d9d8d2651115c02966e49008851c1a",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/contracts.py": "30b31bd8422faf0c35c38dcbde400dd72063e4edea1b78c172cf6c5bd417377c",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py": "ed08ef2c57ca4c2cfa53a30e3a18790195b1c5d08e3b3b230f46ec266eb2dc6f",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py": "366b8de7036f37f2b3cf7d90a8ecd6448d36091008b0a676151e624470aa7397",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py": "45977d026b5aee4a788a17d5cf89776d251c693db51244db3a24807424d64d48",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py": "612097a1e2966ddf1fda20aa3b4b3a9853ede61c263af8e03499d2556fe4267f",
+    "overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py": "6436de2bcb74a88baa1e31343dd6d519e67b2693f85d1261b82b51954d6d5215",
+    "fragment_selector.py": "15ac5935b18567b0f4460e55b34e3beabf4e70157383d5f9b81793573a0f3012",
+    "filtered_fragments.py": "3b3d915c5e4a2bd04403fc7b4204e969e6257c7abda5b847cb26df86aa85a4f3",
+    "peer_wording.py": "5c4ab164c3fb196067e8656f4a88a5866b0ae6c0c02194b8496b65696b4012d0",
+    "reporting_keyword_gate.py": "3f0cf7cfbc29858b3cfb4361943954453a76a3cf979cf75ffde70d944e649978",
+    "reporting_keyword_gate_validation.py": "be46ce8ef608fab46527747b4bb8567a546c685d6bccca73904723e597a80cd3"
+  },
+  "runtime": "archived base src and development references, with frozen overlays",
+  "schema_cutoffs_tested": [
+    0.7,
+    0.8
+  ],
+  "selector_threshold": 0.52,
+  "subtype_threshold": 0.8
+}

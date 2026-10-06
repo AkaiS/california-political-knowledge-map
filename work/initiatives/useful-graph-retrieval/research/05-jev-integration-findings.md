@@ -1,5 +1,17 @@
 # Findings: Jev as a query-construction classifier
 
+The latest experiment is the [preserved staged Jev implementation and aggregate
+evaluation](../query-construction/experiments/jev-staged/README.md), completed on
+2026-10-06. Removing the peer wording examples and replacing the reporting
+keyword gate with a Jev intent Noul matched the dev control at schema .8 and
+reached 15 of 25 exact held-out evidence sets, 80.94% evidence F1, and 71.02%
+evidence recall. The comparison uses one run per configuration and a historical
+control. Held-out review remained limited to aggregate metrics.
+
+The chronology below records the earlier selector-only phase. The preserved
+experiment now includes Jev schema narrowing and staged subtype/property
+selection. It remains an experiment, with production retrieval unchanged.
+
 Research supporting a possible follow-up to issue
 [05](../issues/05-prototype-query-construction-and-validation.md). This note
 compares TypeSafe AI's Jev API with the atomic semantic query-construction
