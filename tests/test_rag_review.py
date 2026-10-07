@@ -116,6 +116,34 @@ def review():
     }
 
 
+@pytest.mark.parametrize("compacted", [False, True])
+def test_review_shows_only_selected_graph_facts_without_jev_construction(compacted):
+    raw = report(generation=True)
+    evidence = raw["report"]["cases"][0]["output"]["evidence"]
+    selected = {"fact": "Bill support", "evidence_chunk_ids": ["a"]}
+    branches = [
+        {
+            "branch": "structural",
+            "status": "succeeded",
+            "construction": {"catalog": "secret"},
+            "semantic_results": [
+                selected,
+                {"fact": "secret", "evidence_chunk_ids": ["b"]},
+            ],
+        }
+    ]
+    if compacted:
+        evidence["semantic_context"] = branches
+    else:
+        evidence["execution"] = {"outcomes": branches}
+    projected = project_report(raw)
+    output = projected["report"]["cases"][0]["output"]
+    assert output["semantic_context"] == [
+        {"branch": "structural", "semantic_results": [selected]}
+    ]
+    assert "secret" not in json.dumps(projected)
+
+
 def test_projection_excludes_all_pipeline_internals_and_keeps_exact_selected_text():
     raw = report()
     before = copy.deepcopy(raw)

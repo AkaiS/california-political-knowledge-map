@@ -30,8 +30,10 @@ measurement as zero.
 ## Judgment inputs
 
 Each case shows the approved retrieval question, scope, selected passage wording
-and citations, and the final rendered generation when present. It does not serve
-rewrites, assessments, branch candidates, model messages or application spans
+and citations, the selected graph facts supplied to generation, and the final
+rendered generation when present. Graph facts are included only when all of their
+evidence chunks reached the selected context, matching the production handoff.
+It does not serve rewrites, assessments, branch candidates, model messages or application spans
 through the focused report API. The run specifications and metric dashboard are
 visible immediately above these inputs in an initially expanded, collapsible
 panel. The case list scrolls independently of the evidence and answer.

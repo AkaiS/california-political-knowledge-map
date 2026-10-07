@@ -70,6 +70,23 @@ def test_top_ten_sampling_includes_unselected_chunks_and_hides_reference_labels(
     assert "fusion_score" not in json.dumps(pools)
 
 
+def test_startup_failures_record_empty_pools_without_fusion_settings():
+    doc = raw_document(
+        execution((candidate(RetrievalBranch.FULL_TEXT),)), expectation()
+    )
+    case = doc["report"]["cases"][0]
+    case["inputs"] = {"question": "Approved question"}
+    failed = copy.deepcopy(case)
+    failed["name"] = "startup-failure"
+    failed["output"].update(settings={}, result=None)
+    doc["report"]["cases"].append(failed)
+    compact_retrieval_report(doc)
+    pools = candidate_pools(doc, "source-hash")
+    assert len(pools[0]) == 1
+    assert pools[1] == []
+    assert sample_pairs(pools, size=1, seed=42) == pools[0]
+
+
 @pytest.mark.parametrize("size,quota", [(100, 4), (200, 8)])
 def test_balanced_random_sample_is_deterministic_and_contains_each_question(
     size, quota

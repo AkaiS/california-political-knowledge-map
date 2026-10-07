@@ -12,6 +12,11 @@ including reporting-only questions. Branch scores follow the execution's recorde
 routing, and run provenance records the active Jev prompt versions. Historical
 runs retain their original branch selection and scores.
 
+Startup failures receive zero scores for all three production branches. Their
+empty candidate pools remain in chunk-sampling manifests. Compact reports retain
+selected graph facts passed to generation, but discard Jev construction audits
+and graph results outside the selected context.
+
 The first Data Set preserves all 25 questions and IDs from the
 [Cypher construction set](../../work/initiatives/useful-graph-retrieval/query-construction/cases.yaml).
 Codex mapped its executed reference results to retrieval labels. These are

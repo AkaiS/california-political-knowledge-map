@@ -123,7 +123,7 @@ def test_invalid_cutoffs_are_rejected(ks):
         RetrievedReferenceEvidence(ks=ks)
 
 
-def test_startup_failure_scores_zero_and_does_not_create_a_structural_score():
+def test_startup_failure_scores_zero_for_every_current_jev_branch():
     scores = evaluate(
         RetrievalOutput(
             failure=chat.ChatFailure(
@@ -138,7 +138,8 @@ def test_startup_failure_scores_zero_and_does_not_create_a_structural_score():
     assert scores["dense_recall_at_5"] == scores["full_text_recall_at_5"] == 0
     assert scores["context_recall"] == scores["fused_recall_at_5"] == 0
     assert scores["retrieval_attempt_completed"] is False
-    assert not any(key.startswith("structural_") for key in scores)
+    assert scores["structural_completed"] is False
+    assert scores["structural_recall_at_5"] == 0
 
 
 @pytest.mark.parametrize("failed", [False, True])

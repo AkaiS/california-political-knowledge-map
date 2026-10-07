@@ -7,7 +7,7 @@ from typing import Any
 
 from knowledge_map.schemas.fusion import FusionConfig
 
-from .retrieval_report import replay_fusion
+from .retrieval_report import replay_fusion, selected_semantic_results
 
 AXES = ("context_relevance", "answer_relevance", "faithfulness")
 VERDICTS = (None, "pass", "fail", "defer")
@@ -229,6 +229,7 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                 "metrics": _metric_rows(case, output, configurations),
                 "output": {
                     "sources": sources,
+                    "semantic_context": selected_semantic_results(evidence),
                     "context_limits": evidence.get("context"),
                     "generation": generation if has_generation else None,
                     "has_context": any(source["passages"] for source in sources),

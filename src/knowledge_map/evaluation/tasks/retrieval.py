@@ -247,7 +247,9 @@ class RetrievedReferenceEvidence(Evaluator):
         expected_branches = (
             execution.expected_branches
             if execution is not None
-            else RetrievalRequest(rewrite=ctx.inputs).expected_branches
+            else RetrievalRequest(
+                rewrite=ctx.inputs, structural_reporting=True
+            ).expected_branches
         )
         for branch in expected_branches:
             candidates = (

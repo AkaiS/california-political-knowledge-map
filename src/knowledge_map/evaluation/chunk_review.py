@@ -21,10 +21,12 @@ def candidate_pools(document: dict[str, Any], report_sha256: str) -> list[list[d
     pools = []
     for case in document["report"]["cases"]:
         output = case["output"]
-        config = FusionConfig.model_validate(
-            configurations[output["configuration_index"]]["fusion_settings"]
-        )
-        ranked = replay_fusion(output["branches"], config)[:10]
+        ranked = []
+        if output["branches"]:
+            config = FusionConfig.model_validate(
+                configurations[output["configuration_index"]]["fusion_settings"]
+            )
+            ranked = replay_fusion(output["branches"], config)[:10]
         evidence = output.get("evidence") or {}
         texts = {
             p["chunk_id"]: p["text"]

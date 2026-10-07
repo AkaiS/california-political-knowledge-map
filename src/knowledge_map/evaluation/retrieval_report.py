@@ -45,7 +45,9 @@ def compact_branches(
         branch = outcome["branch"]
         records = ranked[branch]
         kept = records[:CHUNK_BUDGET]
-        summary = {k: v for k, v in outcome.items() if k != "candidates"}
+        summary = {
+            k: outcome[k] for k in ("branch", "status", "reason") if k in outcome
+        }
         summary.update(
             candidates=kept,
             retrieved_count=len(outcome.get("candidates", [])),
@@ -62,6 +64,31 @@ def compact_branches(
             ]
         compact.append(summary)
     return compact
+
+
+def selected_semantic_results(evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    """Keep the graph facts supplied with the selected passages to generation."""
+    retained_ids = {
+        passage.get("chunk_id") or (passage.get("candidate") or {}).get("chunk_id")
+        for source in evidence.get("sources", [])
+        for passage in source.get("passages", [])
+    }
+    branches = evidence.get("semantic_context")
+    if branches is None:
+        branches = (evidence.get("execution") or {}).get("outcomes", [])
+    context = []
+    for branch in branches:
+        if branch.get("status", "succeeded") != "succeeded":
+            continue
+        rows = [
+            row
+            for row in branch.get("semantic_results", [])
+            if row.get("evidence_chunk_ids")
+            and set(row["evidence_chunk_ids"]) <= retained_ids
+        ]
+        if rows:
+            context.append({"branch": branch["branch"], "semantic_results": rows})
+    return context
 
 
 def replay_fusion(
@@ -269,6 +296,7 @@ def compact_retrieval_report(
                     }
                     for s in result["sources"]
                 ]
+            evidence["semantic_context"] = selected_semantic_results(result)
         observations = case["attributes"].pop("stage_observations", [])
         case["attributes"]["retrieval_diagnostics"] = _diagnostics(observations)
         case["output"] = {

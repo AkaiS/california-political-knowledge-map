@@ -1,5 +1,6 @@
 """Retained ranks explain bounded metrics and reproduce production fusion."""
 
+import asyncio
 import copy
 import json
 import runpy
@@ -9,6 +10,7 @@ import pytest
 from test_retrieval import candidate, rewrite
 from test_retrieval_eval_task import evaluate, expectation
 
+from knowledge_map.core.evidence import EvidenceAssembler, render_evidence_context
 from knowledge_map.core.fusion import fuse_candidates
 from knowledge_map.evaluation.retrieval_report import (
     METRIC_VERSION,
@@ -20,6 +22,7 @@ from knowledge_map.evaluation.tasks.retrieval import (
     RetrievalOutput,
     RetrievedReferenceEvidence,
 )
+from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import (
     EvidenceAssemblyFailure,
@@ -84,6 +87,57 @@ def test_compaction_retains_guidance_and_rendered_answer_without_duplicate_execu
     assert compacted["answer"]["source_notes"] == output["answer"]["source_notes"]
     assert compacted["rendered_text"] == output["rendered_text"]
     assert "evidence" not in compacted["answer"]
+    assert "discard" not in json.dumps(compacted)
+
+
+def test_jev_compaction_keeps_only_graph_facts_supplied_to_generation():
+    from test_retrieval import COVERAGE, load_grounding
+
+    ft = RetrievalBranch.FULL_TEXT
+    result = execution((candidate(ft, chunk="a"), candidate(ft, chunk="b", rank=2)))
+    rows = (
+        {"fact": "selected fact", "evidence_chunk_ids": ["a"]},
+        {"fact": "discarded fact", "evidence_chunk_ids": ["b"]},
+        {"fact": "partial fact", "evidence_chunk_ids": ["a", "b"]},
+        {"fact": "unsupported fact", "evidence_chunk_ids": []},
+    )
+    result = result.model_copy(
+        update={
+            "outcomes": (
+                result.outcomes[0].model_copy(
+                    update={
+                        "construction": {"catalog": "discard construction"},
+                        "semantic_results": rows,
+                    }
+                ),
+                *result.outcomes[1:],
+            )
+        }
+    )
+    package = asyncio.run(
+        EvidenceAssembler(load_grounding=load_grounding).assemble(
+            result,
+            fuse_candidates(result),
+            coverage=COVERAGE,
+            relevant_collection_ids=("reporting",),
+            limits=EvidenceContextLimits(max_passages=1),
+        )
+    )
+    supplied = json.loads(render_evidence_context(package))
+    doc = raw_document(result, expectation(("a",)))
+    doc["report"]["cases"][0]["output"]["result"] = package.model_dump(mode="json")
+    compacted = compact_retrieval_report(doc)["report"]["cases"][0]["output"]
+    assert compacted["evidence"]["semantic_context"] == [
+        {
+            "branch": "full_text",
+            "semantic_results": supplied["branches"][0]["semantic_results"],
+        }
+    ]
+    assert compacted["evidence"]["semantic_context"][0]["semantic_results"] == [rows[0]]
+    assert all(
+        "construction" not in b and "semantic_results" not in b
+        for b in compacted["branches"]
+    )
     assert "discard" not in json.dumps(compacted)
 
 

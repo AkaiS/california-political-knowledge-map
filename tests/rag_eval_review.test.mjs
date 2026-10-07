@@ -56,11 +56,12 @@ test('focused page loads specs, preserves independent judgments and disables abs
  const page=readFileSync(new URL('../scripts/rag_eval_review.html',import.meta.url),'utf8');const script=page.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,'');
  runInNewContext(script,{createReviewEditor,axes:Object.keys(defaults).filter(k=>!k.endsWith('_note')),defaults,validateReview,requiredAxes,complete,diagnosis,document,location:{pathname:'/runs/chat--run'},window:{addEventListener(){}},URL,setTimeout:browserSetTimeout,clearTimeout:browserClearTimeout,localStorage:{getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},fetch:(url,options)=>options?(writes.push(JSON.parse(options.body)),Promise.resolve({ok:true})):new Promise(resolve=>requests.push({url,resolve}))});
  get('search').oninput();get('filter').onchange();
- const c={name:'case-a',question:'Approved question',metrics:[],output:{...both.output,sources:[{citation:{title:'Source',url:'https://example.org'},passages:[{chunk_id:'a',text:'Exact context'}]}],generation:'Final'}};
+ const c={name:'case-a',question:'Approved question',metrics:[],output:{...both.output,sources:[{citation:{title:'Source',url:'https://example.org'},passages:[{chunk_id:'a',text:'Exact context'}]}],semantic_context:[{branch:'structural',semantic_results:[{fact:'Selected graph fact',evidence_chunk_ids:['a']}]}],generation:'Final'}};
  const run={task:'chat',review_identity:'identity',model:'model',metrics:[],specs:{dataset:'dataset',label_quality:'silver',configurations:[],definitions:{}},report:{cases:[c,{...c,name:'case-b',output:{...c.output,has_generation:false,generation:null}}]}};
  for(const r of requests)r.resolve({ok:true,json:async()=>r.url.endsWith('/report')?run:r.url.endsWith('/presentation')?{html:{Final:'<p>Final</p>'}}:{}});
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(get('question').textContent,'Approved question');assert.equal(get('loading').hidden,true);assert.equal(get('answer').innerHTML,'<p>Final</p>');
+ assert.ok(all.some(el=>el.tagName==='PRE'&&el.textContent.includes('Selected graph fact')));
  const button=(axis,value)=>all.find(el=>el.dataset.axis===axis&&el.dataset.value===value);
  const secondCase=get('case-list').children[1];
  assert.equal(button('answer_relevance','pass').disabled,false);
