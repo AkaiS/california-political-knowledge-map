@@ -176,6 +176,16 @@ relevance grades absent from the initial references. Two-hop coverage is shown o
 with two explicit evidence groups, with the reference-answer unit stated.
 The reviewer does not combine context and generation from different executions.
 
+Chunk relevance uses a separate query–Article Chunk view and annotation file.
+A script freezes a balanced random sample from each attempted retrieval's fused
+top ten. It preserves run hashes, ranks, text hashes and text observation origin;
+text missing from the compact report can be loaded from the current graph with
+that later observation recorded explicitly. The reviewer shows only question
+and chunk text. High and Low labels export as judge-calibration examples; Defer
+remains unresolved. Question groups travel with the export for disjoint judge
+validation splits. Sampling and human labels do not overwrite retrieval metrics
+or whole-context and generation judgments.
+
 New retrieval evaluations also call the production final Chat Agent with the
 approved question and that run's Evidence Package. The eval and Chat Session
 share answer generation, citation validation and rendering. Question preparation

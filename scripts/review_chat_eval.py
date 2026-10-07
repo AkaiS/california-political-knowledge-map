@@ -29,6 +29,11 @@ from pygments.util import ClassNotFound
 # report model shipped beside this reviewer.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from knowledge_map.evaluation.chunk_review import (
+    export_labels,
+    project_sample,
+    validate_chunk_review,
+)
 from knowledge_map.evaluation.rag_review import (
     project_report,
     required_axes,
@@ -185,6 +190,11 @@ def presentation_for(report: dict[str, Any]) -> dict[str, Any]:
 def load_report(path: Path, mode: str = "chat") -> dict[str, Any]:
     content = path.read_bytes()
     report = json.loads(content)
+    if mode == "chunks":
+        report["review_identity"] = hashlib.sha256(
+            str(path.resolve()).encode() + b"\0" + content + b"\0chunks-v1"
+        ).hexdigest()
+        return project_sample(report)
     if report.get("task") not in (
         ("chat", "retrieval") if mode == "rag" else ("chat",)
     ) or not isinstance(report.get("report", {}).get("cases"), list):
@@ -232,13 +242,19 @@ def run_path(reports_dir: Path, run_id: str, mode: str = "chat") -> Path | None:
     return (
         path
         if path.is_file()
-        and not path.name.endswith((".reviews.json", ".rag-reviews.json"))
+        and not path.name.endswith(
+            (".reviews.json", ".rag-reviews.json", ".chunk-reviews.json")
+        )
         else None
     )
 
 
 def review_path(path: Path, mode: str) -> Path:
-    return path.with_suffix(".rag-reviews.json" if mode == "rag" else ".reviews.json")
+    return path.with_suffix(
+        {"rag": ".rag-reviews.json", "chunks": ".chunk-reviews.json"}.get(
+            mode, ".reviews.json"
+        )
+    )
 
 
 def list_runs(reports_dir: Path, mode: str = "chat") -> list[dict[str, Any]]:
@@ -251,7 +267,9 @@ def list_runs(reports_dir: Path, mode: str = "chat") -> list[dict[str, Any]]:
     for path in (
         path for directory in directories for path in directory.glob("*.json")
     ):
-        if path.name.endswith((".reviews.json", ".rag-reviews.json")):
+        if path.name.endswith(
+            (".reviews.json", ".rag-reviews.json", ".chunk-reviews.json")
+        ):
             continue
         report = report_for(path, mode)
         cases = report["report"]["cases"]
@@ -325,19 +343,32 @@ def save_reviews(path: Path, reviews: dict[str, Any]) -> None:
 
 
 def make_handler(
-    reports_dir: Path, runs_page: bytes, reviewer_page: bytes, mode: str = "chat"
+    reports_dir: Path,
+    runs_page: bytes,
+    reviewer_page: bytes,
+    mode: str = "chat",
+    *,
+    samples_dir: Path | None = None,
 ) -> type[BaseHTTPRequestHandler]:
+    samples_dir = samples_dir or REPOSITORY / "evals/chunk-samples"
     reviews_lock = threading.Lock()
     review_editing_module = (
         Path(__file__).with_name("chat_eval_review_editing.mjs").read_bytes()
     )
 
     class Handler(BaseHTTPRequestHandler):
-        def _send(self, status: int, body: bytes, content_type: str) -> None:
+        def _send(
+            self, status: int, body: bytes, content_type: str, *, attachment: bool = False
+        ) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(body)))
+            if attachment:
+                self.send_header(
+                    "Content-Disposition",
+                    'attachment; filename="chunk-relevance-labels.jsonl"',
+                )
             self.end_headers()
             self.wfile.write(body)
 
@@ -351,7 +382,19 @@ def make_handler(
             if not self._trusted_host():
                 return
             path = urlsplit(self.path).path
-            if path == "/":
+            if path == "/chunks":
+                self._send(
+                    200,
+                    Path(__file__).with_name("chunk_eval_samples.html").read_bytes(),
+                    "text/html; charset=utf-8",
+                )
+            elif path == "/api/chunks":
+                self._send(
+                    200,
+                    json.dumps(list_runs(samples_dir, "chunks")).encode(),
+                    "application/json; charset=utf-8",
+                )
+            elif path == "/":
                 self._send(200, runs_page, "text/html; charset=utf-8")
             elif path == "/api/runs":
                 body = json.dumps(
@@ -368,30 +411,53 @@ def make_handler(
                 )
             else:
                 parts = [unquote(part) for part in path.strip("/").split("/")]
+                chunk_route = (len(parts) == 2 and parts[0] == "chunks") or (
+                    len(parts) == 4 and parts[:2] == ["api", "chunks"]
+                )
+                request_mode = "chunks" if chunk_route else mode
                 if not (
                     (len(parts) == 2 and parts[0] == "runs")
                     or (len(parts) == 4 and parts[:2] == ["api", "runs"])
+                    or chunk_route
                 ):
                     self._send(404, b"Not found", "text/plain; charset=utf-8")
                     return
                 run_id = parts[-1] if len(parts) == 2 else parts[2]
-                report_path = run_path(reports_dir, run_id, mode)
+                report_path = run_path(
+                    samples_dir if chunk_route else reports_dir, run_id, request_mode
+                )
                 if report_path is None:
                     self._send(404, b"Not found", "text/plain; charset=utf-8")
                 elif len(parts) == 2:
-                    self._send(200, reviewer_page, "text/html; charset=utf-8")
+                    page = (
+                        Path(__file__).with_name("chunk_eval_review.html").read_bytes()
+                        if chunk_route
+                        else reviewer_page
+                    )
+                    self._send(200, page, "text/html; charset=utf-8")
                 elif parts[3] == "report":
                     body = json.dumps(
-                        report_for(report_path, mode), ensure_ascii=False
+                        report_for(report_path, request_mode), ensure_ascii=False
                     ).encode()
                     self._send(200, body, "application/json; charset=utf-8")
                 elif parts[3] == "reviews":
                     body = json.dumps(
-                        load_reviews(review_path(report_path, mode)),
+                        load_reviews(review_path(report_path, request_mode)),
                         ensure_ascii=False,
                     ).encode()
                     self._send(200, body, "application/json; charset=utf-8")
-                elif parts[3] == "presentation":
+                elif chunk_route and parts[3] == "export":
+                    labels = export_labels(
+                        json.loads(report_path.read_text()),
+                        load_reviews(review_path(report_path, "chunks")),
+                    )
+                    body = "".join(
+                        json.dumps(label, ensure_ascii=False) + "\n" for label in labels
+                    ).encode()
+                    self._send(
+                        200, body, "application/x-ndjson; charset=utf-8", attachment=True
+                    )
+                elif parts[3] == "presentation" and not chunk_route:
                     body = json.dumps(
                         presentation_for(report_for(report_path, mode)),
                         ensure_ascii=False,
@@ -418,14 +484,22 @@ def make_handler(
             parts = [
                 unquote(part) for part in urlsplit(self.path).path.strip("/").split("/")
             ]
-            if len(parts) != 4 or parts[:2] != ["api", "runs"] or parts[3] != "reviews":
+            chunk_route = len(parts) == 4 and parts[:2] == ["api", "chunks"]
+            request_mode = "chunks" if chunk_route else mode
+            if (
+                len(parts) != 4
+                or parts[:2] not in (["api", "runs"], ["api", "chunks"])
+                or parts[3] != "reviews"
+            ):
                 self._send(404, b"Not found", "text/plain; charset=utf-8")
                 return
-            report_path = run_path(reports_dir, parts[2], mode)
+            report_path = run_path(
+                samples_dir if chunk_route else reports_dir, parts[2], request_mode
+            )
             if report_path is None:
                 self._send(404, b"Not found", "text/plain; charset=utf-8")
                 return
-            reviews_path = review_path(report_path, mode)
+            reviews_path = review_path(report_path, request_mode)
             try:
                 size = int(self.headers.get("Content-Length", "0"))
                 if size < 1 or size > 1_000_000:
@@ -440,11 +514,13 @@ def make_handler(
                 name, review = payload["name"], payload["review"]
                 case_names = {
                     case["name"]
-                    for case in report_for(report_path, mode)["report"]["cases"]
+                    for case in report_for(report_path, request_mode)["report"]["cases"]
                 }
                 if name not in case_names or not isinstance(review, dict):
                     raise ValueError("unknown case or invalid review")
-                if mode == "rag":
+                if chunk_route:
+                    validate_chunk_review(review)
+                elif mode == "rag":
                     case = next(
                         case
                         for case in report_for(report_path, mode)["report"]["cases"]
@@ -453,21 +529,21 @@ def make_handler(
                     validate_review(review, case)
                 elif set(review) != {"verdict", "note"}:
                     raise ValueError("expected verdict and note")
-                if mode != "rag" and review["verdict"] not in (
+                if request_mode != "rag" and review["verdict"] not in (
                     None,
                     "pass",
                     "fail",
                     "defer",
                 ):
                     raise ValueError("invalid verdict")
-                if mode != "rag" and (
+                if request_mode != "rag" and (
                     not isinstance(review["note"], str) or len(review["note"]) > 20_000
                 ):
                     raise ValueError("invalid note")
                 with reviews_lock:
                     if (
                         payload["review_identity"]
-                        != report_for(report_path, mode)["review_identity"]
+                        != report_for(report_path, request_mode)["review_identity"]
                     ):
                         self._send(
                             409,
@@ -506,6 +582,9 @@ def main() -> None:
         help="directory containing chat evaluation reports",
     )
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--samples-dir", type=Path, default=REPOSITORY / "evals/chunk-samples"
+    )
     args = parser.parse_args()
     if args.reports_dir is None:
         args.reports_dir = REPOSITORY / (
@@ -528,7 +607,13 @@ def main() -> None:
         )
     server = ThreadingHTTPServer(
         ("127.0.0.1", args.port),
-        make_handler(args.reports_dir, runs_page, reviewer_page, args.mode),
+        make_handler(
+            args.reports_dir,
+            runs_page,
+            reviewer_page,
+            args.mode,
+            samples_dir=args.samples_dir,
+        ),
     )
     print(f"Browse {args.mode} evals at http://127.0.0.1:{server.server_port}/")
     print(f"Reports: {args.reports_dir}")

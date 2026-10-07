@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chunk relevance review</title>
+<style>
+:root{font:16px/1.6 system-ui,sans-serif;color:#192422;background:#f5f6f5;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:960px;margin:auto;padding:28px 24px 60px}a{color:#08776b}header{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}.meta{font-size:13px;color:#586c68}.panel{background:white;border:1px solid #dbe2df;border-radius:10px;padding:28px;margin:18px 0}h1{font-size:24px;line-height:1.4;margin:0 0 24px}#chunk{white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.75}button,select,input,textarea{font:inherit;border:1px solid #bdcbc6;border-radius:6px;color:inherit;background:white}button{padding:9px 18px;cursor:pointer}button:disabled{opacity:.45;cursor:default}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #188476;outline-offset:2px}.choices{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 12px}.choices button{font-weight:650;min-width:105px}#high{background:#e8f3f0;border-color:#188476}#low{background:#fde6e3;border-color:#c7796d}#defer{background:#faf3df;border-color:#ab8b36}.choices [aria-pressed=true]{outline:3px solid currentColor;outline-offset:2px}label{display:block;margin-top:22px}textarea{width:100%;min-height:90px;resize:vertical;padding:12px}.navigation{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}select,input{padding:7px}input{width:85px}.error{color:#a13627}.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px}@media(max-width:600px){main{padding:20px 14px}.panel{padding:20px}h1{font-size:21px}.choices button{flex:1;min-width:80px}}
+</style>
+</head>
+<body><main>
+<header><a id="all-samples" href="/chunks">Chunk samples</a><a id="export" download="chunk-relevance-labels.jsonl">Export High / Low labels</a></header>
+<div class="meta" id="progress" aria-live="polite"></div>
+<div class="navigation"><button id="previous">Previous</button><span id="position"></span><button id="next">Next</button><select id="filter" aria-label="Show chunks"><option value="all">All chunks</option><option value="unmarked">Unmarked</option><option value="defer">Deferred</option></select><input id="jump" type="number" min="1" aria-label="Item number"><button id="go">Go</button></div>
+<p id="loading" class="meta" role="status">Loading sample…</p>
+<section class="panel" aria-label="Query and chunk"><h1 id="question"></h1><div id="chunk"></div></section>
+<div class="choices" role="group" aria-label="Chunk relevance"><button id="high" aria-pressed="false">High</button><button id="low" aria-pressed="false">Low</button><button id="defer" aria-pressed="false">Defer</button></div>
+<div class="meta">High: useful evidence for the requested question or one of its required steps. Low: does not help answer it. Defer: uncertain.</div>
+<label for="note">Description <span class="meta">optional</span></label><textarea id="note" maxlength="20000" placeholder="Why this chunk helps, does not help, or needs another look."></textarea>
+<div class="footer"><div><button id="undo">Undo</button> <button id="retry">Save / retry</button></div><span id="save-status" class="meta" role="status"></span></div>
+<p class="meta">Choices save and advance. 1 High · 2 Low · D Defer · U Undo · ← → navigate · Cmd/Ctrl+S save · Cmd/Ctrl+Enter save and next.</p>
+</main>
+<script type="module">
+import {createReviewEditor} from '/assets/chat_eval_review_editing.mjs';
+const $=id=>document.getElementById(id), sampleId=decodeURIComponent(location.pathname.split('/').at(-1)), api=`/api/chunks/${encodeURIComponent(sampleId)}`;
+let report, editor, state, busy=false;
+const cases=()=>report?.report.cases||[], selected=()=>cases().find(c=>c.name===state?.selectedCase);
+const matching=()=>cases().filter(c=>$('filter').value==='all'||($('filter').value==='unmarked'?state.reviews[c.name].verdict===null:state.reviews[c.name].verdict==='defer')).map(c=>c.name);
+function controls(){if(!editor)return;const names=matching(), review=state.reviews[state.selectedCase];for(const [id,value] of [['high','pass'],['low','fail'],['defer','defer']]){$(id).disabled=busy||!selected();$(id).setAttribute('aria-pressed',String(review?.verdict===value));}$('previous').disabled=busy||!editor.canNavigate(-1,names);$('next').disabled=busy||!editor.canNavigate(1,names);$('undo').disabled=busy||!state.canUndo;$('save-status').textContent=state.saveStatus;$('save-status').classList.toggle('error',state.saveFailed);const values=Object.values(state.reviews).map(r=>r.verdict);$('progress').textContent=`${values.filter(v=>v==='pass'||v==='fail').length} labeled · ${values.filter(v=>v==='defer').length} deferred · ${values.filter(v=>v===null).length} unmarked · ${state.pendingDraftCount} pending save`;}
+function render(){const c=selected();if(!c)return;$('position').textContent=`Item ${cases().indexOf(c)+1} of ${cases().length}`;$('jump').value=cases().indexOf(c)+1;$('question').textContent=c.inputs.question;$('chunk').textContent=c.output.text;$('note').value=state.reviews[c.name].note;controls();window.scrollTo(0,0);}
+async function choose(verdict){if(!editor||busy)return;busy=true;controls();try{if(await editor.setVerdict(verdict))await editor.navigate(1,matching);}finally{busy=false;controls();}}
+for(const [id,value] of [['high','pass'],['low','fail'],['defer','defer']])$(id).onclick=()=>choose(value);
+$('note').oninput=()=>editor?.editNote($('note').value);
+$('previous').onclick=()=>editor?.navigate(-1,matching);$('next').onclick=()=>editor?.navigate(1,matching);$('undo').onclick=()=>editor?.undo();$('retry').onclick=()=>editor?.flush();
+$('go').onclick=()=>{const i=Number($('jump').value)-1;if(Number.isInteger(i)&&cases()[i])editor?.selectCase(cases()[i].name);};
+$('filter').onchange=()=>{if(editor){const names=matching();if(names.length)editor.selectCase(names[0]);else controls();}};
+$('all-samples').onclick=async e=>{if(editor){e.preventDefault();if(await editor.flush())location.href='/chunks';}};
+$('export').href=`${api}/export`;$('export').onclick=async e=>{if(editor){e.preventDefault();if(await editor.flush())location.href=`${api}/export`;}};
+window.addEventListener('keydown',e=>{if(!editor)return;const cmd=e.ctrlKey||e.metaKey;if(cmd&&e.key.toLowerCase()==='s'){e.preventDefault();editor.flush();return;}if(cmd&&e.key==='Enter'){e.preventDefault();editor.flush().then(ok=>ok&&editor.navigate(1,matching));return;}if(cmd||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;const action={'1':()=>choose('pass'),'2':()=>choose('fail'),'d':()=>choose('defer'),'u':()=>editor.undo(),'ArrowLeft':()=>editor.navigate(-1,matching),'ArrowRight':()=>editor.navigate(1,matching)}[e.key];if(action){e.preventDefault();action();}});
+window.addEventListener('beforeunload',e=>{if(editor?.prepareForUnload()){e.preventDefault();e.returnValue='';}});
+Promise.all(['report','reviews'].map(part=>fetch(`${api}/${part}`).then(r=>{if(!r.ok)throw new Error(`Load failed: ${r.status}`);return r.json();}))).then(([loaded,reviews])=>{report=loaded;editor=createReviewEditor({caseNames:cases().map(c=>c.name),reviews,runId:sampleId,reviewIdentity:report.review_identity,draftNamespace:'chunk-review-drafts',persistReview:async payload=>{const r=await fetch(`${api}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw Object.assign(new Error(`Save failed: ${r.status}`),{status:r.status});},storage:localStorage,scheduler:{setTimeout:(callback,delay)=>setTimeout(callback,delay),clearTimeout:timer=>clearTimeout(timer)},onChange:(next,change)=>{state=next;if(change==='selection'||change==='undo')render();else controls();}});state=editor.state;$('jump').max=cases().length;$('loading').hidden=true;if(cases().length)render();else $('question').textContent='No chunks in this sample.';}).catch(e=>{$('loading').textContent=e.message;$('loading').classList.add('error');});
+</script>
+</body></html>

@@ -1,5 +1,9 @@
 # Review selected evidence and generation
 
+For a separate question-and-chunk annotation workflow, use
+[sampled chunk review](chunk-review.md). It collects High / Low / Defer labels
+from a sample of each retrieval attempt's fused top ten.
+
 RAG review judges the evidence selected for the Chat Agent and its final
 generation. It does not grade question preparation, structural construction,
 branch execution or the whole Chat Session. Those remain available in the
