@@ -258,6 +258,24 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     return answer_question
 
 
+def chat_stage_observations(ctx: EvaluatorContext) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": span.name,
+            "trace_id": f"{span.trace_id:032x}",
+            "span_id": f"{span.span_id:016x}",
+            "parent_span_id": f"{span.parent_span_id:016x}"
+            if span.parent_span_id is not None
+            else None,
+            "started_at": span.start_timestamp.isoformat(),
+            "finished_at": span.end_timestamp.isoformat(),
+            "attributes": span.attributes,
+        }
+        for span in ctx.span_tree
+        if span.name.startswith("chat_session.")
+    ]
+
+
 class ChatCaseLifecycle(EvaluationCaseLifecycle):
     async def prepare_context(self, ctx: EvaluatorContext) -> EvaluatorContext:
         ctx = await super().prepare_context(ctx)
@@ -272,21 +290,7 @@ class ChatCaseLifecycle(EvaluationCaseLifecycle):
             if project and output.chat_session_id
             else None
         )
-        ctx.attributes["stage_observations"] = [
-            {
-                "name": span.name,
-                "trace_id": f"{span.trace_id:032x}",
-                "span_id": f"{span.span_id:016x}",
-                "parent_span_id": f"{span.parent_span_id:016x}"
-                if span.parent_span_id is not None
-                else None,
-                "started_at": span.start_timestamp.isoformat(),
-                "finished_at": span.end_timestamp.isoformat(),
-                "attributes": span.attributes,
-            }
-            for span in ctx.span_tree
-            if span.name.startswith("chat_session.")
-        ]
+        ctx.attributes["stage_observations"] = chat_stage_observations(ctx)
         return ctx
 
 

@@ -170,6 +170,28 @@ That is strictly stronger than what Ollama provided — Ollama accepted
 `tool_choice: "required"` and ignored it — but it is a different mechanism than
 this record's title implies, and `supports_json_schema_output` is what carries it.
 
+## Amendment: inline ontology dictionary-key constraints
+
+On October 1, 2026, structural retrieval exposed a missing traversal in the
+installed Pydantic AI 2.31.1 schema transformer. `OntologySelection` generates
+a `propertyNames` reference for its `SemanticLabel` dictionary keys. The
+transformer removes `$defs` without walking that keyword, leaving a dangling
+reference. The current local server rejects this request with HTTP 400 before
+generation starts.
+
+`OntologySelection.filter_properties` now uses Pydantic's `json_schema_extra`
+to emit the key enum inline. `TypeAdapter(SemanticLabel)` supplies that enum
+from the existing type. Runtime validation still rejects unknown labels and
+invalid filter properties. This uses the library's schema customization without
+adding a custom walker or changing the structured-output transport. The model
+factory regression test checks the actual wire schema and typed-key validation.
+
+The production ontology-filter replay now receives HTTP 200. Its later
+correction exhaustion is a model-output validation failure, separate from
+request-schema conversion. The annotation can be removed when the upstream
+inliner handles `propertyNames`, provided the wire-schema regression still
+passes.
+
 ## Embeddings remain local
 
 An embedding call has no tool use to enforce, so the argument above does not

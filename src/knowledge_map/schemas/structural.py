@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, TypeAdapter
 
 
 from knowledge_map.prompts import load_prompt
@@ -28,7 +28,11 @@ type Position = Annotated[int, Field(strict=True, ge=0)]
 class OntologySelection(RetrievalValue):
     labels: Annotated[tuple[SemanticLabel, ...], Field(min_length=1)]
     relationships: tuple[NonemptyText, ...]
-    filter_properties: dict[SemanticLabel, tuple[FilterProperty, ...]]
+    filter_properties: dict[SemanticLabel, tuple[FilterProperty, ...]] = Field(
+        json_schema_extra={
+            "propertyNames": TypeAdapter(SemanticLabel).json_schema(),
+        }
+    )
 
 
 class PieceSelection(RetrievalValue):

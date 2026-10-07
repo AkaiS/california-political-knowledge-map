@@ -95,6 +95,11 @@ guidance or a final model failure propagates without another search.
 
 ## Usage and testing
 
+The `ca-map eval run retrieval` task measures branch recall, fusion, and final
+context coverage over the existing 25 Cypher cases. See
+[Evaluate retrieval evidence](evaluation/retrieval.md) for label provenance,
+reference freshness and separate generation review.
+
 `retrieval_total_usage` logs model requests, input tokens, and output tokens
 across structural construction and dense embedding. `chat_total_usage` includes
 Query Rewriter attempts, rejected proposals, policy assessment, retrieval, and
