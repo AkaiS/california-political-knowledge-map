@@ -7,6 +7,11 @@ evidence to the production answer function and renderer. It skips the Query
 Rewriter and question assessment. The [chat task](chat-answer-review.md)
 exercises those preparation stages as part of the whole Chat Session.
 
+New runs use the shared Jev structural retriever for every approved question,
+including reporting-only questions. Branch scores follow the execution's recorded
+routing, and run provenance records the active Jev prompt versions. Historical
+runs retain their original branch selection and scores.
+
 The first Data Set preserves all 25 questions and IDs from the
 [Cypher construction set](../../work/initiatives/useful-graph-retrieval/query-construction/cases.yaml).
 Codex mapped its executed reference results to retrieval labels. These are

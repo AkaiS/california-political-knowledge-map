@@ -12,11 +12,11 @@ from pydantic_ai.usage import RunUsage
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-from knowledge_map.adapters.structural import STRUCTURAL_INSTRUCTIONS
 from knowledge_map.chat_presentation import render_answer
 from knowledge_map.chat_startup import chat_dependencies
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, generate_retrieval_answer
 from knowledge_map.core.fusion import fuse_candidates
+from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import QueryRewrite
 from knowledge_map.schemas.retrieval import (
@@ -244,7 +244,12 @@ class RetrievedReferenceEvidence(Evaluator):
         output = ctx.output
         execution = output.result.execution if output.result is not None else None
         scores = {}
-        for branch in RetrievalRequest(rewrite=ctx.inputs).expected_branches:
+        expected_branches = (
+            execution.expected_branches
+            if execution is not None
+            else RetrievalRequest(rewrite=ctx.inputs).expected_branches
+        )
+        for branch in expected_branches:
             candidates = (
                 execution.evidence_by_branch.get(branch, ()) if execution else ()
             )
@@ -309,6 +314,6 @@ RETRIEVAL_TASK = register(
         evaluators=(RetrievedReferenceEvidence(),),
         case_lifecycle=RetrievalCaseLifecycle,
         default_model=default_model(),
-        prompts=lambda: {**STRUCTURAL_INSTRUCTIONS, "chat_agent": CHAT_INSTRUCTIONS},
+        prompts=lambda: {**JEV_PROMPTS, "chat_agent": CHAT_INSTRUCTIONS},
     )
 )

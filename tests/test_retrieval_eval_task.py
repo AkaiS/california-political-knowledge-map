@@ -28,7 +28,11 @@ from knowledge_map.evaluation.tasks.retrieval import (
     retrieval_scores,
 )
 from knowledge_map.schemas.evidence import EvidenceContextLimits
-from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalBranch
+from knowledge_map.schemas.retrieval import (
+    EvidenceAssemblyFailure,
+    FailedBranch,
+    RetrievalBranch,
+)
 
 
 def expectation(ids=("a", "b"), *, groups=None, grain="article_chunk"):
@@ -135,6 +139,48 @@ def test_startup_failure_scores_zero_and_does_not_create_a_structural_score():
     assert scores["context_recall"] == scores["fused_recall_at_5"] == 0
     assert scores["retrieval_attempt_completed"] is False
     assert not any(key.startswith("structural_") for key in scores)
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_reporting_questions_score_the_attempted_jev_branch(failed):
+    import asyncio
+
+    package = asyncio.run(
+        coordinator(structural_reporting=True).run(
+            rewrite(False),
+            coverage=COVERAGE,
+            relevant_collection_ids=("reporting",),
+        )
+    )
+    execution = package.execution
+    if failed:
+        execution = execution.model_copy(
+            update={
+                "outcomes": tuple(
+                    FailedBranch(branch=outcome.branch)
+                    if outcome.branch == RetrievalBranch.STRUCTURAL
+                    else outcome
+                    for outcome in execution.outcomes
+                )
+            }
+        )
+    scores = evaluate(
+        RetrievalOutput(result=EvidenceAssemblyFailure(execution=execution)),
+        expectation(("structural",)),
+        relational=False,
+    )
+    assert scores["structural_completed"] is (not failed)
+    assert scores["structural_recall_at_1"] == (0 if failed else 1)
+
+
+def test_retrieval_run_records_active_jev_prompts():
+    from knowledge_map.core.chat import CHAT_INSTRUCTIONS
+    from knowledge_map.jev.prompts import JEV_PROMPTS
+
+    assert task_named("retrieval").prompts() == {
+        **JEV_PROMPTS,
+        "chat_agent": CHAT_INSTRUCTIONS,
+    }
 
 
 def test_assembly_loss_keeps_branch_and_fused_scores():
