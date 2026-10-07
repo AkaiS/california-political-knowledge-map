@@ -1,0 +1,1 @@
+Does the question specify a date or time window that requires an inclusive lower bound on {value_0}?

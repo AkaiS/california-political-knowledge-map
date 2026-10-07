@@ -1,0 +1,1 @@
+For anchor-and-peer questions, a named anchor constrains the anchor, never the unrestricted returned peer.

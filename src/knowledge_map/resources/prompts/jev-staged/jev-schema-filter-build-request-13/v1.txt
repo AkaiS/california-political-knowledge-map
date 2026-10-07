@@ -1,0 +1,1 @@
+Could answering `question` require an individual person, as a result, a named anchor, or an intermediate entity?

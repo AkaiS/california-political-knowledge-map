@@ -1,0 +1,456 @@
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py
+@@ -1,0 +2,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -85 +87 @@
+-                f"one semantic {label.value} role",
++                load_prompt('jev-staged/catalog-pieces-02', version=1).format(value_0=label.value),
+@@ -100 +102 @@
+-                                f"one semantic triple: {_label_name(source_label)} -{predicate.value}-> {_label_name(target_label)}",
++                                load_prompt('jev-staged/catalog-pieces-06', version=1).format(value_0=_label_name(source_label), value_1=predicate.value, value_2=_label_name(target_label)),
+@@ -127 +129 @@
+-                f"one semantic predicate-alternative triple: {source.value} -{{{'|'.join(item.value for item in predicates)}}}-> {target.value}",
++                load_prompt('jev-staged/catalog-pieces-03', version=1).format(value_0=source.value, value_1='|'.join((item.value for item in predicates)), value_2=target.value),
+@@ -153 +155 @@
+-                        f"filter one {_label_name(label)} role by {prop.value} using {operator.value}",
++                        load_prompt('jev-staged/catalog-pieces-05', version=1).format(value_0=_label_name(label), value_1=prop.value, value_2=operator.value),
+@@ -164 +166 @@
+-                    f"require two {label.value} roles to identify different entities",
++                    load_prompt('jev-staged/catalog-pieces-04', version=1).format(value_0=label.value),
+@@ -173 +175 @@
+-            "group by PolicyArea and count distinct articles",
++            load_prompt('jev-staged/catalog-pieces-01', version=1),
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py
+@@ -6,0 +7,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -109,7 +111,7 @@
+-FILTER_INSTRUCTIONS = """Select semantic labels, semantic relationships, and properties needed to anchor or filter the question. Article source and result roles are compiler-owned; select only their relationship or filter semantics. Do not choose output fields, result shape, storage mechanics, query syntax, parameter names, or values. Use only names in the supplied semantic schema."""
+-
+-SELECTOR_INSTRUCTIONS = """Choose compiler-assigned IDs for the semantic entity-role occurrences, semantic triple occurrences, question-derived filters, distinct-entity constraints, and genuine aggregate operations needed by the question. Return IDs only in the typed groups. Repeat a role or relationship ID when the question needs two occurrences. Article relationship, filter, and aggregate IDs add their article role in code; there is no article role ID to select. Reporting context is automatic and must not be represented in the selection. Do not choose output fields, result shape, joins, directions, parameter names, values, query syntax, or an answer."""
+-
+-COMPOSER_INSTRUCTIONS = """Wire exactly the selected semantic occurrences using their zero-based indexes. Relationship indexes refer to the selected relationship list, role indexes to the selected role list, filter indexes to the selected filter list, and constraint indexes to the selected distinct-role list. Use each selected relationship, filter, and constraint exactly once. The selected piece declares each relationship's source and target labels. Do not emit names for roles, claims, parameters, outputs, or query syntax. Reporting context and result shape are automatic."""
+-
+-BINDER_INSTRUCTIONS = """Return the concrete question values in the exact supplied order. Return only the values list. Do not name fields or parameters, change semantic structure, choose output fields, or write query syntax. Dates are ISO YYYY-MM-DD boundaries. Use an allowed value when the item supplies a closed set."""
++FILTER_INSTRUCTIONS = load_prompt('jev-staged/runner-filter-instructions-01', version=1)
++
++SELECTOR_INSTRUCTIONS = load_prompt('jev-staged/runner-selector-instructions-01', version=1)
++
++COMPOSER_INSTRUCTIONS = load_prompt('jev-staged/runner-composer-instructions-01', version=1)
++
++BINDER_INSTRUCTIONS = load_prompt('jev-staged/runner-binder-instructions-01', version=1)
+@@ -211 +213 @@
+-    return f"Question: {case.question}\n\n{semantic_schema()}"
++    return load_prompt('jev-staged/runner-filter-request', version=1).format(question=case.question, schema=semantic_schema())
+@@ -231 +233 @@
+-        f"Question: {case.question}\n\nSemantic schema selection:\n"
++        load_prompt('jev-staged/runner-selector-prompt-03', version=1).format(value_0=case.question)
+@@ -233 +235 @@
+-        + "\n\nSemantic piece catalog:\n"
++        + load_prompt('jev-staged/runner-selector-prompt-01', version=1)
+@@ -237 +239 @@
+-        prompt += "\n\nCorrect the prior ID selection:\n" + json.dumps(
++        prompt += load_prompt('jev-staged/runner-selector-prompt-02', version=1) + json.dumps(
+@@ -335 +337 @@
+-        f"Question: {case.question}\n\nSelected semantic occurrences, indexed within each list:\n"
++        load_prompt('jev-staged/runner-composer-prompt-01', version=1).format(value_0=case.question)
+@@ -340 +342 @@
+-            "\n\nFilter attachment rules derived after fragment selection:\n"
++            load_prompt('jev-staged/runner-composer-prompt-02', version=1)
+@@ -345 +347 @@
+-            "\n\nPrior wiring:\n"
++            load_prompt('jev-staged/runner-composer-prompt-04', version=1)
+@@ -347 +349 @@
+-            + "\n\nCorrect these semantic wiring errors:\n"
++            + load_prompt('jev-staged/runner-composer-prompt-03', version=1)
+@@ -401,0 +404,28 @@
++    )
++
++
++def _deterministic_staged_wiring(
++    grouped: dict[str, list[Piece]],
++    attachment: dict[str, Any],
++    *,
++    relationship_free_mode: str = "forbidden",
++) -> SemanticWiring | None:
++    """Keep repeated article endpoints and property anchors at their selected indexes."""
++    try:
++        candidate = SemanticWiring(
++            triples=attachment["triples"],
++            filters=attachment["filters"],
++            distinct_roles=attachment["distinct_roles"],
++            aggregate=_deterministic_aggregate_wiring(grouped),
++            rationale="Deterministic assembly from staged occurrence attachments.",
++        )
++    except (KeyError, ValueError):
++        return None
++    return (
++        candidate
++        if not validate_wiring(
++            candidate, grouped,
++            relationship_free_mode=relationship_free_mode,
++            allow_parent_distinct=True,
++        )
++        else None
+@@ -573 +603 @@
+-    prompt = f"Question: {case.question}\n\nRequired values in order:\n" + json.dumps(
++    prompt = load_prompt('jev-staged/runner-binding-prompt-01', version=1).format(value_0=case.question) + json.dumps(
+@@ -578,2 +608 @@
+-            "\n\nThe prior ordered values failed validation. Return a corrected "
+-            "complete list. Fix these errors:\n"
++            load_prompt('jev-staged/runner-binding-prompt-02', version=1)
+@@ -865 +894 @@
+-            "instruction": "Return the full corrected selection.",
++            "instruction": load_prompt('jev-staged/runner-selector-correction', version=1),
+@@ -910,2 +939,9 @@
+-        deterministic = _deterministic_unique_wiring(
+-            grouped, relationship_free_mode=relationship_free_mode
++        deterministic = (
++            _deterministic_staged_wiring(
++                grouped, filter_attachment_rules[0],
++                relationship_free_mode=relationship_free_mode,
++            )
++            if selector_backend == "jev-staged" and filter_attachment_rules
++            else _deterministic_unique_wiring(
++                grouped, relationship_free_mode=relationship_free_mode
++            )
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py
+@@ -3,0 +4,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -30,4 +32,4 @@
+-    "zero": "The question does not require this semantic piece.",
+-    "one": "The question requires exactly one occurrence of this semantic piece.",
+-    "two": "The question requires exactly two occurrences of this semantic piece.",
+-    "three_or_more": "The question requires three or more occurrences of this semantic piece.",
++    "zero": load_prompt('jev-staged/jev-selector-count-criteria-01', version=1),
++    "one": load_prompt('jev-staged/jev-selector-count-criteria-02', version=1),
++    "two": load_prompt('jev-staged/jev-selector-count-criteria-03', version=1),
++    "three_or_more": load_prompt('jev-staged/jev-selector-count-criteria-04', version=1),
+@@ -37,2 +39,2 @@
+-    "zero": "The question does not require this semantic piece.",
+-    "one": "The question requires this semantic piece once.",
++    "zero": load_prompt('jev-staged/jev-selector-binary-criteria-01', version=1),
++    "one": load_prompt('jev-staged/jev-selector-binary-criteria-02', version=1),
+@@ -49 +51 @@
+-        "task": "Choose how many occurrences of this compiler-owned semantic piece the question requires.",
++        "task": load_prompt('jev-staged/jev-selector-question-01', version=1),
+@@ -53,3 +55,3 @@
+-            "Count semantic roles, relationships, filters, constraints, and aggregates only.",
+-            "Reporting context, provenance, result fields, parameters, and Cypher are automatic.",
+-            "Choose zero when the piece is merely related to the topic but is not needed to answer the question.",
++            load_prompt('jev-staged/jev-selector-question-02', version=1),
++            load_prompt('jev-staged/jev-selector-question-03', version=1),
++            load_prompt('jev-staged/jev-selector-question-04', version=1),
+@@ -75,2 +77 @@
+-            "Produce a complete semantic piece multiset for the question. "
+-            "Each supplied Choice concerns one piece and is evaluated independently."
++            load_prompt('jev-staged/jev-selector-select-pieces-01', version=1)
+@@ -118 +119 @@
+-            errors.append(f"missing Jev answer for {piece.piece_id}")
++            errors.append(load_prompt('jev-staged/jev-selector-select-pieces-02', version=1).format(value_0=piece.piece_id))
+@@ -127 +128 @@
+-                f"{piece.piece_id} selected unsupported occurrence count three_or_more"
++                load_prompt('jev-staged/jev-selector-select-pieces-03', version=1).format(value_0=piece.piece_id)
+@@ -133 +134 @@
+-                f"{piece.piece_id} returned unknown occurrence count {answer.choice!r}"
++                load_prompt('jev-staged/jev-selector-select-pieces-04', version=1).format(value_0=piece.piece_id, value_1=answer.choice)
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py
+@@ -6,0 +7,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -31,5 +33 @@
+-    "Choose every complete semantic fragment required by the question and no others. "
+-    "The prior schema-filter stage has already limited the available entities and relationships. "
+-    "Relationship fragments imply all endpoints. Conditions imply their entity role. "
+-    "Property-condition decisions are independent of relationship variants. "
+-    "Stored-reporting joins and output formatting are automatic. Single and peer variants compete."
++    load_prompt('jev-staged/jev-filtered-selector-guidance-01', version=1)
+@@ -111,2 +109,2 @@
+-            "true": "The whole fragment is required by the minimal semantic query.",
+-            "false": "The fragment is unnecessary or only related to the topic.",
++            "true": load_prompt('jev-staged/jev-filtered-selector-select-pieces-01', version=1),
++            "false": load_prompt('jev-staged/jev-filtered-selector-select-pieces-02', version=1),
+@@ -150 +148 @@
+-            errors.append(f"missing Jev answer for {fragment.fragment_id}")
++            errors.append(load_prompt('jev-staged/jev-filtered-selector-select-pieces-03', version=1).format(value_0=fragment.fragment_id))
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py
+@@ -6,0 +7,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -60,2 +62 @@
+-        "An individual person. Politician is the graph's only person label; "
+-        "judge personhood, without needing to establish the person's political status."
++        load_prompt('jev-staged/jev-schema-filter-schema-candidates-01', version=1)
+@@ -95 +96 @@
+-                "The individual's name, usable to restrict results to a named person."
++                load_prompt('jev-staged/jev-schema-filter-schema-candidates-02', version=1)
+@@ -108,12 +109,12 @@
+-            "Keep semantic schema elements that could be needed to answer the question.",
+-            "Labels cover entities returned, anchors, and intermediate endpoints on a required path.",
+-            "Politician is the graph's person slot. Recognize individual people without inferring political status or graph membership.",
+-            "Organization covers general organizations; LaborUnion and PAC are specialized organization types.",
+-            "Bill is a legislative measure; Prop is a ballot proposition, not a Bill.",
+-            "A vote on a Bill uses a Politician vote relationship to LegislativeEvent and ACTION_ON to Bill.",
+-            "When a question asks what vote was recorded without specifying an outcome, all three possible vote relationships could be needed; do not predict the recorded outcome.",
+-            "Article is compiler-owned. Only its topic relationship and title/date filters are classified.",
+-            "Articles that discuss a policy area use DISCUSSES_TOPIC. Entity policy classification uses ABOUT_TOPIC.",
+-            "Stored reporting about an entity is automatic and does not imply a semantic claim relationship.",
+-            "A topic-related element is unnecessary unless it could participate in answering the question.",
+-            "Each judgment is independent; do not assume any other judgment's answer.",
++            load_prompt('jev-staged/jev-schema-filter-build-request-01', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-02', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-03', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-04', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-05', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-06', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-07', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-08', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-09', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-10', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-11', version=1),
++            load_prompt('jev-staged/jev-schema-filter-build-request-12', version=1),
+@@ -128,2 +129 @@
+-                    "Could answering `question` require an individual person, "
+-                    "as a result, a named anchor, or an intermediate entity?"
++                    load_prompt('jev-staged/jev-schema-filter-build-request-13', version=1)
+@@ -133,2 +133 @@
+-                    f"Could answering `question` require an entity of type {candidate['label']}, "
+-                    "as a result, question anchor, or intermediate entity?"
++                    load_prompt('jev-staged/jev-schema-filter-build-request-14', version=1).format(value_0=candidate['label'])
+@@ -139,2 +138 @@
+-                f"Could answering `question` require the semantic relationship {candidate['predicate']} "
+-                "on a path connecting entities, including an intermediate relationship?"
++                load_prompt('jev-staged/jev-schema-filter-build-request-15', version=1).format(value_0=candidate['predicate'])
+@@ -145,2 +143 @@
+-                    "Does `question` specify an individual person's name that could "
+-                    "restrict results, including a named person used as a question anchor?"
++                    load_prompt('jev-staged/jev-schema-filter-build-request-18', version=1)
+@@ -150,2 +147 @@
+-                    f"Does `question` specify a value or time window that could constrain "
+-                    f"{candidate['label']}.{candidate['property']}?"
++                    load_prompt('jev-staged/jev-schema-filter-build-request-19', version=1).format(value_0=candidate['label'], value_1=candidate['property'])
+@@ -156,2 +152,2 @@
+-            true="This element could be needed by the semantic query described by the question.",
+-            false="This element is unrelated, merely topical, or unnecessary for answering the question.",
++            true=load_prompt('jev-staged/jev-schema-filter-build-request-16', version=1),
++            false=load_prompt('jev-staged/jev-schema-filter-build-request-17', version=1),
+--- a/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py
++++ b/src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py
+@@ -4,0 +5,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -55 +57 @@
+-        "an individual person"
++        load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-01', version=1)
+@@ -57 +59 @@
+-        else f"an entity of parent type {label}"
++        else load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-02', version=1).format(value_0=label)
+@@ -60 +62 @@
+-        "decision": f"Does answering `question` require {entity} as a separate query entity, returned entity, named anchor, necessary intermediate, or participant in stored reporting?",
++        "decision": load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-03', version=1).format(value_0=entity),
+@@ -63,6 +65,6 @@
+-            "Decide whether this parent role must exist in the minimal query.",
+-            "Automatic reporting joins do not eliminate the need to select the entity that anchors those joins.",
+-            "A role already implied by a selected relationship is the same occurrence, not an extra entity.",
+-            "Subtype restrictions and property constraints are separate later decisions.",
+-            "A person or measure mentioned inside a campaign's name does not require its own role unless the question asks for that entity or a relationship to it.",
+-            "Apply the same distinction to names inside any other entity's name. Select the named entity itself, not every entity referred to by words in its name.",
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-04', version=1),
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-05', version=1),
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-06', version=1),
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-07', version=1),
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-08', version=1),
++            load_prompt('jev-staged/jev-staged-selector-parent-role-prompt-09', version=1),
+@@ -80,2 +82,2 @@
+-            "Campaign -> Politician": "Campaign targets an individual candidate or person; candidates are people, irrespective of political status.",
+-            "Campaign -> Prop": "Campaign targets a ballot measure or proposition; this target is not an individual candidate.",
++            "Campaign -> Politician": load_prompt('jev-staged/jev-staged-selector-structural-prompt-01', version=1),
++            "Campaign -> Prop": load_prompt('jev-staged/jev-staged-selector-structural-prompt-02', version=1),
+@@ -85,3 +87,3 @@
+-                "Judge the exact source and target in this fragment against both target definitions.",
+-                "A question asking for candidates connected through funded campaigns requires the individual-person target. A question asking for ballot measures requires the proposition target.",
+-                "A person or measure mentioned only inside a named campaign does not require a CAMPAIGN_FOR relationship. Funding a named campaign can be answered with the campaign name and FUNDED relationship alone.",
++                load_prompt('jev-staged/jev-staged-selector-structural-prompt-03', version=1),
++                load_prompt('jev-staged/jev-staged-selector-structural-prompt-04', version=1),
++                load_prompt('jev-staged/jev-staged-selector-structural-prompt-05', version=1),
+@@ -301,2 +303,2 @@
+-            "Politician": "An individual person, irrespective of political status.",
+-            "Organization": "An organization, including PACs and LaborUnions. Subtype restrictions are decided afterward.",
++            "Politician": load_prompt('jev-staged/jev-staged-selector-select-pieces-01', version=1),
++            "Organization": load_prompt('jev-staged/jev-staged-selector-select-pieces-02', version=1),
+@@ -305,4 +307,4 @@
+-            "Select the minimal required semantic pattern, not plausible additional paths.",
+-            "A named person can be an anchor without being returned.",
+-            "Stored reporting joins are automatic. Do not infer claim edges from reporting wording.",
+-            "A question asking recorded vote without outcome needs all three possible vote predicates.",
++            load_prompt('jev-staged/jev-staged-selector-select-pieces-03', version=1),
++            load_prompt('jev-staged/jev-staged-selector-select-pieces-04', version=1),
++            load_prompt('jev-staged/jev-staged-selector-select-pieces-05', version=1),
++            load_prompt('jev-staged/jev-staged-selector-select-pieces-06', version=1),
+@@ -318,2 +320,2 @@
+-                    "true": "The whole parent-level fragment is required.",
+-                    "false": "Unnecessary or merely topical.",
++                    "true": load_prompt('jev-staged/jev-staged-selector-select-pieces-08', version=1),
++                    "false": load_prompt('jev-staged/jev-staged-selector-select-pieces-09', version=1),
+@@ -351 +353 @@
+-                    "decision": "What category does `question` explicitly request for this specific role: organizations generally, political action committees, or labor unions? Classify the requested category, not whether particular organizations belong to it.",
++                    "decision": load_prompt('jev-staged/jev-staged-selector-select-pieces-10', version=1),
+@@ -355,5 +357,5 @@
+-                        "A generic organization role includes PACs and LaborUnions. Do not infer subtype from a name or political activity.",
+-                        "Anchor and peer are separate occurrences; interpret only this occurrence's purpose.",
+-                        "When this occurrence is requested as labor unions, choose LaborUnion. When it is requested as PACs or political action committees, choose PAC.",
+-                        "unrestricted applies when the question requests organizations generally, without limiting this occurrence to either subtype. Including all subtypes in the parent ontology is not a reason to ignore an explicit requested restriction.",
+-                        "Do not use outside knowledge of an organization's name to infer its subtype. If the requested category for this occurrence is genuinely ambiguous, choose unclear.",
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-19', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-20', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-21', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-22', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-23', version=1),
+@@ -363,4 +365,4 @@
+-                    "unrestricted": "Question requests organizations generally for this occurrence; it does not request only PACs or only labor unions.",
+-                    "PAC": "Question requests PACs or political action committees for this occurrence, rather than organizations generally.",
+-                    "LaborUnion": "Question requests labor unions for this occurrence, rather than organizations generally.",
+-                    "unclear": "Cannot determine which restriction applies to this occurrence.",
++                    "unrestricted": load_prompt('jev-staged/jev-staged-selector-select-pieces-11', version=1),
++                    "PAC": load_prompt('jev-staged/jev-staged-selector-select-pieces-12', version=1),
++                    "LaborUnion": load_prompt('jev-staged/jev-staged-selector-select-pieces-13', version=1),
++                    "unclear": load_prompt('jev-staged/jev-staged-selector-select-pieces-14', version=1),
+@@ -409 +411 @@
+-                    "purposes": ["automatic stored-reporting article"],
++                    "purposes": [load_prompt('jev-staged/jev-staged-selector-select-pieces-15', version=1)],
+@@ -427,3 +429,3 @@
+-                        "Attach this constraint ONLY to this existing role occurrence.",
+-                        "A name inside another entity's name does not constrain this role.",
+-                        "For anchor-and-peer questions, a named anchor constrains the anchor, never the unrestricted returned peer.",
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-16', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-17', version=1),
++                        load_prompt('jev-staged/jev-staged-selector-select-pieces-18', version=1),
+@@ -435,2 +437,2 @@
+-                        "true": "The question requires this property condition on this selected role.",
+-                        "false": "No condition on this role; the value belongs elsewhere or is not explicit.",
++                        "true": load_prompt('jev-staged/jev-staged-selector-select-pieces-24', version=1),
++                        "false": load_prompt('jev-staged/jev-staged-selector-select-pieces-25', version=1),
+@@ -504 +506 @@
+-                "instruction": "These staged decisions specify exact role occurrences. Follow the indexed edges and property attachments; do not add or merge roles.",
++                "instruction": load_prompt('jev-staged/jev-staged-selector-select-pieces-07', version=1),
+--- a/fragment_selector.py
++++ b/fragment_selector.py
+@@ -3,0 +4,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -56 +58 @@
+-            "decision": "Does answering the question require this complete semantic fragment?",
++            "decision": load_prompt('jev-staged/fragment-selector-prompt-01', version=1),
+@@ -60,3 +62,3 @@
+-                "Answer yes only when the whole fragment belongs in the minimal query pattern.",
+-                "Do not select it because one entity or term is merely related to the question.",
+-                "Stored-reporting provenance and output formatting are automatic.",
++                load_prompt('jev-staged/fragment-selector-prompt-02', version=1),
++                load_prompt('jev-staged/fragment-selector-prompt-03', version=1),
++                load_prompt('jev-staged/fragment-selector-prompt-04', version=1),
+@@ -75,2 +77 @@
+-                f"One {label} participates without a selectable ontology relationship, "
+-                "for example as an entity mentioned in or returned through stored-reporting context."
++                load_prompt('jev-staged/fragment-selector-entity-fragments-01', version=1).format(value_0=label)
+@@ -80 +81 @@
+-                "use": "entity-only or automatic stored-reporting context",
++                "use": load_prompt('jev-staged/fragment-selector-entity-fragments-02', version=1),
+@@ -92,3 +93 @@
+-            f"Two different {source} entities each have the recorded {predicate} relationship "
+-            f"to the same {target}. This is the complete anchor-and-peer pattern for wording "
+-            f"such as 'other {source} entities alongside'."
++            load_prompt('jev-staged/fragment-selector-relationship-description-02', version=1).format(value_0=source, value_1=predicate, value_2=target, value_3=source)
+@@ -98,5 +97,3 @@
+-            f"The same {source} has the recorded {predicate} relationship to two different "
+-            f"{target} entities. This is the complete anchor-and-peer pattern for wording "
+-            f"such as 'other {target} entities alongside'."
+-        )
+-    return f"One {source} has a recorded {predicate} relationship to one {target}."
++            load_prompt('jev-staged/fragment-selector-relationship-description-03', version=1).format(value_0=source, value_1=predicate, value_2=target, value_3=target)
++        )
++    return load_prompt('jev-staged/fragment-selector-relationship-description-01', version=1).format(value_0=source, value_1=predicate, value_2=target)
+@@ -187,2 +184 @@
+-            f"One {label} is restricted by an explicit {prop} value from the question "
+-            f"using the {operator} comparison. Selecting this fragment also supplies the {label} role."
++            load_prompt('jev-staged/fragment-selector-filter-fragments-01', version=1).format(value_0=label, value_1=prop, value_2=operator, value_3=label)
+@@ -196 +192 @@
+-                "value_source": "explicit wording in the natural-language question",
++                "value_source": load_prompt('jev-staged/fragment-selector-filter-fragments-02', version=1),
+@@ -213,2 +209 @@
+-                "Group Policy Areas, count distinct stored News Articles that discuss each area, "
+-                "and retain the source articles behind the count."
++                load_prompt('jev-staged/fragment-selector-aggregate-fragments-01', version=1)
+--- a/filtered_fragments.py
++++ b/filtered_fragments.py
+@@ -3,0 +4,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -130,4 +132,3 @@
+-            f"Does the question specify a date or time window that requires an inclusive "
+-            f"lower bound on {field}?"
+-        )
+-        meaning = f"The minimal query constrains {field} at or after a question-derived date."
++            load_prompt('jev-staged/filtered-fragments-filter-prompt-01', version=1).format(value_0=field)
++        )
++        meaning = load_prompt('jev-staged/filtered-fragments-filter-prompt-02', version=1).format(value_0=field)
+@@ -136,4 +137,3 @@
+-            f"Does the question specify a date or time window that requires an exclusive "
+-            f"upper bound on {field}?"
+-        )
+-        meaning = f"The minimal query constrains {field} before a question-derived date."
++            load_prompt('jev-staged/filtered-fragments-filter-prompt-06', version=1).format(value_0=field)
++        )
++        meaning = load_prompt('jev-staged/filtered-fragments-filter-prompt-07', version=1).format(value_0=field)
+@@ -141 +141 @@
+-        decision = f"Does the question specify a value that fixes or constrains {field}?"
++        decision = load_prompt('jev-staged/filtered-fragments-filter-prompt-08', version=1).format(value_0=field)
+@@ -143,2 +143 @@
+-            f"The minimal query restricts {field} with the {comparison} comparison using "
+-            "a value stated in the question."
++            load_prompt('jev-staged/filtered-fragments-filter-prompt-09', version=1).format(value_0=field, value_1=comparison)
+@@ -148,3 +147,3 @@
+-        "Decide only whether this property condition exists; structural relationship selection is a separate decision.",
+-        "A named or otherwise explicit value counts whether the entity is returned or used to restrict the result.",
+-        "Do not infer a condition from schema availability alone.",
++        load_prompt('jev-staged/filtered-fragments-filter-prompt-03', version=1),
++        load_prompt('jev-staged/filtered-fragments-filter-prompt-04', version=1),
++        load_prompt('jev-staged/filtered-fragments-filter-prompt-05', version=1),
+@@ -154 +153 @@
+-            "A bounded calendar period such as July 2026 requires both an inclusive lower bound and an exclusive upper bound."
++            load_prompt('jev-staged/filtered-fragments-filter-prompt-10', version=1)
+@@ -162 +161 @@
+-            "value_source": "explicit wording in the natural-language question",
++            "value_source": load_prompt('jev-staged/filtered-fragments-filter-prompt-11', version=1),
+@@ -190 +189 @@
+-            attachment = "the compiler-owned article role"
++            attachment = load_prompt('jev-staged/filtered-fragments-filter-attachment-rules-01', version=1)
+@@ -192 +191 @@
+-            attachment = "the only selected role with this entity label"
++            attachment = load_prompt('jev-staged/filtered-fragments-filter-attachment-rules-02', version=1)
+@@ -194 +193 @@
+-            attachment = "the anchor role with this entity label; peer roles stay unrestricted"
++            attachment = load_prompt('jev-staged/filtered-fragments-filter-attachment-rules-03', version=1)
+@@ -196 +195 @@
+-            attachment = "the question-scoped role or roles resolved by the downstream composer"
++            attachment = load_prompt('jev-staged/filtered-fragments-filter-attachment-rules-04', version=1)
+--- a/reporting_keyword_gate.py
++++ b/reporting_keyword_gate.py
+@@ -1,0 +2,2 @@
++
++from knowledge_map.prompts import load_prompt
+@@ -10,3 +12 @@
+-    "Does the question request stored reporting about the selected entities or "
+-    "shared reporting co-occurrence, rather than a recorded semantic claim "
+-    "relationship?"
++    load_prompt('jev-staged/reporting-keyword-gate-gate-decision-01', version=1)
+@@ -15,2 +15,2 @@
+-    "true": "The question requests a reporting lookup about the selected entities or shared reporting co-occurrence.",
+-    "false": "The question requests a semantic claim relationship, or does not specify a reporting relationship.",
++    "true": load_prompt('jev-staged/reporting-keyword-gate-gate-criteria-01', version=1),
++    "false": load_prompt('jev-staged/reporting-keyword-gate-gate-criteria-02', version=1),

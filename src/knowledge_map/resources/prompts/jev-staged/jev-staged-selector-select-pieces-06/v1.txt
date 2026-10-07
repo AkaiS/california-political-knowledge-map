@@ -1,0 +1,1 @@
+A question asking recorded vote without outcome needs all three possible vote predicates.

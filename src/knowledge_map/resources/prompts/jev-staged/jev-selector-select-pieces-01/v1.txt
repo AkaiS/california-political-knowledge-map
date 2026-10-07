@@ -1,0 +1,1 @@
+Produce a complete semantic piece multiset for the question. Each supplied Choice concerns one piece and is evaluated independently.

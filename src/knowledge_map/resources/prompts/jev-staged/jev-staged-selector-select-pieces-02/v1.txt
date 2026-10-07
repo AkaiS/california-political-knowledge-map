@@ -1,0 +1,1 @@
+An organization, including PACs and LaborUnions. Subtype restrictions are decided afterward.

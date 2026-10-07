@@ -1,0 +1,1 @@
+The whole fragment is required by the minimal semantic query.

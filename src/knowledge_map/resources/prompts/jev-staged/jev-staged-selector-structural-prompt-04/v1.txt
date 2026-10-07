@@ -1,0 +1,1 @@
+A question asking for candidates connected through funded campaigns requires the individual-person target. A question asking for ballot measures requires the proposition target.

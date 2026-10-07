@@ -1,0 +1,1 @@
+Does the question request stored reporting about the selected entities or shared reporting co-occurrence, rather than a recorded semantic claim relationship?

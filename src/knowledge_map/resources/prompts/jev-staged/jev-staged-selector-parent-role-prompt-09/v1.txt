@@ -1,0 +1,1 @@
+Apply the same distinction to names inside any other entity's name. Select the named entity itself, not every entity referred to by words in its name.

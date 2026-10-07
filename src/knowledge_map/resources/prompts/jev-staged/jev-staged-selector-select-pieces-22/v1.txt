@@ -1,0 +1,1 @@
+unrestricted applies when the question requests organizations generally, without limiting this occurrence to either subtype. Including all subtypes in the parent ontology is not a reason to ignore an explicit requested restriction.

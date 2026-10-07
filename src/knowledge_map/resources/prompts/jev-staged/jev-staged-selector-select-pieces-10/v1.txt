@@ -1,0 +1,1 @@
+What category does `question` explicitly request for this specific role: organizations generally, political action committees, or labor unions? Classify the requested category, not whether particular organizations belong to it.

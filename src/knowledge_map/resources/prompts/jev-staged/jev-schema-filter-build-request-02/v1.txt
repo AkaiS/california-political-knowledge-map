@@ -1,0 +1,1 @@
+Labels cover entities returned, anchors, and intermediate endpoints on a required path.

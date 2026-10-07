@@ -1,0 +1,1 @@
+Decide whether this parent role must exist in the minimal query.

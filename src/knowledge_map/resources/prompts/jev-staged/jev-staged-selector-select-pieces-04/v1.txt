@@ -1,0 +1,1 @@
+A named person can be an anchor without being returned.

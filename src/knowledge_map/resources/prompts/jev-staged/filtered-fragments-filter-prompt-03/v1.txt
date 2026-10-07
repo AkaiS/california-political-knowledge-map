@@ -1,0 +1,1 @@
+Decide only whether this property condition exists; structural relationship selection is a separate decision.

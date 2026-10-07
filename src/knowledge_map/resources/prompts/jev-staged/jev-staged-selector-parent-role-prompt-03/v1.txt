@@ -1,0 +1,1 @@
+Does answering `question` require {value_0} as a separate query entity, returned entity, named anchor, necessary intermediate, or participant in stored reporting?

@@ -1,0 +1,1 @@
+Choose zero when the piece is merely related to the topic but is not needed to answer the question.

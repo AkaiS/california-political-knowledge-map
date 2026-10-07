@@ -1,0 +1,1 @@
+Reporting context, provenance, result fields, parameters, and Cypher are automatic.

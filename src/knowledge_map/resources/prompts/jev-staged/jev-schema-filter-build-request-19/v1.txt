@@ -1,0 +1,1 @@
+Does `question` specify a value or time window that could constrain {value_0}.{value_1}?

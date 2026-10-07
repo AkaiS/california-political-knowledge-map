@@ -1,0 +1,1 @@
+An individual person. Politician is the graph's only person label; judge personhood, without needing to establish the person's political status.

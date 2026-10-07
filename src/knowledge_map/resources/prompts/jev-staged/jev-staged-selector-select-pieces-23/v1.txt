@@ -1,0 +1,1 @@
+Do not use outside knowledge of an organization's name to infer its subtype. If the requested category for this occurrence is genuinely ambiguous, choose unclear.

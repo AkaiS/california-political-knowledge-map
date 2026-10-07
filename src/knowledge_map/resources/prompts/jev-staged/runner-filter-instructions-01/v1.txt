@@ -1,0 +1,1 @@
+Select semantic labels, semantic relationships, and properties needed to anchor or filter the question. Article source and result roles are compiler-owned; select only their relationship or filter semantics. Do not choose output fields, result shape, storage mechanics, query syntax, parameter names, or values. Use only names in the supplied semantic schema.

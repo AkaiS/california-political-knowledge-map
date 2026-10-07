@@ -1,0 +1,1 @@
+one semantic predicate-alternative triple: {value_0} -{{{value_1}}}-> {value_2}

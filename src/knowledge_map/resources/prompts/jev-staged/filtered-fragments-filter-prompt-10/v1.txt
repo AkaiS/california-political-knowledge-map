@@ -1,0 +1,1 @@
+A bounded calendar period such as July 2026 requires both an inclusive lower bound and an exclusive upper bound.
