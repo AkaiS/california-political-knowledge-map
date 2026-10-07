@@ -52,6 +52,18 @@ GROUNDING = {
 }
 
 
+@pytest.fixture(
+    params=[None, False, True, "absent"], ids=["null", "false", "true", "absent"]
+)
+def claim_review_flag(request, monkeypatch):
+    properties = ROW["semantic_relationship_0_properties"]
+    if request.param == "absent":
+        monkeypatch.delitem(properties, "needs_review")
+    else:
+        monkeypatch.setitem(properties, "needs_review", request.param)
+    return request.param is True
+
+
 class SyntheticJev(Fake):
     def __init__(self):
         super().__init__(
@@ -194,7 +206,7 @@ def jev_startup(startup_dependencies, monkeypatch):
     return startup, jev, branches, queries
 
 
-def assert_jev_execution(execution, jev, branches, queries):
+def assert_jev_execution(execution, jev, branches, queries, *, needs_review):
     assert jev.schema_calls == 1
     assert all(b.requests for b in branches.values())
     structural = execution.outcomes[-1]
@@ -207,7 +219,7 @@ def assert_jev_execution(execution, jev, branches, queries):
     assert claims[0].source.id == "union-1"
     assert claims[0].chunk_ids == ("chunk-1",)
     assert claims[0].claim_key == {"alignment": "POSITIVE"}
-    assert claims[0].needs_review is True
+    assert claims[0].needs_review is needs_review
     assert any(text.startswith("EXPLAIN MATCH") for text, _ in queries)
     assert any(
         "RETURN DISTINCT" in text and "evidence_groups" in text for text, _ in queries
@@ -217,7 +229,7 @@ def assert_jev_execution(execution, jev, branches, queries):
 
 
 def test_evaluation_uses_shared_startup_and_jev_cypher_with_both_text_branches(
-    jev_startup, monkeypatch, chat_capture
+    jev_startup, monkeypatch, chat_capture, claim_review_flag
 ):
     startup, jev, branches, queries = jev_startup
     monkeypatch.setattr(task_module, "chat_dependencies", startup)
@@ -226,12 +238,20 @@ def test_evaluation_uses_shared_startup_and_jev_cypher_with_both_text_branches(
     output = report.cases[0].output
     assert output.failure is None
     assert "The union supports AB 1." in output.rendered_text
-    assert_jev_execution(output.answer.evidence.execution, jev, branches, queries)
+    assert_jev_execution(
+        output.answer.evidence.execution,
+        jev,
+        branches,
+        queries,
+        needs_review=claim_review_flag,
+    )
     assert "jev_composer" in {record["component"] for record in output.messages}
     assert output.settings["retrieval_settings"]["cypher_backend"] == "jev-staged"
 
 
-def test_chat_client_approval_uses_the_same_jev_execution(jev_startup, chat_capture):
+def test_chat_client_approval_uses_the_same_jev_execution(
+    jev_startup, chat_capture, claim_review_flag
+):
     startup, jev, branches, queries = jev_startup
     sessions = []
     from knowledge_map.chat_startup import new_chat_session
@@ -253,7 +273,13 @@ def test_chat_client_approval_uses_the_same_jev_execution(jev_startup, chat_capt
         assert response.status_code == 200
         assert "The union supports AB 1." in response.text
         assert "DECLARED_STANCE" in response.text
-    assert_jev_execution(sessions[0].retrieval_result.execution, jev, branches, queries)
+    assert_jev_execution(
+        sessions[0].retrieval_result.execution,
+        jev,
+        branches,
+        queries,
+        needs_review=claim_review_flag,
+    )
 
 
 def test_jev_failure_retains_sparse_and_dense_evidence(

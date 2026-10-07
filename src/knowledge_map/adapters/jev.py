@@ -555,7 +555,7 @@ class JevStructuralRetriever:
                                 for key in sorted(news.claim_key_properties(predicate))
                                 if key in properties
                             },
-                            needs_review=properties.get("needs_review", False),
+                            needs_review=properties.get("needs_review") or False,
                             chunk_ids=() if article_level else (chunk_id,),
                             source_article_ids=(article_id,) if article_level else (),
                         )
