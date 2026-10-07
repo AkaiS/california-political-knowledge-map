@@ -197,6 +197,17 @@ def test_v1_assets_retain_their_immutable_bytes():
         assert _digest(load_prompt(name, version=1)) == expected["sha256"], name
 
 
+def test_new_chat_instruction_versions_retain_their_immutable_bytes():
+    from knowledge_map.prompts import load_prompt
+
+    assert _digest(load_prompt("chat/instructions", version=2)) == (
+        "77bc10b279920b877c820c5a373fca009ad90358139ece86820f4f7f788eb5e1"
+    )
+    assert _digest(load_prompt("chat/instructions", version=3)) == (
+        "2233c7624e9941dd4c0a900fd74b698d7b9b3d68f6aa6f03dddb8ac87ae74877"
+    )
+
+
 def test_explicit_version_selection_and_missing_version():
     from knowledge_map.prompts import load_prompt
 
