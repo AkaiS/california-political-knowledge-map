@@ -13,23 +13,24 @@ import subprocess
 import sys
 import tempfile
 import time
+from http.client import HTTPException
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
 
 REPOSITORY = Path(__file__).resolve().parents[1]
+# Reuse the identity protocol from this checkout's source, even when another
+# checkout supplied the editable installation used by uv.
+sys.path.insert(0, str(REPOSITORY / "src"))
+
+from knowledge_map.reviewer_identity import reviewer_identity as build_reviewer_identity
+
 HTTP = build_opener(ProxyHandler({}))
 URL_PATTERN = re.compile(r"Browse rag evals at http://127\.0\.0\.1:(\d+)/")
 
 
 def reviewer_identity(reports_dir: Path, samples_dir: Path) -> dict[str, str]:
-    return {
-        "service": "ca-map-evaluation-reviewer-v1",
-        "mode": "rag",
-        "checkout": str(REPOSITORY.resolve()),
-        "reports_dir": str(reports_dir.resolve()),
-        "samples_dir": str(samples_dir.resolve()),
-    }
+    return build_reviewer_identity("rag", REPOSITORY, reports_dir, samples_dir)
 
 
 def matching_server(port: int, identity: dict[str, str], timeout: float = 0.5) -> bool:
@@ -43,7 +44,7 @@ def matching_server(port: int, identity: dict[str, str], timeout: float = 0.5) -
         return isinstance(observed, dict) and all(
             observed.get(key) == value for key, value in identity.items()
         )
-    except (OSError, URLError, ValueError):
+    except (OSError, URLError, ValueError, HTTPException):
         return False
 
 

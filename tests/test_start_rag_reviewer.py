@@ -3,8 +3,10 @@
 import importlib.util
 import json
 import os
+import socket
 import subprocess
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -122,6 +124,54 @@ def test_concurrent_launches_share_one_server(checkout):
         )
     assert results[0] == results[1]
     assert len(children) == 1
+
+
+def test_non_http_listener_is_left_running_when_reviewer_starts(checkout, monkeypatch):
+    root, children = checkout
+    greeting = b"SSH-2.0-OpenSSH_9.9\r\n"
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        listener.settimeout(0.1)
+        unrelated_port = listener.getsockname()[1]
+        stopped = threading.Event()
+
+        def serve():
+            while not stopped.is_set():
+                try:
+                    client, _address = listener.accept()
+                except TimeoutError:
+                    continue
+                with client:
+                    client.sendall(greeting)
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        original_http = launcher.HTTP
+
+        class ProbeOwnedListener:
+            def open(self, url, **kwargs):
+                return original_http.open(
+                    url.replace(":8765/", f":{unrelated_port}/"), **kwargs
+                )
+
+        monkeypatch.setattr(launcher, "HTTP", ProbeOwnedListener())
+        try:
+            port, _log = launcher.launch(root / "reports", root / "samples", 5)
+
+            assert port != unrelated_port
+            assert len(children) == 1
+            assert launcher.matching_server(
+                port, launcher.reviewer_identity(root / "reports", root / "samples")
+            )
+            with socket.create_connection(
+                ("127.0.0.1", unrelated_port), timeout=1
+            ) as client, client.makefile("rb") as response:
+                assert response.readline() == greeting
+        finally:
+            stopped.set()
+            thread.join(timeout=2)
+            assert not thread.is_alive()
 
 
 def test_startup_failure_reports_log_without_ready_state(checkout):

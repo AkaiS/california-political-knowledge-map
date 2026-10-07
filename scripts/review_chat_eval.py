@@ -40,6 +40,7 @@ from knowledge_map.evaluation.rag_review import (
     review_complete,
     validate_review,
 )
+from knowledge_map.reviewer_identity import reviewer_identity
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 
@@ -352,13 +353,7 @@ def make_handler(
     samples_dir: Path | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     samples_dir = samples_dir or REPOSITORY / "evals/chunk-samples"
-    identity = {
-        "service": "ca-map-evaluation-reviewer-v1",
-        "mode": mode,
-        "checkout": str(REPOSITORY.resolve()),
-        "reports_dir": str(reports_dir.resolve()),
-        "samples_dir": str(samples_dir.resolve()),
-    }
+    identity = reviewer_identity(mode, REPOSITORY, reports_dir, samples_dir)
     reviews_lock = threading.Lock()
     review_editing_module = (
         Path(__file__).with_name("chat_eval_review_editing.mjs").read_bytes()
