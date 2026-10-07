@@ -118,9 +118,20 @@ def _metric_rows(
                 score = scores.get(name)
                 value = score.get("value") if isinstance(score, dict) else None
                 reason = score.get("reason") if isinstance(score, dict) else None
+                if metric == "two_hop_recall" and two_hop and value is None:
+                    complete = scores.get(f"{branch}_complete_evidence_at_{k}")
+                    if isinstance(complete, dict):
+                        value = complete.get("value")
+                        reason = complete.get("reason")
                 if (
                     metric == "precision" and value is None and replayable and relevant
-                ) or (metric == "two_hop_recall" and two_hop and branches):
+                ) or (
+                    metric == "two_hop_recall"
+                    and value is None
+                    and two_hop
+                    and replayable
+                    and branches
+                ):
                     records = (
                         fused
                         if branch == "fused"
@@ -301,6 +312,7 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
         "task": document["task"],
         "review_kind": "rag",
         "ran_at": document.get("ran_at"),
+        "split": document.get("split"),
         "model": (document.get("deployment") or {}).get("model")
         or document.get("model"),
         "deployment": {"kind": (document.get("deployment") or {}).get("kind")},

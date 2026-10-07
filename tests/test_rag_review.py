@@ -201,6 +201,41 @@ def test_two_hop_recall_requires_both_groups_and_reports_its_population():
     assert row["applicable_cases"] == 2
 
 
+@pytest.mark.parametrize("branch", ["full_text", "fused"])
+@pytest.mark.parametrize("k", [1, 5, 10, 50])
+def test_two_hop_means_include_startup_failures_from_recorded_scores(branch, k):
+    raw = report()
+    success = raw["report"]["cases"][0]
+    success["expected_output"]["answers"][0]["groups"][1]["ids"] = ["a"]
+    failure = copy.deepcopy(success)
+    failure["name"] = "startup-failure"
+    failure["output"].update(branches=[], evidence=None, failure={"stage": "startup"})
+    failure["scores"] = {
+        f"{branch}_complete_evidence_at_{k}": {
+            "value": 0,
+            "reason": "No retrieval completed.",
+        }
+    }
+    raw["report"]["cases"].append(failure)
+    result = project_report(raw)
+    row = next(
+        r
+        for r in result["metrics"]
+        if r["branch"] == branch and r["metric"] == "two_hop_recall" and r["k"] == k
+    )
+    assert row["value"] == 0.5
+    assert row["scored_cases"] == row["applicable_cases"] == 2
+
+
+@pytest.mark.parametrize("split", ["training", "validation", "test"])
+def test_rag_run_cards_keep_the_recorded_dataset_split(tmp_path, split):
+    raw = report()
+    raw["split"] = split
+    path = tmp_path / "run.json"
+    path.write_text(json.dumps(raw))
+    assert review_server.list_runs(tmp_path, "rag")[0]["split"] == split
+
+
 def test_chat_review_uses_approved_question_and_same_execution_context():
     raw = report("chat", generation=True)
     c = raw["report"]["cases"][0]
