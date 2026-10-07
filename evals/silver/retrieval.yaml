@@ -1,0 +1,2236 @@
+task: retrieval
+description: 25 existing Cypher questions with Codex-derived provisional silver retrieval labels. Labels
+  describe stored graph evidence, not independently verified political facts. All cases are training because
+  they have already informed query construction. The task generates final guidance from the selected evidence for human review.
+  Question rewriting and assessment are evaluated separately by chat.
+cases:
+- id: C-E1-01
+  description: Entity dossier over recorded mentions, without demanding a complete biography.
+  split: training
+  task_input:
+    question: What stored reporting mentions Steve Hilton?
+    relational: false
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+    answers:
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/#chunk_18
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+  metadata:
+    family: E1
+    scope_note: Entity dossier over recorded mentions, without demanding a complete biography.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E1
+  - reference-derived
+- id: C-E1-02
+  description: A second named Politician; no vote is inferred from being a bill proponent.
+  split: training
+  task_input:
+    question: What stored reporting mentions Gail Pellerin?
+    relational: false
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+    answers:
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_20
+  metadata:
+    family: E1
+    scope_note: A second named Politician; no vote is inferred from being a bill proponent.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E1
+  - reference-derived
+- id: C-E2-01
+  description: The session is explicit so seed resolution does not require guessing.
+  split: training
+  task_input:
+    question: What reporting is attached to SB 9 in the 2025-2026 legislative session?
+    relational: false
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_14
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_15
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_17
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_19
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_21
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_22
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_24
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_4
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_2
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_4
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_5
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8
+    answers:
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_1
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_14
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_15
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_17
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_18
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_19
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_21
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_22
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_24
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_26
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/#chunk_4
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_10
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_2
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_3
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_4
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_5
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_6
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_7
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/#chunk_8
+  metadata:
+    family: E2
+    scope_note: The session is explicit so seed resolution does not require guessing.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E2
+  - reference-derived
+- id: C-E2-02
+  description: Retrieves the currently recorded proposition and reporting, not every historical measure
+    numbered 38.
+  split: training
+  task_input:
+    question: What stored reporting is attached to Proposition 38?
+    relational: false
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_17
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_12
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_15
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_17
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_2
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_22
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_23
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_25
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_27
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_30
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_38
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_6
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_7
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_8
+    answers:
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/#chunk_17
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_0
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_1
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_12
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_15
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_17
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_18
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_19
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_2
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_22
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_23
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_25
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_27
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_30
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_38
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_6
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_7
+    - groups:
+      - kind: entity_mention
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_8
+  metadata:
+    family: E2
+    scope_note: Retrieves the currently recorded proposition and reporting, not every historical measure
+      numbered 38.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E2
+  - reference-derived
+- id: C-E3-01
+  description: Uses article-level topic assignments and an explicit half-open publication window.
+  split: training
+  task_input:
+    question: Which stored articles discuss housing and community development in July 2026?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: source_article
+    relevant_ids:
+    - https://calmatters.org/economy/2026/07/california-insurance-myths/
+    - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+    - https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+    - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+    - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+    answers:
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/economy/2026/07/california-insurance-myths/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+  metadata:
+    family: E3
+    scope_note: Uses article-level topic assignments and an explicit half-open publication window.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E3
+  - reference-derived
+- id: C-E3-02
+  description: A second temporal sweep; published_date is stored as a string.
+  split: training
+  task_input:
+    question: Which stored articles discuss labor and employment in July 2026?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: source_article
+    relevant_ids:
+    - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+    - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+    answers:
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    - groups:
+      - kind: article_topic_grounding
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+  metadata:
+    family: E3
+    scope_note: A second temporal sweep; published_date is stored as a string.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E3
+  - reference-derived
+- id: C-E3-03
+  description: Counts stored article assignments. Each entry chunk navigates to its source article; it
+    is not an independent chunk-level topic classification.
+  split: training
+  task_input:
+    question: How many stored articles discuss each policy area? Include the source articles behind every
+      count.
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: source_article
+    relevant_ids:
+    - https://calmatters.org/economy/2023/06/california-home-insurance/
+    - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+    - https://calmatters.org/economy/2026/07/california-insurance-myths/
+    - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+    - https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+    - https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+    - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/
+    - https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+    - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+    - https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/
+    - https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/
+    - https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+    - https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+    - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+    - https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+    - https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+    - https://calmatters.org/education/2026/08/head-start-california-2/
+    - https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/
+    - https://calmatters.org/education/higher-education/2025/04/health-research/
+    - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+    - https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+    - https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+    - https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/
+    - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+    - https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+    - https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+    - https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/
+    - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+    - https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+    - https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/
+    - https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+    - https://calmatters.org/education/k-12-education/2026/07/literacy-california/
+    - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/
+    - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+    - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+    - https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+    - https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+    - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+    - https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/
+    - https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+    - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+    - https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+    - https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+    - https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/
+    - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+    - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+    - https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+    - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+    - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+    - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+    - https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/
+    - https://calmatters.org/housing/2026/09/condo-construction-bill-dies/
+    - https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/
+    - https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+    - https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+    - https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+    - https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/
+    - https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+    - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+    - https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+    - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+    - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/
+    - https://calmatters.org/politics/2026/06/driver-license-sharing/
+    - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+    - https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+    - https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+    - https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+    - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+    - https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+    - https://calmatters.org/politics/2026/07/calpers-investment-return/
+    - https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+    - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+    - https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+    - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+    - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+    - https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+    - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+    - https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+    - https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+    - https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/
+    - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+    - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+    - https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+    - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+    - https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/
+    - https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+    - https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/
+    - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    answers:
+    - groups:
+      - kind: https://calmatters.org/education/higher-education/2025/04/health-research/
+        ids:
+        - https://calmatters.org/education/higher-education/2025/04/health-research/
+    - groups:
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+        ids:
+        - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+      - kind: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+        ids:
+        - https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+      - kind: https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+        ids:
+        - https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+      - kind: https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+      - kind: https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+      - kind: https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+      - kind: https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/defense-tech-has-unleashed-a-new-weapons-boom-in-southern-california/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    - groups:
+      - kind: https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/
+        ids:
+        - https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+      - kind: https://calmatters.org/education/k-12-education/2026/07/literacy-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/07/literacy-california/
+      - kind: https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+      - kind: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+      - kind: https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+        ids:
+        - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+    - groups:
+      - kind: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+        ids:
+        - https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+      - kind: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+        ids:
+        - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+      - kind: https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+        ids:
+        - https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+      - kind: https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+      - kind: https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/
+        ids:
+        - https://calmatters.org/environment/climate-change/2026/09/failed-school-air-conditioning-extension-calshape/
+      - kind: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+        ids:
+        - https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+      - kind: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+        ids:
+        - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+        ids:
+        - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/california-insurance-myths/
+        ids:
+        - https://calmatters.org/economy/2026/07/california-insurance-myths/
+      - kind: https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-mute-swan-population-declines/
+      - kind: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+        ids:
+        - https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+        ids:
+        - https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+      - kind: https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+        ids:
+        - https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+        ids:
+        - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+      - kind: https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/
+      - kind: https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+        ids:
+        - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+      - kind: https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+      - kind: https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/
+        ids:
+        - https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/
+      - kind: https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+        ids:
+        - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - groups:
+      - kind: https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+      - kind: https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+      - kind: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+      - kind: https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-school-hvac-funding-cut/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/06/driver-license-sharing/
+        ids:
+        - https://calmatters.org/politics/2026/06/driver-license-sharing/
+      - kind: https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+      - kind: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+        ids:
+        - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+      - kind: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+        ids:
+        - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+      - kind: https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+        ids:
+        - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+      - kind: https://calmatters.org/education/higher-education/2025/04/health-research/
+        ids:
+        - https://calmatters.org/education/higher-education/2025/04/health-research/
+      - kind: https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-utility-heat-shutoff-rules-cpuc/
+      - kind: https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+        ids:
+        - https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+      - kind: https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+        ids:
+        - https://calmatters.org/environment/climate-change/2026/07/california-school-heat-illness-laws/
+      - kind: https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+      - kind: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+        ids:
+        - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+      - kind: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+        ids:
+        - https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+      - kind: https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+        ids:
+        - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+      - kind: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    - groups:
+      - kind: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+        ids:
+        - https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+      - kind: https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+        ids:
+        - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/
+      - kind: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+        ids:
+        - https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+      - kind: https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+        ids:
+        - https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+      - kind: https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/
+        ids:
+        - https://calmatters.org/education/2026/08/trio-cuts-college-outreach-rural-california-students/
+      - kind: https://calmatters.org/education/higher-education/2025/04/health-research/
+        ids:
+        - https://calmatters.org/education/higher-education/2025/04/health-research/
+      - kind: https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+      - kind: https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+      - kind: https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/college-graduate-earnings-california/
+      - kind: https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+      - kind: https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+      - kind: https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+      - kind: https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/
+      - kind: https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/education-cuts-california/
+      - kind: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/california-insurance-myths/
+        ids:
+        - https://calmatters.org/economy/2026/07/california-insurance-myths/
+      - kind: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+      - kind: https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+      - kind: https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+        ids:
+        - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+      - kind: https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+        ids:
+        - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+      - kind: https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+        ids:
+        - https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+      - kind: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+      - kind: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+        ids:
+        - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+      - kind: https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+      - kind: https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/
+        ids:
+        - https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/
+      - kind: https://calmatters.org/housing/2026/09/condo-construction-bill-dies/
+        ids:
+        - https://calmatters.org/housing/2026/09/condo-construction-bill-dies/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+      - kind: https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/07/trump-homeless-funding-judge/
+      - kind: https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/
+      - kind: https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/06/california-housing-hoa-fees/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/
+      - kind: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+        ids:
+        - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+      - kind: https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+        ids:
+        - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/
+      - kind: https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+        ids:
+        - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-midway-rising-legislative-carveout/
+      - kind: https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+      - kind: https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+        ids:
+        - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - groups:
+      - kind: https://calmatters.org/education/2026/08/head-start-california-2/
+        ids:
+        - https://calmatters.org/education/2026/08/head-start-california-2/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+      - kind: https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/
+      - kind: https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+        ids:
+        - https://calmatters.org/politics/2026/07/central-valley-congressional-race-agriculture-concerns/
+      - kind: https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+        ids:
+        - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+      - kind: https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+        ids:
+        - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+    - groups:
+      - kind: https://calmatters.org/economy/2023/06/california-home-insurance/
+        ids:
+        - https://calmatters.org/economy/2023/06/california-home-insurance/
+      - kind: https://calmatters.org/economy/2026/07/california-insurance-myths/
+        ids:
+        - https://calmatters.org/economy/2026/07/california-insurance-myths/
+      - kind: https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+        ids:
+        - https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+      - kind: https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/
+        ids:
+        - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/
+      - kind: https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+        ids:
+        - https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+        ids:
+        - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+        ids:
+        - https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+      - kind: https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/
+      - kind: https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+      - kind: https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+      - kind: https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/
+      - kind: https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+        ids:
+        - https://calmatters.org/environment/2026/07/california-gas-prices-july-fourth/
+      - kind: https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+      - kind: https://calmatters.org/housing/2026/09/condo-construction-bill-dies/
+        ids:
+        - https://calmatters.org/housing/2026/09/condo-construction-bill-dies/
+      - kind: https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-ada-lawsuits-competing-bills/
+      - kind: https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+      - kind: https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+      - kind: https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+        ids:
+        - https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+      - kind: https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+      - kind: https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/
+        ids:
+        - https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/
+      - kind: https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+        ids:
+        - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+      - kind: https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+        ids:
+        - https://calmatters.org/economy/2026/07/san-diego-arts-funding/
+      - kind: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+        ids:
+        - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+      - kind: https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+      - kind: https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/workforce-funding/
+      - kind: https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/07/newsom-uc-cal-state-billion-dollars-more/
+      - kind: https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/student-athlete-payments-california/
+      - kind: https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+      - kind: https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/
+      - kind: https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+        ids:
+        - https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/
+      - kind: https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+        ids:
+        - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+      - kind: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+        ids:
+        - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+      - kind: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+        ids:
+        - https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/
+      - kind: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+      - kind: https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+      - kind: https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-craft-distillery-deliveries-lobbying/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/
+        ids:
+        - https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/
+      - kind: https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+        ids:
+        - https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+        ids:
+        - https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/
+      - kind: https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+        ids:
+        - https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+      - kind: https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+        ids:
+        - https://calmatters.org/housing/2026/07/altadena-sb9-perez-sb1090/
+      - kind: https://calmatters.org/housing/2026/07/road-housing-california-federal/
+        ids:
+        - https://calmatters.org/housing/2026/07/road-housing-california-federal/
+      - kind: https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+        ids:
+        - https://calmatters.org/housing/2026/07/yimby-sb9-malibu-pasadena/
+      - kind: https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/
+        ids:
+        - https://calmatters.org/housing/2026/08/california-rhna-housing-affordable-progress/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/lahsa-hud-funding/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+      - kind: https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+        ids:
+        - https://calmatters.org/politics/2026/06/california-forever-solano-shipyard-deal/
+      - kind: https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+        ids:
+        - https://calmatters.org/politics/2026/07/judge-blocks-bonta-california-blackjack-ban/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/
+      - kind: https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/
+      - kind: https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+      - kind: https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/
+        ids:
+        - https://calmatters.org/politics/2026/09/california-legislature-golden-gate-fields-deal/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+        ids:
+        - https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+      - kind: https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/
+      - kind: https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+      - kind: https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+        ids:
+        - https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+      - kind: https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/school-libraries-california/
+      - kind: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+        ids:
+        - https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+      - kind: https://calmatters.org/politics/2026/06/driver-license-sharing/
+        ids:
+        - https://calmatters.org/politics/2026/06/driver-license-sharing/
+      - kind: https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+      - kind: https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+        ids:
+        - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+    - groups:
+      - kind: https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-pension-vacation-cashouts/
+      - kind: https://calmatters.org/politics/2026/07/calpers-investment-return/
+        ids:
+        - https://calmatters.org/politics/2026/07/calpers-investment-return/
+      - kind: https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-return-to-office-states/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+        ids:
+        - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+      - kind: https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/
+        ids:
+        - https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/
+      - kind: https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+        ids:
+        - https://calmatters.org/economy/2026/09/wildfire-liability-bill-dies-without-a-vote-on-final-day-of-session/
+      - kind: https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/california-kills-flock-camera-regulation-again/
+      - kind: https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+        ids:
+        - https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/
+      - kind: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+        ids:
+        - https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+      - kind: https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+        ids:
+        - https://calmatters.org/education/2026/07/california-campus-police-military-weapons/
+      - kind: https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+        ids:
+        - https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+        ids:
+        - https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+      - kind: https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/
+      - kind: https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+        ids:
+        - https://calmatters.org/housing/homelessness/2026/08/ppic-prop-47-study-drugs-homelessness/
+      - kind: https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+        ids:
+        - https://calmatters.org/politics/2026/07/california-emergency-funding-trump-lawsuit/
+      - kind: https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/
+      - kind: https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-ice-electric-shock-gloves/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/
+      - kind: https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+        ids:
+        - https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/
+      - kind: https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/
+        ids:
+        - https://calmatters.org/politics/2026/08/san-diego-board-supervisor-ice/
+      - kind: https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+        ids:
+        - https://calmatters.org/economy/2026/08/marathon-petroleum-tax-refund/
+      - kind: https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+        ids:
+        - https://calmatters.org/education/k-12-education/2026/06/unequal-school-funding/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+        ids:
+        - https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+      - kind: https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+        ids:
+        - https://calmatters.org/housing/2026/06/tax-cut-measure-pulled/
+      - kind: https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+        ids:
+        - https://calmatters.org/politics/2026/05/california-governor-race-katie-porter/
+      - kind: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+      - kind: https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+        ids:
+        - https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/
+      - kind: https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/
+      - kind: https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+        ids:
+        - https://calmatters.org/economy/2026/07/telematics-car-insurance-bill/
+      - kind: https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+        ids:
+        - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/
+      - kind: https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+        ids:
+        - https://calmatters.org/education/2026/06/california-community-college-prisons-laptops-online-classes/
+      - kind: https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+        ids:
+        - https://calmatters.org/politics/2026/05/tom-steyer-brother-common-sense/
+      - kind: https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+        ids:
+        - https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/
+    - groups:
+      - kind: https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+        ids:
+        - https://calmatters.org/economy/2026/06/uber-ballot-measure-deal/
+      - kind: https://calmatters.org/politics/2026/06/driver-license-sharing/
+        ids:
+        - https://calmatters.org/politics/2026/06/driver-license-sharing/
+      - kind: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+        ids:
+        - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+      - kind: https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+        ids:
+        - https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/
+      - kind: https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+        ids:
+        - https://calmatters.org/politics/2026/09/newsom-lame-duck-session/
+    - groups:
+      - kind: https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+        ids:
+        - https://calmatters.org/politics/2026/07/transgender-troops-assistance-legislation/
+    - groups:
+      - kind: https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+        ids:
+        - https://calmatters.org/education/higher-education/2026/09/science-research-california-2/
+      - kind: https://calmatters.org/environment/2026/06/imperial-county-data-center/
+        ids:
+        - https://calmatters.org/environment/2026/06/imperial-county-data-center/
+      - kind: https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+        ids:
+        - https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/
+      - kind: https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+        ids:
+        - https://calmatters.org/environment/2026/08/el-nino-san-diego-winter-weather/
+      - kind: https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+        ids:
+        - https://calmatters.org/environment/2026/09/lithium-valley-salton-sea-projects/
+      - kind: https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+        ids:
+        - https://calmatters.org/environment/2026/09/tijuana-river-pollution/
+      - kind: https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+        ids:
+        - https://calmatters.org/politics/2026/06/newsom-climate-rules-budget-fight-senate-democrats/
+  metadata:
+    family: E3
+    scope_note: Counts stored article assignments. Each entry chunk navigates to its source article; it
+      is not an independent chunk-level topic classification.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - E3
+  - reference-derived
+- id: C-R1-01
+  description: The text supplies the position; no missing alignment property is filtered or inferred.
+  split: training
+  task_input:
+    question: Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what
+      reporting states that position?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54
+  metadata:
+    family: R1
+    scope_note: The text supplies the position; no missing alignment property is filtered or inferred.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R1
+  - reference-derived
+- id: C-R1-02
+  description: Uses explicit endorsement edges; duplicate graph nodes may share one project id.
+  split: training
+  task_input:
+    question: Which organizations are reported to have endorsed the Steve Hilton campaign?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+  metadata:
+    family: R1
+    scope_note: Uses explicit endorsement edges; duplicate graph nodes may share one project id.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R1
+  - reference-derived
+- id: C-R2-01
+  description: The attached reporting describes support by studio and union lobbyists.
+  split: training
+  task_input:
+    question: Which organizations are recorded as lobbying in favor of AB 186 in the 2025-2026 session?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+  metadata:
+    family: R2
+    scope_note: The attached reporting describes support by studio and union lobbyists.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R2
+  - reference-derived
+- id: C-R2-02
+  description: The stored relationship records opposition; retrieve its reporting rather than inventing
+    a lobbying amount.
+  split: training
+  task_input:
+    question: Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_31
+  metadata:
+    family: R2
+    scope_note: The stored relationship records opposition; retrieve its reporting rather than inventing
+      a lobbying amount.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R2
+  - reference-derived
+- id: C-R3-01
+  description: News funding links exist. Amount and date are absent from the Claim Key, so this asks for
+    entities and reporting.
+  split: training
+  task_input:
+    question: Which organizations are recorded as funding the Yes on Proposition 38 campaign, and what
+      reporting supports those links?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+  metadata:
+    family: R3
+    scope_note: News funding links exist. Amount and date are absent from the Claim Key, so this asks
+      for entities and reporting.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R3
+  - reference-derived
+- id: C-R3-02
+  description: The reporting describes campaign support by a super PAC; this does not assert a direct
+    candidate contribution.
+  split: training
+  task_input:
+    question: Which PACs are recorded as funding the Ed Musgrove campaign, and what reporting supports
+      those links?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+  metadata:
+    family: R3
+    scope_note: The reporting describes campaign support by a super PAC; this does not assert a direct
+      candidate contribution.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - R3
+  - reference-derived
+- id: C-M1-01
+  description: Follows observed lobbying and article-grounded Bill topic edges; does not infer causal
+    influence.
+  split: training
+  task_input:
+    question: Which policy areas are connected to Catalina Media Development LLC through Bills it has
+      a recorded lobbying relationship with?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_11
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_15
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_16
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_17
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_19
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_21
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_22
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_23
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_24
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_26
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_3
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_4
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_5
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9
+    answers:
+    - groups:
+      - kind: bill_topic_article
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_11
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_15
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_16
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_17
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_19
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_21
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_22
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_23
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_24
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_26
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_3
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_4
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_5
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9
+      - kind: actor_bill
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+    - groups:
+      - kind: bill_topic_article
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_0
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_1
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_10
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_11
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_15
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_16
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_17
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_19
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_20
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_21
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_22
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_23
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_24
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_26
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_3
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_4
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_5
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_7
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_9
+      - kind: actor_bill
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_18
+  metadata:
+    family: M1
+    scope_note: Follows observed lobbying and article-grounded Bill topic edges; does not infer causal
+      influence.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M1
+  - reference-derived
+- id: C-M1-02
+  description: A second populated policy footprint. Duplicate stored ids are deduplicated in reference
+    rows.
+  split: training
+  task_input:
+    question: Which policy areas are connected to Stand With Survivors through Bills it has a recorded
+      lobbying relationship with?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8
+    - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9
+    answers:
+    - groups:
+      - kind: actor_bill
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8
+      - kind: bill_topic_article
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9
+    - groups:
+      - kind: actor_bill
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8
+      - kind: bill_topic_article
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9
+    - groups:
+      - kind: actor_bill
+        ids:
+        - https://calmatters.org/politics/2026/08/california-schools-sex-assault-legislation-deal/#chunk_8
+      - kind: bill_topic_article
+        ids:
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_0
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_1
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_10
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_11
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_12
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_2
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_3
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_4
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_5
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_6
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_7
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_8
+        - https://calmatters.org/politics/2026/08/school-sex-abuse-lawsuit-relief/#chunk_9
+  metadata:
+    family: M1
+    scope_note: A second populated policy footprint. Duplicate stored ids are deduplicated in reference
+      rows.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M1
+  - reference-derived
+- id: C-M2-01
+  description: Same-side intersection uses two explicit LOBBIED_FOR edges, preserving the category without
+    missing stance alignment.
+  split: training
+  task_input:
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the
+      2025-2026 session?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+    answers:
+    - groups:
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - groups:
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - groups:
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+  metadata:
+    family: M2
+    scope_note: Same-side intersection uses two explicit LOBBIED_FOR edges, preserving the category without
+      missing stance alignment.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M2
+  - reference-derived
+- id: C-M2-02
+  description: A second seed tests the same intersection with separate claim provenance.
+  split: training
+  task_input:
+    question: Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists
+      Agency in the 2025-2026 session?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+    - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+    answers:
+    - groups:
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+    - groups:
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+    - groups:
+      - kind: peer_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_10
+      - kind: seed_support
+        ids:
+        - https://calmatters.org/politics/2026/08/hollywood-independent-film-tax-credit-exemption/#chunk_7
+  metadata:
+    family: M2
+    scope_note: A second seed tests the same intersection with separate claim provenance.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M2
+  - reference-derived
+- id: C-M3-01
+  description: Co-mention means sharing a Chunk; it does not imply a financial or political relationship.
+  split: training
+  task_input:
+    question: Which organizations appear in the same stored reporting chunks as Steve Hilton?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+    answers:
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_5
+  metadata:
+    family: M3
+    scope_note: Co-mention means sharing a Chunk; it does not imply a financial or political relationship.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M3
+  - reference-derived
+- id: C-M3-02
+  description: Names the source article to make the subject and reporting scope resolvable.
+  split: training
+  task_input:
+    question: Which organizations appear in the same reporting chunks as Gavin Newsom in the article titled
+      Newsom pushes environmental carve-out for campaign donor’s Santa Monica project?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6
+    - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8
+    answers:
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_12
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_13
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_14
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_2
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_25
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_6
+    - groups:
+      - kind: shared_reporting_chunk
+        ids:
+        - https://calmatters.org/politics/2026/08/santa-monica-construction-legislative-carveout/#chunk_8
+  metadata:
+    family: M3
+    scope_note: Names the source article to make the subject and reporting scope resolvable.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M3
+  - reference-derived
+- id: C-M4-01
+  description: Populated two-hop influence-chain prefix. The original extension from candidate to Bill
+    has zero matches.
+  split: training
+  task_input:
+    question: Which candidates are connected to California Leads through campaigns it is recorded as funding?
+      Include the campaign and reporting for each link.
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+    - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_8
+    answers:
+    - groups:
+      - kind: funding_support
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_10
+      - kind: campaign_target
+        ids:
+        - https://calmatters.org/politics/2026/08/demaio-california-republicans-rightward-wins/#chunk_8
+  metadata:
+    family: M4
+    scope_note: Populated two-hop influence-chain prefix. The original extension from candidate to Bill
+      has zero matches.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M4
+  - reference-derived
+- id: C-M4-02
+  description: Same two-hop chain with the Prop arm of CAMPAIGN_FOR. No causal influence or funding total
+    is inferred.
+  split: training
+  task_input:
+    question: Which ballot measures are connected to Michelson Center For Public Policy through campaigns
+      it is recorded as funding? Include the campaign and reporting for each link.
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+    - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+    answers:
+    - groups:
+      - kind: funding_support
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_13
+      - kind: campaign_target
+        ids:
+        - https://calmatters.org/politics/elections/2026/07/proposition-38-california/#chunk_16
+  metadata:
+    family: M4
+    scope_note: Same two-hop chain with the Prop arm of CAMPAIGN_FOR. No causal influence or funding total
+      is inferred.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M4
+  - reference-derived
+- id: C-M5-01
+  description: An individually reported vote using the News Ontology shortcut; no complete roll call or
+    event date is assumed.
+  split: training
+  task_input:
+    question: What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session, and
+      which reporting states it?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18
+    answers:
+    - groups:
+      - kind: event_bill
+        ids:
+        - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18
+      - kind: reported_vote
+        ids:
+        - https://calmatters.org/politics/2026/06/california-housing-hoa-fees/#chunk_18
+  metadata:
+    family: M5
+    scope_note: An individually reported vote using the News Ontology shortcut; no complete roll call
+      or event date is assumed.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M5
+  - reference-derived
+- id: C-M5-02
+  description: The attached quote explicitly says he voted no. The stored event sub-label is Hearing,
+    so matching only Vote would miss it.
+  split: training
+  task_input:
+    question: What vote is recorded for Scott Wiener on SB 1229 in the 2025-2026 session, and which reporting
+      states it?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8
+    answers:
+    - groups:
+      - kind: event_bill
+        ids:
+        - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8
+      - kind: reported_vote
+        ids:
+        - https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/#chunk_8
+  metadata:
+    family: M5
+    scope_note: The attached quote explicitly says he voted no. The stored event sub-label is Hearing,
+      so matching only Vote would miss it.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - M5
+  - reference-derived
+- id: C-C1-01
+  description: The original committee-hearing question is narrowed to the populated referral relationship.
+  split: training
+  task_input:
+    question: Which Bills from the 2025-2026 session are recorded as referred to the Senate Appropriations
+      Committee?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+  metadata:
+    family: C1
+    scope_note: The original committee-hearing question is narrowed to the populated referral relationship.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - C1
+  - reference-derived
+- id: C-C1-02
+  description: Reverse lookup of the same recorded referrals. Does not silently call referrals hearings.
+  split: training
+  task_input:
+    question: Which committees is AB 2540 in the 2025-2026 session recorded as having been referred to?
+    relational: true
+    assessment:
+      status: allowed
+  expected_output:
+    grain: article_chunk
+    relevant_ids:
+    - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+    answers:
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+    - groups:
+      - kind: relationship_claim
+        ids:
+        - https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_24
+  metadata:
+    family: C1
+    scope_note: Reverse lookup of the same recorded referrals. Does not silently call referrals hearings.
+    reference_artifact: work/initiatives/useful-graph-retrieval/query-construction/verified-results.json
+    reference_sha256: 36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a
+    reference_checked_at: '2026-09-08T22:31:46.581922+00:00'
+    annotation_guideline: docs/evaluation/retrieval.md
+    label_quality: silver
+    annotator: Codex
+  tags:
+  - C1
+  - reference-derived

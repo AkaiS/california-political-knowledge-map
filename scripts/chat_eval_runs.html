@@ -31,6 +31,7 @@
 </head>
 <body>
   <main>
+    <a href="/chunks">Chunk review</a>
     <h1>Chat evaluation runs</h1>
     <p class="intro">Choose a run to inspect its case traces and continue your review.</p>
     <div class="heading"><h2>Recent runs</h2><span id="count" class="count"></span></div>
@@ -69,11 +70,12 @@
         add(top, 'time', dateLabel(run.ran_at), 'date');
         add(link, 'div', `${run.deployment || 'unknown deployment'} · ${run.split || 'unknown split'} · ${run.id}`, 'details');
         const progress = add(link, 'div', null, 'progress');
-        add(progress, 'span', `${run.reviewed_count} of ${run.case_count} reviewed`);
-        add(progress, 'span', `${run.case_count ? Math.round(100 * run.reviewed_count / run.case_count) : 0}%`);
+        const reviewable = run.review_kind === 'rag' ? run.reviewable_count : run.case_count;
+        add(progress, 'span', `${run.reviewed_count} of ${reviewable} reviewed`);
+        add(progress, 'span', `${reviewable ? Math.round(100 * run.reviewed_count / reviewable) : 0}%`);
         const bar = add(link, 'div', null, 'bar');
-        add(bar, 'div', null, 'fill').style.width = `${run.case_count ? 100 * run.reviewed_count / run.case_count : 0}%`;
-        add(link, 'div', `${run.pass_count} pass · ${run.fail_count} fail · ${run.defer_count} defer`, 'breakdown');
+        add(bar, 'div', null, 'fill').style.width = `${reviewable ? 100 * run.reviewed_count / reviewable : 0}%`;
+        add(link, 'div', run.review_kind === 'rag' ? `${run.task} · ${run.unjudgeable_count} unjudgeable · Context relevance, answer relevance and faithfulness` : `${run.pass_count} pass · ${run.fail_count} fail · ${run.defer_count} defer`, 'breakdown');
       }
     }).catch(error => { runsNode.replaceChildren(); add(runsNode, 'div', error.message, 'empty'); });
   </script>

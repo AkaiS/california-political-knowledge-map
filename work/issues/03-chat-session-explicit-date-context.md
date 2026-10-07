@@ -104,3 +104,12 @@ Full deterministic verification passed with 1,462 Python tests and 61 opt-in
 skips. The 23 Node editing checks also passed. After adoption of prompt v3, the
 27 focused date, evaluation, and prompt-resource checks passed; touched files
 passed Ruff and whitespace checks. No browser verification was used.
+
+2026-10-07: PR #34 review requested independent content checks for the new
+immutable prompt versions. Added fixed SHA-256 assertions for v2 and v3, leaving
+both original v1 baselines unchanged. Integrated PR #33's shared guidance
+function from main and passed the Chat Session's fixed timestamp through it.
+Standalone retrieval evaluation guidance also receives a resolved current date;
+its request-capture test pins October 1 and checks that input. After integration,
+all 1,533 deterministic Python tests and 29 Node checks passed, with 61 Python
+opt-in skips. Prompt versions and captured historical reports were unchanged.

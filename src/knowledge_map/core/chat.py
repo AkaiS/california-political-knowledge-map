@@ -52,6 +52,17 @@ CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=3)
 QUESTION_POLICY = load_prompt("chat/question-policy", version=1)
 
 
+def _resolve_as_of(as_of: datetime | None) -> datetime:
+    resolved = as_of if as_of is not None else datetime.now(UTC)
+    if resolved.utcoffset() is None:
+        raise ValueError("Chat Session as_of must include a timezone")
+    return resolved.astimezone(UTC)
+
+
+def _date_context(as_of: datetime) -> dict[str, str]:
+    return {"as_of": as_of.isoformat(), "current_date": as_of.date().isoformat()}
+
+
 def _guidance_failure_kind(error: Exception) -> str:
     if isinstance(error, ValidationError):
         return "validation"
@@ -64,6 +75,65 @@ class RetrievalGuidance(RetrievalValue):
     introduction: NonemptyText | None = None
     source_notes: tuple[SourceRelevanceNote, ...] = ()
     disagreements: tuple[SourceDisagreement, ...] = ()
+
+
+async def generate_retrieval_answer(
+    agent: Agent[None, QuestionAssessment],
+    package: EvidencePackage,
+    *,
+    original_question: str,
+    chat_session_id: str,
+    usage: RunUsage,
+    as_of: datetime | None = None,
+) -> RetrievalAnswer:
+    """Generate and validate guidance against the exact assembled evidence."""
+    resolved_as_of = _resolve_as_of(as_of)
+    rewrite = package.execution.request.rewrite
+    with logfire.span(
+        "chat_session.guidance",
+        chat_session_id=chat_session_id,
+        audit_schema_version=1,
+    ) as span:
+        try:
+            result = await agent.run(
+                render_evidence_context(package),
+                message_history=[
+                    ModelRequest(
+                        parts=[
+                            UserPromptPart(json.dumps(_date_context(resolved_as_of)))
+                        ]
+                    ),
+                    ModelRequest(parts=[UserPromptPart(original_question)]),
+                ],
+                output_type=RetrievalGuidance,
+                usage=usage,
+            )
+            disclosures = list(package.failure_disclosures)
+            structural_empty = package.execution.structural_empty_disclosure
+            if structural_empty:
+                disclosures.append(structural_empty)
+            if rewrite.assessment.status == "deferred":
+                assert rewrite.assessment.explanation is not None
+                disclosures.append(rewrite.assessment.explanation)
+            if result.output.introduction:
+                disclosures.append(result.output.introduction)
+            answer = RetrievalAnswer(
+                evidence=package,
+                introduction="\n\n".join(disclosures) or None,
+                source_notes=result.output.source_notes,
+                disagreements=result.output.disagreements,
+            )
+        except Exception as error:
+            span.set_attributes(
+                {
+                    "status": "failed",
+                    "failure_kind": _guidance_failure_kind(error),
+                    "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
+                }
+            )
+            raise
+        span.set_attribute("status", "succeeded")
+        return answer
 
 
 def get_chat_agent(
@@ -99,10 +169,7 @@ class ChatSession:
         start_settings: ChatSessionSettings | None = None,
         as_of: datetime | None = None,
     ) -> None:
-        resolved_as_of = as_of if as_of is not None else datetime.now(UTC)
-        if resolved_as_of.utcoffset() is None:
-            raise ValueError("Chat Session as_of must include a timezone")
-        self._as_of = resolved_as_of.astimezone(UTC)
+        self._as_of = _resolve_as_of(as_of)
         self._original_question = original_question
         self._agent = chat_agent
         self._retrieval = retrieval
@@ -125,7 +192,7 @@ class ChatSession:
             audit_schema_version=1,
             original_question=original_question,
             observed_at=datetime.now(UTC).isoformat(),
-            **self._date_context(),
+            **_date_context(self._as_of),
             coverage=coverage.model_dump(mode="json"),
             **(asdict(start_settings) if start_settings is not None else {}),
         )
@@ -134,12 +201,6 @@ class ChatSession:
     def as_of(self) -> datetime:
         """The session's fixed reference time, independent of source dates."""
         return self._as_of
-
-    def _date_context(self) -> dict[str, str]:
-        return {
-            "as_of": self._as_of.isoformat(),
-            "current_date": self._as_of.date().isoformat(),
-        }
 
     @property
     def retrieval_result(self) -> EvidencePackage | EvidenceAssemblyFailure | None:
@@ -150,7 +211,7 @@ class ChatSession:
         result = await self._agent.run(
             json.dumps(
                 {
-                    **self._date_context(),
+                    **_date_context(self._as_of),
                     "question": rewrite.question,
                     "coverage": self._coverage.model_dump(mode="json"),
                     "question_policy": QUESTION_POLICY,
@@ -228,46 +289,11 @@ class ChatSession:
         self._retrieval_result = package
         if isinstance(package, EvidenceAssemblyFailure):
             return package
-        with logfire.span(
-            "chat_session.guidance",
+        return await generate_retrieval_answer(
+            self._agent,
+            package,
+            original_question=self._original_question,
             chat_session_id=self.chat_session_id,
-            audit_schema_version=1,
-        ) as span:
-            try:
-                result = await self._agent.run(
-                    render_evidence_context(package),
-                    message_history=[
-                        ModelRequest(
-                            parts=[UserPromptPart(json.dumps(self._date_context()))]
-                        ),
-                        ModelRequest(parts=[UserPromptPart(self._original_question)]),
-                    ],
-                    output_type=RetrievalGuidance,
-                    usage=self._usage,
-                )
-                disclosures = list(package.failure_disclosures)
-                structural_empty = package.execution.structural_empty_disclosure
-                if structural_empty:
-                    disclosures.append(structural_empty)
-                if rewrite.assessment.status == "deferred":
-                    assert rewrite.assessment.explanation is not None
-                    disclosures.append(rewrite.assessment.explanation)
-                if result.output.introduction:
-                    disclosures.append(result.output.introduction)
-                answer = RetrievalAnswer(
-                    evidence=package,
-                    introduction="\n\n".join(disclosures) or None,
-                    source_notes=result.output.source_notes,
-                    disagreements=result.output.disagreements,
-                )
-            except Exception as error:
-                span.set_attributes(
-                    {
-                        "status": "failed",
-                        "failure_kind": _guidance_failure_kind(error),
-                        "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
-                    }
-                )
-                raise
-            span.set_attribute("status", "succeeded")
-            return answer
+            usage=self._usage,
+            as_of=self._as_of,
+        )

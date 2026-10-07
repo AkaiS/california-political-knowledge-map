@@ -58,7 +58,11 @@ def report_path(
         filename_slug = _slug(selected.model)
     else:
         filename_slug = _deployment_slug(selected)
-    return (root or Path("evals/reports")) / task / f"{stamp}-{run_commit()}-{filename_slug}.json"
+    return (
+        (root or Path("evals/reports"))
+        / task
+        / f"{stamp}-{run_commit()}-{filename_slug}.json"
+    )
 
 
 def write_report(
@@ -101,6 +105,10 @@ def write_report(
         "ran_at": ran_at.isoformat(),
         "report": to_jsonable_python(serialized_report, fallback=str),
     }
+    if task == "retrieval":
+        from .retrieval_report import compact_retrieval_report
+
+        document = compact_retrieval_report(document)
     path.write_text(json.dumps(document, indent=2, sort_keys=True, default=str) + "\n")
     return path
 
@@ -149,4 +157,6 @@ def _git(*arguments: str) -> str:
 
 
 def _slug(value: str) -> str:
-    return "".join(character if character.isalnum() else "-" for character in value).strip("-")
+    return "".join(
+        character if character.isalnum() else "-" for character in value
+    ).strip("-")

@@ -119,3 +119,76 @@ as the versioning system. The YAML question set, JSON Evaluation Report, and
 human review file can each be committed and compared through Git. Once reviews
 identify repeatable failure modes, evaluators can be added against labeled
 cases without treating the initial trace collection as a benchmark.
+
+## Amendment: retain evidence for bounded retrieval decisions
+
+Retrieval reports retain the first 50 unique Article Chunks per branch as
+chunk ID, Source Article ID and best branch rank. Production fusion determines
+eligibility from configured branch budgets but can use deeper ranks from other
+branches for an eligible chunk. Reports retain only those additional ranks,
+including explicit eligibility when configured production budgets exceed 50.
+This reproduces current RRF scores and ordering without changing production
+fusion or storing complete candidate tails.
+
+Run configuration is stored once per distinct configuration. Case outputs keep
+selected passages and citations, branch status, concise failure diagnostics,
+useful preceding counts and model correction feedback. Deep candidate routes,
+claims, repeated contributions, fused objects, catalogs and cumulative prompts
+do not belong in the evaluation report. Full operational traces remain in
+Logfire. Pydantic Evals continues to own execution, scores and usage metrics;
+this is a task-specific projection in the existing report writer.
+
+Recall cutoffs and reciprocal rank use a budget of unique chunks. Article-grain
+cases measure article coverage inside that chunk budget, rather than searching
+deeper for the first k distinct articles. Reciprocal rank is bounded to 50.
+Reports record the metric definition so these corrected numbers cannot be
+mistaken for the earlier identity-budget measurement.
+
+The user requested compaction of the three initial, uncommitted retrieval
+reports. Their originals are recoverable under `.scratch`, their migration
+provenance records source hashes and the old metric definition, and changed
+legacy scores are labeled outside current scores. The migration rescores those
+same executions; it does not represent another model run. Other historical
+reports are unchanged.
+
+Larger retrospective candidate budgets, arbitrary discarded-candidate review
+and every historical ranking experiment after graph changes require rerunning
+retrieval. Those are accepted losses. Branch failures, reference misses within
+budget, fusion loss and context-selection loss remain explainable.
+
+## Amendment: RAG judgments have a focused review boundary
+
+The reviewer has a separate RAG mode that projects each run to the approved
+question, selected evidence, citations, final generation and retrieval
+measurement specifications. It serves no intermediate pipeline records through
+that mode's report API. Human labels are context relevance, answer relevance
+and answer faithfulness, with an evidence note per axis. They are saved in a
+separate `.rag-reviews.json` sidecar; whole-case chat critiques retain their
+existing `.reviews.json` format. Both modes reuse the tested editing interface
+for draft recovery, autosave, undo and navigation.
+
+Missing judgment inputs remain unjudgeable. Missing reference metrics remain
+unavailable. Reference precision@k measures matching chunk slots against the
+same provisional silver labels used for recall, divided by k. It does not
+claim exhaustive relevance judgments. Existing compact runs derive it from
+retained ranks without rewriting the execution record. NDCG still requires
+relevance grades absent from the initial references. Two-hop coverage is shown only for references
+with two explicit evidence groups, with the reference-answer unit stated.
+The reviewer does not combine context and generation from different executions.
+
+Chunk relevance uses a separate query–Article Chunk view and annotation file.
+A script freezes a balanced random sample from each attempted retrieval's fused
+top ten. It preserves run hashes, ranks, text hashes and text observation origin;
+text missing from the compact report can be loaded from the current graph with
+that later observation recorded explicitly. The reviewer shows only question
+and chunk text. High and Low labels export as judge-calibration examples; Defer
+remains unresolved. Question groups travel with the export for disjoint judge
+validation splits. Sampling and human labels do not overwrite retrieval metrics
+or whole-context and generation judgments.
+
+New retrieval evaluations also call the production final Chat Agent with the
+approved question and that run's Evidence Package. The eval and Chat Session
+share answer generation, citation validation and rendering. Question preparation
+remains outside this focused task. Generation failures preserve retrieval
+measurements and selected context. Compact reports retain generated guidance
+and rendered output without duplicating the evidence execution under the answer.

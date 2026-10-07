@@ -1,0 +1,1608 @@
+{
+  "commit": "e17ffc5",
+  "data_set": "evals/silver/retrieval.yaml",
+  "deployment": {
+    "endpoint": "http://localhost:8080/v1",
+    "kind": "local",
+    "model": "gemma4:26b",
+    "provider_policy": null,
+    "request_settings": {
+      "max_attempts": 3,
+      "max_tokens": null,
+      "rate_limit_wait_cap": 120.0,
+      "reasoning_effort": null,
+      "temperature": 0.0,
+      "thinking": false,
+      "timeout": 3600.0,
+      "top_k": null,
+      "top_p": null
+    }
+  },
+  "dirty": true,
+  "label_quality": "silver",
+  "model": "gemma4:26b",
+  "ran_at": "2026-10-01T00:13:08.420242+00:00",
+  "report": {
+    "analyses": [],
+    "cases": [
+      {
+        "assertions": {
+          "dense_completed": {
+            "evaluator_version": null,
+            "name": "dense_completed",
+            "reason": "Successful empty branches completed; failed branches receive zero retrieval scores.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": true
+          },
+          "evidence_assembled": {
+            "evaluator_version": null,
+            "name": "evidence_assembled",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": true
+          },
+          "full_text_completed": {
+            "evaluator_version": null,
+            "name": "full_text_completed",
+            "reason": "Successful empty branches completed; failed branches receive zero retrieval scores.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": true
+          },
+          "retrieval_attempt_completed": {
+            "evaluator_version": null,
+            "name": "retrieval_attempt_completed",
+            "reason": null,
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": true
+          },
+          "structural_completed": {
+            "evaluator_version": null,
+            "name": "structural_completed",
+            "reason": "Successful empty branches completed; failed branches receive zero retrieval scores.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": false
+          }
+        },
+        "attributes": {
+          "model_routes": [],
+          "retrieval_diagnostics": [],
+          "retrieval_metric_version": "unique-chunk-budget-v2"
+        },
+        "evaluator_failures": [],
+        "expected_output": {
+          "answers": [
+            {
+              "groups": [
+                {
+                  "ids": [
+                    "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+                  ],
+                  "kind": "relationship_claim"
+                }
+              ]
+            }
+          ],
+          "grain": "article_chunk",
+          "relevant_ids": [
+            "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54"
+          ]
+        },
+        "inputs": {
+          "assessment": {
+            "explanation": null,
+            "recoverable_portion": null,
+            "status": "allowed"
+          },
+          "question": "Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what reporting states that position?",
+          "relational": true
+        },
+        "labels": {},
+        "metadata": {
+          "annotation_guideline": "docs/evaluation/retrieval.md",
+          "annotator": "Codex",
+          "family": "R1",
+          "label_quality": "silver",
+          "reference_artifact": "work/initiatives/useful-graph-retrieval/query-construction/verified-results.json",
+          "reference_checked_at": "2026-09-08T22:31:46.581922+00:00",
+          "reference_sha256": "36229d9a5ca7d682dc169e9658f4f55806a14ab3d9cb311b1a42f221fd1ce73a",
+          "scope_note": "The text supplies the position; no missing alignment property is filtered or inferred."
+        },
+        "metrics": {
+          "requests": 1
+        },
+        "name": "C-R1-01",
+        "output": {
+          "branches": [
+            {
+              "branch": "full_text",
+              "candidates": [
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_3",
+                  "rank": 1,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_0",
+                  "rank": 2,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23",
+                  "rank": 3,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54",
+                  "rank": 4,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_1",
+                  "rank": 5,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_10",
+                  "rank": 8,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/#chunk_7",
+                  "rank": 9,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/billionaire-tax-california-democrats-split/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_0",
+                  "rank": 10,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_11",
+                  "rank": 11,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_26",
+                  "rank": 12,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_1",
+                  "rank": 13,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_12",
+                  "rank": 14,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_10",
+                  "rank": 16,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_13",
+                  "rank": 17,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_33",
+                  "rank": 18,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_11",
+                  "rank": 19,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_14",
+                  "rank": 20,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/#chunk_11",
+                  "rank": 21,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/09/driver-license-database-subpoena/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_12",
+                  "rank": 22,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_2",
+                  "rank": 23,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/#chunk_12",
+                  "rank": 24,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_13",
+                  "rank": 25,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_3",
+                  "rank": 26,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/#chunk_0",
+                  "rank": 27,
+                  "source_article_id": "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_14",
+                  "rank": 28,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_4",
+                  "rank": 29,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_13",
+                  "rank": 30,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_15",
+                  "rank": 31,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_5",
+                  "rank": 32,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_3",
+                  "rank": 33,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_16",
+                  "rank": 34,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_6",
+                  "rank": 35,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_21",
+                  "rank": 36,
+                  "source_article_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_17",
+                  "rank": 37,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_7",
+                  "rank": 38,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_22",
+                  "rank": 39,
+                  "source_article_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_18",
+                  "rank": 40,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_8",
+                  "rank": 41,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/#chunk_1",
+                  "rank": 42,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/antitrust-legislation-business-lobbying/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_19",
+                  "rank": 43,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/#chunk_9",
+                  "rank": 44,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/07/california-bar-exam-fiasco/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/#chunk_9",
+                  "rank": 45,
+                  "source_article_id": "https://calmatters.org/education/k-12-education/2026/09/arts-education-money-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_2",
+                  "rank": 46,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/#chunk_0",
+                  "rank": 47,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_31",
+                  "rank": 48,
+                  "source_article_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_20",
+                  "rank": 49,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/#chunk_1",
+                  "rank": 50,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/#chunk_12",
+                  "rank": 51,
+                  "source_article_id": "https://calmatters.org/education/2026/07/uc-san-diego-homeland-security-border-patrol-students-protest/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_21",
+                  "rank": 52,
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/#chunk_10",
+                  "rank": 53,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-congressional-races-republican-fundraising/"
+                }
+              ],
+              "extra_fusion_ranks": [
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_57",
+                  "rank": 63,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_0",
+                  "rank": 101,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1",
+                  "rank": 104,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_10",
+                  "rank": 107,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_13",
+                  "rank": 116,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2",
+                  "rank": 137,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_21",
+                  "rank": 141,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_55",
+                  "rank": 165,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_32",
+                  "rank": 169,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_48",
+                  "rank": 220,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_51",
+                  "rank": 232,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_58",
+                  "rank": 234,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_28",
+                  "rank": 264,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_22",
+                  "rank": 272,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_23",
+                  "rank": 275,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_3",
+                  "rank": 281,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_1",
+                  "rank": 283,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_7",
+                  "rank": 293,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_8",
+                  "rank": 294,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_9",
+                  "rank": 299,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_16",
+                  "rank": 304,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_21",
+                  "rank": 306,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_9",
+                  "rank": 379,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_20",
+                  "rank": 410,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_7",
+                  "rank": 411,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_3",
+                  "rank": 427,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_20",
+                  "rank": 516,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0",
+                  "rank": 622,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_13",
+                  "rank": 632,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_1",
+                  "rank": 633,
+                  "source_article_id": "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_13",
+                  "rank": 669,
+                  "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_19",
+                  "rank": 698,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_24",
+                  "rank": 710,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_4",
+                  "rank": 723,
+                  "source_article_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_5",
+                  "rank": 816,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_9",
+                  "rank": 857,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_11",
+                  "rank": 927,
+                  "source_article_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_12",
+                  "rank": 1307,
+                  "source_article_id": "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/#chunk_16",
+                  "rank": 1366,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_3",
+                  "rank": 1371,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_1",
+                  "rank": 1502,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_5",
+                  "rank": 1528,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                }
+              ],
+              "retrieved_count": 1902,
+              "status": "succeeded",
+              "unique_chunk_count": 1353
+            },
+            {
+              "branch": "dense",
+              "candidates": [
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_57",
+                  "rank": 1,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54",
+                  "rank": 2,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_0",
+                  "rank": 3,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_13",
+                  "rank": 4,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_3",
+                  "rank": 5,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_58",
+                  "rank": 6,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_14",
+                  "rank": 7,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_10",
+                  "rank": 8,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/#chunk_16",
+                  "rank": 9,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/court-reporter-california-supreme-court/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_1",
+                  "rank": 10,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_24",
+                  "rank": 11,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/#chunk_12",
+                  "rank": 12,
+                  "source_article_id": "https://calmatters.org/environment/2026/08/california-data-centers-water-transparency-bills/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_19",
+                  "rank": 13,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_7",
+                  "rank": 14,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_55",
+                  "rank": 15,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/#chunk_7",
+                  "rank": 16,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/09/community-college-bachelors-degrees-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_23",
+                  "rank": 17,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_3",
+                  "rank": 18,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_0",
+                  "rank": 19,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_20",
+                  "rank": 20,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_48",
+                  "rank": 21,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_1",
+                  "rank": 22,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/#chunk_21",
+                  "rank": 23,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-flock-license-plates-bill/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_9",
+                  "rank": 24,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_9",
+                  "rank": 25,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_13",
+                  "rank": 26,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_3",
+                  "rank": 27,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/#chunk_13",
+                  "rank": 28,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/08/students-without-legal-status-california/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_8",
+                  "rank": 29,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/#chunk_1",
+                  "rank": 30,
+                  "source_article_id": "https://calmatters.org/economy/2026/09/smoke-damage-insurance-bills/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23",
+                  "rank": 31,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_3",
+                  "rank": 32,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_11",
+                  "rank": 33,
+                  "source_article_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_32",
+                  "rank": 34,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/#chunk_4",
+                  "rank": 35,
+                  "source_article_id": "https://calmatters.org/education/2026/07/california-campus-police-military-weapons/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/#chunk_9",
+                  "rank": 36,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-grizzly-bear-reintroduction-bill/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_33",
+                  "rank": 37,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/#chunk_22",
+                  "rank": 38,
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-return-to-office-states/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_2",
+                  "rank": 39,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/#chunk_13",
+                  "rank": 40,
+                  "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/legislature-homelessness-bills-2026/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_20",
+                  "rank": 41,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/#chunk_0",
+                  "rank": 42,
+                  "source_article_id": "https://calmatters.org/housing/homelessness/2026/08/pit-counts-2026/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_51",
+                  "rank": 43,
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/#chunk_5",
+                  "rank": 44,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/construction-minimum-wage-fail/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/#chunk_1",
+                  "rank": 45,
+                  "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/#chunk_5",
+                  "rank": 46,
+                  "source_article_id": "https://calmatters.org/education/2026/07/abortion-pills-could-come-to-california-community-college-health-centers/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_28",
+                  "rank": 47,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/#chunk_21",
+                  "rank": 48,
+                  "source_article_id": "https://calmatters.org/politics/2026/08/immigrant-services-privacy-nick-shirley/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/#chunk_3",
+                  "rank": 49,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/workforce-funding/"
+                },
+                {
+                  "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_16",
+                  "rank": 50,
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                }
+              ],
+              "extra_fusion_ranks": [],
+              "retrieved_count": 50,
+              "status": "succeeded",
+              "unique_chunk_count": 50
+            },
+            {
+              "branch": "structural",
+              "candidates": [],
+              "extra_fusion_ranks": [],
+              "retrieved_count": 0,
+              "status": "failed",
+              "unique_chunk_count": 0
+            }
+          ],
+          "chat_session_id": null,
+          "configuration_index": 0,
+          "coverage_observed_at": "2026-10-01T00:13:03.629181+00:00",
+          "evidence": {
+            "context": {
+              "limit": 24000,
+              "max_passages": 12,
+              "omitted_passages": 85,
+              "unit": "characters",
+              "used": 23988
+            },
+            "coverage": {
+              "entries": [
+                {
+                  "availability": {
+                    "available_count": 98,
+                    "expected_count": null
+                  },
+                  "collection_id": "calmatters",
+                  "date_basis": "publication_date",
+                  "description": "CalMatters reporting on California politics and public policy. Source Articles and their Article Chunks support finding reporting and reported connections among political actors, organizations, and measures.",
+                  "earliest_date": "2023-06-15",
+                  "kind": "publication",
+                  "latest_date": "2026-09-05",
+                  "limitations": [
+                    "This is a selected collection of reporting. Completeness against all CalMatters articles is unknown.",
+                    "Reported connections are not a complete record of roll calls, campaign finance, lobbying, bill text, or ballot information.",
+                    "Publication dates describe the reporting, not the dates of every event it discusses. Missing reporting or graph connections cannot establish that an event did not occur."
+                  ],
+                  "name": "CalMatters"
+                }
+              ]
+            },
+            "monthly_coverage": [],
+            "sources": [
+              {
+                "citation": {
+                  "published_date": "2026-07-09T12:00:00Z",
+                  "source_article_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/",
+                  "title": "Kaiser nurses say technology is making their jobs \u2014 and patient care \u2014 worse",
+                  "url": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54",
+                    "provenance": "stored_chunk",
+                    "text": "address how AI impacts workers like call center nurses. Assembly Bill 1018 and Senate Bill 7, Assembly Bill 1018 and Senate Bill 7 endorsed by California Nurses Association, would have required employers to inform workers before using automated systems on the job to do things like promote or discipline workers or evaluate job performance, but Gavin Newsom Gavin Newsom vetoed Senate Bill 7, and, facing strong opposition from companies including Kaiser Permanente, Assembly Bill 1018 failed to pass for the third consecutive year.\n\n"
+                  },
+                  {
+                    "chunk_id": "https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_57",
+                    "provenance": "stored_chunk",
+                    "text": "list of AI systems in use when asked by CalMatters.\n\nAltogether California Nurses Association and California Labor Federation support roughly half a dozen bills to regulate use of AI in the workplace. Calling AI a central issue in the next presidential election, members of the California Labor Federation and labor leaders from Democratic primary states held a press conference in Sacramento earlier this year to say that if Gavin Newsom wants to become president then Gavin Newsom needs to pass laws protecting workers from AI. "
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-07-15T12:30:00Z",
+                  "source_article_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/",
+                  "title": "Californians may get a new way to sue big companies. Some Democrats are nervous",
+                  "url": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/politics/2026/07/california-monopoly-law-compete-act/#chunk_3",
+                    "provenance": "stored_chunk",
+                    "text": "needs to chart California's COMPETE Act own course.\n\nThe fight is pitting some of the state\u2019s biggest political spenders \u2014 labor unions and trial lawyers \u2014 against the lobbying might of California\u2019s business and tech industries. Combined, labor unions and trial lawyers have given at least $106 million to lawmakers\u2019 campaigns since 2000, according to the CalMatters\u2019 Digital Democracy database.\n\n"
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-08-03T12:30:00Z",
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/",
+                  "title": "Keep an eye on these 5 deals as California lawmakers close out the legislative session",
+                  "url": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-returns-five-things-watch/#chunk_23",
+                    "provenance": "stored_chunk",
+                    "text": "warning labels, labor complaints and consumer privacy.\n\nthe COMPETE Act, authored by Assembly Majority Leader Cecilia Aguiar-Curry, a Davis Democrat, has support from labor-friendly progressive lawmakers, but also some who have more moderate records such as Assemblymember Jasmeet Bains and Senator Melissa Hurtado, both Central Valley Democratic lawmakers.\n\nunions have lined up as co-sponsors, including the California Federation of Labor Unions, SEIU California and the United Food and Commercial Workers.\n\n"
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-06-19T12:00:00Z",
+                  "source_article_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/",
+                  "title": "Cal State faculty push to prevent AI tools from replacing them as schools and staff experiment",
+                  "url": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/education/higher-education/2026/06/artificial-intelligence-cal-state-disputes/#chunk_13",
+                    "provenance": "stored_chunk",
+                    "text": "2016, according to Digital Democracy, CalMatters.\n\nCalifornia State University has no position on unnamed bill, but the role of AI broadly is a sticking point in ongoing labor contract negotiations between California Faculty Association and California State University.\n\nA dispute over bots at Sacramento State\n\n"
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-08-24T21:39:59Z",
+                  "source_article_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/",
+                  "title": "Why sex abuse survivors and broke school districts are at odds in Legislature\u2019s final days",
+                  "url": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/politics/2026/08/california-legislature-child-sex-abuse-claims/#chunk_3",
+                    "provenance": "stored_chunk",
+                    "text": "blowing holes in schools and local governments budgets.\n\nIn the final week of the 2026 legislative session, lobbyists for schools and counties are pushing Senate and Assembly leaders to strike a last-minute deal that would allow survivors to be compensated for past harms while simultaneously stewarding taxpayer dollars and protecting local agencies from going bankrupt. An attempt last year to find common ground collapsed in the final hours of the legislative session.\n\n"
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-07-22T12:15:00Z",
+                  "source_article_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/",
+                  "title": "Newsom\u2019s populist act: Oppose state billionaire tax, embrace federal one",
+                  "url": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/politics/2026/07/newsom-balancing-act-wealth-tax-billionaires/#chunk_33",
+                    "provenance": "stored_chunk",
+                    "text": "reluctant to back aggressive regulation or bans on AI.\n\nFlanked by labor leaders in important presidential primary states earlier this year, Gonzalez warned Gavin Newsom that unions could withhold their political support if Gavin Newsom does not rein in use of AI.\n\n\u201cIt\u2019s not enough to say, \u2018I feel your pain,\u2019\u201d Gonzalez said. \u201cWe don\u2019t think that catastrophic job loss is inevitable.\u201d"
+                  }
+                ]
+              },
+              {
+                "citation": {
+                  "published_date": "2026-07-24T12:00:00Z",
+                  "source_article_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/",
+                  "title": "Public funding cuts, lost grants, stagnant wages: How economic woes are dimming a vibrant art scene",
+                  "url": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/"
+                },
+                "passages": [
+                  {
+                    "chunk_id": "https://calmatters.org/economy/2026/07/san-diego-arts-funding/#chunk_18",
+                    "provenance": "stored_chunk",
+                    "text": "programs\u2019re bellwethers for community well-being.\n\nThe University of San Diego report cited research showing that involvement with the arts increases social connection, reduces anxiety and depression, and helps with youth development and academic accomplishment.\n\n"
+                  }
+                ]
+              }
+            ]
+          },
+          "failure": null,
+          "model_corrections": [
+            {
+              "component": "structural_ontology_filter",
+              "exception_type": "ModelAPIError",
+              "feedback": [],
+              "request_index": 1,
+              "response": [],
+              "status": "failed"
+            }
+          ]
+        },
+        "scores": {
+          "context_complete_evidence": {
+            "evaluator_version": null,
+            "name": "context_complete_evidence",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "context_recall": {
+            "evaluator_version": null,
+            "name": "context_recall",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_complete_evidence_at_1": {
+            "evaluator_version": null,
+            "name": "dense_complete_evidence_at_1",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "dense_complete_evidence_at_10": {
+            "evaluator_version": null,
+            "name": "dense_complete_evidence_at_10",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_complete_evidence_at_5": {
+            "evaluator_version": null,
+            "name": "dense_complete_evidence_at_5",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_complete_evidence_at_50": {
+            "evaluator_version": null,
+            "name": "dense_complete_evidence_at_50",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_recall_at_1": {
+            "evaluator_version": null,
+            "name": "dense_recall_at_1",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "dense_recall_at_10": {
+            "evaluator_version": null,
+            "name": "dense_recall_at_10",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_recall_at_5": {
+            "evaluator_version": null,
+            "name": "dense_recall_at_5",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_recall_at_50": {
+            "evaluator_version": null,
+            "name": "dense_recall_at_50",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "dense_reciprocal_rank": {
+            "evaluator_version": null,
+            "name": "dense_reciprocal_rank",
+            "reason": "First relevant article_chunk within 50 unique Article Chunks.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.5
+          },
+          "full_text_complete_evidence_at_1": {
+            "evaluator_version": null,
+            "name": "full_text_complete_evidence_at_1",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "full_text_complete_evidence_at_10": {
+            "evaluator_version": null,
+            "name": "full_text_complete_evidence_at_10",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_complete_evidence_at_5": {
+            "evaluator_version": null,
+            "name": "full_text_complete_evidence_at_5",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_complete_evidence_at_50": {
+            "evaluator_version": null,
+            "name": "full_text_complete_evidence_at_50",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_recall_at_1": {
+            "evaluator_version": null,
+            "name": "full_text_recall_at_1",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "full_text_recall_at_10": {
+            "evaluator_version": null,
+            "name": "full_text_recall_at_10",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_recall_at_5": {
+            "evaluator_version": null,
+            "name": "full_text_recall_at_5",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_recall_at_50": {
+            "evaluator_version": null,
+            "name": "full_text_recall_at_50",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "full_text_reciprocal_rank": {
+            "evaluator_version": null,
+            "name": "full_text_reciprocal_rank",
+            "reason": "First relevant article_chunk within 50 unique Article Chunks.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.25
+          },
+          "fused_complete_evidence_at_1": {
+            "evaluator_version": null,
+            "name": "fused_complete_evidence_at_1",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_complete_evidence_at_10": {
+            "evaluator_version": null,
+            "name": "fused_complete_evidence_at_10",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_complete_evidence_at_5": {
+            "evaluator_version": null,
+            "name": "fused_complete_evidence_at_5",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_complete_evidence_at_50": {
+            "evaluator_version": null,
+            "name": "fused_complete_evidence_at_50",
+            "reason": "All evidence groups found for 1/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_recall_at_1": {
+            "evaluator_version": null,
+            "name": "fused_recall_at_1",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_recall_at_10": {
+            "evaluator_version": null,
+            "name": "fused_recall_at_10",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_recall_at_5": {
+            "evaluator_version": null,
+            "name": "fused_recall_at_5",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_recall_at_50": {
+            "evaluator_version": null,
+            "name": "fused_recall_at_50",
+            "reason": "article_chunk; 0 missing reference IDs: []",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "fused_reciprocal_rank": {
+            "evaluator_version": null,
+            "name": "fused_reciprocal_rank",
+            "reason": "First relevant article_chunk within 50 unique Article Chunks.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 1.0
+          },
+          "structural_complete_evidence_at_1": {
+            "evaluator_version": null,
+            "name": "structural_complete_evidence_at_1",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_complete_evidence_at_10": {
+            "evaluator_version": null,
+            "name": "structural_complete_evidence_at_10",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_complete_evidence_at_5": {
+            "evaluator_version": null,
+            "name": "structural_complete_evidence_at_5",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_complete_evidence_at_50": {
+            "evaluator_version": null,
+            "name": "structural_complete_evidence_at_50",
+            "reason": "All evidence groups found for 0/1 reference answers.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_recall_at_1": {
+            "evaluator_version": null,
+            "name": "structural_recall_at_1",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_recall_at_10": {
+            "evaluator_version": null,
+            "name": "structural_recall_at_10",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_recall_at_5": {
+            "evaluator_version": null,
+            "name": "structural_recall_at_5",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_recall_at_50": {
+            "evaluator_version": null,
+            "name": "structural_recall_at_50",
+            "reason": "article_chunk; 1 missing reference IDs: ['https://calmatters.org/economy/technology/2026/07/kaiser-nurses-workplace-surveillance-ai/#chunk_54']",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          },
+          "structural_reciprocal_rank": {
+            "evaluator_version": null,
+            "name": "structural_reciprocal_rank",
+            "reason": "First relevant article_chunk within 50 unique Article Chunks.",
+            "source": {
+              "arguments": null,
+              "name": "RetrievedReferenceEvidence"
+            },
+            "value": 0.0
+          }
+        },
+        "source_case_name": null,
+        "span_id": "e8de1f9e38053c0d",
+        "task_duration": 4.573845,
+        "total_duration": 4.780074,
+        "trace_id": "01a0f4ceb85942d13bb4073492f0ace8"
+      }
+    ],
+    "experiment_metadata": {
+      "case_ids": [
+        "C-R1-01"
+      ],
+      "commit": "e17ffc5",
+      "data_set": "evals/silver/retrieval.yaml",
+      "deployment": {
+        "endpoint": "http://localhost:8080/v1",
+        "kind": "local",
+        "model": "gemma4:26b",
+        "provider_policy": null,
+        "request_settings": {
+          "max_attempts": 3,
+          "max_tokens": null,
+          "rate_limit_wait_cap": 120.0,
+          "reasoning_effort": null,
+          "temperature": 0.0,
+          "thinking": false,
+          "timeout": 3600.0,
+          "top_k": null,
+          "top_p": null
+        }
+      },
+      "label_quality": "silver",
+      "prompts": {
+        "structural_binder": "sha256:95cc8090c2e9",
+        "structural_ontology_filter": "sha256:d626f8ae641e",
+        "structural_selector": "sha256:dee5909a8c75",
+        "structural_wiring": "sha256:112b9fcb1658"
+      },
+      "split": "training",
+      "task": "retrieval"
+    },
+    "failures": [],
+    "name": "retrieval",
+    "report_evaluator_failures": [],
+    "span_id": "751dbc7af83a2099",
+    "trace_id": "01a0f4ceb85942d13bb4073492f0ace8"
+  },
+  "retrieval_report": {
+    "chunk_budget": 50,
+    "configurations": [
+      {
+        "code_revision": "e17ffc5ac051c5de6eeeaf6d18f9f62993e4e899",
+        "embedding_settings": {
+          "endpoint": "http://localhost:8081/v1/",
+          "model": "embeddinggemma"
+        },
+        "evidence_limits": {
+          "character_limit": 24000,
+          "max_passages": 12
+        },
+        "fusion_settings": {
+          "dense_candidate_limit": 50,
+          "dense_weight": 1.0,
+          "full_text_candidate_limit": 50,
+          "full_text_weight": 1.0,
+          "fused_candidate_limit": 100,
+          "rank_constant": 60.0,
+          "structural_candidate_limit": 50,
+          "structural_weight": 2.0
+        },
+        "model_deployments": {
+          "chat_agent": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          },
+          "query_rewriter": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          },
+          "structural_binder": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          },
+          "structural_ontology_filter": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          },
+          "structural_selector": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          },
+          "structural_wiring": {
+            "endpoint": "http://localhost:8080/v1/",
+            "kind": "local",
+            "model": "gemma4:26b",
+            "provider_policy": null,
+            "request_settings": {
+              "max_attempts": 3,
+              "max_tokens": null,
+              "rate_limit_wait_cap": 120.0,
+              "reasoning_effort": null,
+              "temperature": 0.0,
+              "thinking": false,
+              "timeout": 3600.0,
+              "top_k": null,
+              "top_p": null
+            }
+          }
+        },
+        "prompt_hashes": {
+          "chat_agent": "sha256:df8970c50404884949b9ca2165f65c2d894fbf90e70d19e6f715030e23b5ee64",
+          "query_rewriter": "sha256:ffeab7a331865629f4ccc901b457be00a06f8198066b81d63c0318bdfeb357bd",
+          "question_policy": "sha256:1ebad5d632fd0dc53bfc42bdad477d042b7cb8a40abe4bfaeac8c7ecc482530e",
+          "structural_binder": "sha256:95cc8090c2e9b392a6cc35d09ca805405fe40ca710818ac5d3cea5253c060116",
+          "structural_ontology_filter": "sha256:d626f8ae641e27cf610fe97185d2e51336719ff0f1f575070bd28a8d225fef21",
+          "structural_selector": "sha256:dee5909a8c75c40016f3bb655d3a734b01f7a907cea2ae30012c8ceba0625cb5",
+          "structural_wiring": "sha256:112b9fcb1658d5ea5ff5290637699157c7bec1913bdab1d493afaab675ff7c8e"
+        },
+        "worktree_dirty": true
+      }
+    ],
+    "fusion_replay": "exact_from_retained_best_branch_ranks",
+    "metric_version": "unique-chunk-budget-v2",
+    "migration": {
+      "original_report_backup": ".scratch/rag-evaluation/unbounded-report-backups/20261001T001308Z-e17ffc5-local-gemma4-26b-1499ceec2201.json",
+      "previous_metric_version": "unique-evidence-identity-budget-v1",
+      "rescored": true,
+      "source_sha256": "804eb6e1196c8a4aa56babcb895a8959f0139355275a01fa7132cf2181a9e04f"
+    },
+    "version": 1
+  },
+  "split": "training",
+  "task": "retrieval",
+  "trace_url": "https://logfire-us.pydantic.dev/akais/california-political-knowledge-map?q=trace_id%3D%2701a0f4ceb85942d13bb4073492f0ace8%27"
+}

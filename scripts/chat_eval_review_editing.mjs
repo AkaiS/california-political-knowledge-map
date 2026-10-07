@@ -10,14 +10,15 @@
 export function createReviewEditor({
   caseNames, reviews: loadedReviews, runId, reviewIdentity,
   persistReview, storage, scheduler, onChange = () => {},
+  reviewDefaults = {verdict: null, note: ''},
+  validateReview = review => [null, 'pass', 'fail', 'defer'].includes(review.verdict) && typeof review.note === 'string',
+  draftNamespace = 'chat-review-drafts',
 }) {
   const names = [...caseNames];
-  const reviews = Object.fromEntries(names.map(name => [name, {
-    verdict: loadedReviews[name]?.verdict ?? null,
-    note: loadedReviews[name]?.note ?? '',
-  }]));
+  const normalize = review => Object.fromEntries(Object.entries(reviewDefaults).map(([key, value]) => [key, review?.[key] ?? value]));
+  const reviews = Object.fromEntries(names.map(name => [name, normalize(loadedReviews[name])]));
   const drafts = new Map(), revisions = new Map(), statuses = new Map();
-  const draftKey = `chat-review-drafts:${runId}:${reviewIdentity}`;
+  const draftKey = `${draftNamespace}:${runId}:${reviewIdentity}`;
   let selectedCase = names[0] ?? null, storageFailed = false, saveTimer;
   let saveChain = Promise.resolve(true);
   let navigationChain = Promise.resolve(true), navigationGeneration = 0;
@@ -59,22 +60,30 @@ export function createReviewEditor({
     statuses.set(name, storageFailed ? 'Local backup failed. Keep this page open until saved.' : 'Saved locally; saving to review file…');
   }
   function editNote(note) {
+    editField('note', note);
+  }
+  function editField(field, value) {
     if (selectedCase === null) return;
-    changeReview({...reviews[selectedCase], note});
+    if (!Object.hasOwn(reviewDefaults, field)) return;
+    changeReview({...reviews[selectedCase], [field]: value});
     scheduler.clearTimeout(saveTimer);
     saveTimer = scheduler.setTimeout(flush, 350);
   }
   function changeReview(review) {
     const before = reviews[selectedCase];
-    if (before.verdict === review.verdict && before.note === review.note) return;
+    if (!validateReview(review) || JSON.stringify(before) === JSON.stringify(review)) return;
     history.push({name: selectedCase, before: {...before}});
     reviews[selectedCase] = review;
     markEdited(selectedCase);
     notify('review');
   }
   function setVerdict(verdict) {
+    return setField('verdict', verdict);
+  }
+  function setField(field, value) {
     if (selectedCase === null) return Promise.resolve(true);
-    changeReview({...reviews[selectedCase], verdict});
+    if (!Object.hasOwn(reviewDefaults, field)) return Promise.resolve(false);
+    changeReview({...reviews[selectedCase], [field]: value});
     return flush();
   }
   function undo() {
@@ -158,8 +167,8 @@ export function createReviewEditor({
     const recovered = stored?.review_identity === reviewIdentity && stored.reviews && typeof stored.reviews === 'object' && !Array.isArray(stored.reviews) ? stored.reviews : {};
     for (const name of names) {
       const draft = recovered?.[name];
-      if (draft && [null, 'pass', 'fail', 'defer'].includes(draft.verdict) && typeof draft.note === 'string') {
-        reviews[name] = {verdict: draft.verdict, note: draft.note};
+      if (draft && validateReview(draft)) {
+        reviews[name] = normalize(draft);
         drafts.set(name, {...reviews[name]});
         revisions.set(name, 1);
         statuses.set(name, 'Recovered browser edits; saving to review file…');
@@ -168,5 +177,5 @@ export function createReviewEditor({
   } catch (_) { storageFailed = true; }
   persistDrafts();
   if (drafts.size) Promise.resolve().then(flush);
-  return {get state() { return state(); }, editNote, setVerdict, undo, flush, selectCase, canNavigate, navigate, prepareForUnload};
+  return {get state() { return state(); }, editNote, setVerdict, editField, setField, undo, flush, selectCase, canNavigate, navigate, prepareForUnload};
 }
