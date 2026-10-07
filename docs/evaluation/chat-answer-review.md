@@ -1,7 +1,7 @@
 # Review Chat Session answers
 
 For judgments confined to selected evidence and final generation, use
-[RAG review](rag-review.md): `uv run python scripts/review_chat_eval.py --mode rag`.
+[RAG review](rag-review.md).
 That view records context relevance, answer relevance and faithfulness separately.
 The default chat view below continues to review the whole Chat Session.
 
