@@ -28,6 +28,11 @@ class EvidenceHydrationError(RuntimeError):
 
 def render_evidence_context(package: EvidencePackage) -> str:
     """The measured Chat Agent input, without the pre-selection execution audit."""
+    retained_ids = {
+        passage.candidate.chunk_id
+        for source in package.sources
+        for passage in source.passages
+    }
     return json.dumps(
         {
             "question": package.execution.request.rewrite.question,
@@ -38,6 +43,18 @@ def render_evidence_context(package: EvidencePackage) -> str:
                 {
                     "branch": outcome.branch.value,
                     "status": outcome.status,
+                    **(
+                        {
+                            "semantic_results": tuple(
+                                row
+                                for row in outcome.semantic_results
+                                if row.get("evidence_chunk_ids")
+                                and set(row["evidence_chunk_ids"]) <= retained_ids
+                            )
+                        }
+                        if outcome.status == "succeeded" and outcome.semantic_results
+                        else {}
+                    ),
                     **(
                         {"candidate_count": len(outcome.candidates)}
                         if outcome.status == "succeeded"

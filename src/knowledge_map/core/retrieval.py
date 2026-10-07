@@ -172,6 +172,7 @@ class RetrievalCoordinator:
         context_limits: EvidenceContextLimits | None = None,
         deadline_seconds: float = 60,
         clock: Callable[[], float] | None = None,
+        structural_reporting: bool = False,
     ) -> None:
         if (
             type(deadline_seconds) not in (int, float)
@@ -187,6 +188,7 @@ class RetrievalCoordinator:
         self._context_limits = context_limits or EvidenceContextLimits()
         self._deadline_seconds = deadline_seconds
         self._clock = clock
+        self._structural_reporting = structural_reporting
 
     async def run(
         self,
@@ -200,7 +202,9 @@ class RetrievalCoordinator:
     ) -> EvidencePackage | EvidenceAssemblyFailure:
         clock = self._clock or asyncio.get_running_loop().time
         deadline = clock() + self._deadline_seconds
-        request = RetrievalRequest(rewrite=rewrite)
+        request = RetrievalRequest(
+            rewrite=rewrite, structural_reporting=self._structural_reporting
+        )
         keywords = extract_full_text_keywords(rewrite)
         run_usage = RunUsage()
         calls = [
@@ -209,7 +213,7 @@ class RetrievalCoordinator:
             ),
             partial(self._dense.retrieve, request, deadline=deadline, usage=run_usage),
         ]
-        if rewrite.relational:
+        if RetrievalBranch.STRUCTURAL in request.expected_branches:
             calls.append(
                 partial(
                     self._structural.retrieve,
@@ -243,7 +247,7 @@ class RetrievalCoordinator:
                     "output_tokens": run_usage.output_tokens,
                 },
             )
-        if not rewrite.relational:
+        if RetrievalBranch.STRUCTURAL not in request.expected_branches:
             skipped = SkippedBranch()
             outcomes.append(skipped)
             if chat_session_id is not None:

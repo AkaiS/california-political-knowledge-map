@@ -2,7 +2,7 @@
 
 from datetime import date
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     BaseModel,
@@ -42,6 +42,7 @@ class RetrievalBranch(StrEnum):
 
 class RetrievalRequest(RetrievalValue):
     rewrite: QueryRewrite
+    structural_reporting: bool = False
 
     @model_validator(mode="after")
     def require_retrievable_question(self) -> Self:
@@ -52,7 +53,7 @@ class RetrievalRequest(RetrievalValue):
     @property
     def expected_branches(self) -> tuple[RetrievalBranch, ...]:
         branches = (RetrievalBranch.FULL_TEXT, RetrievalBranch.DENSE)
-        if self.rewrite.relational:
+        if self.rewrite.relational or self.structural_reporting:
             return (*branches, RetrievalBranch.STRUCTURAL)
         return branches
 
@@ -163,6 +164,8 @@ class SuccessfulBranch(RetrievalValue):
     branch: RetrievalBranch
     status: Literal["succeeded"] = "succeeded"
     candidates: tuple[BranchCandidate, ...]
+    construction: dict[str, Any] | None = None
+    semantic_results: tuple[dict[str, Any], ...] = ()
 
     @model_validator(mode="after")
     def rankings_belong_to_branch(self) -> Self:
@@ -176,6 +179,7 @@ class SuccessfulBranch(RetrievalValue):
 class FailedBranch(RetrievalValue):
     branch: RetrievalBranch
     status: Literal["failed"] = "failed"
+    construction: dict[str, Any] | None = None
 
 
 class SkippedBranch(RetrievalValue):

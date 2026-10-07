@@ -8,7 +8,7 @@ The [full-text adapter](full-text-retrieval.md),
 [structural adapter](structural-retrieval.md) produce branch outcomes.
 [Retrieval fusion](retrieval-fusion.md) combines their candidates.
 [Evidence Assembly](evidence-assembly.md) hydrates stored chunk wording and
-packages the result. Coordinator wiring remains the final project ticket.
+packages the result. Chat and chat evaluations share the production coordinator.
 
 ## Approved input and execution facts
 
@@ -18,19 +18,21 @@ fields are forbidden throughout these contracts, including an original-question
 field. The approval workflow remains the authority for obtaining user approval;
 constructing a Pydantic value does not itself establish user consent.
 
-The expected branches follow the internal `relational` boolean. Full-text and
-dense retrieval are always expected. Structural retrieval is expected only for
-a Relational Question. `RetrievalExecutionResult.expected_branches` records that
-set and rejects a caller-supplied set that disagrees with the rewrite.
+Full-text and dense retrieval are always expected. Structural retrieval is
+expected when the internal `relational` boolean or `structural_reporting` is true.
+Production startup sets `structural_reporting=True`, so every approved question
+reaches Jev. Its default remains false for historical records.
+`RetrievalExecutionResult.expected_branches` rejects a caller-supplied set that
+disagrees with the request.
 
-Every execution has exactly one outcome per branch, including a skipped
-structural outcome for a non-relational question. The `status` discriminator
+Every execution has exactly one outcome per branch. Historical records may
+include a skipped structural outcome for a non-relational question. The `status` discriminator
 selects one of these types:
 
 | Type | Meaning | Retained data |
 | --- | --- | --- |
-| `SuccessfulBranch` | Search completed, possibly without matches | Ordered candidates, including an empty tuple |
-| `FailedBranch` | Search could not be completed | Branch identity and the fixed `failed` discriminator |
+| `SuccessfulBranch` | Search completed, possibly without matches | Ordered candidates, optional construction audit and semantic results |
+| `FailedBranch` | Search could not be completed | Branch identity, optional construction audit, and the `failed` discriminator |
 | `SkippedBranch` | Structural search was not requested | Structural branch identity and `non_relational` reason |
 
 `evidence_by_branch` exposes successful branches, including successful empty

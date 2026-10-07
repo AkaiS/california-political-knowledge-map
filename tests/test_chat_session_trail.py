@@ -270,10 +270,8 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
     assert set(deployments) == {
         "query_rewriter",
         "chat_agent",
-        "structural_ontology_filter",
-        "structural_selector",
-        "structural_wiring",
-        "structural_binder",
+        "jev_composer",
+        "jev_binder",
     }
     assert deployments["query_rewriter"]["model"] == "rewriter-test"
     assert deployments["query_rewriter"]["endpoint"] == "http://rewriter.test:8080/v1/"
@@ -281,10 +279,8 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
     assert deployments["chat_agent"]["endpoint"] == "http://chat.test:8080/v1/"
     assert deployments["chat_agent"]["request_settings"]["temperature"] == 0
     for role in (
-        "structural_ontology_filter",
-        "structural_selector",
-        "structural_wiring",
-        "structural_binder",
+        "jev_composer",
+        "jev_binder",
     ):
         assert deployments[role] == deployments["chat_agent"]
     assert start["embedding_settings"] == {
@@ -302,7 +298,10 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         "fused_candidate_limit": 100,
     }
     assert start["evidence_limits"] == {"character_limit": 24000, "max_passages": 12}
-    assert set(start["prompt_hashes"]) == set(deployments) | {"question_policy"}
+    from knowledge_map.jev.prompts import JEV_PROMPTS
+
+    assert set(start["prompt_hashes"]) == {"query_rewriter", "chat_agent", "question_policy"} | set(JEV_PROMPTS)
+    assert start["retrieval_settings"]["cypher_backend"] == "jev-staged"
     for host, role in (
         ("rewriter.test", "query_rewriter"),
         ("chat.test", "chat_agent"),

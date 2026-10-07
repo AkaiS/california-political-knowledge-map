@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
-from neo4j import AsyncDriver, AsyncGraphDatabase
+from neo4j import AsyncDriver, AsyncGraphDatabase, Driver, GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 from starlette.testclient import TestClient
 from test_chat_web import events, question_request
@@ -86,6 +86,11 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch):
         return driver
 
     monkeypatch.setattr(AsyncGraphDatabase, "driver", graph)
+    sync_driver = MagicMock(spec=Driver)
+    monkeypatch.setattr(GraphDatabase, "driver", lambda *args, **kwargs: sync_driver)
+    client = MagicMock()
+    client.system_one.side_effect = ValueError("Synthetic Jev service failure")
+    monkeypatch.setattr("knowledge_map.chat_startup.jev_client", lambda: client)
     clients = []
     requests = []
     failures = set()
