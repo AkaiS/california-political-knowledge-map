@@ -1,0 +1,1 @@
+Two different {value_0} entities each have the recorded {value_1} relationship to the same {value_2}.

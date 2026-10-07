@@ -1,209 +1,106 @@
-# Typed structural retrieval
+# Jev structural retrieval
 
-Ticket 06 reuses the two public seams below under the user's blanket approval.
-`Neo4jStructuralRetriever.retrieve(request: RetrievalRequest, *, deadline:
-float) -> SuccessfulBranch | FailedBranch` is the behavioral seam for bounded
-multi-hop retrieval, per-stage correction bounds, explicit multi-Bill assignment,
-and failure logs. `get_structural_agents(*, ontology_model, selection_model,
-wiring_model, binding_model) -> StructuralAgents` supplies scripted models whose
-typed requests and deterministic correction feedback can be inspected. Tests
-execute compiled queries against a disposable Neo4j graph; they do not assert
-Cypher text or call private compiler functions.
+Production chat and chat evaluations both use `chat_dependencies`, which builds
+`JevStructuralRetriever` alongside `Neo4jFullTextRetriever` and
+`Neo4jDenseRetriever`. It is the sole production Cypher backend. The preserved
+experiment remains an immutable record, and production never bootstraps it.
 
-Ticket 05 test seams, recorded before implementation under the user's blanket
-approval:
+## Selection and query construction
 
-- `Neo4jStructuralRetriever.retrieve(request: RetrievalRequest, *, deadline:
-  float) -> SuccessfulBranch | FailedBranch` receives only the approved Query
-  Rewrite. Tests inject scripted Pydantic AI models and an external Neo4j driver,
-  then observe ranked candidates, graph claims, Grounding Evidence, identity
-  ambiguity, and structured failure logs. Controlled-graph tests execute the
-  compiled query in the disposable Neo4j fixture.
-- `get_structural_agents(*, ontology_model, selection_model, wiring_model,
-  binding_model) -> StructuralAgents` creates the four model stages through the
-  shared observable agent factory. Tests inspect typed requests and responses
-  through the injected models.
+The branch receives the approved question and the shared absolute retrieval
+deadline. Jev narrows the semantic schema at `.8`, retains every endpoint
+alternative required by selected relationships, and selects parent roles at
+`.52`. Organization subtype refinement requires a winning probability of `.8`;
+uncertain required subtypes abstain. Property selection runs at `.52` over the
+chosen role occurrences.
 
-`BranchCandidate.grounding` carries optional hydrated Article Chunk text and a
-Source Article citation. Existing branch producers may leave it absent. This
-text is transformed ingestion text, not a verbatim quotation from the
-Publication. Evidence Assembly packages the hydrated stored chunk directly.
+Single and peer variants compete within one predicate selection. Independently
+required predicates remain separate. When a union overlaps selected individual
+predicates, a Jev Choice distinguishes alternatives from conjunctions at `.8`.
+For parallel relationships, another Choice at `.8` determines which endpoints
+share an identity. Separate Bills retain separate name and session filters;
+uncertain operator or endpoint decisions stop construction.
 
-The implementation follows the atomic semantic constructor preserved at
-`511eaeee`. Models filter the News Ontology, select compiler-owned pieces,
-wire numeric occurrences, and bind positional values. Code owns graph labels,
-identifiers, variables, parameters, projections, and provenance paths.
+Numeric occurrence attachments preserve repeated roles and their filters.
+Compiler-owned Article roles use the repaired staged attachments, including
+multiple PolicyArea roles connected to the same Article. Peer descriptions use
+immutable version 2, without the experiment's removed wording example.
 
-The constructor supports one entity or a connected question containing at most
-three semantic relationships and four role occurrences. Repeated labels and
-relationship types retain separate occurrence indices. Every selected role must
-belong to the connected question, and each selected relationship and filter is
-wired exactly once. `distinct_roles` expresses an explicit request for other or
-different entities by excluding equal internal IDs. No new ADR is introduced.
+An Article selected only for publication or title constraints represents the
+supporting reporting, rather than another semantic endpoint. The compiler applies
+those constraints to each claim's supporting Article after provenance traversal.
+Other selected entity roles must still form one connected semantic pattern.
 
-The verified reported-alongside questions use a separate zero-semantic-hop
-shape. The selector places the requested result entity first, the named entity
-second, and an optional Source Article third. The compiler connects both
-entities to one Article Chunk through fixed `MENTIONED_IN` paths and applies an
-optional article-title filter through `HAS_CHUNK`. Those provenance edges are
-not selectable semantic relationships and produce no semantic `GraphClaim`.
+A successful relationship-free selection goes through one Jev reporting-intent
+decision at `.52`. Negative decisions forbid shared reporting execution.
+Missing, malformed, or failed decisions fail selection. Gate decisions belong
+to the request; simultaneous identical questions cannot share mutable state.
 
-The supplied `RECORDED_VOTE` piece matches any of `VOTED_AYE`, `VOTED_NO`, or
-`ABSTAINED`. It is one semantic hop, because a match traverses one of those
-relationships. The ontology filter must retain all three alternatives before
-the selector can use that piece. This lets a reported-vote question search every
-recorded position without guessing the vote first.
+The configured Chat Model Deployment composes the selected structure and returns
+positional binding values. Composition must preserve Jev's occurrence
+attachments. The compiler owns aggregate wiring, provenance traversal, and result
+projection. Composition and binding each allow two corrections. The experiment's
+unique-occurrence deterministic wiring fallback remains within this compiler;
+it does not select another backend.
 
-## Calling the branch
+Binding receives each slot's node variable and incident predicates, so repeated
+Bill-name slots preserve their association with the question's relationships.
+Binder instructions and the request template explicitly adopt version 2.
 
-Pass four configured Pydantic AI `Model` instances to `get_structural_agents`.
-They may share the same Model Deployment. The Query Rewriter remains separately
-configured. Inject the resulting `StructuralAgents` and a Neo4j `AsyncDriver`
-into `Neo4jStructuralRetriever(driver, agents=agents, database="neo4j")`.
-The caller owns the driver and supplies an absolute event-loop deadline to
-`retrieve`. The deadline covers all model stages, query execution, and hydration;
-the remaining time also limits the Neo4j transaction.
+Binding validates dates, domain membership, canonical entity matches, ambiguous
+identities, and Bill Designations. The deterministic compiler parameterizes
+question values. CyVer syntax, schema, and property checks must authorize the
+abstract structure. Bound queries also require parameter-aware Neo4j EXPLAIN
+and read-only classification before execution.
 
-Each stage uses a closed Pydantic output and the shared observable agent factory.
-There are no model-callable database tools. The ontology filter narrows the News
-Ontology, the selector chooses supplied catalog IDs, the wiring stage connects
-numeric occurrences, and the binder returns values in wired-filter order.
-Binding an internal ID treats it as a literal value supplied by the question,
-never as a Cypher identifier.
+Finite domains are normalized before canonical entity lookup, so session spelling
+variants narrow Bill lookup using the stored session. Claims retain only ontology
+Claim Key properties and expose `needs_review` separately.
 
-Pydantic AI output validators return deterministic failures through `ModelRetry`.
-Each stage allows its initial response and at most two corrections, including
-Pydantic output-shape failures. Correction history carries the exact preceding
-failure. Correction attempts share the original deadline and contribute to
-total model usage. Transport errors leave the stage immediately; the structural
-adapter adds no transport retry loop.
+## Evidence and results
 
-The compiler supports exact name, internal-ID, title, and Bill-session filters.
-Publication dates use inclusive lower and exclusive upper calendar-date bounds,
-matching the selected prototype. Bill names pass through
-`parse_bill_designation` before the database reads them; an unparseable Bill name
-is a validation failure. Name lookup does not perform fuzzy Entity Resolution.
-Queries preserve every matching physical node through its Neo4j element ID,
-including nodes that share the same internal ID. No uniqueness constraint or
-entity merge is introduced.
+The query returns semantic values and independent evidence groups. The adapter
+loads Article Chunks through their actual Source Article links, validates that
+each chunk has one owner, and builds `typed_traversal` candidates. Chunk-level
+claims name their asserting chunks. Article-level topic claims name their
+asserting Source Articles, as required by ADR 0020. Counts retain evidence for
+each counted Article.
 
-When multiple filters bind Bill names, the binder receives each slot's numeric
-index, its role index, and the selected question wiring. It returns `null` for
-those entries in `values` and an explicit `bill_names` assignment for every slot:
+Candidates have deterministic ordinal ranks and no invented similarity score.
+Fusion keeps its existing structural weight and selection limits. Evidence
+Assembly supplies verified wording and citations. The Chat Agent sees a semantic
+result row only when every chunk supporting that row remains in its selected
+evidence. The full pre-selection result remains inspectable in the report.
 
-```json
-{
-  "values": [null, null],
-  "bill_names": [
-    {"slot_index": 1, "value": "Senate Bill 1947"},
-    {"slot_index": 0, "value": "Assembly Bill 186"}
-  ]
-}
-```
+## Services, deadlines, and observations
 
-Assignment order does not matter. Missing or repeated slots fail validation.
-Each value is parsed separately; repeated normalized Bill identities are
-rejected unless explicit session filters distinguish them. A single Bill-name
-slot continues to use the positional contract. There is no question-wide first
-designation fallback.
+The pinned `typesafe-sdk==0.7.2` and `cyver==2.0.2` are normal package dependencies.
+Startup resolves `TYPESAFE_API_KEY` or Keychain service `jev_api`, account
+`test_key`. Shutdown closes the Jev client and both Neo4j drivers.
 
-## Evidence and outcomes
+The Jev SDK and sync Neo4j/CyVer operations run in worker threads so sparse and
+dense branches can progress concurrently. CyVer's driver wrapper forces the
+configured database, read routing, and bounded query timeouts. Production uses
+one 180-second deadline across retrieval, fusion, and Evidence Assembly.
 
-Chunk-level claims follow their `chunks` provenance and require both claim
-endpoints to mention the same Article Chunk. `ABOUT_TOPIC` follows its `articles`
-provenance. `DISCUSSES_TOPIC` follows the source `NewsArticle` to its chunks, as
-required by ADR 0020. A Policy Area entity lookup also follows article-level
-topic connections. A Source Article lookup follows its own chunks.
+Reports retain Jev request state, questions, probabilities, selected pieces,
+usage, generated Cypher, wiring, binding attempts, validation, and semantic
+results. Failed construction records its stage and a safe diagnostic. Provider
+exception payloads do not enter the report. Existing `chat_session.structural_stage`
+spans join these stages to the Chat Session Audit Trail.
 
-Multi-hop candidates carry every claim in their matched question, and hydration
-collects the evidence behind each claim. Shared evidence produces one row per
-matched question and Article Chunk. Fixed `MENTIONED_IN`, Source Article lookup,
-and `HAS_CHUNK` paths do not count toward the three semantic relationships and
-are never selected by the model as question relationships.
-
-Candidates retain the Claim Key, review flag, claim provenance, endpoint element
-IDs, stored chunk wording, and Source Article citation. The stored Source
-Article ID supplies the URL when there is no separate URL property. Candidate
-ranks follow chunk ID, Source Article ID, and entry element ID; there is no
-invented structural similarity score. [Retrieval fusion](retrieval-fusion.md)
-applies configured weights and candidate limits to the retained branch output.
-
-No matching semantic entity or relationship returns `SuccessfulBranch` with an
-empty candidate tuple. A matched claim whose provenance cannot produce valid
-Grounding Evidence fails hydration. The branch does not silently discard that
-claim and call the traversal empty.
-
-`retrieval_branch_failed` records identify `schema_filtering`, `typed_selection`,
-`wiring`, `binding`, `validation`, `hop_bound`, `cypher_execution`, `hydration`, or `deadline`,
-plus failure kind, consumed attempts, and deadline exhaustion. These details stay
-in logs; callers receive the shared `FailedBranch`. Each initial attempt counts
-as one, while a deadline exhausted before execution counts as zero. Exhausted
-corrections record three attempts for the failing stage. A later database or
-hydration failure does not inherit another stage's correction count.
-`retrieval_model_usage` records requests and input/output tokens across the four
-stages, including completed usage before failure.
-
-## Chat Session observations
-
-When called within an observed Chat Session, structural retrieval emits
-`chat_session.structural_stage` spans under the structural branch, with the
-same Chat Session ID and audit schema version. The `stage` attribute identifies
-`schema_filtering`, `typed_selection`, `wiring`, `binding`, `validation`,
-`cypher_execution`, or `hydration`. Model activity stays within the stage that
-invoked it.
-
-Filtering and selection record `accepted_pieces`; wiring and binding record
-their validated typed outputs. Each compiler check occurs inside the binder's
-existing output validator, so its validation span remains within that model
-run's native span tree. A rejected check records a safe failure. A successful
-check records `validated_query` and `bound_values`, exactly as passed to the
-read-only Neo4j execution. A corrected binder can therefore contain failed
-validation spans followed by a successful one. Only its accepted binding is
-recorded on the binding span.
-
-Execution records the configured database and returned row count. Hydration
-records the produced candidate count. Failed stages carry `status=failed`,
-`failure_stage`, `failure_kind`, and a fixed safe diagnostic, including the
-stage interrupted by a shared deadline. Model messages, retries, and token use
-remain in Pydantic AI telemetry. Declared structural attributes preserve the
-ontology's Bill `session` property through Logfire scrubbing.
+A Jev failure produces `FailedBranch`; completed sparse and dense candidates
+remain available, and the final answer discloses the structural failure. There
+is no alternate LLM selector after failure.
 
 ## Verification
 
-`tests/test_structural_retrieval.py` injects scripted models and external driver
-faults through the recorded seams. It covers every initial model stage, compiler
-validation, correction exhaustion, the hop ceiling, invalid wiring and Bill
-assignments, database and hydration failures, deadlines, question isolation,
-usage accounting, and exact retention of stored wording.
+`tests/test_jev_execution.py` drives both chat HTTP approval and the evaluation
+runner through real startup and packaged construction with synthetic services.
+Selector, Article attachment, and reporting-gate tests cover subtype abstention,
+repeated roles, schema closure, invalid decisions, and request isolation. Live
+checks use development questions and the configured services. The unlabeled
+chat Data Set supplies execution evidence without an answer-quality score.
 
-`tests/test_chat_structural_trail.py` uses `POST /api/chat` preparation and
-approval with real coordination, scripted structural agents, fake graph data,
-and an offline Logfire exporter. It checks accepted decisions, span ancestry
-and timing, correction outcomes, empty success, stage failures, and deadline
-cancellation without timing sleeps. This is the public seam selected for
-audit ticket 04; no new product API was needed.
-
-`tests/integration/test_structural_neo4j.py` executes compiled queries against the
-repository's disposable Neo4j fixture. Enable it with
-`RUN_NEO4J_INTEGRATION=1 uv run --no-sync pytest -q tests/integration/test_structural_neo4j.py`.
-These tests establish controlled behavior. They do not measure model selection
-quality or recall on the political corpus.
-
-The controlled graph includes the verified construction families' two-hop
-campaign, same-side lobbying, reported-alongside, and reported-vote shapes, plus
-three-hop campaign and Policy Area extensions. It exercises correction success
-on either permitted correction and exhaustion at every model stage, successful
-empty three-hop searches, and both chunk-level and article-level provenance
-beyond the semantic hop budget. The preserved 25-case batch currently contains
-at most two semantic hops; its original three-hop campaign extension is checked
-on controlled data.
-
-The 25 verified construction cases remain development checks, not a held-out
-Gold Set. Recheck their read-only reference queries with:
-
-```sh
-uv run --no-sync python work/initiatives/useful-graph-retrieval/query-construction/verify.py
-```
-
-This reference recheck establishes that the authored cases still retrieve their
-evidence. It does not score the production models' question construction.
+[ADR 0023](adr/0023-jev-constructs-cypher-in-the-shared-chat-retrieval-path.md)
+records the production integration decision.

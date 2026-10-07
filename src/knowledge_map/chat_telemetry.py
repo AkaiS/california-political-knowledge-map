@@ -1,7 +1,7 @@
 """The resolved conditions observed when a browser Chat Session begins."""
 
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from knowledge_map.schemas.evidence import EvidenceContextLimits
@@ -18,6 +18,7 @@ class ChatSessionSettings:
     fusion_settings: FusionConfig
     evidence_limits: EvidenceContextLimits
     coverage_observed_at: str
+    retrieval_settings: dict[str, object] = field(default_factory=dict)
 
 
 def code_state() -> tuple[str | None, bool | None]:

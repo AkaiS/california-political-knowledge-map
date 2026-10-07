@@ -259,6 +259,11 @@
     "sha256": "9615f43e41258b3e8e5cc215ab49cfa5bd68b0aa45121a0e62b9b5693317054a",
     "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py"
   },
+  "jev-staged/composer-attachment-correction": {
+    "line": 391,
+    "sha256": "95986e4d6345cbde7ddc2f582cc0be1d7864b0946743b9a0dda5242a9e1d73f0",
+    "source": "src/knowledge_map/adapters/jev.py"
+  },
   "jev-staged/filtered-fragments-filter-attachment-rules-01": {
     "line": 190,
     "sha256": "b637c421df85ff2a0334f537e468e8fa500fdd837f088c31d5033d4a79d38e8f",
@@ -784,6 +789,26 @@
     "sha256": "bfa9af227d8f189e9f508c562b9663207dad6a48ac47cfab8e63443c27ce12ae",
     "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/jev_staged_selector.py"
   },
+  "jev-staged/predicate-logic": {
+    "line": 1,
+    "sha256": "155b28f6dcadd14f7d0ce4889d263de199de9a25d81c488ba56d159327b30531",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/predicate-logic-alternatives": {
+    "line": 1,
+    "sha256": "001c45dab42191c0ee28ff94c4b6c16351913aa9a405a334607cde6bb7f47871",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/predicate-logic-conjunction": {
+    "line": 1,
+    "sha256": "3ea782708ce04ed773024e3a5979a529adc0a30d2f448e28cf04bd93ac8487fc",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/predicate-logic-unclear": {
+    "line": 1,
+    "sha256": "90eeca2c4033215d4e1e4e236dc0e835b95b13b71564321548ca9c7d1474859b",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
   "jev-staged/reporting-keyword-gate-gate-criteria-01": {
     "line": 15,
     "sha256": "7596f5ce672c771e5a7b544a3bd6260a908b1ede1da0fe52ff111d1cd8f06221",
@@ -798,6 +823,36 @@
     "line": 10,
     "sha256": "1895cc82eb31faa5f6d40a919cc49f259b2dc9948115ab0956fbd6ca8f7d620d",
     "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/reporting_keyword_gate.py"
+  },
+  "jev-staged/role-occurrences": {
+    "line": 1,
+    "sha256": "21d52784ca1961feeb0ab656fa5f724a02218b057e8e4baee70a19f87ff2cdb3",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/role-occurrences-separate": {
+    "line": 1,
+    "sha256": "e3af6da6e3f8ded7acce60928533c575eb36093e12e0bba434bae025c4ba836d",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/role-occurrences-shared": {
+    "line": 1,
+    "sha256": "24315be763be9a630fcc6f2a891b1bc739171b607b9664ffa60a112bd0399526",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
+  },
+  "jev-staged/role-occurrences-source-separate": {
+    "line": 1,
+    "sha256": "bbd2762824490daf44ea721367ef575274657d3c74516efe40685bb9ceb630bb",
+    "source": "src/knowledge_map/resources/prompts/jev-staged/role-occurrences-source-separate/v1.txt"
+  },
+  "jev-staged/role-occurrences-target-separate": {
+    "line": 1,
+    "sha256": "d7da036582f6e1c71271586c2dda1d71111f733d39fd7ec46481ec8b2f70440e",
+    "source": "src/knowledge_map/resources/prompts/jev-staged/role-occurrences-target-separate/v1.txt"
+  },
+  "jev-staged/role-occurrences-unclear": {
+    "line": 1,
+    "sha256": "9486cc153882aaa231eec3bf57a16c7a65fe09fb5731766745cef28c65456a18",
+    "source": "src/knowledge_map/jev/jev_staged_selector.py"
   },
   "jev-staged/runner-binder-instructions-01": {
     "line": 115,

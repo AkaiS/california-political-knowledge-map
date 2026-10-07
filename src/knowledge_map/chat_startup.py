@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-from neo4j import READ_ACCESS, AsyncGraphDatabase
+from neo4j import READ_ACCESS, AsyncGraphDatabase, GraphDatabase
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
@@ -22,10 +22,10 @@ from knowledge_map.adapters.dense import Neo4jDenseRetriever
 from knowledge_map.adapters.embedding import get_embedding_embedder
 from knowledge_map.adapters.evidence import EvidenceStore
 from knowledge_map.adapters.full_text import Neo4jFullTextRetriever
-from knowledge_map.adapters.structural import (
-    STRUCTURAL_INSTRUCTIONS,
-    Neo4jStructuralRetriever,
-    get_structural_agents,
+from knowledge_map.adapters.jev import (
+    JevStructuralRetriever,
+    get_jev_agents,
+    jev_client,
 )
 from knowledge_map.chat_telemetry import ChatSessionSettings, code_state
 from knowledge_map.core.chat import (
@@ -39,6 +39,7 @@ from knowledge_map.core.question_preparation import (
     get_query_rewriter,
 )
 from knowledge_map.core.retrieval import RetrievalCoordinator
+from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.schemas.evidence import EvidenceContextLimits
 from knowledge_map.schemas.fusion import FusionConfig
@@ -213,13 +214,21 @@ async def chat_dependencies(
                         )
         embedding_client = await resources.enter_async_context(build_retrying_client())
         embedder = get_embedding_embedder(http_client=embedding_client)
-        structural_agents = get_structural_agents(
-            ontology_model=chat_agent.model,
-            selection_model=chat_agent.model,
-            wiring_model=chat_agent.model,
-            binding_model=chat_agent.model,
-            capabilities=capabilities,
-        )
+        with _required("Jev"):
+            client = jev_client()
+            resources.callback(client.close)
+            sync_driver = GraphDatabase.driver(
+                os.environ.get("NEO4J_URI", "bolt://localhost:7687"),
+                auth=(
+                    os.environ.get("NEO4J_USERNAME", "neo4j"),
+                    os.environ.get("NEO4J_PASSWORD", ""),
+                ),
+                connection_timeout=5,
+            )
+            resources.callback(sync_driver.close)
+            structural_agents = get_jev_agents(
+                chat_agent.model, capabilities=capabilities
+            )
         store = EvidenceStore(driver, database=database)
         fusion = FusionConfig()
         context_limits = EvidenceContextLimits()
@@ -231,12 +240,18 @@ async def chat_dependencies(
                 candidate_limit=fusion.dense_candidate_limit,
                 database=database,
             ),
-            structural=Neo4jStructuralRetriever(
-                driver, agents=structural_agents, database=database
+            structural=JevStructuralRetriever(
+                driver,
+                sync_driver=sync_driver,
+                client=client,
+                agents=structural_agents,
+                database=database,
             ),
             load_grounding=store.load_grounding,
             fusion_config=fusion,
             context_limits=context_limits,
+            structural_reporting=True,
+            deadline_seconds=180,
         )
         chat_snapshot = {
             **chat_deployment.model_dump(mode="json"),
@@ -255,7 +270,7 @@ async def chat_dependencies(
                     "endpoint": str(rewriter.model.client.base_url),
                 },
                 "chat_agent": chat_snapshot,
-                **{role: chat_snapshot for role in STRUCTURAL_INSTRUCTIONS},
+                **{role: chat_snapshot for role in ("jev_composer", "jev_binder")},
             },
             embedding_settings={
                 "model": embedder.model.model_name,
@@ -268,12 +283,24 @@ async def chat_dependencies(
                     "query_rewriter": QUERY_REWRITER_INSTRUCTIONS,
                     "chat_agent": CHAT_INSTRUCTIONS,
                     "question_policy": QUESTION_POLICY,
-                    **STRUCTURAL_INSTRUCTIONS,
+                    **JEV_PROMPTS,
                 }.items()
             },
             fusion_settings=fusion,
             evidence_limits=context_limits,
             coverage_observed_at=coverage_observed_at.isoformat(),
+            retrieval_settings={
+                "cypher_backend": "jev-staged",
+                "schema_threshold": 0.8,
+                "structure_threshold": 0.52,
+                "subtype_threshold": 0.8,
+                "property_threshold": 0.52,
+                "occurrence_threshold": 0.8,
+                "predicate_threshold": 0.8,
+                "reporting_threshold": 0.52,
+                "deadline_seconds": 180,
+                "structural_reporting": True,
+            },
         )
         yield ChatDependencies(
             rewriter,

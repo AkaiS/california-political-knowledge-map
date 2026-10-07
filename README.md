@@ -90,7 +90,7 @@ defaults to `document_store.db`, and a reachable Neo4j configured with
 
 Set `QUERY_REWRITER_MODEL` and the other `QUERY_REWRITER_*` settings for the
 Query Rewriter. `CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
-for the Chat Agent and structural construction, using the existing deployment
+for the Chat Agent and Jev composer and binder, using the existing deployment
 environment settings. These choices are fixed at startup. The frontend has no
 model or tool picker. Each required local model endpoint must answer its
 model-listing request unless `SKIP_MODEL_REACHABILITY_CHECK` is set. Any HTTP
@@ -104,12 +104,39 @@ article count and publication-date range from distinct CalMatters Source
 Articles with Article Chunks in Neo4j. At least one is required. Unknown
 publication dates remain unknown, and completeness has no assumed denominator.
 Every version-one question uses this one collection, with no monthly coverage.
-Embedding availability, structural generation, and retrieval index checks wait
+Embedding availability, Jev calls, and retrieval index checks wait
 until retrieval, where existing branch failures remain visible.
 
 The application shares its agents, retrieval dependencies, and coverage across
-in-memory Chat Sessions. Shutdown closes the Neo4j driver and the model and
-embedding HTTP clients that this application owns.
+in-memory Chat Sessions. Shutdown closes both Neo4j drivers, the Jev client, and
+the model and embedding HTTP clients that this application owns.
+
+Every approved question uses one retrieval pipeline. Sparse full-text and dense
+retrieval run alongside the Jev Cypher branch, then graph-prioritized fusion and
+Evidence Assembly select the stored passages. Jev narrows the schema and selects
+roles, subtypes, and properties. The configured chat model composes and binds that
+selection; the deterministic compiler and CyVer authorize read-only execution.
+Reporting questions also reach Jev, regardless of the rewriter's relational flag.
+There is no alternate Cypher backend or fallback to the former LLM selector.
+
+Jev startup requires `TYPESAFE_API_KEY`, or the existing Keychain entry with
+service `jev_api` and account `test_key`. The pinned SDK and CyVer are normal
+project dependencies; no experiment bootstrap or `--with` flags are needed.
+The schema cutoff is `.8`, structural/property/reporting cutoffs are `.52`,
+and subtype refinement requires `.8`. These experiment settings remain
+uncalibrated. All branches share a 180-second retrieval deadline. A Jev failure
+preserves completed sparse and dense evidence and discloses the failed branch.
+
+Chat evaluations use this same dependency builder and Chat Session. For example:
+
+```bash
+uv run ca-map eval run chat --deployment local --case C-R1-01
+```
+
+The report records the Jev decisions, compiler-generated query, validated values,
+semantic result rows, verified evidence, and model exchanges. The chat Data Set is
+unlabeled, so this run measures execution and supports human review, without an
+answer-quality score. Reports go under `evals/reports/chat/`.
 
 Maintainers can inspect application decisions and related model traces through
 the [Chat Session trail guide](docs/chat-session-trails.md). It includes Logfire

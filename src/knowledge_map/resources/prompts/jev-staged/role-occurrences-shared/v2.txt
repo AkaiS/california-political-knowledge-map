@@ -1,0 +1,1 @@
+All selected relationships connect the same source entity to the same target entity.

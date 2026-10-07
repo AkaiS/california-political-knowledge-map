@@ -15,7 +15,7 @@ from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
-from knowledge_map.adapters.structural import STRUCTURAL_INSTRUCTIONS
+from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.chat_presentation import render_answer
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
@@ -305,7 +305,7 @@ CHAT_TASK = register(
             "query_rewriter": QUERY_REWRITER_INSTRUCTIONS,
             "chat_agent": CHAT_INSTRUCTIONS,
             "question_policy": QUESTION_POLICY,
-            **STRUCTURAL_INSTRUCTIONS,
+            **JEV_PROMPTS,
         },
     )
 )

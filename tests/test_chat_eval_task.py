@@ -394,7 +394,7 @@ def test_chat_startup_uses_explicit_deployment_for_chat_and_structural_agents(
             assert dependencies.chat_deployment == DEPLOYMENT
             assert dependencies.chat_agent.model.model_name == "test-chat"
             settings = dependencies.start_settings.model_deployments
-            assert settings["structural_binder"]["model"] == "test-chat"
+            assert settings["jev_binder"]["model"] == "test-chat"
             assert settings["query_rewriter"]["model"] == "rewriter-test"
 
     asyncio.run(exercise())

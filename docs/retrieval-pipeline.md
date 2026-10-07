@@ -1,51 +1,31 @@
 # Retrieval pipeline and Chat Agent handoff
 
 `core.retrieval.RetrievalCoordinator` connects an approved Query Rewrite to the
-full-text, dense, and typed structural branches, weighted fusion, and Evidence
+full-text, dense, and Jev Cypher branches, weighted fusion, and Evidence
 Assembly. `core.chat.ChatSession` connects question preparation and approval to
 that coordinator and one final Retrieval Answer from the same Chat Agent.
 
 ## Construction
 
-The caller supplies the asynchronous Neo4j driver, structural construction
-agents, verified Coverage Description, and explicitly
-relevant collection IDs. Relevant IDs may name a collection with no matches.
-They must have entries in the supplied description. Coverage is authored input;
-the coordinator does not infer new capabilities from retrieved records.
+Chat and chat evaluations obtain their dependencies through the same builder.
+It owns the async Neo4j driver, the sync driver CyVer requires, the Jev client,
+models, embedding client, and verified CalMatters Coverage Description.
 
 ```python
-from knowledge_map.adapters.dense import Neo4jDenseRetriever
-from knowledge_map.adapters.evidence import EvidenceStore
-from knowledge_map.adapters.full_text import Neo4jFullTextRetriever
-from knowledge_map.adapters.structural import Neo4jStructuralRetriever
-from knowledge_map.core.chat import ChatSession, get_chat_agent
-from knowledge_map.core.question_preparation import get_query_rewriter
-from knowledge_map.core.retrieval import RetrievalCoordinator
-from knowledge_map.schemas.fusion import FusionConfig
+from knowledge_map.chat_startup import chat_dependencies, new_chat_session
 
-config = FusionConfig()
-store = EvidenceStore(driver)
-retrieval = RetrievalCoordinator(
-    full_text=Neo4jFullTextRetriever(driver),
-    dense=Neo4jDenseRetriever(driver, candidate_limit=config.dense_candidate_limit),
-    structural=Neo4jStructuralRetriever(driver, agents=structural_agents),
-    load_grounding=store.load_grounding,
-    fusion_config=config,
-    deadline_seconds=60,
-)
-session = ChatSession(
-    original_question,
-    chat_agent=get_chat_agent(chat_deployment),
-    rewriter=get_query_rewriter(rewriter_deployment),
-    retrieval=retrieval,
-    coverage=coverage,
-    relevant_collection_ids=relevant_collection_ids,
-)
-proposal = await session.prepare()
-# Present proposal.approval only when its status is awaiting_approval.
-# After the person approves that proposal:
-answer = await session.approve()
+async with chat_dependencies(chat_deployment=chat_deployment) as dependencies:
+    session = new_chat_session(original_question, dependencies)
+    proposal = await session.prepare()
+    # Present proposal.approval when its status is awaiting_approval.
+    # After the person approves:
+    answer = await session.approve()
 ```
+
+The builder creates `JevStructuralRetriever` as the sole Cypher backend. It
+preserves sparse full-text and dense retrieval, existing fusion weights, and
+Evidence Assembly. [Jev structural retrieval](structural-retrieval.md) describes
+the selection, binding, validation, and provenance rules.
 
 `session.reject(correction)` records the rejected proposal and feedback through
 the existing QuestionPreparation boundary. Call `prepare()` again for a fresh
@@ -58,16 +38,18 @@ coverage, even though the session retains the original question for conversation
 
 The coordinator starts its monotonic deadline when `run()` receives approval.
 It prepares keywords synchronously, then starts both text branches together.
-A relational rewrite adds typed structural retrieval to the same concurrent
-group. Every branch gets the same `RetrievalRequest` and absolute deadline.
-The default duration is 60 seconds and must be finite and positive. An injected
+Production startup also starts Jev for every approved question, including a
+non-relational reporting question. Every branch gets the same `RetrievalRequest`
+and absolute deadline. Production uses 180 seconds; the coordinator constructor
+default remains 60 seconds. Durations must be finite and positive. An injected
 clock must use the event loop's monotonic coordinate system.
 
 Branch failures are independent. Completed ranked candidates remain in the
 execution record when another branch raises or times out. Each unfinished
 branch becomes a `FailedBranch`. Caller cancellation cancels the running
-branches and propagates. Structural construction retains its existing
-three-semantic-relationship bound and two corrections per model stage.
+branches and propagates. Jev makes bounded staged selection requests. Composition
+and binding each allow two corrections after the initial attempt. There is no
+fallback to another Cypher backend.
 
 The [fusion configuration](retrieval-fusion.md) supplies the initial weights and
 selection limits. Its defaults give structural retrieval weight 2 and each text
@@ -92,7 +74,8 @@ grounding raises `LookupError`. The loader does not retry.
 
 The Chat Agent receives `render_evidence_context(package)` as its evidence
 input. It never receives the package's full pre-selection execution audit as
-model context. The original question remains conversation context; the approved
+model context. Semantic result rows enter context only when all their supporting
+Article Chunks survived Evidence Assembly. The original question remains conversation context; the approved
 rewrite controls retrieval and the answer. The agent has no retrieval tools.
 
 The Chat Agent supplies brief guidance, relevance notes, and disagreements.
@@ -121,7 +104,7 @@ deployment settings retain their existing bounds.
 
 `tests/test_retrieval.py`, `tests/test_chat.py`, and
 `tests/test_evidence_store.py` cover the public seams with scripted models,
-in-memory branches and fake Neo4j drivers. Existing
-branch tests continue to cover compilation, hop bounds, and stage corrections.
-No UI, live service, or retrieval-quality measurement is required for this
-integration contract.
+in-memory branches and fake Neo4j drivers. `tests/test_jev_execution.py` exercises
+the shared startup builder through both chat HTTP approval and evaluation. The
+Jev selector, Article attachment, and reporting-gate tests cover pruning, subtype
+abstention, indexed wiring, fail-closed decisions, and concurrent request isolation.

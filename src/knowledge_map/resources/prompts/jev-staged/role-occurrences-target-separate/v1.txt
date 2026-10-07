@@ -1,0 +1,1 @@
+One shared source entity satisfies the selected relationships with different target entities.

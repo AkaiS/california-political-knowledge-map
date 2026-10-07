@@ -1,0 +1,2465 @@
+{
+  "summary": {
+    "report": "evals/reports/chat/20261007T183257Z-dd2a016-local-gemma4-26b-1499ceec2201.json",
+    "trace_url": "https://logfire-us.pydantic.dev/akais/california-political-knowledge-map?q=trace_id%3D%2701a1179871ccc8c786b82f1d3c17f253%27",
+    "case_count": 36,
+    "cohorts": {
+      "populated_graph": 25,
+      "declined_control": 7,
+      "deferred_control": 4
+    },
+    "execution_failures": [
+      "C-M1-01",
+      "C-M2-01",
+      "C-M4-01",
+      "Q-D-04",
+      "Q-F-01",
+      "Q-F-03"
+    ],
+    "completed_answers": 15,
+    "completed_graph_answers": 12,
+    "partial_or_complete_evidence_packages": 20,
+    "failure_stages": {
+      "retrieval_and_guidance": 5,
+      "preparation": 1
+    },
+    "branch_statuses": {
+      "full_text": {
+        "succeeded": 20
+      },
+      "dense": {
+        "succeeded": 20
+      },
+      "structural": {
+        "succeeded": 18,
+        "failed": 2
+      }
+    },
+    "all_case_latency": {
+      "n": 36,
+      "mean": 20.713,
+      "p50": 31.777,
+      "p95": 38.489,
+      "max": 39.248
+    },
+    "concrete_case_latency": {
+      "n": 25,
+      "mean": 22.095,
+      "p50": 32.572,
+      "p95": 38.705,
+      "max": 39.248
+    },
+    "retrieval_attempt_case_latency": {
+      "n": 20,
+      "mean": 34.445,
+      "p50": 33.94,
+      "p95": 38.807,
+      "max": 39.248
+    },
+    "summed_case_seconds": 745.658,
+    "stage_latency": {
+      "chat_session.started": {
+        "n": 36,
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "chat_session.prepare": {
+        "n": 36,
+        "mean": 3.691,
+        "p50": 3.672,
+        "p95": 4.55,
+        "max": 4.604
+      },
+      "chat_session.query_rewrite": {
+        "n": 36,
+        "mean": 0.966,
+        "p50": 0.937,
+        "p95": 1.254,
+        "max": 1.487
+      },
+      "chat_session.question_assessment": {
+        "n": 36,
+        "mean": 2.724,
+        "p50": 2.714,
+        "p95": 3.472,
+        "max": 3.629
+      },
+      "chat_session.approve": {
+        "n": 20,
+        "mean": 30.338,
+        "p50": 29.87,
+        "p95": 34.324,
+        "max": 34.664
+      },
+      "chat_session.rewrite_approved": {
+        "n": 20,
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "chat_session.retrieval_branch:full_text": {
+        "n": 20,
+        "mean": 0.081,
+        "p50": 0.05,
+        "p95": 0.172,
+        "max": 0.332
+      },
+      "chat_session.retrieval_branch:dense": {
+        "n": 20,
+        "mean": 0.085,
+        "p50": 0.063,
+        "p95": 0.189,
+        "max": 0.345
+      },
+      "chat_session.retrieval_branch:structural": {
+        "n": 20,
+        "mean": 7.875,
+        "p50": 7.586,
+        "p95": 11.201,
+        "max": 11.859
+      },
+      "chat_session.structural_stage:schema_filtering": {
+        "n": 20,
+        "mean": 0.316,
+        "p50": 0.26,
+        "p95": 0.548,
+        "max": 0.557
+      },
+      "chat_session.structural_stage:typed_selection": {
+        "n": 20,
+        "mean": 0.422,
+        "p50": 0.369,
+        "p95": 0.829,
+        "max": 0.982
+      },
+      "chat_session.structural_stage:wiring": {
+        "n": 20,
+        "mean": 5.856,
+        "p50": 5.674,
+        "p95": 8.531,
+        "max": 9.012
+      },
+      "chat_session.structural_stage:binding": {
+        "n": 19,
+        "mean": 1.173,
+        "p50": 1.184,
+        "p95": 1.71,
+        "max": 2.38
+      },
+      "chat_session.structural_stage:validation": {
+        "n": 18,
+        "mean": 0.13,
+        "p50": 0.126,
+        "p95": 0.176,
+        "max": 0.2
+      },
+      "chat_session.structural_stage:cypher_execution": {
+        "n": 18,
+        "mean": 0.007,
+        "p50": 0.003,
+        "p95": 0.026,
+        "max": 0.034
+      },
+      "chat_session.structural_stage:hydration": {
+        "n": 18,
+        "mean": 0.007,
+        "p50": 0.002,
+        "p95": 0.032,
+        "max": 0.033
+      },
+      "chat_session.fusion": {
+        "n": 20,
+        "mean": 0.002,
+        "p50": 0.001,
+        "p95": 0.004,
+        "max": 0.006
+      },
+      "chat_session.evidence_assembly": {
+        "n": 20,
+        "mean": 0.239,
+        "p50": 0.225,
+        "p95": 0.326,
+        "max": 0.4
+      },
+      "chat_session.guidance": {
+        "n": 20,
+        "mean": 22.206,
+        "p50": 22.477,
+        "p95": 23.922,
+        "max": 24.138
+      }
+    },
+    "local_model_usage": {
+      "cache_read.input_tokens": 27911,
+      "cache_read_tokens": 27911,
+      "input_tokens": 231720,
+      "output_tokens": 13425,
+      "requests": 135
+    },
+    "recorded_jev_selector_usage": {
+      "requests": 73,
+      "input_tokens": 274956,
+      "output_tokens": 23220,
+      "total_tokens": 298176
+    },
+    "assessment_by_cohort": {
+      "deferred_control": {
+        "deferred": 2,
+        "declined": 1,
+        "failed": 1
+      },
+      "populated_graph": {
+        "declined": 10,
+        "deferred": 15
+      },
+      "declined_control": {
+        "declined": 4,
+        "deferred": 3
+      }
+    },
+    "control_assessment_target_matches": {
+      "declined_control": {
+        "matches": 4,
+        "total": 7
+      },
+      "deferred_control": {
+        "matches": 2,
+        "total": 4
+      }
+    },
+    "reference_method": "A reference row is supported when at least one chunk from each authored evidence group is present. Reference queries were rerun against the current graph. These are graph observations, not human answer labels.",
+    "reference_evidence": {
+      "jev": {
+        "cases_with_any_supported_row": 15,
+        "cases_with_all_supported_rows": 15,
+        "macro_row_coverage": 0.6
+      },
+      "fused": {
+        "cases_with_any_supported_row": 15,
+        "cases_with_all_supported_rows": 15,
+        "macro_row_coverage": 0.6
+      },
+      "selected": {
+        "cases_with_any_supported_row": 15,
+        "cases_with_all_supported_rows": 13,
+        "macro_row_coverage": 0.5435
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "C-E1-01",
+      "cohort": "populated_graph",
+      "question": "What stored reporting mentions Steve Hilton?",
+      "duration": 3.904719,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 2,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-E1-02",
+      "cohort": "populated_graph",
+      "question": "What stored reporting mentions Gail Pellerin?",
+      "duration": 2.819264,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-E2-01",
+      "cohort": "populated_graph",
+      "question": "What reporting is attached to SB 9 in the 2025-2026 legislative session?",
+      "duration": 34.071999,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.161,
+          "candidate_count": 489,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.181,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 5.914,
+          "candidate_count": 19,
+          "retained_candidates": 19,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 19,
+        "jev_supported_rows": 19,
+        "fused_supported_rows": 19,
+        "selected_supported_rows": 8
+      },
+      "sources": 2,
+      "passages": 8,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 72,
+        "unit": "characters",
+        "used": 23412
+      },
+      "fused_candidates": 80,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.37,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.367,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 3.789,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.228,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.085,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.033,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-E2-02",
+      "cohort": "populated_graph",
+      "question": "What stored reporting is attached to Proposition 38?",
+      "duration": 2.966798,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 20,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-E3-01",
+      "cohort": "populated_graph",
+      "question": "Which stored articles discuss housing and community development in July 2026?",
+      "duration": 3.648864,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 9,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-E3-02",
+      "cohort": "populated_graph",
+      "question": "Which stored articles discuss labor and employment in July 2026?",
+      "duration": 28.435663,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.06,
+          "candidate_count": 889,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.073,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 2.452,
+          "candidate_count": 208,
+          "retained_candidates": 208,
+          "semantic_rows": 6
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 6,
+        "jev_supported_rows": 6,
+        "fused_supported_rows": 6,
+        "selected_supported_rows": 1
+      },
+      "sources": 2,
+      "passages": 11,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 89,
+        "unit": "characters",
+        "used": 23756
+      },
+      "fused_candidates": 100,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.245,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.288,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 0.114,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.636,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.084,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.01,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.032,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-E3-03",
+      "cohort": "populated_graph",
+      "question": "How many stored articles discuss each policy area? Include the source articles behind every count.",
+      "duration": 3.820047,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 26,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-R1-01",
+      "cohort": "populated_graph",
+      "question": "Which labor unions have a recorded position on AB 1018 in the 2025-2026 session, and what reporting states that position?",
+      "duration": 35.445536,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.099,
+          "candidate_count": 1798,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.075,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.759,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 6,
+      "passages": 7,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 87,
+        "unit": "characters",
+        "used": 23239
+      },
+      "fused_candidates": 94,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.258,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.423,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.674,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.247,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.123,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-R1-02",
+      "cohort": "populated_graph",
+      "question": "Which organizations are reported to have endorsed the Steve Hilton campaign?",
+      "duration": 33.012025,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.021,
+          "candidate_count": 204,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.038,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 6.133,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 4,
+      "passages": 7,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 87,
+        "unit": "characters",
+        "used": 23336
+      },
+      "fused_candidates": 94,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.244,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.391,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 4.555,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.783,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.11,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.001,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-R2-01",
+      "cohort": "populated_graph",
+      "question": "Which organizations are recorded as lobbying in favor of AB 186 in the 2025-2026 session?",
+      "duration": 31.064278,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.038,
+          "candidate_count": 598,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.053,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.18,
+          "candidate_count": 2,
+          "retained_candidates": 2,
+          "semantic_rows": 4
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 4,
+        "jev_supported_rows": 4,
+        "fused_supported_rows": 4,
+        "selected_supported_rows": 4
+      },
+      "sources": 3,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 80,
+        "unit": "characters",
+        "used": 23235
+      },
+      "fused_candidates": 86,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.231,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.424,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.148,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.177,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.14,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.023,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-R2-02",
+      "cohort": "populated_graph",
+      "question": "Which organizations are recorded as lobbying against SB 947 in the 2025-2026 session?",
+      "duration": 34.587915,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.038,
+          "candidate_count": 644,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.052,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.229,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 2
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 2,
+        "jev_supported_rows": 2,
+        "fused_supported_rows": 2,
+        "selected_supported_rows": 2
+      },
+      "sources": 8,
+      "passages": 8,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 82,
+        "unit": "characters",
+        "used": 23896
+      },
+      "fused_candidates": 90,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.221,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.36,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.278,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.21,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.116,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-R3-01",
+      "cohort": "populated_graph",
+      "question": "Which organizations are recorded as funding the Yes on Proposition 38 campaign, and what reporting supports those links?",
+      "duration": 33.08283,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.043,
+          "candidate_count": 696,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.054,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 6.93,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 2,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 72,
+        "unit": "characters",
+        "used": 23104
+      },
+      "fused_candidates": 78,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.239,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.339,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.325,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.874,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.108,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-R3-02",
+      "cohort": "populated_graph",
+      "question": "Which PACs are recorded as funding the Ed Musgrove campaign, and what reporting supports those links?",
+      "duration": 4.136388,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-M1-01",
+      "cohort": "populated_graph",
+      "question": "Which policy areas are connected to Catalina Media Development LLC through Bills it has a recorded lobbying relationship with?",
+      "duration": 33.808147,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+        "exception_type": "ValidationError",
+        "kind": "validation",
+        "stage": "retrieval_and_guidance"
+      },
+      "preparation": "awaiting_approval",
+      "answer_completed": false,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.091,
+          "candidate_count": 1855,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.069,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 8.194,
+          "candidate_count": 27,
+          "retained_candidates": 27,
+          "semantic_rows": 2
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 2,
+        "jev_supported_rows": 2,
+        "fused_supported_rows": 2,
+        "selected_supported_rows": 2
+      },
+      "sources": 1,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 94,
+        "unit": "characters",
+        "used": 23411
+      },
+      "fused_candidates": 100,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.297,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.489,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 6.342,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.865,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.147,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-M1-02",
+      "cohort": "populated_graph",
+      "question": "Which policy areas are connected to Stand With Survivors through Bills it has a recorded lobbying relationship with?",
+      "duration": 3.556361,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 3,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-M2-01",
+      "cohort": "populated_graph",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Walt Disney in the 2025-2026 session?",
+      "duration": 39.248451,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+        "exception_type": "ValidationError",
+        "kind": "validation",
+        "stage": "retrieval_and_guidance"
+      },
+      "preparation": "awaiting_approval",
+      "answer_completed": false,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.047,
+          "candidate_count": 846,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.058,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 11.859,
+          "candidate_count": 2,
+          "retained_candidates": 2,
+          "semantic_rows": 3
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 3,
+        "jev_supported_rows": 3,
+        "fused_supported_rows": 3,
+        "selected_supported_rows": 3
+      },
+      "sources": 3,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 83,
+        "unit": "characters",
+        "used": 23901
+      },
+      "fused_candidates": 89,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.547,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.821,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 9.012,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.322,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.124,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-M2-02",
+      "cohort": "populated_graph",
+      "question": "Which other organizations are recorded as lobbying for AB 186 alongside Creative Artists Agency in the 2025-2026 session?",
+      "duration": 35.755695,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.332,
+          "candidate_count": 881,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.345,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 11.167,
+          "candidate_count": 2,
+          "retained_candidates": 2,
+          "semantic_rows": 3
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 3,
+        "jev_supported_rows": 3,
+        "fused_supported_rows": 3,
+        "selected_supported_rows": 3
+      },
+      "sources": 2,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 85,
+        "unit": "characters",
+        "used": 23947
+      },
+      "fused_candidates": 91,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.557,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.476,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 8.506,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.425,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.172,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-M3-01",
+      "cohort": "populated_graph",
+      "question": "Which organizations appear in the same stored reporting chunks as Steve Hilton?",
+      "duration": 3.341628,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-M3-02",
+      "cohort": "populated_graph",
+      "question": "Which organizations appear in the same reporting chunks as Gavin Newsom in the article titled Newsom pushes environmental carve-out for campaign donor\u2019s Santa Monica project?",
+      "duration": 3.622235,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 9,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-M4-01",
+      "cohort": "populated_graph",
+      "question": "Which candidates are connected to California Leads through campaigns it is recorded as funding? Include the campaign and reporting for each link.",
+      "duration": 34.811537,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+        "exception_type": "ValidationError",
+        "kind": "validation",
+        "stage": "retrieval_and_guidance"
+      },
+      "preparation": "awaiting_approval",
+      "answer_completed": false,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.153,
+          "candidate_count": 3322,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.113,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 8.693,
+          "candidate_count": 2,
+          "retained_candidates": 2,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 5,
+      "passages": 7,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 80,
+        "unit": "characters",
+        "used": 23201
+      },
+      "fused_candidates": 87,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.497,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.982,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 6.192,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.826,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.139,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.006,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.001,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-M4-02",
+      "cohort": "populated_graph",
+      "question": "Which ballot measures are connected to Michelson Center For Public Policy through campaigns it is recorded as funding? Include the campaign and reporting for each link.",
+      "duration": 4.387835,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 0,
+        "fused_supported_rows": 0,
+        "selected_supported_rows": 0
+      },
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "C-M5-01",
+      "cohort": "populated_graph",
+      "question": "What vote is recorded for Catherine Blakespear on SB 1007 in the 2025-2026 session, and which reporting states it?",
+      "duration": 38.783489,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.041,
+          "candidate_count": 571,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.055,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 10.519,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 3,
+      "passages": 8,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 77,
+        "unit": "characters",
+        "used": 23247
+      },
+      "fused_candidates": 85,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.504,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.501,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 7.89,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.412,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.168,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-M5-02",
+      "cohort": "populated_graph",
+      "question": "What vote is recorded for Scott Wiener on SB 1229 in the 2025-2026 session, and which reporting states it?",
+      "duration": 38.390609,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.04,
+          "candidate_count": 598,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.053,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 9.881,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 4,
+      "passages": 7,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 70,
+        "unit": "characters",
+        "used": 23984
+      },
+      "fused_candidates": 77,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.243,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.304,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 7.803,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.344,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.153,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-C1-01",
+      "cohort": "populated_graph",
+      "question": "Which Bills from the 2025-2026 session are recorded as referred to the Senate Appropriations Committee?",
+      "duration": 32.5717,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.044,
+          "candidate_count": 675,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.058,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.413,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 1
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 1,
+        "jev_supported_rows": 1,
+        "fused_supported_rows": 1,
+        "selected_supported_rows": 1
+      },
+      "sources": 7,
+      "passages": 9,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 83,
+        "unit": "characters",
+        "used": 23920
+      },
+      "fused_candidates": 92,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.261,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.316,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.513,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.151,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.133,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "C-C1-02",
+      "cohort": "populated_graph",
+      "question": "Which committees is AB 2540 in the 2025-2026 session recorded as having been referred to?",
+      "duration": 33.107046,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.038,
+          "candidate_count": 571,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.051,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 6.877,
+          "candidate_count": 1,
+          "retained_candidates": 1,
+          "semantic_rows": 2
+        }
+      },
+      "reference_evidence_coverage": {
+        "reference_rows": 2,
+        "jev_supported_rows": 2,
+        "fused_supported_rows": 2,
+        "selected_supported_rows": 2
+      },
+      "sources": 1,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 75,
+        "unit": "characters",
+        "used": 23165
+      },
+      "fused_candidates": 81,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.252,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.304,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 4.971,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 1.184,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.117,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.003,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.007,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "Q-D-01",
+      "cohort": "declined_control",
+      "question": "What did the Texas legislature do about housing this year?",
+      "duration": 2.9036,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-D-02",
+      "cohort": "declined_control",
+      "question": "Why did Newsom really sign the Uber ballot-measure deal?",
+      "duration": 37.366355,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.053,
+          "candidate_count": 883,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.065,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 9.595,
+          "candidate_count": 11,
+          "retained_candidates": 11,
+          "semantic_rows": 6
+        }
+      },
+      "reference_evidence_coverage": null,
+      "sources": 5,
+      "passages": 7,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 87,
+        "unit": "characters",
+        "used": 23932
+      },
+      "fused_candidates": 94,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.372,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 7.999,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.802,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.128,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.016,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "Q-D-03",
+      "cohort": "declined_control",
+      "question": "Should I vote yes on Proposition 38?",
+      "duration": 3.997234,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-D-04",
+      "cohort": "declined_control",
+      "question": "Will the HOA fee cap bill pass?",
+      "duration": 32.490313,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+        "exception_type": "ValidationError",
+        "kind": "validation",
+        "stage": "retrieval_and_guidance"
+      },
+      "preparation": "awaiting_approval",
+      "answer_completed": false,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.047,
+          "candidate_count": 860,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.06,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "failed",
+          "seconds": 5.654,
+          "candidate_count": 0,
+          "retained_candidates": 0,
+          "semantic_rows": 0
+        }
+      },
+      "reference_evidence_coverage": null,
+      "sources": 1,
+      "passages": 10,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 73,
+        "unit": "characters",
+        "used": 23442
+      },
+      "fused_candidates": 83,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.286,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.393,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": null,
+          "seconds": 4.941,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "Q-D-05",
+      "cohort": "declined_control",
+      "question": "Which California legislators are bought by tech money?",
+      "duration": 33.678814,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.164,
+          "candidate_count": 3617,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.095,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.045,
+          "candidate_count": 3,
+          "retained_candidates": 3,
+          "semantic_rows": 3
+        }
+      },
+      "reference_evidence_coverage": null,
+      "sources": 3,
+      "passages": 6,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 89,
+        "unit": "characters",
+        "used": 23858
+      },
+      "fused_candidates": 95,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.268,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.356,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 5.674,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.57,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.097,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.034,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.002,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "Q-D-06",
+      "cohort": "declined_control",
+      "question": "Who are the family members of a given legislator?",
+      "duration": 3.063771,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-D-07",
+      "cohort": "declined_control",
+      "question": "Which organizations did not fund the campaign against Proposition 38?",
+      "duration": 3.942928,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-F-01",
+      "cohort": "deferred_control",
+      "question": "How did each senator vote on the ADA lawsuit bill?",
+      "duration": 35.675792,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+        "exception_type": "ValidationError",
+        "kind": "validation",
+        "stage": "retrieval_and_guidance"
+      },
+      "preparation": "awaiting_approval",
+      "answer_completed": false,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.054,
+          "candidate_count": 987,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.071,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "failed",
+          "seconds": 9.204,
+          "candidate_count": 0,
+          "retained_candidates": 0,
+          "semantic_rows": 0
+        }
+      },
+      "reference_evidence_coverage": null,
+      "sources": 3,
+      "passages": 9,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 68,
+        "unit": "characters",
+        "used": 23456
+      },
+      "fused_candidates": 77,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.29,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.229,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 6.27,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": null,
+          "seconds": 2.38,
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "Q-F-02",
+      "cohort": "deferred_control",
+      "question": "Who were the largest donors to the 2026 governor's race?",
+      "duration": 3.092762,
+      "failure": null,
+      "preparation": "declined",
+      "answer_completed": false,
+      "assessment": "declined",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-F-03",
+      "cohort": "deferred_control",
+      "question": "Who represented Assembly District 52 before and after the 2021 redistricting?",
+      "duration": 3.549831,
+      "failure": {
+        "diagnostic": "Chat evaluation could not complete preparation.",
+        "exception_type": "UnexpectedModelBehavior",
+        "kind": "model_output",
+        "stage": "preparation"
+      },
+      "preparation": null,
+      "answer_completed": false,
+      "assessment": "failed",
+      "branches": {},
+      "reference_evidence_coverage": null,
+      "sources": 0,
+      "passages": 0,
+      "context": null,
+      "fused_candidates": 0,
+      "construction_stages": []
+    },
+    {
+      "id": "Q-F-04",
+      "cohort": "deferred_control",
+      "question": "Which Assembly members did not vote on AB 1165?",
+      "duration": 33.515317,
+      "failure": null,
+      "preparation": "awaiting_approval",
+      "answer_completed": true,
+      "assessment": "deferred",
+      "branches": {
+        "full_text": {
+          "status": "succeeded",
+          "seconds": 0.066,
+          "candidate_count": 1060,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "dense": {
+          "status": "succeeded",
+          "seconds": 0.079,
+          "candidate_count": 50,
+          "retained_candidates": 50,
+          "semantic_rows": 0
+        },
+        "structural": {
+          "status": "succeeded",
+          "seconds": 7.802,
+          "candidate_count": 0,
+          "retained_candidates": 0,
+          "semantic_rows": 0
+        }
+      },
+      "reference_evidence_coverage": null,
+      "sources": 5,
+      "passages": 8,
+      "context": {
+        "limit": 24000,
+        "max_passages": 12,
+        "omitted_passages": 79,
+        "unit": "characters",
+        "used": 22955
+      },
+      "fused_candidates": 87,
+      "construction_stages": [
+        {
+          "stage": "schema_filtering",
+          "status": "succeeded",
+          "seconds": 0.259,
+          "error": null
+        },
+        {
+          "stage": "typed_selection",
+          "status": "succeeded",
+          "seconds": 0.298,
+          "error": null
+        },
+        {
+          "stage": "wiring",
+          "status": "succeeded",
+          "seconds": 6.132,
+          "error": null
+        },
+        {
+          "stage": "binding",
+          "status": "succeeded",
+          "seconds": 0.842,
+          "error": null
+        },
+        {
+          "stage": "validation",
+          "status": "succeeded",
+          "seconds": 0.2,
+          "error": null
+        },
+        {
+          "stage": "cypher_execution",
+          "status": "succeeded",
+          "seconds": 0.025,
+          "error": null
+        },
+        {
+          "stage": "hydration",
+          "status": "succeeded",
+          "seconds": 0.0,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "report_sha256": "1c9772d3b5bcfe2a46a477448d6538791dbaf8b52dc1f1b088de6748d27e3613",
+    "reference_sha256": "b3c9f5021b6fd358abf530219a781e00502386f57b084ea84d073b8450e866d1",
+    "analysis": "Agent-computed execution and reference-evidence metrics. No human answer-quality labels. Timings use linear-interpolated percentiles."
+  },
+  "observations": [
+    {
+      "kind": "graph_question_preparation",
+      "cases": [
+        "C-E1-01",
+        "C-E1-02",
+        "C-E2-02",
+        "C-E3-01",
+        "C-E3-03",
+        "C-R3-02",
+        "C-M1-02",
+        "C-M3-01",
+        "C-M3-02",
+        "C-M4-02"
+      ],
+      "observation": "Ten graph-backed stored-reporting questions were declined before retrieval despite nonempty current reference query results."
+    },
+    {
+      "kind": "guidance_validation",
+      "cases": [
+        "C-M1-01",
+        "C-M2-01",
+        "C-M4-01",
+        "Q-D-04",
+        "Q-F-01"
+      ],
+      "observation": "Guidance responses each proposed a disagreement with the same source article ID twice; final answer construction raised ValidationError."
+    },
+    {
+      "kind": "assessment_model_output",
+      "cases": [
+        "Q-F-03"
+      ],
+      "observation": "Question assessment returned deferred with recoverable_portion null and failed structured output validation."
+    },
+    {
+      "kind": "jev_construction",
+      "cases": [
+        "Q-D-04",
+        "Q-F-01"
+      ],
+      "observation": "The Cypher branch failed during wiring and binding, respectively; sibling branches still produced evidence."
+    },
+    {
+      "kind": "evidence_assembly",
+      "cases": [
+        "C-E2-01",
+        "C-E3-02"
+      ],
+      "observation": "Complete reference evidence was recovered by Jev and fusion, but final selection supported only 8/19 and 1/6 reference rows, respectively."
+    },
+    {
+      "kind": "decline_controls",
+      "cases": [
+        "Q-D-02",
+        "Q-D-04",
+        "Q-D-05"
+      ],
+      "observation": "The rewrite converted motive, predictive, and beyond-evidence inference requests into factual questions, which were then deferred and approved automatically."
+    }
+  ]
+}
