@@ -6,6 +6,12 @@ political question across preparation, correction, approval, and any prepared
 Retrieval Answer. It differs from the browser conversation ID and native trace
 IDs. The queries below use audit schema version 1.
 
+`chat_session.started` records the session's fixed UTC `as_of` timestamp and
+`current_date`, which assessment and final guidance receive as input data.
+Corrections and approval retain that reference time even across midnight.
+`observed_at` records when the start event occurred; evaluation can supply an
+earlier `as_of`. Source Article publication dates remain separate from both.
+
 ## Find one question
 
 Open the application's Logfire project and its SQL Workbench. Choose a time

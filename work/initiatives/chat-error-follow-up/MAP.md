@@ -34,7 +34,7 @@ the recommended order; a dependency is not an additional triage state.
 
 | Action | Durable record | Next step |
 | --- | --- | --- |
-| Supply an explicit date | [Date context](../../issues/03-chat-session-explicit-date-context.md) | Review the bounded bug brief; offline input omission is confirmed. |
+| Supply an explicit date | [Date context](../../issues/03-chat-session-explicit-date-context.md) | Completed 2026-10-07. Fixed UTC context reaches assessment and guidance; live reruns found no past-as-future language with prompt v3. |
 | Use the original question | [Original-question baseline](issues/01-original-question-retrieval-baseline.md) | Decide routing and approval behavior, then shape implementation. |
 | Continue passage retrieval evaluation | [Existing retrieval investigation](../useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md) and [Model Evaluation](../model-evaluation/MAP.md) | Connect the maintainer's current RAG work to the evidence and measurements below. |
 | Investigate structural-search failures | [Existing structural audit](../../projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md) and current RAG work | Reuse recorded stages; diagnose failures before specifying a runtime fix. |

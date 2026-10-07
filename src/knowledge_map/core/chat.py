@@ -47,13 +47,9 @@ from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_INSTRUCTIONS = (
-    load_prompt("chat/instructions", version=1)
-)
+CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=3)
 
-QUESTION_POLICY = (
-    load_prompt("chat/question-policy", version=1)
-)
+QUESTION_POLICY = load_prompt("chat/question-policy", version=1)
 
 
 def _guidance_failure_kind(error: Exception) -> str:
@@ -101,7 +97,12 @@ class ChatSession:
         relevant_collection_ids: tuple[str, ...],
         monthly_coverage: tuple[MonthlyCoverage, ...] = (),
         start_settings: ChatSessionSettings | None = None,
+        as_of: datetime | None = None,
     ) -> None:
+        resolved_as_of = as_of if as_of is not None else datetime.now(UTC)
+        if resolved_as_of.utcoffset() is None:
+            raise ValueError("Chat Session as_of must include a timezone")
+        self._as_of = resolved_as_of.astimezone(UTC)
         self._original_question = original_question
         self._agent = chat_agent
         self._retrieval = retrieval
@@ -124,9 +125,21 @@ class ChatSession:
             audit_schema_version=1,
             original_question=original_question,
             observed_at=datetime.now(UTC).isoformat(),
+            **self._date_context(),
             coverage=coverage.model_dump(mode="json"),
             **(asdict(start_settings) if start_settings is not None else {}),
         )
+
+    @property
+    def as_of(self) -> datetime:
+        """The session's fixed reference time, independent of source dates."""
+        return self._as_of
+
+    def _date_context(self) -> dict[str, str]:
+        return {
+            "as_of": self._as_of.isoformat(),
+            "current_date": self._as_of.date().isoformat(),
+        }
 
     @property
     def retrieval_result(self) -> EvidencePackage | EvidenceAssemblyFailure | None:
@@ -137,6 +150,7 @@ class ChatSession:
         result = await self._agent.run(
             json.dumps(
                 {
+                    **self._date_context(),
                     "question": rewrite.question,
                     "coverage": self._coverage.model_dump(mode="json"),
                     "question_policy": QUESTION_POLICY,
@@ -223,7 +237,10 @@ class ChatSession:
                 result = await self._agent.run(
                     render_evidence_context(package),
                     message_history=[
-                        ModelRequest(parts=[UserPromptPart(self._original_question)])
+                        ModelRequest(
+                            parts=[UserPromptPart(json.dumps(self._date_context()))]
+                        ),
+                        ModelRequest(parts=[UserPromptPart(self._original_question)]),
                     ],
                     output_type=RetrievalGuidance,
                     usage=self._usage,

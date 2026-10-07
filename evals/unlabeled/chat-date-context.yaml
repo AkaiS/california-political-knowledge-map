@@ -1,0 +1,262 @@
+task: chat
+description: 'Date-context regression subset: nine reviewed past-period-as-future cases and one predictive
+  control from chat-synthetic, with a fixed UTC session date. Unlabeled inputs for human answer review.'
+cases:
+- id: SYN-T06-05
+  description: topic_discovery / sufficient_evidence / layperson
+  split: training
+  task_input:
+    question: Where can I start reading about money in California's 2026 race for governor?
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T06-05
+    family: topic_discovery
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: layperson. Evidence requirement: Reporting
+      discusses campaign funding in the 2026 governor''s race; the request does not require complete finance
+      disclosures. Validation scope: The governor-race report describes Uber and Teamsters funding of
+      independent support for Porter.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T06
+  - topic_discovery
+  - sufficient_evidence
+  - layperson
+  - source_discovery
+- id: SYN-T09-02
+  description: topic_discovery / required_data_not_ingested / familiar
+  split: training
+  task_input:
+    question: What do statewide campaign-finance filings show about contributions from housing developers
+      in California in 2026?
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T09-02
+    family: topic_discovery
+    cohort: deferred_control
+    scope_note: 'Scenario: required_data_not_ingested. Domain familiarity: familiar. Evidence requirement:
+      Statewide campaign-finance filings are required; news mentions do not provide the requested disclosure
+      collection. Validation scope: The active chat collection is selected CalMatters reporting. It is
+      not the official records, complete disclosures, district history, or complete roll-call collection
+      this request needs. Individual reported votes or disclosure amounts do not satisfy that collection
+      requirement.'
+    grounding: coverage-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T09
+  - topic_discovery
+  - required_data_not_ingested
+  - familiar
+  - unspecified
+- id: SYN-T11-03
+  description: comparison / conflicting_reporting / expert
+  split: training
+  task_input:
+    question: Compare the lawsuit's allegation about Kalibrate coordinating California gasoline prices
+      with Kalibrate's response, as reported in July 2026.
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T11-03
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: conflicting_reporting. Domain familiarity: expert. Evidence requirement: The
+      stored report attributes the algorithmic price-coordination allegation to a federal lawsuit and
+      explicitly records Kalibrate''s denial of those allegations. Preserve the claim''s legal and evidentiary
+      status. Validation scope: The stored report attributes the algorithmic price-coordination allegation
+      to a federal lawsuit and explicitly records Kalibrate''s denial of those allegations. Preserve the
+      claim''s legal and evidentiary status. Both accounts are available in one Source Article; no second
+      independent article is asserted.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T11
+  - comparison
+  - conflicting_reporting
+  - expert
+  - source_discovery
+- id: SYN-T12-05
+  description: comparison / partial_coverage / layperson
+  split: training
+  task_input:
+    question: How do California's 2021 Senate Bill 9 and Assembly Bill 2540 from the 2025-2026 session
+      differ, and what is the latest official status of each as of September 30, 2026?
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T12-05
+    family: comparison
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: layperson. Evidence requirement: Reporting
+      describes the 2021 housing SB 9 and the 2025-2026 AB 2540''s medication-abortion access provisions
+      and committee stages, but is not an official, current bill-status collection. Validation scope:
+      The reporting supports provisions and some stages, but not an official status record current to
+      the review date.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T12
+  - comparison
+  - partial_coverage
+  - layperson
+  - unspecified
+- id: SYN-T13-02
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Compare Walt Disney and Creative Artists Agency to tell me which one bought legislators'
+      votes on AB 186 in the 2025-2026 session.
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-02
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The request demands an unsupported corruption inference; documented lobbying does not establish
+      purchased votes. Validation scope: Validate the requested outcome against the application''s question
+      policy, not against a missing search result. The request demands an unsupported corruption inference;
+      documented lobbying does not establish purchased votes.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T13-03
+  description: comparison / outside_permitted_scope / expert
+  split: training
+  task_input:
+    question: Will proposals like SB 947 or AB 1018 face greater legislative resistance in California's
+      next session?
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T13-03
+    family: comparison
+    cohort: declined_control
+    scope_note: 'Scenario: outside_permitted_scope. Domain familiarity: expert. Evidence requirement:
+      The requested comparison predicts future political outcomes rather than retrieving reported events.
+      Validation scope: Validate the requested outcome against the application''s question policy, not
+      against a missing search result. The requested comparison predicts future political outcomes rather
+      than retrieving reported events.'
+    grounding: policy-control
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T13
+  - comparison
+  - outside_permitted_scope
+  - expert
+  - unspecified
+- id: SYN-T14-05
+  description: change_over_time / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Trace the reported sequence from the competing Uber and attorneys' ballot measures to Newsom
+      signing SB 623 in June 2026. State which dates or ordering the reporting actually gives.
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T14-05
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Reporting
+      states that the parties qualified competing measures, then reached an agreement, and Newsom signed
+      SB 623; preserve the reported sequence without inventing an exact date for each stage. Validation
+      scope: Qualification, agreement, and signing are explicitly ordered; the exact signing date is limited
+      to what the dated report and text establish.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T14
+  - change_over_time
+  - sufficient_evidence
+  - expert
+  - unspecified
+- id: SYN-T15-03
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: Trace how organizational support for Steve Hilton's campaign changed from 2025 through September
+      2026.
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-03
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Some
+      dated endorsements are reported, but one end of the requested period is absent from coverage. Validation
+      scope: The August Hilton passage supplies organizational support, not comparable endorsements across
+      the entire 2025-September 2026 period.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - single_hop
+- id: SYN-T15-05
+  description: change_over_time / partial_coverage / familiar
+  split: training
+  task_input:
+    question: How did California's construction minimum-wage proposal develop from its first draft through
+      September 2026?
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T15-05
+    family: change_over_time
+    cohort: populated_graph
+    scope_note: 'Scenario: partial_coverage. Domain familiarity: familiar. Evidence requirement: Reporting
+      covers an intermediate stage but lacks the first draft or the late-September outcome needed for
+      a complete chronology. Validation scope: Two AB 1751 reports describe initial focus and wage-language
+      removal, not complete first-draft text or the late-September outcome.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T15
+  - change_over_time
+  - partial_coverage
+  - familiar
+  - unspecified
+- id: SYN-T19-05
+  description: intersection_of_constraints / sufficient_evidence / expert
+  split: training
+  task_input:
+    question: Find reporting published in July 2026 that discusses Housing & Community Development. Use
+      publication dates for the date filter.
+    as_of: '2026-10-01T00:00:00Z'
+  metadata:
+    source: work/initiatives/model-evaluation/chat-synthetic-questions.yaml
+    source_case_id: SYN-T19-05
+    family: intersection_of_constraints
+    cohort: populated_graph
+    scope_note: 'Scenario: sufficient_evidence. Domain familiarity: expert. Evidence requirement: Matching
+      Source Articles have the Policy Area assignment and July 2026 publication dates; event dates are
+      not substituted. Validation scope: July 2026 Source Articles have Housing & Community Development
+      assignments; the full matching article inventory is recorded in the audit. Use publication dates.'
+    grounding: evidence-grounded
+    reference_artifact: work/initiatives/model-evaluation/chat-synthetic-evidence.json
+  tags:
+  - synthetic
+  - T19
+  - intersection_of_constraints
+  - sufficient_evidence
+  - expert
+  - source_discovery

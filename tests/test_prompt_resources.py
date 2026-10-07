@@ -172,8 +172,15 @@ def rendered_prompt_snapshot():
 
 
 def test_resolved_prompt_outputs_match_pre_migration_bytes():
+    from knowledge_map.core.chat import CHAT_INSTRUCTIONS
+    from knowledge_map.prompts import load_prompt
+
     baseline = json.loads((FIXTURES / "prompt_rendered_baseline.json").read_text())
-    assert rendered_prompt_snapshot() == baseline
+    actual = rendered_prompt_snapshot()
+    assert CHAT_INSTRUCTIONS == load_prompt("chat/instructions", version=3)
+    actual.pop("chat")
+    baseline.pop("chat")
+    assert actual == baseline
 
 
 def test_v1_assets_retain_their_immutable_bytes():
