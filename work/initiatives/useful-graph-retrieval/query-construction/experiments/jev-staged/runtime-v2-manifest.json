@@ -1,11 +1,11 @@
 {
   "revision": "review-repairs-v2",
-  "patch_sha256": "3fdf30b09daa54443a97c2a98c59d6028b6a40ebcefa285b3f2aec0c5ce0636a",
+  "patch_sha256": "33b6d30e28c88090a0c597121db8c7c468228c4b50c7459131a2a9ac927a9ef3",
   "files": {
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/catalog.py": "4e9d2599f6133877cee549151a430ee5bef57f353be856190ef1c6452ffad255",
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/compiler.py": "85861a206121345ec88748d396da5b3440d9d8d2651115c02966e49008851c1a",
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/contracts.py": "30b31bd8422faf0c35c38dcbde400dd72063e4edea1b78c172cf6c5bd417377c",
-    "src/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py": "a4f42790fa43275bcd973a07ccda575c7cefdea42ccdcef5d6763fbafda7b768",
+    "src/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py": "a7ef46eb481751426c8fac1a1e8846e5fd6e336688b5a15d950c20c422fab3cd",
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_selector.py": "fa0d5bf77ee72c176f80365111ac7337ba22bf7ad297c242ad6d53d1e6f254fc",
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_filtered_selector.py": "9d595458eb6a565da94eb020fb74ac758625429a57a0b3df7a8d4185486bc7ae",
     "src/knowledge_map/prototypes/atomic_deterministic_hydration/jev_schema_filter.py": "704c9c684effca4c6cb93ac4619bc34302d8d5fc197b4562c4ab4a9f532edf91",
@@ -143,7 +143,8 @@
     "src/knowledge_map/resources/prompts/jev-staged/runner-composer-prompt-01/v1.txt": "e6a761bfac9f5b50c1783ea315f9d9c480a507eff4e24dba6fd2f4613269b645",
     "src/knowledge_map/resources/prompts/jev-staged/jev-schema-filter-build-request-03/v1.txt": "2a66173815b85dd3733ec60caec5d824f0baa9a05e78ed203aeb8798e2388e3b",
     "src/knowledge_map/resources/prompts/jev-staged/jev-schema-filter-build-request-04/v1.txt": "b7a72893631e4ee7e115f49b0aee167857464c68f60cf1cef2f553795188d019",
-    "src/knowledge_map/resources/prompts/jev-staged/runner-composer-instructions-01/v1.txt": "4bfc4b68cfca1c45e0b960c4ba2564bf1bb00ab11895689ce2d0507c79a1e08a"
+    "src/knowledge_map/resources/prompts/jev-staged/runner-composer-instructions-01/v1.txt": "4bfc4b68cfca1c45e0b960c4ba2564bf1bb00ab11895689ce2d0507c79a1e08a",
+    "src/knowledge_map/resources/prompts/jev-staged/runner-selector-correction/v1.txt": "60b67e3da13f36b7e3f084fd2b82360f0a57e26bf99ea09ee790760f6d04d013"
   },
   "changes": [
     "verbatim versioned prompt extraction",

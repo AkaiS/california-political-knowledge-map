@@ -64,6 +64,30 @@ def main():
             {"state": request["state"], "questions": {key: value.model_dump(mode="json") for key, value in request["questions"].items()}}
             for request in client.calls
         ])
+    # Exercise the actual retry branch so instructions nested in feedback are
+    # compared too, rather than only testing caller-supplied feedback values.
+    retry_requests = []
+    original_call, original_filter = runner._agent_call, runner.narrow_schema
+
+    def failed_selection(agent, prompt):
+        retry_requests.append(prompt)
+        return {"ok": False, "usage": {}, "latency_ms": 0}
+
+    try:
+        runner._agent_call = failed_selection
+        runner.narrow_schema = lambda *args, **kwargs: {
+            "ok": True, "output": vocabulary.model_dump(mode="json"),
+            "model_visible_prompt": "synthetic schema", "usage": {}, "latency_ms": 0,
+        }
+        result = runner.run_case(case, None, None, None, None, None, (),
+                                 jev_client=SimpleNamespace(), selector_backend="pydantic",
+                                 schema_filter_backend="jev", timeout=1)
+        assert result["failure_stage"] == "selector"
+        assert len(retry_requests) == 3
+        assert '"instruction"' in retry_requests[1]
+        snapshot["selector_retry_requests"] = retry_requests
+    finally:
+        runner._agent_call, runner.narrow_schema = original_call, original_filter
     print(json.dumps(snapshot, sort_keys=True))
 
 

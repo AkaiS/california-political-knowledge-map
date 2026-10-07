@@ -849,6 +849,11 @@
     "sha256": "818be7f53c0c333f2a6797e9dc8f21e36af98b3ae68ac216c474663f4896ec14",
     "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
   },
+  "jev-staged/runner-selector-correction": {
+    "line": 865,
+    "sha256": "60b67e3da13f36b7e3f084fd2b82360f0a57e26bf99ea09ee790760f6d04d013",
+    "source": "work/initiatives/useful-graph-retrieval/query-construction/experiments/jev-staged/overlay/knowledge_map/prototypes/atomic_deterministic_hydration/runner.py"
+  },
   "jev-staged/runner-selector-instructions-01": {
     "line": 111,
     "sha256": "b9d86ef85f5dd5bc79eebff1aa8bcd4a4fd5f2b759909445903fc24e269fd6c8",

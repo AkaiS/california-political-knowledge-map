@@ -101,6 +101,9 @@
 -            "\n\nThe prior ordered values failed validation. Return a corrected "
 -            "complete list. Fix these errors:\n"
 +            load_prompt('jev-staged/runner-binding-prompt-02', version=1)
+@@ -865 +894 @@
+-            "instruction": "Return the full corrected selection.",
++            "instruction": load_prompt('jev-staged/runner-selector-correction', version=1),
 @@ -910,2 +939,9 @@
 -        deterministic = _deterministic_unique_wiring(
 -            grouped, relationship_free_mode=relationship_free_mode

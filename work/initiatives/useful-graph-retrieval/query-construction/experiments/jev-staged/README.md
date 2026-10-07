@@ -91,8 +91,9 @@ The offline checks use synthetic inputs. They cover personhood, schema closure,
 subtype abstention, parent-role distinctness, property attachment, deterministic
 hydration, unchanged fragment shapes, and the reporting gate's failure behavior.
 They also cover repeated Article-topic roles, rejected invalid wiring, binding and
-execution with synthetic service stubs, and exact prompt rendering against the
-frozen sources. They make no hosted-model, local-model, or graph calls. The frozen
+execution with synthetic service stubs, and exact prompt rendering, including
+selector correction retries, against the frozen sources. They make no hosted-model,
+local-model, or graph calls. The frozen
 source files remain byte-for-byte unchanged. The separately recorded repairs do not
 inspect held-out questions, gold, traces, or individual failures.
 
