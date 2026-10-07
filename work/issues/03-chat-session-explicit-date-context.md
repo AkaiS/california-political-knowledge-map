@@ -2,7 +2,7 @@
 
 # Supply explicit date context to Chat Session model requests
 
-Labels: bug, needs-triage
+Labels: bug, completed
 Parent: [Chat Session error follow-up](../initiatives/chat-error-follow-up/MAP.md)
 
 ## Verification
@@ -38,14 +38,14 @@ recorded with the session and relevant evaluation inputs.
 - Explicitly versioned prompt resources if instructions must change.
 
 **Acceptance criteria:**
-- [ ] Both assessment and guidance expose the resolved date as input data.
-- [ ] A test fixes the date at 2026-10-01 and verifies September 2026 questions
+- [x] Both assessment and guidance expose the resolved date as input data.
+- [x] A test fixes the date at 2026-10-01 and verifies September 2026 questions
       receive that context. It does not claim scripted output proves model quality.
-- [ ] One session crossing midnight retains its original as-of value.
-- [ ] Repeated evaluation with a supplied date renders the same date context.
-- [ ] Trace and report provenance permit recovering the effective as-of value.
-- [ ] Publication dates remain distinguishable from event dates and session time.
-- [ ] Any changed instruction selects a new immutable prompt version.
+- [x] One session crossing midnight retains its original as-of value.
+- [x] Repeated evaluation with a supplied date renders the same date context.
+- [x] Trace and report provenance permit recovering the effective as-of value.
+- [x] Publication dates remain distinguishable from event dates and session time.
+- [x] Any changed instruction selects a new immutable prompt version.
 
 **Out of scope:**
 - General natural-language date parsing or event-time database reconstruction.
@@ -64,3 +64,52 @@ interpret the user's local timezone. Promotion awaits maintainer direction.
 
 2026-10-01: Initial category is bug; initial state is needs-triage. The maintainer
 already identified supplying the current date as the intended intervention.
+
+2026-10-07: Implemented a fixed, timezone-aware UTC `ChatSession.as_of`, with
+`as_of` and `current_date` in assessment and guidance requests and the start
+observation. Chat evaluation accepts an optional `task_input.as_of` and retains
+the resolved timestamp in its output. Prompt v3 instructs calendar comparison
+against the supplied date, separately from training cutoff, publication dates,
+event dates, and evidence coverage. Existing prompt versions are preserved.
+
+The request-level regression first failed with `KeyError: 'current_date'` under
+`uv run --no-sync pytest -q tests/test_chat_date_context.py`. It now verifies a
+September 2026 question at October 1, corrections and guidance across midnight,
+UTC normalization, and rejection of naive timestamps. Evaluation tests verify
+repeated fixed-date requests, trace attributes, and saved report inputs and outputs.
+
+Live local `gemma4:26b` observations:
+
+- [First date-context run](../../evals/reports/chat/20261007T200642Z-35d1475-local-gemma4-26b-1499ceec2201.json)
+  used prompt v2 and a fixed October 1 date. One of nine previously identified
+  historical cases still called June 2026 future while acknowledging October
+  2026 as the current date. The date was present in all twelve Chat Agent requests.
+- [Calendar-comparison run](../../evals/reports/chat/20261007T200857Z-35d1475-local-gemma4-26b-1499ceec2201.json)
+  used prompt v3 on the same nine cases plus a predictive control. Inspection of
+  all rendered responses found no past-as-future or knowledge-cutoff language
+  in the nine historical cases. The June case explicitly identified the question
+  as historical reporting. The predictive control was still declined. All ten
+  cases stopped during preparation, with separate policy and coverage errors,
+  including Deferred explanations returned with Declined status. This is a
+  temporal-language check, not an overall answer-quality grade.
+- [Final-guidance run](../../evals/reports/chat/20261007T201147Z-35d1475-local-gemma4-26b-1499ceec2201.json)
+  reran original cases `C-R1-01` and `C-M5-01` using the actual October 7 session
+  date and prompt v3. Both reached retrieval and final guidance. Their four Chat
+  Agent requests preserved each session's timestamp, and neither final response
+  treated the 2025-2026 session as future or invoked a knowledge cutoff.
+
+The fixed subset is `evals/unlabeled/chat-date-context.yaml`. These are unlabeled
+training cases from the reviewed failures, not an estimate of general error rate.
+Full deterministic verification passed with 1,462 Python tests and 61 opt-in
+skips. The 23 Node editing checks also passed. After adoption of prompt v3, the
+27 focused date, evaluation, and prompt-resource checks passed; touched files
+passed Ruff and whitespace checks. No browser verification was used.
+
+2026-10-07: PR #34 review requested independent content checks for the new
+immutable prompt versions. Added fixed SHA-256 assertions for v2 and v3, leaving
+both original v1 baselines unchanged. Integrated PR #33's shared guidance
+function from main and passed the Chat Session's fixed timestamp through it.
+Standalone retrieval evaluation guidance also receives a resolved current date;
+its request-capture test pins October 1 and checks that input. After integration,
+all 1,533 deterministic Python tests and 29 Node checks passed, with 61 Python
+opt-in skips. Prompt versions and captured historical reports were unchanged.

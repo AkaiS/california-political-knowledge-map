@@ -32,6 +32,27 @@ commit and dirty state, Model Deployment, each case's output and metadata, and
 the run and case trace IDs. A case can finish with a stage failure; that failure
 is part of the review material, not a pass/fail answer grade.
 
+Each Chat Session resolves one UTC `as_of` timestamp at creation. Assessment,
+corrections, and final guidance use its calendar date as `current_date`.
+Evaluation inputs can supply a timezone-aware `task_input.as_of`, such as
+`'2026-10-01T00:00:00Z'`, to repeat the same date context. The output retains
+the resolved timestamp, and `chat_session.started` records both date fields
+separately from its observation time. A supplied timestamp does not reconstruct
+the corpus as it existed on that date.
+
+Rerun the nine reviewed historical-period misclassifications and one predictive
+control with the fixed date-context subset:
+
+```bash
+uv run ca-map eval run chat --deployment local \
+  --data-set evals/unlabeled/chat-date-context.yaml --max-concurrency 3
+```
+
+Inspect preparation messages and final guidance for language treating past
+periods as future events because of the model's knowledge cutoff. A decline for
+another policy reason or a coverage limit is a separate finding. These cases
+have no automatic answer-quality score.
+
 Start the local reviewer:
 
 ```bash

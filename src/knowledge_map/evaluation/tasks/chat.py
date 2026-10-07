@@ -9,13 +9,19 @@ from statistics import fmean
 from typing import Any, Literal
 from urllib.parse import quote
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_serializer,
+)
 from pydantic_ai.capabilities.hooks import Hooks
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
-from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.chat_presentation import render_answer
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
@@ -23,6 +29,7 @@ from knowledge_map.core.question_preparation import (
     QUERY_REWRITER_INSTRUCTIONS,
     model_failure_kind,
 )
+from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import (
     AwaitingQueryApproval,
@@ -46,6 +53,7 @@ class ChatInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=1)
+    as_of: AwareDatetime | None = None
 
 
 class ChatMetadata(BaseModel):
@@ -79,6 +87,7 @@ class ChatOutput(BaseModel):
     question: str
     approval_mode: Literal["approve_first_proposal"] = "approve_first_proposal"
     chat_session_id: str | None = None
+    as_of: AwareDatetime | None = None
     preparation: QuestionPreparationResult | None = None
     answer: RetrievalAnswer | EvidenceAssemblyFailure | None = None
     retrieval: EvidencePackage | EvidenceAssemblyFailure | None = None
@@ -226,8 +235,11 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     dataclasses.asdict(dependencies.start_settings)
                 )
                 output.coverage = dependencies.coverage
-                session = new_chat_session(case_input.question, dependencies)
+                session = new_chat_session(
+                    case_input.question, dependencies, as_of=case_input.as_of
+                )
                 output.chat_session_id = session.chat_session_id
+                output.as_of = session.as_of
                 stage = "preparation"
                 output.preparation = await session.prepare()
                 if isinstance(output.preparation, AwaitingQueryApproval):

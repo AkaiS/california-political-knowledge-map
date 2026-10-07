@@ -71,7 +71,10 @@ class ChatDependencies:
 
 
 def new_chat_session(
-    question: str, dependencies: ChatDependencies | None
+    question: str,
+    dependencies: ChatDependencies | None,
+    *,
+    as_of: datetime | None = None,
 ) -> ChatSession:
     assert dependencies is not None
     return ChatSession(
@@ -83,6 +86,7 @@ def new_chat_session(
         relevant_collection_ids=("calmatters",),
         monthly_coverage=(),
         start_settings=dependencies.start_settings,
+        as_of=as_of,
     )
 
 

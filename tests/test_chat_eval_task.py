@@ -3,6 +3,7 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -145,7 +146,7 @@ def fake_dependencies(
     return branches
 
 
-def run_one():
+def run_one(*, as_of=None):
     data_set = EvaluationDataSet(
         task="chat",
         description="One full Chat Session",
@@ -154,7 +155,7 @@ def run_one():
                 id="case-1",
                 description="Support question",
                 split=EvaluationSplit.TRAINING,
-                task_input=ChatInput(question="Who backed AB 1?"),
+                task_input=ChatInput(question="Who backed AB 1?", as_of=as_of),
             ),
         ),
     )
@@ -164,6 +165,58 @@ def run_one():
         evaluators=(),
         case_lifecycle=ChatCaseLifecycle,
     )
+
+
+def test_repeated_evaluations_preserve_supplied_date_in_requests_traces_and_report(
+    monkeypatch, chat_capture, tmp_path
+):
+    fixed_time = datetime(2026, 10, 1, tzinfo=UTC)
+    for _ in range(2):
+        fake_dependencies(monkeypatch)
+        report = run_one(as_of=fixed_time)
+        case = report.cases[0]
+        assert case.inputs.as_of == fixed_time
+        assert case.output.as_of == fixed_time
+        chat_requests = [
+            record
+            for record in case.output.messages
+            if record["component"] == "chat_agent"
+        ]
+        assert len(chat_requests) == 2
+        for record in chat_requests:
+            prompt = next(
+                part["content"]
+                for message in record["messages"]
+                for part in message["parts"]
+                if part["part_kind"] == "user-prompt"
+            )
+            assert json.loads(prompt)["as_of"] == fixed_time.isoformat()
+            assert json.loads(prompt)["current_date"] == "2026-10-01"
+        started = next(
+            span
+            for span in case.attributes["stage_observations"]
+            if span["name"] == "chat_session.started"
+        )
+        assert started["attributes"]["as_of"] == fixed_time.isoformat()
+        assert started["attributes"]["current_date"] == "2026-10-01"
+        path = write_report(
+            report,
+            task="chat",
+            deployment=DEPLOYMENT,
+            data_set_path="evals/unlabeled/chat.yaml",
+            label_quality=LabelQuality.UNLABELED,
+            root=tmp_path,
+        )
+        saved_case = json.loads(path.read_text())["report"]["cases"][0]
+        assert saved_case["inputs"]["as_of"] == "2026-10-01T00:00:00Z"
+        assert saved_case["output"]["as_of"] == "2026-10-01T00:00:00Z"
+
+
+def test_evaluation_date_requires_a_timezone():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="timezone"):
+        ChatInput(question="Who supported AB 1?", as_of="2026-10-01T00:00:00")
 
 
 def test_report_contains_rendered_answer_sources_requests_and_stage_outcomes(

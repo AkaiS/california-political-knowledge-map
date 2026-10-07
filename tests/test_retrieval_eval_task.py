@@ -3,6 +3,7 @@
 import hashlib
 import json
 import runpy
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -253,6 +254,12 @@ def test_all_25_cases_preserve_questions_provenance_routing_and_article_grain():
 def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
     monkeypatch, chat_capture, tmp_path
 ):
+    class FixedClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 1, tzinfo=UTC)
+
+    monkeypatch.setattr("knowledge_map.core.chat.datetime", FixedClock)
     branches = fake_dependencies(
         monkeypatch, failed_branch=RetrievalBranch.STRUCTURAL, prepare_question=False
     )
@@ -303,7 +310,11 @@ def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
         for p in m["parts"]
         if p["part_kind"] == "user-prompt"
     ]
-    assert prompts == [
+    assert json.loads(prompts[0]) == {
+        "as_of": "2026-10-01T00:00:00+00:00",
+        "current_date": "2026-10-01",
+    }
+    assert prompts[1:] == [
         rewrite(True).question,
         render_evidence_context(case.output.result),
     ]
