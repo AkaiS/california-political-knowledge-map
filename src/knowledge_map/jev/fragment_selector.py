@@ -165,7 +165,7 @@ def _relationship_fragments() -> Iterable[Fragment]:
             continue
         source_role_ids = _selectable_role_ids(piece.source_label)
         target_role_ids = _selectable_role_ids(piece.target_label)
-        group = f"RELATIONSHIP_VARIANTS__{piece.source_label.value}__{piece.target_label.value}"
+        group = f"RELATIONSHIP_VARIANTS__{piece.piece_id}"
         yield Fragment(
             fragment_id=f"SINGLE__{piece.piece_id}",
             description=_relationship_description(piece),

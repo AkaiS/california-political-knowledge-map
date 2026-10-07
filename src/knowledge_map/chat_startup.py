@@ -295,6 +295,8 @@ async def chat_dependencies(
                 "structure_threshold": 0.52,
                 "subtype_threshold": 0.8,
                 "property_threshold": 0.52,
+                "occurrence_threshold": 0.8,
+                "predicate_threshold": 0.8,
                 "reporting_threshold": 0.52,
                 "deadline_seconds": 180,
                 "structural_reporting": True,

@@ -7,6 +7,7 @@ import json
 import math
 import time
 from collections import Counter
+from copy import deepcopy
 from typing import Any
 
 from typesafe_sdk import Choice, Noul, TypeSafeClient
@@ -36,6 +37,8 @@ from knowledge_map.prompts import load_prompt
 STRUCTURE_THRESHOLD = 0.52
 SUBTYPE_THRESHOLD = 0.80
 PROPERTY_THRESHOLD = 0.52
+OCCURRENCE_THRESHOLD = 0.80
+PREDICATE_THRESHOLD = 0.80
 PARENT = {"PAC": "Organization", "LaborUnion": "Organization"}
 PROMPT_REVISION = "separate-role-requested-category-campaign-target-v1"
 
@@ -310,6 +313,166 @@ def _call(client, stage, state, questions, captured):
     return audit["decisions"], audit
 
 
+def resolve_parallel_occurrences(client, state, roles, edges, distinct, stages):
+    """Keep conjunctions while asking which repeated endpoints share an identity."""
+    pairs = {}
+    for index, edge in enumerate(edges):
+        pairs.setdefault((edge["source"], edge["target"]), []).append(index)
+    questions, requests = {}, {}
+    for (source, target), indexes in pairs.items():
+        if len({edges[i]["piece_id"] for i in indexes}) < 2:
+            continue
+        key = f"occurrence_{source}_{target}"
+        questions[key] = Choice(
+            instructions={
+                "decision": load_prompt("jev-staged/role-occurrences", version=2),
+                "source_role": roles[source],
+                "target_role": roles[target],
+                "relationships": [
+                    BY_ID[edges[i]["piece_id"]].public() for i in indexes
+                ],
+            },
+            criteria={
+                "shared": load_prompt("jev-staged/role-occurrences-shared", version=2),
+                "source_separate": load_prompt(
+                    "jev-staged/role-occurrences-source-separate", version=1
+                ),
+                "target_separate": load_prompt(
+                    "jev-staged/role-occurrences-target-separate", version=1
+                ),
+                "unclear": load_prompt(
+                    "jev-staged/role-occurrences-unclear", version=2
+                ),
+            },
+        )
+        requests[key] = (source, target, indexes)
+    if not questions:
+        return
+    decisions, stage = _call(
+        client,
+        "role_occurrences",
+        {**state, "role_plan": {"roles": roles, "edges": edges}},
+        questions,
+        {key: q.model_dump(mode="json") for key, q in questions.items()},
+    )
+    stages.append(stage)
+    if stage.get("error"):
+        raise ValueError(stage["error"])
+    for key, answer in decisions.items():
+        chosen = answer["choice"]
+        if (
+            chosen == "unclear"
+            or answer["probabilities"][chosen] < OCCURRENCE_THRESHOLD
+        ):
+            raise SelectionAbstention("Repeated endpoint identity is uncertain")
+        source, target, indexes = requests[key]
+        roles[source]["occurrence_decision"] = answer
+        roles[target]["occurrence_decision"] = answer
+        if chosen == "shared":
+            continue
+        side = "source" if chosen == "source_separate" else "target"
+        role_index = source if side == "source" else target
+        original = deepcopy(roles[role_index])
+        separated = []
+        for offset, edge_index in enumerate(indexes):
+            index = role_index
+            if offset:
+                role = deepcopy(original)
+                role["occurrence"] = sum(
+                    r["parent_label"] == original["parent_label"] for r in roles
+                )
+                index = len(roles)
+                roles.append(role)
+            edge = edges[edge_index]
+            edge[side] = index
+            roles[index]["purposes"] = [
+                {
+                    "side": side,
+                    "predicates": [p.value for p in BY_ID[edge["piece_id"]].predicates],
+                    "opposite_label": roles[
+                        edge["target" if side == "source" else "source"]
+                    ]["parent_label"],
+                    "relationship_index": edge_index,
+                }
+            ]
+            for previous in separated:
+                distinct.append(
+                    {
+                        "piece_id": f"DISTINCT__{original['parent_label'].upper()}__ROLES",
+                        "left": previous,
+                        "right": index,
+                    }
+                )
+            separated.append(index)
+
+
+def resolve_predicate_logic(client, state, fragments, selected_ids, stages):
+    """A selected predicate union cannot add a third condition to a conjunction."""
+    selected = [f for f in fragments if f.fragment_id in selected_ids]
+    requests, questions = {}, {}
+    for fragment in selected:
+        ids = fragment.implications.get("relationship_ids", ())
+        if not ids:
+            continue
+        piece = BY_ID[ids[0]]
+        if len(piece.predicates) < 2:
+            continue
+        singles = [
+            f
+            for f in selected
+            if f.variant == fragment.variant
+            and f.implications.get("relationship_ids")
+            and (candidate := BY_ID[f.implications["relationship_ids"][0]]).source_label
+            == piece.source_label
+            and candidate.target_label == piece.target_label
+            and len(candidate.predicates) == 1
+            and set(candidate.predicates) <= set(piece.predicates)
+        ]
+        if not singles:
+            continue
+        key = fragment.fragment_id
+        requests[key] = (fragment, singles)
+        questions[key] = Choice(
+            instructions={
+                "decision": load_prompt("jev-staged/predicate-logic", version=1),
+                "union": fragment.model_shape,
+                "individual_relationships": [f.model_shape for f in singles],
+            },
+            criteria={
+                "conjunction": load_prompt(
+                    "jev-staged/predicate-logic-conjunction", version=1
+                ),
+                "alternatives": load_prompt(
+                    "jev-staged/predicate-logic-alternatives", version=1
+                ),
+                "unclear": load_prompt("jev-staged/predicate-logic-unclear", version=1),
+            },
+        )
+    if not questions:
+        return selected_ids
+    decisions, stage = _call(
+        client,
+        "predicate_logic",
+        state,
+        questions,
+        {key: q.model_dump(mode="json") for key, q in questions.items()},
+    )
+    stages.append(stage)
+    if stage.get("error"):
+        raise ValueError(stage["error"])
+    removed = set()
+    for key, answer in decisions.items():
+        chosen = answer["choice"]
+        if chosen == "unclear" or answer["probabilities"][chosen] < PREDICATE_THRESHOLD:
+            raise SelectionAbstention("Predicate combination is uncertain")
+        union, singles = requests[key]
+        if chosen == "conjunction":
+            removed.add(union.fragment_id)
+        else:
+            removed.update(f.fragment_id for f in singles)
+    return [key for key in selected_ids if key not in removed]
+
+
 def select_pieces(
     client: TypeSafeClient, question: str, schema_selection: SemanticSchemaSelection
 ) -> dict[str, Any]:
@@ -372,7 +535,11 @@ def select_pieces(
             structural, {key: value["score"] for key, value in decisions.items()}
         )
         selected_ids = expanded["selected_fragment_ids"]
+        selected_ids = resolve_predicate_logic(
+            client, base_state, structural, selected_ids, stages
+        )
         roles, edges, distinct = make_role_plan(structural, selected_ids)
+        resolve_parallel_occurrences(client, base_state, roles, edges, distinct, stages)
         parent_plan = json.loads(
             json.dumps({"roles": roles, "edges": edges, "distinct": distinct})
         )
@@ -644,6 +811,8 @@ def select_pieces(
         "threshold": STRUCTURE_THRESHOLD,
         "subtype_threshold": SUBTYPE_THRESHOLD,
         "property_threshold": PROPERTY_THRESHOLD,
+        "occurrence_threshold": OCCURRENCE_THRESHOLD,
+        "predicate_threshold": PREDICATE_THRESHOLD,
         "selected_fragment_ids": selected_ids,
         "filter_attachment_rules": attachment,
     }

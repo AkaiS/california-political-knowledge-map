@@ -12,6 +12,18 @@ it. The configured Chat Model Deployment supplies composition and positional
 binding. The deterministic compiler supplies provenance traversal; CyVer and a
 parameter-aware read-only EXPLAIN must authorize execution.
 
+Independent predicates are preserved as a conjunction. If a predicate union
+overlaps individually selected predicates, Jev chooses the requested logical
+combination before occurrence planning. Parallel relationships also use Jev to
+distinguish shared endpoints from separate entities. These Choices require `.8`
+and abstain on uncertainty. This preserves distinct Bill anchors without adding
+an alternative Cypher backend.
+
+Publication and title filters constrain supporting Source Articles during
+compiler-owned provenance traversal. Such filters do not invent a semantic
+Article endpoint. Session domains are normalized before scoped Bill lookup;
+Graph Claims separate ontology Claim Key properties from the review flag.
+
 Every approved question reaches this branch, including reporting questions the
 rewriter marks non-relational. Historical execution records retain their original
 branch-selection semantics through the default `structural_reporting` field.

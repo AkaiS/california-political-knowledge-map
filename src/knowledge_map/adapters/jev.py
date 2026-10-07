@@ -44,6 +44,7 @@ from knowledge_map.jev.contracts import (
 from knowledge_map.jev.jev_schema_filter import narrow_schema
 from knowledge_map.jev.reporting import select_pieces
 from knowledge_map.jev.validation import Case, QueryPlan, _execute, validate_plan
+from knowledge_map.ontology import news
 from knowledge_map.prompts import load_prompt
 from knowledge_map.retrieval_telemetry import record_branch_failure, structural_stage
 from knowledge_map.schemas.retrieval import (
@@ -66,7 +67,7 @@ JEV_INSTRUCTIONS = {
     "jev_composer": load_prompt(
         "jev-staged/runner-composer-instructions-01", version=1
     ),
-    "jev_binder": load_prompt("jev-staged/runner-binder-instructions-01", version=1),
+    "jev_binder": load_prompt("jev-staged/runner-binder-instructions-01", version=2),
 }
 SCHEMA_THRESHOLD = 0.8
 
@@ -443,7 +444,10 @@ class JevStructuralRetriever:
             feedback, attempts = None, []
             for _ in range(3):
                 result = await self.agents.binder.run(
-                    _binding_prompt(case, contract, feedback), usage=usage
+                    _binding_prompt(
+                        case, contract, feedback, pattern=compiled.binding_pattern
+                    ),
+                    usage=usage,
                 )
                 values = result.output.values
                 normalized = None
@@ -539,13 +543,19 @@ class JevStructuralRetriever:
                         )
 
                     predicate = row[f"semantic_relationship_{index}_relationship"]
+                    properties = row[f"semantic_relationship_{index}_properties"]
                     article_level = predicate in {"DISCUSSES_TOPIC", "ABOUT_TOPIC"}
                     claims.append(
                         GraphClaim(
                             source=reference(triple.source_role_index),
                             target=reference(triple.target_role_index),
                             relationship_type=predicate,
-                            claim_key=row[f"semantic_relationship_{index}_properties"],
+                            claim_key={
+                                key: properties[key]
+                                for key in sorted(news.claim_key_properties(predicate))
+                                if key in properties
+                            },
+                            needs_review=properties.get("needs_review", False),
                             chunk_ids=() if article_level else (chunk_id,),
                             source_article_ids=(article_id,) if article_level else (),
                         )

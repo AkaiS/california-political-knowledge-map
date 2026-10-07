@@ -3,6 +3,31 @@
 from knowledge_map.prompts import load_prompt
 
 JEV_PROMPTS = {
+    "jev-staged/predicate-logic": load_prompt("jev-staged/predicate-logic", version=1),
+    "jev-staged/predicate-logic-conjunction": load_prompt(
+        "jev-staged/predicate-logic-conjunction", version=1
+    ),
+    "jev-staged/predicate-logic-alternatives": load_prompt(
+        "jev-staged/predicate-logic-alternatives", version=1
+    ),
+    "jev-staged/predicate-logic-unclear": load_prompt(
+        "jev-staged/predicate-logic-unclear", version=1
+    ),
+    "jev-staged/role-occurrences": load_prompt(
+        "jev-staged/role-occurrences", version=2
+    ),
+    "jev-staged/role-occurrences-shared": load_prompt(
+        "jev-staged/role-occurrences-shared", version=2
+    ),
+    "jev-staged/role-occurrences-source-separate": load_prompt(
+        "jev-staged/role-occurrences-source-separate", version=1
+    ),
+    "jev-staged/role-occurrences-target-separate": load_prompt(
+        "jev-staged/role-occurrences-target-separate", version=1
+    ),
+    "jev-staged/role-occurrences-unclear": load_prompt(
+        "jev-staged/role-occurrences-unclear", version=2
+    ),
     "jev-staged/composer-attachment-correction": load_prompt(
         "jev-staged/composer-attachment-correction", version=1
     ),
@@ -295,10 +320,10 @@ JEV_PROMPTS = {
         "jev-staged/reporting-keyword-gate-gate-decision-01", version=1
     ),
     "jev-staged/runner-binder-instructions-01": load_prompt(
-        "jev-staged/runner-binder-instructions-01", version=1
+        "jev-staged/runner-binder-instructions-01", version=2
     ),
     "jev-staged/runner-binding-prompt-01": load_prompt(
-        "jev-staged/runner-binding-prompt-01", version=1
+        "jev-staged/runner-binding-prompt-01", version=2
     ),
     "jev-staged/runner-binding-prompt-02": load_prompt(
         "jev-staged/runner-binding-prompt-02", version=1

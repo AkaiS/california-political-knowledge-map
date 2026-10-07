@@ -355,20 +355,33 @@ def _binding_prompt(
     case: Case,
     contract: Any,
     feedback: dict[str, Any] | None,
+    *,
+    pattern: Any,
 ) -> str:
     items = []
     for index, item in enumerate(contract.slots):
+        constraint = next(c for c in pattern.constraints if c.slot == item.name)
         value = {
             "index": index,
             "description": item.description,
             "value_type": item.value_type,
+            "variable": constraint.variable,
+            "node_label": item.node_label.value,
+            "property": item.property.value,
+            "operator": item.operator.value,
+            "semantic_relationships": [
+                relationship
+                for relationship in pattern.relationships
+                if constraint.variable
+                in (relationship["source_variable"], relationship["target_variable"])
+            ],
         }
         if item.allowed_values:
             value["allowed_values"] = item.allowed_values
         items.append(value)
-    prompt = load_prompt("jev-staged/runner-binding-prompt-01", version=1).format(
+    prompt = load_prompt("jev-staged/runner-binding-prompt-01", version=2).format(
         value_0=case.question
-    ) + json.dumps(items, indent=2)
+    ) + json.dumps({"slots": items, "relationships": pattern.relationships}, indent=2)
     if feedback:
         prompt += load_prompt(
             "jev-staged/runner-binding-prompt-02", version=1

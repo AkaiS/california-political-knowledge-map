@@ -1,0 +1,1 @@
+The question requests any of the listed outcomes for one relationship. Retain the predicate union and discard its redundant individual predicates.

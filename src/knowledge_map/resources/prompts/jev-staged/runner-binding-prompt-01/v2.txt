@@ -1,0 +1,5 @@
+Question: {value_0}
+
+Return the required values in slot order. Each slot identifies its node variable, property, and operator. Use the semantic relationships to determine which named entity belongs to each variable. Preserve the association between a named Bill and its requested predicate; the order Bills appear in the question need not match slot order. Publication ranges use an inclusive lower bound and an exclusive upper bound.
+
+Binding slots and semantic relationships:

@@ -14,10 +14,22 @@ alternative required by selected relationships, and selects parent roles at
 uncertain required subtypes abstain. Property selection runs at `.52` over the
 chosen role occurrences.
 
+Single and peer variants compete within one predicate selection. Independently
+required predicates remain separate. When a union overlaps selected individual
+predicates, a Jev Choice distinguishes alternatives from conjunctions at `.8`.
+For parallel relationships, another Choice at `.8` determines which endpoints
+share an identity. Separate Bills retain separate name and session filters;
+uncertain operator or endpoint decisions stop construction.
+
 Numeric occurrence attachments preserve repeated roles and their filters.
 Compiler-owned Article roles use the repaired staged attachments, including
 multiple PolicyArea roles connected to the same Article. Peer descriptions use
 immutable version 2, without the experiment's removed wording example.
+
+An Article selected only for publication or title constraints represents the
+supporting reporting, rather than another semantic endpoint. The compiler applies
+those constraints to each claim's supporting Article after provenance traversal.
+Other selected entity roles must still form one connected semantic pattern.
 
 A successful relationship-free selection goes through one Jev reporting-intent
 decision at `.52`. Negative decisions forbid shared reporting execution.
@@ -31,11 +43,19 @@ projection. Composition and binding each allow two corrections. The experiment's
 unique-occurrence deterministic wiring fallback remains within this compiler;
 it does not select another backend.
 
+Binding receives each slot's node variable and incident predicates, so repeated
+Bill-name slots preserve their association with the question's relationships.
+Binder instructions and the request template explicitly adopt version 2.
+
 Binding validates dates, domain membership, canonical entity matches, ambiguous
 identities, and Bill Designations. The deterministic compiler parameterizes
 question values. CyVer syntax, schema, and property checks must authorize the
 abstract structure. Bound queries also require parameter-aware Neo4j EXPLAIN
 and read-only classification before execution.
+
+Finite domains are normalized before canonical entity lookup, so session spelling
+variants narrow Bill lookup using the stored session. Claims retain only ontology
+Claim Key properties and expose `needs_review` separately.
 
 ## Evidence and results
 

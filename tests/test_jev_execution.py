@@ -35,7 +35,11 @@ ROW = {
     "role_1_id": "union-1",
     "role_1_properties": {"name": "Invented Union"},
     "semantic_relationship_0_relationship": "DECLARED_STANCE",
-    "semantic_relationship_0_properties": {"alignment": "POSITIVE"},
+    "semantic_relationship_0_properties": {
+        "alignment": "POSITIVE",
+        "needs_review": True,
+        "unrelated": "ignored",
+    },
     "semantic_relationship_0_article_ids": [ARTICLE],
     "evidence_groups": [{"kind": "semantic_relationship_0", "ids": ["chunk-1"]}],
 }
@@ -202,6 +206,8 @@ def assert_jev_execution(execution, jev, branches, queries):
     assert claims[0].relationship_type == "DECLARED_STANCE"
     assert claims[0].source.id == "union-1"
     assert claims[0].chunk_ids == ("chunk-1",)
+    assert claims[0].claim_key == {"alignment": "POSITIVE"}
+    assert claims[0].needs_review is True
     assert any(text.startswith("EXPLAIN MATCH") for text, _ in queries)
     assert any(
         "RETURN DISTINCT" in text and "evidence_groups" in text for text, _ in queries

@@ -1,0 +1,1 @@
+Every selected relationship refers to the same entity at this endpoint.

@@ -222,7 +222,8 @@ def validate_and_resolve_bindings(
         errors.append(f"extra slots: {extra}")
     normalized: dict[str, str] = {}
     resolutions: dict[str, Any] = {}
-    for slot in contract.slots:
+    # Resolve finite domains before entity lookup uses them as scope constraints.
+    for slot in sorted(contract.slots, key=lambda slot: slot.allowed_values is None):
         if slot.name not in raw:
             continue
         value = raw[slot.name]
@@ -246,10 +247,12 @@ def validate_and_resolve_bindings(
         if not string_value:
             errors.append(f"{slot.name} must not be empty")
             continue
-        if slot.allowed_values:
+        if slot.allowed_values is not None:
             resolution = _resolve_domain(string_value, slot.allowed_values)
         else:
-            resolution = _resolve_entity(driver, slot, string_value, raw, pattern)
+            resolution = _resolve_entity(
+                driver, slot, string_value, normalized, pattern
+            )
         resolutions[slot.name] = _jsonable(resolution)
         if resolution.status == "selected" and resolution.value is not None:
             normalized[slot.name] = resolution.value

@@ -187,7 +187,14 @@ def validate_wiring(
                 for neighbor in adjacency[current] - reached:
                     reached.add(neighbor)
                     frontier.append(neighbor)
-            if reached != set(range(len(roles))):
+            reporting_roles = {
+                item.role_index
+                for item in wiring.filters
+                if item.role_index not in used
+                and 0 <= item.role_index < len(roles)
+                and roles[item.role_index].node_label == NodeLabel.NEWS_ARTICLE
+            }
+            if reached != set(range(len(roles))) - reporting_roles:
                 errors.append(
                     "every selected role must belong to the connected semantic pattern"
                 )
@@ -250,6 +257,18 @@ def compile_semantic(
     filters = grouped["filter"]
     role_aliases = [f"role_{index}" for index in range(len(roles))]
     rel_aliases = [f"semantic_rel_{index}" for index in range(len(relationships))]
+    semantic_indexes = {
+        index
+        for triple in wiring.triples
+        for index in (triple.source_role_index, triple.target_role_index)
+    }
+    reporting_aliases = {
+        alias
+        for index, alias in enumerate(role_aliases)
+        if wiring.triples
+        and index not in semantic_indexes
+        and roles[index].node_label == NodeLabel.NEWS_ARTICLE
+    }
 
     constraints: list[Constraint] = []
     for index, item in enumerate(wiring.filters):
@@ -277,6 +296,17 @@ def compile_semantic(
         ],
         constraints=constraints,
         inequalities=inequalities,
+        relationships=[
+            {
+                "source_variable": role_aliases[item.source_role_index],
+                "predicates": [
+                    predicate.value
+                    for predicate in relationships[item.relationship_index].predicates
+                ],
+                "target_variable": role_aliases[item.target_role_index],
+            }
+            for item in wiring.triples
+        ],
     )
 
     clauses: list[str] = []
@@ -303,15 +333,24 @@ def compile_semantic(
             )
         )
 
-    where = []
-    for constraint in constraints:
-        prop = f"{constraint.variable}.{constraint.property.value}"
+    def condition(constraint, variable=None):
+        prop = f"{variable or constraint.variable}.{constraint.property.value}"
         value = f"${constraint.slot}"
         if constraint.operator.value == "eq":
-            where.append(f"{prop} = {value}")
-        else:
-            operator = ">=" if constraint.operator.value == "date_gte" else "<"
-            where.append(f"date(substring({prop},0,10)) {operator} date({value})")
+            return f"{prop} = {value}"
+        operator = ">=" if constraint.operator.value == "date_gte" else "<"
+        return f"date(substring({prop},0,10)) {operator} date({value})"
+
+    reporting_constraints = [
+        constraint
+        for constraint in constraints
+        if constraint.variable in reporting_aliases
+    ]
+    where = [
+        condition(constraint)
+        for constraint in constraints
+        if constraint.variable not in reporting_aliases
+    ]
     where.extend(
         f"{item.left_variable}.id <> {item.right_variable}.id" for item in inequalities
     )
@@ -329,7 +368,10 @@ def compile_semantic(
             constraints,
         )
 
-    carried = [*role_aliases, *rel_aliases]
+    carried = [
+        *(alias for alias in role_aliases if alias not in reporting_aliases),
+        *rel_aliases,
+    ]
     evidence_rules: list[dict[str, Any]] = []
     if wiring.triples:
         by_relationship = {item.relationship_index: item for item in wiring.triples}
@@ -362,6 +404,14 @@ def compile_semantic(
             article_expr = (
                 source if piece.predicates == (Predicate.DISCUSSES_TOPIC,) else article
             )
+            if reporting_constraints:
+                clauses.append(
+                    "WHERE "
+                    + " AND ".join(
+                        condition(constraint, article_expr)
+                        for constraint in reporting_constraints
+                    )
+                )
             chunk_ids = f"_chunk_ids_{index}"
             article_ids = f"_article_ids_{index}"
             chunk_values = f"_chunk_values_{index}"
@@ -433,6 +483,8 @@ def compile_semantic(
 
     fields = []
     for index, alias in enumerate(role_aliases):
+        if alias in reporting_aliases:
+            continue
         fields.extend(
             (
                 f"{alias}.id AS role_{index}_id",
