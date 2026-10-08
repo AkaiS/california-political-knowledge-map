@@ -7,7 +7,9 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -66,6 +68,140 @@ def checkout(tmp_path, monkeypatch):
     for process in children:
         if process.poll() is None:
             launcher.stop_child(process)
+
+
+@contextmanager
+def owned_listener(response):
+    """Serve test-owned connections without touching an existing reviewer."""
+    stopped = threading.Event()
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        listener.settimeout(0.05)
+        port = listener.getsockname()[1]
+
+        def serve():
+            while not stopped.is_set():
+                try:
+                    client, _address = listener.accept()
+                except TimeoutError:
+                    continue
+                with client:
+                    client.settimeout(1)
+                    try:
+                        client.recv(4096)
+                        response(client, stopped)
+                    except OSError:
+                        pass
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        try:
+            yield port, thread
+        finally:
+            stopped.set()
+            thread.join(timeout=2)
+            assert not thread.is_alive()
+
+
+def map_default_probe(monkeypatch, port):
+    probe = launcher.matching_server
+    monkeypatch.setattr(
+        launcher,
+        "matching_server",
+        lambda candidate, *args: probe(port if candidate == 8765 else candidate, *args),
+    )
+
+
+@pytest.mark.parametrize("phase", ["headers", "body"])
+def test_probe_total_deadline_includes_streaming_headers_and_body(phase):
+    def stream(client, stopped):
+        if phase == "headers":
+            client.sendall(b"HTTP/1.0 200 OK\r\nX-Slow: ")
+        else:
+            client.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+        until = time.monotonic() + 0.8
+        while time.monotonic() < until and not stopped.wait(0.02):
+            client.sendall(b" ")
+
+    with owned_listener(stream) as (port, thread):
+        started = time.monotonic()
+        assert not launcher.matching_server(port, {"mode": "rag"}, 0.15)
+        assert time.monotonic() - started < 0.45
+        assert thread.is_alive()
+
+
+@pytest.mark.parametrize("recorded", [False, True])
+def test_expired_reuse_probe_does_not_start_a_child(checkout, monkeypatch, recorded):
+    root, children = checkout
+    reports, samples = root / "reports", root / "samples"
+
+    def stream(client, stopped):
+        client.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+        until = time.monotonic() + 0.8
+        while time.monotonic() < until and not stopped.wait(0.02):
+            client.sendall(b" ")
+
+    with owned_listener(stream) as (port, thread):
+        map_default_probe(monkeypatch, port)
+        if recorded:
+            scratch = root / ".scratch/rag-reviewer"
+            scratch.mkdir(parents=True)
+            identity = launcher.reviewer_identity(reports, samples)
+            key = launcher.hashlib.sha256(
+                json.dumps(identity, sort_keys=True).encode()
+            ).hexdigest()[:16]
+            (scratch / f"{key}.json").write_text(json.dumps({"port": port}))
+        started = time.monotonic()
+        with pytest.raises(RuntimeError, match="not ready"):
+            launcher.launch(reports, samples, 0.15)
+        assert time.monotonic() - started < 0.45
+        assert not children
+        assert thread.is_alive()
+
+
+def test_manual_default_reuse_reports_unavailable_log(checkout, monkeypatch, capsys):
+    root, children = checkout
+    reports, samples = root / "reports", root / "samples"
+    identity = launcher.reviewer_identity(reports, samples)
+
+    def respond(client, _stopped):
+        client.sendall(b"HTTP/1.0 200 OK\r\n\r\n" + json.dumps(identity).encode())
+
+    with owned_listener(respond) as (port, thread):
+        map_default_probe(monkeypatch, port)
+        assert launcher.launch(reports, samples, 5) == (8765, None)
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [str(SCRIPT), "--reports-dir", str(reports), "--samples-dir", str(samples)],
+        )
+        launcher.main()
+        output = capsys.readouterr().out
+        assert "Ready: http://127.0.0.1:8765/" in output
+        assert "Log: unavailable" in output
+        assert ".scratch/rag-reviewer" not in output
+        assert not children
+        assert thread.is_alive()
+
+
+@pytest.mark.parametrize("stored_log", [None, 42, {}, "", "missing.log", ".scratch"])
+def test_recorded_reuse_with_invalid_log_reports_unavailable(checkout, stored_log):
+    root, children = checkout
+    reports, samples = root / "reports", root / "samples"
+    port, _log = launcher.launch(reports, samples, 5)
+    state_path = next((root / ".scratch/rag-reviewer").glob("*.json"))
+    state = json.loads(state_path.read_text())
+    if stored_log is None:
+        del state["log"]
+    elif isinstance(stored_log, str):
+        state["log"] = str(root / stored_log)
+    else:
+        state["log"] = stored_log
+    state_path.write_text(json.dumps(state))
+
+    assert launcher.launch(reports, samples, 5) == (port, None)
+    assert len(children) == 1
 
 
 def test_start_detaches_and_reuses_ready_server(checkout):
@@ -147,15 +283,7 @@ def test_non_http_listener_is_left_running_when_reviewer_starts(checkout, monkey
 
         thread = threading.Thread(target=serve)
         thread.start()
-        original_http = launcher.HTTP
-
-        class ProbeOwnedListener:
-            def open(self, url, **kwargs):
-                return original_http.open(
-                    url.replace(":8765/", f":{unrelated_port}/"), **kwargs
-                )
-
-        monkeypatch.setattr(launcher, "HTTP", ProbeOwnedListener())
+        map_default_probe(monkeypatch, unrelated_port)
         try:
             port, _log = launcher.launch(root / "reports", root / "samples", 5)
 
@@ -164,9 +292,12 @@ def test_non_http_listener_is_left_running_when_reviewer_starts(checkout, monkey
             assert launcher.matching_server(
                 port, launcher.reviewer_identity(root / "reports", root / "samples")
             )
-            with socket.create_connection(
-                ("127.0.0.1", unrelated_port), timeout=1
-            ) as client, client.makefile("rb") as response:
+            with (
+                socket.create_connection(
+                    ("127.0.0.1", unrelated_port), timeout=1
+                ) as client,
+                client.makefile("rb") as response,
+            ):
                 assert response.readline() == greeting
         finally:
             stopped.set()
@@ -197,3 +328,48 @@ def test_readiness_timeout_stops_only_launched_child(checkout):
     with pytest.raises(RuntimeError, match="not ready.*Log:"):
         launcher.launch(root / "reports", root / "samples", 0.5)
     assert children[0].poll() is not None
+
+
+def test_streaming_readiness_timeout_stops_only_launched_child(checkout, monkeypatch):
+    root, children = checkout
+
+    def stream(client, stopped):
+        client.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+        until = time.monotonic() + 0.8
+        while time.monotonic() < until and not stopped.wait(0.02):
+            client.sendall(b" ")
+
+    with owned_listener(stream) as (port, thread):
+        probe = launcher.matching_server
+        monkeypatch.setattr(
+            launcher,
+            "matching_server",
+            lambda candidate, *args: (
+                False if candidate == 8765 else probe(candidate, *args)
+            ),
+        )
+        (root / "scripts/review_chat_eval.py").write_text(
+            f'import time\nprint("Browse rag evals at http://127.0.0.1:{port}/", flush=True)\n'
+            "time.sleep(60)\n"
+        )
+        started = time.monotonic()
+        with pytest.raises(RuntimeError, match="not ready.*Log:"):
+            launcher.launch(root / "reports", root / "samples", 0.35)
+        assert time.monotonic() - started < 0.65
+        assert len(children) == 1
+        assert children[0].poll() is not None
+        assert thread.is_alive()
+        assert not list((root / ".scratch/rag-reviewer").glob("*.json"))
+
+
+def test_identity_probe_stops_at_body_limit():
+    def respond(client, stopped):
+        client.sendall(
+            b'HTTP/1.0 200 OK\r\nContent-Length: 20000\r\n\r\n{"mode":"rag"}'
+            + b" " * 10000
+        )
+        stopped.wait(0.8)
+
+    with owned_listener(respond) as (port, thread):
+        assert launcher.matching_server(port, {"mode": "rag"}, 0.15)
+        assert thread.is_alive()

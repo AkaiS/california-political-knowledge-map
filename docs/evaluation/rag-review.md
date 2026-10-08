@@ -24,8 +24,10 @@ when its mode, checkout, report directory and sample directory match. Otherwise
 the operating system assigns a free loopback port. Other reviewers keep running.
 
 The server runs detached after the command exits. Logs and reuse records live
-under `.scratch/rag-reviewer/`. Startup waits at most 30 seconds for readiness;
-failure prints the log path and stops only the process started by that attempt.
+under `.scratch/rag-reviewer/`. A reused server without a recorded log file prints
+`Log: unavailable for reused server`. Startup waits at most 30 seconds for readiness,
+including the launch lock and identity probes. If a started server fails, the
+launcher prints its log path and stops only the process started by that attempt.
 Concurrent launches for the same directories share one server. Repeating the
 command prints the same ready URL while that server is running, which preserves
 the address used by browser-local review drafts.

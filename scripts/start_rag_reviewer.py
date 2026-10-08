@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import fcntl
 import hashlib
 import json
@@ -13,10 +14,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from http.client import HTTPException
 from pathlib import Path
-from urllib.error import URLError
-from urllib.request import ProxyHandler, build_opener
+
+import httpx
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 # Reuse the identity protocol from this checkout's source, even when another
@@ -25,7 +25,6 @@ sys.path.insert(0, str(REPOSITORY / "src"))
 
 from knowledge_map.reviewer_identity import reviewer_identity as build_reviewer_identity
 
-HTTP = build_opener(ProxyHandler({}))
 URL_PATTERN = re.compile(r"Browse rag evals at http://127\.0\.0\.1:(\d+)/")
 
 
@@ -34,17 +33,36 @@ def reviewer_identity(reports_dir: Path, samples_dir: Path) -> dict[str, str]:
 
 
 def matching_server(port: int, identity: dict[str, str], timeout: float = 0.5) -> bool:
-    if not 0 < port < 65536:
+    if not 0 < port < 65536 or timeout <= 0:
         return False
+    deadline = time.monotonic() + timeout
+
+    async def probe() -> bool:
+        # A socket timeout resets with each byte. Cancel the entire request so
+        # streaming headers or bodies cannot hold the launch lock indefinitely.
+        async with asyncio.timeout(max(0, deadline - time.monotonic())):
+            async with (
+                httpx.AsyncClient(trust_env=False, timeout=timeout) as client,
+                client.stream(
+                    "GET",
+                    f"http://127.0.0.1:{port}/api/identity",
+                    headers={"Accept-Encoding": "identity"},
+                ) as response,
+            ):
+                response.raise_for_status()
+                data = bytearray()
+                async for chunk in response.aiter_raw():
+                    data.extend(chunk[: 8192 - len(data)])
+                    if len(data) == 8192:
+                        break
+                observed = json.loads(data)
+            return isinstance(observed, dict) and all(
+                observed.get(key) == value for key, value in identity.items()
+            )
+
     try:
-        with HTTP.open(
-            f"http://127.0.0.1:{port}/api/identity", timeout=timeout
-        ) as response:
-            observed = json.loads(response.read(8192))
-        return isinstance(observed, dict) and all(
-            observed.get(key) == value for key, value in identity.items()
-        )
-    except (OSError, URLError, ValueError, HTTPException):
+        return asyncio.run(probe())
+    except (OSError, ValueError, httpx.HTTPError):
         return False
 
 
@@ -61,7 +79,9 @@ def stop_child(process: subprocess.Popen) -> None:
         process.wait(timeout=2)
 
 
-def launch(reports_dir: Path, samples_dir: Path, timeout: float) -> tuple[int, Path]:
+def launch(
+    reports_dir: Path, samples_dir: Path, timeout: float
+) -> tuple[int, Path | None]:
     identity = reviewer_identity(reports_dir, samples_dir)
     key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     scratch = REPOSITORY / ".scratch/rag-reviewer"
@@ -79,16 +99,29 @@ def launch(reports_dir: Path, samples_dir: Path, timeout: float) -> tuple[int, P
                     raise RuntimeError(
                         "Timed out waiting for another RAG reviewer launch."
                     )
-                time.sleep(0.1)
+                time.sleep(min(0.1, max(0, deadline - time.monotonic())))
         try:
             state = json.loads(state_path.read_text())
         except (OSError, ValueError):
             state = {}
         port = state.get("port") if isinstance(state, dict) else None
-        if isinstance(port, int) and matching_server(port, identity):
-            return port, Path(state.get("log", scratch))
-        if matching_server(8765, identity):
-            return 8765, scratch
+        if isinstance(port, int) and matching_server(
+            port, identity, min(0.5, deadline - time.monotonic())
+        ):
+            recorded_log = state.get("log")
+            try:
+                log_path = Path(recorded_log) if isinstance(recorded_log, str) else None
+                if log_path is not None and not log_path.is_file():
+                    log_path = None
+            except (OSError, ValueError):
+                log_path = None
+            return port, log_path
+        if matching_server(8765, identity, min(0.5, deadline - time.monotonic())):
+            return 8765, None
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                f"RAG reviewer was not ready within {timeout:g} seconds."
+            )
 
         descriptor, log_name = tempfile.mkstemp(
             prefix=f"{key}-", suffix=".log", dir=scratch
@@ -97,6 +130,10 @@ def launch(reports_dir: Path, samples_dir: Path, timeout: float) -> tuple[int, P
         # The server binds port zero itself, so no other process can claim a
         # selected port between discovery and binding.
         with os.fdopen(descriptor, "wb") as log:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"RAG reviewer was not ready within {timeout:g} seconds. Log: {log_path}"
+                )
             process = subprocess.Popen(
                 [
                     "uv",
@@ -137,7 +174,7 @@ def launch(reports_dir: Path, samples_dir: Path, timeout: float) -> tuple[int, P
                             json.dumps({"port": port, "log": str(log_path)})
                         )
                         return port, log_path
-                time.sleep(0.1)
+                time.sleep(min(0.1, max(0, deadline - time.monotonic())))
             raise RuntimeError(
                 f"RAG reviewer was not ready within {timeout:g} seconds."
             )
@@ -172,7 +209,9 @@ def main() -> None:
     print(f"Checkout: {REPOSITORY.resolve()}")
     print(f"Reports: {args.reports_dir.resolve()}")
     print(f"Samples: {args.samples_dir.resolve()}")
-    print(f"Log: {log_path}")
+    print(
+        f"Log: {log_path if log_path is not None else 'unavailable for reused server'}"
+    )
 
 
 if __name__ == "__main__":
