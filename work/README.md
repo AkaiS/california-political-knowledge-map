@@ -353,6 +353,9 @@ On 2026-10-09 UTC, Source Guides implementation and per-ticket review completed:
   [explicit publication-bounds defect](issues/06-source-guide-publication-bounds.md).
   Its issue records the shared assessment correction, inclusion guard, and
   validation separately from the completed sequence review.
+- A further [saved-guide navigation correction](issues/07-source-guide-saved-navigation.md)
+  brings an explicitly opened guide into view on desktop and mobile. Its issue
+  records the initial usability observation, browser regression, and validation.
 
 ## Information model
 

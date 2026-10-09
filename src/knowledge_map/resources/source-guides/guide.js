@@ -64,6 +64,12 @@ async function loadSavedGuides() {
       const link = document.createElement('a');
       link.href = `#guide=${encodeURIComponent(guide.guide_id)}`;
       link.textContent = guide.question;
+      link.addEventListener('click', event => {
+        // Reopening the selected question does not change the URL fragment.
+        if (link.hash !== location.hash || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        openSelectedGuide();
+      });
       const status = document.createElement('p');
       status.className = 'metadata';
       status.textContent = `${guideOutcome(guide)} · Saved ${displayDate(guide.created_at)}`;
@@ -115,9 +121,11 @@ async function openSelectedGuide() {
   progress.textContent = 'Opening saved guide…';
   try {
     const guide = await readSavedGuide(identity);
+    await initialGuides;
     if (selection !== guideSelection) return;
     showGuide(guide);
     progress.textContent = '';
+    guideView.scrollIntoView({block: 'start'});
   } catch {
     if (selection !== guideSelection) return;
     progress.textContent = 'This saved guide could not be opened.';
@@ -477,7 +485,7 @@ newQuestion.addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', openSelectedGuide);
-refreshGuides();
+const initialGuides = refreshGuides();
 openSelectedGuide();
 
 fetch('/api/coverage').then(response => response.json()).then(coverage => {
