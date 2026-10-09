@@ -102,6 +102,14 @@ def test_compact_highlight_uses_original_context_to_disambiguate_repeated_wordin
         (f"{PASSAGE} Elsewhere. {PASSAGE}", PASSAGE),
         (f"{PASSAGE} Elsewhere. {PASSAGE.upper()}", PASSAGE),
         (f"{PASSAGE} Elsewhere. {PASSAGE.replace(' ', chr(10))}", PASSAGE),
+        ("Jose opposed AB 1. Elsewhere. José opposed AB 1.", "José opposed AB 1."),
+        ("José opposed AB 1. Elsewhere. Jose opposed AB 1.", "Jose opposed AB 1."),
+        ("Jose\u0301 opposed AB 1. Elsewhere. José opposed AB 1.", "José opposed AB 1."),
+        ("Łukasz opposed AB 1.", "Łukasz opposed AB 1."),
+        (
+            f"{PASSAGE} Opponents objected. {PASSAGE} Supporters questioned housing.",
+            f"{PASSAGE} Supporters questioned hous",
+        ),
         (None, PASSAGE),
         ("   ", "   "),
         ("Unrelated original reporting.", "PRIVATE_CHUNK_SENTINEL"),
@@ -199,6 +207,25 @@ def test_verified_text_from_one_story_cannot_target_a_different_article_url(tmp_
     assert guide["status"] == "completed"
     assert guide["articles"][0]["citation"]["url"] == "https://other.example/report"
     assert guide["articles"][0]["section_links"] == []
+
+
+def test_unique_accented_original_keeps_verified_spelling_in_highlight(tmp_path):
+    db_path = tmp_path / "guides.db"
+    init_db(str(db_path))
+    selected = "José supported AB 2."
+    save_story(Story(url=ARTICLE, title="Bill reporting", content=selected), str(db_path))
+
+    async def grounding(candidate):
+        return (await stored_article(candidate)).model_copy(update={"text": selected})
+
+    with guide_client(
+        db_path=db_path, guidance={"source_notes": [NOTE]}, load_grounding=grounding
+    ) as (client, _, _):
+        guide = submit_guide(client, json={"question": "Where can I read about AB 2?"}).json()
+    assert guide["status"] == "completed"
+    assert guide["articles"][0]["section_links"] == [
+        "https://example.com/dense#:~:text=Jos%C3%A9%20supported%20AB%202."
+    ]
 
 
 @pytest.mark.parametrize(

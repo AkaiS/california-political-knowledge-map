@@ -2,6 +2,7 @@
 
 import html
 import re
+import unicodedata
 from datetime import datetime
 from urllib.parse import quote, urlsplit, urlunsplit
 
@@ -191,6 +192,13 @@ def _section_links(source: SourceArticleEvidence, db_path: str) -> tuple[HttpUrl
                 suffix = suffix[:80].rpartition(" ")[0]
             if not suffix or not _unique_match(original, f"{target} {suffix}"):
                 continue
+            suffix_end = start + len(target) + 1 + len(suffix)
+            if (
+                suffix[-1].isalnum()
+                and suffix_end < len(original)
+                and original[suffix_end].isalnum()
+            ):
+                continue
             directive += ",-" + _fragment_term(suffix)
         url = urlsplit(str(_ordinary_url(source.citation.url)))
         try:
@@ -207,7 +215,24 @@ def _section_links(source: SourceArticleEvidence, db_path: str) -> tuple[HttpUrl
 
 
 def _unique_match(original: str, text: str) -> bool:
-    return len(re.findall(f"(?={re.escape(text)})", original, flags=re.IGNORECASE)) == 1
+    original_key = _fragment_comparison_key(original)
+    text_key = _fragment_comparison_key(text)
+    if original_key is None or text_key is None:
+        return False
+    return len(re.findall(f"(?={re.escape(text_key)})", original_key)) == 1
+
+
+def _fragment_comparison_key(text: str) -> str | None:
+    # Browser matching ignores accents. Unmapped letters need ordinary fallback
+    # rather than a second implementation of Unicode primary collation.
+    key = "".join(
+        character
+        for character in unicodedata.normalize("NFKD", text.casefold())
+        if not unicodedata.combining(character)
+    )
+    if any(character.isalnum() and not character.isascii() for character in key):
+        return None
+    return key
 
 
 def _ordinary_url(url: HttpUrl) -> HttpUrl:

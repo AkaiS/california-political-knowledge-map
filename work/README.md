@@ -23,11 +23,11 @@ link directly to the spec and declare their blockers.
 [04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md),
 [05 Cancel searches without losing saved content](projects/source-guides/issues/05-cancel-searches.md),
 [06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md),
-and [07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md)
+[07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
+and [08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md)
 are `completed` after independent review on 2026-10-09 UTC.
-[08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md),
-and [09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
-are now takeable.
+[09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
+is now takeable.
 Their main automated seam is the existing web application boundary; the
 maintainer explicitly requires browser verification and excludes a separate
 Chat Session test seam. These are revisable product requirements for this

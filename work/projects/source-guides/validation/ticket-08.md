@@ -1,8 +1,10 @@
 # Ticket 08 implementation evidence
 
 Implemented on 2026-10-09 against fixed point
-`0ab6cfe87628418963b705fe835cb50f58a7f9f2`. Acceptance remains with independent
-review. Ticket 09 coverage work remains separate.
+`0ab6cfe87628418963b705fe835cb50f58a7f9f2`. Independent acceptance and the two
+matching corrections are recorded in [ticket 08 review](ticket-08-review.md).
+Ticket 09 coverage work remains separate. The evidence below records the original
+implementation checks before those corrections.
 
 ## Chosen seams
 

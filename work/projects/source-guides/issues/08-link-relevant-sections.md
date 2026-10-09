@@ -1,6 +1,6 @@
 # 08 Direct readers to relevant article sections
 
-Labels: enhancement, ready-for-agent
+Labels: enhancement, completed
 Parent: [Source Guides spec](../PRD.md)
 
 ## What to build
@@ -13,23 +13,23 @@ and the complete article list in every reading view. Readers never see Article C
 
 ## Acceptance criteria
 
-- [ ] Derive section targets only for included articles from confidently
+- [x] Derive section targets only for included articles from confidently
   identified original Story substrings. Coreference-modified chunk text or
   resolved offsets alone cannot establish an original target.
-- [ ] Best-effort text fragments use verified wording and sufficient context
+- [x] Best-effort text fragments use verified wording and sufficient context
   when needed. Ambiguous repeats, absent original text, and uncertain locations
   produce ordinary-link fallback rather than fabricated anchors.
-- [ ] Save reader-safe targeted URLs with the guide so reopening needs no live
+- [x] Save reader-safe targeted URLs with the guide so reopening needs no live
   scraping, graph hydration, or regeneration. Always preserve the ordinary URL.
-- [ ] Each included article appears once as an ordinary, non-highlighted link,
+- [x] Each included article appears once as an ordinary, non-highlighted link,
   with all available verified highlight links listed nearby. Group directions
   and articles without highlights remain available in every reading view.
-- [ ] Source and relevant-section links open in separate tabs. When browser
+- [x] Source and relevant-section links open in separate tabs. When browser
   support, publisher restrictions, or page changes prevent highlighting, the
   reader can still reach the article.
-- [ ] Public guide and detail responses expose no chunk bodies or hidden chunk
+- [x] Public guide and detail responses expose no chunk bodies or hidden chunk
   previews. Targets refer only to included sources and retain safe-link rules.
-- [ ] No guarantee of a current live-page match, ingestion overhaul for DOM
+- [x] No guarantee of a current live-page match, ingestion overhaul for DOM
   offsets, or new scraping pipeline is introduced.
 
 ## Blocked by
@@ -53,4 +53,9 @@ relevant highlights should appear in close proximity." This applies alongside
 ticket 07's consolidated article list and nearby group directions.
 
 Implementation and test evidence: [ticket 08 validation](../validation/ticket-08.md).
-Acceptance and the completed label remain pending independent review.
+
+Independent review completed on 2026-10-09 UTC. Two Spec findings were accepted
+and fixed: accent-equivalent repeats now produce ordinary fallback, and suffix
+context must end at a word boundary. Both reviewers confirmed the corrections.
+All seven criteria passed application and browser verification. See the
+[independent review and final checks](../validation/ticket-08-review.md).
