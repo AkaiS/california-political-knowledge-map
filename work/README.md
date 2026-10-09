@@ -41,11 +41,12 @@ decisions; unresolved contracts are not agent-ready implementation requirements.
 ### Ready for agent
 
 - [Shared fusion ranking](projects/shared-fusion-ranking/PRD.md),
-  `ready-for-agent` as of 2026-10-08. Start with
-  [01 Share ranking across production and report replay](projects/shared-fusion-ranking/issues/01-share-production-and-replay-ranking.md).
+  `ready-for-agent` as of 2026-10-08.
+  [01 Share ranking across production and report replay](projects/shared-fusion-ranking/issues/01-share-production-and-replay-ranking.md)
+  is `completed` as of 2026-10-09. Continue with
   [02 Share retention eligibility and preserve review consumers](projects/shared-fusion-ranking/issues/02-share-retention-eligibility.md)
-  is blocked by 01. Both preserve the existing interfaces, exact replay, and
-  bounded rank retention.
+  now that its dependency on 01 is satisfied. Both preserve the existing
+  interfaces, exact replay, and bounded rank retention.
 - [Prototype graph-aware reranking](initiatives/useful-graph-retrieval/issues/09-prototype-graph-aware-reranking.md),
   `ready-for-agent` as of 2026-09-17. The completed retrieval branches retain
   the real pre-fusion rankings needed to compare weights and structural signals.
