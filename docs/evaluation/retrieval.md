@@ -359,8 +359,9 @@ The existing command runs all 25 cases, including the answer call:
 
 ```sh
 uv run ca-map eval run retrieval --deployment local --model gemma4:26b
-uv run python scripts/review_chat_eval.py --mode rag
 ```
+
+Open the completed run using [the RAG launcher](rag-review.md#start-the-reviewer).
 
 Use `--case C-R1-01` for a smoke run. Older retrieval reports remain evidence-only;
 rerun them to obtain answers. Reference labels never enter the model request.

@@ -138,6 +138,9 @@ semantic result rows, verified evidence, and model exchanges. The chat Data Set 
 unlabeled, so this run measures execution and supports human review, without an
 answer-quality score. Reports go under `evals/reports/chat/`.
 
+Use the [evaluation guide index](docs/evaluation/README.md) to start reviewers,
+annotate cases, or understand retrieval measurements.
+
 Maintainers can inspect application decisions and related model traces through
 the [Chat Session trail guide](docs/chat-session-trails.md). It includes Logfire
 SQL for one question or a comparison across sessions, saved-search instructions,

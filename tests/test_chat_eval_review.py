@@ -540,3 +540,45 @@ def test_replaced_report_rejects_unbound_or_stale_review(tmp_path, identity):
             )
         assert error.value.code == (409 if identity == "stale" else 400)
     assert review_server.load_reviews(reviews_path) == existing
+
+
+def test_identity_endpoint_reports_resolved_configuration_and_rejects_untrusted_host(
+    tmp_path,
+):
+    with serve_reviewer(tmp_path) as base:
+        with urlopen(f"{base}/api/identity") as response:
+            identity = json.load(response)
+        assert identity == {
+            "service": "ca-map-evaluation-reviewer-v1",
+            "mode": "chat",
+            "checkout": str(SCRIPT.parents[1].resolve()),
+            "reports_dir": str(tmp_path.resolve()),
+            "samples_dir": str((SCRIPT.parents[1] / "evals/chunk-samples").resolve()),
+            "pid": os.getpid(),
+        }
+        with pytest.raises(HTTPError) as rejected:
+            urlopen(
+                Request(f"{base}/api/identity", headers={"Host": "untrusted.example"})
+            )
+        assert rejected.value.code == 403
+
+
+def test_rag_startup_and_loading_never_import_evaluation_tasks(tmp_path):
+    report = tmp_path / "report.json"
+    report.write_text(json.dumps({"task": "retrieval", "report": {"cases": []}}))
+    script = f"""
+import importlib.abc, runpy, sys
+class BlockTasks(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path, target=None):
+        if fullname.startswith("knowledge_map.evaluation.tasks"):
+            raise AssertionError("RAG loaded evaluation tasks: " + fullname)
+sys.meta_path.insert(0, BlockTasks())
+reviewer = runpy.run_path({str(SCRIPT)!r})
+reviewer["load_report"](reviewer["Path"]({str(report)!r}), "rag")
+sys.argv = [{str(SCRIPT)!r}, "--mode", "rag", "--help"]
+reviewer["main"]()
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
