@@ -339,6 +339,31 @@ def _publication_key(value: str | None, newest: bool) -> tuple[bool, int]:
     return False, -ordinal if newest else ordinal
 
 
+def guide_publication_orders(guide: SourceGuide) -> dict[str, tuple[str, ...]]:
+    """Order every saved article by its stated day, retaining relevance on ties."""
+    relevance = {
+        identity: index for index, identity in enumerate(guide.relevance_order)
+    }
+    articles = sorted(
+        guide.articles,
+        key=lambda article: relevance.get(
+            article.citation.source_article_id, len(relevance)
+        ),
+    )
+    return {
+        order: tuple(
+            article.citation.source_article_id
+            for article in sorted(
+                articles,
+                key=lambda article: _publication_key(
+                    article.citation.published_date, order == "publication_desc"
+                ),
+            )
+        )
+        for order in ("publication_asc", "publication_desc")
+    }
+
+
 def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 

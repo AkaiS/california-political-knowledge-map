@@ -7,8 +7,15 @@ import pytest
 from anyio import sleep_forever
 from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
 from starlette.testclient import TestClient
-from test_chat_web import submit_guide
+from test_chat_web import guide_client, submit_guide
+from test_retrieval import Branch, candidate
 from test_source_guide_execution import controlled_app
+
+from knowledge_map.schemas.retrieval import (
+    GroundingEvidence,
+    RetrievalBranch,
+    SourceArticleCitation,
+)
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_SOURCE_GUIDE_BROWSER_TESTS") != "1",
@@ -162,3 +169,140 @@ def test_running_guide_poll_preserves_the_readers_scroll_position(reader):
             pass
         page.evaluate("new Promise(requestAnimationFrame)")
         expect(input).to_be_in_viewport(ratio=1)
+
+
+@pytest.mark.parametrize(
+    "viewport", [{"width": 1120, "height": 1000}, {"width": 390, "height": 844}]
+)
+@pytest.mark.parametrize(
+    "requested", ["publication_asc", "publication_desc", "relevance"]
+)
+def test_publication_views_use_stated_days_and_keep_all_saved_articles(
+    tmp_path, viewport, requested
+):
+    playwright = pytest.importorskip("playwright.sync_api")
+    dates = {
+        "later-day": "2024-01-02T00:30:00+02:00",
+        "invalid": "2024-02-30",
+        "earlier-day": "2024-01-01T23:00:00Z",
+        "equal-day": "2024-01-02T20:00:00Z",
+        "missing": None,
+        "incomplete": "2024-01",
+        "ungrouped": "2023-12-31",
+    }
+    identities = {name: f"https://example.com/{name}" for name in dates}
+    branches = {
+        branch: Branch(
+            branch,
+            tuple(
+                candidate(branch, name, rank).model_copy(
+                    update={"source_article_id": identities[name]}
+                )
+                for rank, name in enumerate(dates, 1)
+            ),
+        )
+        for branch in RetrievalBranch
+    }
+
+    async def grounding(item):
+        return GroundingEvidence(
+            chunk_id=item.chunk_id,
+            text="The committee discussed housing grants.",
+            citation=SourceArticleCitation(
+                source_article_id=item.source_article_id,
+                title=item.chunk_id,
+                url=item.source_article_id,
+                published_date=dates[item.chunk_id],
+            ),
+        )
+
+    groups = [
+        {
+            "kind": "timeline",
+            "label": order,
+            "order": order,
+            "members": [
+                {
+                    "source_article_id": identity,
+                    "reading_direction": "Read the grant discussion.",
+                }
+                for name, identity in identities.items()
+                if name != "ungrouped"
+            ],
+        }
+        for order in ("publication_asc", "publication_desc")
+    ]
+    orders = {
+        "publication_asc": [
+            "ungrouped",
+            "earlier-day",
+            "later-day",
+            "equal-day",
+            "invalid",
+            "missing",
+            "incomplete",
+        ],
+        "publication_desc": [
+            "later-day",
+            "equal-day",
+            "earlier-day",
+            "ungrouped",
+            "invalid",
+            "missing",
+            "incomplete",
+        ],
+        "relevance": list(dates),
+    }
+    with guide_client(
+        db_path=tmp_path / "guides.db",
+        branches=branches,
+        load_grounding=grounding,
+        assessment={"status": "allowed", "reading_order": requested},
+        guidance={
+            "source_notes": [
+                {"source_article_id": identity, "note": "Read the grant discussion."}
+                for identity in identities.values()
+            ],
+            "groups": groups,
+        },
+    ) as (client, _, _):
+        guide = submit_guide(
+            client, json={"question": "Where should I read about housing grants?"}
+        ).json()
+        assert guide["status"] == "completed"
+        with playwright.sync_playwright() as runtime:
+            browser = runtime.chromium.launch()
+            page = browser.new_page(viewport=viewport)
+            errors = []
+            page.on("pageerror", lambda error: errors.append(str(error)))
+
+            def application(route):
+                response = client.request(
+                    route.request.method,
+                    route.request.url,
+                    headers=route.request.headers,
+                    content=route.request.post_data,
+                )
+                route.fulfill(
+                    status=response.status_code,
+                    headers=dict(response.headers),
+                    body=response.content,
+                )
+
+            page.route("http://localhost/**", application)
+            page.goto(f"http://localhost/#guide={guide['guide_id']}")
+            links = page.locator("#articles > li > a")
+            playwright.expect(links).to_have_text(orders[requested])
+            select = page.get_by_label("Reading view")
+            for index, group_order in enumerate(
+                ("publication_asc", "publication_desc")
+            ):
+                select.select_option(f"group:{index}")
+                effective = requested if requested != "relevance" else group_order
+                playwright.expect(links).to_have_text(orders[effective])
+            select.select_option("relevance")
+            playwright.expect(links).to_have_text(orders["relevance"])
+            page.reload()
+            playwright.expect(links).to_have_text(orders[requested])
+            assert errors == []
+            browser.close()

@@ -116,3 +116,6 @@ formatting, and whitespace checks.
 The type check reproduces the same 36 existing RAG projection diagnostics and
 three existing import-loader diagnostics in the summary tests, with no new
 diagnostics. No prompt, historical report, inbox feedback, or browser code changed.
+
+Subsequent PR feedback on configured storage, publication ordering, and saved-guide
+listing is recorded in the [PR review corrections](greptile-review.md).

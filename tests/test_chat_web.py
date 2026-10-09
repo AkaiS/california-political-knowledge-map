@@ -280,7 +280,10 @@ def test_unsuccessful_and_empty_guides_restore_their_outcome_after_restart(
         assert len(listing) == 1
         assert listing[0]["status"] == outcome
         if isinstance(assessment, dict):
-            assert listing[0]["assessment"]["status"] == assessment["status"]
+            assert (
+                listing[0]["latest_attempt"]["assessment"]["status"]
+                == assessment["status"]
+            )
         assert prompts == []
         assert all(not branch.requests for branch in branches.values())
         assert "PRIVATE_" not in reopened.text

@@ -61,7 +61,16 @@ def test_startup_interrupts_accepted_search_that_stopped_before_model_entry(tmp_
                 ).json() == interrupted
                 assert (await client.get("/api/guides")).json()["guides"][0][
                     "latest_attempt"
-                ] == interrupted["latest_attempt"]
+                ] == {
+                    field: interrupted["latest_attempt"][field]
+                    for field in (
+                        "attempt_id",
+                        "started_at",
+                        "finished_at",
+                        "status",
+                        "outcome",
+                    )
+                }
                 assert (await client.get("/")).status_code == 200
             assert questions == []
 

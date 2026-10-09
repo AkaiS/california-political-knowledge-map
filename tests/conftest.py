@@ -13,7 +13,10 @@ import pytest
 def isolate_source_guide_store(monkeypatch, tmp_path):
     from knowledge_map.adapters import sqlite_db
 
-    monkeypatch.setattr(sqlite_db, "DEFAULT_DB_PATH", str(tmp_path / "document_store.db"))
+    monkeypatch.setattr(
+        sqlite_db, "DEFAULT_DB_PATH", str(tmp_path / "document_store.db")
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", str(tmp_path / "document_store.db"))
 
 
 @pytest.fixture(autouse=True)

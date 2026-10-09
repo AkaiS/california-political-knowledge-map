@@ -90,7 +90,7 @@ class SourceGuide(RetrievalValue):
     disclosures: tuple[GuideDisclosure, ...] = ()
 
 
-class GuideAttempt(RetrievalValue):
+class GuideAttemptSummary(RetrievalValue):
     attempt_id: str
     started_at: datetime
     finished_at: datetime | None = None
@@ -99,9 +99,21 @@ class GuideAttempt(RetrievalValue):
     ]
     outcome: GuideOutcome | None = None
     assessment: QuestionAssessment | None = None
+
+
+class GuideAttempt(GuideAttemptSummary):
     message: NonemptyText | None = None
     search_details: GuideSearchDetails | None = None
     disclosures: tuple[GuideDisclosure, ...] = ()
+
+
+class SavedGuideSummary(RetrievalValue):
+    guide_id: str
+    question: NonemptyText
+    status: GuideOutcome | Literal["running"]
+    created_at: datetime
+    latest_attempt: GuideAttemptSummary
+    last_retrieved_at: datetime | None = None
 
 
 class SavedSourceGuide(SourceGuide):

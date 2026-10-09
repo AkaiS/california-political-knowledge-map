@@ -1,15 +1,19 @@
 """Durable reader content and search attempts in the SQLite document store."""
 
+import os
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from knowledge_map.adapters import sqlite_db
+from knowledge_map.config import settings
+from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.source_guides import (
     GuideAttempt,
+    GuideAttemptSummary,
     GuideSearchDetails,
+    SavedGuideSummary,
     SavedSourceGuide,
     SourceGuide,
 )
@@ -22,7 +26,9 @@ class GuideAlreadyRunning(Exception):
 class SQLiteGuideStore:
     def __init__(self, db_path: str | Path | None = None):
         self.db_path = str(
-            db_path if db_path is not None else sqlite_db.DEFAULT_DB_PATH
+            db_path
+            if db_path is not None
+            else os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
         )
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
             connection.executescript("""
@@ -217,9 +223,42 @@ class SQLiteGuideStore:
             }
         )
 
-    def list(self) -> list[SavedSourceGuide]:
+    def list(self) -> list[SavedGuideSummary]:
         with closing(sqlite3.connect(self.db_path)) as connection:
-            identities = connection.execute(
-                "SELECT guide_id FROM source_guides ORDER BY created_at DESC, guide_id"
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                "SELECT g.guide_id, g.question, g.created_at, g.retrieved_at, "
+                "COALESCE(json_extract(g.content_json, '$.status'), "
+                "json_extract(a.outcome_json, '$.status'), a.status) AS guide_status, "
+                "a.attempt_id, a.started_at, a.finished_at, a.status AS attempt_status, "
+                "NULLIF(json_extract(a.outcome_json, '$.status'), 'running') AS outcome, "
+                "json_extract(a.outcome_json, '$.assessment') AS assessment_json "
+                "FROM source_guides g JOIN source_guide_attempts a "
+                "ON a.attempt_id = g.latest_attempt_id ORDER BY g.created_at DESC, g.guide_id"
             ).fetchall()
-        return [self.get(row[0]) for row in identities]
+        return [
+            SavedGuideSummary.model_validate(
+                {
+                    "guide_id": row["guide_id"],
+                    "question": row["question"],
+                    "status": row["guide_status"],
+                    "created_at": row["created_at"],
+                    "last_retrieved_at": row["retrieved_at"],
+                    "latest_attempt": GuideAttemptSummary.model_validate(
+                        {
+                            "attempt_id": row["attempt_id"],
+                            "started_at": row["started_at"],
+                            "finished_at": row["finished_at"],
+                            "status": row["attempt_status"],
+                            "outcome": row["outcome"],
+                            "assessment": QuestionAssessment.model_validate_json(
+                                row["assessment_json"]
+                            )
+                            if row["assessment_json"]
+                            else None,
+                        }
+                    ),
+                }
+            )
+            for row in rows
+        ]

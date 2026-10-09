@@ -80,7 +80,16 @@ def test_cancel_initial_search_persists_question_outcome_and_timing_without_repl
         ):
             assert (await client.get(submitted.headers["Location"])).json() == cancelled
             listing = (await client.get("/api/guides")).json()["guides"]
-            assert listing[0]["latest_attempt"] == cancelled["latest_attempt"]
+            assert listing[0]["latest_attempt"] == {
+                field: cancelled["latest_attempt"][field]
+                for field in (
+                    "attempt_id",
+                    "started_at",
+                    "finished_at",
+                    "status",
+                    "outcome",
+                )
+            }
             assert questions == ["Who backed AB 1 in 2025?"]
 
     asyncio.run(exercise())

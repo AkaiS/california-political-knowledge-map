@@ -20,6 +20,7 @@ from knowledge_map.chat_presentation import (
     assessment_guide,
     deferred_disclosures,
     guide_collections,
+    guide_publication_orders,
     render_answer,
     source_guide,
 )
@@ -72,9 +73,24 @@ def create_app(
     guide_db_path: str | Path | None = None,
 ) -> FastAPI:
     dependencies: ChatDependencies | None = None
-    guide_store = SQLiteGuideStore(guide_db_path)
+    guide_store: SQLiteGuideStore
     running: dict[str, asyncio.Task[None]] = {}
     accepting = False
+
+    def guide_response(
+        guide: SavedSourceGuide,
+        *,
+        status_code: int = 200,
+        headers: dict[str, str] | None = None,
+    ) -> JSONResponse:
+        return JSONResponse(
+            {
+                **guide.model_dump(mode="json", exclude_none=True),
+                "publication_orders": guide_publication_orders(guide),
+            },
+            status_code=status_code,
+            headers=headers,
+        )
 
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
@@ -83,9 +99,10 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        nonlocal dependencies, accepting
+        nonlocal dependencies, accepting, guide_store
         try:
             async with startup() as dependencies:
+                guide_store = SQLiteGuideStore(guide_db_path)
                 guide_store.interrupt_unfinished()
                 if browser_url is not None:
                     print(f"Open {browser_url} in your browser.", flush=True)
@@ -190,15 +207,15 @@ def create_app(
             and (task := running.get(attempt_id)) is not None
         ):
             task.cancel()
-        return JSONResponse(cancelled.model_dump(mode="json", exclude_none=True))
+        return guide_response(cancelled)
 
     def start_execution(saved: SavedSourceGuide) -> Response:
         attempt_id = saved.latest_attempt.attempt_id
         task = asyncio.create_task(execute(saved))
         running[attempt_id] = task
         task.add_done_callback(lambda _: running.pop(attempt_id, None))
-        return JSONResponse(
-            saved.model_dump(mode="json", exclude_none=True),
+        return guide_response(
+            saved,
             status_code=202,
             headers={"Location": f"/api/guides/{saved.guide_id}"},
         )
@@ -288,11 +305,7 @@ def create_app(
         return JSONResponse(
             {
                 "guides": [
-                    guide.model_dump(
-                        mode="json",
-                        exclude_none=True,
-                        exclude={"articles", "groups", "relevance_order", "message"},
-                    )
+                    guide.model_dump(mode="json", exclude_none=True)
                     for guide in guide_store.list()
                 ]
             }
@@ -303,7 +316,7 @@ def create_app(
             guide = guide_store.get(request.path_params["guide_id"])
         except KeyError:
             return JSONResponse({"error": "Source Guide not found."}, status_code=404)
-        return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
+        return guide_response(guide)
 
     async def coverage(request: Request) -> Response:
         return JSONResponse(
