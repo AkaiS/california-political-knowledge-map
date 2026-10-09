@@ -222,7 +222,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared fusion ranking](projects/shared-fusion-ranking/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
@@ -340,6 +340,27 @@ On 2026-10-02, Evaluation Case review editing was reviewed and closed:
 - Browser workflows were retained and not executed. Actual pull-request CI
   evidence will be recorded after the conductor's final review and PR creation;
   this record makes no claim about pending remote checks.
+
+On 2026-10-09, Shared fusion ranking's ticket acceptance state was reconciled:
+
+- Both tickets have checked acceptance criteria and `completed` labels. Each
+  independent Standards and Spec review found zero actionable findings.
+- The parent PRD is `completed` and appears in the completed project table;
+  the project left the ready queue.
+- The final ticket regression run passed `1617 passed, 61 skipped`; 31 Node
+  reviewer tests and changed-file type, lint and format checks passed.
+- All 101 fusion replays in five unchanged historical reports, every RAG
+  projection, 1,010 top-ten candidates and 808 seeded samples matched baseline.
+- Final sequence review from `0b180fd77df13e9aaae3e70678732827ea81a616`
+  is complete. Independent Standards and Spec reviewers each found zero
+  findings across both tickets and their integration. Closure includes the
+  earlier ticket reviews and leaves no unresolved valid finding or question.
+- Final local CI-equivalent checks passed: `uv sync --locked --dev`,
+  `1617 passed, 61 skipped`, 31 Node reviewer tests, changed-file type, lint and
+  format checks, and `git diff --check`. Original-baseline compatibility
+  comparisons preserved the historical outputs recorded above.
+- Remote CI has not run. No model calls, live graph queries or browser
+  verification were performed. Final sequence evidence is in the parent PRD.
 
 ## Information model
 

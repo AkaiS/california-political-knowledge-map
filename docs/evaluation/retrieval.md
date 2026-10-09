@@ -282,11 +282,20 @@ The report omits candidate routes and claims, repeated contributions, fused
 objects, catalogs, cumulative prompts and most successful stage observations.
 `replay_fusion` in `knowledge_map.evaluation.retrieval_report` reconstructs exact
 production scores and ordering from the compact branch records and configuration.
-Production fusion uses each branch's candidate limit to establish eligibility,
-but an eligible chunk can still receive a contribution from a deeper rank in
-another branch. Only those extra ranks are retained. Larger configured fusion
-budgets also record explicit eligible IDs, without changing the 50-chunk metric
-budget. Missing historical fusion settings prevent compaction rather than
+Production's `fuse_candidates` and report replay share the private ranking policy
+in `knowledge_map.core.fusion`. `compact_branches` uses that same policy's ordered
+best branch ranks and nominations to choose retained records. These three
+interfaces keep their existing signatures and return types. The report adapter
+still owns Source Article identity, serialized fields, counts and bounded retention.
+
+Each branch's configured candidate limit establishes eligibility, but an eligible
+chunk can still receive a contribution from a deeper rank in another branch.
+Compaction retains the first 50 unique chunks per branch and only those extra
+contributing ranks. Larger configured fusion budgets also record explicit eligible
+IDs, without changing the 50-chunk metric budget. Replay honors those IDs when
+present and otherwise derives nominations from the retained first-50 population;
+extra ranks cannot nominate discarded candidates. Historical reports need no
+rewrite. Missing historical fusion settings prevent compaction rather than
 inventing a configuration.
 
 These records support branch failure diagnosis, reference misses within the
