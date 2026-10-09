@@ -230,6 +230,43 @@ The final ticket regression run passed 1617 tests with 61 skipped; 31 Node
 reviewer tests and changed-file type, lint and format checks also passed.
 Five unchanged historical reports preserve all 101 exact fusion replays, RAG
 projections, 1,010 top-ten candidate records and 808 seeded sample entries.
-The project and work index are reconciled to completed. Final sequence review
-remains pending; this record does not claim that review or remote CI has passed.
+The project and work index are reconciled to completed. At this ticket handoff,
+final sequence review had not run; its closure is recorded below. Remote CI has
+not run.
 No model calls, live graph queries or browser verification were performed.
+
+2026-10-09: Final sequence review covered both tickets together through
+`7673e0498329a4336985df306f4cd610042d039b`, using
+`git diff 0b180fd77df13e9aaae3e70678732827ea81a616...HEAD`.
+Independent Standards and Spec reviewers each found zero findings. Standards
+confirmed compliance with repository instructions, domain language, ADRs 0017
+and 0024, and the code-smell baseline. Spec checked every bounded PRD requirement
+and both tickets, including their integration and compact-report consumers.
+
+Direct inspection confirms one private preparation policy owns ordered best
+branch ranks, nominations and eligibility for production, retention and replay.
+One private scorer owns reciprocal-rank arithmetic, final identity ties and
+truncation. Adapters retain production provenance and observations, Source Article
+reconstruction, report formatting, counts and bounded retention. Existing public
+interfaces, defaults, validation, metric definitions and report versions remain
+unchanged. No code fixes were needed.
+
+Final verification used `UV_CACHE_DIR=/private/tmp/shared-fusion-uv-cache`:
+
+- `uv sync --locked --dev`: passed, 177 packages checked.
+- `uv run --no-sync pytest -q tests/test_fusion.py tests/test_fusion_replay.py tests/test_retrieval_report.py`: 67 passed.
+- `uv run --no-sync /private/tmp/source-guides-uv/archive-v0/t8HMQ3-8mvMjzC03/bin/ty check src/knowledge_map/core/fusion.py src/knowledge_map/evaluation/retrieval_report.py tests/test_fusion_replay.py`: passed with cached ty 0.0.85.
+- `uv run --no-sync ruff check src/knowledge_map/core/fusion.py src/knowledge_map/evaluation/retrieval_report.py tests/test_fusion_replay.py` and the same files with `ruff format --check`: passed.
+- `uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs tests/chunk_eval_review.test.mjs`: 31 passed on Node 22.23.1.
+- `uv run --no-sync python /private/tmp/shared-fusion-sequence-check.py`: original baseline functions loaded read-only with `git show` passed all 11 non-telemetry characterization cases. All five historical reports matched for 101 exact fusion replays, five RAG projections, 1,010 top-ten records and 808 sample entries with seeds 42 and 43. Chunk identities, Source Article IDs, ranks and floating-point scores matched; inputs and report bytes stayed unchanged.
+- `uv run --no-sync pytest -q tests`: 1617 passed, 61 skipped, one existing ignored-temperature provider warning. This final deterministic run followed both sequence reviews and used authorized loopback access for existing reviewer API tests.
+- `git diff --check`: passed.
+
+Closure checked both earlier ticket reviews and both final axes. Every review
+has zero findings, so there are no per-finding dispositions, unresolved valid
+findings or unresolved questions. All 17 ticket acceptance criteria remain
+checked. The completed parent and work index now record final sequence closure.
+The two existing type diagnostics in untouched `tests/test_retrieval_report.py`
+remain outside this change; all changed-file type checks pass. Remote CI has not
+run. No model calls, live graph queries or browser verification were performed.
+These checks establish compatibility, not retrieval quality or weight calibration.
