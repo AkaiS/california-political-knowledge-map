@@ -61,6 +61,19 @@ class SQLiteGuideStore:
             )
         return self.get(guide_id)
 
+    def interrupt_unfinished(self) -> None:
+        for saved in self.list():
+            if saved.latest_attempt.status == "running":
+                self.finish(
+                    saved.guide_id,
+                    saved.latest_attempt.attempt_id,
+                    SourceGuide(
+                        question=saved.question,
+                        status="interrupted",
+                        message="This search was interrupted before it finished.",
+                    ),
+                )
+
     def start_update(self, guide_id: str) -> SavedSourceGuide:
         attempt_id = str(uuid4())
         now = datetime.now(UTC).isoformat()

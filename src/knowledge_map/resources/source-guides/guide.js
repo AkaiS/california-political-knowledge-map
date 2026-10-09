@@ -132,6 +132,7 @@ function showGuide(guide) {
   document.querySelector('#guide-retrieved').textContent = guide.last_retrieved_at
     ? `Last retrieved ${displayDate(guide.last_retrieved_at)}` : 'No successful retrieval yet.';
   const attempt = guide.latest_attempt;
+  update.textContent = ['failed', 'interrupted'].includes(attempt.status) ? 'Retry' : 'Update guide';
   update.disabled = attempt.status === 'running';
   cancel.hidden = attempt.status !== 'running';
   cancel.disabled = false;
@@ -141,7 +142,7 @@ function showGuide(guide) {
   document.querySelector('#attempt-message').textContent = guide.last_retrieved_at
     ? (attempt.status === 'running'
       ? 'Updating this guide. Saved reading remains available below.'
-      : attempt.status === 'failed'
+      : ['failed', 'interrupted'].includes(attempt.status)
         ? `${attempt.message || outcomeLabels[attempt.outcome]} Saved reading below is from the last successful retrieval.`
         : attempt.outcome !== guide.status ? attempt.message || outcomeLabels[attempt.outcome] : '')
     : '';
@@ -219,7 +220,7 @@ update.addEventListener('click', async () => {
   if (!selected || selected.latest_attempt.status === 'running') return;
   const selection = ++guideSelection;
   update.disabled = true;
-  progress.textContent = 'Starting an update for this saved question…';
+  progress.textContent = 'Starting a search for this saved question…';
   try {
     const response = await fetch(`/api/guides/${encodeURIComponent(selected.guide_id)}/update`, {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}',
@@ -230,12 +231,12 @@ update.addEventListener('click', async () => {
     if (selection === guideSelection) {
       showGuide(guide);
       progress.textContent = response.status === 409
-        ? 'This guide is already being searched. Wait for it to finish before updating.' : '';
+        ? 'This guide is already being searched. Wait for it to finish before searching again.' : '';
     }
     await loadSavedGuides();
   } catch {
     if (selection === guideSelection) {
-      progress.textContent = 'The update could not be confirmed. Reopen this saved guide to check its status.';
+      progress.textContent = 'The search could not be confirmed. Reopen this saved guide to check its status.';
     }
   } finally {
     if (selection === guideSelection) {

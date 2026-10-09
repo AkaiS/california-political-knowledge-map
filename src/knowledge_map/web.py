@@ -74,6 +74,7 @@ def create_app(
         nonlocal dependencies, accepting
         try:
             async with startup() as dependencies:
+                guide_store.interrupt_unfinished()
                 if browser_url is not None:
                     print(f"Open {browser_url} in your browser.", flush=True)
                 accepting = True
@@ -218,9 +219,9 @@ def create_app(
                     "status": status,
                     "assessment": session.assessment if session is not None else None,
                     "message": {
-                        "assessment": "The question could not be assessed. Try submitting it again.",
-                        "retrieval": "The search could not be completed. Try submitting the question again.",
-                        "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Try submitting the question again.",
+                        "assessment": "The question could not be assessed. Choose Retry to search again.",
+                        "retrieval": "The search could not be completed. Choose Retry to search again.",
+                        "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Choose Retry to search again.",
                     }[stage],
                 }
             )
