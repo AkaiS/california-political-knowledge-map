@@ -13,6 +13,8 @@ def test_edited_complete_question_is_assessed_and_retrieved_independently():
         second = client.post(
             "/api/questions", json={"question": "Who backed SB 2 in 2025?"}
         ).json()
+        assert first["guide_id"] != second["guide_id"]
+        assert client.get(f"/api/guides/{first['guide_id']}").json() == first
     assert first["question"] == "Who backed AB 1?"
     assert second["question"] == "Who backed SB 2 in 2025?"
     assert json.loads(prompts[2][0])["question"] == "Who backed SB 2 in 2025?"

@@ -22,7 +22,9 @@ from knowledge_map.web import create_app
 
 
 @contextmanager
-def guide_client(*, assessment=None, guidance=None, branches=None, **retrieval_options):
+def guide_client(
+    *, assessment=None, guidance=None, branches=None, db_path=None, **retrieval_options
+):
     prompts = []
     branches = branches or {branch: Branch(branch) for branch in RetrievalBranch}
 
@@ -67,10 +69,182 @@ def guide_client(*, assessment=None, guidance=None, branches=None, **retrieval_o
         )
 
     with TestClient(
-        create_app(startup=startup, session_factory=session_factory),
+        create_app(
+            startup=startup, session_factory=session_factory, guide_db_path=db_path
+        ),
         base_url="http://localhost",
     ) as client:
         yield client, prompts, branches
+
+
+def test_completed_guide_reopens_after_restart_without_current_sources_or_models(
+    tmp_path,
+):
+    db_path = tmp_path / "document_store.db"
+    question = "What should I read about AB 1's housing provisions in 2025?"
+    with guide_client(
+        db_path=db_path,
+        assessment={
+            "status": "deferred",
+            "explanation": "Complete roll calls are unavailable.",
+            "recoverable_portion": "Reporting can identify some votes.",
+        },
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/dense",
+                    "note": "Read the section on AB 1's housing provisions.",
+                }
+            ]
+        },
+        load_grounding=stored_article,
+    ) as (client, _, _):
+        submitted = client.post("/api/questions", json={"question": question}).json()
+        guide_id = submitted["guide_id"]
+        reopened = client.get(f"/api/guides/{guide_id}")
+        assert reopened.json() == submitted
+    with guide_client(
+        db_path=db_path, assessment=RuntimeError("No model available after restart")
+    ) as (client, prompts, branches):
+        reopened = client.get(f"/api/guides/{guide_id}")
+        saved = client.get("/api/guides").json()["guides"]
+        assert reopened.json() == submitted
+        assert saved[0]["guide_id"] == guide_id
+        assert saved[0]["question"] == question
+        assert saved[0]["status"] == "completed"
+        assert prompts == []
+        assert all(not branch.requests for branch in branches.values())
+    guide = reopened.json()
+    assert (
+        guide["articles"][0]["reading_direction"]
+        == "Read the section on AB 1's housing provisions."
+    )
+    assert guide["articles"][0]["citation"]["published_date"] == "2025-03-01"
+    assert guide["latest_attempt"]["status"] == "completed"
+    assert guide["latest_attempt"]["outcome"] == "completed"
+    assert guide["assessment"]["status"] == "deferred"
+    assert "Complete roll calls are unavailable." in guide["message"]
+    assert "Reporting can identify some votes." in guide["message"]
+    assert guide["created_at"] <= guide["latest_attempt"]["started_at"]
+    assert guide["last_retrieved_at"] == guide["latest_attempt"]["finished_at"]
+    assert "PRIVATE_CHUNK_SENTINEL" not in reopened.text
+
+
+def test_failure_to_start_execution_leaves_a_saved_failed_question(tmp_path):
+    db_path = tmp_path / "document_store.db"
+
+    def unavailable(question, dependencies):
+        raise RuntimeError("PRIVATE_STARTUP_FAILURE")
+
+    with TestClient(
+        create_app(
+            startup=no_dependencies, session_factory=unavailable, guide_db_path=db_path
+        ),
+        base_url="http://localhost",
+        raise_server_exceptions=False,
+    ) as client:
+        response = client.post(
+            "/api/questions", json={"question": "Who supported AB 1?"}
+        )
+        assert response.status_code == 200
+        guide = response.json()
+        assert guide["status"] == "assessment_failed"
+        assert guide["latest_attempt"]["status"] == "failed"
+        assert "last_retrieved_at" not in guide
+    with guide_client(db_path=db_path) as (client, prompts, _):
+        assert client.get(f"/api/guides/{guide['guide_id']}").json() == guide
+        assert prompts == []
+        assert "PRIVATE_" not in client.get("/api/guides").text
+
+
+@pytest.mark.parametrize(
+    "assessment,guidance,outcome,state,retrieved",
+    [
+        (
+            {"status": "needs_edit", "explanation": "Name the bill."},
+            None,
+            "needs_edit",
+            "completed",
+            False,
+        ),
+        (
+            {
+                "status": "declined",
+                "explanation": "Predictions are outside the question policy.",
+            },
+            None,
+            "declined",
+            "completed",
+            False,
+        ),
+        (
+            {
+                "status": "deferred",
+                "explanation": "Complete roll calls are unavailable.",
+                "recoverable_portion": "Reporting can identify some votes.",
+            },
+            None,
+            "empty",
+            "empty",
+            True,
+        ),
+        ({"status": "allowed"}, None, "empty", "empty", True),
+        (
+            RuntimeError("PRIVATE_ASSESSMENT_FAILURE"),
+            None,
+            "assessment_failed",
+            "failed",
+            False,
+        ),
+        (
+            {"status": "allowed"},
+            RuntimeError("PRIVATE_GUIDANCE_FAILURE"),
+            "guidance_failed",
+            "failed",
+            False,
+        ),
+    ],
+)
+def test_unsuccessful_and_empty_guides_restore_their_outcome_after_restart(
+    tmp_path, assessment, guidance, outcome, state, retrieved
+):
+    db_path = tmp_path / "document_store.db"
+    with guide_client(db_path=db_path, assessment=assessment, guidance=guidance) as (
+        client,
+        _,
+        _,
+    ):
+        guide = client.post(
+            "/api/questions", json={"question": "Who backed that bill?"}
+        ).json()
+    with guide_client(db_path=db_path, assessment=RuntimeError("Must not execute")) as (
+        client,
+        prompts,
+        branches,
+    ):
+        reopened = client.get(f"/api/guides/{guide['guide_id']}")
+        assert reopened.json() == guide
+        assert guide["question"] == "Who backed that bill?"
+        assert guide["status"] == outcome
+        assert guide["latest_attempt"]["outcome"] == outcome
+        assert guide["latest_attempt"]["status"] == state
+        assert guide["latest_attempt"]["finished_at"]
+        assert ("last_retrieved_at" in guide) == retrieved
+        listing = client.get("/api/guides").json()["guides"]
+        assert len(listing) == 1
+        assert listing[0]["status"] == outcome
+        if isinstance(assessment, dict):
+            assert listing[0]["assessment"]["status"] == assessment["status"]
+        assert prompts == []
+        assert all(not branch.requests for branch in branches.values())
+        assert "PRIVATE_" not in reopened.text
+
+
+def test_saved_guide_navigation_handles_an_empty_store_and_unknown_identity():
+    with guide_client() as (client, prompts, _):
+        assert client.get("/api/guides").json() == {"guides": []}
+        assert client.get("/api/guides/missing").status_code == 404
+        assert prompts == []
 
 
 def test_submission_searches_the_complete_question_without_rewriting_or_approval():
@@ -226,7 +400,7 @@ def test_invalid_or_unavailable_guidance_is_a_failure_not_an_empty_guide(guidanc
 @pytest.mark.parametrize(
     "failure", ["assessment", "assembly", "all_branches", "one_branch"]
 )
-def test_failures_stay_typed_and_useful_sibling_sources_remain(failure):
+def test_failures_stay_typed_and_useful_sibling_sources_remain(failure, tmp_path):
     class Failed(Branch):
         async def retrieve(self, request, **kwargs):
             return FailedBranch(branch=self.branch)
@@ -245,6 +419,7 @@ def test_failures_stay_typed_and_useful_sibling_sources_remain(failure):
         for branch in RetrievalBranch
     }
     with guide_client(
+        db_path=tmp_path / "guides.db",
         assessment=RuntimeError("PRIVATE_MODEL_FAILURE")
         if failure == "assessment"
         else {
@@ -269,6 +444,9 @@ def test_failures_stay_typed_and_useful_sibling_sources_remain(failure):
             "/api/questions", json={"question": "How did everyone vote on AB 1?"}
         )
     guide = response.json()
+    with guide_client(db_path=tmp_path / "guides.db") as (client, prompts, _):
+        assert client.get(f"/api/guides/{guide['guide_id']}").json() == guide
+        assert prompts == []
     assert (
         guide["status"]
         == {
@@ -336,7 +514,17 @@ def test_reader_page_serves_submission_and_editing_controls_without_external_ass
 
 
 @pytest.mark.parametrize(
-    "path", ["/", "/guide.js", "/api/coverage", "/api/questions", "/api/chat", "/docs"]
+    "path",
+    [
+        "/",
+        "/guide.js",
+        "/api/coverage",
+        "/api/questions",
+        "/api/guides",
+        "/api/guides/saved",
+        "/api/chat",
+        "/docs",
+    ],
 )
 def test_reader_routes_reject_nonlocal_host(path):
     with guide_client() as (client, _, _):

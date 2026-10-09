@@ -182,7 +182,11 @@ def test_export_failure_after_startup_preserves_prepared_answer_and_search_detai
         monkeypatch.setattr(chat_capture, "export", unavailable_export)
         payload = question_request("Who backed AB 1?")
         completed = events(client.post("/api/questions", json=payload))
-        assert completed == expected
+        for field in ("question", "status", "assessment", "message", "articles", "partial"):
+            assert completed.get(field) == expected.get(field)
+        assert completed["guide_id"] != expected["guide_id"]
+        assert completed["last_retrieved_at"]
+        assert client.get(f"/api/guides/{completed['guide_id']}").json() == completed
     assert len(chat_capture.exported_spans) == exported_before_failure
     assert "chat_session.answer_prepared" in export_attempts
 

@@ -1,9 +1,11 @@
 """Local FastAPI entry point for Source Guides."""
 
+import asyncio
 import logging
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from importlib.resources import files
+from pathlib import Path
 from typing import Literal, Protocol
 
 import logfire
@@ -13,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
+from knowledge_map.adapters.source_guides import SQLiteGuideStore
 from knowledge_map.chat_presentation import (
     assessment_guide,
     render_answer,
@@ -55,8 +58,10 @@ def create_app(
         [str, ChatDependencies | None], ChatSessionProtocol
     ] = new_chat_session,
     browser_url: str | None = None,
+    guide_db_path: str | Path | None = None,
 ) -> FastAPI:
     dependencies: ChatDependencies | None = None
+    guide_store = SQLiteGuideStore(guide_db_path)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -83,29 +88,43 @@ def create_app(
             return JSONResponse(
                 {"error": "Enter a complete text question."}, status_code=422
             )
-        session = session_factory(submission.question, dependencies)
+        saved = guide_store.create(submission.question)
+        session = None
         try:
+            session = session_factory(submission.question, dependencies)
             result = await session.run()
+        except asyncio.CancelledError:
+            guide_store.finish(
+                saved.guide_id,
+                SourceGuide(
+                    question=submission.question,
+                    status="interrupted",
+                    message="This search was interrupted before it finished.",
+                ),
+            )
+            raise
         except Exception:
-            logger.exception("Source Guide %s failed", session.stage)
+            stage = session.stage if session is not None else "assessment"
+            logger.exception("Source Guide %s failed", stage)
             status = {
                 "assessment": "assessment_failed",
                 "retrieval": "retrieval_failed",
                 "guidance": "guidance_failed",
-            }[session.stage]
+            }[stage]
             guide = SourceGuide.model_validate(
                 {
                     "question": submission.question,
                     "status": status,
-                    "assessment": session.assessment,
+                    "assessment": session.assessment if session is not None else None,
                     "message": {
                         "assessment": "The question could not be assessed. Try submitting it again.",
                         "retrieval": "The search could not be completed. Try submitting the question again.",
                         "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Try submitting the question again.",
-                    }[session.stage],
+                    }[stage],
                 }
             )
-            return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
+            saved = guide_store.finish(saved.guide_id, guide)
+            return JSONResponse(saved.model_dump(mode="json", exclude_none=True))
         if isinstance(result, QuestionAssessment):
             guide = assessment_guide(submission.question, result)
         else:
@@ -131,6 +150,26 @@ def create_app(
                         for source in result.evidence.sources
                     ],
                 )
+        saved = guide_store.finish(saved.guide_id, guide)
+        return JSONResponse(saved.model_dump(mode="json", exclude_none=True))
+
+    async def list_guides(request: Request) -> Response:
+        return JSONResponse(
+            {
+                "guides": [
+                    guide.model_dump(
+                        mode="json", exclude_none=True, exclude={"articles", "message"}
+                    )
+                    for guide in guide_store.list()
+                ]
+            }
+        )
+
+    async def read_guide(request: Request) -> Response:
+        try:
+            guide = guide_store.get(request.path_params["guide_id"])
+        except KeyError:
+            return JSONResponse({"error": "Source Guide not found."}, status_code=404)
         return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
 
     async def coverage(request: Request) -> Response:
@@ -160,6 +199,8 @@ def create_app(
     frontend = create_agent(name="local_guide_shell").to_web()
     frontend.router.routes[:] = [
         Route("/api/questions", submit_question, methods=["POST"]),
+        Route("/api/guides", list_guides, methods=["GET"]),
+        Route("/api/guides/{guide_id}", read_guide, methods=["GET"]),
         Route("/api/coverage", coverage, methods=["GET"]),
         *(
             Route(path, asset, methods=["GET"])

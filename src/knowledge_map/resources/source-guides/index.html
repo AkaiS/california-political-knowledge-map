@@ -18,9 +18,17 @@
     <div class="actions"><button id="submit" type="submit">Find articles</button><button id="new" type="button" class="secondary">New question</button></div>
   </form>
   <p id="progress" role="status" aria-live="polite"></p>
+  <nav id="saved-guides" aria-labelledby="saved-heading">
+    <h2 id="saved-heading">Saved guides</h2>
+    <p id="saved-status" class="metadata" role="status"></p>
+    <ul id="guide-list"></ul>
+  </nav>
   <section id="guide" aria-labelledby="guide-question" hidden>
     <div class="guide-heading"><h2 id="guide-question"></h2><button id="edit" class="secondary" type="button">Edit question</button></div>
     <p id="outcome"></p><p id="message"></p>
+    <p id="guide-created" class="metadata"></p>
+    <p id="guide-retrieved" class="metadata"></p>
+    <p id="guide-attempt" class="metadata"></p>
     <ol id="articles"></ol>
   </section>
 </main>

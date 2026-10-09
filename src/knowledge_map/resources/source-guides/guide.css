@@ -6,6 +6,9 @@ h2 { font-size: 1.3rem; line-height: 1.5; overflow-wrap: anywhere; }
 .eyebrow { font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: #4d6767; }
 header { margin-bottom: 2rem; }
 form, #guide { border: 1px solid #c8d4cc; background: white; border-radius: .5rem; padding: 1.4rem; }
+#saved-guides { margin: 1.5rem 0; }
+#guide-list { list-style: none; padding: 0; }
+#guide-list li { padding: .6rem 0; }
 label { display: block; font-weight: 600; margin-bottom: .5rem; }
 textarea { box-sizing: border-box; width: 100%; resize: vertical; font: inherit; padding: .8rem; border: 1px solid #8b9f99; border-radius: .3rem; color: inherit; }
 button { font: inherit; padding: .5rem 1rem; border: 1px solid #205a50; border-radius: .3rem; cursor: pointer; background: #205a50; color: white; }

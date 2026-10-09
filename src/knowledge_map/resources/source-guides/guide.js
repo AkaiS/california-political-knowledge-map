@@ -8,6 +8,8 @@ const articles = document.querySelector('#articles');
 const submit = document.querySelector('#submit');
 const edit = document.querySelector('#edit');
 const newQuestion = document.querySelector('#new');
+const guideList = document.querySelector('#guide-list');
+const savedStatus = document.querySelector('#saved-status');
 let currentGuide = null;
 
 const outcomeLabels = {
@@ -19,13 +21,79 @@ const outcomeLabels = {
   retrieval_failed: 'The search could not be completed.',
   assembly_failed: 'The retrieved material could not be prepared.',
   guidance_failed: 'Reading directions could not be prepared.',
+  running: 'Searching for relevant reporting…',
+  cancelled: 'This search was cancelled.',
+  interrupted: 'This search was interrupted before it finished.',
 };
+
+const attemptLabels = {
+  running: 'Running', completed: 'Completed', empty: 'Empty', failed: 'Failed',
+  cancelled: 'Cancelled', interrupted: 'Interrupted',
+};
+const displayDate = value => new Date(value).toLocaleString();
+
+function guideOutcome(guide) {
+  const assessment = guide.assessment?.status;
+  if (assessment === 'declined') return 'Declined';
+  if (assessment === 'needs_edit') return 'Needs editing';
+  const state = attemptLabels[guide.latest_attempt.status];
+  return assessment === 'deferred' ? `Deferred · ${state}` : state;
+}
+
+async function loadSavedGuides() {
+  try {
+    const response = await fetch('/api/guides');
+    if (!response.ok) throw new Error('Listing failed');
+    const {guides} = await response.json();
+    guideList.replaceChildren();
+    savedStatus.textContent = guides.length ? '' : 'No saved questions yet.';
+    for (const guide of guides) {
+      const row = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = `#guide=${encodeURIComponent(guide.guide_id)}`;
+      link.textContent = guide.question;
+      const status = document.createElement('p');
+      status.className = 'metadata';
+      status.textContent = `${guideOutcome(guide)} · Saved ${displayDate(guide.created_at)}`;
+      row.append(link, status);
+      guideList.append(row);
+    }
+  } catch {
+    savedStatus.textContent = 'Saved guides could not be loaded. Reload to try again.';
+  }
+}
+
+async function openSelectedGuide() {
+  const identity = new URLSearchParams(location.hash.slice(1)).get('guide');
+  if (!identity) {
+    clearQuestion();
+    return;
+  }
+  guideView.hidden = true;
+  question.value = '';
+  progress.textContent = 'Opening saved guide…';
+  try {
+    const response = await fetch(`/api/guides/${encodeURIComponent(identity)}`);
+    if (!response.ok) throw new Error('Guide unavailable');
+    showGuide(await response.json());
+    progress.textContent = '';
+  } catch {
+    progress.textContent = 'This saved guide could not be opened.';
+  }
+}
 
 function showGuide(guide) {
   currentGuide = guide;
   document.querySelector('#guide-question').textContent = guide.question;
   document.querySelector('#outcome').textContent = outcomeLabels[guide.status];
   document.querySelector('#message').textContent = guide.message || '';
+  document.querySelector('#guide-created').textContent = `Saved ${displayDate(guide.created_at)}`;
+  document.querySelector('#guide-retrieved').textContent = guide.last_retrieved_at
+    ? `Last retrieved ${displayDate(guide.last_retrieved_at)}` : 'No successful retrieval yet.';
+  const attempt = guide.latest_attempt;
+  document.querySelector('#guide-attempt').textContent =
+    `Latest attempt: ${guideOutcome(guide)}. Started ${displayDate(attempt.started_at)}` +
+    (attempt.finished_at ? `. Finished ${displayDate(attempt.finished_at)}` : '');
   articles.replaceChildren();
   for (const article of guide.articles) {
     const row = document.createElement('li');
@@ -73,7 +141,10 @@ form.addEventListener('submit', async event => {
       body: JSON.stringify({question: text}),
     });
     if (!response.ok) throw new Error('Submission failed');
-    showGuide(await response.json());
+    const guide = await response.json();
+    showGuide(guide);
+    history.pushState(null, '', `#guide=${encodeURIComponent(guide.guide_id)}`);
+    await loadSavedGuides();
     progress.textContent = '';
   } catch {
     progress.textContent = 'The question could not be completed. Try submitting it again.';
@@ -87,14 +158,22 @@ edit.addEventListener('click', () => {
   question.value = currentGuide.question;
   question.focus();
 });
-newQuestion.addEventListener('click', () => {
+function clearQuestion() {
   currentGuide = null;
   question.value = '';
   guideView.hidden = true;
   articles.replaceChildren();
   progress.textContent = '';
   question.focus();
+}
+newQuestion.addEventListener('click', () => {
+  history.pushState(null, '', location.pathname);
+  clearQuestion();
 });
+
+window.addEventListener('hashchange', openSelectedGuide);
+loadSavedGuides();
+openSelectedGuide();
 
 fetch('/api/coverage').then(response => response.json()).then(coverage => {
   document.querySelector('#collections').textContent = coverage.entries.map(entry => {
