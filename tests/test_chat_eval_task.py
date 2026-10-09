@@ -336,18 +336,24 @@ def test_report_summarizes_unscored_full_text_candidates_when_dense_fails():
     )
 
 
-def test_declined_question_is_retained_without_retrieval(monkeypatch, chat_capture):
+@pytest.mark.parametrize("status", ["declined", "needs_edit"])
+def test_terminal_assessment_is_retained_without_retrieval(
+    monkeypatch, chat_capture, status
+):
     branches = fake_dependencies(
         monkeypatch,
         assessment={
-            "status": "declined",
-            "explanation": "This question is outside scope.",
+            "status": status,
+            "explanation": "The question cannot proceed as submitted.",
         },
     )
     output = run_one().cases[0].output
-    assert output.assessment.status == "declined"
+    assert output.assessment.status == status
     assert output.answer is None
-    assert output.rendered_text == "This question is outside scope."
+    assert output.guide.status == status
+    assert output.guide.question == output.question
+    assert output.guide.message == output.assessment.explanation
+    assert output.rendered_text == output.guide.message
     assert len(output.messages) == 1
     assert not any(branch.requests for branch in branches.values())
 

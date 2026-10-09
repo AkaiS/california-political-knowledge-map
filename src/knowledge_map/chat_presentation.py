@@ -4,8 +4,20 @@ import html
 import re
 from datetime import datetime
 
+from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import GuideArticle, SourceGuide
+
+
+def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
+    """Present a terminal assessment consistently across guide consumers."""
+    assert assessment.status == "declined" or assessment.status == "needs_edit"
+    return SourceGuide(
+        question=question,
+        status=assessment.status,
+        assessment=assessment,
+        message=assessment.explanation,
+    )
 
 
 def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGuide:

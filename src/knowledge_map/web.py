@@ -13,7 +13,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from knowledge_map.chat_presentation import render_answer, source_guide
+from knowledge_map.chat_presentation import (
+    assessment_guide,
+    render_answer,
+    source_guide,
+)
 from knowledge_map.chat_startup import (
     ChatDependencies,
     chat_dependencies,
@@ -103,13 +107,7 @@ def create_app(
             )
             return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
         if isinstance(result, QuestionAssessment):
-            assert result.status in {"declined", "needs_edit"}
-            guide = SourceGuide(
-                question=submission.question,
-                status=result.status,
-                assessment=result,
-                message=result.explanation,
-            )
+            guide = assessment_guide(submission.question, result)
         else:
             guide = source_guide(result)
             if isinstance(result, RetrievalAnswer):

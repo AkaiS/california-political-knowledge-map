@@ -16,8 +16,11 @@ source-first UI grilling session and is `ready-for-agent`. It covers durable,
 updateable guides, original-question submission, source-reading views and
 relevance directions, original-section navigation, and independently continuing
 searches. [Nine implementation tickets](projects/source-guides/PRD.md#implementation-tickets)
-link directly to the spec and declare their blockers, starting with
-[01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md).
+link directly to the spec and declare their blockers.
+[01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md)
+is `completed` after independent review on 2026-10-09 UTC;
+[02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md)
+is now takeable.
 Their main automated seam is the existing web application boundary; the
 maintainer explicitly requires browser verification and excludes a separate
 Chat Session test seam. These are revisable product requirements for this

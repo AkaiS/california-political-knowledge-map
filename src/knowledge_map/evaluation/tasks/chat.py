@@ -15,7 +15,11 @@ from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
-from knowledge_map.chat_presentation import render_answer, source_guide
+from knowledge_map.chat_presentation import (
+    assessment_guide,
+    render_answer,
+    source_guide,
+)
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
 from knowledge_map.core.question_preparation import model_failure_kind
@@ -239,14 +243,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     output.assessment = session.assessment
                     output.retrieval = session.retrieval_result
                 if isinstance(result, QuestionAssessment):
-                    output.guide = SourceGuide.model_validate(
-                        {
-                            "question": case_input.question,
-                            "status": result.status,
-                            "assessment": result,
-                            "message": result.explanation,
-                        }
-                    )
+                    output.guide = assessment_guide(case_input.question, result)
                     output.rendered_text = result.explanation
                 else:
                     output.answer = result
