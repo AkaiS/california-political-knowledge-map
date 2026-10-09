@@ -9,9 +9,11 @@ from types import SimpleNamespace
 
 import httpx
 from pydantic_ai import Agent
+from pydantic_evals.reporting import EvaluationReport, ReportCase
 
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality
+from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -43,6 +45,7 @@ class _RecordingCeiling:
 def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
     tmp_path: Path, monkeypatch
 ) -> None:
+    monkeypatch.chdir(tmp_path)
     data_set_path = tmp_path / "relevance.yaml"
     data_set_path.write_text("placeholder")
     calls: dict[str, object] = {}
@@ -64,10 +67,43 @@ def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
         build=build,
         evaluators=(),
     )
-    report = SimpleNamespace(print=lambda **kwargs: None, failures=())
+    report = EvaluationReport(
+        name="relevance",
+        cases=[
+            ReportCase(
+                name="case",
+                inputs={},
+                expected_output={},
+                metadata=None,
+                output={},
+                metrics={},
+                attributes={},
+                scores={},
+                labels={},
+                assertions={},
+                task_duration=0.0,
+                total_duration=0.0,
+            )
+        ],
+    )
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        evaluate,
+        "load_data_set",
+        lambda *args, **kwargs: EvaluationDataSet(
+            task="relevance",
+            description="test",
+            cases=(
+                EvaluationCase(
+                    id="case",
+                    description="test",
+                    task_input={},
+                    expected_output={},
+                ),
+            ),
+        ),
+    )
     monkeypatch.setattr(
         evaluate,
         "run_data_set",
@@ -133,8 +169,12 @@ def _completion(model: str) -> dict[str, object]:
     }
 
 
-def test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(monkeypatch) -> None:
-    asyncio.run(_test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(monkeypatch))
+def test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(
+    monkeypatch,
+) -> None:
+    asyncio.run(
+        _test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(monkeypatch)
+    )
 
 
 async def _test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(
@@ -170,7 +210,10 @@ async def _test_sequential_openrouter_runs_do_not_leak_the_previous_ceiling(
             )
             for index in range(3)
         ]
-        tasks = [asyncio.create_task(agent.run(f"case-{index}")) for index, agent in enumerate(agents)]
+        tasks = [
+            asyncio.create_task(agent.run(f"case-{index}"))
+            for index, agent in enumerate(agents)
+        ]
         await enough_started.wait()
         for _ in range(20):
             await asyncio.sleep(0)

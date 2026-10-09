@@ -297,6 +297,118 @@ def test_unavailable_answers_cannot_receive_fabricated_judgments():
     assert required_axes(case) == ()
 
 
+def test_failed_and_unresolved_attempts_remain_visible_and_annotatable():
+    raw = report()
+    raw["report"]["failures"] = [
+        {
+            "name": "failed",
+            "inputs": {"question": "Failed question"},
+            "error_message": "Transport attempts exhausted",
+            "error_stacktrace": "private internal stack",
+        }
+    ]
+    raw["evaluation_run"] = {
+        "status": "incomplete",
+        "selected_count": 3,
+        "terminal_count": 2,
+        "selected_cases": [
+            {"name": "case"},
+            {"name": "failed"},
+            {"name": "pending", "inputs": {"question": "Pending question"}},
+        ],
+        "unresolved_case_ids": ["pending"],
+    }
+    projected = project_report(raw)
+    cases = projected["report"]["cases"]
+    assert [case["name"] for case in cases] == ["case", "failed", "pending"]
+    assert cases[1]["execution"]["status"] == "failed"
+    assert cases[2]["execution"]["status"] == "unresolved"
+    assert (
+        cases[1]["execution"]["failure"]["diagnostic"] == "Transport attempts exhausted"
+    )
+    assert "private internal stack" not in json.dumps(projected)
+    assert projected["evaluation_run"]["status"] == "incomplete"
+    for case in cases[1:]:
+        note = {**review(), "execution_note": "Inspect this attempt"}
+        validate_review(note, case)
+        assert review_complete(note, case)
+        assert required_axes(case) == ()
+        with pytest.raises(ValueError, match="cannot be judged"):
+            validate_review({**note, "faithfulness": "fail"}, case)
+
+
+def test_decline_and_chat_guidance_failures_keep_their_review_material():
+    raw = report("chat")
+    source = raw["report"]["cases"][0]
+    declined = copy.deepcopy(source)
+    declined["name"] = "declined"
+    declined["output"] = {
+        "preparation": {
+            "status": "declined",
+            "message": "Cannot establish completeness",
+        },
+        "rendered_text": "Cannot establish completeness",
+    }
+    source["output"]["failure"] = {
+        "stage": "retrieval_and_guidance",
+        "exception_type": "ValidationError",
+        "diagnostic": "Guidance could not complete",
+    }
+    raw["report"]["cases"].append(declined)
+    projected = project_report(raw)["report"]["cases"]
+    assert (
+        projected[0]["output"]["generation_failure"]["stage"]
+        == "retrieval_and_guidance"
+    )
+    assert projected[1]["execution"]["message"] == "Cannot establish completeness"
+    assert not projected[1]["output"]["has_generation"]
+
+
+def test_progress_report_failure_notes_save_through_the_reviewer_api(tmp_path):
+    raw = report()
+    raw["report"]["cases"] = []
+    raw["report"]["failures"] = [
+        {
+            "name": "failed",
+            "inputs": {"question": "Question"},
+            "error_message": "Failed",
+        }
+    ]
+    raw["evaluation_run"] = {
+        "status": "incomplete",
+        "selected_cases": [{"name": "failed"}, {"name": "pending"}],
+        "selected_count": 2,
+        "terminal_count": 1,
+    }
+    directory = tmp_path / "retrieval"
+    directory.mkdir()
+    path = directory / "progress.json"
+    path.write_text(json.dumps(raw))
+    with server(tmp_path) as base:
+        api = f"{base}/api/runs/retrieval--progress"
+        projected = json.load(urlopen(f"{api}/report"))
+        runs = json.load(urlopen(f"{base}/api/runs"))
+        assert runs[0]["reviewable_count"] == 2
+        assert runs[0]["run_status"] == "incomplete"
+        for name in ("failed", "pending"):
+            payload = {
+                "name": name,
+                "review": {**review(), "execution_note": f"Inspect {name}"},
+                "review_identity": projected["review_identity"],
+            }
+            with urlopen(
+                Request(
+                    f"{api}/reviews",
+                    data=json.dumps(payload).encode(),
+                    headers={"Content-Type": "application/json"},
+                )
+            ) as response:
+                assert response.status == 200
+        assert json.load(urlopen(f"{base}/api/runs"))[0]["reviewed_count"] == 2
+    saved = json.loads(path.with_suffix(".rag-reviews.json").read_text())
+    assert saved["failed"]["execution_note"] == "Inspect failed"
+
+
 @contextmanager
 def server(directory):
     handler = review_server.make_handler(directory, b"runs", b"rag", "rag")

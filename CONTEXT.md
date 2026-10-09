@@ -346,7 +346,7 @@ The confirmation, before a command dispatches, that every local llama.cpp endpoi
 _Avoid_: OpenRouter Probe, health check, ping, preflight
 
 **Evaluation Run**:
-One execution of an Evaluation Data Set against one task and one Model Deployment, producing one JSON report file under `evals/reports/<task>/`. The report records the commit the run executed at, whether the worktree was dirty, the structured Model Deployment, the Data Set path, its Label Quality and split, and each case's Model Route Summary. A run whose report is not committed did not happen as far as the repository is concerned. Comparing two runs is a diff of two report files. There is no remote run identity, resumption, or finalization; an interrupted run is re-run.
+One execution of a selected population from an Evaluation Data Set against one task and one Model Deployment, retaining completed outcomes, failed attempts, and unresolved cases independently of whether execution finishes. Its provenance distinguishes a full set from an explicitly requested subset; interrupted attempts remain inspectable and a new execution is a separate run.
 _Avoid_: Experiment, job, trial, evaluation record
 
 ## Operational Constraints

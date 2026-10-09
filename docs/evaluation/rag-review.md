@@ -51,8 +51,16 @@ when the inputs do not let you decide:
 Each category has a short Description field. Quote the passage or answer claim
 that explains the decision. There is no whole-case verdict, general critique,
 or separate omission label. Reference recall measures coverage separately.
-Missing context or generation disables the affected judgments. Cases with no
-judgment inputs appear as unjudgeable and do not enter review progress.
+Missing context or generation disables the affected judgments. Every selected
+case remains inspectable, including framework failures and unresolved cases in a
+progress snapshot. The Execution outcome panel shows declines and concise stage
+errors. An Execution note is always available; for cases without RAG judgment
+inputs, a nonempty execution note counts as reviewed. Existing six-field review
+files remain readable. Notes do not manufacture relevance or faithfulness labels.
+
+New reports show run status and terminal outcomes against the selected population.
+Running or incomplete reports retain unresolved cases. A changed snapshot rejects
+stale-page saves; reload the report before saving against its current identity.
 
 The diagnosis panel derives a constrained interpretation from these labels.
 Low context relevance points to evidence selection; relevant context with

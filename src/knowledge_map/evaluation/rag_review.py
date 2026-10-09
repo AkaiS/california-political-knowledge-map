@@ -42,8 +42,11 @@ def required_axes(case: dict[str, Any]) -> tuple[str, ...]:
 
 def validate_review(review: dict[str, Any], case: dict[str, Any]) -> None:
     fields = set(AXES) | {f"{axis}_note" for axis in AXES}
-    if set(review) != fields:
+    if set(review) not in (fields, fields | {"execution_note"}):
         raise ValueError("expected the three RAG judgments and their supporting notes")
+    execution_note = review.get("execution_note", "")
+    if not isinstance(execution_note, str) or len(execution_note) > 20_000:
+        raise ValueError("invalid execution note")
     applicable = required_axes(case)
     for axis in AXES:
         if review[axis] not in VERDICTS:
@@ -57,7 +60,36 @@ def validate_review(review: dict[str, Any], case: dict[str, Any]) -> None:
 
 def review_complete(review: dict[str, Any], case: dict[str, Any]) -> bool:
     axes = required_axes(case)
-    return bool(axes) and all(review.get(axis) in ("pass", "fail") for axis in axes)
+    if not axes:
+        return bool((review.get("execution_note") or "").strip())
+    return all(review.get(axis) in ("pass", "fail") for axis in axes)
+
+
+def review_cases(document: dict[str, Any]) -> list[dict[str, Any]]:
+    """Include failed and unfinished attempts without fabricating task outputs."""
+    cases = {case["name"]: case for case in document["report"]["cases"]}
+    for failure in document["report"].get("failures", []):
+        cases[failure["name"]] = {
+            **failure,
+            "output": {
+                "failure": {
+                    "stage": "execution",
+                    "diagnostic": failure.get(
+                        "error_message", "Task execution failed."
+                    ),
+                }
+            },
+        }
+    selected = (document.get("evaluation_run") or {}).get("selected_cases", [])
+    for case in selected:
+        if case["name"] not in cases:
+            cases[case["name"]] = {
+                **case,
+                "output": {"execution_status": "unresolved"},
+                "unresolved": True,
+            }
+    order = [case["name"] for case in selected] or list(cases)
+    return [cases[name] for name in dict.fromkeys([*order, *cases])]
 
 
 def _evidence(output: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +244,7 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
     """Keep judgment inputs and measurement specs; omit pipeline internals."""
     configurations = (document.get("retrieval_report") or {}).get("configurations", [])
     cases = []
-    for case in document["report"]["cases"]:
+    for case in review_cases(document):
         output = case.get("output") or {}
         evidence = _evidence(output)
         sources = _sources(evidence)
@@ -231,6 +263,21 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
         has_generation = bool(
             generation and output.get("answer") and "introduction" in output["answer"]
         )
+        preparation = output.get("preparation") or {}
+        preparation_status = preparation.get("status")
+        status = (
+            "unresolved"
+            if case.get("unresolved")
+            else "failed"
+            if failure
+            else preparation_status
+            if preparation_status in ("declined", "deferred", "needs_clarification")
+            else "answer_generated"
+            if has_generation
+            else "context_only"
+            if sources
+            else "no_answer"
+        )
         cases.append(
             {
                 "name": case["name"],
@@ -238,6 +285,22 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                 "scope": (case.get("metadata") or {}).get("scope_note"),
                 "grain": (case.get("expected_output") or {}).get("grain"),
                 "metrics": _metric_rows(case, output, configurations),
+                "execution": {
+                    "status": status,
+                    "message": preparation.get("message")
+                    if status in ("declined", "deferred", "needs_clarification")
+                    else None,
+                    "failure": {
+                        key: failure.get(key)
+                        for key in ("stage", "exception_type", "diagnostic")
+                    }
+                    if failure
+                    else None,
+                    "evaluator_errors": [
+                        {key: error.get(key) for key in ("name", "error_message")}
+                        for error in case.get("evaluator_failures", [])
+                    ],
+                },
                 "output": {
                     "sources": sources,
                     "semantic_context": selected_semantic_results(evidence),
@@ -249,7 +312,8 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                         key: failure.get(key)
                         for key in ("stage", "exception_type", "diagnostic")
                     }
-                    if failure.get("stage") in ("guidance", "rendering")
+                    if failure.get("stage")
+                    in ("guidance", "rendering", "retrieval_and_guidance")
                     else None,
                 },
             }
@@ -319,5 +383,17 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
         "review_identity": document.get("review_identity"),
         "specs": specs,
         "metrics": summaries,
+        "evaluation_run": {
+            key: value
+            for key, value in (document.get("evaluation_run") or {}).items()
+            if key
+            in (
+                "status",
+                "selected_count",
+                "terminal_count",
+                "failure_count",
+                "unresolved_case_ids",
+            )
+        },
         "report": {"cases": cases},
     }

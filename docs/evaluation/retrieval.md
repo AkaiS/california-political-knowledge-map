@@ -1,5 +1,22 @@
 # Evaluate retrieval evidence
 
+Use the repository's `run-evaluation` skill or the maintained script for ordinary
+runs. It validates the established 25-case RAG population before calling models,
+runs the complete set by default, and reports every selected outcome:
+
+```sh
+uv run scripts/run_evaluation.py rag --plan
+uv run scripts/run_evaluation.py rag
+```
+
+An explicitly requested mini set uses `--sample 5 --seed 42`; one named case uses
+`--case C-M1-01`. Summarize an existing attempt with
+`uv run scripts/run_evaluation.py --report PATH`. New runs save an initial
+population manifest and atomic progress snapshots to one report path. Failed and
+interrupted attempts remain inspectable, with unresolved cases and nonzero exit
+status distinguished from completed answers. See
+[ADR 0024](../adr/0024-evaluations-preserve-the-selected-population-and-progress.md).
+
 The `retrieval` task runs the production full-text, dense and structural
 branches, weighted fusion, Evidence Assembly and final Chat Agent guidance.
 It starts with an authored, approved Query Rewrite, then passes the assembled

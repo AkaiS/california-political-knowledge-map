@@ -37,6 +37,7 @@ from knowledge_map.evaluation.chunk_review import (
 from knowledge_map.evaluation.rag_review import (
     project_report,
     required_axes,
+    review_cases,
     review_complete,
     validate_review,
 )
@@ -207,6 +208,7 @@ def load_report(path: Path, mode: str = "chat") -> dict[str, Any]:
     ).hexdigest()
     if mode == "rag":
         return project_report(report)
+    report["report"]["cases"] = review_cases(report)
     for case in report["report"]["cases"]:
         output = case.get("output")
         if not isinstance(output, dict):
@@ -293,12 +295,11 @@ def list_runs(reports_dir: Path, mode: str = "chat") -> list[dict[str, Any]]:
                 "case_count": len(cases),
                 **(
                     {
-                        "reviewable_count": sum(
-                            bool(required_axes(case)) for case in cases
-                        ),
+                        "reviewable_count": len(cases),
                         "unjudgeable_count": sum(
                             not required_axes(case) for case in cases
                         ),
+                        "run_status": (report.get("evaluation_run") or {}).get("status"),
                     }
                     if mode == "rag"
                     else {}

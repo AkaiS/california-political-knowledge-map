@@ -4,6 +4,15 @@ import {createReviewEditor} from '../scripts/chat_eval_review_editing.mjs';
 import {defaults,validateReview,requiredAxes,complete,diagnosis} from '../scripts/rag_eval_review_model.mjs';
 
 const both={output:{has_context:true,has_generation:true}};
+test('execution notes annotate cases without inventing RAG judgments',async()=>{
+ const failed={output:{has_context:false,has_generation:false}};
+ assert.deepEqual(requiredAxes(failed),[]);
+ assert.equal(validateReview({...defaults,execution_note:'Transport failure'}),true);
+ assert.equal(complete({...defaults,execution_note:'Transport failure'},failed),true);
+ assert.equal(complete({...defaults,execution_note:'  '},failed),false);
+ assert.equal(validateReview({...defaults,execution_note:3}),false);
+ assert.match(diagnosis(defaults,failed),/execution note/);
+});
 test('RAG axes separate context, answer relevance and faithfulness with scoped diagnosis',()=>{
  assert.deepEqual(requiredAxes(both),['context_relevance','answer_relevance','faithfulness']);
  assert.deepEqual(requiredAxes({output:{has_context:true,has_generation:false}}),['context_relevance']);

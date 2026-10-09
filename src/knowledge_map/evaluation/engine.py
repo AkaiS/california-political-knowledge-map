@@ -1,7 +1,7 @@
 """Run an Evaluation Data Set through ``pydantic-evals``.
 
-The Data Set is a file and the report is a file; this module is what runs
-between them. It holds no persistence and resolves no plan — see ADR 0017.
+The framework lifecycle records terminal outcomes through an optional
+checkpoint while preserving each task's evidence collection hooks.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from pydantic_evals.reporting import EvaluationReport
 from knowledge_map.utils.telemetry import setup_telemetry
 
 from .data_set import EvaluationCase, EvaluationDataSet, EvaluationSplit
+from .persistence import ReportCheckpoint
 
 
 class EvaluationCaseLifecycle(CaseLifecycle[Any, Any, Any]):
@@ -84,6 +85,7 @@ def run_data_set(
     max_concurrency: int = 1,
     experiment_metadata: Mapping[str, Any] | None = None,
     case_lifecycle: type[CaseLifecycle] | None = None,
+    checkpoint: ReportCheckpoint | None = None,
 ) -> EvaluationReport[Any, Any, Any]:
     """Execute every case in ``data_set`` against ``task``.
 
@@ -101,6 +103,9 @@ def run_data_set(
         split=split,
     )
     synchronous_task = _synchronous(task)
+    lifecycle = case_lifecycle or EvaluationCaseLifecycle
+    if checkpoint is not None:
+        lifecycle = checkpoint.lifecycle(lifecycle)
     return dataset.evaluate_sync(
         synchronous_task,
         name=data_set.task,
@@ -108,7 +113,7 @@ def run_data_set(
         metadata=dict(experiment_metadata) if experiment_metadata else None,
         progress=False,
         max_concurrency=max_concurrency,
-        lifecycle=case_lifecycle or EvaluationCaseLifecycle,
+        lifecycle=lifecycle,
     )
 
 

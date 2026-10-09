@@ -1,5 +1,10 @@
 # Git is the evaluation versioning system
 
+Superseded by [ADR 0024](0024-evaluations-preserve-the-selected-population-and-progress.md).
+This document records the previous decision; ADR 0024 carries forward the
+repository versioning boundaries and replaces failure disposal with explicit
+population accounting and progressive persistence.
+
 An Evaluation Data Set is a YAML file under `evals/gold/` or `evals/silver/`, according to whether a person or a model wrote its labels. An Evaluation Run is a command that builds a `pydantic_evals` `Dataset` from that file, executes it, and writes a JSON report to `evals/reports/<task>/`. Both files are committed. A Data Set's revision is a commit; a run's provenance is the commit it ran at, its structured Model Deployment, and each successful Evaluation Case's Model Route Summary. Pydantic Evals report metrics and Logfire/OpenTelemetry cover the operational request details. Comparing two runs is a diff of two report files. There is no Evaluation Ledger, no relational persistence of evaluation records, and no versioning mechanism authored for evaluation beyond the one the repository already has.
 
 This supersedes ADRs 0005, 0006, 0007, 0008, 0009, 0010, 0011, and 0012 in their entirety. It also restates the decision recorded as ADR 0018 on `feat/evaluations` — Evaluation Data Sets are authored as version-controlled files — so that decision survives without porting the branch it was written on.

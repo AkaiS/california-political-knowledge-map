@@ -9,8 +9,11 @@ import argparse
 from pathlib import Path
 from types import SimpleNamespace
 
+from pydantic_evals.reporting import EvaluationReport, ReportCase
+
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality
+from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
 from knowledge_map.evaluation.tasks import EvaluationTask, task_named, task_names
 
 
@@ -76,6 +79,7 @@ def test_every_registered_task_declares_the_prompt_it_runs():
 def test_the_run_command_carries_the_digests_into_experiment_metadata(
     tmp_path: Path, monkeypatch
 ) -> None:
+    monkeypatch.chdir(tmp_path)
     captured: dict[str, object] = {}
     data_set_path = tmp_path / "relevance.yaml"
     data_set_path.write_text("placeholder")
@@ -91,14 +95,47 @@ def test_the_run_command_carries_the_digests_into_experiment_metadata(
         evaluators=(),
         prompt_digests=lambda: {"relevance": "sha256:0123456789ab"},
     )
-    report = SimpleNamespace(print=lambda **kwargs: None, failures=())
+    report = EvaluationReport(
+        name="relevance",
+        cases=[
+            ReportCase(
+                name="case",
+                inputs={},
+                expected_output={},
+                metadata=None,
+                output={},
+                metrics={},
+                attributes={},
+                scores={},
+                labels={},
+                assertions={},
+                task_duration=0.0,
+                total_duration=0.0,
+            )
+        ],
+    )
 
     def capture(*args, **kwargs):
         captured["metadata"] = kwargs["experiment_metadata"]
         return report
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        evaluate,
+        "load_data_set",
+        lambda *args, **kwargs: EvaluationDataSet(
+            task="relevance",
+            description="test",
+            cases=(
+                EvaluationCase(
+                    id="case",
+                    description="test",
+                    task_input={},
+                    expected_output={},
+                ),
+            ),
+        ),
+    )
     monkeypatch.setattr(evaluate, "run_data_set", capture)
     monkeypatch.setattr(evaluate, "write_report", lambda *a, **k: tmp_path / "r.json")
 
