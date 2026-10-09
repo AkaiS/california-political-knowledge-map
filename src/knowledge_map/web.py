@@ -66,7 +66,7 @@ def create_app(
 ) -> FastAPI:
     dependencies: ChatDependencies | None = None
     guide_store = SQLiteGuideStore(guide_db_path)
-    running: set[asyncio.Task[None]] = set()
+    running: dict[str, asyncio.Task[None]] = {}
     accepting = False
 
     @asynccontextmanager
@@ -81,9 +81,9 @@ def create_app(
                     yield
                 finally:
                     accepting = False
-                    for task in running:
+                    for task in running.values():
                         task.cancel()
-                    await asyncio.gather(*running, return_exceptions=True)
+                    await asyncio.gather(*running.values(), return_exceptions=True)
         finally:
             dependencies = None
 
@@ -143,10 +143,45 @@ def create_app(
             )
         return start_execution(saved)
 
+    async def cancel_attempt(request: Request) -> Response:
+        if error := json_content_type_error(request):
+            return error
+        try:
+            GuideUpdate.model_validate_json(await request.body())
+        except ValidationError:
+            return JSONResponse(
+                {"error": "Cancel uses the selected search attempt."}, status_code=422
+            )
+        if error := stopping_service_error():
+            return error
+        guide_id = request.path_params["guide_id"]
+        attempt_id = request.path_params["attempt_id"]
+        try:
+            saved = guide_store.get(guide_id)
+        except KeyError:
+            return JSONResponse({"error": "Source Guide not found."}, status_code=404)
+        cancelled = guide_store.finish(
+            guide_id,
+            attempt_id,
+            SourceGuide(
+                question=saved.question,
+                status="cancelled",
+                message="This search was cancelled.",
+            ),
+        )
+        if (
+            cancelled.latest_attempt.attempt_id == attempt_id
+            and cancelled.latest_attempt.status == "cancelled"
+            and (task := running.get(attempt_id)) is not None
+        ):
+            task.cancel()
+        return JSONResponse(cancelled.model_dump(mode="json", exclude_none=True))
+
     def start_execution(saved: SavedSourceGuide) -> Response:
+        attempt_id = saved.latest_attempt.attempt_id
         task = asyncio.create_task(execute(saved))
-        running.add(task)
-        task.add_done_callback(running.discard)
+        running[attempt_id] = task
+        task.add_done_callback(lambda _: running.pop(attempt_id, None))
         return JSONResponse(
             saved.model_dump(mode="json", exclude_none=True),
             status_code=202,
@@ -266,6 +301,11 @@ def create_app(
         Route("/api/guides", list_guides, methods=["GET"]),
         Route("/api/guides/{guide_id}", read_guide, methods=["GET"]),
         Route("/api/guides/{guide_id}/update", update_guide, methods=["POST"]),
+        Route(
+            "/api/guides/{guide_id}/attempts/{attempt_id}/cancel",
+            cancel_attempt,
+            methods=["POST"],
+        ),
         Route("/api/coverage", coverage, methods=["GET"]),
         *(
             Route(path, asset, methods=["GET"])

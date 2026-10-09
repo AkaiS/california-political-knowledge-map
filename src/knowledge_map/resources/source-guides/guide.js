@@ -8,6 +8,7 @@ const articles = document.querySelector('#articles');
 const submit = document.querySelector('#submit');
 const edit = document.querySelector('#edit');
 const update = document.querySelector('#update');
+const cancel = document.querySelector('#cancel');
 const newQuestion = document.querySelector('#new');
 const guideList = document.querySelector('#guide-list');
 const savedStatus = document.querySelector('#saved-status');
@@ -125,12 +126,15 @@ function showGuide(guide) {
   currentGuide = guide;
   document.querySelector('#guide-question').textContent = guide.question;
   document.querySelector('#outcome').textContent = outcomeLabels[guide.status];
-  document.querySelector('#message').textContent = guide.message || '';
+  document.querySelector('#message').textContent = guide.message === outcomeLabels[guide.status]
+    ? '' : guide.message || '';
   document.querySelector('#guide-created').textContent = `Saved ${displayDate(guide.created_at)}`;
   document.querySelector('#guide-retrieved').textContent = guide.last_retrieved_at
     ? `Last retrieved ${displayDate(guide.last_retrieved_at)}` : 'No successful retrieval yet.';
   const attempt = guide.latest_attempt;
   update.disabled = attempt.status === 'running';
+  cancel.hidden = attempt.status !== 'running';
+  cancel.disabled = false;
   document.querySelector('#guide-attempt').textContent =
     `Latest attempt: ${guideOutcome(guide)}. Started ${displayDate(attempt.started_at)}` +
     (attempt.finished_at ? `. Finished ${displayDate(attempt.finished_at)}` : '');
@@ -239,6 +243,36 @@ update.addEventListener('click', async () => {
     }
   }
 });
+
+cancel.addEventListener('click', async () => {
+  const selected = currentGuide;
+  if (!selected || selected.latest_attempt.status !== 'running') return;
+  const selection = ++guideSelection;
+  cancel.disabled = true;
+  progress.textContent = 'Cancelling this search…';
+  try {
+    const response = await fetch(
+      `/api/guides/${encodeURIComponent(selected.guide_id)}/attempts/${encodeURIComponent(selected.latest_attempt.attempt_id)}/cancel`,
+      {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'},
+    );
+    if (!response.ok) throw new Error('Cancellation failed');
+    const guide = await response.json();
+    if (selection === guideSelection) {
+      ++guideSelection;
+      showGuide(guide);
+      progress.textContent = guide.latest_attempt.status === 'cancelled'
+        ? '' : 'The selected search is no longer running. Its saved outcome is shown below.';
+    }
+    await loadSavedGuides();
+  } catch {
+    if (selection === guideSelection) {
+      progress.textContent = 'Cancellation could not be confirmed. Reopen this saved guide to check its status.';
+    }
+  } finally {
+    if (selection === guideSelection) cancel.disabled = false;
+  }
+});
+
 function clearQuestion() {
   ++guideSelection;
   currentGuide = null;
