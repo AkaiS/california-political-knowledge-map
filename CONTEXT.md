@@ -246,11 +246,11 @@ The Article Chunks loaded into context to support a Retrieval Answer, reached th
 _Avoid_: Context, retrieved documents, source text, supporting chunks
 
 **Chat Agent**:
-The conversational agent that receives the person's original question, applies question policy and coverage to the Query Rewrite, obtains approval, invokes retrieval, and presents the Retrieval Answer. It receives the Evidence Assembler's package directly; no separate answering or sufficiency agent sits between them.
+The agent responsible for assessing the person's explicit political question and guiding the reader to relevant Source Articles through a Retrieval Answer. It receives the Evidence Assembler's package directly and does not supply a standalone reporting account.
 _Avoid_: Retrieval Orchestrator, Answering Agent
 
 **Chat Session**:
-The stateful interaction devoted to one political question, including any Query Rewrite rejection, correction, and approval before retrieval and the resulting Retrieval Answer. A new political question starts a new Chat Session; answers do not rely on context from an earlier one.
+The stateful interaction devoted to one explicit political question, its assessment and retrieval, and the resulting Retrieval Answer. Each search has its own results and limits; previous searches may be consulted but supply no implicit conversational context to a new question.
 _Avoid_: Multi-question chat, persistent conversation
 
 **Chat Session ID**:
@@ -262,7 +262,7 @@ The best-effort observations of a Chat Session's application stages that reached
 _Avoid_: Durable audit log, complete transcript, delivery receipt
 
 **Evidence Assembler**:
-The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups passages by Source Article, supplies verified original wording and relevant coverage limits, and applies the context budget without interpreting or summarizing the evidence.
+The deterministic boundary that turns ranked Grounding Evidence into the typed package returned to the Chat Agent. It retains retrieval routes and supporting graph claims, groups stored passages by Source Article, and supplies relevant coverage limits without interpreting or summarizing the evidence; stored passages may contain coreference replacements and are not necessarily original article wording.
 _Avoid_: Answering Agent, Evidence Curator, context summarizer
 
 **Relational Question**:
@@ -278,8 +278,20 @@ The approved natural-language question from a Query Rewrite Proposal that the re
 _Avoid_: Retrieval plan, normalized query, Cypher query
 
 **Retrieval Answer**:
-A selection of relevant sources and original supporting passages presented for the reader to consult, with brief guidance connecting them to the question and stating known limits on what they support. It serves a librarian's role by directing the reader to sources and highlighting disagreements without adjudicating them.
+A selection of relevant Source Articles with reading directions connecting them to the person's question and known limits on what they support. It is the result of retrieval and assessment, rather than the durable Source Guide that presents it.
 _Avoid_: Expert verdict, standalone summary
+
+**Source Guide**:
+A durable, updateable organization of Source Articles and reading directions for an explicit political question. It records search limitations and outcomes and can present articles through question-specific Article Groups.
+_Avoid_: Workspace, artifact
+
+**Article Group**:
+A question-specific collection of Source Articles that help the reader investigate the same aspect of the question. One article may belong to several groups; membership describes its relevance rather than assigning the article a political position.
+_Avoid_: Policy Area, article stance, summary
+
+**Declined**:
+The eligibility state of a question ruled out by the system's question policy, rather than a legitimate question awaiting unavailable data. It is distinct from Deferred, empty search results, and search failure.
+_Avoid_: Deferred, no results, failed search
 
 **Deferred**:
 The coverage state of a legitimate question whose required data is not yet available, expected to become answerable as coverage expands. It is distinct from a permanently Declined question and from a search that finds no matching evidence.

@@ -17,6 +17,13 @@ without making rewriting mandatory in production.
 
 **What we've established so far:**
 
+- On 2026-10-07, during source-first UI shaping, the maintainer chose to skip
+  the Query Rewrite in the rebuilt iteration. The UI will show an explicit,
+  editable question before each search, including refinements. This settles
+  rewriting for that iteration. The maintainer subsequently chose submission
+  directly to search without a second approval step, and voter editing to
+  resolve missing referents. Broad but meaningful questions may proceed.
+  Routing and preparation still need a bounded implementation contract.
 - The maintainer prefers keeping the original question or removing the Query
   Rewriter and revisiting it only if useful later.
 - The current `QueryRewriteProposal` combines natural-language rewriting and a
@@ -31,18 +38,19 @@ without making rewriting mandatory in production.
 - No equivalent original-question mode was found in preparation, startup,
   configuration, or the chat evaluation task.
 
-**What we still need from the maintainer:**
+**Remaining implementation shaping:**
 
-- Should explicit approval remain when the question is unchanged, or should a
-  valid original question proceed directly to retrieval?
-- Should structural retrieval run for all eligible questions in the baseline,
-  or should a small classification step retain the current relational routing?
-- Should this be the sole production path, or an evaluation-only baseline before
-  deciding to remove rewriting?
+- Preserve current production branch participation under ADR 0023: startup
+  already runs the shared Jev, sparse, and dense path for eligible questions,
+  including those the old rewriter marks non-relational. Do not introduce a new
+  routing classifier merely because rewriting is removed.
+- How should the existing preparation and approval contract be replaced by
+  direct submission for the rebuilt UI while preserving historical audit data?
 
 ## Completion criteria for shaping
 
-- [ ] Record the three decisions above and their effect on existing contracts.
+- [x] Record original-question submission without rewriting or a second approval.
+- [ ] Specify the effect of those decisions on existing execution/audit contracts.
 - [ ] Specify what a correction does when no rewrite proposal exists.
 - [ ] Specify how a corrected question is distinguished from the original in
       approval, traces, and evaluation provenance.
@@ -56,7 +64,8 @@ without making rewriting mandatory in production.
 
 This record does not choose a routing architecture, remove approval by inference,
 add a generic intent language, tune passage ranking, or improve the old rewrite
-prompt. Clarification is deferred rather than introduced as a prerequisite.
+prompt. Voter editing for unresolved referents is part of the Source Guide design;
+a general automatic clarification/reformulation workflow is not a prerequisite.
 
 ## Comments
 
@@ -66,3 +75,27 @@ prompt. Clarification is deferred rather than introduced as a prerequisite.
 The simplification is intentional enhancement work. The three open contract
 choices prevent an agent-ready implementation brief; no decision is inferred
 from the maintainer's preference for using original wording.
+
+2026-10-07: Source-first UI grilling explicitly chose to skip the Query Rewrite
+in the rebuilt iteration. See [the UI issue](04-shape-source-first-chat-ui.md).
+The design allows refinements with the complete search question visible and
+editable; the preparation and routing contract remains to be shaped.
+
+2026-10-07: The maintainer additionally chose search on submission without a
+second approval step. Missing referents are resolved through voter editing;
+broad but meaningful questions may proceed. This UI iteration is the chosen
+product path rather than an evaluation-only rewrite experiment. Routing and
+the replacement preparation contract remain implementation-shaping work.
+
+2026-10-08: Fact checking against ADR 0023 established that production already
+runs structural retrieval for every eligible submitted question through its
+reporting-enabled path. Removing rewriting should preserve that participation;
+it does not require another maintainer routing decision. Source Guide updates
+search the same question again, while edited questions create separate guides.
+
+2026-10-08: The [Source Guides PRD](../../../projects/source-guides/PRD.md) and
+its [first implementation ticket](../../../projects/source-guides/issues/01-submit-original-questions.md)
+now own original-question submission for the rebuilt
+UI. Coordinate changes through that project rather than implement a competing
+rewrite-removal path. Existing historical approval and evaluation records retain
+their original meaning.
