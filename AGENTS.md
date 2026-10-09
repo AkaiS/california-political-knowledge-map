@@ -39,6 +39,8 @@ Triage roles map to default label strings (`needs-triage`, `needs-info`, `ready-
 
 Uses the "single-context" layout, with a single `CONTEXT.md` and `docs/adr/` at the repository root. See [domain.md](docs/agents/domain.md).
 
+For starting reviewers, annotating Evaluation Cases, or explaining evaluation metrics, use the [evaluation guide index](docs/evaluation/README.md).
+
 ## Documentation
 - Comments exist to describe the problem the code is solving. When a function is moved, so should the comments.
 - The place to document architectural decisions is never directly in the code.

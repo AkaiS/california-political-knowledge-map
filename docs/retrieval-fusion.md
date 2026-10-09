@@ -4,6 +4,13 @@
 a `RetrievalExecutionResult` into ranked `FusedCandidate` values. It preserves
 the execution record for later inspection and Evidence Assembly.
 
+Compact-report `replay_fusion` uses the same private ranking implementation in
+the fusion module. Production supplies candidate ranks and retains provenance;
+replay supplies retained ranks, nomination pools and any recorded eligibility,
+then restores Source Article identities. Neither adapter owns separate ranking
+arithmetic, tie breaking or cutoffs. Replay records no production selection
+observations.
+
 ```python
 from knowledge_map.core.fusion import fuse_candidates
 from knowledge_map.schemas.fusion import FusionConfig
@@ -15,7 +22,10 @@ baseline = fuse_candidates(execution, config=config, unweighted_baseline=True)
 
 `FusionConfig` construction and JSON validation, and `fuse_candidates`, are the
 public test seams recorded before implementation under the maintainer's advance
-confirmation. Tests supply the existing retrieval contracts. Fusion needs no
+confirmation. The shared-ranking change also tests the existing `replay_fusion`
+and `compact_branches` interfaces in `knowledge_map.evaluation.retrieval_report`.
+Private ranking helpers are not test seams. Tests supply the existing retrieval
+contracts. Fusion needs no
 model, database, or clock dependency. The [retrieval coordinator](retrieval-pipeline.md)
 consumes it before Evidence Assembly.
 
@@ -88,7 +98,10 @@ context limits remain Evidence Assembly's responsibility.
 
 ## Verification
 
-`uv run --no-sync pytest -q tests/test_fusion.py` covers structural priority,
+`uv run --no-sync pytest -q tests/test_fusion.py tests/test_fusion_replay.py tests/test_retrieval_report.py`
+covers structural priority,
 text-only evidence, branch accumulation, duplicate routes, configuration and
 cutoff behavior, ties, identity preservation, failures, and the unweighted
-measurement baseline. It uses fixed ranked candidates and no external services.
+measurement baseline. Independent expected outputs and exact adapter parity
+cover compact replay, recorded eligibility and nondefault settings. The checks
+use fixed ranked candidates and no external services.

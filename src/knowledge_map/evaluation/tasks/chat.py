@@ -9,7 +9,14 @@ from statistics import fmean
 from typing import Any, Literal
 from urllib.parse import quote
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_serializer,
+)
 from pydantic_ai.capabilities.hooks import Hooks
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
@@ -48,6 +55,7 @@ class ChatInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=1)
+    as_of: AwareDatetime | None = None
 
 
 class ChatMetadata(BaseModel):
@@ -83,6 +91,7 @@ class ChatOutput(BaseModel):
         "approve_first_proposal"
     )
     chat_session_id: str | None = None
+    as_of: AwareDatetime | None = None
     preparation: QuestionPreparationResult | None = None
     assessment: QuestionAssessment | None = None
     guide: SourceGuide | None = None
@@ -234,8 +243,11 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     dataclasses.asdict(dependencies.start_settings)
                 )
                 output.coverage = dependencies.coverage
-                session = new_chat_session(case_input.question, dependencies)
+                session = new_chat_session(
+                    case_input.question, dependencies, as_of=case_input.as_of
+                )
                 output.chat_session_id = session.chat_session_id
+                output.as_of = session.as_of
                 stage = "retrieval_and_guidance"
                 try:
                     result = await session.run()

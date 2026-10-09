@@ -303,7 +303,7 @@ def test_submission_searches_the_complete_question_without_rewriting_or_approval
     assert response.status_code == 200
     assert response.json()["question"] == question
     assert json.loads(prompts[0][0])["question"] == question
-    assert prompts[1][0] == question
+    assert prompts[1][1] == question
     for branch in branches.values():
         assert [request.rewrite.question for request, _ in branch.requests] == [
             question

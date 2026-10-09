@@ -1,5 +1,22 @@
 # Evaluate retrieval evidence
 
+Use the repository's `run-evaluation` skill or the maintained script for ordinary
+runs. It validates the established 25-case RAG population before calling models,
+runs the complete set by default, and reports every selected outcome:
+
+```sh
+uv run scripts/run_evaluation.py rag --plan
+uv run scripts/run_evaluation.py rag
+```
+
+An explicitly requested mini set uses `--sample 5 --seed 42`; one named case uses
+`--case C-M1-01`. Summarize an existing attempt with
+`uv run scripts/run_evaluation.py --report PATH`. New runs save an initial
+population manifest and atomic progress snapshots to one report path. Failed and
+interrupted attempts remain inspectable, with unresolved cases and nonzero exit
+status distinguished from completed answers. See
+[ADR 0024](../adr/0024-evaluations-preserve-the-selected-population-and-progress.md).
+
 The `retrieval` task runs the production full-text, dense and structural
 branches, weighted fusion, Evidence Assembly and final Chat Agent guidance.
 It starts with an authored, approved Query Rewrite, then passes the assembled
@@ -265,11 +282,20 @@ The report omits candidate routes and claims, repeated contributions, fused
 objects, catalogs, cumulative prompts and most successful stage observations.
 `replay_fusion` in `knowledge_map.evaluation.retrieval_report` reconstructs exact
 production scores and ordering from the compact branch records and configuration.
-Production fusion uses each branch's candidate limit to establish eligibility,
-but an eligible chunk can still receive a contribution from a deeper rank in
-another branch. Only those extra ranks are retained. Larger configured fusion
-budgets also record explicit eligible IDs, without changing the 50-chunk metric
-budget. Missing historical fusion settings prevent compaction rather than
+Production's `fuse_candidates` and report replay share the private ranking policy
+in `knowledge_map.core.fusion`. `compact_branches` uses that same policy's ordered
+best branch ranks and nominations to choose retained records. These three
+interfaces keep their existing signatures and return types. The report adapter
+still owns Source Article identity, serialized fields, counts and bounded retention.
+
+Each branch's configured candidate limit establishes eligibility, but an eligible
+chunk can still receive a contribution from a deeper rank in another branch.
+Compaction retains the first 50 unique chunks per branch and only those extra
+contributing ranks. Larger configured fusion budgets also record explicit eligible
+IDs, without changing the 50-chunk metric budget. Replay honors those IDs when
+present and otherwise derives nominations from the retained first-50 population;
+extra ranks cannot nominate discarded candidates. Historical reports need no
+rewrite. Missing historical fusion settings prevent compaction rather than
 inventing a configuration.
 
 These records support branch failure diagnosis, reference misses within the
@@ -342,8 +368,9 @@ The existing command runs all 25 cases, including the answer call:
 
 ```sh
 uv run ca-map eval run retrieval --deployment local --model gemma4:26b
-uv run python scripts/review_chat_eval.py --mode rag
 ```
+
+Open the completed run using [the RAG launcher](rag-review.md#start-the-reviewer).
 
 Use `--case C-R1-01` for a smoke run. Older retrieval reports remain evidence-only;
 rerun them to obtain answers. Reference labels never enter the model request.

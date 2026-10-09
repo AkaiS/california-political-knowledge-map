@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-from math import fsum
 from typing import Any
 
+from knowledge_map.core.fusion import _prepare_ranking, _rank_candidates
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import RetrievalBranch
 
@@ -14,36 +14,36 @@ METRIC_VERSION = "unique-chunk-budget-v2"
 REPORT_VERSION = 1
 
 
-def _best_ranks(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    best = {}
-    for candidate in candidates:
-        chunk = candidate["chunk_id"]
-        rank = candidate["ranking"]["rank"]
-        if chunk not in best or rank < best[chunk]["rank"]:
-            best[chunk] = {
-                "chunk_id": chunk,
-                "source_article_id": candidate["source_article_id"],
-                "rank": rank,
-            }
-    return sorted(best.values(), key=lambda c: (c["rank"], c["chunk_id"]))
-
-
 def compact_branches(
     outcomes: list[dict[str, Any]], config: FusionConfig
 ) -> list[dict[str, Any]]:
     """Keep branch budgets and only the extra ranks that affect fusion."""
-    ranked = {o["branch"]: _best_ranks(o.get("candidates", [])) for o in outcomes}
-    eligible_by_branch = {
-        branch: records[: getattr(config, f"{branch}_candidate_limit")]
-        for branch, records in ranked.items()
+    ranks_by_branch = {
+        RetrievalBranch(outcome["branch"]): [
+            (candidate["chunk_id"], candidate["ranking"]["rank"])
+            for candidate in outcome.get("candidates", [])
+        ]
+        for outcome in outcomes
     }
-    eligible = {
-        r["chunk_id"] for records in eligible_by_branch.values() for r in records
-    }
+    best_ranks, eligible_by_branch = _prepare_ranking(ranks_by_branch, config=config)
+    eligible = {chunk for chunks in eligible_by_branch.values() for chunk in chunks}
     compact = []
     for outcome in outcomes:
-        branch = outcome["branch"]
-        records = ranked[branch]
+        branch = RetrievalBranch(outcome["branch"])
+        articles = {}
+        for candidate in outcome.get("candidates", []):
+            articles.setdefault(
+                (candidate["chunk_id"], candidate["ranking"]["rank"]),
+                candidate["source_article_id"],
+            )
+        records = [
+            {
+                "chunk_id": chunk,
+                "source_article_id": articles[chunk, rank],
+                "rank": rank,
+            }
+            for chunk, rank in best_ranks[branch].items()
+        ]
         kept = records[:CHUNK_BUDGET]
         summary = {
             k: outcome[k] for k in ("branch", "status", "reason") if k in outcome
@@ -58,10 +58,8 @@ def compact_branches(
         )
         # Nondefault larger production budgets still need their eligibility
         # recorded. This does not enlarge the 50-chunk evaluation budget.
-        if getattr(config, f"{branch}_candidate_limit") > CHUNK_BUDGET:
-            summary["fusion_eligible_chunk_ids"] = [
-                r["chunk_id"] for r in eligible_by_branch[branch]
-            ]
+        if getattr(config, f"{branch.value}_candidate_limit") > CHUNK_BUDGET:
+            summary["fusion_eligible_chunk_ids"] = eligible_by_branch[branch]
         compact.append(summary)
     return compact
 
@@ -95,40 +93,28 @@ def replay_fusion(
     branches: list[dict[str, Any]], config: FusionConfig
 ) -> list[dict[str, Any]]:
     """Recover production RRF ordering without candidate provenance or text."""
-    eligible = set()
-    ranks: dict[str, dict[str, int]] = {}
+    ranks_by_branch = {}
+    nomination_pools = {}
+    recorded_eligibility = {}
     articles = {}
     for branch in branches:
-        name = branch["branch"]
+        name = RetrievalBranch(branch["branch"])
         records = branch["candidates"]
-        eligible.update(
-            branch.get(
-                "fusion_eligible_chunk_ids",
-                [
-                    r["chunk_id"]
-                    for r in records[: getattr(config, f"{name}_candidate_limit")]
-                ],
-            )
-        )
+        nomination_pools[name] = {r["chunk_id"] for r in records}
+        if "fusion_eligible_chunk_ids" in branch:
+            recorded_eligibility[name] = branch["fusion_eligible_chunk_ids"]
+        ranks_by_branch[name] = [
+            (r["chunk_id"], r["rank"]) for r in records + branch["extra_fusion_ranks"]
+        ]
         for r in records + branch["extra_fusion_ranks"]:
-            ranks.setdefault(r["chunk_id"], {})[name] = r["rank"]
             articles[r["chunk_id"]] = r["source_article_id"]
-    ranked = sorted(
-        (
-            (
-                chunk,
-                fsum(
-                    getattr(config, f"{branch.value}_weight")
-                    / (config.rank_constant + contributions[branch.value])
-                    for branch in RetrievalBranch
-                    if branch.value in contributions
-                ),
-            )
-            for chunk, contributions in ranks.items()
-            if chunk in eligible
-        ),
-        key=lambda pair: (-pair[1], pair[0]),
+    best_ranks, eligible_by_branch = _prepare_ranking(
+        ranks_by_branch,
+        config=config,
+        nomination_pools=nomination_pools,
+        recorded_eligibility=recorded_eligibility,
     )
+    ranked = _rank_candidates(best_ranks, eligible_by_branch, config=config)
     return [
         {
             "chunk_id": chunk,
@@ -136,7 +122,7 @@ def replay_fusion(
             "rank": rank,
             "fusion_score": score,
         }
-        for rank, (chunk, score) in enumerate(ranked[: config.fused_candidate_limit], 1)
+        for rank, (chunk, score) in enumerate(ranked, 1)
     ]
 
 

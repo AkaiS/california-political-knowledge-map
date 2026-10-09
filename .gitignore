@@ -12,3 +12,8 @@ manual_checks/*
 .claude/*
 .codex/*
 .DS_Store
+
+# Deliver the repository evaluation router without exposing local agent files.
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/run-evaluation/

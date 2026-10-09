@@ -36,6 +36,8 @@ function fixture({storedEntries = [], ...options} = {}) {
     clearTimeout(id) { timers.delete(id); },
   };
   const storage = {
+    get length() { return stored.size; },
+    key: index => [...stored.keys()][index] ?? null,
     getItem: key => stored.get(key) ?? null,
     setItem: (key, value) => stored.set(key, value),
     removeItem: key => stored.delete(key),
@@ -196,7 +198,7 @@ for (const status of [503, 409]) {
     assert.equal(editor.state.pendingDraftCount, 1);
     assert.equal(JSON.parse(stored.get(draftKey)).reviews['case-a'].note, 'Keep my review');
     assert.match(editor.state.saveStatus, /case-a: .*Edits kept in this browser.*Use Save \/ retry/);
-    if (status === 409) assert.match(editor.state.saveStatus, /report changed\. Reload to review the current report/);
+    if (status === 409) assert.match(editor.state.saveStatus, /report changed\. Back up unsaved notes before reloading/);
     const retry = editor.flush();
     (await persistence.nextWrite()).succeed();
     assert.equal(await retry, true);

@@ -9,15 +9,42 @@ generation. It does not grade question preparation, structural construction,
 branch execution or the whole Chat Session. Those remain available in the
 separate end-to-end chat reviewer.
 
-Start the same review server in RAG mode:
+## Start the reviewer
+
+From a prepared checkout, run:
 
 ```sh
-uv run python scripts/review_chat_eval.py --mode rag
+./scripts/start-rag-reviewer.sh
 ```
 
-Open `http://127.0.0.1:8765/`. The run list includes retrieval and chat reports.
+Open the ready URL printed by the launcher. The run list includes retrieval and
+chat reports, and **Chunk review** opens the sampled chunk view. The launcher
+prints the resolved checkout and data directories. It reuses a ready server only
+when its mode, checkout, report directory and sample directory match. Otherwise
+the operating system assigns a free loopback port. Other reviewers keep running.
+
+The server runs detached after the command exits. Logs and reuse records live
+under `.scratch/rag-reviewer/`. A reused server without a recorded log file prints
+`Log: unavailable for reused server`. Startup waits at most 30 seconds for readiness,
+including the launch lock and identity probes. If a started server fails, the
+launcher prints its log path and stops only the process started by that attempt.
+Concurrent launches for the same directories share one server. Repeating the
+command prints the same ready URL while that server is running, which preserves
+the address used by browser-local review drafts.
+
 Use `--reports-dir evals/reports/retrieval` to show only retrieval reports,
-or `--port 8766` when another reviewer is already running.
+`--samples-dir <path>` to select another sample directory, or `--timeout <seconds>`
+to change the readiness deadline. Relative paths resolve from the checkout root.
+To stop a server you started, read its PID at `<ready-url>api/identity` and send
+that PID `SIGTERM`. Saved annotations remain beside their reports and samples.
+
+The launcher uses `uv run --no-sync python -u` and does not install dependencies.
+If the checkout has no prepared `.venv`, run `uv sync --locked --dev` first.
+In a restricted sandbox, allow access to uv's runtime/cache and local loopback
+sockets, including a detached subprocess. A denied launch cannot produce a ready
+URL; inspect its error or the printed log before retrying.
+
+## Choose a run
 
 A new retrieval report supplies selected context, retrieval reference metrics
 and the final Chat Agent answer from the same execution. Older retrieval-only
@@ -51,8 +78,20 @@ when the inputs do not let you decide:
 Each category has a short Description field. Quote the passage or answer claim
 that explains the decision. There is no whole-case verdict, general critique,
 or separate omission label. Reference recall measures coverage separately.
-Missing context or generation disables the affected judgments. Cases with no
-judgment inputs appear as unjudgeable and do not enter review progress.
+Missing context or generation disables the affected judgments. Every selected
+case remains inspectable, including framework failures and unresolved cases in a
+progress snapshot. The Execution outcome panel shows declines and concise stage
+errors. An Execution note is always available; for cases without RAG judgment
+inputs, a nonempty execution note counts as reviewed. Existing six-field review
+files remain readable. Notes do not manufacture relevance or faithfulness labels.
+
+New reports show run status and terminal outcomes against the selected population.
+Running or incomplete reports retain unresolved cases. A changed snapshot rejects
+stale-page saves. Use **Download unsaved notes** before reloading to retain the
+notes with their original case IDs and snapshot identity. The download remains
+available after reload for browser backups from earlier snapshots of this run.
+Inspect those notes against the current evidence before entering them again;
+the reviewer never automatically applies judgments from a changed snapshot.
 
 The diagnosis panel derives a constrained interpretation from these labels.
 Low context relevance points to evidence selection; relevant context with
