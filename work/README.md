@@ -19,9 +19,10 @@ searches. [Nine implementation tickets](projects/source-guides/PRD.md#implementa
 link directly to the spec and declare their blockers.
 [01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md),
 [02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md),
-and [03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md)
+[03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md),
+and [04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md)
 are `completed` after independent review on 2026-10-09 UTC.
-[04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md),
+[05 Cancel searches without losing saved content](projects/source-guides/issues/05-cancel-searches.md),
 [06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md),
 [07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
 [08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md),

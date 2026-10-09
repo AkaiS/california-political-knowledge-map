@@ -87,7 +87,7 @@ def create_app(
         finally:
             dependencies = None
 
-    async def submit_question(request: Request) -> Response:
+    def json_content_type_error(request: Request) -> Response | None:
         if (
             request.headers.get("content-type", "").split(";")[0].strip().lower()
             != "application/json"
@@ -95,27 +95,32 @@ def create_app(
             return JSONResponse(
                 {"error": "Expected Content-Type: application/json"}, status_code=415
             )
+        return None
+
+    def stopping_service_error() -> Response | None:
+        if not accepting:
+            return JSONResponse(
+                {"error": "The local service is stopping."}, status_code=503
+            )
+        return None
+
+    async def submit_question(request: Request) -> Response:
+        if error := json_content_type_error(request):
+            return error
         try:
             submission = QuestionSubmission.model_validate_json(await request.body())
         except ValidationError:
             return JSONResponse(
                 {"error": "Enter a complete text question."}, status_code=422
             )
-        if not accepting:
-            return JSONResponse(
-                {"error": "The local service is stopping."}, status_code=503
-            )
+        if error := stopping_service_error():
+            return error
         saved = guide_store.create(submission.question)
         return start_execution(saved)
 
     async def update_guide(request: Request) -> Response:
-        if (
-            request.headers.get("content-type", "").split(";")[0].strip().lower()
-            != "application/json"
-        ):
-            return JSONResponse(
-                {"error": "Expected Content-Type: application/json"}, status_code=415
-            )
+        if error := json_content_type_error(request):
+            return error
         try:
             GuideUpdate.model_validate_json(await request.body())
         except ValidationError:
@@ -123,10 +128,8 @@ def create_app(
                 {"error": "Update guide uses its saved question and settings."},
                 status_code=422,
             )
-        if not accepting:
-            return JSONResponse(
-                {"error": "The local service is stopping."}, status_code=503
-            )
+        if error := stopping_service_error():
+            return error
         try:
             saved = guide_store.start_update(request.path_params["guide_id"])
         except KeyError:
