@@ -9,7 +9,7 @@ import pytest
 from neo4j import AsyncDriver, AsyncGraphDatabase, Driver, GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 from starlette.testclient import TestClient
-from test_chat_web import events, question_request
+from test_chat_web import events, question_request, submit_guide
 from test_model_factory import chat_completion
 
 from knowledge_map.chat_startup import chat_dependencies
@@ -23,9 +23,7 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
 ):
     _, _, _, _, requests, _, _, _ = startup_dependencies
     with TestClient(create_app(), base_url="http://localhost") as client:
-        response = client.post(
-            "/api/questions", json=question_request("Who backed AB 1?")
-        )
+        response = submit_guide(client, json=question_request("Who backed AB 1?"))
         chunks = events(response)
 
     assessment_request = next(
@@ -166,8 +164,8 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
     ) as client:
         for index in range(2):
             chunks = events(
-                client.post(
-                    "/api/questions",
+                submit_guide(
+                    client,
                     json=question_request(
                         "Find housing reporting.", f"question-{index}"
                     ),
@@ -226,8 +224,8 @@ def test_startup_ignores_unparseable_publication_dates(
     with TestClient(
         create_app(session_factory=session_factory), base_url="http://localhost"
     ) as client:
-        response = client.post(
-            "/api/questions", json=question_request("Find CalMatters reporting.")
+        response = submit_guide(
+            client, json=question_request("Find CalMatters reporting.")
         )
 
     assert response.status_code == 200

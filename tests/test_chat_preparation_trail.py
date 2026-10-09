@@ -4,7 +4,7 @@ import pytest
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import guide_client
+from test_chat_web import guide_client, submit_guide
 
 
 def scripted_model(outputs):
@@ -28,7 +28,7 @@ def test_submitted_question_assessment_has_one_safe_observation(status, chat_cap
     if status == "deferred":
         assessment["recoverable_portion"] = "Available reporting."
     with guide_client(assessment=assessment) as (client, _, _):
-        result = client.post("/api/questions", json={"question": "Who backed AB 1?"})
+        result = submit_guide(client, json={"question": "Who backed AB 1?"})
     assert result.status_code == 200
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     assessed = [s for s in spans if s["name"] == "chat_session.assessment"]

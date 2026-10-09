@@ -57,7 +57,9 @@ class SQLiteGuideStore:
             )
         return self.get(guide_id)
 
-    def finish(self, guide_id: str, result: SourceGuide) -> SavedSourceGuide:
+    def finish(
+        self, guide_id: str, attempt_id: str, result: SourceGuide
+    ) -> SavedSourceGuide:
         now = datetime.now(UTC).isoformat()
         outcome = result.model_dump_json()
         state = (
@@ -68,12 +70,13 @@ class SQLiteGuideStore:
             else "completed"
         )
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
-            connection.execute(
+            updated = connection.execute(
                 "UPDATE source_guide_attempts SET status = ?, finished_at = ?, outcome_json = ? "
-                "WHERE attempt_id = (SELECT latest_attempt_id FROM source_guides WHERE guide_id = ?)",
-                (state, now, outcome, guide_id),
+                "WHERE attempt_id = ? AND guide_id = ? AND status = 'running' "
+                "AND attempt_id = (SELECT latest_attempt_id FROM source_guides WHERE guide_id = ?)",
+                (state, now, outcome, attempt_id, guide_id, guide_id),
             )
-            if result.status in {"completed", "empty"}:
+            if updated.rowcount and result.status in {"completed", "empty"}:
                 connection.execute(
                     "UPDATE source_guides SET content_json = ?, retrieved_at = ? WHERE guide_id = ?",
                     (outcome, now, guide_id),

@@ -13,7 +13,7 @@ from test_chat_evidence_trail import application_attributes, complete_chat
 from test_chat_preparation_trail import scripted_model
 from test_chat_retrieval_trail import chat_app
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import events, no_dependencies, question_request
+from test_chat_web import events, no_dependencies, question_request, submit_guide
 from test_query_preparation import rewriter_agent
 from test_retrieval import COVERAGE, Branch, candidate, coordinator
 
@@ -181,8 +181,15 @@ def test_export_failure_after_startup_preserves_prepared_answer_and_search_detai
     ) as client:
         monkeypatch.setattr(chat_capture, "export", unavailable_export)
         payload = question_request("Who backed AB 1?")
-        completed = events(client.post("/api/questions", json=payload))
-        for field in ("question", "status", "assessment", "message", "articles", "partial"):
+        completed = events(submit_guide(client, json=payload))
+        for field in (
+            "question",
+            "status",
+            "assessment",
+            "message",
+            "articles",
+            "partial",
+        ):
             assert completed.get(field) == expected.get(field)
         assert completed["guide_id"] != expected["guide_id"]
         assert completed["last_retrieved_at"]
@@ -279,8 +286,8 @@ def test_answer_observation_retains_grounding_but_reader_receives_only_direction
         },
         load_grounding=stored_article,
     ) as (client, _, _):
-        response = client.post(
-            "/api/questions", json={"question": "What should I read about AB 1?"}
+        response = submit_guide(
+            client, json={"question": "What should I read about AB 1?"}
         )
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     answer = next(s for s in spans if s["name"] == "chat_session.answer_prepared")

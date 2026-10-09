@@ -2,8 +2,11 @@
 
 import json
 from contextlib import asynccontextmanager, contextmanager
+from time import monotonic
 
+import httpx
 import pytest
+from anyio.lowlevel import checkpoint
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
@@ -19,6 +22,46 @@ from knowledge_map.schemas.retrieval import (
     SourceArticleCitation,
 )
 from knowledge_map.web import create_app
+
+
+def completed_guide(client, response):
+    """Follow the accepted guide through the same persisted reads as the reader."""
+    assert response.status_code == 202
+    deadline = monotonic() + 5
+    while response.json()["latest_attempt"]["status"] == "running":
+        assert monotonic() < deadline, "Source Guide did not complete"
+        response = client.get(f"/api/guides/{response.json()['guide_id']}")
+    return response
+
+
+async def completed_guide_async(client, response):
+    assert response.status_code in {200, 202}
+    deadline = monotonic() + 5
+    while response.json()["latest_attempt"]["status"] == "running":
+        assert monotonic() < deadline, "Source Guide did not complete"
+        await checkpoint()
+        response = await client.get(f"/api/guides/{response.json()['guide_id']}")
+    return response
+
+
+def submit_guide(client, **kwargs):
+    return completed_guide(client, client.post("/api/questions", **kwargs))
+
+
+async def submit_guide_async(client, **kwargs):
+    return await completed_guide_async(
+        client, await client.post("/api/questions", **kwargs)
+    )
+
+
+@asynccontextmanager
+async def guide_async_client(*, transport, **kwargs):
+    app = transport.app
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(transport=transport, **kwargs) as client,
+    ):
+        yield client
 
 
 @contextmanager
@@ -99,7 +142,7 @@ def test_completed_guide_reopens_after_restart_without_current_sources_or_models
         },
         load_grounding=stored_article,
     ) as (client, _, _):
-        submitted = client.post("/api/questions", json={"question": question}).json()
+        submitted = submit_guide(client, json={"question": question}).json()
         guide_id = submitted["guide_id"]
         reopened = client.get(f"/api/guides/{guide_id}")
         assert reopened.json() == submitted
@@ -143,9 +186,7 @@ def test_failure_to_start_execution_leaves_a_saved_failed_question(tmp_path):
         base_url="http://localhost",
         raise_server_exceptions=False,
     ) as client:
-        response = client.post(
-            "/api/questions", json={"question": "Who supported AB 1?"}
-        )
+        response = submit_guide(client, json={"question": "Who supported AB 1?"})
         assert response.status_code == 200
         guide = response.json()
         assert guide["status"] == "assessment_failed"
@@ -214,9 +255,7 @@ def test_unsuccessful_and_empty_guides_restore_their_outcome_after_restart(
         _,
         _,
     ):
-        guide = client.post(
-            "/api/questions", json={"question": "Who backed that bill?"}
-        ).json()
+        guide = submit_guide(client, json={"question": "Who backed that bill?"}).json()
     with guide_client(db_path=db_path, assessment=RuntimeError("Must not execute")) as (
         client,
         prompts,
@@ -253,7 +292,7 @@ def test_submission_searches_the_complete_question_without_rewriting_or_approval
         "and 2025-12-31? Find at most 5 reports, oldest publication first."
     )
     with guide_client() as (client, prompts, branches):
-        response = client.post("/api/questions", json={"question": question})
+        response = submit_guide(client, json={"question": question})
     assert response.status_code == 200
     assert response.json()["question"] == question
     assert json.loads(prompts[0][0])["question"] == question
@@ -295,7 +334,7 @@ def test_assessment_preserves_broad_questions_and_requests_explicit_referents(
     question, assessment, expected
 ):
     with guide_client(assessment=assessment) as (client, _, branches):
-        response = client.post("/api/questions", json={"question": question})
+        response = submit_guide(client, json={"question": question})
     assert response.status_code == 200
     guide = response.json()
     assert guide["status"] == expected
@@ -339,8 +378,8 @@ def test_only_articles_with_reading_directions_are_public_in_relevance_order():
         },
         load_grounding=stored_article,
     ) as (client, _, _):
-        response = client.post(
-            "/api/questions",
+        response = submit_guide(
+            client,
             json={"question": "What are organizations saying about AB 1?"},
         )
     guide = response.json()
@@ -388,9 +427,7 @@ def test_invalid_or_unavailable_guidance_is_a_failure_not_an_empty_guide(guidanc
         _,
         _,
     ):
-        response = client.post(
-            "/api/questions", json={"question": "Who supported AB 1?"}
-        )
+        response = submit_guide(client, json={"question": "Who supported AB 1?"})
     assert response.status_code == 200
     assert response.json()["status"] == "guidance_failed"
     assert response.json()["articles"] == []
@@ -440,8 +477,8 @@ def test_failures_stay_typed_and_useful_sibling_sources_remain(failure, tmp_path
         branches=branches,
         load_grounding=unavailable if failure == "assembly" else stored_article,
     ) as (client, _, _):
-        response = client.post(
-            "/api/questions", json={"question": "How did everyone vote on AB 1?"}
+        response = submit_guide(
+            client, json={"question": "How did everyone vote on AB 1?"}
         )
     guide = response.json()
     with guide_client(db_path=tmp_path / "guides.db") as (client, prompts, _):
@@ -487,8 +524,8 @@ def test_requested_publication_chronology_orders_all_included_articles_and_omits
         },
         load_grounding=stored_article,
     ) as (client, _, _):
-        response = client.post(
-            "/api/questions",
+        response = submit_guide(
+            client,
             json={"question": "Find reporting on AB 1 in publication order."},
         )
     articles = response.json()["articles"]

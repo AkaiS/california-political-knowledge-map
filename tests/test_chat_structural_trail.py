@@ -11,7 +11,13 @@ from starlette.testclient import TestClient
 from structural_support import relationship_outputs, scripted_agents
 from test_chat_retrieval_trail import branch_observations, chat_app
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import events, question_request
+from test_chat_web import (
+    events,
+    guide_async_client,
+    question_request,
+    submit_guide,
+    submit_guide_async,
+)
 from test_retrieval import Branch
 from test_structural_retrieval import driver_for
 
@@ -36,7 +42,7 @@ def complete_chat(driver, outputs=None):
         structural_chat(driver, outputs), base_url="http://localhost"
     ) as client:
         payload = question_request("Who lobbied for SB 623?")
-        return events(client.post("/api/questions", json=payload))
+        return events(submit_guide(client, json=payload))
 
 
 def structural_spans(capture):
@@ -335,7 +341,7 @@ def test_shared_deadline_cancellation_is_recorded_on_the_active_model_stage(
 
         agents = scripted_agents(relationship_outputs())
         agents.binder.model = FunctionModel(expire)
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(
                 app=structural_chat(driver_for(), agents=agents)
             ),
@@ -343,7 +349,7 @@ def test_shared_deadline_cancellation_is_recorded_on_the_active_model_stage(
         ) as client:
             payload = question_request("Who lobbied for SB 623?")
             try:
-                return events(await client.post("/api/questions", json=payload))
+                return events(await submit_guide_async(client, json=payload))
             finally:
                 monkeypatch.setattr(loop, "time", real_time)
 

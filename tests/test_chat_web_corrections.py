@@ -2,16 +2,14 @@
 
 import json
 
-from test_chat_web import guide_client
+from test_chat_web import guide_client, submit_guide
 
 
 def test_edited_complete_question_is_assessed_and_retrieved_independently():
     with guide_client() as (client, prompts, branches):
-        first = client.post(
-            "/api/questions", json={"question": "Who backed AB 1?"}
-        ).json()
-        second = client.post(
-            "/api/questions", json={"question": "Who backed SB 2 in 2025?"}
+        first = submit_guide(client, json={"question": "Who backed AB 1?"}).json()
+        second = submit_guide(
+            client, json={"question": "Who backed SB 2 in 2025?"}
         ).json()
         assert first["guide_id"] != second["guide_id"]
         assert client.get(f"/api/guides/{first['guide_id']}").json() == first

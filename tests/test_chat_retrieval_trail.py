@@ -11,7 +11,14 @@ from starlette.testclient import TestClient
 from structural_support import entity_outputs, scripted_agents
 from test_chat_preparation_trail import scripted_model
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import events, no_dependencies, question_request
+from test_chat_web import (
+    events,
+    guide_async_client,
+    no_dependencies,
+    question_request,
+    submit_guide,
+    submit_guide_async,
+)
 from test_dense_retrieval import driver_for as dense_driver
 from test_dense_retrieval import embedder_for, online_index
 from test_full_text_retrieval import online_indexes
@@ -98,12 +105,12 @@ def test_concurrent_branch_spans_match_successful_and_empty_results(
             )
             for branch, count in zip(RetrievalBranch, (2, 0, 1), strict=True)
         }
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(app=chat_app(branches)),
             base_url="http://localhost",
         ) as client:
             payload = question_request("Who backed AB 1?")
-            approval = asyncio.create_task(client.post("/api/questions", json=payload))
+            approval = asyncio.create_task(submit_guide_async(client, json=payload))
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*(event.wait() for event in entered.values())), 2
@@ -174,7 +181,7 @@ def test_failed_branch_records_a_safe_cause_and_preserves_sibling_results(
     branches[RetrievalBranch.DENSE] = BrokenBranch(RetrievalBranch.DENSE)
     with TestClient(chat_app(branches), base_url="http://localhost") as client:
         payload = question_request("Who backed AB 1?")
-        completed = events(client.post("/api/questions", json=payload))
+        completed = events(submit_guide(client, json=payload))
     details = completed
     assert details["status"] == "empty"
     spans = branch_observations(chat_capture)
@@ -241,7 +248,7 @@ def test_retriever_diagnostics_retain_the_observed_failure_stage(
         diagnostic = "Structural retrieval could not complete this stage."
     with TestClient(chat_app(branches), base_url="http://localhost") as client:
         payload = question_request("Who backed AB 1?")
-        completed = events(client.post("/api/questions", json=payload))
+        completed = events(submit_guide(client, json=payload))
     spans = branch_observations(chat_capture)
     attributes = spans[failed_branch]["attributes"]
     assert attributes["status"] == "failed"
@@ -301,7 +308,7 @@ def test_index_observations_reuse_existing_lookups_without_candidate_payloads(
         chat_app(branches, relational=False), base_url="http://localhost"
     ) as client:
         payload = question_request("Who backed AB 1?")
-        completed = events(client.post("/api/questions", json=payload))
+        completed = events(submit_guide(client, json=payload))
     spans = branch_observations(chat_capture)
     assert completed["status"] == "empty"
     assert spans["full_text"]["attributes"]["indexes"] == {
@@ -351,7 +358,7 @@ def test_prepared_search_terms_retain_legislative_session_wording(chat_capture):
         payload = question_request(
             "Which organizations support AB 1 in the 2025-2026 session?"
         )
-        events(client.post("/api/questions", json=payload))
+        events(submit_guide(client, json=payload))
     assert branch_observations(chat_capture)["full_text"]["attributes"][
         "search_terms"
     ] == [
@@ -384,13 +391,13 @@ def test_shared_deadline_records_late_failure_and_keeps_completed_siblings(
                 return result
 
         branches = {branch: DeadlineBranch(branch) for branch in RetrievalBranch}
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(app=chat_app(branches, clock=lambda: now)),
             base_url="http://localhost",
         ) as client:
             payload = question_request("Who backed AB 1?")
             response = await asyncio.wait_for(
-                client.post("/api/questions", json=payload), 2
+                submit_guide_async(client, json=payload), 2
             )
         assert all(branch.requests[0][1] == 160.0 for branch in branches.values())
         return events(response)

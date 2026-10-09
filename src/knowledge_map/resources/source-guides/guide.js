@@ -12,6 +12,8 @@ const guideList = document.querySelector('#guide-list');
 const savedStatus = document.querySelector('#saved-status');
 let currentGuide = null;
 let guideSelection = 0;
+let listRequest = 0;
+let savedRevision = '';
 
 const outcomeLabels = {
   completed: 'Articles to read',
@@ -42,12 +44,17 @@ function guideOutcome(guide) {
 }
 
 async function loadSavedGuides() {
+  const request = ++listRequest;
   try {
     const response = await fetch('/api/guides');
     if (!response.ok) throw new Error('Listing failed');
     const {guides} = await response.json();
-    guideList.replaceChildren();
+    if (request !== listRequest) return;
     savedStatus.textContent = guides.length ? '' : 'No saved questions yet.';
+    const revision = JSON.stringify(guides);
+    if (revision === savedRevision) return;
+    savedRevision = revision;
+    guideList.replaceChildren();
     for (const guide of guides) {
       const row = document.createElement('li');
       const link = document.createElement('a');
@@ -60,8 +67,31 @@ async function loadSavedGuides() {
       guideList.append(row);
     }
   } catch {
+    if (request !== listRequest) return;
     savedStatus.textContent = 'Saved guides could not be loaded. Reload to try again.';
   }
+}
+
+async function refreshGuides() {
+  await loadSavedGuides();
+  const selected = currentGuide;
+  const selection = guideSelection;
+  if (selected?.latest_attempt.status === 'running') {
+    try {
+      const response = await fetch(`/api/guides/${encodeURIComponent(selected.guide_id)}`);
+      if (!response.ok) throw new Error('Guide unavailable');
+      const guide = await response.json();
+      if (selection === guideSelection) {
+        showGuide(guide);
+        progress.textContent = '';
+      }
+    } catch {
+      if (selection === guideSelection) {
+        progress.textContent = 'Search status is unavailable. Reconnecting to the local service…';
+      }
+    }
+  }
+  window.setTimeout(refreshGuides, 1000);
 }
 
 async function openSelectedGuide() {
@@ -71,6 +101,7 @@ async function openSelectedGuide() {
     clearQuestion();
     return;
   }
+  currentGuide = null;
   guideView.hidden = true;
   question.value = '';
   progress.textContent = 'Opening saved guide…';
@@ -129,18 +160,17 @@ function setBusy(busy) {
   form.setAttribute('aria-busy', String(busy));
   submit.disabled = busy;
   question.disabled = busy;
-  edit.disabled = busy;
-  newQuestion.disabled = busy;
 }
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
   const text = question.value.trim();
   if (!text) return;
-  ++guideSelection;
+  const selection = ++guideSelection;
+  currentGuide = null;
   setBusy(true);
   guideView.hidden = true;
-  progress.textContent = 'Searching for relevant reporting…';
+  progress.textContent = 'Saving your question…';
   try {
     const response = await fetch('/api/questions', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -148,12 +178,16 @@ form.addEventListener('submit', async event => {
     });
     if (!response.ok) throw new Error('Submission failed');
     const guide = await response.json();
-    showGuide(guide);
-    history.pushState(null, '', `#guide=${encodeURIComponent(guide.guide_id)}`);
+    if (selection === guideSelection) {
+      showGuide(guide);
+      history.pushState(null, '', `#guide=${encodeURIComponent(guide.guide_id)}`);
+      progress.textContent = '';
+    }
     await loadSavedGuides();
-    progress.textContent = '';
   } catch {
-    progress.textContent = 'The question could not be completed. Try submitting it again.';
+    if (selection === guideSelection) {
+      progress.textContent = 'The submission could not be confirmed. Check Saved guides before submitting again.';
+    }
   } finally {
     setBusy(false);
   }
@@ -179,7 +213,7 @@ newQuestion.addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', openSelectedGuide);
-loadSavedGuides();
+refreshGuides();
 openSelectedGuide();
 
 fetch('/api/coverage').then(response => response.json()).then(coverage => {

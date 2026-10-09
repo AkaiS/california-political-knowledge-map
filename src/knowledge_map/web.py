@@ -28,7 +28,7 @@ from knowledge_map.chat_startup import (
 )
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
-from knowledge_map.schemas.source_guides import SourceGuide
+from knowledge_map.schemas.source_guides import SavedSourceGuide, SourceGuide
 from knowledge_map.utils.agents import create_agent
 
 logger = logging.getLogger(__name__)
@@ -62,15 +62,24 @@ def create_app(
 ) -> FastAPI:
     dependencies: ChatDependencies | None = None
     guide_store = SQLiteGuideStore(guide_db_path)
+    running: set[asyncio.Task[None]] = set()
+    accepting = False
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        nonlocal dependencies
+        nonlocal dependencies, accepting
         try:
             async with startup() as dependencies:
                 if browser_url is not None:
                     print(f"Open {browser_url} in your browser.", flush=True)
-                yield
+                accepting = True
+                try:
+                    yield
+                finally:
+                    accepting = False
+                    for task in running:
+                        task.cancel()
+                    await asyncio.gather(*running, return_exceptions=True)
         finally:
             dependencies = None
 
@@ -88,16 +97,31 @@ def create_app(
             return JSONResponse(
                 {"error": "Enter a complete text question."}, status_code=422
             )
+        if not accepting:
+            return JSONResponse(
+                {"error": "The local service is stopping."}, status_code=503
+            )
         saved = guide_store.create(submission.question)
+        task = asyncio.create_task(execute(saved))
+        running.add(task)
+        task.add_done_callback(running.discard)
+        return JSONResponse(
+            saved.model_dump(mode="json", exclude_none=True),
+            status_code=202,
+            headers={"Location": f"/api/guides/{saved.guide_id}"},
+        )
+
+    async def execute(saved: SavedSourceGuide) -> None:
         session = None
         try:
-            session = session_factory(submission.question, dependencies)
+            session = session_factory(saved.question, dependencies)
             result = await session.run()
         except asyncio.CancelledError:
             guide_store.finish(
                 saved.guide_id,
+                saved.latest_attempt.attempt_id,
                 SourceGuide(
-                    question=submission.question,
+                    question=saved.question,
                     status="interrupted",
                     message="This search was interrupted before it finished.",
                 ),
@@ -113,7 +137,7 @@ def create_app(
             }[stage]
             guide = SourceGuide.model_validate(
                 {
-                    "question": submission.question,
+                    "question": saved.question,
                     "status": status,
                     "assessment": session.assessment if session is not None else None,
                     "message": {
@@ -125,7 +149,7 @@ def create_app(
             )
         else:
             if isinstance(result, QuestionAssessment):
-                guide = assessment_guide(submission.question, result)
+                guide = assessment_guide(saved.question, result)
             else:
                 guide = source_guide(result)
                 if isinstance(result, RetrievalAnswer):
@@ -149,8 +173,7 @@ def create_app(
                             for source in result.evidence.sources
                         ],
                     )
-        saved = guide_store.finish(saved.guide_id, guide)
-        return JSONResponse(saved.model_dump(mode="json", exclude_none=True))
+        guide_store.finish(saved.guide_id, saved.latest_attempt.attempt_id, guide)
 
     async def list_guides(request: Request) -> Response:
         return JSONResponse(

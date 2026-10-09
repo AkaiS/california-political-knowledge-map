@@ -11,7 +11,14 @@ from starlette.testclient import TestClient
 from test_chat_preparation_trail import scripted_model
 from test_chat_retrieval_trail import chat_app
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import events, no_dependencies, question_request
+from test_chat_web import (
+    events,
+    guide_async_client,
+    no_dependencies,
+    question_request,
+    submit_guide,
+    submit_guide_async,
+)
 from test_query_preparation import rewriter_agent
 from test_retrieval import COVERAGE, Branch, candidate, coordinator, load_grounding
 
@@ -91,11 +98,11 @@ def test_fusion_records_actual_eligible_ids_and_order_after_duplicates_and_limit
                 fused_candidate_limit=3,
             ),
         )
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(app=app), base_url="http://localhost"
         ) as client:
             payload = question_request("Who backed AB 1?")
-            approval = asyncio.create_task(client.post("/api/questions", json=payload))
+            approval = asyncio.create_task(submit_guide_async(client, json=payload))
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*(event.wait() for event in entered.values())), 2
@@ -171,7 +178,7 @@ def evidence_chat(
 def complete_chat(app):
     with TestClient(app, base_url="http://localhost") as client:
         payload = question_request("Who backed AB 1?")
-        return events(client.post("/api/questions", json=payload))
+        return events(submit_guide(client, json=payload))
 
 
 def test_assembly_records_actual_selection_omission_reasons_and_measured_context(
@@ -401,7 +408,7 @@ def test_deadline_exhaustion_is_assigned_to_the_active_selection_stage(
             return evidence
 
         branches = {branch: DeadlineBranch(branch) for branch in RetrievalBranch}
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(
                 app=chat_app(branches, clock=lambda: now, load_grounding=store)
             ),
@@ -409,7 +416,7 @@ def test_deadline_exhaustion_is_assigned_to_the_active_selection_stage(
         ) as client:
             payload = question_request("Who backed AB 1?")
             try:
-                return events(await client.post("/api/questions", json=payload))
+                return events(await submit_guide_async(client, json=payload))
             finally:
                 monkeypatch.setattr(loop, "time", real_time)
 

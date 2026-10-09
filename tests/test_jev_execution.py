@@ -15,7 +15,7 @@ from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC041
 from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
-from test_chat_web import question_request
+from test_chat_web import question_request, submit_guide
 from test_jev_staged_selector import Fake
 from test_model_factory import chat_completion
 from test_retrieval import Branch, candidate
@@ -266,7 +266,7 @@ def test_chat_client_approval_uses_the_same_jev_execution(
     ) as client:
         payload = question_request(QUESTION)
         assert jev.schema_calls == 0
-        response = client.post("/api/questions", json=payload)
+        response = submit_guide(client, json=payload)
         assert response.status_code == 200
         assert "The union supports AB 1." not in response.text
         assert "DECLARED_STANCE" not in response.text

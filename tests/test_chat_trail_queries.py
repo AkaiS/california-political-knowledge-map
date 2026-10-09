@@ -20,7 +20,7 @@ from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
 from test_chat_structural_trail import structural_chat
-from test_chat_web import events, question_request
+from test_chat_web import events, question_request, submit_guide
 from test_structural_retrieval import driver_for
 
 from knowledge_map.chat_startup import chat_dependencies
@@ -77,7 +77,7 @@ def test_documented_session_search_joins_requests_and_keeps_stage_outcomes(
         if span.name == "chat_session.started"
     )
     with TestClient(chat_app(None), base_url="http://localhost") as client:
-        events(client.post("/api/questions", json=question_request("Another question")))
+        events(submit_guide(client, json=question_request("Another question")))
 
     with captured_records(chat_capture) as records:
         rows = records.execute(
@@ -132,13 +132,11 @@ def test_documented_cohort_search_compares_settings_and_observed_answer_presence
     with TestClient(create_app(startup=startup), base_url="http://localhost") as client:
         payload = question_request("First question")
         before_approval = datetime.now(UTC).isoformat()
-        events(client.post("/api/questions", json=payload))
+        events(submit_guide(client, json=payload))
     revision = "b" * 40
     monkeypatch.setenv("LLAMA_CPP_MODEL", "changed-chat")
     with TestClient(create_app(startup=startup), base_url="http://localhost") as client:
-        events(
-            client.post("/api/questions", json=question_request("Declined question"))
-        )
+        events(submit_guide(client, json=question_request("Declined question")))
     window_end = datetime.now(UTC).isoformat()
 
     with captured_records(chat_capture) as records:
@@ -187,11 +185,7 @@ def test_documented_failure_search_includes_returned_and_raised_stage_failures(
     complete_chat(answer_chat(httpx.ConnectError("private guidance detail")))
     with TestClient(create_app(), base_url="http://localhost") as client:
         startup_dependencies[5].add("chat.test")
-        events(
-            client.post(
-                "/api/questions", json=question_request("Unavailable assessment")
-            )
-        )
+        events(submit_guide(client, json=question_request("Unavailable assessment")))
     window_end = datetime.now(UTC).isoformat()
 
     with captured_records(chat_capture) as records:
