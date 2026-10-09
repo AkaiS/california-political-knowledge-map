@@ -123,33 +123,32 @@ def create_app(
                     }[stage],
                 }
             )
-            saved = guide_store.finish(saved.guide_id, guide)
-            return JSONResponse(saved.model_dump(mode="json", exclude_none=True))
-        if isinstance(result, QuestionAssessment):
-            guide = assessment_guide(submission.question, result)
         else:
-            guide = source_guide(result)
-            if isinstance(result, RetrievalAnswer):
-                logfire.info(
-                    "chat_session.answer_prepared",
-                    chat_session_id=session.chat_session_id,
-                    audit_schema_version=2,
-                    rendered_text=render_answer(result),
-                    selected_sources=[
-                        {
-                            "citation": source.citation.model_dump(mode="json"),
-                            "passages": [
-                                {
-                                    "chunk_id": passage.candidate.chunk_id,
-                                    "text": passage.text,
-                                    "provenance": passage.provenance,
-                                }
-                                for passage in source.passages
-                            ],
-                        }
-                        for source in result.evidence.sources
-                    ],
-                )
+            if isinstance(result, QuestionAssessment):
+                guide = assessment_guide(submission.question, result)
+            else:
+                guide = source_guide(result)
+                if isinstance(result, RetrievalAnswer):
+                    logfire.info(
+                        "chat_session.answer_prepared",
+                        chat_session_id=session.chat_session_id,
+                        audit_schema_version=2,
+                        rendered_text=render_answer(result),
+                        selected_sources=[
+                            {
+                                "citation": source.citation.model_dump(mode="json"),
+                                "passages": [
+                                    {
+                                        "chunk_id": passage.candidate.chunk_id,
+                                        "text": passage.text,
+                                        "provenance": passage.provenance,
+                                    }
+                                    for passage in source.passages
+                                ],
+                            }
+                            for source in result.evidence.sources
+                        ],
+                    )
         saved = guide_store.finish(saved.guide_id, guide)
         return JSONResponse(saved.model_dump(mode="json", exclude_none=True))
 

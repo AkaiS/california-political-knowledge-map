@@ -18,9 +18,13 @@ relevance directions, original-section navigation, and independently continuing
 searches. [Nine implementation tickets](projects/source-guides/PRD.md#implementation-tickets)
 link directly to the spec and declare their blockers.
 [01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md)
-is `completed` after independent review on 2026-10-09 UTC;
-[02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md)
-is now takeable.
+and [02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md)
+are `completed` after independent review on 2026-10-09 UTC.
+[03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md),
+[07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
+[08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md),
+and [09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
+are now takeable.
 Their main automated seam is the existing web application boundary; the
 maintainer explicitly requires browser verification and excludes a separate
 Chat Session test seam. These are revisable product requirements for this

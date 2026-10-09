@@ -11,6 +11,7 @@ const newQuestion = document.querySelector('#new');
 const guideList = document.querySelector('#guide-list');
 const savedStatus = document.querySelector('#saved-status');
 let currentGuide = null;
+let guideSelection = 0;
 
 const outcomeLabels = {
   completed: 'Articles to read',
@@ -64,6 +65,7 @@ async function loadSavedGuides() {
 }
 
 async function openSelectedGuide() {
+  const selection = ++guideSelection;
   const identity = new URLSearchParams(location.hash.slice(1)).get('guide');
   if (!identity) {
     clearQuestion();
@@ -75,9 +77,12 @@ async function openSelectedGuide() {
   try {
     const response = await fetch(`/api/guides/${encodeURIComponent(identity)}`);
     if (!response.ok) throw new Error('Guide unavailable');
-    showGuide(await response.json());
+    const guide = await response.json();
+    if (selection !== guideSelection) return;
+    showGuide(guide);
     progress.textContent = '';
   } catch {
+    if (selection !== guideSelection) return;
     progress.textContent = 'This saved guide could not be opened.';
   }
 }
@@ -132,6 +137,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   const text = question.value.trim();
   if (!text) return;
+  ++guideSelection;
   setBusy(true);
   guideView.hidden = true;
   progress.textContent = 'Searching for relevant reporting…';
@@ -159,6 +165,7 @@ edit.addEventListener('click', () => {
   question.focus();
 });
 function clearQuestion() {
+  ++guideSelection;
   currentGuide = null;
   question.value = '';
   guideView.hidden = true;
