@@ -16,17 +16,27 @@ from knowledge_map.schemas.retrieval import (
     RetrievalAnswer,
     SourceArticleEvidence,
 )
-from knowledge_map.schemas.source_guides import GuideArticle, SourceGuide
+from knowledge_map.schemas.source_guides import (
+    GuideArticle,
+    GuideCollection,
+    GuideDisclosure,
+    GuideSearchDetails,
+    SourceGuide,
+)
 
 
 def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
     """Present a terminal assessment consistently across guide consumers."""
     assert assessment.status == "declined" or assessment.status == "needs_edit"
+    assert assessment.explanation is not None
     return SourceGuide(
         question=question,
         status=assessment.status,
         assessment=assessment,
         message=assessment.explanation,
+        disclosures=(
+            GuideDisclosure(kind=assessment.status, message=assessment.explanation),
+        ),
     )
 
 
@@ -41,11 +51,7 @@ def source_guide(
         else result.execution
     )
     assessment = execution.request.rewrite.assessment
-    disclosures = (
-        list(result.failure_disclosures)
-        if isinstance(result, EvidenceAssemblyFailure)
-        else []
-    )
+    disclosures: list[GuideDisclosure] = []
     articles: tuple[GuideArticle, ...] = ()
     groups = ()
     relevance_order = ()
@@ -64,6 +70,9 @@ def source_guide(
             GuideArticle(
                 citation=citations[note.source_article_id],
                 reading_direction=note.note,
+                publication=sqlite_db.get_article_publication(
+                    note.source_article_id, story_db_path
+                ),
                 section_links=_section_links(
                     sources[note.source_article_id], story_db_path
                 ),
@@ -126,16 +135,58 @@ def source_guide(
                         ),
                     )
                 )
-        if result.introduction:
-            disclosures.append(result.introduction)
-    for disclosure in (
-        *execution.failure_disclosures,
-        execution.structural_empty_disclosure,
-        assessment.explanation if assessment.status == "deferred" else None,
-        assessment.recoverable_portion if assessment.status == "deferred" else None,
+        disclosures.extend(
+            GuideDisclosure(
+                kind="unmatched_request",
+                request_portion=gap.request_portion,
+                message=gap.explanation,
+            )
+            for gap in result.unmatched_requests
+        )
+    if isinstance(result, EvidenceAssemblyFailure):
+        disclosures.append(
+            GuideDisclosure(
+                kind="assembly_failed",
+                message="Retrieved material could not be prepared for relevance review. Choose Retry to search again.",
+            )
+        )
+    elif len(execution.failed_branches) == len(execution.expected_branches):
+        disclosures.append(
+            GuideDisclosure(
+                kind="retrieval_failed",
+                message="The search failed before articles could be assessed. Choose Retry to search again.",
+            )
+        )
+    elif not articles:
+        disclosures.append(
+            GuideDisclosure(
+                kind="irrelevant_candidates"
+                if result.evidence.sources
+                else "no_matches",
+                message=(
+                    "Retrieved articles were assessed, but none supported a reading direction for this question."
+                    if result.evidence.sources
+                    else "No articles were available to assess within this search's limits."
+                )
+                + " This does not establish that matching reporting does not exist.",
+            )
+        )
+    if execution.failed_branches and len(execution.failed_branches) < len(
+        execution.expected_branches
     ):
-        if disclosure and not any(disclosure in existing for existing in disclosures):
-            disclosures.append(disclosure)
+        disclosures.append(
+            GuideDisclosure(
+                kind="partial_search",
+                message="Part of this search failed. Available reading is retained, but this search is incomplete.",
+            )
+        )
+    if assessment.status == "deferred":
+        disclosures.append(
+            GuideDisclosure(
+                kind="deferred",
+                message=f"{assessment.explanation}\n\n{assessment.recoverable_portion}",
+            )
+        )
     return SourceGuide(
         question=execution.request.rewrite.question,
         status=(
@@ -148,11 +199,31 @@ def source_guide(
             else "empty"
         ),
         assessment=assessment,
-        message="\n\n".join(disclosures) or None,
+        message="\n\n".join(disclosure.message for disclosure in disclosures) or None,
+        disclosures=tuple(disclosures),
         articles=articles,
         groups=groups,
         relevance_order=relevance_order,
         partial=bool(execution.failed_branches),
+        search_details=GuideSearchDetails(
+            collections=tuple(
+                GuideCollection.model_validate(
+                    entry.model_dump(
+                        include={"name", "date_basis", "earliest_date", "latest_date"}
+                    )
+                )
+                for entry in result.evidence.coverage.entries
+            ),
+            completion="failed"
+            if len(execution.failed_branches) == len(execution.expected_branches)
+            else "partial"
+            if execution.failed_branches
+            else "completed",
+            selection_limited=bool(result.evidence.context.omitted_passages),
+            included_articles=len(articles),
+        )
+        if isinstance(result, RetrievalAnswer)
+        else None,
     )
 
 
@@ -266,13 +337,23 @@ def render_answer(
     """Evaluation consumers see the same reading selection as the application."""
     guide = guide if guide is not None else source_guide(result)
     paragraphs = [_escape_markdown_text(guide.question)]
-    if guide.message:
+    if guide.disclosures:
+        for disclosure in guide.disclosures:
+            text = disclosure.message
+            if disclosure.kind == "unmatched_request":
+                text = f"Unmatched part of your question: {disclosure.request_portion}. {text}"
+            if disclosure.kind == "deferred":
+                text = f"Deferred coverage: {text}"
+            paragraphs.append(_escape_markdown_text(text))
+    elif guide.message:
         paragraphs.append(_escape_markdown_text(guide.message))
     for number, article in enumerate(guide.articles, start=1):
         citation = article.citation
         paragraphs.append(
             f"{number}. [{_escape_markdown_text(citation.title)}](<{citation.url}>)"
         )
+        if article.publication:
+            paragraphs.append(_escape_markdown_text(article.publication))
         if citation.published_date:
             paragraphs.append(_escape_markdown_text(citation.published_date))
         paragraphs.append(_escape_markdown_text(article.reading_direction))

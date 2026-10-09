@@ -9,6 +9,7 @@ from uuid import uuid4
 from knowledge_map.adapters import sqlite_db
 from knowledge_map.schemas.source_guides import (
     GuideAttempt,
+    GuideSearchDetails,
     SavedSourceGuide,
     SourceGuide,
 )
@@ -45,7 +46,9 @@ class SQLiteGuideStore:
                 );
             """)
 
-    def create(self, question: str) -> SavedSourceGuide:
+    def create(
+        self, question: str, search_details: GuideSearchDetails | None = None
+    ) -> SavedSourceGuide:
         guide_id, attempt_id = str(uuid4()), str(uuid4())
         now = datetime.now(UTC).isoformat()
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
@@ -55,9 +58,18 @@ class SQLiteGuideStore:
                 (guide_id, question, now, attempt_id),
             )
             connection.execute(
-                "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status) "
-                "VALUES (?, ?, ?, 'running')",
-                (attempt_id, guide_id, now),
+                "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status, outcome_json) "
+                "VALUES (?, ?, ?, 'running', ?)",
+                (
+                    attempt_id,
+                    guide_id,
+                    now,
+                    SourceGuide(
+                        question=question,
+                        status="running",
+                        search_details=search_details,
+                    ).model_dump_json(),
+                ),
             )
         return self.get(guide_id)
 
@@ -74,13 +86,15 @@ class SQLiteGuideStore:
                     ),
                 )
 
-    def start_update(self, guide_id: str) -> SavedSourceGuide:
+    def start_update(
+        self, guide_id: str, search_details: GuideSearchDetails | None = None
+    ) -> SavedSourceGuide:
         attempt_id = str(uuid4())
         now = datetime.now(UTC).isoformat()
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT a.status FROM source_guides g JOIN source_guide_attempts a "
+                "SELECT a.status, g.question FROM source_guides g JOIN source_guide_attempts a "
                 "ON a.attempt_id = g.latest_attempt_id WHERE g.guide_id = ?",
                 (guide_id,),
             ).fetchone()
@@ -89,9 +103,16 @@ class SQLiteGuideStore:
             if row[0] == "running":
                 raise GuideAlreadyRunning(guide_id)
             connection.execute(
-                "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status) "
-                "VALUES (?, ?, ?, 'running')",
-                (attempt_id, guide_id, now),
+                "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status, outcome_json) "
+                "VALUES (?, ?, ?, 'running', ?)",
+                (
+                    attempt_id,
+                    guide_id,
+                    now,
+                    SourceGuide(
+                        question=row[1], status="running", search_details=search_details
+                    ).model_dump_json(),
+                ),
             )
             connection.execute(
                 "UPDATE source_guides SET latest_attempt_id = ? WHERE guide_id = ?",
@@ -102,6 +123,27 @@ class SQLiteGuideStore:
     def finish(
         self, guide_id: str, attempt_id: str, result: SourceGuide
     ) -> SavedSourceGuide:
+        saved = self.get(guide_id)
+        details = result.search_details or saved.latest_attempt.search_details
+        if details is not None:
+            completion = (
+                "failed"
+                if result.status.endswith("_failed")
+                else result.status
+                if result.status in {"cancelled", "interrupted"}
+                else "not_searched"
+                if result.status in {"declined", "needs_edit"}
+                else "partial"
+                if result.partial
+                else "completed"
+            )
+            result = result.model_copy(
+                update={
+                    "search_details": details.model_copy(
+                        update={"completion": completion}
+                    )
+                }
+            )
         now = datetime.now(UTC).isoformat()
         outcome = result.model_dump_json()
         state = (
@@ -163,9 +205,13 @@ class SQLiteGuideStore:
                         "started_at": row["started_at"],
                         "finished_at": row["finished_at"],
                         "status": row["status"],
-                        "outcome": outcome.status if outcome else None,
+                        "outcome": outcome.status
+                        if outcome and outcome.status != "running"
+                        else None,
                         "assessment": outcome.assessment if outcome else None,
                         "message": outcome.message if outcome else None,
+                        "search_details": outcome.search_details if outcome else None,
+                        "disclosures": outcome.disclosures if outcome else (),
                     }
                 ),
             }

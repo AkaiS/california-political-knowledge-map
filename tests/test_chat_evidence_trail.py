@@ -304,7 +304,10 @@ def test_assembly_failure_records_a_safe_cause_without_a_retrieval_answer(
     assert completed["status"] == "assembly_failed"
     assert len(prompts) == 1
     rendered = completed.get("message", "")
-    assert rendered == "Grounding Evidence could not be assembled."
+    assert (
+        rendered
+        == "Retrieved material could not be prepared for relevance review. Choose Retry to search again."
+    )
     spans = stage_spans(chat_capture)
     assert spans["chat_session.fusion"]["attributes"]["status"] == "succeeded"
     failed = spans["chat_session.evidence_assembly"]["attributes"]

@@ -3,6 +3,7 @@
 import json
 from contextlib import asynccontextmanager, contextmanager
 from time import monotonic
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -66,7 +67,13 @@ async def guide_async_client(*, transport, **kwargs):
 
 @contextmanager
 def guide_client(
-    *, assessment=None, guidance=None, branches=None, db_path=None, **retrieval_options
+    *,
+    assessment=None,
+    guidance=None,
+    branches=None,
+    db_path=None,
+    coverage=COVERAGE,
+    **retrieval_options,
 ):
     prompts = []
     branches = branches or {branch: Branch(branch) for branch in RetrievalBranch}
@@ -98,7 +105,7 @@ def guide_client(
 
     @asynccontextmanager
     async def startup():
-        yield None
+        yield SimpleNamespace(coverage=coverage)
 
     def session_factory(question, dependencies):
         return ChatSession(
@@ -107,7 +114,7 @@ def guide_client(
             retrieval=coordinator(
                 branches, structural_reporting=True, **retrieval_options
             ),
-            coverage=COVERAGE,
+            coverage=coverage,
             relevant_collection_ids=("reporting",),
         )
 
@@ -496,7 +503,7 @@ def test_failures_stay_typed_and_useful_sibling_sources_remain(failure, tmp_path
     if failure == "one_branch":
         assert len(guide["articles"]) == 1
         assert guide["partial"] is True
-        assert "Dense retrieval could not be completed." in guide["message"]
+        assert "Part of this search failed." in guide["message"]
         assert "Complete roll calls are unavailable." in guide["message"]
     assert "PRIVATE_" not in response.text
 
@@ -547,7 +554,9 @@ def test_reader_page_serves_submission_and_editing_controls_without_external_ass
     assert "New question" in page.text
     assert "Content-Security-Policy" in page.headers
     assert script.status_code == 200
-    assert coverage.json() == {"entries": []}
+    assert coverage.json() == {
+        "entries": [{"name": "Reporting", "date_basis": "publication_date"}]
+    }
 
 
 @pytest.mark.parametrize(

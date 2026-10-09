@@ -174,7 +174,7 @@ def rendered_prompt_snapshot():
 def test_resolved_prompt_outputs_match_adopted_versions():
     baseline = json.loads((FIXTURES / "prompt_rendered_baseline.json").read_text())
     baseline.update(
-        chat="c3e7482eefc83784e5d2be283a7f8369b4c29354a84803df7b1dcd10141cbafe",
+        chat="006a05c2c45fff7b554ab2894cd746fbcc5eb532b260d049b85a80c9592e3a3a",
         question_policy="6c6f4d61668b3929c62cff87a6f0030d5d9739c103163c9fee2c97b4dc543ac9",
     )
     assert rendered_prompt_snapshot() == baseline

@@ -28,7 +28,13 @@ from knowledge_map.chat_startup import (
 )
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
-from knowledge_map.schemas.source_guides import SavedSourceGuide, SourceGuide
+from knowledge_map.schemas.source_guides import (
+    GuideCollection,
+    GuideDisclosure,
+    GuideSearchDetails,
+    SavedSourceGuide,
+    SourceGuide,
+)
 from knowledge_map.utils.agents import create_agent
 
 logger = logging.getLogger(__name__)
@@ -68,6 +74,20 @@ def create_app(
     guide_store = SQLiteGuideStore(guide_db_path)
     running: dict[str, asyncio.Task[None]] = {}
     accepting = False
+
+    def search_details() -> GuideSearchDetails:
+        return GuideSearchDetails(
+            collections=tuple(
+                GuideCollection.model_validate(
+                    entry.model_dump(
+                        include={"name", "date_basis", "earliest_date", "latest_date"}
+                    )
+                )
+                for entry in dependencies.coverage.entries
+            )
+            if dependencies
+            else ()
+        )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -116,7 +136,7 @@ def create_app(
             )
         if error := stopping_service_error():
             return error
-        saved = guide_store.create(submission.question)
+        saved = guide_store.create(submission.question, search_details())
         return start_execution(saved)
 
     async def update_guide(request: Request) -> Response:
@@ -132,7 +152,9 @@ def create_app(
         if error := stopping_service_error():
             return error
         try:
-            saved = guide_store.start_update(request.path_params["guide_id"])
+            saved = guide_store.start_update(
+                request.path_params["guide_id"], search_details()
+            )
         except KeyError:
             return JSONResponse({"error": "Source Guide not found."}, status_code=404)
         except GuideAlreadyRunning:
@@ -225,6 +247,33 @@ def create_app(
                     }[stage],
                 }
             )
+            guide = guide.model_copy(
+                update={
+                    "disclosures": (
+                        GuideDisclosure.model_validate(
+                            {"kind": status, "message": guide.message}
+                        ),
+                        *(
+                            (
+                                GuideDisclosure(
+                                    kind="deferred",
+                                    message=f"{guide.assessment.explanation}\n\n{guide.assessment.recoverable_portion}",
+                                ),
+                            )
+                            if guide.assessment is not None
+                            and guide.assessment.status == "deferred"
+                            else ()
+                        ),
+                    )
+                }
+            )
+            guide = guide.model_copy(
+                update={
+                    "message": "\n\n".join(
+                        disclosure.message for disclosure in guide.disclosures
+                    )
+                }
+            )
         else:
             if isinstance(result, QuestionAssessment):
                 guide = assessment_guide(saved.question, result)
@@ -276,9 +325,12 @@ def create_app(
 
     async def coverage(request: Request) -> Response:
         return JSONResponse(
-            dependencies.coverage.model_dump(mode="json", exclude_none=True)
-            if dependencies
-            else {"entries": []}
+            {
+                "entries": [
+                    entry.model_dump(mode="json", exclude_none=True)
+                    for entry in search_details().collections
+                ]
+            }
         )
 
     async def asset(request: Request) -> Response:

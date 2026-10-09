@@ -153,12 +153,15 @@ def test_only_a_completed_retrieval_answer_has_an_answer_observation(
     answers = [s for s in spans if s["name"] == "chat_session.answer_prepared"]
     if assembly_fails:
         assert completed["status"] == "assembly_failed"
-        assert rendered == "Grounding Evidence could not be assembled."
+        assert (
+            rendered
+            == "Retrieved material could not be prepared for relevance review. Choose Retry to search again."
+        )
         assert answers == []
         assert not any(s["name"] == "chat_session.guidance" for s in spans)
     else:
         assert completed["status"] == "empty"
-        assert "Consult the reporting." in rendered
+        assert "No articles were available to assess" in rendered
         assert len(answers) == 1
         assert rendered in answers[0]["attributes"]["rendered_text"]
         assert answers[0]["attributes"]["selected_sources"] == []

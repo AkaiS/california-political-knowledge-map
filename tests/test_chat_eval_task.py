@@ -478,7 +478,7 @@ def test_shared_evaluation_retains_groups_and_renders_membership_directions(
     report = run_one()
     output = report.cases[0].output
     assert output.failure is None
-    assert output.answer.guidance_contract == 3
+    assert output.answer.guidance_contract == 4
     assert len(output.guide.groups) == 2
     assert output.rendered_text.count("](<https://example.com/full_text>)") == 1
     assert "Read the supporters section." in output.rendered_text
@@ -542,3 +542,52 @@ def test_evaluation_keeps_one_ordinary_article_and_nearby_verified_section_links
         in output.rendered_text
     )
     assert "The union supports AB 1." not in output.rendered_text
+
+
+def test_shared_evaluation_saves_typed_unmatched_request_and_safe_partial_search(
+    monkeypatch, tmp_path
+):
+    fake_dependencies(
+        monkeypatch,
+        failed_branch=RetrievalBranch.DENSE,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the section on organizations involved in AB 1.",
+                }
+            ],
+            "unmatched_requests": [
+                {
+                    "request_portion": "transit grants <img src=x>",
+                    "explanation": "The selected evidence does not address this requested portion.",
+                }
+            ],
+        },
+    )
+    report = run_one()
+    output = report.cases[0].output
+    assert output.failure is None
+    assert len(output.guide.articles) == 1
+    assert {item.kind for item in output.guide.disclosures} == {
+        "unmatched_request",
+        "partial_search",
+    }
+    assert "transit grants &lt;img src=x&gt;" in output.rendered_text
+    assert "Part of this search failed" in output.rendered_text
+    assert "Dense retrieval" not in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
+    assert output.guide.search_details.completion == "partial"
+    saved = write_report(
+        report,
+        task="chat",
+        deployment=DEPLOYMENT,
+        data_set_path="evals/unlabeled/chat.yaml",
+        label_quality=LabelQuality.UNLABELED,
+        root=tmp_path,
+    )
+    record = json.loads(saved.read_text())["report"]["cases"][0]["output"]
+    assert (
+        record["guide"]["disclosures"][0]["request_portion"]
+        == "transit grants <img src=x>"
+    )

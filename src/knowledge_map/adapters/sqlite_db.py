@@ -499,6 +499,25 @@ def get_story_content(url: str, db_path: str = DEFAULT_DB_PATH) -> str | None:
     return row[0] if row else None
 
 
+def get_article_publication(url: str, db_path: str = DEFAULT_DB_PATH) -> str | None:
+    """Use the article's recorded Publication, never a guessed URL or text match."""
+    from contextlib import closing
+    from pathlib import Path
+
+    try:
+        with closing(
+            sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
+        ) as conn:
+            row = conn.execute(
+                "SELECT p.name FROM scraped_html_cache c "
+                "JOIN publications p ON p.id = c.publication_id WHERE c.url = ?",
+                (url,),
+            ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    return row[0].strip() or None if row else None
+
+
 def get_last_n_stories(n: int = 5, db_path: str = DEFAULT_DB_PATH) -> List[Dict[str, Any]]:
     """
     Retrieves the last n inserted stories from the database.

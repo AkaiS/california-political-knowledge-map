@@ -471,6 +471,11 @@ class SourceRelevanceNote(RetrievalValue):
     note: NonemptyText
 
 
+class UnmatchedRequest(RetrievalValue):
+    request_portion: NonemptyText
+    explanation: NonemptyText
+
+
 class SourceDisagreement(RetrievalValue):
     source_article_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=2)]
     description: NonemptyText
@@ -498,12 +503,13 @@ class ArticleGroup(RetrievalValue):
 
 
 class RetrievalAnswer(RetrievalValue):
-    guidance_contract: Literal[1, 2, 3] = 1
+    guidance_contract: Literal[1, 2, 3, 4] = 1
     evidence: EvidencePackage
     introduction: NonemptyText | None = None
     source_notes: tuple[SourceRelevanceNote, ...] = ()
     disagreements: tuple[SourceDisagreement, ...] = ()
     groups: tuple[ArticleGroup, ...] = ()
+    unmatched_requests: tuple[UnmatchedRequest, ...] = ()
 
     @model_validator(mode="after")
     def guidance_refers_to_selected_sources(self) -> Self:

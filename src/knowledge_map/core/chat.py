@@ -43,13 +43,14 @@ from knowledge_map.schemas.retrieval import (
     RetrievalValue,
     SourceDisagreement,
     SourceRelevanceNote,
+    UnmatchedRequest,
 )
 from knowledge_map.utils.agents import create_agent
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=10)
+CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=12)
 
 QUESTION_POLICY = load_prompt("chat/question-policy", version=2)
 
@@ -67,6 +68,7 @@ class RetrievalGuidance(RetrievalValue):
     source_notes: tuple[SourceRelevanceNote, ...] = ()
     disagreements: tuple[SourceDisagreement, ...] = ()
     groups: tuple[ArticleGroup, ...] = ()
+    unmatched_requests: tuple[UnmatchedRequest, ...] = ()
 
 
 def _included_groups(
@@ -155,12 +157,13 @@ async def generate_retrieval_answer(
             if result.output.introduction:
                 disclosures.append(result.output.introduction)
             answer = RetrievalAnswer(
-                guidance_contract=3,
+                guidance_contract=4,
                 evidence=package,
                 introduction="\n\n".join(disclosures) or None,
                 source_notes=result.output.source_notes,
                 disagreements=result.output.disagreements,
                 groups=_included_groups(result.output, package),
+                unmatched_requests=result.output.unmatched_requests,
             )
         except Exception as error:
             span.set_attributes(

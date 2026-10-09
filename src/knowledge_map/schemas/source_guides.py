@@ -1,6 +1,6 @@
 """Reader-facing citations, directions, and verified navigation without chunk bodies."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import HttpUrl
@@ -8,6 +8,7 @@ from pydantic import HttpUrl
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import (
     ArticleGroup,
+    Count,
     NonemptyText,
     RetrievalValue,
     SourceArticleCitation,
@@ -17,7 +18,49 @@ from knowledge_map.schemas.retrieval import (
 class GuideArticle(RetrievalValue):
     citation: SourceArticleCitation
     reading_direction: NonemptyText
+    publication: NonemptyText | None = None
     section_links: tuple[HttpUrl, ...] = ()
+
+
+class GuideCollection(RetrievalValue):
+    name: NonemptyText
+    date_basis: Literal["publication_date", "event_date"]
+    earliest_date: date | None = None
+    latest_date: date | None = None
+
+
+class GuideSearchDetails(RetrievalValue):
+    collections: tuple[GuideCollection, ...] = ()
+    completion: Literal[
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "not_searched",
+        "cancelled",
+        "interrupted",
+    ] = "running"
+    bounded_selection: bool = True
+    selection_limited: bool = False
+    included_articles: Count = 0
+
+
+class GuideDisclosure(RetrievalValue):
+    kind: Literal[
+        "unmatched_request",
+        "partial_search",
+        "deferred",
+        "declined",
+        "needs_edit",
+        "no_matches",
+        "irrelevant_candidates",
+        "retrieval_failed",
+        "assembly_failed",
+        "guidance_failed",
+        "assessment_failed",
+    ]
+    message: NonemptyText
+    request_portion: NonemptyText | None = None
 
 
 GuideOutcome = Literal[
@@ -43,6 +86,8 @@ class SourceGuide(RetrievalValue):
     groups: tuple[ArticleGroup, ...] = ()
     relevance_order: tuple[str, ...] = ()
     partial: bool = False
+    search_details: GuideSearchDetails | None = None
+    disclosures: tuple[GuideDisclosure, ...] = ()
 
 
 class GuideAttempt(RetrievalValue):
@@ -55,6 +100,8 @@ class GuideAttempt(RetrievalValue):
     outcome: GuideOutcome | None = None
     assessment: QuestionAssessment | None = None
     message: NonemptyText | None = None
+    search_details: GuideSearchDetails | None = None
+    disclosures: tuple[GuideDisclosure, ...] = ()
 
 
 class SavedSourceGuide(SourceGuide):

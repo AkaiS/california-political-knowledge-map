@@ -39,3 +39,18 @@ cases:
     split: training
     task_input:
       question: Where should I read the differing accounts about whether the committee received the cost memo for California AB 1?
+  - id: SG09-partial
+    description: Retain housing reading and identify unmatched transit grants without changing eligibility.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1 housing provisions and its rural transit grants?
+  - id: SG09-empty
+    description: All controlled searches succeed without evidence; absence is not established.
+    split: training
+    task_input:
+      question: Where should I read about California water storage funding?
+  - id: SG09-failed-search
+    description: A controlled search failure retains supported sibling reporting.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1 grant eligibility?

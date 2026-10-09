@@ -259,7 +259,8 @@ def test_cancel_and_completion_publish_one_consistent_terminal_result(tmp_path, 
                     assert terminal[field] == saved[field]
             else:
                 assert (
-                    terminal["articles"] == result.model_dump(mode="json")["articles"]
+                    terminal["articles"]
+                    == result.model_dump(mode="json", exclude_none=True)["articles"]
                 )
                 assert terminal["partial"] is True
                 assert terminal["last_retrieved_at"] == attempt["finished_at"]

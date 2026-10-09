@@ -4,6 +4,7 @@ Run with uv run --no-sync python work/projects/source-guides/validation/run_cont
 Only the Chat Agent uses the local deployment; retrieval is a controlled fixture.
 """
 
+import argparse
 import hashlib
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -26,6 +27,7 @@ from knowledge_map.schemas.retrieval import (
     CoverageAvailability,
     CoverageDescription,
     CoverageEntry,
+    FailedBranch,
     GraphNodeReference,
     GroundingEvidence,
     RetrievalBranch,
@@ -89,6 +91,17 @@ class ControlledBranch:
         self.branch = branch
 
     async def retrieve(self, request, *, deadline, keywords=None, usage=None):
+        if (
+            request.rewrite.question
+            == "Where should I read about California water storage funding?"
+        ):
+            return SuccessfulBranch(branch=self.branch, candidates=())
+        if (
+            request.rewrite.question
+            == "Where should I read about California AB 1 grant eligibility?"
+            and self.branch == RetrievalBranch.DENSE
+        ):
+            return FailedBranch(branch=self.branch)
         if self.branch != RetrievalBranch.FULL_TEXT:
             return SuccessfulBranch(branch=self.branch, candidates=())
         return SuccessfulBranch(
@@ -168,7 +181,7 @@ async def controlled_dependencies(*, chat_deployment, capabilities):
                 evidence_limits=EvidenceContextLimits(),
                 coverage_observed_at=datetime.now(UTC).isoformat(),
                 retrieval_settings={
-                    "fixture": "SG01/SG07 fixed fictional reporting; no database or Jev model calls"
+                    "fixture": "SG01/SG07/SG09 fixed fictional reporting with explicit empty and partial-failure controls; no database or Jev model calls"
                 },
             ),
         )
@@ -177,6 +190,9 @@ async def controlled_dependencies(*, chat_deployment, capabilities):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--case", action="append", default=[])
+    args = parser.parse_args()
     path = "evals/unlabeled/source-guides.yaml"
     data = load_data_set(
         path,
@@ -184,6 +200,10 @@ def main():
         output_type=chat.ChatOutput,
         metadata_type=chat.ChatMetadata,
     )
+    if args.case:
+        data = data.model_copy(
+            update={"cases": [case for case in data.cases if case.id in args.case]}
+        )
     deployment = ModelDeployment(
         kind=DeploymentKind.LOCAL,
         model="gemma4:26b",
@@ -198,8 +218,8 @@ def main():
             evaluators=(),
             case_lifecycle=chat.ChatCaseLifecycle,
             experiment_metadata={
-                "retrieval": "fixed fictional SG01/SG07 fixture",
-                "prompt": "chat/instructions/v10; chat/question-policy/v2",
+                "retrieval": "fixed fictional SG01/SG07/SG09 fixture",
+                "prompt": "chat/instructions/v12; chat/question-policy/v2",
             },
         )
     saved = write_report(

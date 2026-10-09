@@ -297,10 +297,7 @@ def test_jev_failure_retains_sparse_and_dense_evidence(
         "succeeded",
         "failed",
     ]
-    assert (
-        "Graph connections matching the question could not be searched."
-        in output.rendered_text
-    )
+    assert "Part of this search failed." in output.rendered_text
     assert "The union supports AB 1." not in output.rendered_text
     assert not queries
     assert "private API diagnostic" not in output.model_dump_json()

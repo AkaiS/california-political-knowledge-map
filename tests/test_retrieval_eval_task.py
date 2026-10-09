@@ -292,7 +292,8 @@ def test_production_wiring_failed_branch_and_report_retain_bounded_evidence(
     assert case.scores["context_recall"].value == 1
     assert case.assertions["structural_completed"].value is False
     assert case.output.answer.evidence is case.output.result
-    assert "Read the available reporting." in case.output.rendered_text
+    assert "Retrieved articles were assessed" in case.output.rendered_text
+    assert "Part of this search failed" in case.output.rendered_text
     assert case.assertions["answer_generated"].value is True
     assert len(case.output.messages) == 1  # Guidance only; no rewrite or assessment.
     exchange = case.output.messages[0]

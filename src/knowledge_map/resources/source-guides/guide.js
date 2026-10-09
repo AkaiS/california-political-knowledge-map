@@ -132,10 +132,20 @@ function showGuide(guide) {
   document.querySelector('#outcome').textContent = outcomeLabels[guide.status];
   document.querySelector('#message').textContent = guide.message === outcomeLabels[guide.status]
     ? '' : guide.message || '';
+  document.querySelector('#message').hidden = Boolean(guide.disclosures?.length);
+  renderDisclosures(document.querySelector('#disclosures'), guide.disclosures);
   document.querySelector('#guide-created').textContent = `Saved ${displayDate(guide.created_at)}`;
   document.querySelector('#guide-retrieved').textContent = guide.last_retrieved_at
     ? `Last retrieved ${displayDate(guide.last_retrieved_at)}` : 'No successful retrieval yet.';
   const attempt = guide.latest_attempt;
+  const retainedReading = guide.last_retrieved_at && guide.last_retrieved_at !== attempt.finished_at;
+  renderDisclosures(document.querySelector('#attempt-disclosures'), retainedReading ? attempt.disclosures : []);
+  if (!sameGuide) document.querySelector('#search-details').open = false;
+  renderSearchDetails(document.querySelector('#content-search-details'), guide.search_details,
+    retainedReading ? 'Saved reading' : 'This search');
+  const attemptDetails = document.querySelector('#attempt-search-details');
+  attemptDetails.replaceChildren();
+  if (retainedReading) renderSearchDetails(attemptDetails, attempt.search_details, 'Latest attempt');
   update.textContent = ['failed', 'interrupted'].includes(attempt.status) ? 'Retry' : 'Update guide';
   update.disabled = attempt.status === 'running';
   cancel.hidden = attempt.status !== 'running';
@@ -147,7 +157,7 @@ function showGuide(guide) {
     ? (attempt.status === 'running'
       ? 'Updating this guide. Saved reading remains available below.'
       : ['failed', 'interrupted'].includes(attempt.status)
-        ? `${attempt.message || outcomeLabels[attempt.outcome]} Saved reading below is from the last successful retrieval.`
+        ? `${attempt.disclosures?.length ? '' : attempt.message || outcomeLabels[attempt.outcome]} Saved reading below is from the last successful retrieval.`
         : attempt.outcome !== guide.status ? attempt.message || outcomeLabels[attempt.outcome] : '')
     : '';
   const previousOrder = articleOrder.value;
@@ -172,6 +182,63 @@ function showGuide(guide) {
   document.querySelector('#all-articles-heading').hidden = !guide.articles.length;
   renderArticles();
   guideView.hidden = false;
+}
+
+function renderDisclosures(container, disclosures = []) {
+  container.replaceChildren();
+  for (const disclosure of disclosures) {
+    const row = document.createElement('li');
+    if (disclosure.kind === 'unmatched_request') {
+      const portion = document.createElement('strong');
+      portion.textContent = `Unmatched part of your question: ${disclosure.request_portion}`;
+      row.append(portion);
+    } else if (disclosure.kind === 'deferred') {
+      const label = document.createElement('strong');
+      label.textContent = 'Deferred coverage';
+      row.append(label);
+    }
+    const message = document.createElement('p');
+    message.textContent = disclosure.message;
+    row.append(message);
+    container.append(row);
+  }
+  container.hidden = !container.children.length;
+}
+
+function collectionLabel(entry) {
+  const basis = entry.date_basis === 'event_date' ? 'event dates' : 'publication dates';
+  const dates = entry.earliest_date && entry.latest_date
+    ? `${entry.earliest_date} to ${entry.latest_date}`
+    : entry.earliest_date ? `from ${entry.earliest_date}`
+      : entry.latest_date ? `through ${entry.latest_date}` : 'unavailable';
+  return `${entry.name}: ${basis} ${dates}`;
+}
+
+function renderSearchDetails(container, details, label) {
+  container.replaceChildren();
+  const title = document.createElement('h4');
+  title.textContent = label;
+  container.append(title);
+  const add = text => {
+    const paragraph = document.createElement('p');
+    paragraph.textContent = text;
+    container.append(paragraph);
+  };
+  if (!details) {
+    add('Search limits were not recorded for this saved guide.');
+    return;
+  }
+  add(details.collections.length
+    ? `Collections: ${details.collections.map(collectionLabel).join(' · ')}`
+    : 'Collection dates were not recorded for this search.');
+  const completion = {
+    running: 'Running', completed: 'Completed', partial: 'Partly failed', failed: 'Failed',
+    not_searched: 'Not searched', cancelled: 'Cancelled', interrupted: 'Interrupted',
+  };
+  add(`Search completion: ${completion[details.completion]}.`);
+  if (details.bounded_selection) add('Result limits: This search examines a limited selection of available reporting. It does not establish complete coverage. All articles with a supported reading direction are shown.');
+  if (details.selection_limited) add('Some retrieved material was omitted before relevance review because the selection limit was reached.');
+  if (['completed', 'partial'].includes(details.completion)) add(`Included articles: ${details.included_articles}.`);
 }
 
 const timelineLabels = {
@@ -230,6 +297,12 @@ function articleRow(article, selectedIndex) {
     link.rel = 'noopener noreferrer';
   }
   row.append(link);
+  if (article.publication) {
+    const publication = document.createElement('p');
+    publication.className = 'metadata';
+    publication.textContent = article.publication;
+    row.append(publication);
+  }
   if (article.citation.published_date) {
     const date = document.createElement('p');
     date.className = 'metadata';
@@ -408,8 +481,7 @@ refreshGuides();
 openSelectedGuide();
 
 fetch('/api/coverage').then(response => response.json()).then(coverage => {
-  document.querySelector('#collections').textContent = coverage.entries.map(entry => {
-    const dates = [entry.earliest_date, entry.latest_date].filter(Boolean).join(' to ');
-    return dates ? `${entry.name}: published ${dates}` : entry.name;
-  }).join(' · ');
-}).catch(() => {});
+  document.querySelector('#collections').textContent = coverage.entries.length
+    ? `Available collections: ${coverage.entries.map(collectionLabel).join(' · ')}`
+    : 'Available collection dates are unavailable.';
+}).catch(() => { document.querySelector('#collections').textContent = 'Available collection dates could not be loaded.'; });

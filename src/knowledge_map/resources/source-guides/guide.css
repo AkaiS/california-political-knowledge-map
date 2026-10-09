@@ -19,6 +19,12 @@ button:disabled { opacity: .6; cursor: wait; }
 .guide-heading button { flex-shrink: 0; font-size: .85rem; }
 .metadata { color: #536661; font-size: .85rem; }
 #message { white-space: pre-line; }
+#disclosures, #attempt-disclosures { padding-left: 1.3rem; }
+#disclosures li, #attempt-disclosures li { border: 0; padding: .4rem 0; white-space: pre-line; }
+#search-details { margin: 1rem 0; padding: .8rem; background: #f5f6f1; border: 1px solid #dce3dc; border-radius: .3rem; }
+#search-details summary { cursor: pointer; font-weight: 600; }
+#search-details h4 { margin: .7rem 0; }
+#search-details p { margin: .5rem 0; font-size: .85rem; }
 ol { padding-left: 1.5rem; }
 li { padding: 1rem 0; border-top: 1px solid #dce3dc; }
 li p { margin: .3rem 0; }
