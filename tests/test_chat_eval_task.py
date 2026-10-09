@@ -171,18 +171,41 @@ def test_report_contains_rendered_answer_sources_requests_and_stage_outcomes(
     chat_capture,
     tmp_path,
 ):
-    fake_dependencies(monkeypatch, failed_branch=RetrievalBranch.DENSE)
+    branches = fake_dependencies(
+        monkeypatch,
+        failed_branch=RetrievalBranch.DENSE,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ],
+        },
+    )
     report = run_one()
     assert not report.failures
     case = report.cases[0]
     output = case.output
     assert output.failure is None
     assert isinstance(output.answer, RetrievalAnswer)
-    assert "The union supports AB 1." in output.rendered_text
+    assert "Who backed AB 1?" in output.rendered_text
+    assert (
+        "Read the section on organizations involved with AB 1." in output.rendered_text
+    )
+    assert "The union supports AB 1." not in output.rendered_text
+    assert output.approval_mode == "direct_question"
+    assert output.assessment.status == "allowed"
+    assert (
+        output.guide.articles[0].citation.source_article_id
+        == "https://example.com/full_text"
+    )
+    for branch in branches.values():
+        if branch.requests:
+            assert branch.requests[0][0].rewrite.question == "Who backed AB 1?"
     assert output.answer.evidence.sources[0].passages[0].provenance == "stored_chunk"
-    assert len(output.messages) == 3
+    assert len(output.messages) == 2
     assert [r["component"] for r in output.messages] == [
-        "query_rewriter",
         "chat_agent",
         "chat_agent",
     ]
@@ -322,10 +345,10 @@ def test_declined_question_is_retained_without_retrieval(monkeypatch, chat_captu
         },
     )
     output = run_one().cases[0].output
-    assert output.preparation.status == "declined"
+    assert output.assessment.status == "declined"
     assert output.answer is None
     assert output.rendered_text == "This question is outside scope."
-    assert len(output.messages) == 2
+    assert len(output.messages) == 1
     assert not any(branch.requests for branch in branches.values())
 
 
@@ -404,6 +427,7 @@ def test_chat_startup_uses_explicit_deployment_for_chat_and_structural_agents(
             assert dependencies.chat_agent.model.model_name == "test-chat"
             settings = dependencies.start_settings.model_deployments
             assert settings["jev_binder"]["model"] == "test-chat"
-            assert settings["query_rewriter"]["model"] == "rewriter-test"
+            assert "query_rewriter" not in settings
+            assert dependencies.rewriter is None
 
     asyncio.run(exercise())

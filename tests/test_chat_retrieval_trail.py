@@ -12,7 +12,6 @@ from structural_support import entity_outputs, scripted_agents
 from test_chat_preparation_trail import scripted_model
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
 from test_chat_web import events, no_dependencies, question_request
-from test_chat_web_answers import approval_request
 from test_dense_retrieval import driver_for as dense_driver
 from test_dense_retrieval import embedder_for, online_index
 from test_full_text_retrieval import online_indexes
@@ -66,14 +65,6 @@ def branch_observations(capture):
     }
 
 
-def search_details(completed):
-    return next(
-        event["output"]
-        for event in completed
-        if event["type"] == "tool-output-available" and "branches" in event["output"]
-    )
-
-
 @pytest.mark.parametrize(
     "completion_order",
     [
@@ -111,14 +102,8 @@ def test_concurrent_branch_spans_match_successful_and_empty_results(
             transport=httpx.ASGITransport(app=chat_app(branches)),
             base_url="http://localhost",
         ) as client:
-            prepared = events(
-                await client.post(
-                    "/api/chat", json=question_request("Who backed AB 1?")
-                )
-            )
-            approval = asyncio.create_task(
-                client.post("/api/chat", json=approval_request(prepared))
-            )
+            payload = question_request("Who backed AB 1?")
+            approval = asyncio.create_task(client.post("/api/questions", json=payload))
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*(event.wait() for event in entered.values())), 2
@@ -135,8 +120,8 @@ def test_concurrent_branch_spans_match_successful_and_empty_results(
         return completed
 
     completed = asyncio.run(exercise())
-    details = search_details(completed)
-    assert details["outcome"] == "retrieval_answer"
+    details = completed
+    assert details["status"] == "empty"
     spans = branch_observations(chat_capture)
     assert set(spans) == {"full_text", "dense", "structural"}
     assert {
@@ -146,17 +131,16 @@ def test_concurrent_branch_spans_match_successful_and_empty_results(
         "dense": 0,
         "structural": 1,
     }
-    for outcome in details["branches"]:
-        attributes = spans[outcome["branch"]]["attributes"]
-        assert attributes["status"] == outcome["status"] == "succeeded"
-        assert attributes["candidate_count"] == len(outcome["candidates"])
+    for span in spans.values():
+        attributes = span["attributes"]
+        assert attributes["status"] == "succeeded"
         assert attributes["audit_schema_version"] == 1
         assert (
             not {"candidates", "routes", "scores", "embedding", "sequence"}
             & attributes.keys()
         )
     all_spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
-    approval = next(s for s in all_spans if s["name"] == "chat_session.approve")
+    approval = next(s for s in all_spans if s["name"] == "chat_session.submit")
     assert len({s["context"]["span_id"] for s in spans.values()}) == 3
     for span in spans.values():
         assert (
@@ -176,45 +160,6 @@ def test_concurrent_branch_spans_match_successful_and_empty_results(
     )
 
 
-def test_non_relational_approval_records_prepared_terms_and_a_structural_skip(
-    chat_capture,
-):
-    branches = {branch: Branch(branch) for branch in RetrievalBranch}
-    with TestClient(
-        chat_app(branches, relational=False), base_url="http://localhost"
-    ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
-    details = search_details(completed)
-    spans = branch_observations(chat_capture)
-    assert set(spans) == {"full_text", "dense", "structural"}
-    skipped = spans["structural"]
-    assert skipped["attributes"]["status"] == "skipped"
-    assert (
-        skipped["attributes"]["reason"]
-        == details["branches"][-1]["reason"]
-        == "non_relational"
-    )
-    assert skipped["attributes"]["candidate_count"] == 0
-    assert branches[RetrievalBranch.STRUCTURAL].requests == []
-    assert spans["full_text"]["attributes"]["search_terms"] == [
-        "organizations",
-        "support",
-        "ab",
-        "1",
-    ]
-    assert (
-        tuple(spans["full_text"]["attributes"]["search_terms"])
-        == branches[RetrievalBranch.FULL_TEXT].keywords
-    )
-    assert "search_terms" not in spans["dense"]["attributes"]
-    assert "indexes" not in spans["full_text"]["attributes"]
-    assert "indexes" not in spans["dense"]["attributes"]
-    assert len({s["attributes"]["chat_session_id"] for s in spans.values()}) == 1
-
-
 @pytest.mark.parametrize("failure", ["exception", "returned"])
 def test_failed_branch_records_a_safe_cause_and_preserves_sibling_results(
     chat_capture, failure
@@ -228,12 +173,10 @@ def test_failed_branch_records_a_safe_cause_and_preserves_sibling_results(
     branches = {branch: Branch(branch) for branch in RetrievalBranch}
     branches[RetrievalBranch.DENSE] = BrokenBranch(RetrievalBranch.DENSE)
     with TestClient(chat_app(branches), base_url="http://localhost") as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
-    details = search_details(completed)
-    assert details["outcome"] == "retrieval_answer"
+        payload = question_request("Who backed AB 1?")
+        completed = events(client.post("/api/questions", json=payload))
+    details = completed
+    assert details["status"] == "empty"
     spans = branch_observations(chat_capture)
     failed = spans["dense"]["attributes"]
     assert failed["status"] == "failed"
@@ -252,11 +195,13 @@ def test_failed_branch_records_a_safe_cause_and_preserves_sibling_results(
     assert "private database credential" not in json.dumps(
         [s["attributes"] for s in spans.values()]
     )
-    for outcome in details["branches"]:
-        attributes = spans[outcome["branch"]]["attributes"]
-        assert attributes["status"] == outcome["status"]
-        assert attributes["candidate_count"] == len(outcome.get("candidates", []))
-        if outcome["branch"] != "dense":
+    for branch, span in spans.items():
+        attributes = span["attributes"]
+        assert attributes["status"] in {"succeeded", "failed"}
+        assert attributes["candidate_count"] == (
+            0 if attributes["status"] == "failed" else 1
+        )
+        if branch != "dense":
             assert attributes["candidate_count"] == 1
             assert "failure_kind" not in attributes
 
@@ -295,10 +240,8 @@ def test_retriever_diagnostics_retain_the_observed_failure_stage(
         stage, kind = "schema_filtering", "transport"
         diagnostic = "Structural retrieval could not complete this stage."
     with TestClient(chat_app(branches), base_url="http://localhost") as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
+        payload = question_request("Who backed AB 1?")
+        completed = events(client.post("/api/questions", json=payload))
     spans = branch_observations(chat_capture)
     attributes = spans[failed_branch]["attributes"]
     assert attributes["status"] == "failed"
@@ -306,13 +249,13 @@ def test_retriever_diagnostics_retain_the_observed_failure_stage(
     assert attributes["failure_kind"] == kind
     assert attributes["diagnostic"] == diagnostic
     assert attributes["candidate_count"] == 0
-    details = search_details(completed)
-    assert details["outcome"] == "retrieval_answer"
-    for outcome in details["branches"]:
-        assert spans[outcome["branch"]]["attributes"]["status"] == outcome["status"]
-        if outcome["branch"] != failed_branch:
-            assert spans[outcome["branch"]]["attributes"]["candidate_count"] == 1
-            assert "failure_kind" not in spans[outcome["branch"]]["attributes"]
+    details = completed
+    assert details["status"] == "empty"
+    for branch, span in spans.items():
+        assert span["attributes"]["status"]
+        if branch != failed_branch:
+            assert span["attributes"]["candidate_count"] == 1
+            assert "failure_kind" not in span["attributes"]
     assert "private provider credential" not in json.dumps(
         [s["attributes"] for s in spans.values()]
     )
@@ -357,11 +300,10 @@ def test_index_observations_reuse_existing_lookups_without_candidate_payloads(
     with TestClient(
         chat_app(branches, relational=False), base_url="http://localhost"
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        completed = events(client.post("/api/chat", json=approval_request(prepared)))
+        payload = question_request("Who backed AB 1?")
+        completed = events(client.post("/api/questions", json=payload))
     spans = branch_observations(chat_capture)
+    assert completed["status"] == "empty"
     assert spans["full_text"]["attributes"]["indexes"] == {
         "entity_name_fulltext_index": "ONLINE",
         "article_title_fulltext_index": "ONLINE",
@@ -373,10 +315,12 @@ def test_index_observations_reuse_existing_lookups_without_candidate_payloads(
     for branch in ("full_text", "dense"):
         assert spans[branch]["attributes"]["database"] == "reporting"
     expected_status = "succeeded" if index_state == "ONLINE" else "failed"
-    for outcome in search_details(completed)["branches"][:2]:
-        attributes = spans[outcome["branch"]]["attributes"]
-        assert attributes["status"] == outcome["status"] == expected_status
-        assert attributes["candidate_count"] == len(outcome.get("candidates", []))
+    for branch in ("full_text", "dense"):
+        attributes = spans[branch]["attributes"]
+        assert attributes["status"] == expected_status
+        assert attributes["candidate_count"] == (
+            0 if index_state != "ONLINE" else 3 if branch == "full_text" else 1
+        )
     assert full_run.await_count == (4 if index_state == "ONLINE" else 1)
     assert (
         vector_driver.session.return_value.__aenter__.return_value.run.await_count
@@ -404,10 +348,10 @@ def test_prepared_search_terms_retain_legislative_session_wording(chat_capture):
         ),
         base_url="http://localhost",
     ) as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
+        payload = question_request(
+            "Which organizations support AB 1 in the 2025-2026 session?"
         )
-        events(client.post("/api/chat", json=approval_request(prepared)))
+        events(client.post("/api/questions", json=payload))
     assert branch_observations(chat_capture)["full_text"]["attributes"][
         "search_terms"
     ] == [
@@ -444,20 +388,16 @@ def test_shared_deadline_records_late_failure_and_keeps_completed_siblings(
             transport=httpx.ASGITransport(app=chat_app(branches, clock=lambda: now)),
             base_url="http://localhost",
         ) as client:
-            prepared = events(
-                await client.post(
-                    "/api/chat", json=question_request("Who backed AB 1?")
-                )
-            )
+            payload = question_request("Who backed AB 1?")
             response = await asyncio.wait_for(
-                client.post("/api/chat", json=approval_request(prepared)), 2
+                client.post("/api/questions", json=payload), 2
             )
         assert all(branch.requests[0][1] == 160.0 for branch in branches.values())
         return events(response)
 
     completed = asyncio.run(exercise())
-    details = search_details(completed)
-    assert details["outcome"] == "assembly_failed"
+    details = completed
+    assert details["status"] == "assembly_failed"
     spans = branch_observations(chat_capture)
     failed = spans["dense"]["attributes"]
     assert failed["status"] == "failed"
@@ -468,11 +408,13 @@ def test_shared_deadline_records_late_failure_and_keeps_completed_siblings(
         == "The retrieval deadline expired before this branch completed."
     )
     assert failed["candidate_count"] == 0
-    for outcome in details["branches"]:
-        attributes = spans[outcome["branch"]]["attributes"]
-        assert attributes["status"] == outcome["status"]
-        assert attributes["candidate_count"] == len(outcome.get("candidates", []))
-        if outcome["branch"] != "dense":
+    for branch, span in spans.items():
+        attributes = span["attributes"]
+        assert attributes["status"] in {"succeeded", "failed"}
+        assert attributes["candidate_count"] == (
+            0 if attributes["status"] == "failed" else 1
+        )
+        if branch != "dense":
             assert attributes["status"] == "succeeded"
             assert attributes["candidate_count"] == 1
             assert "failure_kind" not in attributes

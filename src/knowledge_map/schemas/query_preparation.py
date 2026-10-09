@@ -30,14 +30,19 @@ class QuestionAssessment(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    status: Literal["allowed", "declined", "deferred"]
+    status: Literal["allowed", "declined", "deferred", "needs_edit"]
     explanation: QuestionText | None = None
     recoverable_portion: QuestionText | None = None
+    reading_order: Literal["relevance", "publication_asc", "publication_desc"] = (
+        "relevance"
+    )
 
     @model_validator(mode="after")
     def unsupported_question_has_explanation(self) -> Self:
         if self.status != "allowed" and self.explanation is None:
-            raise ValueError("a Declined or Deferred question requires an explanation")
+            raise ValueError(
+                "a Declined, Deferred, or needs-edit question requires an explanation"
+            )
         if self.status == "deferred" and self.recoverable_portion is None:
             raise ValueError(
                 "a Deferred question must describe the recoverable portion"

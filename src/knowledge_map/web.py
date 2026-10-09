@@ -1,98 +1,45 @@
-"""Local browser entry point for retrieval chat."""
+"""Local FastAPI entry point for Source Guides."""
 
 import logging
-from collections.abc import AsyncIterator, Callable, Iterable
+from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from dataclasses import dataclass
-from typing import Protocol
-from uuid import uuid4
+from importlib.resources import files
+from typing import Literal, Protocol
 
 import logfire
 from fastapi import FastAPI
-from pydantic import ValidationError
-from pydantic_ai.ui.vercel_ai.request_types import (
-    SubmitMessage,
-    TextUIPart,
-    ToolApprovalResponded,
-    ToolApprovalRespondedPart,
-    UIMessage,
-)
-from pydantic_ai.ui.vercel_ai.response_types import (
-    BaseChunk,
-    DoneChunk,
-    ErrorChunk,
-    FinishChunk,
-    StartChunk,
-    TextDeltaChunk,
-    TextEndChunk,
-    TextStartChunk,
-    ToolApprovalRequestChunk,
-    ToolInputAvailableChunk,
-    ToolOutputAvailableChunk,
-    ToolOutputDeniedChunk,
-    ToolOutputErrorChunk,
-)
+from pydantic import BaseModel, ConfigDict, ValidationError
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from knowledge_map.chat_presentation import render_answer, search_details
+from knowledge_map.chat_presentation import render_answer, source_guide
 from knowledge_map.chat_startup import (
     ChatDependencies,
     chat_dependencies,
     new_chat_session,
 )
-from knowledge_map.schemas.query_preparation import (
-    QuestionPreparationResult,
-    RewriteRejection,
-)
+from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
+from knowledge_map.schemas.source_guides import SourceGuide
 from knowledge_map.utils.agents import create_agent
 
 logger = logging.getLogger(__name__)
 
-NEW_CHAT_GUIDANCE = "Start a new chat to ask a question."
-TERMINAL_FAILURE = f"This question could not be completed. {NEW_CHAT_GUIDANCE}"
 
-
-def _encode_chunks(chunks: Iterable[BaseChunk]) -> str:
-    return "".join(f"data: {chunk.encode(sdk_version=7)}\n\n" for chunk in chunks)
-
-
-def _chat_stream_response(content: AsyncIterator[str]) -> StreamingResponse:
-    return StreamingResponse(
-        content,
-        media_type="text/event-stream",
-        headers={
-            "x-vercel-ai-ui-message-stream": "v1",
-            "Cache-Control": "no-cache",
-        },
-    )
+class QuestionSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: QuestionText
 
 
 class ChatSessionProtocol(Protocol):
     chat_session_id: str
+    assessment: QuestionAssessment | None
+    stage: Literal["assessment", "retrieval", "guidance"]
 
-    async def prepare(self) -> QuestionPreparationResult: ...
-
-    def reject(self, correction: str | None = None) -> RewriteRejection: ...
-
-    async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure: ...
-
-
-@dataclass
-class BrowserSession:
-    session: ChatSessionProtocol
-    message_id: str | None = None
-    approval_id: str | None = None
-    awaiting_correction: bool = False
-
-
-def _composer_text(message: UIMessage) -> str | None:
-    text_parts = [part for part in message.parts if isinstance(part, TextUIPart)]
-    if not text_parts or len(text_parts) != len(message.parts):
-        return None
-    return "\n".join(part.text for part in text_parts).strip() or None
+    async def run(
+        self,
+    ) -> RetrievalAnswer | EvidenceAssemblyFailure | QuestionAssessment: ...
 
 
 def create_app(
@@ -105,14 +52,7 @@ def create_app(
     ] = new_chat_session,
     browser_url: str | None = None,
 ) -> FastAPI:
-    """Serve the stock frontend and adapt its messages to one Chat Session."""
-    sessions: dict[str, BrowserSession] = {}
-    terminal_conversations: set[str] = set()
     dependencies: ChatDependencies | None = None
-
-    def retire_conversation(conversation_id: str) -> None:
-        sessions.pop(conversation_id, None)
-        terminal_conversations.add(conversation_id)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -123,11 +63,9 @@ def create_app(
                     print(f"Open {browser_url} in your browser.", flush=True)
                 yield
         finally:
-            sessions.clear()
-            terminal_conversations.clear()
             dependencies = None
 
-    async def post_chat(request: Request) -> Response:
+    async def submit_question(request: Request) -> Response:
         if (
             request.headers.get("content-type", "").split(";")[0].strip().lower()
             != "application/json"
@@ -136,256 +74,99 @@ def create_app(
                 {"error": "Expected Content-Type: application/json"}, status_code=415
             )
         try:
-            submission = SubmitMessage.model_validate_json(await request.body())
+            submission = QuestionSubmission.model_validate_json(await request.body())
         except ValidationError:
-            return JSONResponse({"error": "Invalid chat message"}, status_code=422)
-        options = submission.__pydantic_extra__ or {}
-        if options.get("model") or options.get("builtinTools"):
             return JSONResponse(
-                {"error": "Models and tools are fixed at application startup."},
-                status_code=400,
+                {"error": "Enter a complete text question."}, status_code=422
             )
-        if entry := sessions.get(submission.id):
-            message = submission.messages[-1] if submission.messages else None
-            if entry.awaiting_correction and message and message.role == "user":
-                rejected_proposal = (
-                    submission.messages[-2] if len(submission.messages) >= 2 else None
-                )
-                if (
-                    rejected_proposal is None
-                    or rejected_proposal.role != "assistant"
-                    or rejected_proposal.id != entry.message_id
-                ):
-                    return JSONResponse(
-                        {"error": "This question has no matching rejected proposal."},
-                        status_code=409,
-                    )
-                correction = _composer_text(message)
-                if correction is None:
-                    return JSONResponse(
-                        {"error": "Enter a text correction."}, status_code=422
-                    )
-                entry.awaiting_correction = False
-                return prepare_response(submission.id, entry, correction=correction)
-            approvals = (
-                [
-                    part
-                    for part in message.parts
-                    if isinstance(part, ToolApprovalRespondedPart)
-                    and part.type == "tool-Query approval"
-                    and part.tool_call_id == entry.approval_id
-                    and isinstance(part.approval, ToolApprovalResponded)
-                    and part.approval.id == entry.approval_id
-                ]
-                if message
-                and message.role == "assistant"
-                and message.id == entry.message_id
-                else []
+        session = session_factory(submission.question, dependencies)
+        try:
+            result = await session.run()
+        except Exception:
+            logger.exception("Source Guide %s failed", session.stage)
+            status = {
+                "assessment": "assessment_failed",
+                "retrieval": "retrieval_failed",
+                "guidance": "guidance_failed",
+            }[session.stage]
+            guide = SourceGuide.model_validate(
+                {
+                    "question": submission.question,
+                    "status": status,
+                    "assessment": session.assessment,
+                    "message": {
+                        "assessment": "The question could not be assessed. Try submitting it again.",
+                        "retrieval": "The search could not be completed. Try submitting the question again.",
+                        "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Try submitting the question again.",
+                    }[session.stage],
+                }
             )
-            if entry.approval_id is None or len(approvals) != 1:
-                return JSONResponse(
-                    {"error": "This question has no matching pending approval."},
-                    status_code=409,
-                )
-            approval_id = entry.approval_id
-            entry.approval_id = None
-            decision = approvals[0].approval
-            assert isinstance(decision, ToolApprovalResponded)
-            if not decision.approved:
-                entry.awaiting_correction = True
-
-                async def rejection_stream() -> AsyncIterator[str]:
-                    text_id = str(uuid4())
-                    chunks: list[BaseChunk] = [
-                        StartChunk(message_id=entry.message_id),
-                        ToolOutputDeniedChunk(tool_call_id=approval_id),
-                        TextStartChunk(id=text_id),
-                        TextDeltaChunk(
-                            id=text_id,
-                            delta="Describe the change you want in your next message.",
-                        ),
-                        TextEndChunk(id=text_id),
-                        FinishChunk(finish_reason="stop"),
-                        DoneChunk(),
-                    ]
-                    yield _encode_chunks(chunks)
-
-                return _chat_stream_response(rejection_stream())
-
-            # The response owns the consumed session until its answer finishes.
-            retire_conversation(submission.id)
-
-            async def answer_stream() -> AsyncIterator[str]:
-                operation_id = str(uuid4())
-                starting: list[BaseChunk] = [
-                    StartChunk(message_id=entry.message_id),
-                    ToolOutputAvailableChunk(
-                        tool_call_id=approval_id, output={"approved": True}
-                    ),
-                    ToolInputAvailableChunk(
-                        tool_call_id=operation_id, tool_name="Search details", input={}
-                    ),
-                ]
-                try:
-                    yield _encode_chunks(starting)
-                    result = await entry.session.approve()
-                except Exception:
-                    logger.exception("Chat Session approval failed")
-                    failure_chunks: list[BaseChunk] = [
-                        ToolOutputErrorChunk(
-                            tool_call_id=operation_id, error_text=TERMINAL_FAILURE
-                        ),
-                        ErrorChunk(error_text=TERMINAL_FAILURE),
-                        FinishChunk(finish_reason="stop"),
-                        DoneChunk(),
-                    ]
-                    yield _encode_chunks(failure_chunks)
-                    return
-                text = render_answer(result)
-                if isinstance(result, RetrievalAnswer):
-                    logfire.info(
-                        "chat_session.answer_prepared",
-                        chat_session_id=entry.session.chat_session_id,
-                        audit_schema_version=1,
-                        rendered_text=text,
-                        selected_sources=[
-                            {
-                                "citation": source.citation.model_dump(mode="json"),
-                                "passages": [
-                                    {
-                                        "chunk_id": passage.candidate.chunk_id,
-                                        "text": passage.text,
-                                        "provenance": passage.provenance,
-                                    }
-                                    for passage in source.passages
-                                ],
-                            }
-                            for source in result.evidence.sources
-                        ],
-                    )
-                text_id = str(uuid4())
-                chunks: list[BaseChunk] = [
-                    ToolOutputAvailableChunk(
-                        tool_call_id=operation_id, output=search_details(result)
-                    ),
-                    TextStartChunk(id=text_id),
-                    TextDeltaChunk(id=text_id, delta=text),
-                    TextEndChunk(id=text_id),
-                    FinishChunk(finish_reason="stop"),
-                    DoneChunk(),
-                ]
-                yield _encode_chunks(chunks)
-
-            return _chat_stream_response(answer_stream())
-        if (
-            submission.id in terminal_conversations
-            or len(submission.messages) != 1
-            or submission.messages[0].role != "user"
-        ):
-            return JSONResponse({"error": NEW_CHAT_GUIDANCE}, status_code=409)
-        message = submission.messages[0]
-        question = _composer_text(message)
-        if question is None:
-            return JSONResponse({"error": "Enter a text question."}, status_code=422)
-        session = session_factory(question, dependencies)
-        entry = BrowserSession(session)
-        sessions[submission.id] = entry
-        return prepare_response(submission.id, entry)
-
-    def prepare_response(
-        conversation_id: str, entry: BrowserSession, *, correction: str | None = None
-    ) -> StreamingResponse:
-        async def stream() -> AsyncIterator[str]:
-            try:
-                if correction is not None:
-                    entry.session.reject(correction)
-                result = await entry.session.prepare()
-            except Exception:
-                logger.exception("Chat Session preparation failed")
-                retire_conversation(conversation_id)
-                failure_chunks: list[BaseChunk] = [
-                    StartChunk(message_id=str(uuid4())),
-                    ErrorChunk(error_text=TERMINAL_FAILURE),
-                    FinishChunk(finish_reason="stop"),
-                    DoneChunk(),
-                ]
-                yield _encode_chunks(failure_chunks)
-                return
-            except BaseException:
-                retire_conversation(conversation_id)
-                raise
-            if result.status != "awaiting_approval":
-                retire_conversation(conversation_id)
-            message_id, call_id = str(uuid4()), str(uuid4())
-            text = (
-                result.message
-                if result.status != "awaiting_approval"
-                else "\n\n".join(
-                    value
-                    for value in (
-                        result.approval.question,
-                        result.approval.explanation,
-                        result.approval.recoverable_portion,
-                    )
-                    if value
-                )
+            return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
+        if isinstance(result, QuestionAssessment):
+            assert result.status in {"declined", "needs_edit"}
+            guide = SourceGuide(
+                question=submission.question,
+                status=result.status,
+                assessment=result,
+                message=result.explanation,
             )
-            chunks: list[BaseChunk] = [
-                StartChunk(message_id=message_id),
-                TextStartChunk(id=message_id),
-                TextDeltaChunk(id=message_id, delta=text),
-                TextEndChunk(id=message_id),
-            ]
-            if result.status == "awaiting_approval":
-                entry.message_id = message_id
-                entry.approval_id = call_id
-                chunks.extend(
-                    [
-                        ToolInputAvailableChunk(
-                            tool_call_id=call_id,
-                            tool_name="Query approval",
-                            input=result.approval.model_dump(exclude_none=True),
-                        ),
-                        ToolApprovalRequestChunk(
-                            approval_id=call_id, tool_call_id=call_id
-                        ),
-                    ]
+        else:
+            guide = source_guide(result)
+            if isinstance(result, RetrievalAnswer):
+                logfire.info(
+                    "chat_session.answer_prepared",
+                    chat_session_id=session.chat_session_id,
+                    audit_schema_version=2,
+                    rendered_text=render_answer(result),
+                    selected_sources=[
+                        {
+                            "citation": source.citation.model_dump(mode="json"),
+                            "passages": [
+                                {
+                                    "chunk_id": passage.candidate.chunk_id,
+                                    "text": passage.text,
+                                    "provenance": passage.provenance,
+                                }
+                                for passage in source.passages
+                            ],
+                        }
+                        for source in result.evidence.sources
+                    ],
                 )
-            chunks.extend(
-                [
-                    FinishChunk(
-                        finish_reason="tool-calls"
-                        if result.status == "awaiting_approval"
-                        else "stop"
-                    ),
-                    DoneChunk(),
-                ]
-            )
-            yield _encode_chunks(chunks)
+        return JSONResponse(guide.model_dump(mode="json", exclude_none=True))
 
-        return _chat_stream_response(stream())
-
-    async def configure_frontend(request: Request) -> Response:
-        # The stock UI requires a first model even when Chat Sessions own deployment.
-        # An empty ID means no override and keeps its model picker hidden.
+    async def coverage(request: Request) -> Response:
         return JSONResponse(
-            {
-                "models": [
-                    {
-                        "id": "",
-                        "name": "Local retrieval",
-                        "builtinTools": [],
-                    }
-                ],
-                "builtinTools": [],
-            }
+            dependencies.coverage.model_dump(mode="json", exclude_none=True)
+            if dependencies
+            else {"entries": []}
+        )
+
+    async def asset(request: Request) -> Response:
+        filename, media_type = {
+            "/": ("index.html", "text/html"),
+            "/guide.js": ("guide.js", "text/javascript"),
+            "/guide.css": ("guide.css", "text/css"),
+        }[request.url.path]
+        return Response(
+            files("knowledge_map")
+            .joinpath("resources/source-guides", filename)
+            .read_text(),
+            media_type=media_type,
+            headers={
+                "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+            },
         )
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    frontend = create_agent(name="local_chat_shell").to_web()
-    frontend.router.routes.insert(0, Route("/api/chat", post_chat, methods=["POST"]))
-    frontend.router.routes.insert(
-        0, Route("/api/configure", configure_frontend, methods=["GET"])
-    )
+    frontend = create_agent(name="local_guide_shell").to_web()
+    frontend.router.routes[:] = [
+        Route("/api/questions", submit_question, methods=["POST"]),
+        Route("/api/coverage", coverage, methods=["GET"]),
+        *(
+            Route(path, asset, methods=["GET"])
+            for path in ("/", "/guide.js", "/guide.css")
+        ),
+    ]
     app.mount("/", frontend)
     return app

@@ -46,8 +46,8 @@ class RetrievalRequest(RetrievalValue):
 
     @model_validator(mode="after")
     def require_retrievable_question(self) -> Self:
-        if self.rewrite.assessment.status == "declined":
-            raise ValueError("a Declined question cannot enter retrieval")
+        if self.rewrite.assessment.status in {"declined", "needs_edit"}:
+            raise ValueError("a Declined or unresolved question cannot enter retrieval")
         return self
 
     @property
@@ -477,6 +477,7 @@ class SourceDisagreement(RetrievalValue):
 
 
 class RetrievalAnswer(RetrievalValue):
+    guidance_contract: Literal[1, 2] = 1
     evidence: EvidencePackage
     introduction: NonemptyText | None = None
     source_notes: tuple[SourceRelevanceNote, ...] = ()
@@ -489,6 +490,12 @@ class RetrievalAnswer(RetrievalValue):
         }
         if any(note.source_article_id not in selected for note in self.source_notes):
             raise ValueError("relevance notes must refer to selected sources")
+        if self.guidance_contract == 2:
+            noted = [note.source_article_id for note in self.source_notes]
+            if len(noted) != len(set(noted)):
+                raise ValueError(
+                    "each included article must have one reading direction"
+                )
         for disagreement in self.disagreements:
             sources = set(disagreement.source_article_ids)
             if len(sources) < 2 or not sources <= selected:

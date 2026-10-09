@@ -254,7 +254,7 @@ The stateful interaction devoted to one explicit political question, its assessm
 _Avoid_: Multi-question chat, persistent conversation
 
 **Chat Session ID**:
-An application-generated identity assigned when a Chat Session accepts its first question. It joins observations across separate preparation and approval requests and is distinct from the browser conversation identity and individual trace IDs.
+An application-generated identity assigned when a Chat Session accepts its first question. It joins observations for direct question assessment, retrieval, and guidance. Historical sessions also join separate preparation and approval requests. It is distinct from individual trace IDs.
 _Avoid_: Conversation ID, trace ID, approval ID
 
 **Chat Session Audit Trail**:
@@ -270,11 +270,11 @@ A question whose answer depends on one or more typed relationships among politic
 _Avoid_: Zero-hop question, graph question, Cypher question
 
 **Query Rewrite Proposal**:
-The candidate natural-language restatement and internal route produced for a Chat Session before retrieval. The person sees only the restated question and either approves it as the Query Rewrite or supplies a correction for the Query Rewriter to consider in another proposal.
+The legacy candidate natural-language restatement and internal route produced for a Chat Session before retrieval. Current Source Guides web and evaluation consumers preserve the original question and bypass rewriting and approval. In that legacy flow, the person sees only the restated question and either approves it as the Query Rewrite or supplies a correction for the Query Rewriter to consider in another proposal.
 _Avoid_: Draft query, proposed Cypher, retrieval plan
 
 **Query Rewrite**:
-The approved natural-language question from a Query Rewrite Proposal that the retrieval pipeline uses in place of the original wording. It makes the requested entities, relationships, scope, and result explicit in the form used by the verified query-construction cases; it does not ask separately for reporting because every retrieval returns Grounding Evidence.
+The legacy approved natural-language question from a Query Rewrite Proposal that the retrieval pipeline uses in place of the original wording. The current direct path retains this internal transport type with the original submitted wording and assessment. It makes the requested entities, relationships, scope, and result explicit in the form used by the verified query-construction cases; it does not ask separately for reporting because every retrieval returns Grounding Evidence.
 _Avoid_: Retrieval plan, normalized query, Cypher query
 
 **Retrieval Answer**:

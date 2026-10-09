@@ -1,4 +1,10 @@
-# Query Rewrite and approval
+# Historical Query Rewrite and approval
+
+The Source Guides application and shared chat evaluation now submit the original
+question directly to assessment and retrieval. They do not create a Query
+Rewriter or call this approval workflow. This document describes the retained
+legacy consumer contract and historical evaluation records.
+
 
 `QuestionPreparation` owns one question's preparation for the Chat Agent. Its
 rewriter is a Pydantic AI agent created by `get_query_rewriter`. The injected

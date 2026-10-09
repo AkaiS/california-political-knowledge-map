@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>California Source Guides</title>
+  <link rel="stylesheet" href="/guide.css">
+  <script src="/guide.js" defer></script>
+</head>
+<body>
+<main>
+  <header><p class="eyebrow">California Political Knowledge Map</p><h1>Source Guides</h1>
+    <p>Find reporting to read for your California political question.</p></header>
+  <form id="question-form">
+    <label for="question">Complete question</label>
+    <textarea id="question" name="question" rows="4" required placeholder="What should I read about housing legislation in California?"></textarea>
+    <p id="collections" class="metadata"></p>
+    <div class="actions"><button id="submit" type="submit">Find articles</button><button id="new" type="button" class="secondary">New question</button></div>
+  </form>
+  <p id="progress" role="status" aria-live="polite"></p>
+  <section id="guide" aria-labelledby="guide-question" hidden>
+    <div class="guide-heading"><h2 id="guide-question"></h2><button id="edit" class="secondary" type="button">Edit question</button></div>
+    <p id="outcome"></p><p id="message"></p>
+    <ol id="articles"></ol>
+  </section>
+</main>
+</body>
+</html>

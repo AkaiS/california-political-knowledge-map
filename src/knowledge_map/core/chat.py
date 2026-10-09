@@ -1,11 +1,11 @@
-"""Keep question approval and the Retrieval Answer in one Chat Agent session."""
+"""Assess a question and prepare source guidance with the existing Chat Agent."""
 
 import json
 import logging
 from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import cast
+from typing import Literal, cast
 from uuid import uuid4
 
 import logfire
@@ -47,13 +47,9 @@ from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_INSTRUCTIONS = (
-    load_prompt("chat/instructions", version=1)
-)
+CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=6)
 
-QUESTION_POLICY = (
-    load_prompt("chat/question-policy", version=1)
-)
+QUESTION_POLICY = load_prompt("chat/question-policy", version=2)
 
 
 def _guidance_failure_kind(error: Exception) -> str:
@@ -88,7 +84,9 @@ async def generate_retrieval_answer(
         try:
             result = await agent.run(
                 render_evidence_context(package),
-                message_history=[ModelRequest(parts=[UserPromptPart(original_question)])],
+                message_history=[
+                    ModelRequest(parts=[UserPromptPart(original_question)])
+                ],
                 output_type=RetrievalGuidance,
                 usage=usage,
             )
@@ -102,6 +100,7 @@ async def generate_retrieval_answer(
             if result.output.introduction:
                 disclosures.append(result.output.introduction)
             answer = RetrievalAnswer(
+                guidance_contract=2,
                 evidence=package,
                 introduction="\n\n".join(disclosures) or None,
                 source_notes=result.output.source_notes,
@@ -145,7 +144,7 @@ class ChatSession:
         original_question: str,
         *,
         chat_agent: Agent[None, QuestionAssessment],
-        rewriter: Agent[None, QueryRewriteProposal],
+        rewriter: Agent[None, QueryRewriteProposal] | None = None,
         retrieval: RetrievalCoordinator,
         coverage: CoverageDescription,
         relevant_collection_ids: tuple[str, ...],
@@ -160,13 +159,19 @@ class ChatSession:
         self._monthly_coverage = monthly_coverage
         self._usage = RunUsage()
         self._retrieval_result: EvidencePackage | EvidenceAssemblyFailure | None = None
+        self.assessment: QuestionAssessment | None = None
+        self.stage: Literal["assessment", "retrieval", "guidance"] = "assessment"
         self.chat_session_id = str(uuid4())
-        self._preparation = QuestionPreparation(
-            original_question,
-            rewriter=rewriter,
-            assess_question_policy_and_coverage=self._assess,
-            usage=self._usage,
-            chat_session_id=self.chat_session_id,
+        self._preparation = (
+            QuestionPreparation(
+                original_question,
+                rewriter=rewriter,
+                assess_question_policy_and_coverage=self._assess,
+                usage=self._usage,
+                chat_session_id=self.chat_session_id,
+            )
+            if rewriter is not None
+            else None
         )
         logfire.info(
             "chat_session.started",
@@ -197,6 +202,7 @@ class ChatSession:
         return result.output
 
     async def prepare(self) -> QuestionPreparationResult:
+        assert self._preparation is not None
         rejections = self._preparation.rejections
         with logfire.span(
             "chat_session.correct" if rejections else "chat_session.prepare",
@@ -217,9 +223,11 @@ class ChatSession:
             return result
 
     def reject(self, correction: str | None = None) -> RewriteRejection:
+        assert self._preparation is not None
         return self._preparation.reject(correction)
 
     async def approve(self) -> RetrievalAnswer | EvidenceAssemblyFailure:
+        assert self._preparation is not None
         with logfire.span(
             "chat_session.approve",
             chat_session_id=self.chat_session_id,
@@ -239,6 +247,48 @@ class ChatSession:
             finally:
                 self._log_usage()
 
+    async def run(
+        self,
+    ) -> RetrievalAnswer | EvidenceAssemblyFailure | QuestionAssessment:
+        """Assess and search the submitted wording without a rewrite proposal."""
+        with logfire.span(
+            "chat_session.submit",
+            chat_session_id=self.chat_session_id,
+            audit_schema_version=2,
+        ):
+            try:
+                proposal = QueryRewriteProposal(
+                    question=self._original_question,
+                    relational=True,
+                )
+                with logfire.span(
+                    "chat_session.assessment",
+                    chat_session_id=self.chat_session_id,
+                    audit_schema_version=2,
+                ) as span:
+                    try:
+                        assessment = self.assessment = await self._assess(proposal)
+                    except Exception as error:
+                        span.set_attributes(
+                            {
+                                "status": "failed",
+                                "failure_kind": _guidance_failure_kind(error),
+                                "diagnostic": "The Chat Agent could not assess the question.",
+                            }
+                        )
+                        raise
+                    span.set_attributes(assessment.model_dump(exclude_none=True))
+                if assessment.status in {"declined", "needs_edit"}:
+                    return assessment
+                return await self._answer(
+                    QueryRewrite(
+                        **proposal.model_dump(),
+                        assessment=assessment,
+                    )
+                )
+            finally:
+                self._log_usage()
+
     def _log_usage(self) -> None:
         logger.info(
             "chat_total_usage",
@@ -253,6 +303,7 @@ class ChatSession:
     async def _answer(
         self, rewrite: QueryRewrite
     ) -> RetrievalAnswer | EvidenceAssemblyFailure:
+        self.stage = "retrieval"
         package = await self._retrieval.run(
             rewrite,
             coverage=self._coverage,
@@ -264,6 +315,7 @@ class ChatSession:
         self._retrieval_result = package
         if isinstance(package, EvidenceAssemblyFailure):
             return package
+        self.stage = "guidance"
         return await generate_retrieval_answer(
             self._agent,
             package,

@@ -171,8 +171,12 @@ def rendered_prompt_snapshot():
     return {key: _digest(value) for key, value in sorted(values.items())}
 
 
-def test_resolved_prompt_outputs_match_pre_migration_bytes():
+def test_resolved_prompt_outputs_match_adopted_versions():
     baseline = json.loads((FIXTURES / "prompt_rendered_baseline.json").read_text())
+    baseline.update(
+        chat="4fef0ac93fdb5c0d6630334318d073172c4be96f7ccdeaa937144f8b1583fdaa",
+        question_policy="6c6f4d61668b3929c62cff87a6f0030d5d9739c103163c9fee2c97b4dc543ac9",
+    )
     assert rendered_prompt_snapshot() == baseline
 
 
