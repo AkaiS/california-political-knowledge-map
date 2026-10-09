@@ -21,9 +21,9 @@ link directly to the spec and declare their blockers.
 [02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md),
 [03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md),
 [04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md),
-and [05 Cancel searches without losing saved content](projects/source-guides/issues/05-cancel-searches.md)
+[05 Cancel searches without losing saved content](projects/source-guides/issues/05-cancel-searches.md),
+and [06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md)
 are `completed` after independent review on 2026-10-09 UTC.
-[06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md),
 [07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
 [08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md),
 and [09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
