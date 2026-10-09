@@ -6,12 +6,8 @@ generation, retrieval scores, ranks or provisional reference labels. These
 judgments belong to a query–chunk pair; the same chunk can receive different
 labels for different questions.
 
-Open **Chunk review** from the RAG reviewer, or visit
-`http://127.0.0.1:8765/chunks`. The existing server serves both views:
-
-```sh
-uv run python scripts/review_chat_eval.py --mode rag
-```
+Start the server using [the RAG launcher](rag-review.md#start-the-reviewer), then
+open **Chunk review** from its run list. The same server serves both views.
 
 Choices autosave and advance. Descriptions autosave after typing pauses.
 Previous, Next, an item-number jump, unmarked/deferred filters and Undo allow

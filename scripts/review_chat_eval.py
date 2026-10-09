@@ -40,7 +40,7 @@ from knowledge_map.evaluation.rag_review import (
     review_complete,
     validate_review,
 )
-from knowledge_map.evaluation.tasks.chat import compact_retrieval_for_report
+from knowledge_map.reviewer_identity import reviewer_identity
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 
@@ -207,6 +207,8 @@ def load_report(path: Path, mode: str = "chat") -> dict[str, Any]:
     ).hexdigest()
     if mode == "rag":
         return project_report(report)
+    from knowledge_map.evaluation.tasks.chat import compact_retrieval_for_report
+
     for case in report["report"]["cases"]:
         output = case.get("output")
         if not isinstance(output, dict):
@@ -351,6 +353,7 @@ def make_handler(
     samples_dir: Path | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     samples_dir = samples_dir or REPOSITORY / "evals/chunk-samples"
+    identity = reviewer_identity(mode, REPOSITORY, reports_dir, samples_dir)
     reviews_lock = threading.Lock()
     review_editing_module = (
         Path(__file__).with_name("chat_eval_review_editing.mjs").read_bytes()
@@ -382,7 +385,13 @@ def make_handler(
             if not self._trusted_host():
                 return
             path = urlsplit(self.path).path
-            if path == "/chunks":
+            if path == "/api/identity":
+                self._send(
+                    200,
+                    json.dumps({**identity, "pid": os.getpid()}).encode(),
+                    "application/json; charset=utf-8",
+                )
+            elif path == "/chunks":
                 self._send(
                     200,
                     Path(__file__).with_name("chunk_eval_samples.html").read_bytes(),
