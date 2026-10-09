@@ -14,6 +14,9 @@ from pydantic import (
 type QuestionText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
 ]
+type ReadingOrder = Literal[
+    "relevance", "publication_asc", "publication_desc", "event_asc", "event_desc"
+]
 
 
 class QueryRewriteProposal(BaseModel):
@@ -33,9 +36,7 @@ class QuestionAssessment(BaseModel):
     status: Literal["allowed", "declined", "deferred", "needs_edit"]
     explanation: QuestionText | None = None
     recoverable_portion: QuestionText | None = None
-    reading_order: Literal[
-        "relevance", "publication_asc", "publication_desc", "event_asc", "event_desc"
-    ] = "relevance"
+    reading_order: ReadingOrder = "relevance"
 
     @model_validator(mode="after")
     def unsupported_question_has_explanation(self) -> Self:

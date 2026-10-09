@@ -192,7 +192,16 @@ function renderArticles() {
     ordered.sort((left, right) =>
       (order.get(left.citation.source_article_id) ?? 0) - (order.get(right.citation.source_article_id) ?? 0));
   }
-  if (selectedGroup) {
+  if (selectedGroup && ['publication_asc', 'publication_desc'].includes(selectedGroup.order)) {
+    const newest = selectedGroup.order === 'publication_desc';
+    const date = article => Date.parse(article.citation.published_date || '');
+    ordered.sort((left, right) => {
+      const leftDate = date(left), rightDate = date(right);
+      if (Number.isNaN(leftDate)) return Number.isNaN(rightDate) ? 0 : 1;
+      if (Number.isNaN(rightDate)) return -1;
+      return newest ? rightDate - leftDate : leftDate - rightDate;
+    });
+  } else if (selectedGroup) {
     const order = new Map();
     for (const member of selectedGroup.members) {
       if (!order.has(member.source_article_id)) order.set(member.source_article_id, order.size);

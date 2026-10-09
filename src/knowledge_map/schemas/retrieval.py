@@ -15,7 +15,7 @@ from pydantic import (
     model_validator,
 )
 
-from knowledge_map.schemas.query_preparation import QueryRewrite
+from knowledge_map.schemas.query_preparation import QueryRewrite, ReadingOrder
 
 type NonemptyText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
@@ -486,9 +486,7 @@ class ArticleGroup(RetrievalValue):
     kind: Literal["contrast", "timeline", "aspect"]
     label: NonemptyText
     members: tuple[ArticleGroupMember, ...]
-    order: Literal[
-        "relevance", "publication_asc", "publication_desc", "event_asc", "event_desc"
-    ] = "relevance"
+    order: ReadingOrder = "relevance"
 
     @model_validator(mode="after")
     def valid_reading_view(self) -> Self:
