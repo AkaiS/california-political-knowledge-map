@@ -9,29 +9,15 @@ have not yet been shaped into executable work.
 
 ## Current attention
 
-### Source Guides
+### Source Guides sequence review
 
-[Source Guides PRD](projects/source-guides/PRD.md) synthesizes the completed
-source-first UI grilling session and is `ready-for-agent`. It covers durable,
-updateable guides, original-question submission, source-reading views and
-relevance directions, original-section navigation, and independently continuing
-searches. [Nine implementation tickets](projects/source-guides/PRD.md#implementation-tickets)
-link directly to the spec and declare their blockers.
-[01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md),
-[02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md),
-[03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md),
-[04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md),
-[05 Cancel searches without losing saved content](projects/source-guides/issues/05-cancel-searches.md),
-[06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md),
-[07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
-and [08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md)
-are `completed` after independent review on 2026-10-09 UTC.
-[09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
-is now takeable.
-Their main automated seam is the existing web application boundary; the
-maintainer explicitly requires browser verification and excludes a separate
-Chat Session test seam. These are revisable product requirements for this
-iteration, with no new feature ADRs.
+[Source Guides](projects/source-guides/PRD.md) and all
+[nine implementation tickets](projects/source-guides/PRD.md#implementation-tickets)
+are `completed` after independent review on 2026-10-09 UTC. Their checked criteria
+have application-boundary, browser, and shared evaluation evidence. Ticket 09's
+[review record](projects/source-guides/validation/ticket-09-review.md) records the
+last correction and final local checks. The conductor's whole-sequence review
+and remote pull-request CI remain forthcoming.
 
 ### Chat Session error follow-up
 
@@ -235,7 +221,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Source Guides](projects/source-guides/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
@@ -353,6 +339,19 @@ On 2026-10-02, Evaluation Case review editing was reviewed and closed:
 - Browser workflows were retained and not executed. Actual pull-request CI
   evidence will be recorded after the conductor's final review and PR creation;
   this record makes no claim about pending remote checks.
+
+On 2026-10-09 UTC, Source Guides implementation and per-ticket review completed:
+
+- All nine issues have checked acceptance criteria and `completed` labels. The
+  parent PRD and completed project table now match them.
+- Ticket 09's Standards review found one P3 repeated coverage projection, fixed
+  and confirmed by the reviewer. Its Spec review found no gaps. The
+  [review record](projects/source-guides/validation/ticket-09-review.md) records
+  the evidence and remaining limits.
+- Final local CI after that correction passed: 1574 Python tests with 61 skips,
+  and 29 Node tests. The existing OpenRouter sampling warning remains.
+- The conductor's separate whole-sequence review and remote pull-request CI
+  remain forthcoming and are not claimed as passed.
 
 ## Information model
 

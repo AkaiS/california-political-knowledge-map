@@ -12,6 +12,7 @@ from knowledge_map.adapters import sqlite_db
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import (
     ArticleGroup,
+    CoverageDescription,
     EvidenceAssemblyFailure,
     RetrievalAnswer,
     SourceArticleEvidence,
@@ -23,6 +24,18 @@ from knowledge_map.schemas.source_guides import (
     GuideSearchDetails,
     SourceGuide,
 )
+
+
+def guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
+    """Keep saved search scope and question-entry coverage on the same projection."""
+    return tuple(
+        GuideCollection.model_validate(
+            entry.model_dump(
+                include={"name", "date_basis", "earliest_date", "latest_date"}
+            )
+        )
+        for entry in coverage.entries
+    )
 
 
 def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
@@ -206,14 +219,7 @@ def source_guide(
         relevance_order=relevance_order,
         partial=bool(execution.failed_branches),
         search_details=GuideSearchDetails(
-            collections=tuple(
-                GuideCollection.model_validate(
-                    entry.model_dump(
-                        include={"name", "date_basis", "earliest_date", "latest_date"}
-                    )
-                )
-                for entry in result.evidence.coverage.entries
-            ),
+            collections=guide_collections(result.evidence.coverage),
             completion="failed"
             if len(execution.failed_branches) == len(execution.expected_branches)
             else "partial"

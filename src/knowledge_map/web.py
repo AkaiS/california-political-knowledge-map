@@ -18,6 +18,7 @@ from starlette.routing import Route
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
     assessment_guide,
+    guide_collections,
     render_answer,
     source_guide,
 )
@@ -29,7 +30,6 @@ from knowledge_map.chat_startup import (
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import (
-    GuideCollection,
     GuideDisclosure,
     GuideSearchDetails,
     SavedSourceGuide,
@@ -77,14 +77,7 @@ def create_app(
 
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
-            collections=tuple(
-                GuideCollection.model_validate(
-                    entry.model_dump(
-                        include={"name", "date_basis", "earliest_date", "latest_date"}
-                    )
-                )
-                for entry in dependencies.coverage.entries
-            )
+            collections=guide_collections(dependencies.coverage)
             if dependencies
             else ()
         )

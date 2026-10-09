@@ -1,6 +1,6 @@
 # Source Guides for California political questions
 
-Labels: enhancement, ready-for-agent
+Labels: enhancement, completed
 Parent: [Source-first UI shaping](../../initiatives/chat-error-follow-up/issues/04-shape-source-first-chat-ui.md)
 
 ## Problem Statement
@@ -433,3 +433,13 @@ clarification supersedes repeated article-link rendering across groups. Group
 membership remains useful organization; the reader consolidates its directions
 near each article. Repeated memberships with distinct directions are accepted.
 Ticket 08 remains responsible for verified highlights.
+
+## Completion record, 2026-10-09 UTC
+
+All nine implementation tickets have checked acceptance criteria and a single
+`completed` triage-state label after their independent Standards and Spec reviews.
+The project is complete on that evidence. Ticket 09's
+[review record](validation/ticket-09-review.md) records its coverage correction and
+final local checks. The conductor's separate review of the whole implementation
+sequence and remote pull-request CI are still forthcoming; this record does not
+claim either has passed.
