@@ -2,7 +2,8 @@
  * Evaluation Case editing, independent of the page and browser APIs.
  * persistReview resolves after the file is saved, or rejects with an Error
  * carrying the HTTP status when available. Storage and scheduling use the
- * getItem/setItem/removeItem and setTimeout/clearTimeout interfaces.
+ * getItem/setItem/removeItem and setTimeout/clearTimeout interfaces. Storage
+ * length/key also exposes earlier snapshots for export, never automatic reuse.
  * State is copied. Notifications identify selection/undo redraws separately
  * from review/status changes so typing and save completion keep the caret.
  * Save and navigation promises return false when saving or movement is blocked.
@@ -18,6 +19,7 @@ export function createReviewEditor({
   const normalize = review => Object.fromEntries(Object.entries(reviewDefaults).map(([key, value]) => [key, review?.[key] ?? value]));
   const reviews = Object.fromEntries(names.map(name => [name, normalize(loadedReviews[name])]));
   const drafts = new Map(), revisions = new Map(), statuses = new Map();
+  const previousDrafts = [];
   const draftKey = `${draftNamespace}:${runId}:${reviewIdentity}`;
   let selectedCase = names[0] ?? null, storageFailed = false, saveTimer;
   let saveChain = Promise.resolve(true);
@@ -36,6 +38,8 @@ export function createReviewEditor({
       saveStatus,
       saveFailed: failed.length > 0,
       pendingDraftCount: drafts.size,
+      previousDraftCount: previousDrafts.reduce((count, snapshot) => count + Object.keys(snapshot.reviews).length, 0),
+      exportableDraftCount: drafts.size + previousDrafts.reduce((count, snapshot) => count + Object.keys(snapshot.reviews).length, 0),
       canUndo: history.length > 0,
       shouldWarnOnUnload,
     };
@@ -110,7 +114,7 @@ export function createReviewEditor({
         setStatus(name, revision, 'Saved to review file');
         return true;
       } catch (error) {
-        const message = error.status === 409 ? 'Save failed: report changed. Reload to review the current report' : error.message;
+        const message = error.status === 409 ? 'Save failed: report changed. Back up unsaved notes before reloading the current report' : error.message;
         setStatus(name, revision, `${message}. ${storageFailed ? 'Keep this page open.' : 'Edits kept in this browser.'} Use Save / retry.`);
         return false;
       } finally { pendingSaves.delete(key); }
@@ -162,7 +166,26 @@ export function createReviewEditor({
     notify();
     return state().shouldWarnOnUnload;
   }
+  function exportDrafts() {
+    const snapshots = [...previousDrafts];
+    if (drafts.size) snapshots.push({review_identity: reviewIdentity, reviews: Object.fromEntries(drafts)});
+    return {run_id: runId, snapshots: snapshots.map(snapshot => ({
+      review_identity: snapshot.review_identity,
+      reviews: Object.fromEntries(Object.entries(snapshot.reviews).map(([name, review]) => [name, {...review}])),
+    }))};
+  }
   try {
+    const prefix = `${draftNamespace}:${runId}:`;
+    for (let index = 0; index < storage.length; index++) {
+      const key = storage.key(index);
+      if (!key?.startsWith(prefix) || key === draftKey) continue;
+      try {
+        const snapshot = JSON.parse(storage.getItem(key));
+        if (key !== `${prefix}${snapshot?.review_identity}` || !snapshot?.reviews || typeof snapshot.reviews !== 'object' || Array.isArray(snapshot.reviews)) continue;
+        const reviews = Object.fromEntries(Object.entries(snapshot.reviews).filter(([, review]) => review && validateReview(review)));
+        if (Object.keys(reviews).length) previousDrafts.push({review_identity: snapshot.review_identity, reviews});
+      } catch (_) { /* Preserve malformed backups without applying or exporting them. */ }
+    }
     const stored = JSON.parse(storage.getItem(draftKey) || '{}');
     const recovered = stored?.review_identity === reviewIdentity && stored.reviews && typeof stored.reviews === 'object' && !Array.isArray(stored.reviews) ? stored.reviews : {};
     for (const name of names) {
@@ -177,5 +200,5 @@ export function createReviewEditor({
   } catch (_) { storageFailed = true; }
   persistDrafts();
   if (drafts.size) Promise.resolve().then(flush);
-  return {get state() { return state(); }, editNote, setVerdict, editField, setField, undo, flush, selectCase, canNavigate, navigate, prepareForUnload};
+  return {get state() { return state(); }, editNote, setVerdict, editField, setField, undo, flush, selectCase, canNavigate, navigate, prepareForUnload, exportDrafts};
 }

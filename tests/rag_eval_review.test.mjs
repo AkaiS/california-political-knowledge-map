@@ -4,6 +4,34 @@ import {createReviewEditor} from '../scripts/chat_eval_review_editing.mjs';
 import {defaults,validateReview,requiredAxes,complete,diagnosis} from '../scripts/rag_eval_review_model.mjs';
 
 const both={output:{has_context:true,has_generation:true}};
+test('changed snapshots keep blocked notes exportable before and after reload without applying stale judgments',async()=>{
+ const stored=new Map(),oldWrites=[],newWrites=[];
+ const storage={get length(){return stored.size;},key:i=>[...stored.keys()][i]??null,getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)};
+ const options={caseNames:['a'],reviews:{},runId:'run',reviewDefaults:defaults,validateReview,draftNamespace:'rag-review-drafts',storage,scheduler:{setTimeout:()=>1,clearTimeout:()=>{}}};
+ const old=createReviewEditor({...options,reviewIdentity:'old',persistReview:async p=>{oldWrites.push(p);throw Object.assign(new Error('Changed snapshot'),{status:409});}});
+ old.editField('execution_note','Pending when I inspected it');
+ assert.equal(await old.flush(),false);
+ assert.equal(oldWrites[0].review_identity,'old');
+ assert.match(old.state.saveStatus,/Back up unsaved notes before reloading/);
+ assert.equal(old.exportDrafts().snapshots[0].reviews.a.execution_note,'Pending when I inspected it');
+ stored.set('rag-review-drafts:other-run:old',JSON.stringify({review_identity:'old',reviews:{a:{...defaults,execution_note:'Other run'}}}));
+ stored.set('chat-review-drafts:run:old',JSON.stringify({review_identity:'old',reviews:{a:{...defaults,execution_note:'Other reviewer'}}}));
+ const reloaded=createReviewEditor({...options,reviewIdentity:'new',persistReview:async p=>newWrites.push(p)});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(newWrites,[]);
+ assert.equal(reloaded.state.reviews.a.execution_note,'');
+ assert.equal(reloaded.state.pendingDraftCount,0);
+ assert.equal(reloaded.state.previousDraftCount,1);
+ assert.equal(reloaded.state.exportableDraftCount,1);
+ assert.deepEqual(reloaded.exportDrafts(),{run_id:'run',snapshots:[{review_identity:'old',reviews:{a:{...defaults,execution_note:'Pending when I inspected it'}}}]});
+ reloaded.editField('execution_note','Checked against the new answer');
+ const backup=reloaded.exportDrafts();
+ assert.deepEqual(backup.snapshots.map(s=>s.review_identity),['old','new']);
+ backup.snapshots[0].reviews.a.execution_note='Mutated export';
+ assert.equal(reloaded.exportDrafts().snapshots[0].reviews.a.execution_note,'Pending when I inspected it');
+ assert.equal(reloaded.state.reviews.a.execution_note,'Checked against the new answer');
+ assert.equal(stored.has('rag-review-drafts:run:old'),true);
+});
 test('execution notes annotate cases without inventing RAG judgments',async()=>{
  const failed={output:{has_context:false,has_generation:false}};
  assert.deepEqual(requiredAxes(failed),[]);
@@ -54,22 +82,29 @@ test('independent RAG labels and evidence survive autosave, undo, reload and nav
 
 test('focused page loads specs, preserves independent judgments and disables absent generation',async()=>{
  const {readFileSync}=await import('node:fs');const {runInNewContext}=await import('node:vm');
- const elements=new Map(),all=[],requests=[],writes=[],stored=new Map();
- function element(tag='div'){const el={tagName:tag.toUpperCase(),dataset:{},value:'',textContent:'',children:[],disabled:false,hidden:false,classList:{toggle(){},add(){}},append(child){this.children.push(child);},replaceChildren(...children){this.children=children;},setAttribute(key,value){this[key]=value;},click(){if(!this.disabled)this.onclick?.({preventDefault(){}});}};Object.defineProperty(el,'id',{set(value){elements.set(value,el);},get(){return [...elements].find(([,node])=>node===el)?.[0];}});all.push(el);return el;}
+ const elements=new Map(),all=[],requests=[],writes=[],stored=new Map(),backups=[],downloadNames=[];
+ stored.set('rag-review-drafts:chat--run:earlier',JSON.stringify({review_identity:'earlier',reviews:{'case-a':{...defaults,faithfulness_note:'Unsaved earlier observation'}}}));
+ class DownloadURL extends URL{static createObjectURL(blob){backups.push(blob);return 'blob:backup';}static revokeObjectURL(){}}
+ function element(tag='div'){const el={tagName:tag.toUpperCase(),dataset:{},value:'',textContent:'',children:[],disabled:false,hidden:false,classList:{toggle(){},add(){}},append(child){this.children.push(child);},replaceChildren(...children){this.children=children;},remove(){},setAttribute(key,value){this[key]=value;},click(){if(this.download)downloadNames.push(this.download);if(!this.disabled)this.onclick?.({preventDefault(){}});}};Object.defineProperty(el,'id',{set(value){elements.set(value,el);},get(){return [...elements].find(([,node])=>node===el)?.[0];}});all.push(el);return el;}
  function get(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}
  get('filter').value='all';get('branch').value='fused';
  // Window timers reject a foreign receiver; Node's timers silently accept it.
  function browserSetTimeout(...args){assert.equal(this,undefined,'Illegal invocation: setTimeout receiver');return setTimeout(...args);}
  function browserClearTimeout(...args){assert.equal(this,undefined,'Illegal invocation: clearTimeout receiver');return clearTimeout(...args);}
- const document={getElementById:get,createElement:element,activeElement:element('body'),addEventListener(){},querySelector:()=>get('main'),querySelectorAll:selector=>all.filter(el=>el.dataset.axis===selector.match(/data-axis="(\w+)"/)?.[1]&&Object.hasOwn(el.dataset,'value'))};
+ const document={body:get('body'),getElementById:get,createElement:element,activeElement:element('body'),addEventListener(){},querySelector:()=>get('main'),querySelectorAll:selector=>all.filter(el=>el.dataset.axis===selector.match(/data-axis="(\w+)"/)?.[1]&&Object.hasOwn(el.dataset,'value'))};
  const page=readFileSync(new URL('../scripts/rag_eval_review.html',import.meta.url),'utf8');const script=page.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,'');
- runInNewContext(script,{createReviewEditor,axes:Object.keys(defaults).filter(k=>!k.endsWith('_note')),defaults,validateReview,requiredAxes,complete,diagnosis,document,location:{pathname:'/runs/chat--run'},window:{addEventListener(){}},URL,setTimeout:browserSetTimeout,clearTimeout:browserClearTimeout,localStorage:{getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},fetch:(url,options)=>options?(writes.push(JSON.parse(options.body)),Promise.resolve({ok:true})):new Promise(resolve=>requests.push({url,resolve}))});
+ runInNewContext(script,{createReviewEditor,axes:Object.keys(defaults).filter(k=>!k.endsWith('_note')),defaults,validateReview,requiredAxes,complete,diagnosis,document,location:{pathname:'/runs/chat--run'},window:{addEventListener(){}},URL:DownloadURL,Blob,setTimeout:browserSetTimeout,clearTimeout:browserClearTimeout,localStorage:{get length(){return stored.size;},key:i=>[...stored.keys()][i]??null,getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},fetch:(url,options)=>options?(writes.push(JSON.parse(options.body)),Promise.resolve({ok:true})):new Promise(resolve=>requests.push({url,resolve}))});
  get('search').oninput();get('filter').onchange();
  const c={name:'case-a',question:'Approved question',metrics:[],output:{...both.output,sources:[{citation:{title:'Source',url:'https://example.org'},passages:[{chunk_id:'a',text:'Exact context'}]}],semantic_context:[{branch:'structural',semantic_results:[{fact:'Selected graph fact',evidence_chunk_ids:['a']}]}],generation:'Final'}};
  const run={task:'chat',review_identity:'identity',model:'model',metrics:[],specs:{dataset:'dataset',label_quality:'silver',configurations:[],definitions:{}},report:{cases:[c,{...c,name:'case-b',output:{...c.output,has_generation:false,generation:null}}]}};
  for(const r of requests)r.resolve({ok:true,json:async()=>r.url.endsWith('/report')?run:r.url.endsWith('/presentation')?{html:{Final:'<p>Final</p>'}}:{}});
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(get('question').textContent,'Approved question');assert.equal(get('loading').hidden,true);assert.equal(get('answer').innerHTML,'<p>Final</p>');
+ assert.equal(get('export-drafts').disabled,false);assert.equal(get('previous-drafts').hidden,false);
+ get('export-drafts').click();
+ const downloaded=JSON.parse(await backups[0].text());
+ assert.equal(downloaded.run_id,'chat--run');assert.equal(downloaded.snapshots[0].review_identity,'earlier');assert.equal(downloaded.snapshots[0].reviews['case-a'].faithfulness_note,'Unsaved earlier observation');
+ assert.equal(downloadNames[0],'rag-unsaved-notes-chat--run.json');assert.equal(get('note-faithfulness').value,'');
  assert.ok(all.some(el=>el.tagName==='PRE'&&el.textContent.includes('Selected graph fact')));
  const button=(axis,value)=>all.find(el=>el.dataset.axis===axis&&el.dataset.value===value);
  const secondCase=get('case-list').children[1];

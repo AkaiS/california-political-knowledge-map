@@ -75,7 +75,7 @@
         add(progress, 'span', `${reviewable ? Math.round(100 * run.reviewed_count / reviewable) : 0}%`);
         const bar = add(link, 'div', null, 'bar');
         add(bar, 'div', null, 'fill').style.width = `${reviewable ? 100 * run.reviewed_count / reviewable : 0}%`;
-        add(link, 'div', run.review_kind === 'rag' ? `${run.task} · ${run.run_status || 'Historical report'} · ${run.unjudgeable_count} need execution review · Context relevance, answer relevance and faithfulness` : `${run.pass_count} pass · ${run.fail_count} fail · ${run.defer_count} defer`, 'breakdown');
+        add(link, 'div', run.review_kind === 'rag' ? `${run.task} · ${run.run_status || 'Historical report'} · ${run.execution_review_pending_count} need execution review · Context relevance, answer relevance and faithfulness` : `${run.pass_count} pass · ${run.fail_count} fail · ${run.defer_count} defer`, 'breakdown');
       }
     }).catch(error => { runsNode.replaceChildren(); add(runsNode, 'div', error.message, 'empty'); });
   </script>

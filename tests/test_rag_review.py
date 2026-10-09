@@ -389,6 +389,7 @@ def test_progress_report_failure_notes_save_through_the_reviewer_api(tmp_path):
         projected = json.load(urlopen(f"{api}/report"))
         runs = json.load(urlopen(f"{base}/api/runs"))
         assert runs[0]["reviewable_count"] == 2
+        assert runs[0]["execution_review_pending_count"] == 2
         assert runs[0]["run_status"] == "incomplete"
         for name in ("failed", "pending"):
             payload = {
@@ -404,7 +405,10 @@ def test_progress_report_failure_notes_save_through_the_reviewer_api(tmp_path):
                 )
             ) as response:
                 assert response.status == 200
-        assert json.load(urlopen(f"{base}/api/runs"))[0]["reviewed_count"] == 2
+        finished = json.load(urlopen(f"{base}/api/runs"))[0]
+        assert finished["reviewed_count"] == 2
+        assert finished["unjudgeable_count"] == 2
+        assert finished["execution_review_pending_count"] == 0
     saved = json.loads(path.with_suffix(".rag-reviews.json").read_text())
     assert saved["failed"]["execution_note"] == "Inspect failed"
 

@@ -87,7 +87,11 @@ files remain readable. Notes do not manufacture relevance or faithfulness labels
 
 New reports show run status and terminal outcomes against the selected population.
 Running or incomplete reports retain unresolved cases. A changed snapshot rejects
-stale-page saves; reload the report before saving against its current identity.
+stale-page saves. Use **Download unsaved notes** before reloading to retain the
+notes with their original case IDs and snapshot identity. The download remains
+available after reload for browser backups from earlier snapshots of this run.
+Inspect those notes against the current evidence before entering them again;
+the reviewer never automatically applies judgments from a changed snapshot.
 
 The diagnosis panel derives a constrained interpretation from these labels.
 Low context relevance points to evidence selection; relevant context with

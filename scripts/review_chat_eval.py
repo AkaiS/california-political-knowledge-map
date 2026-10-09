@@ -301,7 +301,14 @@ def list_runs(reports_dir: Path, mode: str = "chat") -> list[dict[str, Any]]:
                         "unjudgeable_count": sum(
                             not required_axes(case) for case in cases
                         ),
-                        "run_status": (report.get("evaluation_run") or {}).get("status"),
+                        "execution_review_pending_count": sum(
+                            not required_axes(case)
+                            and not review_complete(reviews.get(case["name"], {}), case)
+                            for case in cases
+                        ),
+                        "run_status": (report.get("evaluation_run") or {}).get(
+                            "status"
+                        ),
                     }
                     if mode == "rag"
                     else {}
@@ -362,7 +369,12 @@ def make_handler(
 
     class Handler(BaseHTTPRequestHandler):
         def _send(
-            self, status: int, body: bytes, content_type: str, *, attachment: bool = False
+            self,
+            status: int,
+            body: bytes,
+            content_type: str,
+            *,
+            attachment: bool = False,
         ) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
@@ -465,7 +477,10 @@ def make_handler(
                         json.dumps(label, ensure_ascii=False) + "\n" for label in labels
                     ).encode()
                     self._send(
-                        200, body, "application/x-ndjson; charset=utf-8", attachment=True
+                        200,
+                        body,
+                        "application/x-ndjson; charset=utf-8",
+                        attachment=True,
                     )
                 elif parts[3] == "presentation" and not chunk_route:
                     body = json.dumps(
