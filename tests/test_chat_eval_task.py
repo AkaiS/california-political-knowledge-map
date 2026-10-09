@@ -177,13 +177,18 @@ def test_repeated_evaluations_preserve_supplied_date_in_requests_traces_and_repo
         case = report.cases[0]
         assert case.inputs.as_of == fixed_time
         assert case.output.as_of == fixed_time
+        assert case.output.approval_mode == "direct_question"
+        assert case.output.preparation is None
         chat_requests = [
             record
             for record in case.output.messages
             if record["component"] == "chat_agent"
         ]
         assert len(chat_requests) == 2
-        for record in chat_requests:
+        assert not any(
+            record["component"] == "query_rewriter" for record in case.output.messages
+        )
+        for index, record in enumerate(chat_requests):
             prompt = next(
                 part["content"]
                 for message in record["messages"]
@@ -192,6 +197,8 @@ def test_repeated_evaluations_preserve_supplied_date_in_requests_traces_and_repo
             )
             assert json.loads(prompt)["as_of"] == fixed_time.isoformat()
             assert json.loads(prompt)["current_date"] == "2026-10-01"
+            if index == 0:
+                assert json.loads(prompt)["question"] == "Who backed AB 1?"
         started = next(
             span
             for span in case.attributes["stage_observations"]
@@ -224,18 +231,41 @@ def test_report_contains_rendered_answer_sources_requests_and_stage_outcomes(
     chat_capture,
     tmp_path,
 ):
-    fake_dependencies(monkeypatch, failed_branch=RetrievalBranch.DENSE)
+    branches = fake_dependencies(
+        monkeypatch,
+        failed_branch=RetrievalBranch.DENSE,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ],
+        },
+    )
     report = run_one()
     assert not report.failures
     case = report.cases[0]
     output = case.output
     assert output.failure is None
     assert isinstance(output.answer, RetrievalAnswer)
-    assert "The union supports AB 1." in output.rendered_text
+    assert "Who backed AB 1?" in output.rendered_text
+    assert (
+        "Read the section on organizations involved with AB 1." in output.rendered_text
+    )
+    assert "The union supports AB 1." not in output.rendered_text
+    assert output.approval_mode == "direct_question"
+    assert output.assessment.status == "allowed"
+    assert (
+        output.guide.articles[0].citation.source_article_id
+        == "https://example.com/full_text"
+    )
+    for branch in branches.values():
+        if branch.requests:
+            assert branch.requests[0][0].rewrite.question == "Who backed AB 1?"
     assert output.answer.evidence.sources[0].passages[0].provenance == "stored_chunk"
-    assert len(output.messages) == 3
+    assert len(output.messages) == 2
     assert [r["component"] for r in output.messages] == [
-        "query_rewriter",
         "chat_agent",
         "chat_agent",
     ]
@@ -366,19 +396,25 @@ def test_report_summarizes_unscored_full_text_candidates_when_dense_fails():
     )
 
 
-def test_declined_question_is_retained_without_retrieval(monkeypatch, chat_capture):
+@pytest.mark.parametrize("status", ["declined", "needs_edit"])
+def test_terminal_assessment_is_retained_without_retrieval(
+    monkeypatch, chat_capture, status
+):
     branches = fake_dependencies(
         monkeypatch,
         assessment={
-            "status": "declined",
-            "explanation": "This question is outside scope.",
+            "status": status,
+            "explanation": "The question cannot proceed as submitted.",
         },
     )
     output = run_one().cases[0].output
-    assert output.preparation.status == "declined"
+    assert output.assessment.status == status
     assert output.answer is None
-    assert output.rendered_text == "This question is outside scope."
-    assert len(output.messages) == 2
+    assert output.guide.status == status
+    assert output.guide.question == output.question
+    assert output.guide.message == output.assessment.explanation
+    assert output.rendered_text == output.guide.message
+    assert len(output.messages) == 1
     assert not any(branch.requests for branch in branches.values())
 
 
@@ -457,6 +493,161 @@ def test_chat_startup_uses_explicit_deployment_for_chat_and_structural_agents(
             assert dependencies.chat_agent.model.model_name == "test-chat"
             settings = dependencies.start_settings.model_deployments
             assert settings["jev_binder"]["model"] == "test-chat"
-            assert settings["query_rewriter"]["model"] == "rewriter-test"
+            assert "query_rewriter" not in settings
+            assert dependencies.rewriter is None
 
     asyncio.run(exercise())
+
+
+def test_shared_evaluation_retains_groups_and_renders_membership_directions(
+    monkeypatch, chat_capture, tmp_path
+):
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the hearing coverage on AB 1.",
+                }
+            ],
+            "groups": [
+                {
+                    "kind": "contrast",
+                    "label": "Investigate supporters <img src=x>",
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the supporters section.",
+                        }
+                    ],
+                },
+                {
+                    "kind": "contrast",
+                    "label": "Investigate detractors",
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the detractors section.",
+                        }
+                    ],
+                },
+            ],
+        },
+    )
+    report = run_one()
+    output = report.cases[0].output
+    assert output.failure is None
+    assert output.answer.guidance_contract == 4
+    assert len(output.guide.groups) == 2
+    assert output.rendered_text.count("](<https://example.com/full_text>)") == 1
+    assert "Read the supporters section." in output.rendered_text
+    assert "Read the detractors section." in output.rendered_text
+    assert "<img src=x>" not in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
+    path = write_report(
+        report,
+        task="chat",
+        deployment=DEPLOYMENT,
+        data_set_path="evals/unlabeled/chat.yaml",
+        label_quality=LabelQuality.UNLABELED,
+        root=tmp_path,
+    )
+    saved = json.loads(path.read_text())
+    assert (
+        saved["report"]["cases"][0]["output"]["guide"]["groups"][1]["members"][0][
+            "reading_direction"
+        ]
+        == "Read the detractors section."
+    )
+
+
+def test_evaluation_keeps_one_ordinary_article_and_nearby_verified_section_links(
+    monkeypatch, tmp_path
+):
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.schemas.stories import Story
+
+    monkeypatch.chdir(tmp_path)
+    init_db()
+    save_story(
+        Story(
+            url="https://example.com/dense",
+            title="Support coverage",
+            content="The union supports AB 1.",
+        )
+    )
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/dense",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ]
+        },
+    )
+    report = run_one()
+    assert not report.failures
+    output = report.cases[0].output
+    assert output.failure is None
+    assert (
+        str(output.guide.articles[0].section_links[0])
+        == "https://example.com/dense#:~:text=The%20union%20supports%20AB%201."
+    )
+    assert output.rendered_text.count("(<https://example.com/dense>)") == 1
+    assert (
+        "[Relevant highlight 1](<https://example.com/dense#:~:text=The%20union%20supports%20AB%201.>)"
+        in output.rendered_text
+    )
+    assert "The union supports AB 1." not in output.rendered_text
+
+
+def test_shared_evaluation_saves_typed_unmatched_request_and_safe_partial_search(
+    monkeypatch, tmp_path
+):
+    fake_dependencies(
+        monkeypatch,
+        failed_branch=RetrievalBranch.DENSE,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the section on organizations involved in AB 1.",
+                }
+            ],
+            "unmatched_requests": [
+                {
+                    "request_portion": "transit grants <img src=x>",
+                    "explanation": "The selected evidence does not address this requested portion.",
+                }
+            ],
+        },
+    )
+    report = run_one()
+    output = report.cases[0].output
+    assert output.failure is None
+    assert len(output.guide.articles) == 1
+    assert {item.kind for item in output.guide.disclosures} == {
+        "unmatched_request",
+        "partial_search",
+    }
+    assert "transit grants &lt;img src=x&gt;" in output.rendered_text
+    assert "Part of this search failed" in output.rendered_text
+    assert "Dense retrieval" not in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
+    assert output.guide.search_details.completion == "partial"
+    saved = write_report(
+        report,
+        task="chat",
+        deployment=DEPLOYMENT,
+        data_set_path="evals/unlabeled/chat.yaml",
+        label_quality=LabelQuality.UNLABELED,
+        root=tmp_path,
+    )
+    record = json.loads(saved.read_text())["report"]["cases"][0]["output"]
+    assert (
+        record["guide"]["disclosures"][0]["request_portion"]
+        == "transit grants <img src=x>"
+    )

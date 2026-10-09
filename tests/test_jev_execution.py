@@ -15,8 +15,7 @@ from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC041
 from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
-from test_chat_web import events, question_request
-from test_chat_web_answers import approval_request
+from test_chat_web import question_request, submit_guide
 from test_jev_staged_selector import Fake
 from test_model_factory import chat_completion
 from test_retrieval import Branch, candidate
@@ -225,7 +224,7 @@ def assert_jev_execution(execution, jev, branches, queries, *, needs_review):
         "RETURN DISTINCT" in text and "evidence_groups" in text for text, _ in queries
     )
     assert execution.request.structural_reporting
-    assert not execution.request.rewrite.relational
+    assert execution.request.rewrite.relational
 
 
 def test_evaluation_uses_shared_startup_and_jev_cypher_with_both_text_branches(
@@ -237,7 +236,7 @@ def test_evaluation_uses_shared_startup_and_jev_cypher_with_both_text_branches(
     assert not report.failures
     output = report.cases[0].output
     assert output.failure is None
-    assert "The union supports AB 1." in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
     assert_jev_execution(
         output.answer.evidence.execution,
         jev,
@@ -265,14 +264,12 @@ def test_chat_client_approval_uses_the_same_jev_execution(
         create_app(startup=startup, session_factory=session_factory),
         base_url="http://localhost",
     ) as client:
-        prepared = events(client.post("/api/chat", json=question_request(QUESTION)))
+        payload = question_request(QUESTION)
         assert jev.schema_calls == 0
-        response = client.post(
-            "/api/chat", json=approval_request(prepared, question=QUESTION)
-        )
+        response = submit_guide(client, json=payload)
         assert response.status_code == 200
-        assert "The union supports AB 1." in response.text
-        assert "DECLARED_STANCE" in response.text
+        assert "The union supports AB 1." not in response.text
+        assert "DECLARED_STANCE" not in response.text
     assert_jev_execution(
         sessions[0].retrieval_result.execution,
         jev,
@@ -300,11 +297,8 @@ def test_jev_failure_retains_sparse_and_dense_evidence(
         "succeeded",
         "failed",
     ]
-    assert (
-        "Graph connections matching the question could not be searched."
-        in output.rendered_text
-    )
-    assert "The union supports AB 1." in output.rendered_text
+    assert "Part of this search failed." in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
     assert not queries
     assert "private API diagnostic" not in output.model_dump_json()
 

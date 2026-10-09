@@ -1,0 +1,56 @@
+task: chat
+description: >-
+  Controlled, fictional reporting for inspection of original-question assessment
+  and librarian guidance. The runner supplies the same three Source Articles to
+  every eligible question. These unlabeled examples establish no accuracy score.
+cases:
+  - id: SG01-broad
+    description: Broad California housing question can begin without a rewrite.
+    split: training
+    task_input:
+      question: What is happening with housing policy in California?
+  - id: SG01-unresolved
+    description: Missing bill referent requires editing the complete question.
+    split: training
+    task_input:
+      question: Who supported that bill?
+  - id: SG01-directions
+    description: Direct readers to reported arguments without recounting them; omit fishing-only coverage.
+    split: training
+    task_input:
+      question: Where should I read about supporters' and detractors' arguments on California AB 1 housing provisions?
+  - id: SG01-chronology
+    description: Preserve bill, dates, bound and oldest-first publication order.
+    split: training
+    task_input:
+      question: Find up to five articles about California AB 1 housing provisions published between 2024-01-01 and 2025-12-31, oldest publication first.
+  - id: SG01-irrelevant
+    description: Successful relevance assessment can omit every supplied article.
+    split: training
+    task_input:
+      question: Which articles discuss California school meal funding in 2025?
+  - id: SG07-events
+    description: Event chronology uses reported dates with original precision, separate from publication dates, and reading directions rather than event narration.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1's proposal and hearing events in earliest-to-latest event order?
+  - id: SG07-accounts
+    description: Group differing accounts with distinct directions for overlapping sources without deciding which account is correct.
+    split: training
+    task_input:
+      question: Where should I read the differing accounts about whether the committee received the cost memo for California AB 1?
+  - id: SG09-partial
+    description: Retain housing reading and identify unmatched transit grants without changing eligibility.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1 housing provisions and its rural transit grants?
+  - id: SG09-empty
+    description: All controlled searches succeed without evidence; absence is not established.
+    split: training
+    task_input:
+      question: Where should I read about California water storage funding?
+  - id: SG09-failed-search
+    description: A controlled search failure retains supported sibling reporting.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1 grant eligibility?

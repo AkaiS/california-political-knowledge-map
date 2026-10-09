@@ -17,8 +17,7 @@ from starlette.testclient import TestClient
 from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
-from test_chat_web import events, question_request
-from test_chat_web_corrections import correction_request, rejection_request
+from test_chat_web import events, question_request, submit_guide
 
 from knowledge_map.chat_startup import chat_dependencies
 from knowledge_map.utils.telemetry import (
@@ -44,75 +43,14 @@ def chat_capture():
     return exporter
 
 
-def test_first_question_starts_a_trail_and_closes_preparation_before_approval(
-    startup_dependencies, chat_capture
-):
-    with TestClient(create_app(), base_url="http://localhost") as client:
-        prepared = events(
-            client.post(
-                "/api/chat",
-                json=question_request("Who backed AB 1 in 2025-2026?"),
-            )
-        )
-        spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
-        starts = [span for span in spans if span["name"] == "chat_session.started"]
-        assert len(starts) == 1
-        start = starts[0]
-        session_id = start["attributes"]["chat_session_id"]
-        assert UUID(session_id).version == 4
-        assert session_id != "conversation-1"
-        assert session_id.replace("-", "") != f"{start['context']['trace_id']:032x}"
-        assert start["attributes"]["audit_schema_version"] == 1
-        assert (
-            start["attributes"]["original_question"] == "Who backed AB 1 in 2025-2026?"
-        )
-        preparation = next(
-            span for span in spans if span["name"] == "chat_session.prepare"
-        )
-        assert preparation["attributes"]["chat_session_id"] == session_id
-        assert preparation["attributes"]["audit_schema_version"] == 1
-        assert preparation["end_time"] > preparation["start_time"]
-        agent_spans = [
-            span
-            for span in spans
-            if span["attributes"].get("gen_ai.operation.name") == "invoke_agent"
-        ]
-        assert len(agent_spans) == 2
-        assert all(
-            "gen_ai.input.messages" not in span["attributes"]
-            and "gen_ai.output.messages" not in span["attributes"]
-            for span in agent_spans
-        )
-        stages = {
-            span["context"]["span_id"]: span
-            for span in spans
-            if span["name"]
-            in {"chat_session.query_rewrite", "chat_session.question_assessment"}
-        }
-        for span in agent_spans:
-            stage = stages[span["parent"]["span_id"]]
-            assert stage["parent"]["span_id"] == preparation["context"]["span_id"]
-            assert span["context"]["trace_id"] == preparation["context"]["trace_id"]
-            assert span["end_time"] <= preparation["end_time"]
-        assert any(event["type"] == "tool-approval-request" for event in prepared)
-        text = "".join(
-            event["delta"] for event in prepared if event["type"] == "text-delta"
-        )
-        assert text == (
-            "Which organizations supported AB 1?\n\n"
-            "Complete lobbying records are unavailable.\n\n"
-            "CalMatters has 2 available articles."
-        )
-
-
 def test_audit_text_keeps_secret_scrubbing_even_when_it_mentions_a_session(
     startup_dependencies, chat_capture
 ):
     secret = "credential-shaped-value"
     with TestClient(create_app(), base_url="http://localhost") as client:
         events(
-            client.post(
-                "/api/chat",
+            submit_guide(
+                client,
                 json=question_request(
                     f"Who backed AB 1 in this session? api_key={secret}"
                 ),
@@ -138,7 +76,7 @@ def test_legislative_session_id_is_scrubbed_from_the_recorded_question(
 ):
     question = "Which bill has legislative session ID 2025-2026?"
     with TestClient(create_app(), base_url="http://localhost") as client:
-        events(client.post("/api/chat", json=question_request(question)))
+        events(submit_guide(client, json=question_request(question)))
 
     start = next(
         span
@@ -160,7 +98,7 @@ def test_session_credentials_are_scrubbed_without_changing_the_browser_response(
     secret = "opaque-credential-123"
     question = f"Who backed AB 1? {label} {secret}"
     with TestClient(create_app(), base_url="http://localhost") as client:
-        prepared = events(client.post("/api/chat", json=question_request(question)))
+        prepared = events(submit_guide(client, json=question_request(question)))
 
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     start = next(span for span in spans if span["name"] == "chat_session.started")
@@ -170,34 +108,7 @@ def test_session_credentials_are_scrubbed_without_changing_the_browser_response(
         note["path"] == ["attributes", "original_question"]
         for note in start["attributes"]["logfire.scrubbed"]
     )
-    assert any(event["type"] == "tool-approval-request" for event in prepared)
-
-
-def test_session_id_credential_in_correction_is_scrubbed(
-    startup_dependencies, chat_capture
-):
-    secret = "opaque-credential-123"
-    with TestClient(create_app(), base_url="http://localhost") as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        events(client.post("/api/chat", json=rejection_request(prepared)))
-        events(
-            client.post(
-                "/api/chat",
-                json=correction_request(prepared, f"session ID: {secret}"),
-            )
-        )
-
-    spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
-    corrected = next(
-        span for span in spans if span["name"] == "chat_session.rewrite_corrected"
-    )
-    assert secret not in json.dumps([span["attributes"] for span in spans])
-    assert any(
-        note["path"] == ["attributes", "correction"]
-        for note in corrected["attributes"]["logfire.scrubbed"]
-    )
+    assert prepared["question"]
 
 
 def test_audit_snapshot_does_not_exempt_mixed_or_nested_session_text(chat_capture):
@@ -232,7 +143,7 @@ def test_audit_snapshot_does_not_exempt_mixed_or_nested_session_text(chat_captur
 def test_start_records_resolved_settings_and_already_measured_coverage(
     startup_dependencies, chat_capture, monkeypatch
 ):
-    _, driver, _, _, requests, _, _, _ = startup_dependencies
+    _, _driver, _, _, requests, _, _, _ = startup_dependencies
     monkeypatch.setenv("EMBEDDING_MODEL", "embedding-test")
 
     def git_result(args, **kwargs):
@@ -247,7 +158,7 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         before_question = datetime.now(UTC)
         monkeypatch.setenv("QUERY_REWRITER_MODEL", "changed-after-startup")
         monkeypatch.setenv("EMBEDDING_MODEL", "changed-after-startup")
-        events(client.post("/api/chat", json=question_request("Who backed AB 1?")))
+        events(submit_guide(client, json=question_request("Who backed AB 1?")))
     after_question = datetime.now(UTC)
 
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
@@ -268,13 +179,10 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
     )
     deployments = start["model_deployments"]
     assert set(deployments) == {
-        "query_rewriter",
         "chat_agent",
         "jev_composer",
         "jev_binder",
     }
-    assert deployments["query_rewriter"]["model"] == "rewriter-test"
-    assert deployments["query_rewriter"]["endpoint"] == "http://rewriter.test:8080/v1/"
     assert deployments["chat_agent"]["model"] == "chat-test"
     assert deployments["chat_agent"]["endpoint"] == "http://chat.test:8080/v1/"
     assert deployments["chat_agent"]["request_settings"]["temperature"] == 0
@@ -300,12 +208,11 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
     assert start["evidence_limits"] == {"character_limit": 24000, "max_passages": 12}
     from knowledge_map.jev.prompts import JEV_PROMPTS
 
-    assert set(start["prompt_hashes"]) == {"query_rewriter", "chat_agent", "question_policy"} | set(JEV_PROMPTS)
+    assert set(start["prompt_hashes"]) == {"chat_agent", "question_policy"} | set(
+        JEV_PROMPTS
+    )
     assert start["retrieval_settings"]["cypher_backend"] == "jev-staged"
-    for host, role in (
-        ("rewriter.test", "query_rewriter"),
-        ("chat.test", "chat_agent"),
-    ):
+    for host, role in (("chat.test", "chat_agent"),):
         request = next(
             request
             for request in requests
@@ -331,23 +238,34 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         == "sha256:"
         + hashlib.sha256(assessment["question_policy"].encode()).hexdigest()
     )
-    driver.session.return_value.__aenter__.return_value.run.assert_awaited_once()
-    assert len([request for request in requests if request.method == "GET"]) == 2
-    assert len([request for request in requests if request.method == "POST"]) == 2
+    assert len([request for request in requests if request.method == "GET"]) == 1
+    assert (
+        len(
+            [
+                request
+                for request in requests
+                if request.method == "POST" and request.url.host == "chat.test"
+            ]
+        )
+        == 2
+    )
 
 
 def test_invalid_submissions_create_no_trail_and_each_accepted_question_has_its_own_id(
     startup_dependencies, chat_capture
 ):
     with TestClient(create_app(), base_url="http://localhost") as client:
-        assert client.post("/api/chat", json={}).status_code == 422
-        assert client.post("/api/chat", json=question_request("  ")).status_code == 422
+        assert client.post("/api/questions", json={}).status_code == 422
+        assert (
+            client.post("/api/questions", json=question_request("  ")).status_code
+            == 422
+        )
         assert (
             client.post(
-                "/api/chat",
+                "/api/questions",
                 json={**question_request("Who backed AB 1?"), "model": "other"},
             ).status_code
-            == 400
+            == 422
         )
         assert not any(
             span.name.startswith("chat_session.")
@@ -355,8 +273,7 @@ def test_invalid_submissions_create_no_trail_and_each_accepted_question_has_its_
         )
         for conversation_id in ("conversation-1", "conversation-2"):
             request = question_request("Who backed AB 1?", conversation_id)
-            events(client.post("/api/chat", json=request))
-            assert client.post("/api/chat", json=request).status_code == 409
+            events(submit_guide(client, json=request))
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     starts = [span for span in spans if span["name"] == "chat_session.started"]
     assert len(starts) == 2
@@ -387,9 +304,9 @@ def test_openrouter_settings_retain_provider_policy_without_credentials(
 
     with TestClient(create_app(startup=startup), base_url="http://localhost") as client:
         prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
+            submit_guide(client, json=question_request("Who backed AB 1?"))
         )
-    assert any(event["type"] == "tool-approval-request" for event in prepared)
+    assert prepared["question"]
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     start = next(
         span["attributes"] for span in spans if span["name"] == "chat_session.started"
@@ -418,9 +335,9 @@ def test_unavailable_code_metadata_does_not_prevent_preparation(
     monkeypatch.setattr(subprocess, "run", missing_git)
     with TestClient(create_app(), base_url="http://localhost") as client:
         prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
+            submit_guide(client, json=question_request("Who backed AB 1?"))
         )
-    assert any(event["type"] == "tool-approval-request" for event in prepared)
+    assert prepared["question"]
     spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
     start = next(
         span["attributes"] for span in spans if span["name"] == "chat_session.started"
@@ -438,7 +355,7 @@ def test_export_failure_after_startup_does_not_change_preparation(
     with TestClient(create_app(), base_url="http://localhost") as client:
         monkeypatch.setattr(chat_capture, "export", export_failure)
         prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
+            submit_guide(client, json=question_request("Who backed AB 1?"))
         )
-    assert any(event["type"] == "tool-approval-request" for event in prepared)
-    assert "Which organizations supported AB 1?" in json.dumps(prepared)
+    assert prepared["question"]
+    assert "Who backed AB 1?" in json.dumps(prepared)

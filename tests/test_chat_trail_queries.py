@@ -20,8 +20,7 @@ from test_chat_startup import (
     startup_dependencies as startup_dependencies,  # noqa: PLC0414
 )
 from test_chat_structural_trail import structural_chat
-from test_chat_web import events, question_request
-from test_chat_web_answers import approval_request
+from test_chat_web import events, question_request, submit_guide
 from test_structural_retrieval import driver_for
 
 from knowledge_map.chat_startup import chat_dependencies
@@ -78,24 +77,18 @@ def test_documented_session_search_joins_requests_and_keeps_stage_outcomes(
         if span.name == "chat_session.started"
     )
     with TestClient(chat_app(None), base_url="http://localhost") as client:
-        events(client.post("/api/chat", json=question_request("Another question")))
+        events(submit_guide(client, json=question_request("Another question")))
 
     with captured_records(chat_capture) as records:
         rows = records.execute(
             documented_query("single-session", **{"chat-session-id": session_id})
         ).fetchall()
 
-    assert len(rows) == 13
     assert {row["chat_session_id"] for row in rows} == {session_id}
     by_name = {row["span_name"]: row for row in rows}
-    preparation = by_name["chat_session.prepare"]
-    approval = by_name["chat_session.approve"]
-    assert preparation["trace_id"] != approval["trace_id"]
-    assert preparation["end_timestamp"] <= approval["start_timestamp"]
-    assert preparation["status"] is None
-    assert by_name["chat_session.query_rewrite"]["status"] == "proposed"
-    assert by_name["chat_session.query_rewrite"]["proposal_attempt"] == 1
-    assert by_name["chat_session.question_assessment"]["status"] == "allowed"
+    approval = by_name["chat_session.submit"]
+    assert by_name["chat_session.assessment"]["status"] == "allowed"
+    assert "chat_session.query_rewrite" not in by_name
     assert by_name["chat_session.guidance"]["status"] == "succeeded"
     assert by_name["chat_session.answer_prepared"]["status"] is None
     branches = [
@@ -104,7 +97,7 @@ def test_documented_session_search_joins_requests_and_keeps_stage_outcomes(
     assert {row["branch"]: row["status"] for row in branches} == {
         "full_text": "succeeded",
         "dense": "succeeded",
-        "structural": "skipped",
+        "structural": "succeeded",
     }
     assert {row["parent_span_id"] for row in branches} == {approval["span_id"]}
     assert {row["trace_id"] for row in branches} == {approval["trace_id"]}
@@ -128,25 +121,22 @@ def test_documented_cohort_search_compares_settings_and_observed_answer_presence
     @asynccontextmanager
     async def startup():
         async with chat_dependencies() as dependencies:
-            dependencies.rewriter.model = scripted_model(
-                [{"question": "Which articles discuss AB 1?", "relational": False}]
-            )
             dependencies.chat_agent.model = scripted_model(
-                [{"status": "allowed"}, {"introduction": "Read the reporting."}]
+                [{"status": "declined", "explanation": "Outside the question policy."}]
+                if revision == "b" * 40
+                else [{"status": "allowed"}, {"introduction": "Read the reporting."}]
             )
             yield dependencies
 
     window_start = datetime.now(UTC).isoformat()
     with TestClient(create_app(startup=startup), base_url="http://localhost") as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("First question"))
-        )
+        payload = question_request("First question")
         before_approval = datetime.now(UTC).isoformat()
-        events(client.post("/api/chat", json=approval_request(prepared)))
+        events(submit_guide(client, json=payload))
     revision = "b" * 40
     monkeypatch.setenv("LLAMA_CPP_MODEL", "changed-chat")
     with TestClient(create_app(startup=startup), base_url="http://localhost") as client:
-        events(client.post("/api/chat", json=question_request("Unapproved question")))
+        events(submit_guide(client, json=question_request("Declined question")))
     window_end = datetime.now(UTC).isoformat()
 
     with captured_records(chat_capture) as records:
@@ -155,9 +145,9 @@ def test_documented_cohort_search_compares_settings_and_observed_answer_presence
         )
         rows = records.execute(query).fetchall()
         by_question = {row["original_question"]: row for row in rows}
-        assert set(by_question) == {"First question", "Unapproved question"}
+        assert set(by_question) == {"First question", "Declined question"}
         answered = by_question["First question"]
-        pending = by_question["Unapproved question"]
+        pending = by_question["Declined question"]
         assert answered["chat_session_id"] != pending["chat_session_id"]
         assert answered["code_revision"] == "a" * 40
         assert pending["code_revision"] == "b" * 40
@@ -174,10 +164,7 @@ def test_documented_cohort_search_compares_settings_and_observed_answer_presence
             assert row["chat_deployment_kind"] == "local"
             assert row["chat_endpoint"] == "http://chat.test:8080/v1/"
             assert row["worktree_dirty"] == 0
-            assert (
-                json.loads(row["model_deployments"])["query_rewriter"]["model"]
-                == "rewriter-test"
-            )
+            assert "query_rewriter" not in json.loads(row["model_deployments"])
 
         earlier = records.execute(
             documented_query(
@@ -185,9 +172,7 @@ def test_documented_cohort_search_compares_settings_and_observed_answer_presence
                 **{"window-start": window_start, "window-end": before_approval},
             )
         ).fetchall()
-        assert len(earlier) == 1
-        assert earlier[0]["chat_session_id"] == answered["chat_session_id"]
-        assert earlier[0]["answer_observed_in_window"] == 0
+        assert earlier == []
 
 
 def test_documented_failure_search_includes_returned_and_raised_stage_failures(
@@ -199,8 +184,8 @@ def test_documented_failure_search_includes_returned_and_raised_stage_failures(
     complete_chat(structural_chat(driver_for(), outputs))
     complete_chat(answer_chat(httpx.ConnectError("private guidance detail")))
     with TestClient(create_app(), base_url="http://localhost") as client:
-        startup_dependencies[5].add("rewriter.test")
-        events(client.post("/api/chat", json=question_request("Unavailable rewrite")))
+        startup_dependencies[5].add("chat.test")
+        events(submit_guide(client, json=question_request("Unavailable assessment")))
     window_end = datetime.now(UTC).isoformat()
 
     with captured_records(chat_capture) as records:
@@ -217,7 +202,7 @@ def test_documented_failure_search_includes_returned_and_raised_stage_failures(
         "chat_session.structural_stage",
         "chat_session.retrieval_branch",
         "chat_session.guidance",
-        "chat_session.query_rewrite",
+        "chat_session.assessment",
     }
     structural = by_name["chat_session.structural_stage"]
     branch = by_name["chat_session.retrieval_branch"]
@@ -227,11 +212,12 @@ def test_documented_failure_search_includes_returned_and_raised_stage_failures(
     assert structural["trace_id"] == branch["trace_id"]
     assert structural["parent_span_id"] == branch["span_id"]
     assert branch["branch"] == "structural"
-    assert by_name["chat_session.query_rewrite"]["status"] == "unavailable"
-    assert by_name["chat_session.query_rewrite"]["proposal_attempt"] == 1
+    assert by_name["chat_session.assessment"]["status"] == "failed"
     assert by_name["chat_session.guidance"]["failure_stage"] is None
     for row in rows:
-        assert row["failure_kind"] == "transport"
+        assert row["failure_kind"] == (
+            "provider" if row["span_name"] == "chat_session.assessment" else "transport"
+        )
         assert window_start <= row["start_timestamp"] < window_end
         assert row["diagnostic"]
         assert "private" not in row["diagnostic"]

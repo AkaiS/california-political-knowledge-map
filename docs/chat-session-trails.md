@@ -2,9 +2,11 @@
 
 The Chat Session Audit Trail consists of the application's observations that
 reached Logfire. Use the application-generated `chat_session_id` to find one
-political question across preparation, correction, approval, and any prepared
-Retrieval Answer. It differs from the browser conversation ID and native trace
-IDs. The queries below use audit schema version 1.
+political question through assessment, retrieval, and any prepared Retrieval
+Answer. It differs from native trace IDs. New direct submissions have a `chat_session.submit` operation and a
+`chat_session.assessment` stage. They have no rewrite, correction, or approval
+stages. The queries include versions 1 and 2 so historical approval runs remain
+inspectable.
 
 `chat_session.started` records the session's fixed UTC `as_of` timestamp and
 `current_date`, which assessment and final guidance receive as input data.
@@ -15,7 +17,8 @@ earlier `as_of`. Source Article publication dates remain separate from both.
 ## Find one question
 
 Open the application's Logfire project and its SQL Workbench. Choose a time
-window that covers the question and the later approval. Replace
+window that covers the question and its completion. For historical approval
+sessions, include the later approval. Replace
 `<chat-session-id>` with the ID from a `chat_session.started` record, then run
 this query. If the ID is unknown, use the cohort search below to find the
 original question and its observation time. A scrubbed question may not be
@@ -39,7 +42,7 @@ SELECT
     parent_span_id
 FROM records
 WHERE span_name LIKE 'chat_session.%'
-  AND CAST(attributes->>'audit_schema_version' AS INTEGER) = 1
+  AND CAST(attributes->>'audit_schema_version' AS INTEGER) IN (1, 2)
   AND attributes->>'chat_session_id' = '<chat-session-id>'
 ORDER BY start_timestamp, span_id
 LIMIT 500
@@ -50,7 +53,7 @@ dense, and structural retrieval; `structural_stage` distinguishes construction,
 execution, and hydration. A NULL status means that record does not declare an
 outcome. Start, approval, and answer events and the enclosing request operations
 do not declare a status. Stage records carry outcomes such as `proposed`,
-`allowed`, `deferred`, `declined`, `unavailable`, `succeeded`, `failed`, or `skipped`.
+`allowed`, `needs_edit`, `deferred`, `declined`, `unavailable`, `succeeded`, `failed`, or `skipped`.
 Keep these meanings instead of interpreting every completed span as success.
 
 Click a returned `trace_id` to open its native trace, then expand the application
@@ -60,7 +63,9 @@ Live view filter, for example `trace_id = '<trace-id>'`.
 See Logfire's [trace navigation](https://pydantic.dev/docs/logfire/observe/explore/#cross-linking-with-live-view)
 and [record columns](https://pydantic.dev/docs/logfire/reference/sql/#span-tree).
 
-Preparation, each correction, and approval close their own operation spans.
+Direct submissions close one operation span after assessment and retrieval.
+In historical runs, preparation, each correction, and approval close their own
+operation spans.
 Their separate traces share the application ID; no span stays open while a
 person considers approval. The start and prepared-answer events can also have
 their own traces because they occur outside those operations. Native model
@@ -93,7 +98,7 @@ WITH observations AS (
     SELECT start_timestamp, span_name, trace_id, attributes
     FROM records
     WHERE span_name LIKE 'chat_session.%'
-      AND CAST(attributes->>'audit_schema_version' AS INTEGER) = 1
+      AND CAST(attributes->>'audit_schema_version' AS INTEGER) IN (1, 2)
       AND start_timestamp >= '<window-start>'
       AND start_timestamp < '<window-end>'
 ), answers AS (
@@ -196,7 +201,7 @@ SELECT
     parent_span_id
 FROM records
 WHERE span_name LIKE 'chat_session.%'
-  AND CAST(attributes->>'audit_schema_version' AS INTEGER) = 1
+  AND CAST(attributes->>'audit_schema_version' AS INTEGER) IN (1, 2)
   AND start_timestamp >= '<window-start>'
   AND start_timestamp < '<window-end>'
   AND attributes->>'status' IN ('failed', 'unavailable')
@@ -230,7 +235,7 @@ predicate with the real application ID, then click **Run**:
 ```sql
 -- live-session-filter
 span_name LIKE 'chat_session.%'
-AND CAST(attributes->>'audit_schema_version' AS INTEGER) = 1
+AND CAST(attributes->>'audit_schema_version' AS INTEGER) IN (1, 2)
 AND attributes->>'chat_session_id' = '<chat-session-id>'
 ```
 
@@ -293,16 +298,17 @@ delivery, exactly-once capture, or tamper evidence.
 
 ## Offline verification
 
-`tests/test_chat_trail_queries.py` drives `POST /api/chat` with real Chat Session
+`tests/test_chat_trail_queries.py` drives `POST /api/questions` with real Chat Session
 coordination, scripted models, fake graph and transport boundaries, and the
 offline Logfire exporter. It reads the SQL blocks above and executes their
 portable SQL/JSON subset against a test-only in-memory projection of captured
-records. It checks the field paths and identities, separate request traces,
+records. It checks the field paths and identities, request trace ancestry,
 statuses, changed startup settings, window-bounded answer presence, and both
 returned and raised stage failures.
 
 These tests do not emulate Logfire ingestion or certify its query engine or
 current UI. SQL syntax and navigation were checked against the linked official
 documentation on 2026-09-24. No live project or browser verification is needed.
-The existing `test_chat_*_trail.py` tests cover concurrent branches, corrected
-proposals, native model ancestry, safe answer snapshots, and exporter failures.
+The existing `test_chat_*_trail.py` tests cover concurrent branches, assessment
+outcomes, native model ancestry, internal answer snapshots, reader-safe
+projections, and exporter failures.

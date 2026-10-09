@@ -9,11 +9,11 @@ import pytest
 from neo4j import AsyncDriver, AsyncGraphDatabase, Driver, GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 from starlette.testclient import TestClient
-from test_chat_web import events, question_request
+from test_chat_web import events, question_request, submit_guide
 from test_model_factory import chat_completion
 
 from knowledge_map.chat_startup import chat_dependencies
-from knowledge_map.schemas.query_preparation import AwaitingQueryApproval, QueryApproval
+from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.utils.reachability import SKIP_MODEL_CHECK_ENV
 from knowledge_map.web import create_app
 
@@ -23,7 +23,7 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
 ):
     _, _, _, _, requests, _, _, _ = startup_dependencies
     with TestClient(create_app(), base_url="http://localhost") as client:
-        response = client.post("/api/chat", json=question_request("Who backed AB 1?"))
+        response = submit_guide(client, json=question_request("Who backed AB 1?"))
         chunks = events(response)
 
     assessment_request = next(
@@ -33,7 +33,7 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
     )
     messages = json.loads(assessment_request.content)["messages"]
     assessment = json.loads(messages[-1]["content"])
-    assert assessment["question"] == "Which organizations supported AB 1?"
+    assert assessment["question"] == "Who backed AB 1?"
     assert [entry["collection_id"] for entry in assessment["coverage"]["entries"]] == [
         "calmatters"
     ]
@@ -41,7 +41,7 @@ def test_real_chat_session_prepares_the_question_using_startup_coverage(
     assert "CalMatters has 2 available articles." in response.text
     assert "Complete lobbying records are unavailable." in response.text
     assert "relational" not in response.text
-    assert any(chunk["type"] == "tool-approval-request" for chunk in chunks)
+    assert chunks["status"] == "retrieval_failed"
 
 
 @pytest.fixture
@@ -120,6 +120,8 @@ def startup_dependencies(monkeypatch: pytest.MonkeyPatch):
                     "explanation": "Complete lobbying records are unavailable.",
                     "recoverable_portion": f"{entry['name']} has {entry['availability']['available_count']} available articles.",
                 }
+            if request.url.host == "chat.test" and "question_policy" not in assessment:
+                output = {"source_notes": []}
             return httpx.Response(200, json=chat_completion(json.dumps(output)))
         raise AssertionError(f"Unexpected request: {request.method} {request.url}")
 
@@ -147,14 +149,12 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
         class Session:
             chat_session_id = "test-session"
 
-            async def prepare(self):
+            async def run(self):
                 entry = dependencies.coverage.entries[0]
-                return AwaitingQueryApproval(
-                    approval=QueryApproval(
-                        question=question,
-                        explanation=f"{entry.name}: {entry.availability.available_count} articles, "
-                        f"{entry.earliest_date} to {entry.latest_date}.",
-                    )
+                return QuestionAssessment(
+                    status="needs_edit",
+                    explanation=f"{entry.name}: {entry.availability.available_count} articles, "
+                    f"{entry.earliest_date} to {entry.latest_date}.",
                 )
 
         return Session()
@@ -164,8 +164,8 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
     ) as client:
         for index in range(2):
             chunks = events(
-                client.post(
-                    "/api/chat",
+                submit_guide(
+                    client,
                     json=question_request(
                         "Find housing reporting.", f"question-{index}"
                     ),
@@ -174,18 +174,15 @@ def test_startup_assembles_once_refreshes_calmatters_and_closes_owned_resources(
             assert "CalMatters: 2 articles, 2025-03-02 to 2026-09-01." in json.dumps(
                 chunks
             )
-        config = client.get("/api/configure").json()
-        assert len(config["models"]) == 1
-        assert config["models"][0]["id"] == ""
-        assert config["models"][0]["builtinTools"] == []
-        assert config["builtinTools"] == []
+        config = client.get("/api/coverage").json()
+        assert config["entries"][0]["name"] == "CalMatters"
 
     assert received[0] is received[1]
     assert len(drivers) == 1
-    assert received[0].rewriter is not received[0].chat_agent
+    assert received[0].rewriter is None
     assert received[0].coverage.entries[0].limitations
     assert received[0].coverage.entries[0].availability.expected_count is None
-    assert {request.url.host for request in requests} == {"chat.test", "rewriter.test"}
+    assert {request.url.host for request in requests} == {"chat.test"}
     assert clients and all(value.is_closed for value in clients)
     driver.close.assert_awaited_once()
 
@@ -217,12 +214,9 @@ def test_startup_ignores_unparseable_publication_dates(
         class Session:
             chat_session_id = "test-session"
 
-            async def prepare(self):
-                return AwaitingQueryApproval(
-                    approval=QueryApproval(
-                        question=question,
-                        explanation="Review this question.",
-                    )
+            async def run(self):
+                return QuestionAssessment(
+                    status="needs_edit", explanation="Name the bill."
                 )
 
         return Session()
@@ -230,8 +224,8 @@ def test_startup_ignores_unparseable_publication_dates(
     with TestClient(
         create_app(session_factory=session_factory), base_url="http://localhost"
     ) as client:
-        response = client.post(
-            "/api/chat", json=question_request("Find CalMatters reporting.")
+        response = submit_guide(
+            client, json=question_request("Find CalMatters reporting.")
         )
 
     assert response.status_code == 200
@@ -250,11 +244,10 @@ def test_startup_counts_any_local_model_http_response_as_reachable(
     statuses.update({"rewriter.test": 401, "chat.test": 503})
 
     with TestClient(create_app(), base_url="http://localhost") as client:
-        assert client.get("/api/configure").status_code == 200
+        assert client.get("/api/coverage").status_code == 200
 
     assert {request.url.host for request in requests} == {
         "chat.test",
-        "rewriter.test",
     }
 
 
@@ -267,7 +260,7 @@ def test_startup_honors_the_shared_model_reachability_override(
     monkeypatch.setenv(SKIP_MODEL_CHECK_ENV, "1")
 
     with TestClient(create_app(), base_url="http://localhost") as client:
-        assert client.get("/api/configure").status_code == 200
+        assert client.get("/api/coverage").status_code == 200
 
     assert requests == []
 
@@ -285,7 +278,7 @@ def test_startup_does_not_probe_openrouter_deployments(
     monkeypatch.setenv("OPENROUTER_PROVIDERS", "test-provider")
 
     with TestClient(create_app(), base_url="http://localhost") as client:
-        assert client.get("/api/configure").status_code == 200
+        assert client.get("/api/coverage").status_code == 200
 
     assert requests == []
 
@@ -294,7 +287,6 @@ def test_startup_does_not_probe_openrouter_deployments(
     "failure, explanation",
     [
         ("neo4j", "Neo4j"),
-        ("rewriter", "Query Rewriter deployment"),
         ("chat", "Chat Agent deployment"),
         ("coverage_file", "CalMatters coverage"),
         ("coverage_refresh", "CalMatters coverage"),

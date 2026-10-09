@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-from collections.abc import AsyncIterator, Iterator, Sequence
+from collections.abc import AsyncGenerator, Generator, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -34,10 +34,6 @@ from knowledge_map.core.chat import (
     ChatSession,
     get_chat_agent,
 )
-from knowledge_map.core.question_preparation import (
-    QUERY_REWRITER_INSTRUCTIONS,
-    get_query_rewriter,
-)
 from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
@@ -50,7 +46,6 @@ from knowledge_map.schemas.query_preparation import (
 from knowledge_map.schemas.retrieval import CoverageDescription, CoverageEntry
 from knowledge_map.utils.deployments import (
     deployment_from_environment,
-    query_rewriter_deployment_from_environment,
 )
 from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, build_retrying_client
 from knowledge_map.utils.reachability import (
@@ -61,11 +56,11 @@ from knowledge_map.utils.reachability import (
 
 @dataclass(frozen=True)
 class ChatDependencies:
-    rewriter: Agent[None, QueryRewriteProposal]
+    rewriter: Agent[None, QueryRewriteProposal] | None
     chat_agent: Agent[None, QuestionAssessment]
     retrieval: RetrievalCoordinator
     coverage: CoverageDescription
-    rewriter_deployment: ModelDeployment
+    rewriter_deployment: ModelDeployment | None
     chat_deployment: ModelDeployment
     start_settings: ChatSessionSettings
 
@@ -79,7 +74,6 @@ def new_chat_session(
     assert dependencies is not None
     return ChatSession(
         question,
-        rewriter=dependencies.rewriter,
         chat_agent=dependencies.chat_agent,
         retrieval=dependencies.retrieval,
         coverage=dependencies.coverage,
@@ -107,7 +101,7 @@ def _publication_date_range(
 
 
 @contextmanager
-def _required(dependency: str) -> Iterator[None]:
+def _required(dependency: str) -> Generator[None]:
     try:
         yield
     except Exception as error:
@@ -122,7 +116,7 @@ async def chat_dependencies(
     coverage_path: Path | None = None,
     chat_deployment: ModelDeployment | None = None,
     capabilities: Sequence[AbstractCapability] = (),
-) -> AsyncIterator[ChatDependencies]:
+) -> AsyncGenerator[ChatDependencies]:
     load_dotenv()
     code_revision, worktree_dirty = code_state()
     async with AsyncExitStack() as resources:
@@ -186,13 +180,6 @@ async def chat_dependencies(
                 )
             )
             coverage_observed_at = datetime.now(UTC)
-        with _required("Query Rewriter deployment"):
-            rewrite_deployment = query_rewriter_deployment_from_environment()
-            rewriter = get_query_rewriter(
-                rewrite_deployment, cache_model=False, capabilities=capabilities
-            )
-            assert isinstance(rewriter.model, OpenAIChatModel)
-            resources.push_async_callback(rewriter.model.client.close)
         with _required("Chat Agent deployment"):
             chat_deployment = chat_deployment or deployment_from_environment(
                 os.environ.get("CHAT_DEPLOYMENT", "local"),
@@ -207,7 +194,6 @@ async def chat_dependencies(
         if not model_reachability_check_skipped():
             async with httpx.AsyncClient(timeout=5) as probe:
                 for name, deployment, model in (
-                    ("Query Rewriter", rewrite_deployment, rewriter.model),
                     ("Chat Agent", chat_deployment, chat_agent.model),
                 ):
                     if deployment.kind is DeploymentKind.OPENROUTER:
@@ -269,10 +255,6 @@ async def chat_dependencies(
             code_revision=code_revision,
             worktree_dirty=worktree_dirty,
             model_deployments={
-                "query_rewriter": {
-                    **rewrite_deployment.model_dump(mode="json"),
-                    "endpoint": str(rewriter.model.client.base_url),
-                },
                 "chat_agent": chat_snapshot,
                 **{role: chat_snapshot for role in ("jev_composer", "jev_binder")},
             },
@@ -282,9 +264,12 @@ async def chat_dependencies(
             },
             prompt_hashes={
                 role: "sha256:"
-                + hashlib.sha256(prompt.strip().encode("utf-8")).hexdigest()
+                + hashlib.sha256(
+                    (prompt if role == "question_policy" else prompt.strip()).encode(
+                        "utf-8"
+                    )
+                ).hexdigest()
                 for role, prompt in {
-                    "query_rewriter": QUERY_REWRITER_INSTRUCTIONS,
                     "chat_agent": CHAT_INSTRUCTIONS,
                     "question_policy": QUESTION_POLICY,
                     **JEV_PROMPTS,
@@ -307,11 +292,11 @@ async def chat_dependencies(
             },
         )
         yield ChatDependencies(
-            rewriter,
+            None,
             chat_agent,
             retrieval,
             coverage,
-            rewrite_deployment,
+            None,
             chat_deployment,
             start_settings,
         )

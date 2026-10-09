@@ -308,6 +308,26 @@ concrete need.
 - **RP-10 · P4:** Consider hosted Neo4j and pipeline deployment after local
   operational semantics are stable.
 
+## UI/UX fixes
+
+Captured from hands-on Source Guides feedback on 2026-10-09. Related project:
+[Source Guides](projects/source-guides/PRD.md).
+
+- **UX-01:** Make the transition from running to completed more evident.
+  Labels: needs-triage
+- **UX-02:** Prototype layout alternatives to stacking everything in a single
+  vertical view.
+  Labels: needs-triage
+- **UX-03:** Provide links that take readers to the relevant portion of an
+  article. The reported experience describes a section but leaves the reader
+  to find it themselves.
+  Labels: needs-triage
+- **UX-04:** Transition from the ask-question view to a looking-for-sources
+  view after submission, and reset the question input.
+  Labels: needs-triage
+- **UX-05:** Show articles in pro and against sections in the contrastive view.
+  Labels: needs-triage
+
 ## Loose-note ID crosswalk
 
 The `LN-*` identifiers were retired on 2026-07-25. Use this table to resolve any

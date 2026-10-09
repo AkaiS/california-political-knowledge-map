@@ -171,16 +171,13 @@ def rendered_prompt_snapshot():
     return {key: _digest(value) for key, value in sorted(values.items())}
 
 
-def test_resolved_prompt_outputs_match_pre_migration_bytes():
-    from knowledge_map.core.chat import CHAT_INSTRUCTIONS
-    from knowledge_map.prompts import load_prompt
-
+def test_resolved_prompt_outputs_match_adopted_versions():
     baseline = json.loads((FIXTURES / "prompt_rendered_baseline.json").read_text())
-    actual = rendered_prompt_snapshot()
-    assert CHAT_INSTRUCTIONS == load_prompt("chat/instructions", version=3)
-    actual.pop("chat")
-    baseline.pop("chat")
-    assert actual == baseline
+    baseline.update(
+        chat="13a19dad456271de744ef106e41ba64ded60e31dbf15405ae5b6adac61490ac4",
+        question_policy="6c6f4d61668b3929c62cff87a6f0030d5d9739c103163c9fee2c97b4dc543ac9",
+    )
+    assert rendered_prompt_snapshot() == baseline
 
 
 def test_v1_assets_retain_their_immutable_bytes():
@@ -197,15 +194,30 @@ def test_v1_assets_retain_their_immutable_bytes():
         assert _digest(load_prompt(name, version=1)) == expected["sha256"], name
 
 
-def test_new_chat_instruction_versions_retain_their_immutable_bytes():
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        (2, "77bc10b279920b877c820c5a373fca009ad90358139ece86820f4f7f788eb5e1"),
+        (3, "2233c7624e9941dd4c0a900fd74b698d7b9b3d68f6aa6f03dddb8ac87ae74877"),
+        (4, "d17a8772e5cdfa619dcc4bfab7f48edde92bb0214e34f3343df078fb7451792e"),
+        (5, "621a9fdc544193f363f8f182636b456e6f5158a0650da75fd7cbfe43ae11ade7"),
+        (6, "4fef0ac93fdb5c0d6630334318d073172c4be96f7ccdeaa937144f8b1583fdaa"),
+        (7, "27a70c03bd8b7ccb9a16682d8cc7dec9932ade56e569a85a3a461bf2d0277453"),
+        (8, "fa0b638eabdd129613e2e7b33ee19a8d1a8ad142da8f7af4be70b7586c6bdb71"),
+        (9, "aadc52b6ef9fb05854268247c3b0cf37b713c7e3028f050ae111a46661dfacbc"),
+        (10, "c3e7482eefc83784e5d2be283a7f8369b4c29354a84803df7b1dcd10141cbafe"),
+        (11, "46446baf8b6dcb45deb1cd60b2b96354bbe55a550c457d4445229bb26e829014"),
+        (12, "006a05c2c45fff7b554ab2894cd746fbcc5eb532b260d049b85a80c9592e3a3a"),
+        (13, "d204438d9628e272aea0b668ea2bcc0684c626a90941ad2333f0e6f6efdb3fe3"),
+        (14, "c9b0001ce2b862b869c4c7046c3688a32d484b08336e0b3e6ac68f891a80f549"),
+        (15, "bdde131d657eea35891ca2576ee04b798db74754ddddce292091c006e81a8d7d"),
+        (16, "13a19dad456271de744ef106e41ba64ded60e31dbf15405ae5b6adac61490ac4"),
+    ],
+)
+def test_new_chat_instruction_versions_retain_their_immutable_bytes(version, expected):
     from knowledge_map.prompts import load_prompt
 
-    assert _digest(load_prompt("chat/instructions", version=2)) == (
-        "77bc10b279920b877c820c5a373fca009ad90358139ece86820f4f7f788eb5e1"
-    )
-    assert _digest(load_prompt("chat/instructions", version=3)) == (
-        "2233c7624e9941dd4c0a900fd74b698d7b9b3d68f6aa6f03dddb8ac87ae74877"
-    )
+    assert _digest(load_prompt("chat/instructions", version=version)) == expected
 
 
 def test_explicit_version_selection_and_missing_version():

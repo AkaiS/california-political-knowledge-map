@@ -40,7 +40,7 @@ the recommended order; a dependency is not an additional triage state.
 | Investigate structural-search failures | [Existing structural audit](../../projects/logfire-chat-session-audit-trail/issues/04-trace-structural-construction.md) and current RAG work | Reuse recorded stages; diagnose failures before specifying a runtime fix. |
 | Evaluate coverage decisions | [Controlled coverage evaluation](issues/02-controlled-coverage-evaluation.md) | Review expected outcomes, then implement the controlled evaluation. |
 | Change coverage behavior | [Evidence support after retrieval](issues/03-assess-evidence-support-after-retrieval.md) | Wait for reviewed expectations and a baseline from the coverage evaluation. |
-| Improve source navigation | [Source-first UI scope](issues/04-shape-source-first-chat-ui.md) | Set the interaction scope, then write a bounded UI PRD. |
+| Improve source navigation | [Source Guide shaping](issues/04-shape-source-first-chat-ui.md) and [Source Guides PRD](../../projects/source-guides/PRD.md) | Shaping is complete; nine implementation tickets link directly to the spec and declare their blockers. |
 | Explain validation failures | [Validation diagnostics](../../issues/04-chat-guidance-validation-diagnostics.md) | Review the bounded bug brief; offline failure reproduction is confirmed. |
 
 Date context and diagnostics can be taken independently once their labels are
@@ -50,6 +50,22 @@ coverage evaluation. UI implementation coordinates with the accepted coverage
 output contract, without blocking retrieval measurements.
 
 ## Existing retrieval work to connect
+
+The 2026-10-07/08 UI interview settled a durable, updateable Source Guide for
+each explicit question, with independently continuing searches, mandatory
+per-article reading directions, optional Article Groups, and no visible chunks.
+Same-question updates replace a guide; edited questions create separate guides.
+Failed updates preserve previous content and last retrieval information. The
+rebuilt UI uses the original submitted wording without rewrite approval and
+retains agent-owned Declined/Deferred semantics. The consolidated feature brief
+captures those decisions. The maintainer requested publication through to-spec;
+the [PRD](../../projects/source-guides/PRD.md) and
+[nine implementation tickets](../../projects/source-guides/PRD.md#implementation-tickets)
+are published without another interview. The application-boundary testing plan now
+includes explicitly authorized browser verification rather than a separate
+Chat Session test seam. Retrieval ranking and the controlled
+coverage evaluation remain their existing workstreams. These are revisable
+product requirements for this iteration, recorded in the feature brief.
 
 The maintainer reports active RAG work, but its exact task or work-item reference
 was not supplied in this conversation. The reranking issue is related existing

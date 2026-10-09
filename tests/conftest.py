@@ -10,6 +10,16 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def isolate_source_guide_store(monkeypatch, tmp_path):
+    from knowledge_map.adapters import sqlite_db
+
+    monkeypatch.setattr(
+        sqlite_db, "DEFAULT_DB_PATH", str(tmp_path / "document_store.db")
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", str(tmp_path / "document_store.db"))
+
+
+@pytest.fixture(autouse=True)
 def skip_model_reachability_check(monkeypatch):
     # Imported lazily: the CLI module pulls in the whole adapter stack, and
     # collection should not pay for that in every test session.

@@ -10,7 +10,8 @@ about the local deployment, not proof that the two behave identically.
 
 The domain glossary in [`CONTEXT.md`](../CONTEXT.md) is the canonical vocabulary.
 
-The Query Rewriter has its own deployment selection. Set
+The retained legacy Query Rewriter has its own deployment selection. Current
+Source Guides web requests and shared chat evaluations do not create it. Set
 `QUERY_REWRITER_DEPLOYMENT=local|openrouter` and a nonempty
 `QUERY_REWRITER_MODEL`. `QUERY_REWRITER_BASE_URL` optionally selects a separate
 local chat server; blank uses `LLAMA_CPP_BASE_URL`. These settings do not alter
@@ -106,7 +107,7 @@ on both. A server left running with the wrong model loaded passes the check.
 
 | Command | Chat | Embedding |
 | --- | --- | --- |
-| `chat` | yes (local Query Rewriter and Chat Agent deployments) | no |
+| `chat` | yes (local Chat Agent deployment) | no |
 | `ingest` | yes (local deployment only) | yes |
 | `update-sources` | yes | yes |
 | `scrape-archive` | yes | yes |
@@ -121,8 +122,8 @@ command selects. OpenRouter reachability is not checked; its configuration is
 still validated during command setup, and the request itself surfaces an
 unreachable provider.
 
-`chat` checks the Query Rewriter and Chat Agent when either uses a local
-deployment. It does not check the embedding endpoint at startup because dense
+`chat` checks the Chat Agent when it uses a local deployment. It does not check
+the embedding endpoint at startup because dense
 embedding is one retrieval branch and retains the retrieval contract's
 partial-failure behavior.
 

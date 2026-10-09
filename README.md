@@ -55,41 +55,44 @@ The command prints `http://127.0.0.1:7932`. Open that URL in your browser.
 Use `uv run ca-map chat --port 8123` to choose another port. The server always
 binds to `127.0.0.1`, stays in the foreground, and stops with Ctrl+C.
 
-Pydantic AI serves its stock frontend from its default CDN build and caches the
-HTML under `$XDG_CACHE_HOME/pydantic-ai/web-ui`, or
-`~/.cache/pydantic-ai/web-ui` when `XDG_CACHE_HOME` is unset. The first visit may
-require network access, and frontend assets can still require CDN access after
-the HTML is cached. This is not an offline frontend bundle.
+The packaged Source Guides page accepts a complete question and starts assessment
+and retrieval directly. Assessment preserves the submitted wording. Broad
+meaningful questions proceed; an unresolved reference asks you to edit the
+complete question. No Query Rewriter or approval step runs.
 
-Enter one political question to receive a Query Rewrite Proposal. Deferred
-questions include the coverage limit and the recoverable portion; Declined
-questions and unavailable rewrites end without approval. Approving the proposal
-runs retrieval once. Search details shows the search in progress, then expands
-to show retrieval routes, branch ranks, graph claims, coverage, and branch
-outcomes. The answer presents numbered Source Article links and verified
-passages, with Deferred limits and branch failures kept visible. Candidate
-wording and detailed failure diagnostics are excluded from Search details.
+The guide shows your complete question and linked Source Articles with brief
+reading directions, recorded Publications, and available publication dates.
+Each article has one ordinary link with its group directions and any verified
+highlight links nearby. Reading views reorder the complete article list. Links
+open in another tab. The guide omits stored passages and candidates without a
+relevant reading direction. Available collections and dates appear near the
+question input; coverage limits, unmatched portions, and partial search failures
+remain visible. Collapsed Search details explain the saved search's limits.
 
-Reject a proposal to request a change, then describe that change in the chat
-composer. The same Chat Session returns a revised proposal for approval. You
-can repeat this correction loop; retrieval starts only after you approve a
-proposal. Each browser conversation handles one political question. After an
-answer, a Declined question, an unavailable rewrite, or an unrecoverable failure,
-start a new chat for another question. Completed Chat Session objects are
-released; only their conversation IDs remain in memory to prevent continuation.
+Submitting saves the question before searching. Saved guides restore their
+content and status after reload or service restart without another search.
+Several questions can run independently while you switch guides or close the
+browser page. Keep the local application running until they finish.
 
-Pending approvals and corrections exist only in application memory and remain
-available until you continue or stop the server. Restarting the server discards
-them. Browser-managed history stays readable, but continuing an old conversation
-returns "Start a new chat to ask a question." It cannot restore a Chat Session.
+Use Update guide to search again for the same saved question. Previous reading
+remains available during an update and after failure or cancellation; a successful
+update replaces it, including an empty result. Cancel targets the selected running
+attempt. Restart marks unfinished attempts Interrupted, and Retry explicitly
+starts another attempt after interruption or failure. The guide distinguishes
+the last successful retrieval from the latest attempt's timing and outcome.
+Edit question restores the complete wording for submission as a new guide.
+New question clears the input. Opening guides and restarting never replay searches.
 
-Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
-defaults to `document_store.db`, and a reachable Neo4j configured with
+Source Guides save to the SQLite document store at `SQLITE_DB_PATH`, which
+defaults to `document_store.db`. Startup requires a reachable Neo4j configured with
 `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD`. `NEO4J_DATABASE` defaults to
-`neo4j`. Chat opens SQLite read-only and does not create a missing store.
+`neo4j`. Source Guides use the existing SQLite store for durable guide and attempt
+writes, creating their focused tables when the application is constructed.
+Guide presentation reads stored Story wording and recorded Publication metadata
+through read-only connections when preparing new reading. Missing Story data
+leaves the ordinary article link available without a verified highlight.
 
-Set `QUERY_REWRITER_MODEL` and the other `QUERY_REWRITER_*` settings for the
-Query Rewriter. `CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
+`CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
 for the Chat Agent and Jev composer and binder, using the existing deployment
 environment settings. These choices are fixed at startup. The frontend has no
 model or tool picker. Each required local model endpoint must answer its
@@ -108,15 +111,16 @@ Embedding availability, Jev calls, and retrieval index checks wait
 until retrieval, where existing branch failures remain visible.
 
 The application shares its agents, retrieval dependencies, and coverage across
-in-memory Chat Sessions. Shutdown closes both Neo4j drivers, the Jev client, and
-the model and embedding HTTP clients that this application owns.
+independent Chat Sessions. Its lifespan owns running searches and stops them
+before shutdown closes both Neo4j drivers, the Jev client, and the model and
+embedding HTTP clients that this application owns.
 
-Every approved question uses one retrieval pipeline. Sparse full-text and dense
+Every accepted question uses one retrieval pipeline. Sparse full-text and dense
 retrieval run alongside the Jev Cypher branch, then graph-prioritized fusion and
 Evidence Assembly select the stored passages. Jev narrows the schema and selects
 roles, subtypes, and properties. The configured chat model composes and binds that
 selection; the deterministic compiler and CyVer authorize read-only execution.
-Reporting questions also reach Jev, regardless of the rewriter's relational flag.
+Reporting questions also reach Jev.
 There is no alternate Cypher backend or fallback to the former LLM selector.
 
 Jev startup requires `TYPESAFE_API_KEY`, or the existing Keychain entry with

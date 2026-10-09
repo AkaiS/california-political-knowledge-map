@@ -222,7 +222,7 @@ it, not how the run is persisted.
 | --- | --- |
 | `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
-| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared fusion ranking](projects/shared-fusion-ranking/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
+| `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared fusion ranking](projects/shared-fusion-ranking/PRD.md); [Source Guides](projects/source-guides/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |
 
 ## Reconciliation record
@@ -340,6 +340,35 @@ On 2026-10-02, Evaluation Case review editing was reviewed and closed:
 - Browser workflows were retained and not executed. Actual pull-request CI
   evidence will be recorded after the conductor's final review and PR creation;
   this record makes no claim about pending remote checks.
+
+On 2026-10-09 UTC, Source Guides implementation and per-ticket review completed:
+
+- All nine issues have checked acceptance criteria and `completed` labels. The
+  parent PRD and completed project table now match them.
+- Ticket 09's Standards review found one P3 repeated coverage projection, fixed
+  and confirmed by the reviewer. Its Spec review found no gaps. The
+  [review record](projects/source-guides/validation/ticket-09-review.md) records
+  the evidence and remaining limits.
+- Final local CI after that correction passed: 1574 Python tests with 61 skips,
+  and 29 Node tests. The existing OpenRouter sampling warning remains.
+- The separate whole-sequence Standards and Spec review subsequently closed
+  both findings: shared Deferred disclosure formatting and current user
+  documentation. The [sequence review](projects/source-guides/validation/sequence-review.md)
+  records prior-finding closure and final local checks. No valid finding remains
+  unresolved. Remote pull-request CI has not run and is not claimed as passed.
+- Subsequent user-like browser exploration found a
+  [reported event chronology defect](issues/05-source-guide-event-chronology.md).
+  Its issue records the deterministic regression, correction, and follow-up
+  validation separately from the completed sequence review.
+- The same exploration found an
+  [explicit publication-bounds defect](issues/06-source-guide-publication-bounds.md).
+  Its issue records the shared assessment correction, inclusion guard, and
+  validation separately from the completed sequence review.
+- A further [saved-guide navigation correction](issues/07-source-guide-saved-navigation.md)
+  brings an explicitly opened guide into view on desktop and mobile. Its issue
+  records the initial usability observation, browser regression, and validation.
+- The [main integration record](projects/source-guides/validation/main-integration.md)
+  records the merged date context, preserved prompt histories, and regression checks.
 
 On 2026-10-09, Shared fusion ranking's ticket acceptance state was reconciled:
 

@@ -263,15 +263,21 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
         has_generation = bool(
             generation and output.get("answer") and "introduction" in output["answer"]
         )
-        preparation = output.get("preparation") or {}
-        preparation_status = preparation.get("status")
+        decision = output.get("assessment") or output.get("preparation") or {}
+        decision_status = decision.get("status")
+        assessment_outcomes = (
+            "declined",
+            "deferred",
+            "needs_edit",
+            "needs_clarification",
+        )
         status = (
             "unresolved"
             if case.get("unresolved")
             else "failed"
             if failure
-            else preparation_status
-            if preparation_status in ("declined", "deferred", "needs_clarification")
+            else decision_status
+            if decision_status in assessment_outcomes
             else "answer_generated"
             if has_generation
             else "context_only"
@@ -287,8 +293,8 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                 "metrics": _metric_rows(case, output, configurations),
                 "execution": {
                     "status": status,
-                    "message": preparation.get("message")
-                    if status in ("declined", "deferred", "needs_clarification")
+                    "message": (decision.get("explanation") or decision.get("message"))
+                    if status in assessment_outcomes
                     else None,
                     "failure": {
                         key: failure.get(key)

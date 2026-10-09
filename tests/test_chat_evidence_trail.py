@@ -9,10 +9,16 @@ from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from starlette.testclient import TestClient
 from test_chat_preparation_trail import scripted_model
-from test_chat_retrieval_trail import chat_app, search_details
+from test_chat_retrieval_trail import chat_app
 from test_chat_session_trail import chat_capture as chat_capture  # noqa: PLC0414
-from test_chat_web import events, no_dependencies, question_request
-from test_chat_web_answers import approval_request
+from test_chat_web import (
+    events,
+    guide_async_client,
+    no_dependencies,
+    question_request,
+    submit_guide,
+    submit_guide_async,
+)
 from test_query_preparation import rewriter_agent
 from test_retrieval import COVERAGE, Branch, candidate, coordinator, load_grounding
 
@@ -92,17 +98,11 @@ def test_fusion_records_actual_eligible_ids_and_order_after_duplicates_and_limit
                 fused_candidate_limit=3,
             ),
         )
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(app=app), base_url="http://localhost"
         ) as client:
-            prepared = events(
-                await client.post(
-                    "/api/chat", json=question_request("Who backed AB 1?")
-                )
-            )
-            approval = asyncio.create_task(
-                client.post("/api/chat", json=approval_request(prepared))
-            )
+            payload = question_request("Who backed AB 1?")
+            approval = asyncio.create_task(submit_guide_async(client, json=payload))
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*(event.wait() for event in entered.values())), 2
@@ -117,9 +117,8 @@ def test_fusion_records_actual_eligible_ids_and_order_after_duplicates_and_limit
                 await approval
 
     completed = asyncio.run(exercise())
-    details = search_details(completed)
-    assert details["outcome"] == "retrieval_answer"
-    assert [len(branch["candidates"]) for branch in details["branches"]] == [4, 3, 3]
+    details = completed
+    assert details["status"] == "empty"
     assert [value.chunk_id for value in loaded] == ["shared", "structural", "dense"]
     fusion = stage_spans(chat_capture)["chat_session.fusion"]
     attrs = fusion["attributes"]
@@ -133,7 +132,7 @@ def test_fusion_records_actual_eligible_ids_and_order_after_duplicates_and_limit
     approval = next(
         span
         for span in chat_capture.exported_spans_as_dict(parse_json_attributes=True)
-        if span["name"] == "chat_session.approve"
+        if span["name"] == "chat_session.submit"
     )
     assert attrs["chat_session_id"] == approval["attributes"]["chat_session_id"]
     assert attrs["audit_schema_version"] == 1
@@ -178,10 +177,8 @@ def evidence_chat(
 
 def complete_chat(app):
     with TestClient(app, base_url="http://localhost") as client:
-        prepared = events(
-            client.post("/api/chat", json=question_request("Who backed AB 1?"))
-        )
-        return events(client.post("/api/chat", json=approval_request(prepared)))
+        payload = question_request("Who backed AB 1?")
+        return events(submit_guide(client, json=payload))
 
 
 def test_assembly_records_actual_selection_omission_reasons_and_measured_context(
@@ -233,7 +230,7 @@ def test_assembly_records_actual_selection_omission_reasons_and_measured_context
             context_limits=EvidenceContextLimits(character_limit=3000, max_passages=1),
         )
     )
-    assert search_details(completed)["outcome"] == "retrieval_answer"
+    assert completed["status"] == "empty"
     assert loaded == ["large", "hearing-small"]
     context = json.loads(prompts[-1])
     assert [
@@ -304,12 +301,13 @@ def test_assembly_failure_records_a_safe_cause_without_a_retrieval_answer(
     completed = complete_chat(
         evidence_chat(None, prompts=prompts, load_grounding=store)
     )
-    assert search_details(completed)["outcome"] == "assembly_failed"
+    assert completed["status"] == "assembly_failed"
     assert len(prompts) == 1
-    rendered = "".join(
-        event["delta"] for event in completed if event["type"] == "text-delta"
+    rendered = completed.get("message", "")
+    assert (
+        rendered
+        == "Retrieved material could not be prepared for relevance review. Choose Retry to search again."
     )
-    assert rendered == "Grounding Evidence could not be assembled."
     spans = stage_spans(chat_capture)
     assert spans["chat_session.fusion"]["attributes"]["status"] == "succeeded"
     failed = spans["chat_session.evidence_assembly"]["attributes"]
@@ -353,13 +351,8 @@ def test_zero_passage_assembly_accounts_for_empty_failed_and_skipped_branches(
             context_limits=EvidenceContextLimits(character_limit=3000),
         )
     )
-    details = search_details(completed)
-    assert details["outcome"] == "retrieval_answer"
-    assert [branch["status"] for branch in details["branches"]] == [
-        "succeeded",
-        "failed",
-        "skipped",
-    ]
+    details = completed
+    assert details["status"] == "empty"
     context = json.loads(prompts[-1])
     assert context["sources"] == []
     spans = stage_spans(chat_capture)
@@ -418,28 +411,21 @@ def test_deadline_exhaustion_is_assigned_to_the_active_selection_stage(
             return evidence
 
         branches = {branch: DeadlineBranch(branch) for branch in RetrievalBranch}
-        async with httpx.AsyncClient(
+        async with guide_async_client(
             transport=httpx.ASGITransport(
                 app=chat_app(branches, clock=lambda: now, load_grounding=store)
             ),
             base_url="http://localhost",
         ) as client:
-            prepared = events(
-                await client.post(
-                    "/api/chat", json=question_request("Who backed AB 1?")
-                )
-            )
+            payload = question_request("Who backed AB 1?")
             try:
-                return events(
-                    await client.post("/api/chat", json=approval_request(prepared))
-                )
+                return events(await submit_guide_async(client, json=payload))
             finally:
                 monkeypatch.setattr(loop, "time", real_time)
 
     completed = asyncio.run(exercise())
-    details = search_details(completed)
-    assert details["outcome"] == "assembly_failed"
-    assert all(branch["status"] == "succeeded" for branch in details["branches"])
+    details = completed
+    assert details["status"] == "assembly_failed"
     spans = stage_spans(chat_capture)
     stage = "fusion" if expiry == "before_fusion" else "evidence_assembly"
     attrs = spans[f"chat_session.{stage}"]["attributes"]
@@ -496,12 +482,7 @@ def test_raised_selection_failures_identify_the_stage_and_preserve_chat_failure(
 
         options["load_grounding"] = store
     completed = complete_chat(chat_app(branches, **options))
-    assert any(event["type"] == "error" for event in completed)
-    assert not any(
-        event["type"] == "tool-output-available"
-        and event.get("output", {}).get("outcome") == "retrieval_answer"
-        for event in completed
-    )
+    assert completed["status"] == "retrieval_failed"
     spans = stage_spans(chat_capture)
     failed = spans[f"chat_session.{stage}"]["attributes"]
     assert failed["status"] == "failed"

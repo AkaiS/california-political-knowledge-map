@@ -22,17 +22,18 @@ from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
-from knowledge_map.chat_presentation import render_answer
+from knowledge_map.chat_presentation import (
+    assessment_guide,
+    render_answer,
+    source_guide,
+)
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
-from knowledge_map.core.question_preparation import (
-    QUERY_REWRITER_INSTRUCTIONS,
-    model_failure_kind,
-)
+from knowledge_map.core.question_preparation import model_failure_kind
 from knowledge_map.jev.prompts import JEV_PROMPTS
 from knowledge_map.schemas import ModelDeployment
 from knowledge_map.schemas.query_preparation import (
-    AwaitingQueryApproval,
+    QuestionAssessment,
     QuestionPreparationResult,
 )
 from knowledge_map.schemas.retrieval import (
@@ -41,6 +42,7 @@ from knowledge_map.schemas.retrieval import (
     EvidencePackage,
     RetrievalAnswer,
 )
+from knowledge_map.schemas.source_guides import SourceGuide
 from knowledge_map.utils.telemetry import project_url
 
 from ..data_set import LabelQuality
@@ -78,17 +80,21 @@ class ChatFailure(BaseModel):
 class ChatOutput(BaseModel):
     """A completed attempt can contain a failed stage or a declined question.
 
-    No field claims that an answer is correct. The first proposal is approved
-    mechanically, so reviewers must inspect whether it preserved the question.
+    No field claims that an answer is correct. Historical approval runs retain
+    their original mode; new runs assess and retrieve the submitted question.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     question: str
-    approval_mode: Literal["approve_first_proposal"] = "approve_first_proposal"
+    approval_mode: Literal["approve_first_proposal", "direct_question"] = (
+        "approve_first_proposal"
+    )
     chat_session_id: str | None = None
     as_of: AwareDatetime | None = None
     preparation: QuestionPreparationResult | None = None
+    assessment: QuestionAssessment | None = None
+    guide: SourceGuide | None = None
     answer: RetrievalAnswer | EvidenceAssemblyFailure | None = None
     retrieval: EvidencePackage | EvidenceAssemblyFailure | None = None
     rendered_text: str | None = None
@@ -224,7 +230,9 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     deployment = as_deployment(model)
 
     async def answer_question(case_input: ChatInput) -> ChatOutput:
-        output = ChatOutput(question=case_input.question)
+        output = ChatOutput(
+            question=case_input.question, approval_mode="direct_question"
+        )
         stage = "startup"
         try:
             async with chat_dependencies(
@@ -240,19 +248,23 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 )
                 output.chat_session_id = session.chat_session_id
                 output.as_of = session.as_of
-                stage = "preparation"
-                output.preparation = await session.prepare()
-                if isinstance(output.preparation, AwaitingQueryApproval):
-                    stage = "retrieval_and_guidance"
-                    try:
-                        output.answer = await session.approve()
-                    finally:
-                        if output.answer is None:
-                            output.retrieval = session.retrieval_result
-                    stage = "rendering"
-                    output.rendered_text = render_answer(output.answer)
+                stage = "retrieval_and_guidance"
+                try:
+                    result = await session.run()
+                finally:
+                    output.assessment = session.assessment
+                    output.retrieval = session.retrieval_result
+                if isinstance(result, QuestionAssessment):
+                    output.guide = assessment_guide(case_input.question, result)
+                    output.rendered_text = result.explanation
                 else:
-                    output.rendered_text = output.preparation.message
+                    output.answer = result
+                    output.retrieval = None
+                    stage = "rendering"
+                    output.guide = source_guide(output.answer)
+                    output.rendered_text = render_answer(
+                        output.answer, guide=output.guide
+                    )
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Preserve a failed case for review.
             # A bad answer, unavailable dependency, or failed model request is
@@ -318,7 +330,6 @@ CHAT_TASK = register(
         default_model=default_model(),
         case_lifecycle=ChatCaseLifecycle,
         prompts=lambda: {
-            "query_rewriter": QUERY_REWRITER_INSTRUCTIONS,
             "chat_agent": CHAT_INSTRUCTIONS,
             "question_policy": QUESTION_POLICY,
             **JEV_PROMPTS,

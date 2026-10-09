@@ -15,7 +15,7 @@ from pydantic import (
     model_validator,
 )
 
-from knowledge_map.schemas.query_preparation import QueryRewrite
+from knowledge_map.schemas.query_preparation import QueryRewrite, ReadingOrder
 
 type NonemptyText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
@@ -46,8 +46,8 @@ class RetrievalRequest(RetrievalValue):
 
     @model_validator(mode="after")
     def require_retrievable_question(self) -> Self:
-        if self.rewrite.assessment.status == "declined":
-            raise ValueError("a Declined question cannot enter retrieval")
+        if self.rewrite.assessment.status in {"declined", "needs_edit"}:
+            raise ValueError("a Declined or unresolved question cannot enter retrieval")
         return self
 
     @property
@@ -471,16 +471,45 @@ class SourceRelevanceNote(RetrievalValue):
     note: NonemptyText
 
 
+class UnmatchedRequest(RetrievalValue):
+    request_portion: NonemptyText
+    explanation: NonemptyText
+
+
 class SourceDisagreement(RetrievalValue):
     source_article_ids: Annotated[tuple[NonemptyText, ...], Field(min_length=2)]
     description: NonemptyText
 
 
+class ArticleGroupMember(RetrievalValue):
+    source_article_id: NonemptyText
+    reading_direction: NonemptyText
+    reported_event_date: NonemptyText | None = None
+
+
+class ArticleGroup(RetrievalValue):
+    kind: Literal["contrast", "timeline", "aspect"]
+    label: NonemptyText
+    members: tuple[ArticleGroupMember, ...]
+    order: ReadingOrder = "relevance"
+
+    @model_validator(mode="after")
+    def valid_reading_view(self) -> Self:
+        if (self.kind == "timeline") != (self.order != "relevance"):
+            raise ValueError(
+                "only timeline groups have a chronological basis and order"
+            )
+        return self
+
+
 class RetrievalAnswer(RetrievalValue):
+    guidance_contract: Literal[1, 2, 3, 4] = 1
     evidence: EvidencePackage
     introduction: NonemptyText | None = None
     source_notes: tuple[SourceRelevanceNote, ...] = ()
     disagreements: tuple[SourceDisagreement, ...] = ()
+    groups: tuple[ArticleGroup, ...] = ()
+    unmatched_requests: tuple[UnmatchedRequest, ...] = ()
 
     @model_validator(mode="after")
     def guidance_refers_to_selected_sources(self) -> Self:
@@ -489,6 +518,19 @@ class RetrievalAnswer(RetrievalValue):
         }
         if any(note.source_article_id not in selected for note in self.source_notes):
             raise ValueError("relevance notes must refer to selected sources")
+        if self.guidance_contract >= 2:
+            noted = [note.source_article_id for note in self.source_notes]
+            if len(noted) != len(set(noted)):
+                raise ValueError(
+                    "each included article must have one reading direction"
+                )
+        included = {note.source_article_id for note in self.source_notes}
+        if any(
+            member.source_article_id not in included
+            for group in self.groups
+            for member in group.members
+        ):
+            raise ValueError("group memberships must refer to included articles")
         for disagreement in self.disagreements:
             sources = set(disagreement.source_article_ids)
             if len(sources) < 2 or not sources <= selected:

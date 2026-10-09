@@ -1,5 +1,6 @@
 """Question preparation values shared by the Chat Agent and retrieval."""
 
+from datetime import date
 from typing import Annotated, Literal, Self
 
 from pydantic import (
@@ -13,6 +14,9 @@ from pydantic import (
 
 type QuestionText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1)
+]
+type ReadingOrder = Literal[
+    "relevance", "publication_asc", "publication_desc", "event_asc", "event_desc"
 ]
 
 
@@ -30,14 +34,29 @@ class QuestionAssessment(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    status: Literal["allowed", "declined", "deferred"]
+    status: Literal["allowed", "declined", "deferred", "needs_edit"]
     explanation: QuestionText | None = None
     recoverable_portion: QuestionText | None = None
+    reading_order: ReadingOrder = "relevance"
+    publication_date_from: date | None = None
+    publication_date_through: date | None = None
+
+    @model_validator(mode="after")
+    def publication_bounds_are_chronological(self) -> Self:
+        if (
+            self.publication_date_from is not None
+            and self.publication_date_through is not None
+            and self.publication_date_from > self.publication_date_through
+        ):
+            raise ValueError("publication date bounds must be chronological")
+        return self
 
     @model_validator(mode="after")
     def unsupported_question_has_explanation(self) -> Self:
         if self.status != "allowed" and self.explanation is None:
-            raise ValueError("a Declined or Deferred question requires an explanation")
+            raise ValueError(
+                "a Declined, Deferred, or needs-edit question requires an explanation"
+            )
         if self.status == "deferred" and self.recoverable_portion is None:
             raise ValueError(
                 "a Deferred question must describe the recoverable portion"
