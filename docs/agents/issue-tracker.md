@@ -25,8 +25,16 @@ and Dead Letter Queue records.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a project and issue under `work/projects/<project-slug>/`, or add an issue
-to an existing project. Put an unshaped report in `work/inbox.md` instead.
+Publish the artifact the user requested:
+
+- A spec or PRD goes in `work/projects/<project-slug>/PRD.md`. Create the project
+  directory or update its existing PRD, and link the PRD from `work/README.md`.
+  Publishing the spec completes a spec-only request. The PRD directly anchors
+  any later implementation tickets; it needs no umbrella or handoff issue.
+- Create implementation issues only when the user requests tickets or issues.
+  Add them to the project's `issues/` directory using the conventions above.
+  Existing issues remain in place when publishing or revising a spec.
+- Put an unshaped report in `work/inbox.md` instead.
 
 ## When a skill says "fetch the relevant ticket"
 

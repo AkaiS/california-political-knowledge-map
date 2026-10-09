@@ -13,7 +13,8 @@ manual_checks/*
 .codex/*
 .DS_Store
 
-# Deliver the repository evaluation router without exposing local agent files.
+# Deliver maintained repository skills without exposing other local agent files.
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/run-evaluation/
+!.agents/skills/to-spec/
