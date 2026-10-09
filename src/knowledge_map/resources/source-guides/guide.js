@@ -72,15 +72,19 @@ async function loadSavedGuides() {
   }
 }
 
+async function readSavedGuide(identity) {
+  const response = await fetch(`/api/guides/${encodeURIComponent(identity)}`);
+  if (!response.ok) throw new Error('Guide unavailable');
+  return response.json();
+}
+
 async function refreshGuides() {
   await loadSavedGuides();
   const selected = currentGuide;
   const selection = guideSelection;
   if (selected?.latest_attempt.status === 'running') {
     try {
-      const response = await fetch(`/api/guides/${encodeURIComponent(selected.guide_id)}`);
-      if (!response.ok) throw new Error('Guide unavailable');
-      const guide = await response.json();
+      const guide = await readSavedGuide(selected.guide_id);
       if (selection === guideSelection) {
         showGuide(guide);
         progress.textContent = '';
@@ -106,9 +110,7 @@ async function openSelectedGuide() {
   question.value = '';
   progress.textContent = 'Opening saved guide…';
   try {
-    const response = await fetch(`/api/guides/${encodeURIComponent(identity)}`);
-    if (!response.ok) throw new Error('Guide unavailable');
-    const guide = await response.json();
+    const guide = await readSavedGuide(identity);
     if (selection !== guideSelection) return;
     showGuide(guide);
     progress.textContent = '';

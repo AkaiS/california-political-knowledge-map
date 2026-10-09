@@ -124,5 +124,5 @@ The first full Python run had 1505 passes, 61 skips, and four failures from one
 Jev HTTP consumer still expecting a synchronous 200 response. That consumer now
 uses the accepted-submission and saved-result helper, and the final full run
 above passed. The disposable browser tab and server were closed after checking.
-No ticket 03 blocker remains. Acceptance reconciliation is left to independent
-review.
+No ticket 03 blocker remains. Independent review and acceptance reconciliation
+are recorded in [ticket-03-review.md](ticket-03-review.md).

@@ -1,6 +1,6 @@
 # 03 Keep independent searches running across navigation
 
-Labels: enhancement, ready-for-agent
+Labels: enhancement, completed
 Parent: [Source Guides spec](../PRD.md)
 
 ## What to build
@@ -11,20 +11,20 @@ guide reconnects to its saved status instead of starting another search.
 
 ## Acceptance criteria
 
-- [ ] Submission returns the saved guide identity and attempt status promptly;
+- [x] Submission returns the saved guide identity and attempt status promptly;
   work belongs to the application's lifespan rather than an HTTP response or
   browser connection.
-- [ ] Two independent guides can progress without one displayed guide owning
+- [x] Two independent guides can progress without one displayed guide owning
   the other's execution. Preserve existing provider admission/resource limits;
   this does not require unlimited model concurrency.
-- [ ] Switching guides, reloading, or disconnecting the browser leaves execution
+- [x] Switching guides, reloading, or disconnecting the browser leaves execution
   running while the local service remains active.
-- [ ] List and detail views show persisted running and terminal status. Reopening
+- [x] List and detail views show persisted running and terminal status. Reopening
   reconnects to the current attempt without duplicate retrieval or model calls.
-- [ ] Completion publishes content and retrieval information atomically, only
+- [x] Completion publishes content and retrieval information atomically, only
   for that guide's active attempt identity. An obsolete completion cannot
   overwrite another guide or a newer attempt.
-- [ ] Closing the application is distinct from closing the browser. Restart
+- [x] Closing the application is distinct from closing the browser. Restart
   recovery and explicit Retry are implemented by ticket 06.
 
 ## Blocked by
@@ -40,3 +40,12 @@ Avoid timing sleeps and assertions about private task registries. In the browser
 start multiple questions, switch views, close/reopen the page, and observe their
 continued progress. Run required checks with uv, without a separate Chat Session
 test seam.
+
+## Comments
+
+Completed after independent Standards and Spec review on 2026-10-09 UTC.
+[Implementation validation](../validation/ticket-03.md) maps each acceptance
+criterion to application tests and controlled browser evidence.
+[Review evidence](../validation/ticket-03-review.md) records both reports,
+the fixed duplication finding, final checks, and the shutdown boundary
+reserved for ticket 06. No valid ticket 03 finding remains unresolved.

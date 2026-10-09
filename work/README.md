@@ -17,10 +17,12 @@ updateable guides, original-question submission, source-reading views and
 relevance directions, original-section navigation, and independently continuing
 searches. [Nine implementation tickets](projects/source-guides/PRD.md#implementation-tickets)
 link directly to the spec and declare their blockers.
-[01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md)
-and [02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md)
+[01 Submit an original question](projects/source-guides/issues/01-submit-original-questions.md),
+[02 Save, browse, and reopen Source Guides](projects/source-guides/issues/02-save-and-reopen-guides.md),
+and [03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md)
 are `completed` after independent review on 2026-10-09 UTC.
-[03 Keep independent searches running across navigation](projects/source-guides/issues/03-continue-independent-searches.md),
+[04 Update a guide or edit its question](projects/source-guides/issues/04-update-and-edit-guides.md),
+[06 Recover interrupted searches with explicit Retry](projects/source-guides/issues/06-retry-interrupted-searches.md),
 [07 Organize reading through contrast and timeline views](projects/source-guides/issues/07-organize-reading-views.md),
 [08 Direct readers to relevant article sections](projects/source-guides/issues/08-link-relevant-sections.md),
 and [09 Explain guide coverage, outcomes, and search limits](projects/source-guides/issues/09-explain-search-coverage.md)
