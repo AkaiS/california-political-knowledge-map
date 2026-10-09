@@ -53,6 +53,20 @@ def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGui
     )
 
 
+def deferred_disclosures(
+    assessment: QuestionAssessment | None,
+) -> tuple[GuideDisclosure, ...]:
+    """Retain the same Deferred coverage explanation after success or failure."""
+    if assessment is None or assessment.status != "deferred":
+        return ()
+    return (
+        GuideDisclosure(
+            kind="deferred",
+            message=f"{assessment.explanation}\n\n{assessment.recoverable_portion}",
+        ),
+    )
+
+
 def source_guide(
     result: RetrievalAnswer | EvidenceAssemblyFailure,
     *,
@@ -193,13 +207,7 @@ def source_guide(
                 message="Part of this search failed. Available reading is retained, but this search is incomplete.",
             )
         )
-    if assessment.status == "deferred":
-        disclosures.append(
-            GuideDisclosure(
-                kind="deferred",
-                message=f"{assessment.explanation}\n\n{assessment.recoverable_portion}",
-            )
-        )
+    disclosures.extend(deferred_disclosures(assessment))
     return SourceGuide(
         question=execution.request.rewrite.question,
         status=(

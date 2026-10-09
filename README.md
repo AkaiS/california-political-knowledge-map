@@ -60,19 +60,37 @@ and retrieval directly. Assessment preserves the submitted wording. Broad
 meaningful questions proceed; an unresolved reference asks you to edit the
 complete question. No Query Rewriter or approval step runs.
 
-The result shows your complete question and linked Source Articles with brief
-reading directions and available publication dates. Article links open in another
-tab. The guide omits stored passages and candidates without a relevant reading
-direction. Deferred coverage limits and partial retrieval failures remain visible.
-Use Edit question to revise the complete wording, or New question to clear it.
+The guide shows your complete question and linked Source Articles with brief
+reading directions, recorded Publications, and available publication dates.
+Each article has one ordinary link with its group directions and any verified
+highlight links nearby. Reading views reorder the complete article list. Links
+open in another tab. The guide omits stored passages and candidates without a
+relevant reading direction. Available collections and dates appear near the
+question input; coverage limits, unmatched portions, and partial search failures
+remain visible. Collapsed Search details explain the saved search's limits.
 
-This first slice runs within the submission request. It has no saved guide,
-history, recovery after reload, or detached background execution.
+Submitting saves the question before searching. Saved guides restore their
+content and status after reload or service restart without another search.
+Several questions can run independently while you switch guides or close the
+browser page. Keep the local application running until they finish.
 
-Startup requires the existing SQLite document store at `SQLITE_DB_PATH`, which
-defaults to `document_store.db`, and a reachable Neo4j configured with
+Use Update guide to search again for the same saved question. Previous reading
+remains available during an update and after failure or cancellation; a successful
+update replaces it, including an empty result. Cancel targets the selected running
+attempt. Restart marks unfinished attempts Interrupted, and Retry explicitly
+starts another attempt after interruption or failure. The guide distinguishes
+the last successful retrieval from the latest attempt's timing and outcome.
+Edit question restores the complete wording for submission as a new guide.
+New question clears the input. Opening guides and restarting never replay searches.
+
+Source Guides save to the SQLite document store at `SQLITE_DB_PATH`, which
+defaults to `document_store.db`. Startup requires a reachable Neo4j configured with
 `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD`. `NEO4J_DATABASE` defaults to
-`neo4j`. Chat opens SQLite read-only and does not create a missing store.
+`neo4j`. Source Guides use the existing SQLite store for durable guide and attempt
+writes, creating their focused tables when the application is constructed.
+Guide presentation reads stored Story wording and recorded Publication metadata
+through read-only connections when preparing new reading. Missing Story data
+leaves the ordinary article link available without a verified highlight.
 
 `CHAT_DEPLOYMENT` selects `local`, the default, or `openrouter`
 for the Chat Agent and Jev composer and binder, using the existing deployment
@@ -93,8 +111,9 @@ Embedding availability, Jev calls, and retrieval index checks wait
 until retrieval, where existing branch failures remain visible.
 
 The application shares its agents, retrieval dependencies, and coverage across
-in-memory Chat Sessions. Shutdown closes both Neo4j drivers, the Jev client, and
-the model and embedding HTTP clients that this application owns.
+independent Chat Sessions. Its lifespan owns running searches and stops them
+before shutdown closes both Neo4j drivers, the Jev client, and the model and
+embedding HTTP clients that this application owns.
 
 Every accepted question uses one retrieval pipeline. Sparse full-text and dense
 retrieval run alongside the Jev Cypher branch, then graph-prioritized fusion and

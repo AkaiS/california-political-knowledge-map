@@ -18,6 +18,7 @@ from starlette.routing import Route
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
     assessment_guide,
+    deferred_disclosures,
     guide_collections,
     render_answer,
     source_guide,
@@ -77,9 +78,7 @@ def create_app(
 
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
-            collections=guide_collections(dependencies.coverage)
-            if dependencies
-            else ()
+            collections=guide_collections(dependencies.coverage) if dependencies else ()
         )
 
     @asynccontextmanager
@@ -246,17 +245,7 @@ def create_app(
                         GuideDisclosure.model_validate(
                             {"kind": status, "message": guide.message}
                         ),
-                        *(
-                            (
-                                GuideDisclosure(
-                                    kind="deferred",
-                                    message=f"{guide.assessment.explanation}\n\n{guide.assessment.recoverable_portion}",
-                                ),
-                            )
-                            if guide.assessment is not None
-                            and guide.assessment.status == "deferred"
-                            else ()
-                        ),
+                        *deferred_disclosures(guide.assessment),
                     )
                 }
             )

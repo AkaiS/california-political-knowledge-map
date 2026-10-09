@@ -440,6 +440,8 @@ All nine implementation tickets have checked acceptance criteria and a single
 `completed` triage-state label after their independent Standards and Spec reviews.
 The project is complete on that evidence. Ticket 09's
 [review record](validation/ticket-09-review.md) records its coverage correction and
-final local checks. The conductor's separate review of the whole implementation
-sequence and remote pull-request CI are still forthcoming; this record does not
-claim either has passed.
+final local checks. The separate [whole-sequence review](validation/sequence-review.md)
+also completed, with both Standards and Spec findings fixed and independently
+confirmed. All earlier findings remain closed in the integrated implementation.
+Final local deterministic checks passed. Remote pull-request CI has not run;
+this record makes no claim about it.
