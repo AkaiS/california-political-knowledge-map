@@ -437,3 +437,66 @@ def test_chat_startup_uses_explicit_deployment_for_chat_and_structural_agents(
             assert dependencies.rewriter is None
 
     asyncio.run(exercise())
+
+
+def test_shared_evaluation_retains_groups_and_renders_membership_directions(
+    monkeypatch, chat_capture, tmp_path
+):
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/full_text",
+                    "note": "Read the hearing coverage on AB 1.",
+                }
+            ],
+            "groups": [
+                {
+                    "kind": "contrast",
+                    "label": "Investigate supporters <img src=x>",
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the supporters section.",
+                        }
+                    ],
+                },
+                {
+                    "kind": "contrast",
+                    "label": "Investigate detractors",
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the detractors section.",
+                        }
+                    ],
+                },
+            ],
+        },
+    )
+    report = run_one()
+    output = report.cases[0].output
+    assert output.failure is None
+    assert output.answer.guidance_contract == 3
+    assert len(output.guide.groups) == 2
+    assert output.rendered_text.count("](<https://example.com/full_text>)") == 1
+    assert "Read the supporters section." in output.rendered_text
+    assert "Read the detractors section." in output.rendered_text
+    assert "<img src=x>" not in output.rendered_text
+    assert "The union supports AB 1." not in output.rendered_text
+    path = write_report(
+        report,
+        task="chat",
+        deployment=DEPLOYMENT,
+        data_set_path="evals/unlabeled/chat.yaml",
+        label_quality=LabelQuality.UNLABELED,
+        root=tmp_path,
+    )
+    saved = json.loads(path.read_text())
+    assert (
+        saved["report"]["cases"][0]["output"]["guide"]["groups"][1]["members"][0][
+            "reading_direction"
+        ]
+        == "Read the detractors section."
+    )

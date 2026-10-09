@@ -258,7 +258,9 @@ def create_app(
             {
                 "guides": [
                     guide.model_dump(
-                        mode="json", exclude_none=True, exclude={"articles", "message"}
+                        mode="json",
+                        exclude_none=True,
+                        exclude={"articles", "groups", "relevance_order", "message"},
                     )
                     for guide in guide_store.list()
                 ]

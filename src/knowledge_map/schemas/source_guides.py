@@ -5,6 +5,7 @@ from typing import Literal
 
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import (
+    ArticleGroup,
     NonemptyText,
     RetrievalValue,
     SourceArticleCitation,
@@ -36,6 +37,8 @@ class SourceGuide(RetrievalValue):
     assessment: QuestionAssessment | None = None
     message: NonemptyText | None = None
     articles: tuple[GuideArticle, ...] = ()
+    groups: tuple[ArticleGroup, ...] = ()
+    relevance_order: tuple[str, ...] = ()
     partial: bool = False
 
 

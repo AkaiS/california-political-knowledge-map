@@ -29,3 +29,13 @@ cases:
     split: training
     task_input:
       question: Which articles discuss California school meal funding in 2025?
+  - id: SG07-events
+    description: Event chronology uses reported dates with original precision, separate from publication dates, and reading directions rather than event narration.
+    split: training
+    task_input:
+      question: Where should I read about California AB 1's proposal and hearing events in earliest-to-latest event order?
+  - id: SG07-accounts
+    description: Group differing accounts with distinct directions for overlapping sources without deciding which account is correct.
+    split: training
+    task_input:
+      question: Where should I read the differing accounts about whether the committee received the cost memo for California AB 1?

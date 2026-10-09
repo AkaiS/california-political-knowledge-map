@@ -24,4 +24,8 @@ li { padding: 1rem 0; border-top: 1px solid #dce3dc; }
 li p { margin: .3rem 0; }
 a { color: #145d52; font-weight: 600; text-underline-offset: .2em; overflow-wrap: anywhere; }
 :focus-visible { outline: 3px solid #b78b2c; outline-offset: 3px; }
+.reading-directions { margin: .8rem 0 0; padding-left: 1.4rem; }
+.reading-directions li { border: 0; padding: .5rem; }
+.reading-directions .selected-direction { background: #eff5ee; border-radius: .3rem; }
+select { max-width: 100%; font: inherit; padding: .3rem; color: inherit; background: white; }
 @media (max-width: 560px) { main { margin-top: 1.5rem; } .guide-heading { display: block; } }

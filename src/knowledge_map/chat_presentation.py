@@ -5,7 +5,11 @@ import re
 from datetime import datetime
 
 from knowledge_map.schemas.query_preparation import QuestionAssessment
-from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
+from knowledge_map.schemas.retrieval import (
+    ArticleGroup,
+    EvidenceAssemblyFailure,
+    RetrievalAnswer,
+)
 from knowledge_map.schemas.source_guides import GuideArticle, SourceGuide
 
 
@@ -33,6 +37,8 @@ def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGui
         else []
     )
     articles: tuple[GuideArticle, ...] = ()
+    groups = ()
+    relevance_order = ()
     if isinstance(result, RetrievalAnswer):
         citations = {
             source.citation.source_article_id: source.citation
@@ -44,32 +50,62 @@ def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGui
             )
             for note in result.source_notes
         )
-        if assessment.reading_order != "relevance":
-
-            def publication_date(article: GuideArticle) -> int | None:
-                try:
-                    return (
-                        datetime.fromisoformat(article.citation.published_date or "")
-                        .date()
-                        .toordinal()
-                    )
-                except ValueError:
-                    return None
-
-            dated = [
-                article for article in articles if publication_date(article) is not None
-            ]
-            undated = [
-                article for article in articles if publication_date(article) is None
-            ]
+        relevance_order = tuple(note.source_article_id for note in result.source_notes)
+        if assessment.reading_order in {"publication_asc", "publication_desc"}:
             articles = tuple(
                 sorted(
-                    dated,
-                    key=lambda article: publication_date(article) or 0,
-                    reverse=assessment.reading_order == "publication_desc",
+                    articles,
+                    key=lambda article: _publication_key(
+                        article.citation.published_date,
+                        assessment.reading_order == "publication_desc",
+                    ),
                 )
-                + undated
             )
+        organized: list[ArticleGroup] = []
+        for group in result.groups:
+            order = group.order
+            if group.kind == "timeline" and assessment.reading_order in {
+                "publication_asc",
+                "publication_desc",
+            }:
+                order = assessment.reading_order
+            members = group.members
+            if order in {"publication_asc", "publication_desc"}:
+                members = tuple(
+                    sorted(
+                        members,
+                        key=lambda member: _publication_key(
+                            citations[member.source_article_id].published_date,
+                            order == "publication_desc",
+                        ),
+                    )
+                )
+            organized.append(
+                group.model_copy(update={"order": order, "members": members})
+            )
+        groups = tuple(organized)
+        if assessment.reading_order in {"event_asc", "event_desc"}:
+            timeline = next(
+                (group for group in groups if group.order == assessment.reading_order),
+                None,
+            )
+            if timeline:
+                event_order = {
+                    identity: index
+                    for index, identity in enumerate(
+                        dict.fromkeys(
+                            member.source_article_id for member in timeline.members
+                        )
+                    )
+                }
+                articles = tuple(
+                    sorted(
+                        articles,
+                        key=lambda article: event_order.get(
+                            article.citation.source_article_id, len(event_order)
+                        ),
+                    )
+                )
         if result.introduction:
             disclosures.append(result.introduction)
     for disclosure in (
@@ -94,8 +130,18 @@ def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGui
         assessment=assessment,
         message="\n\n".join(disclosures) or None,
         articles=articles,
+        groups=groups,
+        relevance_order=relevance_order,
         partial=bool(execution.failed_branches),
     )
+
+
+def _publication_key(value: str | None, newest: bool) -> tuple[bool, int]:
+    try:
+        ordinal = datetime.fromisoformat(value or "").date().toordinal()
+    except ValueError:
+        return True, 0
+    return False, -ordinal if newest else ordinal
 
 
 def _escape_markdown_text(text: str) -> str:
@@ -116,6 +162,20 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
         if citation.published_date:
             paragraphs.append(_escape_markdown_text(citation.published_date))
         paragraphs.append(_escape_markdown_text(article.reading_direction))
+        for group in guide.groups:
+            for member in group.members:
+                if member.source_article_id != citation.source_article_id:
+                    continue
+                direction = f"{group.label}: {member.reading_direction}"
+                if group.kind == "timeline":
+                    direction += (
+                        " Reported event order; publication dates are shown separately."
+                        if group.order in {"event_asc", "event_desc"}
+                        else " Publication order; publication dates do not establish event dates."
+                    )
+                if member.reported_event_date:
+                    direction += f" Reported event date: {member.reported_event_date}."
+                paragraphs.append(f"   - {_escape_markdown_text(direction)}")
     if guide.status == "empty":
         paragraphs.append("No relevant articles were selected from this search.")
     return "\n\n".join(paragraphs)

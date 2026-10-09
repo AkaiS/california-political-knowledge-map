@@ -14,9 +14,12 @@ parts of the question. Preserve an ungrouped list when organization is unavailab
 - [ ] The existing Chat Agent produces typed optional groups over articles that
   passed the final relevance gate. Validate article references and omit any
   membership pointing outside the included sources.
-- [ ] One article can appear in several groups with a distinct reading direction
-  for each membership. Group labels identify what to investigate and do not
-  assign an article a political position.
+- [ ] One article can belong to several groups or have distinct directions
+  within one group. Render its ordinary article link once, with group-labeled
+  reading directions listed nearby; accept otherwise-valid repeated
+  memberships and consolidate identical entries. Group labels identify what
+  to investigate and do not assign an article a political position. Verified
+  highlight links remain ticket 08.
 - [ ] Contrast views can organize supporters' and detractors' arguments or
   differing accounts when supported by retrieved evidence. They direct readers
   to articles without supplying conclusions or adjudicating the accounts.
@@ -42,5 +45,13 @@ At the application boundary with temporary real SQLite and deterministic model
 outputs, check overlapping membership, omitted-source references, persistence,
 chronology, absent dates, and group-free fallback. Use existing controlled
 evaluation examples for librarian behavior. Browser-check contrast and timeline
-reading, overlapping articles, restored views, and safe rendering. Run required
+reading, overlapping memberships consolidated near one article link under every
+view, restored views, and safe rendering. Run required
 checks with uv and do not introduce independent Chat Session tests.
+
+## Comments
+
+2026-10-09: The maintainer clarified that each article should appear once as a
+non-highlighted link, with relevant highlights in a nearby list when available.
+Ticket 07 consolidates its reading directions near that link. Ticket 08 adds
+verified highlight links. See the [PRD clarification](../PRD.md#maintainer-clarification-2026-10-09).

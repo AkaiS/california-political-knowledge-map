@@ -5,6 +5,8 @@ const question = document.querySelector('#question');
 const progress = document.querySelector('#progress');
 const guideView = document.querySelector('#guide');
 const articles = document.querySelector('#articles');
+const viewDescription = document.querySelector('#view-description');
+const articleOrder = document.querySelector('#article-order');
 const submit = document.querySelector('#submit');
 const edit = document.querySelector('#edit');
 const update = document.querySelector('#update');
@@ -123,6 +125,8 @@ async function openSelectedGuide() {
 }
 
 function showGuide(guide) {
+  const sameGuide = currentGuide?.guide_id === guide.guide_id;
+  const newReading = !sameGuide || currentGuide?.last_retrieved_at !== guide.last_retrieved_at;
   currentGuide = guide;
   document.querySelector('#guide-question').textContent = guide.question;
   document.querySelector('#outcome').textContent = outcomeLabels[guide.status];
@@ -146,30 +150,116 @@ function showGuide(guide) {
         ? `${attempt.message || outcomeLabels[attempt.outcome]} Saved reading below is from the last successful retrieval.`
         : attempt.outcome !== guide.status ? attempt.message || outcomeLabels[attempt.outcome] : '')
     : '';
-  articles.replaceChildren();
-  for (const article of guide.articles) {
-    const row = document.createElement('li');
-    const link = document.createElement('a');
-    link.textContent = article.citation.title;
-    const url = new URL(article.citation.url);
-    if (url.protocol === 'https:' || url.protocol === 'http:') {
-      link.href = url.href;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-    }
-    row.append(link);
-    if (article.citation.published_date) {
-      const date = document.createElement('p');
-      date.className = 'metadata';
-      date.textContent = `Published ${article.citation.published_date}`;
-      row.append(date);
-    }
-    const direction = document.createElement('p');
-    direction.textContent = article.reading_direction;
-    row.append(direction);
-    articles.append(row);
+  const previousOrder = articleOrder.value;
+  articleOrder.replaceChildren();
+  const addOption = (value, label) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    articleOrder.append(option);
+  };
+  addOption('relevance', 'All articles by relevance');
+  const chronological = ['publication_asc', 'publication_desc'].includes(guide.assessment?.reading_order);
+  if (chronological) addOption('requested', 'Requested publication order');
+  for (const [index, group] of (guide.groups || []).entries()) {
+    addOption(`group:${index}`, group.label);
   }
+  const eventTimeline = (guide.groups || []).findIndex(group =>
+    group.kind === 'timeline' && group.order === guide.assessment?.reading_order);
+  articleOrder.value = newReading
+    ? chronological ? 'requested' : eventTimeline >= 0 ? `group:${eventTimeline}` : 'relevance'
+    : previousOrder;
+  document.querySelector('#all-articles-heading').hidden = !guide.articles.length;
+  renderArticles();
   guideView.hidden = false;
+}
+
+const timelineLabels = {
+  publication_asc: 'Publication order, oldest first. Publication dates do not establish event dates.',
+  publication_desc: 'Publication order, newest first. Publication dates do not establish event dates.',
+  event_asc: 'Reported event order, earliest first. Publication dates are shown separately. Undated reading follows.',
+  event_desc: 'Reported event order, latest first. Publication dates are shown separately. Undated reading follows.',
+};
+
+function renderArticles() {
+  articles.replaceChildren();
+  const ordered = [...currentGuide.articles];
+  const selectedIndex = articleOrder.value.startsWith('group:')
+    ? Number(articleOrder.value.slice(6)) : -1;
+  const selectedGroup = currentGuide.groups?.[selectedIndex];
+  if (articleOrder.value === 'relevance' || selectedGroup) {
+    const order = new Map((currentGuide.relevance_order || []).map((identity, index) => [identity, index]));
+    ordered.sort((left, right) =>
+      (order.get(left.citation.source_article_id) ?? 0) - (order.get(right.citation.source_article_id) ?? 0));
+  }
+  if (selectedGroup) {
+    const order = new Map();
+    for (const member of selectedGroup.members) {
+      if (!order.has(member.source_article_id)) order.set(member.source_article_id, order.size);
+    }
+    ordered.sort((left, right) =>
+      (order.get(left.citation.source_article_id) ?? Infinity) - (order.get(right.citation.source_article_id) ?? Infinity));
+  }
+  viewDescription.textContent = selectedGroup
+    ? `${timelineLabels[selectedGroup.order] || 'Related articles appear first.'} Every included article remains available.`
+    : articleOrder.value === 'requested'
+      ? timelineLabels[currentGuide.assessment.reading_order]
+      : 'Each article appears once. Its reading directions are listed beneath its link.';
+  for (const article of ordered) articles.append(articleRow(article, selectedIndex));
+}
+
+articleOrder.addEventListener('change', renderArticles);
+
+function articleRow(article, selectedIndex) {
+  const row = document.createElement('li');
+  const link = document.createElement('a');
+  link.textContent = article.citation.title;
+  const url = new URL(article.citation.url);
+  if (url.protocol === 'https:' || url.protocol === 'http:') {
+    link.href = url.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  }
+  row.append(link);
+  if (article.citation.published_date) {
+    const date = document.createElement('p');
+    date.className = 'metadata';
+    date.textContent = `Published ${article.citation.published_date}`;
+    row.append(date);
+  }
+  const direction = document.createElement('p');
+  direction.textContent = article.reading_direction;
+  row.append(direction);
+  const directions = document.createElement('ul');
+  directions.className = 'reading-directions';
+  for (const [index, group] of (currentGuide.groups || []).entries()) {
+    for (const member of group.members) {
+      if (member.source_article_id !== article.citation.source_article_id) continue;
+      const item = document.createElement('li');
+      if (index === selectedIndex) item.className = 'selected-direction';
+      const label = document.createElement('strong');
+      label.textContent = group.label;
+      item.append(label);
+      if (group.kind === 'timeline') {
+        const basis = document.createElement('p');
+        basis.className = 'metadata';
+        basis.textContent = timelineLabels[group.order];
+        item.append(basis);
+      }
+      if (member.reported_event_date) {
+        const date = document.createElement('p');
+        date.className = 'metadata';
+        date.textContent = `Reported event date: ${member.reported_event_date}`;
+        item.append(date);
+      }
+      const reading = document.createElement('p');
+      reading.textContent = member.reading_direction;
+      item.append(reading);
+      directions.append(item);
+    }
+  }
+  if (directions.children.length) row.append(directions);
+  return row;
 }
 
 function setBusy(busy) {

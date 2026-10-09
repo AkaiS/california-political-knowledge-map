@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -32,6 +33,7 @@ from knowledge_map.schemas.query_preparation import (
     RewriteRejection,
 )
 from knowledge_map.schemas.retrieval import (
+    ArticleGroup,
     CoverageDescription,
     EvidenceAssemblyFailure,
     EvidencePackage,
@@ -47,7 +49,7 @@ from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=6)
+CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=10)
 
 QUESTION_POLICY = load_prompt("chat/question-policy", version=2)
 
@@ -64,6 +66,59 @@ class RetrievalGuidance(RetrievalValue):
     introduction: NonemptyText | None = None
     source_notes: tuple[SourceRelevanceNote, ...] = ()
     disagreements: tuple[SourceDisagreement, ...] = ()
+    groups: tuple[ArticleGroup, ...] = ()
+
+
+def _included_groups(
+    guidance: RetrievalGuidance, package: EvidencePackage
+) -> tuple[ArticleGroup, ...]:
+    included = {note.source_article_id for note in guidance.source_notes}
+    passages = {
+        source.citation.source_article_id: tuple(
+            passage.text for passage in source.passages
+        )
+        for source in package.sources
+    }
+    groups = []
+    for group in guidance.groups:
+        members = []
+        for member in group.members:
+            if member.source_article_id not in included:
+                continue
+            event_date = member.reported_event_date
+            if event_date and not (
+                group.kind == "timeline"
+                and group.order in {"event_asc", "event_desc"}
+                and re.fullmatch(
+                    r"(?:\d{4}(?:-\d{2}(?:-\d{2})?)?|"
+                    r"(?:January|February|March|April|May|June|July|August|September|October|November|December)"
+                    r"(?: \d{1,2},)? \d{4})",
+                    event_date,
+                )
+                and any(
+                    event_date in text
+                    for text in passages.get(member.source_article_id, ())
+                )
+            ):
+                event_date = None
+            validated = member.model_copy(update={"reported_event_date": event_date})
+            if validated not in members:
+                members.append(validated)
+        if not members:
+            continue
+        order = group.order
+        if order in {"event_asc", "event_desc"}:
+            dated = [member for member in members if member.reported_event_date]
+            undated = [member for member in members if not member.reported_event_date]
+            requested = package.execution.request.rewrite.assessment.reading_order
+            if requested in {"event_asc", "event_desc"} and requested != order:
+                dated.reverse()
+                order = requested
+            members = dated + undated
+        groups.append(
+            group.model_copy(update={"members": tuple(members), "order": order})
+        )
+    return tuple(groups)
 
 
 async def generate_retrieval_answer(
@@ -100,11 +155,12 @@ async def generate_retrieval_answer(
             if result.output.introduction:
                 disclosures.append(result.output.introduction)
             answer = RetrievalAnswer(
-                guidance_contract=2,
+                guidance_contract=3,
                 evidence=package,
                 introduction="\n\n".join(disclosures) or None,
                 source_notes=result.output.source_notes,
                 disagreements=result.output.disagreements,
+                groups=_included_groups(result.output, package),
             )
         except Exception as error:
             span.set_attributes(

@@ -31,7 +31,9 @@ article's arguments or conclusions.
 Present sources through views suited to the question: contrasting positions,
 differing accounts, chronological reading, or another supported division of the
 question. Article Groups organize sources rather than assign political positions
-to articles. One article may appear in several groups. An ungrouped list remains
+to articles. One article may belong to several groups, while its ordinary link
+appears once with relevant reading directions and verified highlights listed
+nearby. An ungrouped list remains
 useful when group organization is unavailable, provided every article has a
 defensible relevance reason.
 
@@ -184,7 +186,12 @@ create an architectural constraint or require an ADR.
   these references deterministically.
 - Support optional Article Groups with descriptive headings and article
   references. Different groups may reference the same article with distinct
-  reading directions. An ungrouped result is valid and retains per-article reasons.
+  reading directions. Distinct directions may also reference the same article
+  within one group; this alone is not invalid guidance. Render each included
+  article once as an ordinary, non-highlighted link, with its group-labeled
+  directions and any verified highlights listed nearby. Selecting a reading
+  view can reorder this single complete list. An ungrouped result is valid and
+  retains per-article reasons.
 - Support question-appropriate organization for opposing positions, differing
   accounts, timelines, and other parts of a question without forcing every
   question into two opposing groups or a fixed political taxonomy.
@@ -207,8 +214,10 @@ create an architectural constraint or require an ADR.
 - Wire title, Publication, publication date, article URL, and reading directions
   into guide presentation. Omit missing metadata; do not infer Publication names
   from unrelated source text or generate authors, dates, or scores.
-- Article links open separately and preserve the displayed guide. Keep an
-  ordinary article URL even when a relevant-section target is available.
+- Article links open separately and preserve the displayed guide. Show each
+  article once as an ordinary, non-highlighted link. List available verified
+  relevant-section highlights close to that link. Ticket 07 provides nearby
+  reading directions; ticket 08 supplies verified highlight links.
 - Derive targeted links from verified original Story wording associated with
   the selected Source Article. Retrieved chunks may contain coreference
   substitutions; their text and resolved offsets are not reliable original
@@ -414,3 +423,13 @@ are complete; ticket 01 is the initial frontier.
 | [07 Organize reading through contrast and timeline views](issues/07-organize-reading-views.md) | 02 |
 | [08 Direct readers to relevant article sections](issues/08-link-relevant-sections.md) | 02 |
 | [09 Explain guide coverage, outcomes, and search limits](issues/09-explain-search-coverage.md) | 02 |
+
+## Maintainer clarification, 2026-10-09
+
+The maintainer clarified article presentation during ticket 07 implementation:
+"An article should always appear once as a non-highlighted link and if we have
+them, a list of relevant highlights should appear in close proximity." This
+clarification supersedes repeated article-link rendering across groups. Group
+membership remains useful organization; the reader consolidates its directions
+near each article. Repeated memberships with distinct directions are accepted.
+Ticket 08 remains responsible for verified highlights.

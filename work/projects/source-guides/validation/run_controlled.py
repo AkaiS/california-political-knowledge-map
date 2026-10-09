@@ -40,10 +40,12 @@ ARTICLES = (
         "Housing grants hearing",
         "2025-03-01",
         (
-            "California AB 1 would expand affordable housing grants. "
+            "California AB 1 would expand affordable housing grants. The committee met on March 2, 2023. "
             "A committee hearing included a supporters section in which the Tenants Association "
             "argued that the grants would reduce rent pressure, and a detractors section in which "
-            "the Municipal Budget Council argued that the matching costs would strain city budgets."
+            "the Municipal Budget Council argued that the matching costs would strain city budgets. "
+            "The Tenants Association said the committee received its cost memo, while "
+            "the Municipal Budget Council said it had not received the same memo."
         ),
     ),
     (
@@ -51,7 +53,7 @@ ARTICLES = (
         "Housing proposal introduced",
         "2024-01-15",
         (
-            "California AB 1 was introduced with housing construction "
+            "California AB 1 was introduced in January 2022 with housing construction "
             "grant provisions. A section on eligibility explains which local governments could "
             "apply. Another section describes the scope of the initial proposal and the public hearing schedule."
         ),
@@ -166,7 +168,7 @@ async def controlled_dependencies(*, chat_deployment, capabilities):
                 evidence_limits=EvidenceContextLimits(),
                 coverage_observed_at=datetime.now(UTC).isoformat(),
                 retrieval_settings={
-                    "fixture": "SG01 fixed fictional reporting; no database or Jev model calls"
+                    "fixture": "SG01/SG07 fixed fictional reporting; no database or Jev model calls"
                 },
             ),
         )
@@ -196,8 +198,8 @@ def main():
             evaluators=(),
             case_lifecycle=chat.ChatCaseLifecycle,
             experiment_metadata={
-                "retrieval": "fixed fictional SG01 fixture",
-                "prompt": "chat/instructions/v6; chat/question-policy/v2",
+                "retrieval": "fixed fictional SG01/SG07 fixture",
+                "prompt": "chat/instructions/v10; chat/question-policy/v2",
             },
         )
     saved = write_report(
