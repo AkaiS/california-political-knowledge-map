@@ -349,6 +349,10 @@ On 2026-10-09 UTC, Source Guides implementation and per-ticket review completed:
   [reported event chronology defect](issues/05-source-guide-event-chronology.md).
   Its issue records the deterministic regression, correction, and follow-up
   validation separately from the completed sequence review.
+- The same exploration found an
+  [explicit publication-bounds defect](issues/06-source-guide-publication-bounds.md).
+  Its issue records the shared assessment correction, inclusion guard, and
+  validation separately from the completed sequence review.
 
 ## Information model
 

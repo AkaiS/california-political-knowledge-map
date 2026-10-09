@@ -54,7 +54,7 @@ from knowledge_map.utils.models import DEFAULT_LOCAL_CHAT_MODEL, get_chat_model
 
 logger = logging.getLogger(__name__)
 
-CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=12)
+CHAT_INSTRUCTIONS = load_prompt("chat/instructions", version=13)
 
 QUESTION_POLICY = load_prompt("chat/question-policy", version=2)
 
@@ -73,6 +73,36 @@ class RetrievalGuidance(RetrievalValue):
     disagreements: tuple[SourceDisagreement, ...] = ()
     groups: tuple[ArticleGroup, ...] = ()
     unmatched_requests: tuple[UnmatchedRequest, ...] = ()
+
+
+def _publication_bounded_guidance(
+    guidance: RetrievalGuidance, package: EvidencePackage
+) -> RetrievalGuidance:
+    assessment = package.execution.request.rewrite.assessment
+    first = assessment.publication_date_from
+    last = assessment.publication_date_through
+    if first is None and last is None:
+        return guidance
+    excluded = set()
+    for source in package.sources:
+        published = source.citation.published_date
+        try:
+            # Use the publication's stated day, without converting its timezone
+            # or inventing a day for missing or incomplete citation metadata.
+            day = datetime.fromisoformat(published).date() if published else None
+        except ValueError:
+            day = None
+        if day is None or (first and day < first) or (last and day > last):
+            excluded.add(source.citation.source_article_id)
+    return guidance.model_copy(
+        update={
+            "source_notes": tuple(
+                note
+                for note in guidance.source_notes
+                if note.source_article_id not in excluded
+            )
+        }
+    )
 
 
 def _event_date_bounds(value: str) -> tuple[date, date] | None:
@@ -201,6 +231,7 @@ async def generate_retrieval_answer(
                 output_type=RetrievalGuidance,
                 usage=usage,
             )
+            guidance = _publication_bounded_guidance(result.output, package)
             disclosures = list(package.failure_disclosures)
             structural_empty = package.execution.structural_empty_disclosure
             if structural_empty:
@@ -214,9 +245,9 @@ async def generate_retrieval_answer(
                 guidance_contract=4,
                 evidence=package,
                 introduction="\n\n".join(disclosures) or None,
-                source_notes=result.output.source_notes,
+                source_notes=guidance.source_notes,
                 disagreements=result.output.disagreements,
-                groups=_included_groups(result.output, package),
+                groups=_included_groups(guidance, package),
                 unmatched_requests=result.output.unmatched_requests,
             )
         except Exception as error:

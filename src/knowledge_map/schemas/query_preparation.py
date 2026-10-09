@@ -1,5 +1,6 @@
 """Question preparation values shared by the Chat Agent and retrieval."""
 
+from datetime import date
 from typing import Annotated, Literal, Self
 
 from pydantic import (
@@ -37,6 +38,18 @@ class QuestionAssessment(BaseModel):
     explanation: QuestionText | None = None
     recoverable_portion: QuestionText | None = None
     reading_order: ReadingOrder = "relevance"
+    publication_date_from: date | None = None
+    publication_date_through: date | None = None
+
+    @model_validator(mode="after")
+    def publication_bounds_are_chronological(self) -> Self:
+        if (
+            self.publication_date_from is not None
+            and self.publication_date_through is not None
+            and self.publication_date_from > self.publication_date_through
+        ):
+            raise ValueError("publication date bounds must be chronological")
+        return self
 
     @model_validator(mode="after")
     def unsupported_question_has_explanation(self) -> Self:
