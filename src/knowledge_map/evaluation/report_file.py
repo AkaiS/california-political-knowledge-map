@@ -1,15 +1,13 @@
-"""Write one Evaluation Run's report to a committed JSON file.
-
-Records the commit, Model Deployment, and model a run used.  Commit the
-report; an uncommitted run did not happen — see ADR 0017.
-"""
+"""Atomically serialize Evaluation Runs with their provenance (ADR 0024)."""
 
 from __future__ import annotations
 
 import dataclasses
 import hashlib
 import json
+import os
 import subprocess
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -75,8 +73,12 @@ def write_report(
     label_quality: LabelQuality,
     split: str | None = None,
     root: Path | None = None,
+    checkpoint: Any = None,
 ) -> Path:
     """Serialize ``report`` with its provenance and return where it landed."""
+    if checkpoint is not None:
+        checkpoint.finish(report)
+        return checkpoint.path
     selected = _deployment_for_report(deployment, model)
     ran_at = datetime.now(UTC)
     path = report_path(
@@ -109,8 +111,32 @@ def write_report(
         from .retrieval_report import compact_retrieval_report
 
         document = compact_retrieval_report(document)
-    path.write_text(json.dumps(document, indent=2, sort_keys=True, default=str) + "\n")
+    atomic_write_document(path, document)
     return path
+
+
+def atomic_write_document(path: Path, document: dict[str, Any]) -> None:
+    """Replace a snapshot only after its complete JSON is durably written."""
+    content = json.dumps(document, indent=2, sort_keys=True, default=str) + "\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def _deployment_for_report(

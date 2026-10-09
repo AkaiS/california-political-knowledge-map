@@ -1,7 +1,7 @@
 """`ca-map eval` — collect an Evaluation Data Set's candidates, and run it.
 
-`collect` writes the file the author then edits; `run` reads that file and
-writes one report.  Neither touches a database — see ADR 0017.
+`collect` writes the file the author then edits; `run` checkpoints that file's
+selected population and outcomes into one report — see ADR 0024.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
+from collections.abc import Mapping
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from knowledge_map.evaluation import (
     trace_url,
     write_report,
 )
+from knowledge_map.evaluation.persistence import ReportCheckpoint
 from knowledge_map.evaluation.tasks import task_named, task_names
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.utils.deployments import deployment_from_environment
@@ -131,7 +133,9 @@ def dispatch(args: argparse.Namespace) -> None:
 def _collect(args: argparse.Namespace) -> None:
     task = task_named(args.task)
     if task.collect is None:
-        sys.exit(f"{task.name} has no labeled data to collect from; author the file by hand")
+        sys.exit(
+            f"{task.name} has no labeled data to collect from; author the file by hand"
+        )
 
     path = args.data_set or data_set_path(task.data_set_stem, task.label_quality)
     if path.exists() and not args.force:
@@ -151,11 +155,16 @@ def _collect(args: argparse.Namespace) -> None:
         "cases": cases,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=100))
+    path.write_text(
+        yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=100)
+    )
     print(f"Wrote {len(cases)} cases to {path}")
 
     labels = Counter(case["expected_output"]["classification"] for case in cases)
-    print("Labels: " + ", ".join(f"{label} {count}" for label, count in labels.most_common()))
+    print(
+        "Labels: "
+        + ", ".join(f"{label} {count}" for label, count in labels.most_common())
+    )
     _warn_if_one_label_dominates(labels)
 
     if skipped:
@@ -185,7 +194,7 @@ def _warn_if_one_label_dominates(labels: Counter) -> None:
     )
 
 
-def _run(args: argparse.Namespace) -> None:
+def _run(args: argparse.Namespace) -> Path | None:
     task = task_named(args.task)
     try:
         deployment = select_deployment(
@@ -214,33 +223,81 @@ def _run(args: argparse.Namespace) -> None:
         if unknown:
             sys.exit("Unknown case IDs: " + ", ".join(sorted(unknown)))
         data_set = data_set.model_copy(
-            update={"cases": tuple(case for case in data_set.cases if case.id in selected)}
+            update={
+                "cases": tuple(case for case in data_set.cases if case.id in selected)
+            }
         )
 
+    metadata = {
+        **getattr(args, "run_metadata", {}),
+        **getattr(args, "experiment_metadata", {}),
+        "task": task.name,
+        "deployment": deployment.model_dump(mode="json"),
+        "commit": run_commit(),
+        "prompts": task.prompt_digests(),
+        "data_set": str(path),
+        "label_quality": task.label_quality.value,
+        "split": split.value if split else None,
+        "case_ids": case_ids,
+    }
+    selected_cases = data_set.split(split) if split else data_set.cases
+    if not selected_cases:
+        sys.exit("The requested selection contains no cases.")
+    checkpoint = (
+        None
+        if args.no_report
+        else ReportCheckpoint(
+            task=task.name,
+            cases=selected_cases,
+            deployment=deployment,
+            data_set_path=path,
+            label_quality=task.label_quality,
+            split=split.value if split else None,
+            experiment_metadata=metadata,
+        )
+    )
+    if checkpoint is not None:
+        print(f"Evaluation report: {checkpoint.path}")
+        callback = getattr(args, "report_written_callback", None)
+        if callback is not None:
+            callback(checkpoint.path)
     admission_scope = (
         openrouter_admission_ceiling(args.max_concurrency)
         if deployment.kind is DeploymentKind.OPENROUTER
         else nullcontext()
     )
-    with admission_scope:
-        report = run_data_set(
-            data_set,
-            task=task.build(deployment, data_set),
-            evaluators=task.evaluators,
-            case_lifecycle=getattr(task, "case_lifecycle", None),
-            split=split,
-            max_concurrency=args.max_concurrency,
-            experiment_metadata={
-                "task": task.name,
-                "deployment": deployment.model_dump(mode="json"),
-                "commit": run_commit(),
-                "prompts": task.prompt_digests(),
-                "data_set": str(path),
-                "label_quality": task.label_quality.value,
-                "split": split.value if split else None,
-                "case_ids": case_ids,
-            },
-        )
+    try:
+        with admission_scope:
+            report = run_data_set(
+                data_set,
+                task=task.build(deployment, data_set),
+                evaluators=task.evaluators,
+                case_lifecycle=getattr(task, "case_lifecycle", None),
+                split=split,
+                max_concurrency=args.max_concurrency,
+                experiment_metadata=metadata,
+                checkpoint=checkpoint,
+            )
+        written = None
+        if checkpoint is not None:
+            written = write_report(
+                report,
+                task=task.name,
+                deployment=deployment,
+                data_set_path=path,
+                label_quality=task.label_quality,
+                split=split.value if split else None,
+                checkpoint=checkpoint,
+            )
+            print(f"\nWrote {written}")
+    except BaseException as error:
+        if checkpoint is not None:
+            try:
+                checkpoint.interrupted(f"{type(error).__name__}: {error}")
+            except Exception as persistence_error:  # noqa: BLE001 -- preserve the original abort when snapshot serialization fails
+                print(f"Could not update the saved snapshot: {persistence_error}")
+            print(f"\nIncomplete evaluation report: {checkpoint.path}")
+        raise
     report.print(include_input=False, include_output=False)
 
     # Printed before the failure check below: a run that failed is exactly the
@@ -249,20 +306,28 @@ def _run(args: argparse.Namespace) -> None:
     if trace:
         print(f"\nTrace: {trace}")
 
-    if report.failures:
-        # A failed case is not a completed Evaluation Run; do not persist a
-        # report whose cases would be mistaken for a complete Data Set result.
-        raise SystemExit("Evaluation Run failed; no report was written.")
-
-    if args.no_report:
-        return
-    written = write_report(
-        report,
-        task=task.name,
-        deployment=deployment,
-        data_set_path=path,
-        label_quality=task.label_quality,
-        split=split.value if split else None,
+    has_execution_errors = (
+        bool(report.failures or report.report_evaluator_failures)
+        or any(case.evaluator_failures for case in report.cases)
+        or any(
+            any(
+                (
+                    case.output.get(field)
+                    if isinstance(case.output, Mapping)
+                    else getattr(case.output, field, None)
+                )
+                is not None
+                for field in ("failure", "failure_type")
+            )
+            for case in report.cases
+        )
     )
-    print(f"\nWrote {written}")
-    print("Commit it — a run whose report is not committed did not happen.")
+    if has_execution_errors:
+        raise SystemExit(
+            f"Evaluation Run failed; report preserved at {written}."
+            if written
+            else "Evaluation Run failed; reporting disabled by --no-report."
+        )
+    if written is not None:
+        print("Commit the report to preserve its evaluation evidence.")
+    return written

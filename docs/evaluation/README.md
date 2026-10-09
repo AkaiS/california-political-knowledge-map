@@ -17,6 +17,6 @@ annotation rules.
 | Annotate Topic Assignment | [Topic assignment annotation](topic-assignment-annotation.md) |
 
 For evaluation artifact provenance and storage decisions, see
-[ADR 0017](../adr/0017-git-is-the-evaluation-versioning-system.md). To inspect
+[ADR 0024](../adr/0024-evaluations-preserve-the-selected-population-and-progress.md). To inspect
 application decisions and model activity, use the
 [Chat Session trail guide](../chat-session-trails.md).

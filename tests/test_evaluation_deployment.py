@@ -10,9 +10,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic_evals.reporting import EvaluationReport, ReportCase
 
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality, report_path, write_report
+from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -37,14 +39,13 @@ def test_evaluation_run_defaults_to_openrouter_deployment() -> None:
 @pytest.mark.parametrize("value", ["0", "-1"])
 def test_evaluation_run_requires_positive_max_concurrency(value: str) -> None:
     with pytest.raises(SystemExit):
-        _parser().parse_args(
-            ["eval", "run", "relevance", "--max-concurrency", value]
-        )
+        _parser().parse_args(["eval", "run", "relevance", "--max-concurrency", value])
 
 
 def test_eval_run_binds_one_model_deployment_to_task_and_report(
     tmp_path: Path, monkeypatch
 ) -> None:
+    monkeypatch.chdir(tmp_path)
     calls: dict[str, object] = {}
     data_set_path = tmp_path / "relevance.yaml"
     data_set_path.write_text("placeholder")
@@ -65,10 +66,43 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
         build=build,
         evaluators=(),
     )
-    report = SimpleNamespace(print=lambda **kwargs: None, failures=())
+    report = EvaluationReport(
+        name="relevance",
+        cases=[
+            ReportCase(
+                name="case",
+                inputs={},
+                expected_output={},
+                metadata=None,
+                output={},
+                metrics={},
+                attributes={},
+                scores={},
+                labels={},
+                assertions={},
+                task_duration=0.0,
+                total_duration=0.0,
+            )
+        ],
+    )
 
     monkeypatch.setattr(evaluate, "task_named", lambda name: task)
-    monkeypatch.setattr(evaluate, "load_data_set", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        evaluate,
+        "load_data_set",
+        lambda *args, **kwargs: EvaluationDataSet(
+            task="relevance",
+            description="test",
+            cases=(
+                EvaluationCase(
+                    id="case",
+                    description="test",
+                    task_input={},
+                    expected_output={},
+                ),
+            ),
+        ),
+    )
     monkeypatch.setattr(evaluate, "run_data_set", lambda *args, **kwargs: report)
 
     def capture_report(*args, **kwargs):
