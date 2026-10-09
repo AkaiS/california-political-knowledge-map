@@ -1,7 +1,9 @@
-"""Reader-facing Source Guide values contain citations and directions only."""
+"""Reader-facing citations, directions, and verified navigation without chunk bodies."""
 
 from datetime import datetime
 from typing import Literal
+
+from pydantic import HttpUrl
 
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import (
@@ -15,6 +17,7 @@ from knowledge_map.schemas.retrieval import (
 class GuideArticle(RetrievalValue):
     citation: SourceArticleCitation
     reading_direction: NonemptyText
+    section_links: tuple[HttpUrl, ...] = ()
 
 
 GuideOutcome = Literal[

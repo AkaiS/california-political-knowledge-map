@@ -229,13 +229,13 @@ def create_app(
             if isinstance(result, QuestionAssessment):
                 guide = assessment_guide(saved.question, result)
             else:
-                guide = source_guide(result)
+                guide = source_guide(result, story_db_path=guide_store.db_path)
                 if isinstance(result, RetrievalAnswer):
                     logfire.info(
                         "chat_session.answer_prepared",
                         chat_session_id=session.chat_session_id,
                         audit_schema_version=2,
-                        rendered_text=render_answer(result),
+                        rendered_text=render_answer(result, guide=guide),
                         selected_sources=[
                             {
                                 "citation": source.citation.model_dump(mode="json"),

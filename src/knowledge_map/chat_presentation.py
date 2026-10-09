@@ -3,12 +3,17 @@
 import html
 import re
 from datetime import datetime
+from urllib.parse import quote, urlsplit, urlunsplit
 
+from pydantic import HttpUrl, ValidationError
+
+from knowledge_map.adapters import sqlite_db
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import (
     ArticleGroup,
     EvidenceAssemblyFailure,
     RetrievalAnswer,
+    SourceArticleEvidence,
 )
 from knowledge_map.schemas.source_guides import GuideArticle, SourceGuide
 
@@ -24,7 +29,11 @@ def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGui
     )
 
 
-def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGuide:
+def source_guide(
+    result: RetrievalAnswer | EvidenceAssemblyFailure,
+    *,
+    story_db_path: str = sqlite_db.DEFAULT_DB_PATH,
+) -> SourceGuide:
     execution = (
         result.evidence.execution
         if isinstance(result, RetrievalAnswer)
@@ -41,12 +50,22 @@ def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGui
     relevance_order = ()
     if isinstance(result, RetrievalAnswer):
         citations = {
-            source.citation.source_article_id: source.citation
+            source.citation.source_article_id: source.citation.model_copy(
+                update={"url": _ordinary_url(source.citation.url)}
+            )
+            for source in result.evidence.sources
+        }
+        sources = {
+            source.citation.source_article_id: source
             for source in result.evidence.sources
         }
         articles = tuple(
             GuideArticle(
-                citation=citations[note.source_article_id], reading_direction=note.note
+                citation=citations[note.source_article_id],
+                reading_direction=note.note,
+                section_links=_section_links(
+                    sources[note.source_article_id], story_db_path
+                ),
             )
             for note in result.source_notes
         )
@@ -136,6 +155,72 @@ def source_guide(result: RetrievalAnswer | EvidenceAssemblyFailure) -> SourceGui
     )
 
 
+def _section_links(source: SourceArticleEvidence, db_path: str) -> tuple[HttpUrl, ...]:
+    try:
+        original_url = HttpUrl(source.citation.source_article_id)
+    except ValidationError:
+        return ()
+    if urlsplit(str(original_url))._replace(fragment="") != urlsplit(
+        str(source.citation.url)
+    )._replace(fragment=""):
+        return ()
+    original = sqlite_db.get_story_content(source.citation.source_article_id, db_path)
+    if not original:
+        return ()
+    original = " ".join(original.split())
+    links = []
+    for passage in source.passages:
+        text = " ".join(passage.text.split())
+        if not text or text not in original or not _unique_match(original, text):
+            continue
+        start = original.index(text)
+        if text[0].isalnum() and start and original[start - 1].isalnum():
+            continue
+        target = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0]
+        if len(target) > 160:
+            target = target[:160].rpartition(" ")[0]
+        if not target:
+            continue
+        end = start + len(target)
+        if target[-1].isalnum() and end < len(original) and original[end].isalnum():
+            continue
+        directive = _fragment_term(target)
+        if not _unique_match(original, target):
+            suffix = text[len(target) :].strip()
+            if len(suffix) > 80:
+                suffix = suffix[:80].rpartition(" ")[0]
+            if not suffix or not _unique_match(original, f"{target} {suffix}"):
+                continue
+            directive += ",-" + _fragment_term(suffix)
+        url = urlsplit(str(_ordinary_url(source.citation.url)))
+        try:
+            links.append(
+                HttpUrl(
+                    urlunsplit(
+                        url._replace(fragment=url.fragment + ":~:text=" + directive)
+                    )
+                )
+            )
+        except ValidationError:
+            continue
+    return tuple(dict.fromkeys(links))
+
+
+def _unique_match(original: str, text: str) -> bool:
+    return len(re.findall(f"(?={re.escape(text)})", original, flags=re.IGNORECASE)) == 1
+
+
+def _ordinary_url(url: HttpUrl) -> HttpUrl:
+    parts = urlsplit(str(url))
+    return HttpUrl(
+        urlunsplit(parts._replace(fragment=parts.fragment.split(":~:", 1)[0]))
+    )
+
+
+def _fragment_term(text: str) -> str:
+    return quote(text, safe="").replace("-", "%2D")
+
+
 def _publication_key(value: str | None, newest: bool) -> tuple[bool, int]:
     try:
         ordinal = datetime.fromisoformat(value or "").date().toordinal()
@@ -148,9 +233,13 @@ def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 
 
-def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
+def render_answer(
+    result: RetrievalAnswer | EvidenceAssemblyFailure,
+    *,
+    guide: SourceGuide | None = None,
+) -> str:
     """Evaluation consumers see the same reading selection as the application."""
-    guide = source_guide(result)
+    guide = guide if guide is not None else source_guide(result)
     paragraphs = [_escape_markdown_text(guide.question)]
     if guide.message:
         paragraphs.append(_escape_markdown_text(guide.message))
@@ -162,6 +251,8 @@ def render_answer(result: RetrievalAnswer | EvidenceAssemblyFailure) -> str:
         if citation.published_date:
             paragraphs.append(_escape_markdown_text(citation.published_date))
         paragraphs.append(_escape_markdown_text(article.reading_direction))
+        for index, url in enumerate(article.section_links, start=1):
+            paragraphs.append(f"   - [Relevant highlight {index}](<{url}>)")
         for group in guide.groups:
             for member in group.members:
                 if member.source_article_id != citation.source_article_id:

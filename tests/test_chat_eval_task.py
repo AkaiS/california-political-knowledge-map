@@ -500,3 +500,45 @@ def test_shared_evaluation_retains_groups_and_renders_membership_directions(
         ]
         == "Read the detractors section."
     )
+
+
+def test_evaluation_keeps_one_ordinary_article_and_nearby_verified_section_links(
+    monkeypatch, tmp_path
+):
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.schemas.stories import Story
+
+    monkeypatch.chdir(tmp_path)
+    init_db()
+    save_story(
+        Story(
+            url="https://example.com/dense",
+            title="Support coverage",
+            content="The union supports AB 1.",
+        )
+    )
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/dense",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ]
+        },
+    )
+    report = run_one()
+    assert not report.failures
+    output = report.cases[0].output
+    assert output.failure is None
+    assert (
+        str(output.guide.articles[0].section_links[0])
+        == "https://example.com/dense#:~:text=The%20union%20supports%20AB%201."
+    )
+    assert output.rendered_text.count("(<https://example.com/dense>)") == 1
+    assert (
+        "[Relevant highlight 1](<https://example.com/dense#:~:text=The%20union%20supports%20AB%201.>)"
+        in output.rendered_text
+    )
+    assert "The union supports AB 1." not in output.rendered_text

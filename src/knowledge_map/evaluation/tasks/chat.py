@@ -249,8 +249,10 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     output.answer = result
                     output.retrieval = None
                     stage = "rendering"
-                    output.rendered_text = render_answer(output.answer)
                     output.guide = source_guide(output.answer)
+                    output.rendered_text = render_answer(
+                        output.answer, guide=output.guide
+                    )
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Preserve a failed case for review.
             # A bad answer, unavailable dependency, or failed model request is

@@ -27,5 +27,7 @@ a { color: #145d52; font-weight: 600; text-underline-offset: .2em; overflow-wrap
 .reading-directions { margin: .8rem 0 0; padding-left: 1.4rem; }
 .reading-directions li { border: 0; padding: .5rem; }
 .reading-directions .selected-direction { background: #eff5ee; border-radius: .3rem; }
+.section-links { margin: .4rem 0; padding-left: 1.4rem; }
+.section-links li { border: 0; padding: .2rem 0; }
 select { max-width: 100%; font: inherit; padding: .3rem; color: inherit; background: white; }
 @media (max-width: 560px) { main { margin-top: 1.5rem; } .guide-heading { display: block; } }

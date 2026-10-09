@@ -213,7 +213,7 @@ function renderArticles() {
     ? `${timelineLabels[selectedGroup.order] || 'Related articles appear first.'} Every included article remains available.`
     : articleOrder.value === 'requested'
       ? timelineLabels[currentGuide.assessment.reading_order]
-      : 'Each article appears once. Its reading directions are listed beneath its link.';
+      : 'Each article appears once. Reading directions and available highlights are listed beneath its link.';
   for (const article of ordered) articles.append(articleRow(article, selectedIndex));
 }
 
@@ -239,6 +239,22 @@ function articleRow(article, selectedIndex) {
   const direction = document.createElement('p');
   direction.textContent = article.reading_direction;
   row.append(direction);
+  const highlights = document.createElement('ul');
+  highlights.className = 'section-links';
+  highlights.setAttribute('aria-label', 'Relevant highlights');
+  for (const [index, target] of (article.section_links || []).entries()) {
+    const section = new URL(target);
+    if (section.protocol !== 'https:' && section.protocol !== 'http:') continue;
+    const item = document.createElement('li');
+    const highlight = document.createElement('a');
+    highlight.href = section.href;
+    highlight.target = '_blank';
+    highlight.rel = 'noopener noreferrer';
+    highlight.textContent = `Relevant highlight ${index + 1}`;
+    item.append(highlight);
+    highlights.append(item);
+  }
+  if (highlights.children.length) row.append(highlights);
   const directions = document.createElement('ul');
   directions.className = 'reading-directions';
   for (const [index, group] of (currentGuide.groups || []).entries()) {

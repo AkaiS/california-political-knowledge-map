@@ -5,9 +5,11 @@ Parent: [Source Guides spec](../PRD.md)
 
 ## What to build
 
-Use internal selected evidence to offer a relevant-section link that highlights
+Use internal selected evidence to offer relevant-section links that highlight
 verified original Story wording on the actual article page where supported.
-Always retain the ordinary article link. Readers never see Article Chunks.
+Each included article appears once as an ordinary, non-highlighted link, with a
+list of available verified highlights nearby. Preserve its reading directions
+and the complete article list in every reading view. Readers never see Article Chunks.
 
 ## Acceptance criteria
 
@@ -19,6 +21,9 @@ Always retain the ordinary article link. Readers never see Article Chunks.
   produce ordinary-link fallback rather than fabricated anchors.
 - [ ] Save reader-safe targeted URLs with the guide so reopening needs no live
   scraping, graph hydration, or regeneration. Always preserve the ordinary URL.
+- [ ] Each included article appears once as an ordinary, non-highlighted link,
+  with all available verified highlight links listed nearby. Group directions
+  and articles without highlights remain available in every reading view.
 - [ ] Source and relevant-section links open in separate tabs. When browser
   support, publisher restrictions, or page changes prevent highlighting, the
   reader can still reach the article.
@@ -39,3 +44,13 @@ repeats, absent text, unsafe URLs, and omitted sources. A chunk sentinel must
 never appear publicly. Browser-verify actual highlighting and separate-tab
 navigation on controlled source pages, plus useful ordinary-link fallback.
 Run required checks with uv without independent Chat Session tests.
+
+## Comments
+
+The maintainer clarified the presentation on 2026-10-09: "An article should
+always appear once as a non-highlighted link and if we have them, a list of
+relevant highlights should appear in close proximity." This applies alongside
+ticket 07's consolidated article list and nearby group directions.
+
+Implementation and test evidence: [ticket 08 validation](../validation/ticket-08.md).
+Acceptance and the completed label remain pending independent review.
