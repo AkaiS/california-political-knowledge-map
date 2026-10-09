@@ -14,36 +14,36 @@ METRIC_VERSION = "unique-chunk-budget-v2"
 REPORT_VERSION = 1
 
 
-def _best_ranks(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    best = {}
-    for candidate in candidates:
-        chunk = candidate["chunk_id"]
-        rank = candidate["ranking"]["rank"]
-        if chunk not in best or rank < best[chunk]["rank"]:
-            best[chunk] = {
-                "chunk_id": chunk,
-                "source_article_id": candidate["source_article_id"],
-                "rank": rank,
-            }
-    return sorted(best.values(), key=lambda c: (c["rank"], c["chunk_id"]))
-
-
 def compact_branches(
     outcomes: list[dict[str, Any]], config: FusionConfig
 ) -> list[dict[str, Any]]:
     """Keep branch budgets and only the extra ranks that affect fusion."""
-    ranked = {o["branch"]: _best_ranks(o.get("candidates", [])) for o in outcomes}
-    eligible_by_branch = {
-        branch: records[: getattr(config, f"{branch}_candidate_limit")]
-        for branch, records in ranked.items()
+    ranks_by_branch = {
+        RetrievalBranch(outcome["branch"]): [
+            (candidate["chunk_id"], candidate["ranking"]["rank"])
+            for candidate in outcome.get("candidates", [])
+        ]
+        for outcome in outcomes
     }
-    eligible = {
-        r["chunk_id"] for records in eligible_by_branch.values() for r in records
-    }
+    best_ranks, eligible_by_branch = _prepare_ranking(ranks_by_branch, config=config)
+    eligible = {chunk for chunks in eligible_by_branch.values() for chunk in chunks}
     compact = []
     for outcome in outcomes:
-        branch = outcome["branch"]
-        records = ranked[branch]
+        branch = RetrievalBranch(outcome["branch"])
+        articles = {}
+        for candidate in outcome.get("candidates", []):
+            articles.setdefault(
+                (candidate["chunk_id"], candidate["ranking"]["rank"]),
+                candidate["source_article_id"],
+            )
+        records = [
+            {
+                "chunk_id": chunk,
+                "source_article_id": articles[chunk, rank],
+                "rank": rank,
+            }
+            for chunk, rank in best_ranks[branch].items()
+        ]
         kept = records[:CHUNK_BUDGET]
         summary = {
             k: outcome[k] for k in ("branch", "status", "reason") if k in outcome
@@ -58,10 +58,8 @@ def compact_branches(
         )
         # Nondefault larger production budgets still need their eligibility
         # recorded. This does not enlarge the 50-chunk evaluation budget.
-        if getattr(config, f"{branch}_candidate_limit") > CHUNK_BUDGET:
-            summary["fusion_eligible_chunk_ids"] = [
-                r["chunk_id"] for r in eligible_by_branch[branch]
-            ]
+        if getattr(config, f"{branch.value}_candidate_limit") > CHUNK_BUDGET:
+            summary["fusion_eligible_chunk_ids"] = eligible_by_branch[branch]
         compact.append(summary)
     return compact
 

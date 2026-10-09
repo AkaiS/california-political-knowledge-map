@@ -14,6 +14,107 @@ from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import RetrievalBranch
 
 
+@pytest.mark.parametrize("limit", [2, 50, 75])
+@pytest.mark.parametrize("reverse_inputs", [False, True])
+def test_compaction_preserves_measurement_population_and_only_eligible_tail_ranks(
+    limit, reverse_inputs
+):
+    candidates = (
+        candidate(RetrievalBranch.FULL_TEXT, "ft-002", 20),
+        *(
+            candidate(RetrievalBranch.FULL_TEXT, f"ft-{number:03}", 2)
+            for number in range(1, 81)
+        ),
+        candidate(RetrievalBranch.FULL_TEXT, "ft-001", 99),
+        candidate(RetrievalBranch.FULL_TEXT, "cross", 98),
+        candidate(RetrievalBranch.DENSE, "cross", 2),
+        candidate(RetrievalBranch.DENSE, "ft-001", 38),
+    )
+    retained = execution(*(reversed(candidates) if reverse_inputs else candidates))
+    outcomes = retained.model_dump(mode="json")["outcomes"]
+    if reverse_inputs:
+        outcomes.reverse()
+    original = copy.deepcopy(outcomes)
+    config = FusionConfig(
+        full_text_weight=2,
+        dense_weight=4,
+        structural_weight=6,
+        rank_constant=2,
+        full_text_candidate_limit=limit,
+        dense_candidate_limit=limit,
+        structural_candidate_limit=limit,
+        fused_candidate_limit=3,
+    )
+
+    compact = compact_branches(outcomes, config)
+
+    expected: dict[str, dict[str, Any]] = {
+        "full_text": {
+            "branch": "full_text",
+            "status": "succeeded",
+            "candidates": [
+                {
+                    "chunk_id": f"ft-{number:03}",
+                    "source_article_id": "article-a",
+                    "rank": 2,
+                }
+                for number in range(1, 51)
+            ],
+            "retrieved_count": 83,
+            "unique_chunk_count": 81,
+            "extra_fusion_ranks": [
+                *(
+                    {
+                        "chunk_id": f"ft-{number:03}",
+                        "source_article_id": "article-a",
+                        "rank": 2,
+                    }
+                    for number in range(51, limit + 1)
+                ),
+                {"chunk_id": "cross", "source_article_id": "article-a", "rank": 98},
+            ],
+        },
+        "dense": {
+            "branch": "dense",
+            "status": "succeeded",
+            "candidates": [
+                {"chunk_id": "cross", "source_article_id": "article-a", "rank": 2},
+                {"chunk_id": "ft-001", "source_article_id": "article-a", "rank": 38},
+            ],
+            "retrieved_count": 2,
+            "unique_chunk_count": 2,
+            "extra_fusion_ranks": [],
+        },
+        "structural": {
+            "branch": "structural",
+            "status": "succeeded",
+            "candidates": [],
+            "retrieved_count": 0,
+            "unique_chunk_count": 0,
+            "extra_fusion_ranks": [],
+        },
+    }
+    if limit == 75:
+        expected["full_text"]["fusion_eligible_chunk_ids"] = [
+            f"ft-{number:03}" for number in range(1, 76)
+        ]
+        expected["dense"]["fusion_eligible_chunk_ids"] = ["cross", "ft-001"]
+        expected["structural"]["fusion_eligible_chunk_ids"] = []
+    assert compact == [expected[outcome["branch"]] for outcome in outcomes]
+    assert outcomes == original
+
+    replay = replay_fusion(compact, config)
+    assert [(row["chunk_id"], row["rank"], row["fusion_score"]) for row in replay] == [
+        ("cross", 1, 1.02),
+        ("ft-001", 2, 0.6),
+        ("ft-002", 3, 0.5),
+    ]
+    assert [
+        (row.chunk_id, row.rank, row.fusion_score)
+        for row in fuse_candidates(retained, config=config)
+    ] == [(row["chunk_id"], row["rank"], row["fusion_score"]) for row in replay]
+
+
 @pytest.mark.parametrize("reverse_inputs", [False, True])
 def test_production_and_replay_preserve_nondefault_scores_and_final_limit(
     reverse_inputs,

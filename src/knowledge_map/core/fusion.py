@@ -19,21 +19,22 @@ def _prepare_ranking(
     config: FusionConfig,
     nomination_pools: Mapping[RetrievalBranch, Collection[str]] | None = None,
     recorded_eligibility: Mapping[RetrievalBranch, Sequence[str]] | None = None,
-) -> tuple[dict[str, dict[RetrievalBranch, int]], dict[RetrievalBranch, list[str]]]:
-    best_ranks: dict[str, dict[RetrievalBranch, int]] = {}
+) -> tuple[dict[RetrievalBranch, dict[str, int]], dict[RetrievalBranch, list[str]]]:
+    best_ranks: dict[RetrievalBranch, dict[str, int]] = {}
     eligible_by_branch: dict[RetrievalBranch, list[str]] = {}
     for branch in RetrievalBranch:
         branch_ranks: dict[str, int] = {}
         for chunk, rank in ranks_by_branch.get(branch, ()):
             branch_ranks[chunk] = min(branch_ranks.get(chunk, rank), rank)
-        for chunk, rank in branch_ranks.items():
-            best_ranks.setdefault(chunk, {})[branch] = rank
+        best_ranks[branch] = dict(
+            sorted(branch_ranks.items(), key=lambda item: (item[1], item[0]))
+        )
         # Retained tail ranks can contribute without becoming new nominations.
-        pool = (nomination_pools or {}).get(branch, branch_ranks)
+        pool = (nomination_pools or {}).get(branch, best_ranks[branch])
         branch_ids = (
             list(recorded_eligibility[branch])
             if recorded_eligibility is not None and branch in recorded_eligibility
-            else sorted(pool, key=lambda chunk: (branch_ranks[chunk], chunk))[
+            else [chunk for chunk in best_ranks[branch] if chunk in pool][
                 : getattr(config, f"{branch.value}_candidate_limit")
             ]
         )
@@ -42,13 +43,18 @@ def _prepare_ranking(
 
 
 def _rank_candidates(
-    best_ranks: Mapping[str, Mapping[RetrievalBranch, int]],
+    best_ranks: Mapping[RetrievalBranch, Mapping[str, int]],
     eligible_by_branch: Mapping[RetrievalBranch, Sequence[str]],
     *,
     config: FusionConfig,
     unweighted_baseline: bool = False,
 ) -> list[tuple[str, float]]:
     eligible = {chunk for chunks in eligible_by_branch.values() for chunk in chunks}
+    contributions: dict[str, dict[RetrievalBranch, int]] = {}
+    for branch, ranks in best_ranks.items():
+        for chunk, rank in ranks.items():
+            if chunk in eligible:
+                contributions.setdefault(chunk, {})[branch] = rank
     ranked = sorted(
         (
             (
@@ -63,8 +69,7 @@ def _rank_candidates(
                     for branch, rank in ranks.items()
                 ),
             )
-            for chunk_id, ranks in best_ranks.items()
-            if chunk_id in eligible
+            for chunk_id, ranks in contributions.items()
         ),
         key=lambda item: (-item[1], item[0]),
     )
