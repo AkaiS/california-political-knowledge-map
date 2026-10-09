@@ -77,11 +77,12 @@ that expected the question before the new date-context message. That assertion
 now checks the question in its new position. The suite was rerun with local
 loopback permission and passed. `git diff --check` also passed.
 
-Broader type checking reports 48 diagnostics in three unchanged main files,
+At merge commit `feb9eff`, broader type checking reported 48 diagnostics in three
+unchanged main files,
 `scripts/review_chat_eval.py`, `src/knowledge_map/evaluation/persistence.py`, and
-`src/knowledge_map/evaluation/rag_review.py`. Their contents match the main merge
-parent byte-for-byte. Broad formatting also reports one unchanged main assertion
-in `tests/test_chat_eval_review.py`. The six existing prompt-resource test type
+`src/knowledge_map/evaluation/rag_review.py`. Their contents matched the main merge
+parent byte-for-byte at that commit. Broad formatting also reported one unchanged
+main assertion in `tests/test_chat_eval_review.py`. The six existing prompt-resource test type
 diagnostics and two existing chat-evaluation test type diagnostics remain; the
 latter were reproduced against the premerge HEAD file. These were not introduced
 by integration. An inherited type diagnostic in the changed chat module was
@@ -91,3 +92,27 @@ values.
 These deterministic and controlled-browser checks verify contracts and reader
 behavior. They do not measure model relevance quality. No live model evaluation
 or public deployment was performed during integration.
+
+## Independent review correction
+
+Independent Spec review found a P2 mismatch between Source Guides outputs and
+main's report consumers. Direct submissions record `assessment.status` and
+`assessment.explanation`, while the RAG projection and summary still read only
+historical `preparation` fields. Declined and Needs Edit cases appeared as
+`no_answer`; Deferred explanations and direct decline counts were lost.
+
+Regression tests reproduced all three direct assessment projection failures and
+a mixed current/historical report summary that counted one decline instead of
+two. The consumers now prefer the current assessment and fall back to historical
+preparation. Legacy `needs_clarification` remains supported. Failure and unresolved
+outcomes keep precedence, and Deferred guidance retains its context and generation
+judgment inputs. The CLI regression also verifies that summarizing a report leaves
+its saved bytes unchanged.
+
+The focused evaluation/report suite passed 87 tests, and the 31 Node reviewer
+tests passed. The final deterministic suite passed with 1,709 tests, 71 opt-in
+skips, and the existing OpenRouter sampling warning. Changed files pass Ruff lint,
+formatting, and whitespace checks.
+The type check reproduces the same 36 existing RAG projection diagnostics and
+three existing import-loader diagnostics in the summary tests, with no new
+diagnostics. No prompt, historical report, inbox feedback, or browser code changed.

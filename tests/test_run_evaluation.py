@@ -155,6 +155,72 @@ def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
     assert summary["reviewer_url"] == "http://127.0.0.1:8766/runs/retrieval--run"
 
 
+def test_report_cli_counts_direct_and_historical_declines_without_rewriting_report(
+    tmp_path, capsys
+):
+    document = {
+        "task": "chat",
+        "label_quality": "unlabeled",
+        "report": {
+            "cases": [
+                {
+                    "name": "historical-decline",
+                    "output": {
+                        "preparation": {
+                            "status": "declined",
+                            "message": "Forecasts are outside the question policy.",
+                        }
+                    },
+                },
+                {
+                    "name": "direct-decline",
+                    "output": {
+                        "approval_mode": "direct_question",
+                        "preparation": None,
+                        "assessment": {
+                            "status": "declined",
+                            "explanation": "Forecasts are outside the question policy.",
+                        },
+                    },
+                },
+                {
+                    "name": "needs-edit",
+                    "output": {
+                        "assessment": {
+                            "status": "needs_edit",
+                            "explanation": "Name the bill in the complete question.",
+                        }
+                    },
+                },
+                {
+                    "name": "deferred-with-guidance",
+                    "output": {
+                        "assessment": {
+                            "status": "deferred",
+                            "explanation": "The collection has a limited date range.",
+                            "recoverable_portion": "Reporting inside that range.",
+                        },
+                        "answer": {"introduction": None, "source_notes": []},
+                        "rendered_text": "Read the available reporting.",
+                    },
+                },
+            ]
+        },
+    }
+    path = _saved(tmp_path, document)
+    original = path.read_bytes()
+
+    assert runner.main(["--report", str(path)]) == 0
+    summary = json.loads(capsys.readouterr().out)
+
+    assert summary["counts"]["selected"] == summary["counts"]["terminal"] == 4
+    assert summary["counts"]["declined"] == 2
+    assert summary["counts"]["completed_answers"] == 1
+    assert summary["counts"]["execution_failures"] == 0
+    assert summary["counts"]["unresolved"] == 0
+    assert path.read_bytes() == original
+
+
 def test_summary_detects_duplicate_unexpected_and_mismatched_ids(tmp_path):
     document = _document()
     document["report"]["cases"].append(document["report"]["cases"][0])

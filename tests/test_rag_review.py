@@ -268,8 +268,17 @@ def test_compact_retrieval_answer_without_introduction_enables_generation_axes()
     assert case["output"]["generation"] == output["rendered_text"]
 
 
-def test_generation_failure_exposes_only_answer_diagnostic_and_keeps_context_judgeable():
+@pytest.mark.parametrize("deferred", [False, True])
+def test_generation_failure_exposes_only_answer_diagnostic_and_keeps_context_judgeable(
+    deferred,
+):
     raw = report()
+    if deferred:
+        raw["report"]["cases"][0]["output"]["assessment"] = {
+            "status": "deferred",
+            "explanation": "The collection has a limited date range.",
+            "recoverable_portion": "Reporting inside that range.",
+        }
     raw["report"]["cases"][0]["output"]["failure"] = {
         "stage": "guidance",
         "exception_type": "ValidationError",
@@ -277,6 +286,7 @@ def test_generation_failure_exposes_only_answer_diagnostic_and_keeps_context_jud
         "private": "secret",
     }
     case = project_report(raw)["report"]["cases"][0]
+    assert case["execution"]["status"] == "failed"
     assert required_axes(case) == ("context_relevance",)
     assert case["output"]["generation_failure"]["stage"] == "guidance"
     assert "secret" not in json.dumps(case)
@@ -337,14 +347,48 @@ def test_failed_and_unresolved_attempts_remain_visible_and_annotatable():
             validate_review({**note, "faithfulness": "fail"}, case)
 
 
-def test_decline_and_chat_guidance_failures_keep_their_review_material():
+@pytest.mark.parametrize("status", ["declined", "deferred", "needs_edit"])
+def test_direct_question_assessments_keep_their_execution_outcome(status):
+    raw = report("chat", generation=status == "deferred")
+    source = raw["report"]["cases"][0]
+    if status != "deferred":
+        source["output"] = {}
+    source["output"].update(
+        approval_mode="direct_question",
+        preparation=None,
+        assessment={
+            "status": status,
+            "explanation": "The submitted question needs this explanation.",
+            "recoverable_portion": "The available reporting"
+            if status == "deferred"
+            else None,
+        },
+    )
+    original = copy.deepcopy(raw)
+
+    case = project_report(raw)["report"]["cases"][0]
+
+    assert case["question"] == "Who supports AB 1?"
+    assert case["execution"]["status"] == status
+    assert (
+        case["execution"]["message"] == "The submitted question needs this explanation."
+    )
+    assert case["output"]["has_generation"] == (status == "deferred")
+    assert required_axes(case) == (AXES if status == "deferred" else ())
+    assert raw == original
+
+
+@pytest.mark.parametrize("status", ["declined", "deferred", "needs_clarification"])
+def test_historical_preparation_and_chat_guidance_failures_keep_their_review_material(
+    status,
+):
     raw = report("chat")
     source = raw["report"]["cases"][0]
     declined = copy.deepcopy(source)
     declined["name"] = "declined"
     declined["output"] = {
         "preparation": {
-            "status": "declined",
+            "status": status,
             "message": "Cannot establish completeness",
         },
         "rendered_text": "Cannot establish completeness",
@@ -361,6 +405,7 @@ def test_decline_and_chat_guidance_failures_keep_their_review_material():
         == "retrieval_and_guidance"
     )
     assert projected[1]["execution"]["message"] == "Cannot establish completeness"
+    assert projected[1]["execution"]["status"] == status
     assert not projected[1]["output"]["has_generation"]
 
 

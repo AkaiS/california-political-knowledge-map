@@ -224,8 +224,8 @@ def summarize_report(
         answer = output.get("answer") or {}
         if output.get("rendered_text") and answer and "introduction" in answer:
             completed_answers += 1
-        preparation = output.get("preparation") or {}
-        if preparation.get("status") == "declined":
+        decision = output.get("assessment") or output.get("preparation") or {}
+        if decision.get("status") == "declined":
             declined += 1
         outcomes = output.get("branches")
         if outcomes is None:
