@@ -345,6 +345,10 @@ On 2026-10-09 UTC, Source Guides implementation and per-ticket review completed:
   documentation. The [sequence review](projects/source-guides/validation/sequence-review.md)
   records prior-finding closure and final local checks. No valid finding remains
   unresolved. Remote pull-request CI has not run and is not claimed as passed.
+- Subsequent user-like browser exploration found a
+  [reported event chronology defect](issues/05-source-guide-event-chronology.md).
+  Its issue records the deterministic regression, correction, and follow-up
+  validation separately from the completed sequence review.
 
 ## Information model
 

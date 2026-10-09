@@ -354,6 +354,225 @@ def test_optional_publication_view_orders_its_members_without_changing_the_defau
     ] == ["https://example.com/full_text", "https://example.com/dense"]
 
 
+@pytest.mark.parametrize(
+    "order,requested,dates,expected",
+    [
+        (
+            "event_asc",
+            "relevance",
+            ["2021-09-16", "2021-04-15"],
+            ["2021-04-15", "2021-09-16"],
+        ),
+        (
+            "event_desc",
+            "relevance",
+            ["2021-04-15", "2021-09-16"],
+            ["2021-09-16", "2021-04-15"],
+        ),
+        (
+            "event_asc",
+            "event_desc",
+            ["2021-04-15", "2021-09-16"],
+            ["2021-09-16", "2021-04-15"],
+        ),
+        (
+            "event_desc",
+            "event_asc",
+            ["2021-09-16", "2021-04-15"],
+            ["2021-04-15", "2021-09-16"],
+        ),
+    ],
+)
+def test_optional_event_timeline_orders_verified_dates_before_saving(
+    tmp_path, order, requested, dates, expected
+):
+    async def event_articles(candidate):
+        article = await stored_article(candidate)
+        return article.model_copy(
+            update={
+                "text": {
+                    "dense": f"The reported event happened on {dates[0]}.",
+                    "full_text": f"The reported event happened on {dates[1]}.",
+                    "structural": "Budget coverage has no event date.",
+                }[candidate.chunk_id]
+            }
+        )
+
+    db_path = tmp_path / "guides.db"
+    with guide_client(
+        db_path=db_path,
+        assessment={"status": "allowed", "reading_order": requested},
+        guidance={
+            "source_notes": NOTES,
+            "groups": [
+                {
+                    "kind": "timeline",
+                    "label": "Reported event timeline",
+                    "order": order,
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/dense",
+                            "reading_direction": "Read the signing event.",
+                            "reported_event_date": dates[0],
+                        },
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the hearing event.",
+                            "reported_event_date": dates[1],
+                        },
+                    ],
+                }
+            ],
+        },
+        load_grounding=event_articles,
+    ) as (client, _, _):
+        guide = submit_guide(
+            client, json={"question": "Where can I read about SB 9?"}
+        ).json()
+        assert guide["status"] == "completed"
+        assert [
+            member["reported_event_date"] for member in guide["groups"][0]["members"]
+        ] == expected
+        assert guide["groups"][0]["order"] == (
+            order if requested == "relevance" else requested
+        )
+        assert [
+            article["citation"]["source_article_id"] for article in guide["articles"]
+        ] == (
+            ["https://example.com/dense", "https://example.com/full_text"]
+            if requested == "relevance"
+            else ["https://example.com/full_text", "https://example.com/dense"]
+        )
+    with guide_client(db_path=db_path) as (client, _, _):
+        assert client.get(f"/api/guides/{guide['guide_id']}").json() == guide
+
+
+@pytest.mark.parametrize(
+    "dates,order,expected",
+    [
+        (
+            ["September 2021", "2021", "April 2021"],
+            "event_asc",
+            ["2021", "April 2021", "September 2021"],
+        ),
+        (
+            ["September 2021", "2021", "April 2021"],
+            "event_desc",
+            ["September 2021", "2021", "April 2021"],
+        ),
+        (
+            ["September 2021", "April 2021", "2021"],
+            "event_asc",
+            ["April 2021", "September 2021", "2021"],
+        ),
+    ],
+)
+def test_partial_event_dates_order_only_nonoverlapping_periods(
+    tmp_path, dates, order, expected
+):
+    notes = [
+        *NOTES,
+        {
+            "source_article_id": "https://example.com/structural",
+            "note": "Read the report about housing review.",
+        },
+    ]
+    reported_dates = dict(zip(("dense", "full_text", "structural"), dates, strict=True))
+
+    async def event_articles(candidate):
+        article = await stored_article(candidate)
+        return article.model_copy(
+            update={
+                "text": f"The housing review happened in {reported_dates[candidate.chunk_id]}."
+            }
+        )
+
+    with guide_client(
+        db_path=tmp_path / "guides.db",
+        guidance={
+            "source_notes": notes,
+            "groups": [
+                {
+                    "kind": "timeline",
+                    "label": "Reported event timeline",
+                    "order": order,
+                    "members": [
+                        {
+                            "source_article_id": note["source_article_id"],
+                            "reading_direction": note["note"],
+                            "reported_event_date": event_date,
+                        }
+                        for note, event_date in zip(notes, dates, strict=True)
+                    ],
+                }
+            ],
+        },
+        load_grounding=event_articles,
+    ) as (client, _, _):
+        guide = submit_guide(
+            client, json={"question": "Where can I read about SB 9?"}
+        ).json()
+    assert guide["status"] == "completed"
+    assert [
+        member["reported_event_date"] for member in guide["groups"][0]["members"]
+    ] == expected
+
+
+@pytest.mark.parametrize("event_date", [None, "2021-02-29", "2021-13", "0000"])
+def test_unavailable_event_dates_keep_the_article_after_dated_reading(
+    tmp_path, event_date
+):
+    async def event_articles(candidate):
+        article = await stored_article(candidate)
+        return article.model_copy(
+            update={
+                "text": (
+                    f"The event was reported as {event_date}."
+                    if candidate.chunk_id == "dense"
+                    else "The hearing happened on 2021-04-15."
+                )
+            }
+        )
+
+    with guide_client(
+        db_path=tmp_path / "guides.db",
+        assessment={"status": "allowed", "reading_order": "event_desc"},
+        guidance={
+            "source_notes": NOTES,
+            "groups": [
+                {
+                    "kind": "timeline",
+                    "label": "Reported event timeline",
+                    "order": "event_desc",
+                    "members": [
+                        {
+                            "source_article_id": "https://example.com/dense",
+                            "reading_direction": "Read the report about housing review.",
+                            "reported_event_date": event_date,
+                        },
+                        {
+                            "source_article_id": "https://example.com/full_text",
+                            "reading_direction": "Read the hearing coverage.",
+                            "reported_event_date": "2021-04-15",
+                        },
+                    ],
+                }
+            ],
+        },
+        load_grounding=event_articles,
+    ) as (client, _, _):
+        guide = submit_guide(
+            client, json={"question": "Read about SB 9 events from latest to earliest."}
+        ).json()
+    assert guide["status"] == "completed"
+    assert [
+        member.get("reported_event_date") for member in guide["groups"][0]["members"]
+    ] == ["2021-04-15", None]
+    assert [
+        article["citation"]["source_article_id"] for article in guide["articles"]
+    ] == ["https://example.com/full_text", "https://example.com/dense"]
+
+
 def test_repeated_memberships_keep_distinct_nearby_directions_for_one_included_article(
     tmp_path,
 ):

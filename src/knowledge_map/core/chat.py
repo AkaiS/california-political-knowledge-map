@@ -3,9 +3,12 @@
 import json
 import logging
 import re
+from calendar import monthrange
 from collections.abc import Sequence
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from graphlib import TopologicalSorter
+from time import strptime
 from typing import Literal, cast
 from uuid import uuid4
 
@@ -34,6 +37,7 @@ from knowledge_map.schemas.query_preparation import (
 )
 from knowledge_map.schemas.retrieval import (
     ArticleGroup,
+    ArticleGroupMember,
     CoverageDescription,
     EvidenceAssemblyFailure,
     EvidencePackage,
@@ -71,6 +75,53 @@ class RetrievalGuidance(RetrievalValue):
     unmatched_requests: tuple[UnmatchedRequest, ...] = ()
 
 
+def _event_date_bounds(value: str) -> tuple[date, date] | None:
+    for date_format in ("%Y", "%Y-%m", "%Y-%m-%d", "%B %Y", "%B %d, %Y"):
+        try:
+            earliest = date(*strptime(value, date_format)[:3])
+        except ValueError:
+            continue
+        latest = earliest
+        if date_format == "%Y":
+            latest = earliest.replace(month=12, day=31)
+        elif date_format in {"%Y-%m", "%B %Y"}:
+            latest = earliest.replace(day=monthrange(earliest.year, earliest.month)[1])
+        return earliest, latest
+    return None
+
+
+def _order_event_members(
+    members: list[ArticleGroupMember], *, newest_first: bool
+) -> list[ArticleGroupMember]:
+    bounds = []
+    for member in members:
+        assert member.reported_event_date is not None
+        period = _event_date_bounds(member.reported_event_date)
+        assert period is not None
+        bounds.append(period)
+    # Overlapping periods cannot establish event order. Honor every comparable
+    # pair, using model order to choose between the remaining available members.
+    predecessors = {
+        index: [
+            other_index
+            for other_index, other in enumerate(bounds)
+            if (period[1] < other[0] if newest_first else other[1] < period[0])
+        ]
+        for index, period in enumerate(bounds)
+    }
+    timeline = TopologicalSorter(predecessors)
+    timeline.prepare()
+    ready: set[int] = set()
+    ordered = []
+    while timeline.is_active():
+        ready.update(timeline.get_ready())
+        index = min(ready)
+        ready.remove(index)
+        ordered.append(members[index])
+        timeline.done(index)
+    return ordered
+
+
 def _included_groups(
     guidance: RetrievalGuidance, package: EvidencePackage
 ) -> tuple[ArticleGroup, ...]:
@@ -97,6 +148,7 @@ def _included_groups(
                     r"(?: \d{1,2},)? \d{4})",
                     event_date,
                 )
+                and _event_date_bounds(event_date) is not None
                 and any(
                     event_date in text
                     for text in passages.get(member.source_article_id, ())
@@ -113,10 +165,12 @@ def _included_groups(
             dated = [member for member in members if member.reported_event_date]
             undated = [member for member in members if not member.reported_event_date]
             requested = package.execution.request.rewrite.assessment.reading_order
-            if requested in {"event_asc", "event_desc"} and requested != order:
-                dated.reverse()
+            if requested in {"event_asc", "event_desc"}:
                 order = requested
-            members = dated + undated
+            members = (
+                _order_event_members(dated, newest_first=order == "event_desc")
+                + undated
+            )
         groups.append(
             group.model_copy(update={"members": tuple(members), "order": order})
         )
