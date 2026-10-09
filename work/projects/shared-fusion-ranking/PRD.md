@@ -1,6 +1,6 @@
 # Shared fusion ranking
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
@@ -202,8 +202,9 @@ place and verify it through the interfaces callers already use.
 ## Further Notes
 
 This is the shared fusion ranking candidate selected from the October 8, 2026
-architecture review. It is a bounded behavior-preserving refactor, with one
-implementation issue. The other architecture candidates are separate work.
+architecture review. It is a bounded behavior-preserving refactor, delivered
+through two implementation tickets. The other architecture candidates are
+separate work.
 
 ADR 0024 remains authoritative for Evaluation Run accounting and retains
 ADR 0017's compact-report and repository-versioning decisions. This spec
@@ -222,3 +223,13 @@ report-scoring consumers using that owner.
 confirmed testing through the existing production-fusion and compact-report
 replay interfaces, keeping shared ranking internals private. Published as
 ready-for-agent; implementation has not started.
+
+2026-10-09: Both implementation tickets are complete with checked acceptance
+criteria. Each passed independent Standards and Spec review with zero findings.
+The final ticket regression run passed 1617 tests with 61 skipped; 31 Node
+reviewer tests and changed-file type, lint and format checks also passed.
+Five unchanged historical reports preserve all 101 exact fusion replays, RAG
+projections, 1,010 top-ten candidate records and 808 seeded sample entries.
+The project and work index are reconciled to completed. Final sequence review
+remains pending; this record does not claim that review or remote CI has passed.
+No model calls, live graph queries or browser verification were performed.

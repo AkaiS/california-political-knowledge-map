@@ -1,6 +1,6 @@
 # 02 Share retention eligibility and preserve review consumers
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -16,27 +16,27 @@ across production, retention, and replay.
 
 ## Acceptance criteria
 
-- [ ] Compact-branch retention uses the shared best-rank and nomination policy;
+- [x] Compact-branch retention uses the shared best-rank and nomination policy;
       no independent eligibility or ranking implementation remains across the
       production, retention, and replay adapters.
-- [ ] Existing compaction and replay interfaces, serialized fields, counts,
+- [x] Existing compaction and replay interfaces, serialized fields, counts,
       report versions, and configuration identities remain unchanged.
-- [ ] Retention keeps the first 50 unique chunks per branch and only the deeper
+- [x] Retention keeps the first 50 unique chunks per branch and only the deeper
       ranks required for eligible chunks, with explicit branch eligibility for
       configured nomination budgets above 50.
-- [ ] End-to-end production, compact-retention, and replay checks preserve exact
+- [x] End-to-end production, compact-retention, and replay checks preserve exact
       identities, ranks, and scores for branch limits 2, 50, and 75, duplicates,
       ties, cross-branch tail contributions, nondefault valid configuration,
       empty branches, and final truncation.
-- [ ] Tests use existing interfaces and independent expected results alongside
+- [x] Tests use existing interfaces and independent expected results alongside
       parity; private helper calls or intermediate maps are not test contracts.
-- [ ] RAG projection and sampled top-ten chunk review preserve their established
+- [x] RAG projection and sampled top-ten chunk review preserve their established
       outputs and Source Article identities. Existing historical reports and
       compact inputs remain unmodified.
-- [ ] Existing documentation accurately describes shared ownership, preserved
+- [x] Existing documentation accurately describes shared ownership, preserved
       interfaces, and bounded retention. There is no new dependency, public seam,
       report migration, prompt, model call, or change to measurement definitions.
-- [ ] Focused deterministic fusion, retrieval-report, RAG projection, and chunk
+- [x] Focused deterministic fusion, retrieval-report, RAG projection, and chunk
       review checks pass through uv, with normal deterministic CI retained.
       Record completion evidence without claiming browser or model verification.
 
@@ -88,3 +88,28 @@ The focused and full reviewer API checks used authorized loopback socket access
 outside the sandbox. No model calls, live graph queries or browser verification were
 performed. This verifies compatibility, not retrieval quality or calibration.
 Completion reconciliation remains with the independent reviewer.
+
+2026-10-09: Independent two-axis review of implementation commit
+`6de40f4c8fcfde9ea253500f676d4933b7dc945b` used
+`git diff 03566c1b0ec7d5c171a6030ac0ce6fa94eab6172...HEAD`.
+The Standards reviewer found zero documented-standard violations and zero
+actionable baseline smells. The Spec reviewer found zero missing or partial
+requirements, scope additions, or incorrect implementations. There are no
+findings to fix or unresolved questions. Both reviewers confirmed that compact
+retention now uses the shared best-rank and nomination policy while retaining
+its formatting and Source Article identity responsibilities.
+
+Independent review verification used the same temporary uv cache:
+
+- `uv run --no-sync pytest -q tests/test_fusion.py tests/test_fusion_replay.py`: 57 passed. The Spec reviewer independently ran these files plus `tests/test_retrieval_report.py`: 67 passed.
+- All six new characterization cases passed against baseline functions loaded read-only with `git show`. A separate baseline comparison matched all 101 replays across the five historical reports, every RAG projection, all 1,010 top-ten candidate records and 808 seeded sample entries. Source Article IDs and exact floating-point scores matched; in-memory inputs and report bytes remained unchanged.
+- `uv run --no-sync pytest -q tests`: 1617 passed, 61 skipped, with the existing ignored-temperature provider warning. This was the final deterministic regression run after both reviews; authorized loopback access covered the existing reviewer API checks.
+- `uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs tests/chunk_eval_review.test.mjs`: 31 passed on Node 22.23.1.
+- The same changed-file `ty check`, `ruff check` and `ruff format --check` commands recorded above passed again. `git diff --check` passed.
+
+All eight acceptance criteria are satisfied. No code fixes were required by
+review. The completed label and checked criteria record that evidence. Both
+project tickets are complete, so the parent and work index are reconciled;
+final sequence review remains pending. No model calls, live graph queries or
+browser verification were performed. These checks establish compatibility,
+not retrieval quality or weight calibration.
