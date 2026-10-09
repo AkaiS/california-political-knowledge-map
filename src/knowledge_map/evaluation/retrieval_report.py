@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-from math import fsum
 from typing import Any
 
+from knowledge_map.core.fusion import _prepare_ranking, _rank_candidates
 from knowledge_map.schemas.fusion import FusionConfig
 from knowledge_map.schemas.retrieval import RetrievalBranch
 
@@ -95,40 +95,28 @@ def replay_fusion(
     branches: list[dict[str, Any]], config: FusionConfig
 ) -> list[dict[str, Any]]:
     """Recover production RRF ordering without candidate provenance or text."""
-    eligible = set()
-    ranks: dict[str, dict[str, int]] = {}
+    ranks_by_branch = {}
+    nomination_pools = {}
+    recorded_eligibility = {}
     articles = {}
     for branch in branches:
-        name = branch["branch"]
+        name = RetrievalBranch(branch["branch"])
         records = branch["candidates"]
-        eligible.update(
-            branch.get(
-                "fusion_eligible_chunk_ids",
-                [
-                    r["chunk_id"]
-                    for r in records[: getattr(config, f"{name}_candidate_limit")]
-                ],
-            )
-        )
+        nomination_pools[name] = {r["chunk_id"] for r in records}
+        if "fusion_eligible_chunk_ids" in branch:
+            recorded_eligibility[name] = branch["fusion_eligible_chunk_ids"]
+        ranks_by_branch[name] = [
+            (r["chunk_id"], r["rank"]) for r in records + branch["extra_fusion_ranks"]
+        ]
         for r in records + branch["extra_fusion_ranks"]:
-            ranks.setdefault(r["chunk_id"], {})[name] = r["rank"]
             articles[r["chunk_id"]] = r["source_article_id"]
-    ranked = sorted(
-        (
-            (
-                chunk,
-                fsum(
-                    getattr(config, f"{branch.value}_weight")
-                    / (config.rank_constant + contributions[branch.value])
-                    for branch in RetrievalBranch
-                    if branch.value in contributions
-                ),
-            )
-            for chunk, contributions in ranks.items()
-            if chunk in eligible
-        ),
-        key=lambda pair: (-pair[1], pair[0]),
+    best_ranks, eligible_by_branch = _prepare_ranking(
+        ranks_by_branch,
+        config=config,
+        nomination_pools=nomination_pools,
+        recorded_eligibility=recorded_eligibility,
     )
+    ranked = _rank_candidates(best_ranks, eligible_by_branch, config=config)
     return [
         {
             "chunk_id": chunk,
@@ -136,7 +124,7 @@ def replay_fusion(
             "rank": rank,
             "fusion_score": score,
         }
-        for rank, (chunk, score) in enumerate(ranked[: config.fused_candidate_limit], 1)
+        for rank, (chunk, score) in enumerate(ranked, 1)
     ]
 
 
