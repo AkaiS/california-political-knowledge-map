@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from knowledge_map.adapters.source_guides import SQLiteGuideStore
+from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
     assessment_guide,
     render_answer,
@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 class QuestionSubmission(BaseModel):
     model_config = ConfigDict(extra="forbid")
     question: QuestionText
+
+
+class GuideUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class ChatSessionProtocol(Protocol):
@@ -102,6 +106,41 @@ def create_app(
                 {"error": "The local service is stopping."}, status_code=503
             )
         saved = guide_store.create(submission.question)
+        return start_execution(saved)
+
+    async def update_guide(request: Request) -> Response:
+        if (
+            request.headers.get("content-type", "").split(";")[0].strip().lower()
+            != "application/json"
+        ):
+            return JSONResponse(
+                {"error": "Expected Content-Type: application/json"}, status_code=415
+            )
+        try:
+            GuideUpdate.model_validate_json(await request.body())
+        except ValidationError:
+            return JSONResponse(
+                {"error": "Update guide uses its saved question and settings."},
+                status_code=422,
+            )
+        if not accepting:
+            return JSONResponse(
+                {"error": "The local service is stopping."}, status_code=503
+            )
+        try:
+            saved = guide_store.start_update(request.path_params["guide_id"])
+        except KeyError:
+            return JSONResponse({"error": "Source Guide not found."}, status_code=404)
+        except GuideAlreadyRunning:
+            return JSONResponse(
+                {
+                    "error": "This guide is already being searched. Wait for it to finish before updating."
+                },
+                status_code=409,
+            )
+        return start_execution(saved)
+
+    def start_execution(saved: SavedSourceGuide) -> Response:
         task = asyncio.create_task(execute(saved))
         running.add(task)
         task.add_done_callback(running.discard)
@@ -223,6 +262,7 @@ def create_app(
         Route("/api/questions", submit_question, methods=["POST"]),
         Route("/api/guides", list_guides, methods=["GET"]),
         Route("/api/guides/{guide_id}", read_guide, methods=["GET"]),
+        Route("/api/guides/{guide_id}/update", update_guide, methods=["POST"]),
         Route("/api/coverage", coverage, methods=["GET"]),
         *(
             Route(path, asset, methods=["GET"])

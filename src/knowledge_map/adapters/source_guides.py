@@ -14,6 +14,10 @@ from knowledge_map.schemas.source_guides import (
 )
 
 
+class GuideAlreadyRunning(Exception):
+    """An explicit update must wait for the guide's active attempt to finish."""
+
+
 class SQLiteGuideStore:
     def __init__(self, db_path: str | Path | None = None):
         self.db_path = str(
@@ -54,6 +58,31 @@ class SQLiteGuideStore:
                 "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status) "
                 "VALUES (?, ?, ?, 'running')",
                 (attempt_id, guide_id, now),
+            )
+        return self.get(guide_id)
+
+    def start_update(self, guide_id: str) -> SavedSourceGuide:
+        attempt_id = str(uuid4())
+        now = datetime.now(UTC).isoformat()
+        with closing(sqlite3.connect(self.db_path)) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT a.status FROM source_guides g JOIN source_guide_attempts a "
+                "ON a.attempt_id = g.latest_attempt_id WHERE g.guide_id = ?",
+                (guide_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(guide_id)
+            if row[0] == "running":
+                raise GuideAlreadyRunning(guide_id)
+            connection.execute(
+                "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status) "
+                "VALUES (?, ?, ?, 'running')",
+                (attempt_id, guide_id, now),
+            )
+            connection.execute(
+                "UPDATE source_guides SET latest_attempt_id = ? WHERE guide_id = ?",
+                (attempt_id, guide_id),
             )
         return self.get(guide_id)
 
@@ -122,6 +151,8 @@ class SQLiteGuideStore:
                         "finished_at": row["finished_at"],
                         "status": row["status"],
                         "outcome": outcome.status if outcome else None,
+                        "assessment": outcome.assessment if outcome else None,
+                        "message": outcome.message if outcome else None,
                     }
                 ),
             }

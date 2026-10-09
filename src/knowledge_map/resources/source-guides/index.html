@@ -15,6 +15,7 @@
   <form id="question-form">
     <label for="question">Complete question</label>
     <textarea id="question" name="question" rows="4" required placeholder="What should I read about housing legislation in California?"></textarea>
+    <p class="metadata">Submitting a question saves a new guide. To search again for a saved question, open its guide and choose Update guide.</p>
     <p id="collections" class="metadata"></p>
     <div class="actions"><button id="submit" type="submit">Find articles</button><button id="new" type="button" class="secondary">New question</button></div>
   </form>
@@ -25,11 +26,12 @@
     <ul id="guide-list"></ul>
   </nav>
   <section id="guide" aria-labelledby="guide-question" hidden>
-    <div class="guide-heading"><h2 id="guide-question"></h2><button id="edit" class="secondary" type="button">Edit question</button></div>
+    <div class="guide-heading"><h2 id="guide-question"></h2><div class="actions"><button id="update" type="button">Update guide</button><button id="edit" class="secondary" type="button">Edit question</button></div></div>
     <p id="outcome"></p><p id="message"></p>
     <p id="guide-created" class="metadata"></p>
     <p id="guide-retrieved" class="metadata"></p>
     <p id="guide-attempt" class="metadata"></p>
+    <p id="attempt-message" role="status"></p>
     <ol id="articles"></ol>
   </section>
 </main>

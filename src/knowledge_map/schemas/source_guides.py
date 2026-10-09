@@ -47,6 +47,8 @@ class GuideAttempt(RetrievalValue):
         "running", "completed", "empty", "failed", "cancelled", "interrupted"
     ]
     outcome: GuideOutcome | None = None
+    assessment: QuestionAssessment | None = None
+    message: NonemptyText | None = None
 
 
 class SavedSourceGuide(SourceGuide):

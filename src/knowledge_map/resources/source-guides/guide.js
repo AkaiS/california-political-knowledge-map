@@ -7,6 +7,7 @@ const guideView = document.querySelector('#guide');
 const articles = document.querySelector('#articles');
 const submit = document.querySelector('#submit');
 const edit = document.querySelector('#edit');
+const update = document.querySelector('#update');
 const newQuestion = document.querySelector('#new');
 const guideList = document.querySelector('#guide-list');
 const savedStatus = document.querySelector('#saved-status');
@@ -36,7 +37,7 @@ const attemptLabels = {
 const displayDate = value => new Date(value).toLocaleString();
 
 function guideOutcome(guide) {
-  const assessment = guide.assessment?.status;
+  const assessment = guide.latest_attempt.assessment?.status;
   if (assessment === 'declined') return 'Declined';
   if (assessment === 'needs_edit') return 'Needs editing';
   const state = attemptLabels[guide.latest_attempt.status];
@@ -129,9 +130,17 @@ function showGuide(guide) {
   document.querySelector('#guide-retrieved').textContent = guide.last_retrieved_at
     ? `Last retrieved ${displayDate(guide.last_retrieved_at)}` : 'No successful retrieval yet.';
   const attempt = guide.latest_attempt;
+  update.disabled = attempt.status === 'running';
   document.querySelector('#guide-attempt').textContent =
     `Latest attempt: ${guideOutcome(guide)}. Started ${displayDate(attempt.started_at)}` +
     (attempt.finished_at ? `. Finished ${displayDate(attempt.finished_at)}` : '');
+  document.querySelector('#attempt-message').textContent = guide.last_retrieved_at
+    ? (attempt.status === 'running'
+      ? 'Updating this guide. Saved reading remains available below.'
+      : attempt.status === 'failed'
+        ? `${attempt.message || outcomeLabels[attempt.outcome]} Saved reading below is from the last successful retrieval.`
+        : attempt.outcome !== guide.status ? attempt.message || outcomeLabels[attempt.outcome] : '')
+    : '';
   articles.replaceChildren();
   for (const article of guide.articles) {
     const row = document.createElement('li');
@@ -199,6 +208,36 @@ edit.addEventListener('click', () => {
   if (!currentGuide) return;
   question.value = currentGuide.question;
   question.focus();
+});
+
+update.addEventListener('click', async () => {
+  const selected = currentGuide;
+  if (!selected || selected.latest_attempt.status === 'running') return;
+  const selection = ++guideSelection;
+  update.disabled = true;
+  progress.textContent = 'Starting an update for this saved question…';
+  try {
+    const response = await fetch(`/api/guides/${encodeURIComponent(selected.guide_id)}/update`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}',
+    });
+    if (!response.ok && response.status !== 409) throw new Error('Update failed');
+    const guide = response.status === 409
+      ? await readSavedGuide(selected.guide_id) : await response.json();
+    if (selection === guideSelection) {
+      showGuide(guide);
+      progress.textContent = response.status === 409
+        ? 'This guide is already being searched. Wait for it to finish before updating.' : '';
+    }
+    await loadSavedGuides();
+  } catch {
+    if (selection === guideSelection) {
+      progress.textContent = 'The update could not be confirmed. Reopen this saved guide to check its status.';
+    }
+  } finally {
+    if (selection === guideSelection) {
+      update.disabled = currentGuide.latest_attempt.status === 'running';
+    }
+  }
 });
 function clearQuestion() {
   ++guideSelection;
