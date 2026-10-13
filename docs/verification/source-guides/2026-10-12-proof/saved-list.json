@@ -1,0 +1,22 @@
+{
+  "guides": [
+    {
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "question": "Who supported that bill?",
+      "status": "needs_edit",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "finished_at": "2026-10-12T22:37:18.282044Z",
+        "status": "completed",
+        "outcome": "needs_edit",
+        "assessment": {
+          "status": "needs_edit",
+          "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+          "reading_order": "relevance"
+        }
+      }
+    }
+  ]
+}
