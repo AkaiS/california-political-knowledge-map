@@ -1,0 +1,69 @@
+{
+  "format_version": 1,
+  "release": "2026-10-12-5c00b4d",
+  "created_at": "2026-10-13T00:23:09.294752+00:00",
+  "sqlite": {
+    "filename": "document_store.db",
+    "bytes": 11350016,
+    "sha256": "ab0739c4236ad225fd57e9e46eebbd87b84f1cb23339f550a4befecd84fb1a2f",
+    "preserved_tables": {
+      "publication_discovery_state": {
+        "rows": 0,
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "publication_selectors": {
+        "rows": 7,
+        "content_sha256": "f5e674af49d70476b7532e17aa52a0b0858d279a25d9026bb97f1e7d1a00f522"
+      },
+      "publications": {
+        "rows": 1,
+        "content_sha256": "6de05e35e442cd1662bdfe72721f325bf0dc6377ea0cb0853fe7b5d96c947564"
+      },
+      "scraped_html_cache": {
+        "rows": 215,
+        "content_sha256": "76b8f718b2273480b686d1a89a58477e385301243f0153a7e24e4effc7cb1b79"
+      },
+      "selector_proposals": {
+        "rows": 34,
+        "content_sha256": "bb4d91ce802e7f2016b3f55f6d9e86e15da765b32bdbd05d0e311312a7e1c097"
+      },
+      "stories": {
+        "rows": 157,
+        "content_sha256": "ca323c1d73265265b317ed186ef90ca7c1452ec99c822bbfb29f2b391de00eba"
+      },
+      "story_links": {
+        "rows": 1721,
+        "content_sha256": "b636dca67a790c2c23927c277854f69e6d575552ce97240fe67af1f228421b48"
+      }
+    },
+    "removed_private_rows": {
+      "source_guide_attempts": 7,
+      "source_guides": 6
+    },
+    "integrity": "ok",
+    "foreign_key_errors": 0,
+    "freed_private_pages_removed": true
+  },
+  "source": {
+    "opened_read_only": true,
+    "before_sha256": {
+      "main": "a04824a3e605a2c3487b062487839df616bbae98d8bfbfed31a2d9defa108013"
+    },
+    "after_sha256": {
+      "main": "a04824a3e605a2c3487b062487839df616bbae98d8bfbfed31a2d9defa108013"
+    },
+    "files_unchanged_during_export": true
+  },
+  "graph": {
+    "filename": null,
+    "sha256": null,
+    "state": "pending explicitly approved offline dump and disposable recovery rehearsal",
+    "neo4j_version": "2026.07.1"
+  },
+  "deployable": false,
+  "remaining": [
+    "Pair with same-corpus Neo4j offline dump, embedding checksum and application release",
+    "Restore into disposable Neo4j and verify indexes and Story alignment",
+    "Verify Publication labels and section links through real HTTP service"
+  ]
+}

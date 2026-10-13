@@ -1,5 +1,6 @@
 """The resolved conditions observed when a browser Chat Session begins."""
 
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -42,5 +43,6 @@ def code_state() -> tuple[str | None, bool | None]:
             timeout=5,
         ).stdout
     except (OSError, subprocess.SubprocessError):
-        return None, None
+        revision = os.environ.get("BUILD_REVISION")
+        return (revision if revision and revision != "unknown" else None), None
     return revision, bool(status)

@@ -1,0 +1,24 @@
+# A source allowlist keeps private local outputs out of the context itself.
+*
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!src/**
+!deployment/
+!deployment/**
+!classifier/
+!classifier/pyproject.toml
+!classifier/src/
+!classifier/src/**
+**/__pycache__
+**/.env*
+**/*.db*
+**/*.backup
+**/*.sqlite*
+**/*.gguf
+**/*.dump
+**/*.log
+**/node_modules

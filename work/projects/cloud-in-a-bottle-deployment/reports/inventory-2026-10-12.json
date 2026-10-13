@@ -1,0 +1,614 @@
+{
+  "format_version": 1,
+  "recorded_at": "2026-10-13T00:23:06.810394+00:00",
+  "application_commit": {
+    "available": true,
+    "output": "5c00b4de33223be5d1eda385803f38de51e1ed84"
+  },
+  "python": "3.13.5",
+  "uv": {
+    "available": true,
+    "output": "uv 0.12.21 (7af826859 2026-09-29 aarch64-apple-darwin)"
+  },
+  "local_system": {
+    "os": "Darwin",
+    "architecture": "arm64"
+  },
+  "hosted_architecture": null,
+  "sqlite": {
+    "file_bytes": 36122624,
+    "wal_bytes": 0,
+    "tables": {
+      "publication_discovery_state": {
+        "rows": 0,
+        "schema": "CREATE TABLE publication_discovery_state (\n                publication_id TEXT PRIMARY KEY,\n                state_json TEXT NOT NULL,\n                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE\n            )"
+      },
+      "publication_selectors": {
+        "rows": 7,
+        "schema": "CREATE TABLE publication_selectors (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                publication_id TEXT NOT NULL,\n                selectors_json TEXT NOT NULL,\n                earliest_success_date DATETIME,\n                latest_success_date DATETIME,\n                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE\n            )"
+      },
+      "publications": {
+        "rows": 1,
+        "schema": "CREATE TABLE publications (\n                id TEXT PRIMARY KEY,\n                name TEXT NOT NULL,\n                base_url TEXT NOT NULL,\n                crawl_delay REAL DEFAULT 2.0,\n                max_concurrency INTEGER DEFAULT 2,\n                use_robots_txt BOOLEAN DEFAULT 1,\n                discovery_config_json TEXT,\n                archive_cutoff_years INTEGER DEFAULT 5,\n                validation_paused BOOLEAN DEFAULT 0,\n                failure_points INTEGER DEFAULT 0,\n                healing_in_progress BOOLEAN DEFAULT 0,\n                created_at DATETIME DEFAULT CURRENT_TIMESTAMP\n            , tripping_article_url TEXT)"
+      },
+      "scraped_html_cache": {
+        "rows": 215,
+        "schema": "CREATE TABLE scraped_html_cache (\n                        url TEXT PRIMARY KEY,\n                        publication_id TEXT NOT NULL,\n                        raw_html TEXT,\n                        validation TEXT CHECK(validation IN ('PENDING', 'VALIDATED', 'VALIDATION_FAILED', 'UNVALIDATABLE')) DEFAULT 'PENDING',\n                        validation_date DATETIME,\n                        scraped_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n                        headline TEXT,\n                        description TEXT,\n                        embedding BLOB,\n                        relevance_status TEXT CHECK(relevance_status IN ('RELEVANT', 'IRRELEVANT', 'INCONCLUSIVE', 'PENDING')) DEFAULT 'PENDING',\n                        relevance_label_source TEXT CHECK(relevance_label_source IN ('KEYWORD', 'LLM', 'HUMAN', 'MODEL')) DEFAULT 'KEYWORD',\n                        fetch_status INTEGER,\n                        raw_metadata_json TEXT,\n                        FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE\n                    )"
+      },
+      "selector_proposals": {
+        "rows": 34,
+        "schema": "CREATE TABLE selector_proposals (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                publication_id TEXT NOT NULL,\n                selectors_json TEXT NOT NULL,       -- Candidate article selectors (title, author, date, body)\n                trigger_article_url TEXT NOT NULL,  -- The VALIDATION_FAILED article that tripped the breaker (Recovery Check target)\n                status TEXT CHECK(status IN ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'HEALING_FAILED')) DEFAULT 'PENDING_REVIEW',\n                critic_iterations INTEGER,          -- Number of Generator/Critic iterations consumed\n                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n                resolved_at DATETIME,\n                FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE\n            )"
+      },
+      "source_guide_attempts": {
+        "rows": 7,
+        "schema": "CREATE TABLE source_guide_attempts (\n                    attempt_id TEXT PRIMARY KEY,\n                    guide_id TEXT NOT NULL REFERENCES source_guides(guide_id),\n                    started_at TEXT NOT NULL,\n                    finished_at TEXT,\n                    status TEXT NOT NULL CHECK(status IN (\n                        'running', 'completed', 'empty', 'failed', 'cancelled', 'interrupted'\n                    )),\n                    outcome_json TEXT\n                )"
+      },
+      "source_guides": {
+        "rows": 6,
+        "schema": "CREATE TABLE source_guides (\n                    guide_id TEXT PRIMARY KEY,\n                    question TEXT NOT NULL,\n                    created_at TEXT NOT NULL,\n                    latest_attempt_id TEXT NOT NULL,\n                    content_json TEXT,\n                    retrieved_at TEXT\n                )"
+      },
+      "stories": {
+        "rows": 157,
+        "schema": "CREATE TABLE \"stories\" (\n                    id INTEGER PRIMARY KEY AUTOINCREMENT,\n                    title TEXT NOT NULL,\n                    url TEXT NOT NULL UNIQUE,\n                    category TEXT,\n                    author TEXT,\n                    published_date TEXT,\n                    summary TEXT,\n                    content TEXT,\n                    status TEXT CHECK(status IN ('UNPROCESSED', 'PROCESSING', 'COMPLETED', 'FAILED_DLQ', 'SYSTEM_ERROR')) DEFAULT 'UNPROCESSED',\n                    completed_at DATETIME,\n                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP\n                )"
+      },
+      "story_links": {
+        "rows": 1721,
+        "schema": "CREATE TABLE story_links (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                story_id INTEGER NOT NULL,\n                text TEXT,\n                url TEXT NOT NULL,\n                scraped BOOLEAN DEFAULT 0,\n                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n                FOREIGN KEY(story_id) REFERENCES stories(id) ON DELETE CASCADE,\n                UNIQUE(story_id, url)\n            )"
+      }
+    },
+    "user_version": 0,
+    "integrity": "ok",
+    "publications": [
+      {
+        "name": "CalMatters",
+        "base_url": "https://calmatters.org"
+      }
+    ],
+    "story_status_counts": {
+      "COMPLETED": 98,
+      "UNPROCESSED": 59
+    }
+  },
+  "neo4j": {
+    "available": true,
+    "components": [
+      {
+        "name": "Neo4j Kernel",
+        "versions": [
+          "2026.07.1"
+        ],
+        "edition": "community"
+      },
+      {
+        "name": "Cypher",
+        "versions": [
+          "5",
+          "25"
+        ],
+        "edition": ""
+      }
+    ],
+    "nodes": [
+      {
+        "count": 3668
+      }
+    ],
+    "relationships": [
+      {
+        "count": 6061
+      }
+    ],
+    "labels": [
+      {
+        "label": "AdvocacyGroup",
+        "count": 42
+      },
+      {
+        "label": "Amendment",
+        "count": 2
+      },
+      {
+        "label": "BallotMeasureCampaign",
+        "count": 8
+      },
+      {
+        "label": "Bill",
+        "count": 84
+      },
+      {
+        "label": "Campaign",
+        "count": 41
+      },
+      {
+        "label": "CandidateCampaign",
+        "count": 33
+      },
+      {
+        "label": "Chunk",
+        "count": 2407
+      },
+      {
+        "label": "Committee",
+        "count": 22
+      },
+      {
+        "label": "Corporation",
+        "count": 90
+      },
+      {
+        "label": "EducationalInstitution",
+        "count": 81
+      },
+      {
+        "label": "GovernmentAgency",
+        "count": 202
+      },
+      {
+        "label": "GrassrootsMovement",
+        "count": 9
+      },
+      {
+        "label": "Hearing",
+        "count": 18
+      },
+      {
+        "label": "LaborUnion",
+        "count": 36
+      },
+      {
+        "label": "LegislativeEvent",
+        "count": 37
+      },
+      {
+        "label": "MediaOrganization",
+        "count": 16
+      },
+      {
+        "label": "NewsArticle",
+        "count": 98
+      },
+      {
+        "label": "NonProfit",
+        "count": 134
+      },
+      {
+        "label": "Organization",
+        "count": 679
+      },
+      {
+        "label": "PAC",
+        "count": 9
+      },
+      {
+        "label": "PolicyArea",
+        "count": 26
+      },
+      {
+        "label": "Politician",
+        "count": 241
+      },
+      {
+        "label": "Prop",
+        "count": 33
+      },
+      {
+        "label": "TradeAssociation",
+        "count": 31
+      },
+      {
+        "label": "TribalNation",
+        "count": 3
+      },
+      {
+        "label": "Vote",
+        "count": 17
+      }
+    ],
+    "relationship_types": [
+      {
+        "type": "ABOUT_TOPIC",
+        "count": 24
+      },
+      {
+        "type": "ABSTAINED",
+        "count": 1
+      },
+      {
+        "type": "ACTION_ON",
+        "count": 26
+      },
+      {
+        "type": "CAMPAIGN_FOR",
+        "count": 22
+      },
+      {
+        "type": "CHAIRS",
+        "count": 11
+      },
+      {
+        "type": "DECLARED_STANCE",
+        "count": 174
+      },
+      {
+        "type": "DENOUNCED",
+        "count": 3
+      },
+      {
+        "type": "DISCUSSES_TOPIC",
+        "count": 278
+      },
+      {
+        "type": "ENDORSED",
+        "count": 24
+      },
+      {
+        "type": "FUNDED",
+        "count": 12
+      },
+      {
+        "type": "HAS_CHUNK",
+        "count": 2407
+      },
+      {
+        "type": "HELD_BY",
+        "count": 2
+      },
+      {
+        "type": "LOBBIED_AGAINST",
+        "count": 28
+      },
+      {
+        "type": "LOBBIED_FOR",
+        "count": 11
+      },
+      {
+        "type": "MENTIONED_IN",
+        "count": 3026
+      },
+      {
+        "type": "REFERRED_TO",
+        "count": 2
+      },
+      {
+        "type": "SERVES_ON",
+        "count": 3
+      },
+      {
+        "type": "VOTED_AYE",
+        "count": 3
+      },
+      {
+        "type": "VOTED_NO",
+        "count": 4
+      }
+    ],
+    "indexes": [
+      {
+        "name": "article_title_fulltext_index",
+        "type": "FULLTEXT",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "NewsArticle"
+        ],
+        "properties": [
+          "title"
+        ],
+        "options": {
+          "indexConfig": {
+            "fulltext.analyzer": "standard-no-stop-words",
+            "fulltext.eventually_consistent": false
+          }
+        }
+      },
+      {
+        "name": "bill_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Bill"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "campaign_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Campaign"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "chunk_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Chunk"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "chunk_text_fulltext_index",
+        "type": "FULLTEXT",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Chunk"
+        ],
+        "properties": [
+          "text"
+        ],
+        "options": {
+          "indexConfig": {
+            "fulltext.analyzer": "standard-no-stop-words",
+            "fulltext.eventually_consistent": false
+          }
+        }
+      },
+      {
+        "name": "chunk_vector_index",
+        "type": "VECTOR",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Chunk"
+        ],
+        "properties": [
+          "embedding"
+        ],
+        "options": {
+          "indexConfig": {
+            "vector.dimensions": 768,
+            "vector.default_search_expansion_factor": 1.5,
+            "vector.hnsw.m": 16,
+            "vector.quantization.type": "SCALAR",
+            "vector.similarity_function": "COSINE",
+            "vector.hnsw.ef_construction": 100
+          }
+        }
+      },
+      {
+        "name": "committee_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Committee"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "entity_name_fulltext_index",
+        "type": "FULLTEXT",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Bill",
+          "Campaign",
+          "Committee",
+          "LegislativeEvent",
+          "Organization",
+          "PolicyArea",
+          "Politician",
+          "Prop"
+        ],
+        "properties": [
+          "name"
+        ],
+        "options": {
+          "indexConfig": {
+            "fulltext.analyzer": "standard-no-stop-words",
+            "fulltext.eventually_consistent": false
+          }
+        }
+      },
+      {
+        "name": "index_1b9dcc97",
+        "type": "LOOKUP",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": null,
+        "properties": null,
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "index_460996c0",
+        "type": "LOOKUP",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": null,
+        "properties": null,
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "legislativeevent_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "LegislativeEvent"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "newsarticle_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "NewsArticle"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "organization_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Organization"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "policyarea_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "PolicyArea"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "politician_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Politician"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      },
+      {
+        "name": "prop_id_index",
+        "type": "RANGE",
+        "state": "ONLINE",
+        "populationPercent": 100.0,
+        "labelsOrTypes": [
+          "Prop"
+        ],
+        "properties": [
+          "id"
+        ],
+        "options": {
+          "indexConfig": {}
+        }
+      }
+    ],
+    "corpus_alignment": {
+      "graph_articles": 98,
+      "graph_articles_with_sqlite_story": 98,
+      "sqlite_stories": 157
+    },
+    "all_indexes_online": true
+  },
+  "docker": {
+    "version": {
+      "available": true,
+      "output": "{\"Client\":{\"Version\":\"29.6.2\",\"ApiVersion\":\"1.55\",\"DefaultAPIVersion\":\"1.55\",\"GitCommit\":\"dfc4efb\",\"GoVersion\":\"go1.26.5\",\"Os\":\"darwin\",\"Arch\":\"arm64\",\"BuildTime\":\"Thu Jul 16 16:11:17 2026\",\"Context\":\"desktop-linux\"},\"Server\":{\"Platform\":{\"Name\":\"Docker Desktop 4.83.0 (234302)\"},\"Version\":\"29.6.2\",\"ApiVersion\":\"1.55\",\"MinAPIVersion\":\"1.40\",\"Os\":\"linux\",\"Arch\":\"arm64\",\"Components\":[{\"Name\":\"Engine\",\"Version\":\"29.6.2\",\"Details\":{\"ApiVersion\":\"1.55\",\"Arch\":\"arm64\",\"BuildTime\":\"Thu Jul 16 16:13:03 2026\",\"Experimental\":\"false\",\"GitCommit\":\"3d80467\",\"GoVersion\":\"go1.26.5\",\"KernelVersion\":\"6.12.76-linuxkit\",\"MinAPIVersion\":\"1.40\",\"Module\":\"github.com/moby/moby/v2\",\"ModuleVersion\":\"v2.0.0+unknown\",\"Os\":\"linux\"}},{\"Name\":\"containerd\",\"Version\":\"v2.2.5\",\"Details\":{\"GitCommit\":\"e53c7c1516c3b2bff98eb76f1f4117477e6f4e66\"}},{\"Name\":\"runc\",\"Version\":\"1.3.6\",\"Details\":{\"GitCommit\":\"v1.3.6-0-g491b69ba\"}},{\"Name\":\"docker-init\",\"Version\":\"0.19.0\",\"Details\":{\"GitCommit\":\"de40ad0\"}}],\"GitCommit\":\"3d80467\",\"GoVersion\":\"go1.26.5\",\"KernelVersion\":\"6.12.76-linuxkit\",\"BuildTime\":\"2026-07-16T16:13:03.000000000+00:00\"}}"
+    },
+    "container": "c423cdec431d",
+    "image": {
+      "available": true,
+      "output": "neo4j:2026.07.1"
+    },
+    "java": {
+      "available": true,
+      "output": "openjdk version \"25.0.3\" 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-25.0.3+9 (build 25.0.3+9-LTS)\nOpenJDK 64-Bit Server VM Temurin-25.0.3+9 (build 25.0.3+9-LTS, mixed mode, sharing)"
+    },
+    "data_kib": {
+      "available": true,
+      "output": "30192\t/data/databases/neo4j\n263172\t/data/transactions/neo4j"
+    },
+    "idle_memory": {
+      "available": true,
+      "output": "1.777GiB / 7.75GiB"
+    },
+    "mounts": {
+      "available": true,
+      "output": "[{\"Type\":\"volume\",\"Name\":\"26ae4f7b0e68ed7be02af64cef3accc7fa3162be2d9bd6d21a497b956d8c20a7\",\"Source\":\"/var/lib/docker/volumes/26ae4f7b0e68ed7be02af64cef3accc7fa3162be2d9bd6d21a497b956d8c20a7/_data\",\"Destination\":\"/data\",\"Driver\":\"local\",\"Mode\":\"\",\"RW\":true,\"Propagation\":\"\"},{\"Type\":\"volume\",\"Name\":\"f82445fb9d3c22a17e5f6d1557c9b2a29ae003f1a67d0b190510abb3c1d53647\",\"Source\":\"/var/lib/docker/volumes/f82445fb9d3c22a17e5f6d1557c9b2a29ae003f1a67d0b190510abb3c1d53647/_data\",\"Destination\":\"/logs\",\"Driver\":\"local\",\"Mode\":\"\",\"RW\":true,\"Propagation\":\"\"}]"
+    },
+    "image_digest": {
+      "available": true,
+      "output": "[\"neo4j@sha256:dca31d0d938dd8bb199c8846abedd897c3a07ddb629eca46a8009ac9e87aece2\"]"
+    }
+  },
+  "llama_cpp": {
+    "version": {
+      "available": true,
+      "output": "version: 10150 (dee2a846b)\nbuilt with AppleClang 21.0.0.21000099 for Darwin arm64"
+    },
+    "binary_sha256": "e5c153a1237e1c8e14ce0721d9afba4fd07936c7dc17dc7bd156d4dbe454952a"
+  },
+  "embedding_artifact": {
+    "filename": "embeddinggemma-300M-Q8_0.gguf",
+    "available": true,
+    "bytes": 333590944,
+    "sha256": "b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63",
+    "dimensions": 768,
+    "context": 2048,
+    "batch_size": 2048,
+    "ubatch_size": 2048,
+    "pooling": "GGUF mean pooling; do not override",
+    "projection": "Original ggml-org conversion with dense_2/dense_3 projection tensors",
+    "linux_gpu_layers": 0
+  },
+  "memory_measurement": {
+    "scope": "Local idle only; Darwin processes and Docker Desktop VM differ from hosted Linux",
+    "process_rss": {
+      "available": true,
+      "output": " 8775  35472 /Users/akaisenghor/.hermes/hermes-agent/venv/bin/python\n48375 112896 /Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/bin/python\n71077  19440 /Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/bin/python\n36876 5064848 llama-server\n36910  19392 llama-server\n89455  38656 /Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/bin/python3"
+    },
+    "linux_peak_question_bytes": null
+  },
+  "release_gates": [
+    "Hosted architecture not measured",
+    "Offline graph dump and disposable restore pending; local Neo4j remains running",
+    "Linux peak whole-question memory not measured",
+    "Dedicated capped OpenRouter key and Jev billing not verified"
+  ]
+}

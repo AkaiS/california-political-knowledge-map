@@ -25,12 +25,16 @@ dependencies = [
     "pygments>=2.19.0",
     "typesafe-sdk==0.7.2",
     "cyver==2.0.2",
+    "limits>=5.8.0",
 ]
 
 [project.scripts]
 ca-map = "knowledge_map.cli.main:main"
 
 [dependency-groups]
+deployment = [
+    "supervisor==4.3.0",
+]
 dev = [
     "ca-political-classifier",
     "pytest>=9.1.1",
