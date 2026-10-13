@@ -26,6 +26,7 @@ class PublicSettings:
     enabled: bool = False
     public_origin: str | None = None
     trusted_proxies: tuple[str, ...] = ()
+    frame_ancestors: tuple[str, ...] = ()
     active_questions: int = 1
     queued_questions: int = 2
     hourly_submissions: int = 3
@@ -53,8 +54,10 @@ class PublicSettings:
             ipaddress.ip_network(proxy)
         if self.enabled and self.public_origin is None:
             raise ValueError("CLOUD_PUBLIC_ORIGIN is required in public mode")
-        if self.public_origin is not None:
-            parsed = urlsplit(self.public_origin)
+        for origin in (
+            (self.public_origin,) if self.public_origin is not None else ()
+        ) + self.frame_ancestors:
+            parsed = urlsplit(origin)
             if (
                 parsed.scheme != "https"
                 or not parsed.hostname
@@ -65,7 +68,7 @@ class PublicSettings:
                 or parsed.fragment
             ):
                 raise ValueError(
-                    "CLOUD_PUBLIC_ORIGIN must be an HTTPS origin without a path"
+                    "CLOUD_PUBLIC_ORIGIN and CLOUD_FRAME_ANCESTORS must be HTTPS origins without a path"
                 )
 
     @classmethod
@@ -77,6 +80,9 @@ class PublicSettings:
                 value.strip()
                 for value in os.environ.get("CLOUD_TRUSTED_PROXIES", "").split(",")
                 if value.strip()
+            ),
+            "frame_ancestors": tuple(
+                os.environ.get("CLOUD_FRAME_ANCESTORS", "").split()
             ),
         }
         for field, key in (
@@ -174,11 +180,15 @@ class PublicAccessMiddleware:
                 cookie[COOKIE_NAME]["path"] = "/"
                 cookie[COOKIE_NAME]["secure"] = True
                 cookie[COOKIE_NAME]["httponly"] = True
-                cookie[COOKIE_NAME]["samesite"] = "Lax"
+                # A page framed by another site only receives its visitor cookie
+                # when the cookie is cross-site and partitioned to that embedder.
+                framed = bool(self.settings.frame_ancestors)
+                cookie[COOKIE_NAME]["samesite"] = "None" if framed else "Lax"
                 cookie[COOKIE_NAME]["max-age"] = self.settings.retention_days * 86400
-                response_headers.append(
-                    (b"set-cookie", cookie.output(header="").strip().encode())
-                )
+                header = cookie.output(header="").strip()
+                if framed:
+                    header += "; Partitioned"
+                response_headers.append((b"set-cookie", header.encode()))
                 message["headers"] = response_headers
             await send(message)
 

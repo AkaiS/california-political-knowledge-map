@@ -83,6 +83,44 @@ def test_public_mode_is_explicit_and_environment_limits_are_validated(monkeypatc
         replace(result, deadline_seconds=0)
 
 
+def test_page_framed_by_listed_site_keeps_its_visitor_cookie(tmp_path):
+    embedder = "https://portfolio.example"
+    settings = replace(PUBLIC, frame_ancestors=(embedder,))
+    with pytest.raises(ValueError):
+        replace(settings, frame_ancestors=("http://portfolio.example",))
+    with TestClient(application(tmp_path / "guides.db"), base_url=ORIGIN) as client:
+        unframed = client.get("/")
+    with TestClient(
+        application(tmp_path / "guides.db", settings=settings), base_url=ORIGIN
+    ) as client:
+        framed = client.get("/")
+    assert "frame-ancestors 'none'" in unframed.headers["content-security-policy"]
+    assert "SameSite=Lax" in unframed.headers["set-cookie"]
+    assert (
+        f"frame-ancestors {embedder}" in framed.headers["content-security-policy"]
+    )
+    for attribute in ("SameSite=None", "Secure", "Partitioned"):
+        assert attribute in framed.headers["set-cookie"]
+
+
+def test_framed_visitor_keeps_saved_guides_across_requests(tmp_path):
+    settings = replace(PUBLIC, frame_ancestors=("https://portfolio.example",))
+    app = application(tmp_path / "guides.db", settings=settings)
+    with TestClient(app, base_url=ORIGIN, headers={"Origin": ORIGIN}) as client:
+        response = client.post("/api/questions", json={"question": "Framed question"})
+        saved = wait_for_terminal(client, response).json()
+        token = client.cookies.get(COOKIE_NAME)
+        assert [
+            row["guide_id"] for row in client.get("/api/guides").json()["guides"]
+        ] == [saved["guide_id"]]
+        read = client.get(f"/api/guides/{saved['guide_id']}")
+        assert read.status_code == 200
+        assert read.json()["question"] == "Framed question"
+        assert client.cookies.get(COOKIE_NAME) == token
+        client.cookies.clear()
+        assert client.get("/api/guides").json() == {"guides": []}
+
+
 def test_two_visitors_cannot_list_read_update_cancel_or_adopt_private_guides(tmp_path):
     path = tmp_path / "guides.db"
     private = SQLiteGuideStore(path).create("Private legacy question")
