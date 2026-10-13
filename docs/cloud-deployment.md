@@ -1,191 +1,231 @@
-# Cloud deployment candidate
+# Cloud deployment runbook
 
-The repository prepares one owner-only Bottle app. The runtime contains
-Neo4j Community 2026.07.1 with its bundled Temurin 25.0.3 Java runtime,
-llama.cpp `dee2a846b82f15d27f84a48fa387cb53e0d99c25`, Python 3.13.5,
-uv 0.12.21 and supervisord 4.3.0. Base images use immutable digests.
-The manifest grants 5 GiB and three cores to runtime, with a separate 2 GiB
-build ceiling. Compile concurrency is one; embedding concurrency is one
-with two CPU threads. Host architecture remains a provisioning check.
+The owner-only app runs at
+`https://california-knowledge-map.akaisenghor.bottle.cloud/` on the $20 instance.
+The frozen `a74ca13ffd6a6a6ddfd23568e8e9f26934d57286` release passed hosted
+AMD64 startup, rootless persistence, corpus/index, embedding, HTTPS and visitor
+isolation checks. Gemini 3.1 Flash Lite is active after private restart. Its full HTTPS guide passed
+in 19.832 seconds with the expected article, reading direction and Article Group,
+completed search, no partial disclosure, persisted ownership and a 1.675 GiB
+peak with no swap or OOM. Publication waits for the owner to enable BYOK usage
+counting on the existing $5/month key, followed by public verification. Live
+routing stays `public_paths = []`. Public SHA
+`c3c3f01ed569f5336d8f8a0188cefec7cbed1c3a` is committed and pushed, but has
+not been deployed.
+[Current implementation and evidence](../work/projects/cloud-in-a-bottle-deployment/IMPLEMENTATION.md).
 
-Bottle runs rootless Podman. The image uses container UID 0 so the platform's
-idmapped, host-account-owned persistence directory is writable. This is not
-host root. Verify the installed platform's mount mapping before private
-deployment. Local Docker checks do not establish rootless Podman behavior.
+Backup configuration is deferred at the user's explicit request. It is not a
+publication prerequisite in this phase; recovery readiness is not established.
 
-Build a candidate from the recorded checkout with:
+## Runtime and release provenance
+
+The manifest reserves 5 GiB and three CPUs for the app, and 2 GiB for builds.
+Compile concurrency is one. The runtime includes Neo4j Community 2026.07.1,
+Temurin 25.0.3 Java, llama.cpp `dee2a846b82f15d27f84a48fa387cb53e0d99c25`,
+Python 3.13.5, uv 0.12.21 and supervisord 4.3.0. Base images use immutable
+digests. The upstream llama.cpp embedded server UI fetch still uses an unpinned
+asset URL; its server is loopback-only. Embeddings use the fixed GGUF with one
+request at a time and two CPU threads.
+
+The target's rootless Podman mapping was verified: container UID/GID `0:0`
+corresponds to host `1000:1000` for the app's writable persistence. Only HTTP
+8080 is published to a host loopback port. Neo4j Bolt uses container loopback;
+its HTTP interface is disabled. Embeddings listen on loopback 8081.
+
+For a local candidate build:
 
 ```sh
 docker build --build-arg APP_REVISION="$(git rev-parse HEAD)" -t ca-map-candidate .
 ```
 
-The build excludes local credentials, databases, model weights, scratch output
-and Git history. `BUILD_REVISION` and the OCI revision label retain a revision
-supplied through the build argument. Bottle's inspected builder does not supply
-that argument, so its default revision is unknown. Record its actual remote
-checkout SHA externally before release. Gitless telemetry correctly reports an
-unavailable SHA. `/app/deployment/build-metadata.json` records source-content
-hashes and runtime versions independently of Git. Record dirty source
-separately; a dirty image is a development
-candidate and must not be described as the committed release.
+The build excludes credentials, databases, weights, scratch output and Git
+history. Bottle does not supply `APP_REVISION`; record the actual remote
+checkout SHA and compare `/app/deployment/build-metadata.json` source hashes
+with that frozen source. A dirty local image is a development candidate.
 
-## Prepare the persistent corpus
+## Corpus installation and ordinary updates
 
-Read [the deployment inventory](../work/projects/cloud-in-a-bottle-deployment/IMPLEMENTATION.md)
-and use the sanitized export command:
+The real seed `2026-10-12-real-corpus-01` is already installed. Ordinary code
+updates retain the seed, `recovery/installed-release.json`, graph, saved guides
+and admission counters. Do not replace or recreate this seed during a code
+reload. The installed marker identifies the initial corpus import, while the
+verified checkout identifies the running code revision.
+
+For a new empty app, make a sanitized export and pair it with a same-version
+offline Neo4j dump that excludes the system database:
 
 ```sh
 uv run scripts/export_deployment_corpus.py --source document_store.db --release RELEASE
-```
-
-It opens the source read-only and uses SQLite's backup API. It removes saved
-guides, attempts and admission state from the copy and vacuums private free pages.
-Keep that export paired with a version-compatible offline Neo4j dump. The live
-graph must be stopped for Community's offline dump; arrange a maintenance window
-before touching the maintainer's running graph. Do not copy its live store files.
-
-Transfer these artifacts through an authenticated channel into
-`$BOTTLE_APP_DATA_DIR/recovery/seed/`:
-
-- `neo4j.dump`, the selected database dump, excluding the system database.
-- `document_store.db`, the sanitized SQLite export with its export manifest.
-- `embeddinggemma-300M-Q8_0.gguf`, checksum
-  `b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63`.
-- `release.json`, created locally after pairing those files.
-
-```sh
 uv run deployment/make_seed_manifest.py /absolute/path/to/seed \
   --corpus-id RELEASE --application-revision COMMIT_SHA \
   --sqlite-export-manifest /absolute/path/to/export/manifest.json
 ```
 
-Startup checks every artifact's checksum, the fixed embedding conversion,
-SQLite integrity, required corpus tables, private guide rows and Neo4j version.
-It restores the graph once, sets fresh authentication separately, installs the
-SQLite and model files, then writes `recovery/installed-release.json`. A partial
-restore fails closed. Recover it deliberately while stopped; startup never
-overwrites an unmarked database. Later starts retain visitor guides and daily
-admission counters. Model checksum and SQLite integrity are checked again.
+Community's graph dump requires a stopped database and an agreed maintenance
+window. The SQLite export uses read-only backup, clears local guides, attempts
+and admission state, and vacuums private free pages. Transfer only the graph
+dump, sanitized database, export `manifest.json`, embedding GGUF and
+`release.json` through authenticated SSH into the empty app's
+`$BOTTLE_APP_DATA_DIR/recovery/seed/` before its first start.
+The embedding artifact SHA-256 is
+`b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63`.
 
-Do not use this bootstrap for corpus replacement. A later release needs a
-separately rehearsed graph replacement and SQLite corpus-table refresh that
-preserves cloud guide ownership. Keep immutable release exports off the server.
+Bootstrap verifies checksums, embedding conversion, corpus/guide schemas,
+SQLite integrity and Neo4j version, then restores once and creates fresh
+Neo4j authentication. Partial unmarked installations fail closed. Model checksum
+and SQLite integrity are checked on later starts. Corpus replacement needs a
+separate rehearsed graph replacement and corpus-table refresh preserving cloud
+visitor ownership. Keep immutable release exports off the server.
 
-## Supply grants and configuration
+## Secrets and request limits
 
-The manifest requests individual keys from secrets service version 0.1.0:
+Secrets service `==0.1.0` grants the owner's existing names:
 `OPENROUTER_KEY`, `TYPESAFE_API_KEY`, `LOGFIRE_API_KEY`, `NEO4J_PASSWORD`,
 `OPENROUTER_MODEL`, `OPENROUTER_PROVIDERS`, `LOGFIRE_URL` and
-`CLOUD_PUBLIC_ORIGIN`. The last four are configuration stored in the same
-service because the app manifest has no arbitrary environment configuration.
-The additional `CLOUD_TRUSTED_PROXIES` grant permits an optional comma-separated
-CIDR setting. A missing value keeps conservative peer-IP handling.
-The Neo4j password must be freshly generated and at least 16 characters.
-`CLOUD_PUBLIC_ORIGIN` is the exact HTTPS origin with no path or trailing slash.
-Choose the model/provider after the current tools and structured outputs pass
-compatibility checks. The OpenRouter key needs its independent $5 monthly cap.
+`CLOUD_PUBLIC_ORIGIN`. Bootstrap maps the three existing provider/telemetry
+names to `OPENROUTER_API_KEY`, `LOGFIRE_TOKEN` and `LOGFIRE_PROJECT_URL` in the
+application environment. It creates no duplicate credential entries.
+The exact origin has no path or trailing slash. Fresh Neo4j passwords require
+at least 16 characters. Missing values or denied grants fail startup without
+logging values. The injected Bottle app token stays inside the runtime.
 
-The three existing Bottle entries map to the application environment at
-startup, without creating duplicate store entries:
+The dedicated key's limit of $5 and monthly reset are verified, but its
+`include_byok_in_limit=false` setting excludes existing Google BYOK usage.
+The owner must enable Include BYOK usage in limit on that same key and retain
+the $5 monthly settings before publication. Verify the resulting flag is true;
+do not claim the requested inference-wide ceiling before then.
+[Official key limit fields](https://openrouter.ai/docs/api/api-reference/api-keys/update-keys).
 
-| Bottle key requested and granted | Canonical application environment |
-| --- | --- |
-| `OPENROUTER_KEY` | `OPENROUTER_API_KEY` |
-| `LOGFIRE_API_KEY` | `LOGFIRE_TOKEN` |
-| `LOGFIRE_URL` | `LOGFIRE_PROJECT_URL` |
+The selected cloud configuration is `google/gemini-3.1-flash-lite` with exclusive
+provider order `google-ai-studio,google-vertex/global`, active after private
+restart. Standard published rates are $0.25 per million input tokens and $1.50
+per million output tokens. The real assessment trial returned valid dates and
+reading order from Google AI Studio in 4.113 seconds, with one framework request
+and HTTP 200. Default `reasoning.effort: none` was accepted. Response cost was
+zero because the account's existing Google BYOK served the call. Current-key
+tracked usage is $0.00255985 OpenRouter-funded plus $0.00601500 BYOK, totaling
+$0.00857485. This is the latest snapshot, not a final or per-guide cost total:
+BYOK counters increased without another verifier inference call, leaving delayed
+settlement or other key activity unresolved. BYOK is outside the cap until the
+flag above is enabled.
+[Model and trial evidence](../work/projects/cloud-in-a-bottle-deployment/reports/gemini-trial-evidence-2026-10-12.md).
 
-All other names are unchanged. The mapping is explicit and cloud-only. Missing
-aliases fail startup even if a canonical environment value happens to exist.
-Direct `CLOUD_SECRET_SOURCE=environment` uses canonical names exclusively.
+The prior Gemma guide completed with sparse/dense evidence and a partial-search
+disclosure. Direct diagnostics reproduced intentional `LaborUnion` subtype
+abstention at 0.73 below the unchanged 0.80 threshold. Another question returned
+an invalid reading-order enum, motivating the Model Deployment change rather
+than prompt, validator, output-retry or threshold relaxation. The complete
+Gemini bill-focused HTTPS guide passed without partial search or disclosures.
+Once BYOK counting is enabled, the key allowance includes its tracked BYOK and
+OpenRouter-funded usage, not Jev, Logfire or purchase
+fees. Telemetry initializes before agents.
 
-Bootstrap calls the injected router with its injected app token. It requires
-the documented `{secrets: {key: value}, missing: [...]}` response and refuses
-missing keys, denied grants and service failures. It never logs values. The
-temporary mode-0600 Neo4j argument file avoids placing its password in process
-arguments. Environment mode exists only for explicit isolated rehearsals via
-`CLOUD_SECRET_SOURCE=environment`; all keys remain mandatory.
+Cloud model requests default to 60 seconds, two transport attempts and a
+15-second rate-limit wait cap. Retrieval retains its 180-second deadline; the
+complete question deadline is 240 seconds. One web worker enforces the shared
+admission limits. Uvicorn proxy rewriting is disabled. The router source, actual
+Caddy forwarding configuration and observed app socket peer support the exact
+setting `CLOUD_TRUSTED_PROXIES=127.0.0.1/32`. It is stored in Secrets and
+verified active in the web process after the private Gemini restart. No broader
+network is trusted.
+[Proxy review](../work/projects/cloud-in-a-bottle-deployment/reports/trusted-proxy-review-2026-10-12.md).
 
-Telemetry initializes before agents. Application imports follow persistent
-SQLite path selection. Neo4j uses loopback Bolt with HTTP disabled; embeddings
-use loopback HTTP on 8081. Only application HTTP 8080 is exposed. The web server
-has one worker and Uvicorn proxy rewriting disabled. Cloud
-model transport defaults are a 60-second request timeout, two total
-transport attempts and a 15-second rate-limit wait cap. Bootstrap and the web
-subprocess set these through the existing environment settings before either
-cached embedding settings or chat clients load. Explicit transport environment
-settings can override them; local command defaults stay unchanged. The overall
-question deadline remains 240 seconds. Paid-route compatibility with these
-limits still requires real credential-backed checks. Keep
-`CLOUD_TRUSTED_PROXIES` unset until the actual Bottle peer and forwarding chain
-are verified. An unset value treats the router peer as the source IP, producing
-conservative shared rate limits until deployment configuration is confirmed.
+## Frozen deployment and updates
 
-## Deploy privately after verification
-
-The current manifest has `public_paths = []`. Keep it that way through the
-private rehearsal. Log in interactively and select the intended instance.
-With the tested release committed and pushed, deploy its branch using the
-documented branch URL syntax:
+Always target `akaisenghor.bottle.cloud`. The installed Bottle parser and Git
+implementation support a full commit after `@`; exact detached checkout was
+verified on this instance. For the first deployment of an absent app:
 
 ```sh
-bottle app deploy https://github.com/OWNER/REPO@RELEASE_BRANCH \
-  --name california-knowledge-map --grant-permissions-v2 --wait --instance INSTANCE
-bottle app status california-knowledge-map --instance INSTANCE
-bottle app logs california-knowledge-map --instance INSTANCE
+bottle app deploy https://github.com/AkaiS/california-political-knowledge-map@COMMIT_SHA \
+  --name california-knowledge-map --grant-permissions-v2 --wait \
+  --instance akaisenghor.bottle.cloud
 ```
 
-Record the remote checkout SHA and compare it to the tested release. A branch
-can move; the syntax alone does not prove commit selection. The CLI has no
-assumed `--ref` flag. For rebuilds, stop admission and the app before rebuilding
-so runtime and build allocations do not compete on the eight-GB host. Maintain
-at least 20% free disk and retain the tested release plus one rollback candidate.
+Review the manifest's individual service grants before approving them. The
+source repository is public and does not need owner GitHub OAuth.
 
-The installed CLI's `--grant-permissions-v2` approves the individually declared
-service keys during deploy. Review that list and populate the required keys
-first. Without grants, secrets retrieval returns 403 and bootstrap fails before
-readiness. This recipe does not grant access now; provisioning and grant approval
-remain operator steps.
+For this existing app, first stop admission and shut down services cleanly.
+Bottle's ordinary stop allows ten seconds before forced termination; Neo4j
+needed about eleven seconds in rehearsal. Open an authenticated instance shell:
 
-`/health/live` checks the web process. `/health/ready` also checks authenticated
-Neo4j connectivity and embedding health without paid inference. Web startup
-waits up to 180 seconds for both dependencies, then initializes the existing
-chat dependency path and its corpus coverage checks. Admission fails when a
-required dependency is unavailable.
+```sh
+bottle instance ssh --instance akaisenghor.bottle.cloud
+```
 
-Supervisor retries startup at most three times and stops process groups on
-shutdown. Stable-process exits are not retried indefinitely. A process crash
-requires an owner restart after inspection, using the private Unix supervisor
-socket or a container restart. Readiness remains false while dependencies are
-down. Supervisord has no network administration endpoint. Shutdown allows the
-web app to cancel work and records interrupted attempts on the next startup.
-Neo4j file logs use the distribution's rolling configuration; service output
-goes to stdout/stderr. Verify the platform's stdout retention separately.
+Inside that shell, use the installed Podman environment:
 
-The inspected Bottle source stops containers with a fixed ten-second grace
-period, then forces termination. Our Docker rehearsal with a 75-second grace
-period allowed Neo4j to finish its shutdown after about eleven seconds. The
-ordinary Bottle stop command therefore does not establish graceful shutdown.
-For planned maintenance, use an authenticated instance shell to request
-`supervisorctl -c /app/deployment/supervisord.conf shutdown` inside the app
-container, wait for all services to exit, and then invoke Bottle stop/reload.
-Confirm this procedure on the installed rootless instance before release.
-Unexpected termination still requires crash-recovery and interruption checks.
+```sh
+cd ~/openhost
+/home/host/.pixi/bin/pixi run -e dev podman update --restart=no \
+  openhost-california-knowledge-map
+/home/host/.pixi/bin/pixi run -e dev podman exec openhost-california-knowledge-map \
+  /app/.venv/bin/supervisorctl -c /app/deployment/supervisord.conf shutdown
+/home/host/.pixi/bin/pixi run -e dev podman inspect \
+  --format '{{.State.Running}}' openhost-california-knowledge-map
+```
 
-Before publication, rehearse persistence, interrupted searches, dependency
-failure, process restart, off-server SQLite backup and restoration, graph
-replacement, and rollback. Verify indexes and article alignment against the
-real exported corpus. Measure whole-question peak memory, latency and external
-cost. The prepared code does not establish the $5 cap, paid-route compatibility,
-TypeSafe billing, HTTPS/proxy behavior, backups or public readiness.
+The installed Podman supports `update --restart=no`. This temporary adjustment
+must precede shutdown because the platform's `unless-stopped` policy otherwise
+restarts a clean supervisor exit. Verify the policy change and stable stopped
+state before reloading. Bottle creates the replacement container with its
+normal policy. If shutdown has not finished within 150 seconds plus observation
+margin, inspect this app's status instead of forcing a reload. The supervisor
+stops web, embeddings and Neo4j in order. A confirmed stopped container avoids
+runtime/build competition on the eight-GB host. The latest private Gemini reload
+verified this sequence with clean service exits, no automatic-restart race and
+unchanged saved guide/attempt state.
 
-## Consistent SQLite recovery snapshots
+Resolve this app's unique ID from authenticated `/api/apps`, matching its exact
+name. The installed owner endpoint sets the existing app's next frozen remote:
 
-Use `deployment/backup_sqlite.py` for cloud recovery. It opens the source
-read-only and uses SQLite's backup API, including committed WAL pages. It keeps
-all corpus tables, visitor-owned guides, attempts and daily admission counters.
-The local sanitizing exporter is only for the initial corpus import.
+```sh
+bottle curl --instance akaisenghor.bottle.cloud -- -fsS \
+  -X POST https://akaisenghor.bottle.cloud/set_app_remote/APP_ID \
+  -H 'Content-Type: application/json' \
+  --data '{"repo_url":"https://github.com/AkaiS/california-political-knowledge-map@COMMIT_SHA"}'
+bottle app reload california-knowledge-map --update --wait \
+  --instance akaisenghor.bottle.cloud
+bottle app status california-knowledge-map --instance akaisenghor.bottle.cloud
+```
 
-Run inside the app container, using its persistent data path:
+Replace `APP_ID` and `COMMIT_SHA` with the reviewed app ID and full release SHA.
+`--update` fetches the stored ref and checks out FETCH_HEAD; the CLI also approves
+new v2 permissions declared by that reviewed manifest. Verify the reported SHA,
+source digest and retained installed data after startup. Keep 20% free disk and
+one tested rollback image/revision. A rollback is an ordinary frozen code update
+only while its schemas remain compatible with current persistent data.
+
+## Readiness and publication
+
+`/health/live` checks the web process. `/health/ready` checks authenticated graph
+connectivity and embedding health without paid inference:
+
+```sh
+bottle curl --instance akaisenghor.bottle.cloud -- -fsS \
+  https://california-knowledge-map.akaisenghor.bottle.cloud/health/ready
+```
+
+Startup waits up to 180 seconds for dependencies. Supervisor retries startup at
+most three times; a later stable-process crash requires an inspected owner
+restart. Administration uses a private Unix socket. Service output goes to
+stdout/stderr; Neo4j file logs rotate using its distribution configuration.
+
+The complete Gemini guide, runtime memory, ownership and persistence checks
+pass. Confirm the required BYOK budget flag and audit public routes before publication.
+Publication uses a reviewed, versioned manifest change followed by
+unauthenticated HTTP and visitor-isolation checks. Exact proxy trust is active.
+Hosted owner cancellation, failure/interruption recovery and
+precise forwarded-IP attribution remain limitations; existing local evidence
+does not establish each behavior on this host. A ready health endpoint alone
+does not establish a successful reading journey or public accessibility.
+
+## Deferred recovery setup
+
+When backup work resumes, use the installed Bottle backup service and verify its
+broader app capture, destination and schedule. Prepare consistent SQLite
+snapshots with the existing helper; the initial sanitized exporter is not a
+backup of cloud visitor data. Run inside the app container:
 
 ```sh
 uv run --no-sync python deployment/backup_sqlite.py \
@@ -193,21 +233,15 @@ uv run --no-sync python deployment/backup_sqlite.py \
   --output-root "$BOTTLE_APP_DATA_DIR/recovery/sqlite-backups"
 ```
 
-Each invocation creates a new timestamped directory with owner-only access. It
-contains `document_store.db` and a checksum manifest written after integrity and
-foreign-key checks. An existing directory is refused. A failed backup removes
-only its newly created snapshot directory. Backups preserve private visitor
-content, so transfer them only through authenticated, encrypted recovery storage.
+The helper includes committed WAL pages and preserves corpus, guide ownership,
+attempts and quotas. It creates an owner-only timestamped directory with a
+checksum manifest after integrity/foreign-key checks. Pair these snapshots with
+the immutable graph/model release. The broader Bottle backup reads live files;
+its capture does not itself prove database consistency. Verify an actual restore
+before claiming recovery, and handle visitor snapshots through authenticated,
+encrypted storage. No new destination or dedicated job is required now.
 
-To rehearse SQLite recovery, verify the manifest checksum, restore its database
-to a fresh directory and check saved guide ownership, attempts, quotas and
-reader corpus. Replacing the live database requires stopping admission and the
-web process first. This helper does not configure an off-server destination,
-encryption, retention, a nightly schedule or restore the graph. Pair SQLite
-snapshots with the immutable corpus/model release and measure actual off-server
-restoration before publication.
-
-The service contract was checked against Bottle source
-[`6ea27634d1cbfc1b29caec29b53b76d919201b97`](https://github.com/cloud-in-a-bottle/cloud-in-a-bottle/tree/6ea27634d1cbfc1b29caec29b53b76d919201b97/services/secrets)
-and its [manifest reference](https://cloudinabottle.org/docs/creating_an_app/manifest_spec.html).
-Confirm the installed zone matches those contracts before deployment.
+Contracts match installed Bottle
+[`6ea27634d1cbfc1b29caec29b53b76d919201b97`](https://github.com/cloud-in-a-bottle/cloud-in-a-bottle/tree/6ea27634d1cbfc1b29caec29b53b76d919201b97).
+[Hosted deployment evidence](../work/projects/cloud-in-a-bottle-deployment/reports/hosted-private-deployment-2026-10-12.md),
+[installed backup contract](../work/projects/cloud-in-a-bottle-deployment/reports/backup-integration-2026-10-12.md).

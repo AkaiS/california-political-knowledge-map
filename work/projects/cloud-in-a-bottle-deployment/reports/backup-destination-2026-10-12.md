@@ -1,0 +1,21 @@
+# Off-server backup destination
+
+Research date: 2026-10-12. Recommendation only; no account, bucket, credentials, or hosted backup was configured.
+
+Use a private Backblaze B2 bucket through restic's S3 backend. The prepared corpus is approximately 375 MB. Two corpus releases plus guide-preserving SQLite snapshots should fit the estimated 1–2 GB budget, subject to measured repository growth. The first 10 GB is free across the account. B2 currently charges $6.95/TB-month beyond that allowance, offers free API calls, and has no minimum file size or storage duration fee. Expected storage cost here is $0. The pricing page states, "First 10GB storage is always free." [Current B2 pricing](https://www.backblaze.com/cloud-storage/pricing)
+
+Downloads are free up to three times monthly average stored data, then $0.01/GB. An immediate first-day restore may exceed its initially small allowance; a 2 GB download has at most $0.02 of gross egress at that rate. Published primary billing documents did not establish a card collection threshold; do not mistake any deferred invoice threshold for a minimum storage purchase. [B2 pricing](https://www.backblaze.com/cloud-storage/pricing), [billing](https://help.backblaze.com/hc/en-us/articles/217665708-Transaction-History-and-Invoices)
+
+Cloudflare R2 Standard is the alternative if the owner already uses Cloudflare. Its free tier covers 10 GB-month, one million write/list operations and ten million read operations monthly, with free Internet egress. Overage is $0.015/GB-month, $4.50/million writes/lists and $0.36/million reads, rounded to billing units. Standard has no minimum storage duration. Avoid Infrequent Access, which excludes the free tier and imposes 30-day minimum retention. B2's lower storage overage and official restic guidance make it the default choice. [R2 pricing](https://developers.cloudflare.com/r2/pricing/)
+
+## Human setup
+
+1. Register or enable **B2 Cloud Storage**, verify email, and create a private, globally unique bucket. Copy its actual regional S3 endpoint. Review Caps & Alerts; set bounded storage/download spending and email alerts. Caps can stop backup or restore work and changes can take ten minutes. Confirm the displayed free allowances before setting zero-dollar caps. [Account/bucket setup](https://www.backblaze.com/docs/en/cloud-storage-get-started-with-a-backblaze-integration), [caps](https://www.backblaze.com/docs/cloud-storage-create-and-manage-caps-and-alerts)
+2. Create a standard application key restricted to this bucket, Read and Write, with Allow List All Bucket Names enabled for S3 compatibility. Its key ID becomes `AWS_ACCESS_KEY_ID`; its one-time application key becomes `AWS_SECRET_ACCESS_KEY`. Store these in the authenticated backup app, never chat or Git. Use `s3:https://<endpoint>/<bucket>/ca-map` as the repository URL. [Key permissions](https://www.backblaze.com/docs/cloud-storage-s3-compatible-app-keys), [restic S3 setup](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html)
+3. Keep a strong restic repository password in a password manager outside Bottle, then initialize the repository. Use B2 lifecycle "Keep only the last version of the file" to clear hidden deleted packs. Do not add age-based expiration of current objects. Restic specifically recommends S3 over its native B2 backend. [Restic B2 guidance](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html#backblaze-b2)
+
+## Retention and acceptance
+
+Keep SQLite backups tagged `guides` with seven daily and four weekly snapshots; keep corpus snapshots tagged `corpus` with the latest two releases. Apply separate tag-filtered policies and stable paths, review `forget --dry-run`, then prune. These rules overlap; they do not promise eleven distinct SQLite snapshots. [Retention semantics](https://restic.readthedocs.io/en/stable/060_forget.html)
+
+Before public launch, restore both sets to an isolated destination, verify corpus checksums, SQLite integrity and saved-guide ownership, then test application readiness. A successful upload or `restic check` alone does not prove recovery. Bucket-scoped deletion credentials permit pruning but also permit a compromised host to delete backups; this initial plan provides recovery from server loss, without immutability.

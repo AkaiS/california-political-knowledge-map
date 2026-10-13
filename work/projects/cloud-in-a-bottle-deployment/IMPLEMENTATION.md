@@ -2,135 +2,190 @@
 
 Labels: ready-for-agent
 
-Started October 12, 2026. The maintainer authorized beginning the deployment
-plan with the orchestration and Cloud in a Bottle skills. This record separates
-prepared artifacts and verified behavior from remaining provisioning and launch
-checks.
+The owner-only app runs on the selected $20 Cloud in a Bottle instance at
+`a74ca13ffd6a6a6ddfd23568e8e9f26934d57286`. Infrastructure and visitor-isolation
+checks pass. Gemini 3.1 Flash Lite is active after the private restart. Its HTTPS
+guide completed in 19.832 seconds with the expected CalMatters article, reading
+direction and Article Group, a completed search and no partial-search disclosure.
+Publication is waiting for the owner to enable BYOK usage counting on the
+dedicated $5/month OpenRouter key, then public access verification.
 
-## Assignments
+The user explicitly said, "Leave backup configuration for later." Backup setup
+and off-server recovery are deferred beyond this phase. This record supersedes
+older provisioning and backup requirements in the research notes.
 
-| Assignment | Owned changes | Acceptance |
-| --- | --- | --- |
-| Packaging | Dockerfile, manifest, runtime, supervisor and deployment guide | Pinned image; private service ports; safe startup; real isolated boot and persistence checks |
-| Public service | Visitor controls, web entry, SQLite ownership and tests | Cross-visitor access rejected; bounded work; existing local behavior preserved |
-| Data preparation | Inventory, SQLite export and recovery scripts/tests/report | Original data unchanged; private guides scrubbed; corpus preserved; compatible graph dump recipe |
-| Integration | Shared dependencies, ADR 0025, configuration and tracker | Focused checks and deterministic suite; clear remaining launch gates |
+## Current deployment
 
-## Accepted facts
+| Item | Verified state |
+| --- | --- |
+| Instance | `akaisenghor.bottle.cloud`, x86_64, four CPUs, about 8 GB RAM, rootless Podman 5.8.3 |
+| App | `california-knowledge-map` |
+| Private URL | `https://california-knowledge-map.akaisenghor.bottle.cloud/` |
+| Deployed SHA | `a74ca13ffd6a6a6ddfd23568e8e9f26934d57286` |
+| Source | Public GitHub repository, branch `codex/cloud-in-a-bottle-deployment`; deployment uses a full commit ref |
+| Limits | 5 GiB runtime, three CPUs, 2 GiB build, one web worker |
+| Live routing | `public_paths = []`; authenticated readiness 200, unauthenticated shell 404 |
+| Prepared public SHA | `c3c3f01ed569f5336d8f8a0188cefec7cbed1c3a`, committed and pushed; not deployed |
+| Corpus | `2026-10-12-real-corpus-01`, Neo4j Community 2026.07.1, sanitized SQLite and checksum-pinned embeddings |
+| Active inference | OpenRouter `google/gemini-3.1-flash-lite`, exclusive order `google-ai-studio,google-vertex/global`; existing Google BYOK served the Gemini calls |
+| Budget | Key limit $5/month verified; `include_byok_in_limit=false`, so the requested inference-wide cap is not yet established |
 
-The local graph runs Neo4j Community 2026.07.1 with Temurin Java 25.0.3. All
-16 indexes are online, including the 768-dimensional cosine vector index. The
-inventory observed 3,668 graph nodes and 157 SQLite Stories. The CPU embedding
-runtime to match is llama.cpp build 10150, revision `dee2a846b`. These are local
-observations, not measurements on an Imbue space.
+Bottle revision `6ea27634d1cbfc1b29caec29b53b76d919201b97` matches the
+inspected contracts. The complete manifest passes its installed parser;
+consumed Secrets service version is `==0.1.0`. GitHub OAuth is not a remaining
+prerequisite for the public repository. The six existing apps remain running.
+[Instance preflight](reports/instance-preflight-2026-10-12.md),
+[private deployment evidence](reports/hosted-private-deployment-2026-10-12.md).
 
-The official Bottle CLI is installed from upstream commit
-`6ea27634d1cbfc1b29caec29b53b76d919201b97`. The maintainer completed interactive
-login. The sole configured instance, `akaisenghor.bottle.cloud`, responded with
-HTTP 200. Its six standard apps were running. Read-only instance preflight is
-under way; no hosted app has been modified by this work.
+## Accepted infrastructure and data evidence
 
-## Pending verification and launch checks
+The AMD64 image built and started on the actual instance under the declared
+limits, without reported OOM or swap use. Rootless persistence mapping was
+verified. Only application HTTP is published on host loopback; Neo4j Bolt and
+embeddings remain inside the container. All 383 tracked source files match the
+frozen SHA. Bottle does not inject the image revision argument, so the checkout
+and source-content digest establish release provenance.
 
-- Inspect the authenticated instance's version-matched docs.
-- Verify the trusted router peer and hosted build/runtime behavior on x86_64.
-- Configure a dedicated $5/month OpenRouter key, compatible paid route, Jev and
-  Logfire credentials, plus off-server recovery storage.
-- Finish the disposable restore of the authorized real Neo4j/SQLite seed and
-  freeze its release manifest against the final tested commit.
-- Rehearse the matching real corpus, off-server restore, rollback and private
-  hosted workload, including build memory under the manifest's 2 GiB limit.
-- Publish only after the deployment plan's public launch checks pass.
+The hosted graph has 3,668 nodes, 6,061 relationships, 98 Source Articles and
+2,407 Article Chunks. All 16 indexes are ONLINE, including the 768-dimensional
+COSINE vector index. SQLite passes integrity checks and retains 157 Stories;
+every graph Article URL aligns with a Story. Real CPU embeddings returned 768
+dimensions. The original container reached about 2.15 GiB during startup and
+short assessments. The corrected container's peak after the completed reading
+retry was about 1.517 GiB, under its 5 GiB limit, with zero swap and OOM events.
+[Hosted runtime and corpus evidence](reports/hosted-private-deployment-2026-10-12.md).
 
-## Implemented and verified locally
+The authorized local offline graph export interrupted Neo4j for 14 seconds and
+restarted it immediately. Before/after inventory matched. The SQLite export
+removed six local guides and seven attempts, preserved corpus data and left the
+source checksum unchanged. A disposable real-corpus restore passed graph,
+index, vector, reader and restart checks. The immutable seed was transferred
+through authenticated SSH, with all artifact checksums verified remotely.
+[Data preparation](reports/data-preparation-2026-10-12.md),
+[real seed rehearsal](reports/seed-preflight-2026-10-12.md).
 
-The pinned container, owner-only manifest and deployment runtime are in place.
-Credentials come from explicit Bottle secret grants, database and model seeds
-are validated before installation, and private service ports remain loopback.
-The [deployment runbook](/Users/akaisenghor/Projects/california-political-knowledge-map/main/docs/cloud-deployment.md)
-records startup, release provenance, operator steps and known platform limits.
+Secrets bootstrap uses individual grants and maps the owner's existing
+`OPENROUTER_KEY`, `LOGFIRE_API_KEY` and `LOGFIRE_URL` names to application
+configuration. It preserves the existing TypeSafe entry. Credentials and fresh
+Neo4j authentication worked at hosted startup; no credential values were
+printed or committed. Cloud request settings are 60 seconds, two attempts and
+a 15-second rate-limit wait cap. The overall question deadline is 240 seconds.
+[Transport review](reports/cloud-transport-review-2026-10-12.md),
+[deployment runbook](../../../docs/cloud-deployment.md).
 
-Public mode now scopes saved guides and their controls to anonymous browser
-identities. It bounds request bodies, question length, active and queued work,
-per-visitor/IP submissions and persistent daily admission. It requires an
-explicit HTTPS origin. The original local mode remains available; existing
-unowned private guides are not exposed in public mode.
+## Source Guides and deployed model compatibility
 
-The actual SQLite export removed six local guides and seven attempts from its
-copy, preserved reader corpus data and left the source checksum unchanged. All
-98 graph Source Articles have matching SQLite Stories. See the
-[data preparation report](reports/data-preparation-2026-10-12.md).
+Public mode scopes saved guides, reads, updates and cancellation to anonymous
+browser identities. It bounds body and question size, active and queued work,
+hourly visitor/IP submissions and persistent daily admission. Existing unowned
+local guides remain private. Hosted HTTPS checks confirmed separate visitor
+cookies, foreign-Origin rejection, request bounds, cross-visitor 404 responses
+and stable reopening of terminal guides.
 
-Verification evidence:
+The missing-reference question passed and returned `needs_edit`. The initial
+reading question failed during assessment before retrieval. The installed OpenRouter
+Google transformer inferred from the `google/` model prefix rewrote genuine
+nullable date unions into `nullable: true`, which the constrained Gemma route
+did not honor. An isolated same-model, same-provider diagnostic changed only
+the library schema transformer and returned typed `None` dates successfully.
 
-- Full deterministic Python suite: 1,773 passed and 77 skipped after allowing
-  loopback HTTP fixtures. The first sandboxed run could not bind those sockets.
-- JavaScript CI checks: all 31 passed.
-- Independent public-service checks found an expired-guide admission defect,
-  which was corrected; privacy, cancellation and local lifecycle checks pass.
-  [Public-service review](reports/public-service-review-2026-10-12.md).
-- Independent packaging checks found incompatible SQLite schema and private
-  build-context inclusion defects, which were corrected. Final focused
-  packaging and revision checks pass. [Packaging review](reports/packaging-review-2026-10-12.md).
-- A real Linux ARM64 Docker candidate booted under 6 GiB/3 CPU limits with
-  external networking disabled. It used a synthetic graph, the sanitized SQLite
-  corpus and the exact embedding artifact. Readiness was 200; real CPU
-  embeddings returned 768 dimensions. Idle memory was about 1.5 GiB.
-- Actual container restart retained an owned guide and daily quotas, and marked
-  an unfinished attempt interrupted. Dependency failure caused readiness 503;
-  explicit supervisor recovery worked. Fresh Neo4j authentication succeeded and
-  the default password was rejected. [Image rehearsal](/Users/akaisenghor/Projects/california-political-knowledge-map/main/deployment/verification-2026-10-12.md).
+The factory now selects `OpenAIJsonSchemaTransformer` only for OpenRouter
+`google/gemma-` names, including the supported `~` alias. Other inferred
+capabilities, Gemini and local profiles, prompts, domain validation and zero
+output retries remain unchanged. The ten-case regression and adjacent targeted
+suites passed 120 tests. Independent review passed 54 focused tests and verified
+standard null/date wire semantics and continued rejection of invalid strings.
+[Hosted HTTP checks and diagnosis](reports/hosted-http-verification-2026-10-12.md),
+[independent profile review](reports/openrouter-profile-review-2026-10-12.md).
 
-No paid model request or live source graph mutation was performed. This dirty
-candidate has source-content metadata; it is not a committed or hosted release.
-The Docker checks do not establish rootless Podman behavior, the target's actual
-resource use, real question completion, HTTPS/proxy behavior or backup recovery.
+The corrected release preserved the existing guide, failed attempt and visitor
+ownership. Its real HTTPS retry completed assessment, retrieval and reading
+guidance in 11.996 seconds with two CalMatters articles and nonempty directions.
+The saved response explicitly reported a partial search; reopening and foreign
+visitor rejection passed again. It is a completed guide, not a clean pass for
+every retrieval branch.
 
-Bottle's inspected stop operation allows ten seconds before forced termination.
-The isolated Neo4j shutdown needed about eleven seconds with a 75-second Docker
-grace period. Planned maintenance must first drain the web service and request
-private supervisor shutdown before invoking Bottle stop/reload; verify this on
-the installed instance. Ordinary Bottle stop is not recorded as graceful.
+Independent direct full-text and dense checks succeeded. A structural-only
+probe stopped before composition, binding or graph execution. The bounded
+selection probe then confirmed `SelectionAbstention` at `role_subtypes`:
+`LaborUnion` scored 0.73 below the unchanged 0.80 threshold, while the other
+subtype scored 0.85. All three TypeSafe requests returned HTTP 200; these probes
+made zero OpenRouter requests. This is the documented conservative subtype
+policy, so no threshold, prompt or selector adjustment was made. Historical
+attribution to the original HTTP branch remains limited because its Logfire
+span was not queried. [Selection policy](../../../docs/structural-retrieval.md).
 
-## Authenticated preflight and real corpus export
+The earlier Gemma reading retry cost $0.00131952 by current-key delta. Its
+settled funded usage was $0.00232569 before the later Gemini execution. Current
+funded and BYOK totals are recorded below.
 
-The maintainer completed Bottle login and authorized a brief local Neo4j stop
-for the offline export. The original container restarted after a 14-second
-maintenance interval. The dump operation took three seconds. Read-only
-before/after inventory retained 3,668 nodes, 6,061 relationships and all 16
-online indexes. SQLite's source checksum remained unchanged.
+The bill-focused Gemma execution failed assessment by returning the string
+`"null"` for the nonnullable `reading_order` enum. The nullable-schema correction
+does not make that provider's enum output reliable. The selected cloud Model
+Deployment is now `google/gemini-3.1-flash-lite`, using only
+`google-ai-studio,google-vertex/global`. Its real production assessment trial
+passed in 4.113 seconds with one framework request, one HTTP 200 response from
+Google AI Studio, typed null dates and `reading_order: relevance`. The unchanged
+factory's `reasoning.effort: none` was accepted. The response reported zero
+OpenRouter billed cost for existing Google BYOK routing; it was not free inference.
 
-The paired seed is in `.scratch/deployment-corpus/2026-10-12-real-corpus-01`.
-Its Neo4j dump is 30,364,204 bytes with SHA-256
-`b9c57e38234afdd659f36eae2caca3f447d903fadcabd669effca696d3e00314`.
-The sanitized SQLite and fixed embedding checksums match the earlier inventory.
-The final application revision and release manifest remain pending. The
-disposable restore passed index, vector, reader and restart checks, with a
-2.15 GiB peak across those probes. The maintainer reports external credentials
-configured with the dedicated $5 monthly OpenRouter cap.
+The standard published rates are $0.25 per million input tokens and $1.50 per
+million output tokens. Prompts, validators, output retries, Jev thresholds and
+CPU embeddings remain unchanged. The private restart activated the selected
+model/provider configuration without a code change.
+[Gemini route and trial evidence](reports/gemini-trial-evidence-2026-10-12.md).
 
-Authenticated preflight found Bottle revision
-`6ea27634d1cbfc1b29caec29b53b76d919201b97`, matching the inspected contracts.
-The instance runs x86_64, four CPUs, 8,127,721,472 bytes of RAM and rootless
-Podman 5.8.3. Its filesystem has about 123 GiB free. The local ARM64 rehearsal
-does not prove this target build. The bundled backup app has no recorded
-successful snapshots; off-server recovery remains unverified.
+The complete Gemini HTTPS guide passed in 19.831821 seconds, retaining one
+expected CalMatters AB 1751 article, a nonempty reading direction and an Article
+Group. It reported `partial: false`, completed search and no disclosures. Foreign
+visitor access returned 404; saved ownership and attempt history persisted.
+The runtime peak was about 1.675 GiB with zero swap and OOM events.
 
-Key-name-only inspection found an existing TypeSafe entry. It was preserved.
-Authenticated owner API calls added only the confirmed-missing Neo4j password,
-model, provider and origin entries. No credential values were printed or saved
-in the repository. [Credential setup](../../../docs/cloud-credentials.md)
-describes the remaining external keys, monthly cap and billing review.
+Latest current-key metadata shows OpenRouter-funded usage of $0.00255985 and
+tracked BYOK usage of $0.00601500, combined $0.00857485, still below one cent.
+BYOK usage increased between metadata snapshots despite no further inference
+by the verifier. Delayed settlement or other key activity is unresolved, so
+these counters are not a final total or exact per-guide cost attribution.
+The zero response cost described OpenRouter billing, not free
+Google inference. `include_byok_in_limit` is false, so BYOK currently bypasses
+the key's verified $5/month allowance. The owner has been asked to enable
+Include BYOK usage in limit on this existing key, keeping the $5 limit and
+monthly reset. That required response is pending before publication. The cap
+does not cover TypeSafe, Logfire, purchase fees or unrelated provider usage.
 
-The maintainer clarified existing names `OPENROUTER_KEY`, `LOGFIRE_API_KEY`
-and `LOGFIRE_URL`. Key-name-only inspection confirmed their presence. Cloud
-bootstrap maps those entries to the application's standard environment names.
-It does not copy credentials or create duplicate secret entries.
-See the [instance preflight](reports/instance-preflight-2026-10-12.md).
+## Validation and next acceptance checks
 
-The initial runtime ceiling is now 5 GiB, leaving about 2.57 GiB outside the
-app on this host. A complete paid question must still pass that limit. An
-independent fresh-process review confirmed cloud model transport settings of
-60-second requests, two attempts and a 15-second rate-limit wait cap before
-configuration imports. The 240-second question deadline remains in effect;
-98 targeted checks passed. Local defaults remain unchanged.
+The full deterministic suite with the correction passed 1,790 tests with 77
+skipped and one existing sampling-temperature warning, in 67.67 seconds.
+JavaScript CI checks passed all 31 tests. Independent privacy, lifecycle,
+packaging, transport and schema reviews are recorded in the linked reports.
+
+Remaining work in this phase:
+
+- Obtain owner confirmation and verify `include_byok_in_limit=true` on the
+  existing dedicated key, retaining `limit=5` and `limit_reset=monthly`.
+- Deploy the prepared public SHA with `public_paths = ["/"]` only after the
+  budget setting is verified. Then verify unauthenticated access and visitor
+  isolation before publishing the portfolio link. It has not been deployed yet.
+
+The exact proxy setting `127.0.0.1/32` is active in the current web process after
+the private Gemini restart. Router source, actual Caddy configuration and socket
+peer evidence passed [proxy review](reports/trusted-proxy-review-2026-10-12.md).
+
+Hosted owner cancellation and interruption recovery remain follow-up evidence;
+local failure checks already pass. They are not new launch prerequisites.
+
+Planned maintenance uses the supported `podman update --restart=no` before
+private supervisor shutdown and Bottle stop/reload. The normal `unless-stopped`
+policy otherwise restarts a clean exit, making a momentary stopped-state reading
+insufficient. The replacement container restores the normal policy. Bottle
+gives only ten seconds before forced termination, while Neo4j shutdown took
+about eleven seconds. The latest Gemini maintenance verified the temporary
+policy, stable stopped state and clean service exits, then recreated the same
+code/image with the normal policy. Saved guide and attempt state matched before
+and after. [Hosted maintenance proof](reports/hosted-private-deployment-2026-10-12.md).
+
+Backup destination, schedule and off-server restoration remain deferred at the
+user's request. Resume that work with the installed Bottle backup service and
+its verified contract; a running backup app is not evidence of recoverable
+snapshots.
