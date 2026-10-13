@@ -39,6 +39,26 @@ def deployment(model="google/gemma-4-26b-a4b-it"):
 
 
 def completion(body, output):
+    if body.get("response_format", {}).get("type") == "json_schema":
+        output = {
+            **QuestionAssessment(status="allowed").model_dump(mode="json"),
+            **output,
+        }
+        return {
+            "id": "assessment-output-test",
+            "object": "chat.completion",
+            "created": 0,
+            "model": body["model"],
+            "provider": "DeepInfra",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": json.dumps(output)},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
     return {
         "id": "assessment-output-test",
         "object": "chat.completion",
@@ -102,7 +122,7 @@ def test_openrouter_gemma_assessment_can_return_real_null_dates(monkeypatch, mod
     def respond(request):
         body = json.loads(request.content)
         requests.append(body)
-        fields = body["tools"][0]["function"]["parameters"]["properties"]
+        fields = body["response_format"]["json_schema"]["schema"]["properties"]
         for name in ("publication_date_from", "publication_date_through"):
             assert Draft202012Validator(fields[name]).is_valid(None), (
                 "The request must permit the same JSON null accepted by QuestionAssessment"
