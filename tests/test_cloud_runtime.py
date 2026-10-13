@@ -2,10 +2,12 @@ import hashlib
 import json
 import sqlite3
 import subprocess
+import tomllib
 from pathlib import Path
 
 import httpx
 import pytest
+from packaging.specifiers import SpecifierSet
 
 from knowledge_map.cloud_runtime import (
     ARTIFACTS,
@@ -26,6 +28,20 @@ def secrets():
         **{key: "DedicatedDeploymentSecret123!" for key in REQUIRED_SECRETS},
         "CLOUD_PUBLIC_ORIGIN": "https://guides.example",
     }
+
+
+def test_manifest_consumes_exact_compatible_secrets_service():
+    root = Path(__file__).resolve().parents[1]
+    manifest = tomllib.loads((root / "cloudinabottle.toml").read_text())
+    service = manifest["services"]["v2"]["consumes"][0]
+    constraint = SpecifierSet(service["version"])
+    assert "0.1.0" in constraint
+    assert "0.1.1" not in constraint
+    assert "0.2.0" not in constraint
+    assert [grant["key"] for grant in service["grants"]] == list(
+        REQUIRED_BOTTLE_KEYS + OPTIONAL_CONFIGURATION
+    )
+    assert manifest["routing"]["public_paths"] == []
 
 
 def bottle_secrets():
