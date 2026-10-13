@@ -2,16 +2,22 @@
 
 `main` is the production branch. Pull requests and pushes to `main` run the
 same deterministic Python and Node checks in `.github/workflows/ci.yml`.
-They also build the production Dockerfile, including its pinned llama.cpp
-binary, dependency installation and build metadata. The image stays on the
-temporary runner. A cold build has a 60-minute limit.
+The test, review-gate and build jobs check out the exact reviewed PR head on
+pull requests, and the exact push SHA on `main`. PR jobs test and build that
+reviewed head. The required up-to-date branch rule supplies the integration
+baseline before merging. The image's `APP_REVISION` records the same SHA.
+Only after `tests` and `review-gate` succeed does `container-build` build the
+production Dockerfile, including its pinned llama.cpp binary, dependency
+installation and build metadata. The image stays on the temporary runner.
+A cold build has a 60-minute limit.
 
-The required branch checks are `tests` and `container-build`. Configure the
-`main` branch to require a pull request and both successful checks, require
+The required branch checks are `tests`, `review-gate` and `container-build`,
+all from the GitHub Actions app, ID `15368`. Configure the
+`main` branch to require a pull request and all three successful checks, require
 the branch to be up to date, and enforce the rules for administrators without
 a bypass. The workflow alone cannot enforce repository settings.
 
-After both jobs succeed on a push to `main`, `production-preflight` checks out
+After all three jobs succeed on a push to `main`, `production-preflight` checks out
 that push's exact `github.sha`. It uses the `production` GitHub environment.
 That environment must allow deployments only from `main`. The job shares the
 `production` concurrency group and does not cancel an in-progress run.
@@ -25,6 +31,53 @@ release application code. Its summary reports the candidate SHA separately
 from the current checkout SHA observed through Bottle. An unavailable current
 SHA is reported as unavailable. A successful status read does not establish
 application health or release readiness.
+
+## Build review gate
+
+`scripts/review_gate.py` reads GitHub metadata through the runner's `gh` CLI.
+It requires the external `Greptile Review` check from app ID `867647`, slug
+`greptile-apps`, to complete successfully for the exact pull request head.
+The latest summary must come from bot ID `165735046`, login
+`greptile-apps[bot]`, contain exactly one
+`<!-- greptile_confidence_score:5 -->` marker, and identify that full head SHA
+in its `Last reviewed commit` link. Its update must follow the check's start.
+A successful Greptile check with a score of 3/5 rejects the build.
+
+Every review thread must be resolved, including outdated threads. A review
+that still requests changes also rejects the build. The gate reads all pages
+of comments, reviews, threads, checks and commit statuses. Every other visible
+check and status must complete successfully. Neutral, skipped, cancelled and
+failed checks do not count as green. The gate excludes only its own
+`review-gate`, `container-build` and `production-preflight` jobs after checking
+the Actions app identity, run repository, run head SHA and authoritative
+workflow path `.github/workflows/ci.yml`. Same-named jobs from other apps or
+workflows must succeed. A successful `tests` job from this CI workflow is
+required independently of the workflow's `needs` dependency.
+
+Missing or stale review evidence and pending checks wait up to 30 minutes,
+with a 30-second polling interval. A definitive score below 5/5, unresolved
+feedback, failed check, malformed evidence or API failure rejects the build.
+The gate rechecks the pull request head during each poll and immediately
+before success. A new head requires a new workflow run and review.
+
+A push to `main` must correspond to exactly one associated merged pull
+request whose `merge_commit_sha` equals the push SHA. GitHub commit metadata
+must show an identical tree for that merge and the reviewed PR head. The gate
+revalidates the merged PR's review and head checks, then requires green checks
+for the main commit too. This accepts the exact reviewed merge without
+waiting for a Greptile review on a merge SHA that Greptile does not review.
+Direct pushes, arbitrary reviewed ancestors, ambiguous merged PRs and merges
+that introduce a different tree fail closed. Requiring the PR to be up to date
+before merging keeps the reviewed tree equal to the merged tree.
+
+The review job receives only a read-only `GITHUB_TOKEN`, scoped to contents,
+checks, commit statuses, Actions run metadata, pull requests and issues. It has
+no production environment or deployment secrets, including on fork pull
+requests. API
+errors withhold raw output. The gate does not post, resolve, approve or change
+reviews. GitHub metadata can change after the last read; branch protection and
+a fresh run remain necessary when a PR head changes. Changes to the gate or
+workflow require the same external review as other pull request changes.
 
 ## Production environment configuration
 
@@ -102,13 +155,21 @@ config, and suppression of secret-bearing errors:
 ```sh
 uv run --no-sync pytest -q tests/test_production_preflight.py
 uv run --no-sync ruff check scripts/production_preflight.py tests/test_production_preflight.py
+uv run --no-sync pytest -q tests/test_review_gate.py
+uv run --no-sync ruff check scripts/review_gate.py tests/test_review_gate.py
 uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs tests/chunk_eval_review.test.mjs
 uv run --no-sync pytest -q tests
-docker build --build-arg APP_REVISION="$(git rev-parse HEAD)" --tag ca-map-ci .
 ```
 
-These checks make steps 1 through 4 reviewable: the production branch,
-required CI policy, a success-dependent job for an exact main commit, and
-production API/SSH authentication. The user chose manual releases initially.
+The review-gate tests cover trusted score and commit markers, stale and
+missing evidence, unresolved outdated threads, requested changes, other
+checks and statuses, API pagination, workflow ownership, fork event context,
+head changes during polling, bounded timeout, merged PR provenance and the
+success-dependent workflow ordering. No local container build is needed to
+verify this policy. GitHub runs the image build after the gate succeeds.
+
+These checks cover the production branch, required CI policy, review before
+build, a success-dependent job for an exact main commit, and production
+API/SSH authentication. The user chose manual releases initially.
 Step 5, automatic application deployment and its shutdown, health, reload and
 rollback behavior, is not implemented.
