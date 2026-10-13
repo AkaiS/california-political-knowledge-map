@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import logfire
 from pydantic import ValidationError
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 from pydantic_ai.usage import RunUsage
@@ -27,7 +27,7 @@ from knowledge_map.core.question_preparation import (
 )
 from knowledge_map.core.retrieval import RetrievalCoordinator
 from knowledge_map.prompts import load_prompt
-from knowledge_map.schemas import ModelDeployment
+from knowledge_map.schemas import DeploymentKind, ModelDeployment
 from knowledge_map.schemas.query_preparation import (
     QueryRewrite,
     QueryRewriteProposal,
@@ -292,7 +292,13 @@ def get_chat_agent(
         create_agent(
             get_chat_model(deployment or DEFAULT_LOCAL_CHAT_MODEL, cache=cache_model),
             name="chat_agent",
-            output_type=QuestionAssessment,
+            output_type=(
+                NativeOutput(QuestionAssessment, strict=True)
+                if deployment is not None
+                and deployment.kind is DeploymentKind.OPENROUTER
+                and deployment.model.removeprefix("~").startswith("google/gemma-")
+                else QuestionAssessment
+            ),
             retries=0,
             instructions=CHAT_INSTRUCTIONS,
             capabilities=capabilities,
