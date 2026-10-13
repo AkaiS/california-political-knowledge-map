@@ -22,7 +22,7 @@ app_data = true
 [[services.v2.consumes]]
 service = "github.com/imbue-openhost/openhost/services/secrets"
 shortname = "secrets"
-version = "0.1.0"
+version = "==0.1.0"
 grants = [
   {key = "OPENROUTER_KEY"},
   {key = "TYPESAFE_API_KEY"},
