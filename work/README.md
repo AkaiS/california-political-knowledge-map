@@ -17,9 +17,9 @@ proposes one container for the web app, Neo4j and CPU embeddings, with persisten
 corpus and Source Guide data, visitor isolation, off-server recovery and staged
 publication. The [implementation record](projects/cloud-in-a-bottle-deployment/IMPLEMENTATION.md)
 captures the running AMD64 app, visitor controls, prepared corpus and passing
-local checks. Gemini completed the full HTTPS Source Guide check, with visitor
-isolation and persistence verified. Public routing is prepared; enabling BYOK
-usage in the dedicated key's $5 monthly limit remains the final setup step.
+local checks. The app is public on paid Gemma 4 26B through exclusive DeepInfra,
+using the dedicated $5/month OpenRouter key. The assessment integration fix
+passed local regression tests and the final anonymous HTTPS guide check.
 Backup configuration and off-server restoration are deferred at the maintainer's
 request. GitHub OAuth is unnecessary for the now-public repository.
 

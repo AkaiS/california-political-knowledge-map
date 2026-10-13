@@ -1,14 +1,17 @@
-# Hosted private deployment
+# Hosted deployment and publication
 
-The corrected owner-only app is running on `akaisenghor.bottle.cloud` at
-`a74ca13ffd6a6a6ddfd23568e8e9f26934d57286`. Authenticated HTTPS readiness returns
-200. The profile correction and redeploy evidence appear at the end of this
-report. Earlier attempts stopped before app creation because
+The public portfolio release on `akaisenghor.bottle.cloud` is running at
+`0444a3cffb7c1cb09f220fb7e36b8c45e5081563`, with exclusive paid DeepInfra Gemma
+configuration active. Authenticated readiness and fresh anonymous homepage
+requests both return 200 at
+[California Political Knowledge Map](https://california-knowledge-map.akaisenghor.bottle.cloud/).
+Deployment, configuration-trial and publication evidence appears below.
+Earlier attempts stopped before app creation because
 Bottle's GitHub authorization fallback masked a consumed-version constraint
 error. The corrected complete manifest passes the actual installed parser.
 The existing six apps remain running.
 
-## Frozen release
+## Initial frozen release
 
 - Git repository `https://github.com/AkaiS/california-political-knowledge-map`.
 - Branch `codex/cloud-in-a-bottle-deployment`.
@@ -381,3 +384,213 @@ was made by this worker. Evidence is retained in the disposable
 `/private/tmp/ca-map-bottle-after-gemini-state.json`,
 `/private/tmp/ca-map-bottle-gemini-source-evidence.json` and
 `/private/tmp/ca-map-bottle-gemini-runtime-evidence.json`.
+
+## Paid DeepInfra Gemma configuration trial
+
+The user requested a paid Gemma route through OpenRouter rather than the Google
+BYOK route. The root verified two isolated assessments through exclusive
+`deepinfra/fp8`: each used one HTTP request, emitted JSON null dates and a valid
+reading order, reported `is_byok=false`, and together cost $0.00053218.
+The root then configured `google/gemma-4-26b-a4b-it` and `deepinfra/fp8` and
+authorized a private configuration-only restart. This worker made no paid call.
+
+The remote checkout was again confirmed clean at `a74ca13`, with
+`public_paths=[]`; the local publication commit was not fetched. Before stopping,
+the state snapshot recorded three guides, five attempts and daily admissions
+five for `2026-10-13`, with SQLite integrity `ok` and unchanged installed marker.
+The worker set only this container's policy to `no`, verified it, shut down
+supervisor and waited. Two observations confirmed a stable exited container,
+exit zero and no OOM. Uvicorn completed application shutdown, embeddings exited
+zero, and Neo4j logged `Stopped.` and exited zero.
+
+A plain `bottle app reload ... --wait`, without `--update`, started the private
+rebuild. Contrary to the initial cache expectation, its llama.cpp stage rebuilt
+the apt, Git and CMake steps. The installed build command specifies the
+2,048 MiB memory and combined memory/swap ceilings and has no explicit
+`--no-cache` or layer override; installed Podman defaults `--layers=true`.
+The build log showed only one cache-hit line. The cause of the misses was not
+established, and no global cache or platform setting was changed. Sampled host
+available memory remained about 5.7 GiB with zero swap during compilation.
+
+The platform's supported plain reload always invokes the builder. Static review
+found no owner API/CLI route for image-only restart or manifest-only publication;
+internal archive/startup helpers are not an approved publication shortcut. The
+prepared publication commit changes only the manifest and its test, which the
+Docker context excludes, but a later cache hit is not guaranteed. This build
+was allowed to finish rather than being interrupted for an optimization.
+
+Readiness was 503 during maintenance because the replacement container had not
+been created. Build and startup subsequently completed. Authenticated HTTPS
+readiness is 200. The new container is
+`74b6f2823194cba6493a5f98a79b30b41c4dab10d7e81502554b308c6fd502af`, and image is
+`aef0b360fac312621498b9cd5595596377c435a1b17e0995e97b0932f158be30`.
+Normal `unless-stopped` policy and exact 5 GiB/three-CPU limits are restored.
+Its early peak was 1,413,320,704 bytes (about 1.32 GiB), with zero swap and zero
+OOM counters.
+
+The active nonsecret settings match the authorized Gemma model, exclusive
+`deepinfra/fp8` route and reviewed `127.0.0.1/32` proxy range. All 383 source
+files still match `a74ca13` exactly, including aggregate
+`7cf60672c3715e2612243655d9a2f45939b2caa88addb484de5df5220900efd1`.
+Post-restart persistent state is exactly equal to the baseline: three guides,
+five attempts, daily admissions five, identity/status hashes and installed
+marker all retained; SQLite integrity is `ok`. No seed was reimported.
+
+The private app remains unpublished and is held stable for the separately
+authorized full-guide check. The rebuilt image ID differs despite matching
+application source bytes; the previously documented unpinned embedded UI fetch
+remains a reproducibility limitation. No build cache was cleared, and no
+retained image was removed. The rebuilt AMD64 image is 1,739,834,222 bytes;
+`llama-server` SHA-256 is
+`5594e47e015c4e7f966e64cbe8914599681e74836d1bb9ab2ad31f0fb44c3690`.
+The exact cause of the changed binary digest was not established. The preceding
+tested image `584327c5ce4cdb02e8835df9eb580e7416d99c68a183078774673aa178cd35da`
+still exists for rollback. Disposable progress evidence is
+`/private/tmp/ca-map-bottle-paid-gemma-build-progress.log`; shutdown and baseline
+files are `/private/tmp/ca-map-bottle-paid-gemma-shutdown.log` and
+`/private/tmp/ca-map-bottle-before-paid-gemma-state.json`.
+Post-start evidence is `/private/tmp/ca-map-bottle-after-paid-gemma-state.json`
+and `/private/tmp/ca-map-bottle-paid-gemma-source-evidence.json`.
+
+## Public portfolio rollout
+
+The root authorized publication under the user's original portfolio goal after
+the full paid DeepInfra Gemma HTTPS guide completed cleanly in 14.875 seconds:
+expected Article, reading directions and two groups; `partial=false`, search
+completed, and no disclosures. Cross-owner access remained 404 and history was
+preserved. The reported OpenRouter retry delta was $0.00139204; ordinary usage
+was $0.00448407 with $4.99551593 remaining under the $5 monthly cap. Historical
+BYOK usage did not increase during this paid route check. The separate HTTP
+verification report owns those model and privacy results.
+
+The public manifest and existing assertion were frozen at
+`c3c3f01ed569f5336d8f8a0188cefec7cbed1c3a`. Its source tree is byte-identical to
+`a74ca13`; only the manifest and test changed. The installed full parser and
+49 focused tests had already accepted `public_paths=["/"]`. The audited routes
+serve the Source Guides UI/assets, owned guide APIs, coverage and health; docs,
+OpenAPI and admin endpoints are absent.
+
+The worker took a fresh pre-publication snapshot: three guides, six attempts and
+daily admissions six, with ownership/latest-attempt hashes, attempt statuses,
+SQLite integrity and installed marker recorded without emitting private text.
+The supported owner remote-ref POST accepted the exact `c3c3f01` ref. The owned
+container's policy was temporarily set to `no`; supervisor shutdown then produced
+a stable exited container with exit zero and no OOM. Uvicorn completed shutdown,
+embeddings exited zero, and Neo4j logged `Stopped.` and exited zero. The worker
+then ran the standard authorized `reload --update --wait`.
+
+This publication build reused 24 cached steps and retained image
+`aef0b360fac312621498b9cd5595596377c435a1b17e0995e97b0932f158be30`.
+Actual hosted checkout is clean at the exact full public SHA, with
+`public_paths=["/"]`. All 383 tracked source files match, with unchanged digest
+`7cf60672c3715e2612243655d9a2f45939b2caa88addb484de5df5220900efd1`.
+The recreated container is
+`1c6af300e2abd641b973cfa1334cfa05f1227a38fdeaae93e08406b784886a23`.
+
+Post-rollout state and allowed nonsecret configuration are exactly equal to the
+baseline: three guides, six attempts, daily admissions six, all recorded hashes
+and the installed marker unchanged, integrity `ok`, Gemma 26B with exclusive
+`deepinfra/fp8`, and trusted proxy range `127.0.0.1/32`. No seed was imported or
+marker overwritten. Runtime remains 5 GiB and three CPUs, with normal
+`unless-stopped` policy and only host `127.0.0.1:9006` published to web port 8080.
+Neo4j ports have no host bindings; build limit remains 2,048 MiB.
+
+Authenticated `/health/ready` returned 200. A fresh raw `curl -q` request, with
+no owner Authorization or saved cookie jar, returned homepage 200 and the Source
+Guides shell. Recent Uvicorn access lines show actual socket peer `127.0.0.1`,
+within the reviewed trusted range; only that peer address was extracted, with
+no headers or visitor addresses emitted. The early public-container memory peak
+was 1,356,804,096 bytes (about 1.26 GiB), with zero swap and all OOM counters zero.
+
+The root and HTTP verifier received the public readiness signal and new
+container ID. The app is held stable for the separately authorized fresh
+anonymous full-guide and final privacy/header checks. This worker made no paid
+call and did not change another app, reboot the instance or remove cache/rollback
+images. Backup setup remains explicitly user-deferred.
+
+Disposable publication evidence is
+`/private/tmp/ca-map-bottle-public-reload-c3c3f01.log`,
+`/private/tmp/ca-map-bottle-public-build-progress.log`,
+`/private/tmp/ca-map-bottle-public-shutdown.log`,
+`/private/tmp/ca-map-bottle-before-public-state.json`,
+`/private/tmp/ca-map-bottle-after-public-state.json`,
+`/private/tmp/ca-map-bottle-public-source-evidence.json`,
+`/private/tmp/ca-map-bottle-public-anonymous-home.html` and
+`/private/tmp/ca-map-bottle-public-access-peer.log`.
+
+## Anonymous assessment follow-up
+
+The final fresh anonymous guide check failed assessment at UTC
+`2026-10-13T07:28:21.165173` through `07:28:22.847845`, before retrieval. The
+five-second scoped log check found one `QuestionAssessment.reading_order`
+`literal_error`: the model emitted the literal string `"null"` (`str`) rather
+than `relevance`, `publication_asc`, `publication_desc`, `event_asc` or
+`event_desc`. The terminal exception was `UnexpectedModelBehavior: Exceeded
+maximum output retries (0)`. This is the same validation class observed in the
+earlier bill check despite an intervening successful full private guide.
+
+The running public release and chosen Gemma 26B/exclusive DeepInfra configuration
+remain unchanged while the root investigates the structured-output integration.
+No model/provider swap, rollback, restart, additional paid execution or other-app
+operation was performed by this worker. Anonymous landing access and deployment
+readiness passed; final anonymous guide functionality is not yet verified.
+The scoped log extraction emitted only the validation field, expected enum,
+actual enum scalar and exception type. Evidence is
+`/private/tmp/ca-map-bottle-public-anonymous-assessment-scoped.log`.
+
+## Locally tested strict assessment integration release
+
+The root fixed the chosen Gemma integration without changing model, provider,
+prompts, domain values, retry count, profiles or guidance output. For OpenRouter
+Gemma only, assessment now uses `NativeOutput(QuestionAssessment, strict=True)`.
+Before deployment, the full local deterministic suite passed 1,799 tests with
+77 skips and one existing warning in 72.35 seconds; 129 focused and 19 independent
+checks also passed. One isolated request through the same Gemma 26B/exclusive
+DeepInfra route verified the actual strict native JSON-schema assessment in
+1.18 seconds, with `is_byok=false` and reported cost $0.00022590. No saved hosted
+guide was changed by that isolated test. The root then authorized the exact
+public release `0444a3cffb7c1cb09f220fb7e36b8c45e5081563`.
+
+The pre-update snapshot recorded four guides, seven attempts and daily admissions
+seven, with identity/status hashes and installed marker preserved. The supported
+remote-ref POST returned 200. Only the owned container's restart policy was set
+to `no`; supervisor completed shutdown, and independent inspection confirmed
+stable `running=false`, exit zero and no OOM. Uvicorn completed application
+shutdown, embeddings exited zero, and Neo4j stopped and exited zero. Standard
+`reload --update --wait` fetched the exact frozen commit and reused 13 cached
+build steps.
+
+Actual hosted checkout is clean at the new full SHA, with `public_paths=["/"]`.
+All 383 deployed source files match its Git tree exactly, including
+`core/chat.py` with the strict native assessment wrapper. The new source digest
+is `1f2760347408d395426273711ae1b46663b1523e3d0b913c6d6dfc6f6d734096`.
+The image is
+`62ba97b22b01be84085555a5c9643c25c85b907dbfdaf3df10124aec36109d3a`, and
+container is
+`a00c8bcacc09ce9927a6db5d0a0e942f97f7c13ae7e2f667154844847c572bdb`.
+The image is AMD64 and 1,739,834,217 bytes. Actual host bindings publish only
+`127.0.0.1:9006` to web port 8080; Neo4j ports have no host bindings. The preceding
+image `aef0b360fac312621498b9cd5595596377c435a1b17e0995e97b0932f158be30`
+is still retained.
+
+The post-update state and permitted nonsecret configuration exactly match the
+baseline: four guides, seven attempts, daily admissions seven, all recorded
+identity/status hashes and installed marker unchanged, SQLite integrity `ok`,
+`google/gemma-4-26b-a4b-it`, exclusive `deepinfra/fp8` and trusted range
+`127.0.0.1/32`. No seed or marker was overwritten. Runtime is still 5 GiB and
+three CPUs, build limit 2,048 MiB, and normal `unless-stopped` policy is restored.
+Authenticated readiness and a fresh anonymous non-inference homepage GET both
+returned 200. The early runtime peak was 1,491,484,672 bytes (about 1.39 GiB),
+with zero swap and all OOM counters zero.
+
+The root dispatched exactly one final anonymous full-guide smoke after these
+checks. This worker holds the service stable and submits no model request.
+Testing for this fix occurred locally first; public testing is the final smoke,
+not an iterative diagnosis loop. Backup configuration remains user-deferred.
+Disposable evidence is `/private/tmp/ca-map-bottle-strict-reload-0444a3c.log`,
+`/private/tmp/ca-map-bottle-strict-build-progress.log`,
+`/private/tmp/ca-map-bottle-strict-shutdown.log`,
+`/private/tmp/ca-map-bottle-before-strict-state.json`,
+`/private/tmp/ca-map-bottle-after-strict-state.json`,
+`/private/tmp/ca-map-bottle-strict-source-evidence.json` and
+`/private/tmp/ca-map-bottle-strict-anonymous-home.html`.

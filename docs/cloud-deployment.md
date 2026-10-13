@@ -1,17 +1,19 @@
 # Cloud deployment runbook
 
-The owner-only app runs at
-`https://california-knowledge-map.akaisenghor.bottle.cloud/` on the $20 instance.
-The frozen `a74ca13ffd6a6a6ddfd23568e8e9f26934d57286` release passed hosted
-AMD64 startup, rootless persistence, corpus/index, embedding, HTTPS and visitor
-isolation checks. Gemini 3.1 Flash Lite is active after private restart. Its full HTTPS guide passed
-in 19.832 seconds with the expected article, reading direction and Article Group,
-completed search, no partial disclosure, persisted ownership and a 1.675 GiB
-peak with no swap or OOM. Publication waits for the owner to enable BYOK usage
-counting on the existing $5/month key, followed by public verification. Live
-routing stays `public_paths = []`. Public SHA
-`c3c3f01ed569f5336d8f8a0188cefec7cbed1c3a` is committed and pushed, but has
-not been deployed.
+The public app is live at [https://california-knowledge-map.akaisenghor.bottle.cloud/](https://california-knowledge-map.akaisenghor.bottle.cloud/) on the $20 instance,
+frozen at `0444a3cffb7c1cb09f220fb7e36b8c45e5081563`. It uses only
+`google/gemma-4-26b-a4b-it` through exclusive `deepinfra/fp8`, paid with the
+existing OpenRouter key. No additional Google key is required. The user requires
+this model to remain fixed; a different model or provider requires direct user
+instruction. No automatic model or provider fallback is configured.
+
+The final anonymous guide passed in 17.174719 seconds without owner
+authorization: allowed assessment, relevance order, one linked expected
+CalMatters AB 1751 article, completed search, `partial: false` and no disclosures.
+The saved guide reopens unchanged for its owner; a foreign visitor receives
+404, and all seven earlier attempts remain in history. Live routing is
+`public_paths = ["/"]`. Peak runtime memory was 1.745 GiB with zero swap and
+OOM events. Public assets, privacy, bounds and persistence checks passed.
 [Current implementation and evidence](../work/projects/cloud-in-a-bottle-deployment/IMPLEMENTATION.md).
 
 Backup configuration is deferred at the user's explicit request. It is not a
@@ -41,7 +43,10 @@ docker build --build-arg APP_REVISION="$(git rev-parse HEAD)" -t ca-map-candidat
 The build excludes credentials, databases, weights, scratch output and Git
 history. Bottle does not supply `APP_REVISION`; record the actual remote
 checkout SHA and compare `/app/deployment/build-metadata.json` source hashes
-with that frozen source. A dirty local image is a development candidate.
+with that frozen source. All 383 tracked source hashes match the live release;
+the source digest is
+`1f2760347408d395426273711ae1b46663b1523e3d0b913c6d6dfc6f6d734096`.
+A dirty local image is a development candidate.
 
 ## Corpus installation and ordinary updates
 
@@ -89,36 +94,39 @@ The exact origin has no path or trailing slash. Fresh Neo4j passwords require
 at least 16 characters. Missing values or denied grants fail startup without
 logging values. The injected Bottle app token stays inside the runtime.
 
-The dedicated key's limit of $5 and monthly reset are verified, but its
-`include_byok_in_limit=false` setting excludes existing Google BYOK usage.
-The owner must enable Include BYOK usage in limit on that same key and retain
-the $5 monthly settings before publication. Verify the resulting flag is true;
-do not claim the requested inference-wide ceiling before then.
-[Official key limit fields](https://openrouter.ai/docs/api/api-reference/api-keys/update-keys).
+The dedicated key's $5 limit and monthly reset are verified. The user's selected
+cloud configuration is paid `google/gemma-4-26b-a4b-it`, exclusive provider
+`deepinfra/fp8`, funded through the existing OpenRouter key and credits. No
+additional Google or DeepInfra key is required. Published endpoint rates are
+$0.07 per million input tokens and $0.34 per million output tokens.
+[Paid route evidence](../work/projects/cloud-in-a-bottle-deployment/reports/gemma-paid-route-2026-10-12.md).
 
-The selected cloud configuration is `google/gemini-3.1-flash-lite` with exclusive
-provider order `google-ai-studio,google-vertex/global`, active after private
-restart. Standard published rates are $0.25 per million input tokens and $1.50
-per million output tokens. The real assessment trial returned valid dates and
-reading order from Google AI Studio in 4.113 seconds, with one framework request
-and HTTP 200. Default `reasoning.effort: none` was accepted. Response cost was
-zero because the account's existing Google BYOK served the call. Current-key
-tracked usage is $0.00255985 OpenRouter-funded plus $0.00601500 BYOK, totaling
-$0.00857485. This is the latest snapshot, not a final or per-guide cost total:
-BYOK counters increased without another verifier inference call, leaving delayed
-settlement or other key activity unresolved. BYOK is outside the cap until the
-flag above is enabled.
-[Model and trial evidence](../work/projects/cloud-in-a-bottle-deployment/reports/gemini-trial-evidence-2026-10-12.md).
+Question assessment now uses `NativeOutput(QuestionAssessment, strict=True)`
+only for OpenRouter Gemma. The existing library transformer emits native JSON
+Schema with every property required, explicit null date unions and the fixed
+reading-order enum. Guidance keeps its original output-tool mode; prompts,
+domain validators, zero output retries, other deployment modes, Jev thresholds
+and CPU embeddings are unchanged. String-length and cross-field rules still
+use application validation. One isolated actual same-model/same-provider native
+assessment passed before this release, followed by the clean anonymous guide.
+[Strict integration review](../work/projects/cloud-in-a-bottle-deployment/reports/strict-gemma-review-2026-10-13.md).
 
-The prior Gemma guide completed with sparse/dense evidence and a partial-search
-disclosure. Direct diagnostics reproduced intentional `LaborUnion` subtype
-abstention at 0.73 below the unchanged 0.80 threshold. Another question returned
-an invalid reading-order enum, motivating the Model Deployment change rather
-than prompt, validator, output-retry or threshold relaxation. The complete
-Gemini bill-focused HTTPS guide passed without partial search or disclosures.
-Once BYOK counting is enabled, the key allowance includes its tracked BYOK and
-OpenRouter-funded usage, not Jev, Logfire or purchase
-fees. Telemetry initializes before agents.
+The dedicated key's $5 monthly limit and `include_byok_in_limit: true` are
+verified. The final anonymous smoke cost $0.00135362 through the selected paid
+route. Funded key usage is $0.00629775;
+historical BYOK usage is $0.00601500,
+unchanged during the selected paid tests. Observed combined usage is
+$0.01231275 and remaining monthly allowance is $4.98768725 with a $5 limit,
+monthly reset and BYOK counting enabled.
+The allowance excludes Jev, Logfire, credit purchase fees and unrelated provider
+usage. Earlier trial snapshots are retained in the linked evidence reports.
+[Key limit fields](https://openrouter.ai/docs/api/api-reference/api-keys/update-keys).
+
+Earlier nullable/tool enum failures and the temporary Gemini trial are retained
+in the historical reports. Gemini is not selected or an approved fallback.
+Structural subtype abstention at 0.73 below 0.80 was existing policy and was not
+tuned for deployment. Telemetry initializes before agents.
+[Hosted diagnosis](../work/projects/cloud-in-a-bottle-deployment/reports/hosted-http-verification-2026-10-12.md).
 
 Cloud model requests default to 60 seconds, two transport attempts and a
 15-second rate-limit wait cap. Retrieval retains its 180-second deadline; the
@@ -126,8 +134,8 @@ complete question deadline is 240 seconds. One web worker enforces the shared
 admission limits. Uvicorn proxy rewriting is disabled. The router source, actual
 Caddy forwarding configuration and observed app socket peer support the exact
 setting `CLOUD_TRUSTED_PROXIES=127.0.0.1/32`. It is stored in Secrets and
-verified active in the web process after the private Gemini restart. No broader
-network is trusted.
+verified active in the current public web process. No broader network is
+trusted.
 [Proxy review](../work/projects/cloud-in-a-bottle-deployment/reports/trusted-proxy-review-2026-10-12.md).
 
 ## Frozen deployment and updates
@@ -172,7 +180,7 @@ state before reloading. Bottle creates the replacement container with its
 normal policy. If shutdown has not finished within 150 seconds plus observation
 margin, inspect this app's status instead of forcing a reload. The supervisor
 stops web, embeddings and Neo4j in order. A confirmed stopped container avoids
-runtime/build competition on the eight-GB host. The latest private Gemini reload
+runtime/build competition on the eight-GB host. The earlier private Gemini reload
 verified this sequence with clean service exits, no automatic-restart race and
 unchanged saved guide/attempt state.
 
@@ -196,6 +204,16 @@ source digest and retained installed data after startup. Keep 20% free disk and
 one tested rollback image/revision. A rollback is an ordinary frozen code update
 only while its schemas remain compatible with current persistent data.
 
+Plain reload also invokes the image builder; omitting `--update` only skips the
+Git fetch. This installed Bottle version exposes no per-app owner API for
+skipping the build or applying only manifest routing. The paid-Gemma config
+restart recompiled llama.cpp despite unchanged app source. The public commit
+changes only the manifest and a test, both excluded from the Docker build
+context, but cache reuse is not guaranteed. Allow for another build and keep
+the graceful maintenance sequence. Do not substitute internal recovery helpers
+or global cache/settings changes.
+[Installed builder review](../work/projects/cloud-in-a-bottle-deployment/reports/build-cache-review-2026-10-13.md).
+
 ## Readiness and publication
 
 `/health/live` checks the web process. `/health/ready` checks authenticated graph
@@ -211,14 +229,14 @@ most three times; a later stable-process crash requires an inspected owner
 restart. Administration uses a private Unix socket. Service output goes to
 stdout/stderr; Neo4j file logs rotate using its distribution configuration.
 
-The complete Gemini guide, runtime memory, ownership and persistence checks
-pass. Confirm the required BYOK budget flag and audit public routes before publication.
-Publication uses a reviewed, versioned manifest change followed by
-unauthenticated HTTP and visitor-isolation checks. Exact proxy trust is active.
-Hosted owner cancellation, failure/interruption recovery and
-precise forwarded-IP attribution remain limitations; existing local evidence
-does not establish each behavior on this host. A ready health endpoint alone
-does not establish a successful reading journey or public accessibility.
+The frozen public release and anonymous paid-Gemma reading journey pass.
+Owner reopening, foreign-visitor 404 responses, preserved attempt history,
+public assets, privacy, bounds and persistence checks passed. Runtime peak was
+1.745 GiB with zero swap/OOM events; final funded billing was recorded. Exact
+proxy trust remains `127.0.0.1/32`.
+Hosted owner cancellation, failure/interruption recovery and precise forwarded-IP
+attribution remain limitations; existing local evidence does not establish each
+behavior on this host. These are follow-up evidence, not new launch gates.
 
 ## Deferred recovery setup
 

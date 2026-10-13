@@ -1,17 +1,16 @@
 # Cloud deployment credentials
 
-Prepare these values for the `california-knowledge-map` app on
-`akaisenghor.bottle.cloud`. Keep credential values in your password manager and
-the instance's Secrets app. Report completion and budget settings in chat,
-without values. This guide does not create accounts, purchase credits or make
-inference requests.
+Required credentials are configured and the app is public at
+[https://california-knowledge-map.akaisenghor.bottle.cloud/](https://california-knowledge-map.akaisenghor.bottle.cloud/). It uses fixed paid
+`google/gemma-4-26b-a4b-it` exclusively through `deepinfra/fp8` with the existing
+OpenRouter key and credits. No extra Google or DeepInfra key is required. Do not
+change the model or provider without direct user instruction; there is no
+automatic model/provider fallback. The final anonymous guide passed in
+17.174719 seconds. Existing local examples remain unchanged.
 
-Required credentials are configured and Gemini 3.1 Flash Lite is active. The
-complete HTTPS guide passed in 19.832 seconds with the expected article and
-reading direction, completed search and no partial disclosure. Publication is
-waiting for the owner to enable Include BYOK usage in limit on the existing
-dedicated OpenRouter key, while keeping its $5 limit and monthly reset. Existing
-local examples remain unchanged.
+Keep credential values in your password manager and the instance's Secrets app.
+Report completion and budget settings in chat without values. This guide does
+not create accounts, purchase credits or make inference requests.
 
 The required key names come from [the manifest](../cloudinabottle.toml) and
 [runtime bootstrap](../src/knowledge_map/cloud_runtime.py). Use these exact
@@ -19,9 +18,9 @@ names in Secrets, without extra spaces:
 
 | Bottle secret key | Application environment | Value to supply |
 | --- | --- | --- |
-| `OPENROUTER_KEY` | `OPENROUTER_API_KEY` | The existing dedicated $5/month key; enable Include BYOK usage in limit before publication |
-| `OPENROUTER_MODEL` | Same name | `google/gemini-3.1-flash-lite` |
-| `OPENROUTER_PROVIDERS` | Same name | `google-ai-studio,google-vertex/global` |
+| `OPENROUTER_KEY` | `OPENROUTER_API_KEY` | The existing dedicated $5/month OpenRouter inference key |
+| `OPENROUTER_MODEL` | Same name | `google/gemma-4-26b-a4b-it` |
+| `OPENROUTER_PROVIDERS` | Same name | `deepinfra/fp8` |
 | `TYPESAFE_API_KEY` | Same name | Your direct TypeSafe API key for Jev |
 | `LOGFIRE_API_KEY` | `LOGFIRE_TOKEN` | A write token for the chosen Logfire project |
 | `LOGFIRE_URL` | `LOGFIRE_PROJECT_URL` | The URL of that same Logfire project |
@@ -30,64 +29,56 @@ names in Secrets, without extra spaces:
 
 Optional `CLOUD_TRUSTED_PROXIES` is approved and stored as `127.0.0.1/32`, based
 on verified forwarding configuration and the observed socket peer. It is active
-in the web process after the private Gemini restart. The origin has no trailing
-slash or path.
+in the current public web process. The origin has no trailing slash or path.
 All eight required values must be present before startup can succeed.
 
 ## OpenRouter budget and selected deployment
 
-Open [OpenRouter's keys page](https://openrouter.ai/settings/keys) and create a
-dedicated inference key named `california-knowledge-map-bottle`. Set its USD
-spending limit to `5` and its reset to `monthly`. Confirm both saved settings
-and enable Include BYOK usage in limit before copying a new key into Secrets.
-For this deployment, update the existing dedicated key rather than creating
-another one. A plain $5 limit with no reset is a lifetime
-allowance, not the requested monthly budget. The official key API supports
-`limit: 5` and `limit_reset: "monthly"`; administrative API operations require a
-separate management key. Store only the inference key in Bottle.
-[Key creation reference](https://openrouter.ai/docs/api/api-reference/api-keys/create-a-new-api-key),
-[key management reference](https://openrouter.ai/docs/guides/overview/auth/management-api-keys).
+The current dedicated key is already configured with `limit: 5` and
+`limit_reset: "monthly"` and `include_byok_in_limit: true`, verified after the
+user enabled BYOK counting. Paid Gemma tests counted against that allowance
+and observed `is_byok: false`. Use the existing inference key; no extra Google
+or DeepInfra key is necessary to purchase shared inference with OpenRouter
+credits. If setting up another deployment, create its key in
+[OpenRouter settings](https://openrouter.ai/settings/keys) and verify the same
+limit/reset settings before use. A plain limit without reset is a lifetime
+allowance. Management keys handle administration and do not replace inference
+keys in Bottle.
+[Key creation](https://openrouter.ai/docs/api/api-reference/api-keys/create-a-new-api-key),
+[key management](https://openrouter.ai/docs/guides/overview/auth/management-api-keys).
 
-Current-key metadata shows the account's existing Google BYOK integration is
-serving Gemini, with `include_byok_in_limit=false`. The verified $5/month key
-allowance therefore currently excludes that usage. On the existing key, enable
-Include BYOK usage in limit and save it. The required resulting settings are
-`limit: 5`, `limit_reset: "monthly"` and `include_byok_in_limit: true`. Report
-completion without sending its value; publication waits for that setting to be
-verified. Review direct provider billing separately.
-[Budget and BYOK fields](https://openrouter.ai/docs/api/api-reference/api-keys/update-keys).
+The exclusive `deepinfra/fp8` policy excludes Google providers and their BYOK
+integration. Enabling BYOK counting does not authorize a model change. Keep
+that budget setting enabled; the current paid route needs no new provider key.
+If direct provider billing is deliberately enabled later, review it separately.
+[Budget fields](https://openrouter.ai/docs/api/api-reference/api-keys/update-keys),
+[credits and BYOK](https://openrouter.ai/docs/guides/overview/auth/byok).
 
-Keep automatic credit replenishment off if you want manual control of purchases.
-The key allowance does not cover credit purchase fees, other keys, Bottle,
-TypeSafe, Logfire or unrelated Google API usage.
-[Credit purchases and billing](https://openrouter.ai/docs/faq).
+Keep automatic credit replenishment off if you want manual purchase control.
+The allowance does not cover credit fees, other keys, Bottle, TypeSafe, Logfire
+or unrelated provider usage. [Billing](https://openrouter.ai/docs/faq).
 
-The cloud choice is separate from the repository's local/free example. Set the
-explicit model and providers above in Bottle Secrets. Do not copy the local
-example's provider policy into this hosted deployment.
+The selected paid 26B endpoint lists $0.07 per million input tokens and $0.34
+per million output tokens. Strict native JSON Schema is used only for Gemma
+question assessment; guidance retains its original tool-output mode. Prompts,
+domain validators and zero output retries are unchanged. The final anonymous
+guide returned allowed/relevance, the expected linked AB 1751 article,
+completed search, no partial search and no disclosures.
+[Official endpoint](https://openrouter.ai/api/v1/models/google/gemma-4-26b-a4b-it/endpoints),
+[paid Gemma evidence](../work/projects/cloud-in-a-bottle-deployment/reports/gemma-paid-route-2026-10-12.md),
+[strict integration review](../work/projects/cloud-in-a-bottle-deployment/reports/strict-gemma-review-2026-10-13.md).
 
-As checked on October 12, 2026, the selected Gemini standard endpoints list
-$0.25 per million input tokens and $1.50 per million output tokens. Both
-advertise tools, forced tool choice, structured outputs, reasoning and the
-current sampling/token parameters. The exclusive order permits same-model
-fallback only between Google AI Studio and the specified Google Vertex endpoint.
-[Official endpoint metadata](https://openrouter.ai/api/v1/models/google/gemini-3.1-flash-lite/endpoints).
-
-Gemma's nullable-schema correction allowed one completed guide, but a further
-question produced an invalid reading-order enum. The Gemini assessment trial
-passed with valid dates and `relevance`, retaining prompts, validators and zero
-output retries. The complete Gemini HTTPS guide also passed. Its zero response
-cost represented OpenRouter billing for a BYOK-served request, not free Google
-inference. Latest tracked usage is $0.00255985 OpenRouter-funded plus
-$0.00601500 BYOK, totaling $0.00857485. These counters changed without another
-verifier inference call, so delayed settlement or other key activity is unresolved;
-they are not final or exact per-guide charges. Including BYOK in the limit
-remains the required budget setting before publication.
-[Deployment trial evidence](../work/projects/cloud-in-a-bottle-deployment/reports/gemini-trial-evidence-2026-10-12.md).
-
-The application requires support for every sent parameter and restricts requests
-to the configured providers. Inspect a failure before changing that policy.
-[Provider routing reference](https://openrouter.ai/docs/guides/routing/provider-selection),
+The final anonymous smoke cost $0.00135362. Funded key usage is $0.00629775;
+historical BYOK usage is $0.00601500,
+unchanged during the selected paid tests. Observed combined usage is
+$0.01231275 and remaining monthly allowance is $4.98768725 with a $5 limit,
+monthly reset and BYOK counting enabled.
+Its runtime peak was 1.745 GiB with zero swap and OOM events. Saved owner
+reopening, foreign-visitor 404 responses and all seven earlier attempts in
+history were verified. Earlier trial costs remain historical evidence; older
+BYOK counter changes were not fully attributable to verifier activity. The cloud
+configuration remains separate from the unchanged local/free example.
+[Provider policy](https://openrouter.ai/docs/guides/routing/provider-selection),
 [project Model Deployment contract](model-deployments.md).
 
 ## TypeSafe and Logfire
@@ -134,20 +125,21 @@ existing `TYPESAFE_API_KEY` entry was preserved; confirm its intended account
 and billing before using it. The maintainer reports the external entries
 configured under `OPENROUTER_KEY`, `LOGFIRE_API_KEY` and `LOGFIRE_URL`; key-name
 inspection confirmed their presence. Cloud bootstrap maps these three entries
-to the standard application environment. Private startup, active Gemini
-configuration, the $5 key limit and monthly reset were verified. The BYOK flag
-is false and awaits the owner's dashboard correction; the full requested cap
-has not yet been established.
+to the standard application environment. Private startup, the $5 key limit and
+monthly reset were verified. The selected paid Gemma model/provider entries were
+stored through the owner API and verified active after the private restart.
+The full guide and paid assessment trials verified non-BYOK funded billing.
 
 Deployment requests individual grants for these keys through secrets service
 version constraint `==0.1.0`. The deployment command includes `--grant-permissions-v2` so the
 runtime can retrieve them. Bootstrap rejects missing or denied grants without
-logging their values. Keep the app owner-only until the BYOK budget flag is
-verified, then complete public-route verification. Backup configuration is
-deferred at the user's request.
+logging their values. The selected paid-Gemma guide and anonymous
+public journey passed on the frozen public release, including owner reopening
+and foreign-access rejection. Final billing and memory checks passed. Backup
+configuration is deferred
+at the user's request.
 [Deployment runbook](cloud-deployment.md),
 [versioned secrets contract](https://github.com/cloud-in-a-bottle/cloud-in-a-bottle/tree/6ea27634d1cbfc1b29caec29b53b76d919201b97/services/secrets).
 
-Once done, report: "The existing OpenRouter key has limit 5, monthly reset and
-Include BYOK usage in limit enabled." Do not send
-keys, tokens or passwords.
+The $5 monthly key limit and BYOK-counting setting are verified.
+Keep keys, tokens and passwords out of chat and the repository.
