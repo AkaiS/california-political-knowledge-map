@@ -1,0 +1,79 @@
+INFO:     Started server process [35651]
+INFO:     Waiting for application startup.
+Logfire project URL: 
+https://logfire-us.pydantic.dev/akais/california-political-knowledge-map
+15:37:04.276 GET localhost/v1/models
+15:37:04.283 HTTP Request: GET http://localhost:8080/v1/models "HTTP/1.1 200 OK"
+Open http://127.0.0.1:8132 in your browser.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8132 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62940 - "GET /api/coverage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/coverage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "POST /api/questions HTTP/1.1" 202 Accepted
+15:37:04.768 chat_session.started
+15:37:04.772 chat_session.submit
+15:37:04.772   chat_session.assessment
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+15:37:04.879     chat_agent run
+15:37:04.881       chat gemma4:26b
+15:37:04.902         POST localhost/v1/chat/completions
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+15:37:18.265         HTTP Request: POST http://localhost:8080/v1/chat/completions "HTTP/1.1 200 OK"
+15:37:18.281   chat_total_usage
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [35651]
+Exception ignored in atexit callback <bound method MeterProvider.shutdown of <opentelemetry.sdk.metrics._internal.MeterProvider object at 0x115cb57f0>>:
+Traceback (most recent call last):
+  File "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/__init__.py", line 616, in shutdown
+    metric_reader.shutdown(
+  File "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/export/__init__.py", line 597, in shutdown
+    self._daemon_thread.join(timeout=(deadline_ns - time_ns()) / 10**9)
+  File "/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/threading.py", line 1094, in join
+    self._handle.join(timeout)
+KeyboardInterrupt: 
+INFO:     Started server process [35825]
+INFO:     Waiting for application startup.
+Logfire project URL: 
+https://logfire-us.pydantic.dev/akais/california-political-knowledge-map
+15:37:22.709 GET localhost/v1/models
+15:37:22.715 HTTP Request: GET http://localhost:8080/v1/models "HTTP/1.1 200 OK"
+Open http://127.0.0.1:8132 in your browser.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8132 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62957 - "GET /api/coverage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62957 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62957 - "GET /api/coverage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62957 - "GET /api/guides HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62957 - "GET /api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [35825]
+Exception ignored in atexit callback <bound method MeterProvider.shutdown of <opentelemetry.sdk.metrics._internal.MeterProvider object at 0x1160857f0>>:
+Traceback (most recent call last):
+  File "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/__init__.py", line 616, in shutdown
+    metric_reader.shutdown(
+  File "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/export/__init__.py", line 597, in shutdown
+    self._daemon_thread.join(timeout=(deadline_ns - time_ns()) / 10**9)
+  File "/Users/akaisenghor/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/threading.py", line 1094, in join
+    self._handle.join(timeout)
+KeyboardInterrupt: 

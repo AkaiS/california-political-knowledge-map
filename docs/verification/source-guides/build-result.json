@@ -1,0 +1,16 @@
+{
+  "command": "uv build --offline --out-dir .scratch/verification-build",
+  "exit_code": 0,
+  "outputs": [
+    {
+      "filename": "california_political_knowledge_map-0.1.0.tar.gz",
+      "bytes": 14626550,
+      "sha256": "65770f260833da107dab88ba5e4e4e3c46f1a07295e495abfc639d997b3322ee"
+    },
+    {
+      "filename": "california_political_knowledge_map-0.1.0-py3-none-any.whl",
+      "bytes": 462427,
+      "sha256": "a885b0116299f4e338fd9db2159e13eaa602c58865b5b2f7d739d578f90f419e"
+    }
+  ]
+}

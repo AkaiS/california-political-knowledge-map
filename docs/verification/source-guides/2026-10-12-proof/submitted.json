@@ -1,0 +1,49 @@
+{
+  "question": "Who supported that bill?",
+  "status": "running",
+  "articles": [],
+  "groups": [],
+  "relevance_order": [],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-09-05"
+      }
+    ],
+    "completion": "running",
+    "bounded_selection": true,
+    "selection_limited": false,
+    "included_articles": 0
+  },
+  "disclosures": [],
+  "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+  "created_at": "2026-10-12T22:37:04.757718Z",
+  "latest_attempt": {
+    "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+    "started_at": "2026-10-12T22:37:04.757718Z",
+    "status": "running",
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-09-05"
+        }
+      ],
+      "completion": "running",
+      "bounded_selection": true,
+      "selection_limited": false,
+      "included_articles": 0
+    },
+    "disclosures": []
+  },
+  "publication_orders": {
+    "publication_asc": [],
+    "publication_desc": []
+  }
+}

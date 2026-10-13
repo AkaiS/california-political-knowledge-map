@@ -1,0 +1,27 @@
+{
+  "feature": "question-assessment",
+  "entry_point": "HTTP POST /api/questions",
+  "question": "Who supported that bill?",
+  "expected": "needs_edit",
+  "state": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.scratch/verify-source-guides-fvvle790",
+  "source_sqlite": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/document_store.db",
+  "command": [
+    "uv",
+    "run",
+    "--frozen",
+    "--no-sync",
+    "--project",
+    "/Users/akaisenghor/Projects/california-political-knowledge-map/main",
+    "ca-map",
+    "chat",
+    "--port",
+    "8132"
+  ],
+  "deployment": "local",
+  "untraced": false,
+  "shared_dependencies": "Existing Neo4j and model services; never stopped or migrated by this run",
+  "unverified": [
+    "Browser rendering, focus, navigation and screenshots",
+    "Other feature-map journeys"
+  ]
+}

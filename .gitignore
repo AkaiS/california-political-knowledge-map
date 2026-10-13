@@ -17,3 +17,4 @@ manual_checks/*
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/run-evaluation/
+!.agents/skills/verify-source-guides/

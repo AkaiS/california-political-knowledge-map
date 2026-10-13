@@ -24,7 +24,7 @@ from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
 from pydantic_ai.profiles import InlineDefsJsonSchemaTransformer, merge_profile
 from pydantic_ai.profiles.google import google_model_profile
-from pydantic_ai.profiles.openai import OpenAIModelProfile
+from pydantic_ai.profiles.openai import OpenAIJsonSchemaTransformer, OpenAIModelProfile
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
@@ -1085,6 +1085,9 @@ def _build_openrouter_model(
     return _OpenRouterModel(
         deployment.model,
         provider=provider,
+        profile=ModelProfile(json_schema_transformer=OpenAIJsonSchemaTransformer)
+        if deployment.model.removeprefix("~").startswith("google/gemma-")
+        else None,
         settings=OpenRouterModelSettings(**model_settings),  # type: ignore[arg-type]
     )
 

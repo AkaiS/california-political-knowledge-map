@@ -1,0 +1,27 @@
+{
+  "url": "http://127.0.0.1:8132",
+  "cwd": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.scratch/verify-source-guides-fvvle790",
+  "sqlite": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.scratch/verify-source-guides-fvvle790/document_store.db",
+  "process_group": 35824,
+  "listeners": [
+    {
+      "pid": 35825,
+      "command": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/bin/python /Users/akaisenghor/Projects/california-political-knowledge-map/main/.venv/bin/ca-map chat --port 8132"
+    }
+  ],
+  "revision": "5c00b4de33223be5d1eda385803f38de51e1ed84",
+  "dirty": true,
+  "coverage": {
+    "entries": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-09-05"
+      }
+    ]
+  },
+  "guide_count": 1,
+  "authentication": "No application login; production startup accepted dependency configuration",
+  "limits": "Model listing checks reachability. Doctor does not prove Jev or embedding inference."
+}

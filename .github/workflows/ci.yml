@@ -1,5 +1,8 @@
 name: CI
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -9,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Install Node 22
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -24,3 +30,74 @@ jobs:
       - name: Test review editing
         run: uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs tests/chunk_eval_review.test.mjs
       - run: uv run --no-sync pytest -q tests
+
+  review-gate:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      checks: read
+      actions: read
+      statuses: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.21"
+      - name: Require current Greptile 5/5 and resolved feedback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project --python 3.13.5 scripts/review_gate.py
+
+  container-build:
+    needs: [tests, review-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Build production container
+        env:
+          APP_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: docker build --build-arg APP_REVISION="$APP_REVISION" --tag ca-map-ci .
+
+  production-preflight:
+    # Credentials are available only after review and checks pass on trusted main.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [tests, review-gate, container-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.21"
+      - name: Install pinned Bottle CLI
+        run: |
+          uv tool install --python 3.13.5 'cloud-in-a-bottle-cli @ git+https://github.com/cloud-in-a-bottle/cloud-in-a-bottle.git@6ea27634d1cbfc1b29caec29b53b76d919201b97#subdirectory=compute_space_cli'
+          uv tool dir --bin >> "$GITHUB_PATH"
+      - name: Check production authentication without deploying
+        env:
+          BOTTLE_API_TOKEN: ${{ secrets.BOTTLE_API_TOKEN }}
+          BOTTLE_SSH_PRIVATE_KEY: ${{ secrets.BOTTLE_SSH_PRIVATE_KEY }}
+          BOTTLE_SSH_KNOWN_HOSTS: ${{ secrets.BOTTLE_SSH_KNOWN_HOSTS }}
+          BOTTLE_INSTANCE_HOSTNAME: ${{ vars.BOTTLE_INSTANCE_HOSTNAME }}
+          BOTTLE_APP_NAME: ${{ vars.BOTTLE_APP_NAME }}
+        run: uv run --no-project --python 3.13.5 scripts/production_preflight.py

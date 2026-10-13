@@ -1,0 +1,4 @@
+{"event": "HTTP Request: GET http://localhost:8080/v1/models \"HTTP/1.1 200 OK\"", "level": "INFO", "timestamp": "2026-10-12T22:37:04.283202Z", "logger": "httpx", "filename": "_client.py", "lineno": 1740}
+{"event": "HTTP Request: POST http://localhost:8080/v1/chat/completions \"HTTP/1.1 200 OK\"", "level": "INFO", "timestamp": "2026-10-12T22:37:18.263078Z", "logger": "httpx", "filename": "_client.py", "lineno": 1740}
+{"event": "chat_total_usage", "level": "INFO", "requests": 1, "input_tokens": 2964, "output_tokens": 111, "timestamp": "2026-10-12T22:37:18.280854Z", "logger": "knowledge_map.core.chat", "filename": "chat.py", "lineno": 465}
+{"event": "HTTP Request: GET http://localhost:8080/v1/models \"HTTP/1.1 200 OK\"", "level": "INFO", "timestamp": "2026-10-12T22:37:22.715179Z", "logger": "httpx", "filename": "_client.py", "lineno": 1740}

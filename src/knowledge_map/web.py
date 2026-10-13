@@ -7,10 +7,12 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
 from typing import Literal, Protocol
+from urllib.parse import urlsplit
 
 import logfire
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict, ValidationError
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
@@ -28,6 +30,13 @@ from knowledge_map.chat_startup import (
     ChatDependencies,
     chat_dependencies,
     new_chat_session,
+)
+from knowledge_map.public_access import (
+    PublicAccessMiddleware,
+    PublicSettings,
+    VisitorAdmission,
+    source_ip,
+    visitor_id,
 )
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
@@ -51,6 +60,10 @@ class GuideUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class QuestionDeadlineExceeded(Exception):
+    """The admitted question exhausted its total public execution time."""
+
+
 class ChatSessionProtocol(Protocol):
     chat_session_id: str
     assessment: QuestionAssessment | None
@@ -71,11 +84,59 @@ def create_app(
     ] = new_chat_session,
     browser_url: str | None = None,
     guide_db_path: str | Path | None = None,
+    public_settings: PublicSettings | None = None,
+    readiness: Callable[[], bool] | None = None,
 ) -> FastAPI:
+    public = public_settings or PublicSettings()
     dependencies: ChatDependencies | None = None
     guide_store: SQLiteGuideStore
     running: dict[str, asyncio.Task[None]] = {}
     accepting = False
+    admission = VisitorAdmission(public) if public.enabled else None
+    execution_slots = asyncio.Semaphore(public.active_questions)
+
+    def owner(request: Request) -> str | None:
+        return visitor_id(request) if public.enabled else None
+
+    async def ready() -> bool:
+        if not accepting:
+            return False
+        try:
+            healthy = readiness is None or await run_in_threadpool(readiness)
+            return accepting and healthy
+        except Exception:
+            logger.exception("Source Guide readiness check failed")
+            return False
+
+    def admission_error(request: Request) -> Response | None:
+        if admission is None:
+            return None
+        if len(running) >= public.active_questions + public.queued_questions:
+            return JSONResponse(
+                {
+                    "error": "All search places are occupied. Try again after a search finishes."
+                },
+                status_code=429,
+                headers={"Retry-After": "30"},
+            )
+        visitor, ip = visitor_id(request), source_ip(request, public)
+        if not admission.available(visitor, ip):
+            return JSONResponse(
+                {
+                    "error": "The hourly question limit has been reached. Try again later."
+                },
+                status_code=429,
+                headers={"Retry-After": "3600"},
+            )
+        if not guide_store.admit_public_question(public.daily_submissions):
+            return JSONResponse(
+                {
+                    "error": "Today's question limit has been reached. Please return tomorrow."
+                },
+                status_code=429,
+            )
+        admission.consume(visitor, ip)
+        return None
 
     def guide_response(
         guide: SavedSourceGuide,
@@ -103,7 +164,9 @@ def create_app(
         try:
             async with startup() as dependencies:
                 guide_store = SQLiteGuideStore(guide_db_path)
-                guide_store.interrupt_unfinished()
+                guide_store.interrupt_unfinished(public_only=public.enabled)
+                if public.enabled:
+                    guide_store.prune_public_guides(public.retention_days)
                 if browser_url is not None:
                     print(f"Open {browser_url} in your browser.", flush=True)
                 accepting = True
@@ -111,9 +174,12 @@ def create_app(
                     yield
                 finally:
                     accepting = False
-                    for task in running.values():
+                    tasks = tuple(running.values())
+                    for task in tasks:
                         task.cancel()
-                    await asyncio.gather(*running.values(), return_exceptions=True)
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    if public.enabled:
+                        guide_store.interrupt_unfinished(public_only=True)
         finally:
             dependencies = None
 
@@ -127,10 +193,17 @@ def create_app(
             )
         return None
 
-    def stopping_service_error() -> Response | None:
-        if not accepting:
+    async def stopping_service_error(
+        *, check_dependencies: bool = True
+    ) -> Response | None:
+        if not accepting or check_dependencies and not await ready():
             return JSONResponse(
-                {"error": "The local service is stopping."}, status_code=503
+                {
+                    "error": "The service is unavailable. Try again later."
+                    if public.enabled
+                    else "The local service is stopping."
+                },
+                status_code=503,
             )
         return None
 
@@ -143,9 +216,20 @@ def create_app(
             return JSONResponse(
                 {"error": "Enter a complete text question."}, status_code=422
             )
-        if error := stopping_service_error():
+        if public.enabled and len(submission.question) > public.max_question_characters:
+            return JSONResponse(
+                {
+                    "error": f"Questions may contain at most {public.max_question_characters:,} characters."
+                },
+                status_code=422,
+            )
+        if error := await stopping_service_error():
             return error
-        saved = guide_store.create(submission.question, search_details())
+        if error := admission_error(request):
+            return error
+        saved = guide_store.create(
+            submission.question, search_details(), owner_id=owner(request)
+        )
         return start_execution(saved)
 
     async def update_guide(request: Request) -> Response:
@@ -158,11 +242,28 @@ def create_app(
                 {"error": "Update guide uses its saved question and settings."},
                 status_code=422,
             )
-        if error := stopping_service_error():
+        if error := await stopping_service_error():
             return error
         try:
+            current = guide_store.get(
+                request.path_params["guide_id"], owner_id=owner(request)
+            )
+            if current.latest_attempt.status == "running":
+                raise GuideAlreadyRunning(current.guide_id)
+            if (
+                public.enabled
+                and len(current.question) > public.max_question_characters
+            ):
+                return JSONResponse(
+                    {"error": "The saved question exceeds the question length limit."},
+                    status_code=422,
+                )
+            if error := admission_error(request):
+                return error
             saved = guide_store.start_update(
-                request.path_params["guide_id"], search_details()
+                request.path_params["guide_id"],
+                search_details(),
+                owner_id=owner(request),
             )
         except KeyError:
             return JSONResponse({"error": "Source Guide not found."}, status_code=404)
@@ -184,12 +285,12 @@ def create_app(
             return JSONResponse(
                 {"error": "Cancel uses the selected search attempt."}, status_code=422
             )
-        if error := stopping_service_error():
+        if error := await stopping_service_error(check_dependencies=False):
             return error
         guide_id = request.path_params["guide_id"]
         attempt_id = request.path_params["attempt_id"]
         try:
-            saved = guide_store.get(guide_id)
+            saved = guide_store.get(guide_id, owner_id=owner(request))
         except KeyError:
             return JSONResponse({"error": "Source Guide not found."}, status_code=404)
         cancelled = guide_store.finish(
@@ -200,6 +301,7 @@ def create_app(
                 status="cancelled",
                 message="This search was cancelled.",
             ),
+            owner_id=owner(request),
         )
         if (
             cancelled.latest_attempt.attempt_id == attempt_id
@@ -210,6 +312,8 @@ def create_app(
         return guide_response(cancelled)
 
     def start_execution(saved: SavedSourceGuide) -> Response:
+        if public.enabled:
+            guide_store.prune_public_guides(public.retention_days)
         attempt_id = saved.latest_attempt.attempt_id
         task = asyncio.create_task(execute(saved))
         running[attempt_id] = task
@@ -222,9 +326,37 @@ def create_app(
 
     async def execute(saved: SavedSourceGuide) -> None:
         session = None
-        try:
+
+        async def run_question():
+            nonlocal session
             session = session_factory(saved.question, dependencies)
-            result = await session.run()
+            return await session.run()
+
+        try:
+            if public.enabled:
+                deadline = asyncio.timeout(public.deadline_seconds)
+                try:
+                    async with deadline, execution_slots:
+                        result = await run_question()
+                    if deadline.expired():
+                        raise QuestionDeadlineExceeded
+                except TimeoutError as error:
+                    if deadline.expired():
+                        raise QuestionDeadlineExceeded from error
+                    raise
+            else:
+                result = await run_question()
+        except QuestionDeadlineExceeded:
+            guide_store.finish(
+                saved.guide_id,
+                saved.latest_attempt.attempt_id,
+                SourceGuide(
+                    question=saved.question,
+                    status="interrupted",
+                    message="This search exceeded its time limit. Choose Retry to search again.",
+                ),
+            )
+            return
         except asyncio.CancelledError:
             guide_store.finish(
                 saved.guide_id,
@@ -306,14 +438,16 @@ def create_app(
             {
                 "guides": [
                     guide.model_dump(mode="json", exclude_none=True)
-                    for guide in guide_store.list()
+                    for guide in guide_store.list(owner_id=owner(request))
                 ]
             }
         )
 
     async def read_guide(request: Request) -> Response:
         try:
-            guide = guide_store.get(request.path_params["guide_id"])
+            guide = guide_store.get(
+                request.path_params["guide_id"], owner_id=owner(request)
+            )
         except KeyError:
             return JSONResponse({"error": "Source Guide not found."}, status_code=404)
         return guide_response(guide)
@@ -345,7 +479,26 @@ def create_app(
         )
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    frontend = create_agent(name="local_guide_shell").to_web()
+    if public.enabled:
+        app.add_middleware(PublicAccessMiddleware, settings=public)
+
+    @app.get("/health/live")
+    async def live() -> Response:
+        return JSONResponse({"status": "alive"})
+
+    @app.get("/health/ready")
+    async def ready_response() -> Response:
+        healthy = await ready()
+        return JSONResponse(
+            {"status": "ready" if healthy else "unavailable"},
+            status_code=200 if healthy else 503,
+        )
+
+    frontend = create_agent(name="local_guide_shell").to_web(
+        allowed_hosts=[urlsplit(public.public_origin).hostname]
+        if public.enabled and public.public_origin
+        else None,
+    )
     frontend.router.routes[:] = [
         Route("/api/questions", submit_question, methods=["POST"]),
         Route("/api/guides", list_guides, methods=["GET"]),

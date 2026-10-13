@@ -1,0 +1,36 @@
+[app]
+name = "california-knowledge-map"
+version = "0.1.0"
+description = "California political Source Guides from a prepared corpus"
+
+[runtime.container]
+image = "Dockerfile"
+port = 8080
+
+[routing]
+health_check = "/health/ready"
+public_paths = ["/"]
+
+[resources]
+memory_mb = 5120
+build_memory_mb = 2048
+cpu_cores = 3.0
+
+[data]
+app_data = true
+
+[[services.v2.consumes]]
+service = "github.com/imbue-openhost/openhost/services/secrets"
+shortname = "secrets"
+version = "==0.1.0"
+grants = [
+  {key = "OPENROUTER_KEY"},
+  {key = "TYPESAFE_API_KEY"},
+  {key = "LOGFIRE_API_KEY"},
+  {key = "NEO4J_PASSWORD"},
+  {key = "OPENROUTER_MODEL"},
+  {key = "OPENROUTER_PROVIDERS"},
+  {key = "LOGFIRE_URL"},
+  {key = "CLOUD_PUBLIC_ORIGIN"},
+  {key = "CLOUD_TRUSTED_PROXIES"},
+]

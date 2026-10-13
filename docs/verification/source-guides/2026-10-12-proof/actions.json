@@ -1,0 +1,1136 @@
+[
+  {
+    "event": "start",
+    "process_group": 35650,
+    "command": [
+      "uv",
+      "run",
+      "--frozen",
+      "--no-sync",
+      "--project",
+      "/Users/akaisenghor/Projects/california-political-knowledge-map/main",
+      "ca-map",
+      "chat",
+      "--port",
+      "8132"
+    ]
+  },
+  {
+    "method": "POST",
+    "route": "/api/questions",
+    "body": {
+      "question": "Who supported that bill?"
+    },
+    "status": 202,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "needs_edit",
+      "assessment": {
+        "status": "needs_edit",
+        "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "reading_order": "relevance"
+      },
+      "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "not_searched",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [
+        {
+          "kind": "needs_edit",
+          "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+        }
+      ],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "finished_at": "2026-10-12T22:37:18.282044Z",
+        "status": "completed",
+        "outcome": "needs_edit",
+        "assessment": {
+          "status": "needs_edit",
+          "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+          "reading_order": "relevance"
+        },
+        "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "not_searched",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": [
+          {
+            "kind": "needs_edit",
+            "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+          }
+        ]
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides",
+    "body": null,
+    "status": 200,
+    "response": {
+      "guides": [
+        {
+          "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+          "question": "Who supported that bill?",
+          "status": "needs_edit",
+          "created_at": "2026-10-12T22:37:04.757718Z",
+          "latest_attempt": {
+            "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+            "started_at": "2026-10-12T22:37:04.757718Z",
+            "finished_at": "2026-10-12T22:37:18.282044Z",
+            "status": "completed",
+            "outcome": "needs_edit",
+            "assessment": {
+              "status": "needs_edit",
+              "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+              "reading_order": "relevance"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "needs_edit",
+      "assessment": {
+        "status": "needs_edit",
+        "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "reading_order": "relevance"
+      },
+      "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "not_searched",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [
+        {
+          "kind": "needs_edit",
+          "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+        }
+      ],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "finished_at": "2026-10-12T22:37:18.282044Z",
+        "status": "completed",
+        "outcome": "needs_edit",
+        "assessment": {
+          "status": "needs_edit",
+          "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+          "reading_order": "relevance"
+        },
+        "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "not_searched",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": [
+          {
+            "kind": "needs_edit",
+            "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+          }
+        ]
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "event": "stop",
+    "process_group": 35650,
+    "exit_code": 0
+  },
+  {
+    "event": "start",
+    "process_group": 35824,
+    "command": [
+      "uv",
+      "run",
+      "--frozen",
+      "--no-sync",
+      "--project",
+      "/Users/akaisenghor/Projects/california-political-knowledge-map/main",
+      "ca-map",
+      "chat",
+      "--port",
+      "8132"
+    ]
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "Who supported that bill?",
+      "status": "needs_edit",
+      "assessment": {
+        "status": "needs_edit",
+        "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "reading_order": "relevance"
+      },
+      "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-09-05"
+          }
+        ],
+        "completion": "not_searched",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [
+        {
+          "kind": "needs_edit",
+          "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+        }
+      ],
+      "guide_id": "8bb6c5fe-9d5b-4fb4-8a83-8b71d8b05ee0",
+      "created_at": "2026-10-12T22:37:04.757718Z",
+      "latest_attempt": {
+        "attempt_id": "e3dcd204-4453-48e6-a46e-f20ea57b15df",
+        "started_at": "2026-10-12T22:37:04.757718Z",
+        "finished_at": "2026-10-12T22:37:18.282044Z",
+        "status": "completed",
+        "outcome": "needs_edit",
+        "assessment": {
+          "status": "needs_edit",
+          "explanation": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+          "reading_order": "relevance"
+        },
+        "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?').",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-09-05"
+            }
+          ],
+          "completion": "not_searched",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": [
+          {
+            "kind": "needs_edit",
+            "message": "The question 'Who supported that bill?' is missing a specific referent. Please provide the name or number of the bill you are inquiring about (e.g., 'Who supported AB 123?')."
+          }
+        ]
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "event": "stop",
+    "process_group": 35824,
+    "exit_code": 0
+  }
+]
