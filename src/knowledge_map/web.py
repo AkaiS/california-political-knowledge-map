@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 import logfire
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict, ValidationError
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
@@ -97,11 +98,12 @@ def create_app(
     def owner(request: Request) -> str | None:
         return visitor_id(request) if public.enabled else None
 
-    def ready() -> bool:
+    async def ready() -> bool:
         if not accepting:
             return False
         try:
-            return readiness is None or readiness()
+            healthy = readiness is None or await run_in_threadpool(readiness)
+            return accepting and healthy
         except Exception:
             logger.exception("Source Guide readiness check failed")
             return False
@@ -191,8 +193,10 @@ def create_app(
             )
         return None
 
-    def stopping_service_error(*, check_dependencies: bool = True) -> Response | None:
-        if not accepting or check_dependencies and not ready():
+    async def stopping_service_error(
+        *, check_dependencies: bool = True
+    ) -> Response | None:
+        if not accepting or check_dependencies and not await ready():
             return JSONResponse(
                 {
                     "error": "The service is unavailable. Try again later."
@@ -219,7 +223,7 @@ def create_app(
                 },
                 status_code=422,
             )
-        if error := stopping_service_error():
+        if error := await stopping_service_error():
             return error
         if error := admission_error(request):
             return error
@@ -238,7 +242,7 @@ def create_app(
                 {"error": "Update guide uses its saved question and settings."},
                 status_code=422,
             )
-        if error := stopping_service_error():
+        if error := await stopping_service_error():
             return error
         try:
             current = guide_store.get(
@@ -281,7 +285,7 @@ def create_app(
             return JSONResponse(
                 {"error": "Cancel uses the selected search attempt."}, status_code=422
             )
-        if error := stopping_service_error(check_dependencies=False):
+        if error := await stopping_service_error(check_dependencies=False):
             return error
         guide_id = request.path_params["guide_id"]
         attempt_id = request.path_params["attempt_id"]
@@ -484,7 +488,7 @@ def create_app(
 
     @app.get("/health/ready")
     async def ready_response() -> Response:
-        healthy = ready()
+        healthy = await ready()
         return JSONResponse(
             {"status": "ready" if healthy else "unavailable"},
             status_code=200 if healthy else 503,

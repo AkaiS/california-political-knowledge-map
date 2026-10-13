@@ -160,8 +160,7 @@ class PublicAccessMiddleware:
         except CookieError:
             cookies = SimpleCookie()
         token = cookies[COOKIE_NAME].value if COOKIE_NAME in cookies else ""
-        fresh = not _TOKEN.fullmatch(token)
-        if fresh:
+        if not _TOKEN.fullmatch(token):
             token = secrets.token_urlsafe(32)
         scope["public_visitor_id"] = hashlib.sha256(token.encode()).hexdigest()
 
@@ -170,19 +169,16 @@ class PublicAccessMiddleware:
                 message = dict(message)
                 response_headers = list(message.get("headers", []))
                 response_headers.append((b"cache-control", b"no-store"))
-                if fresh:
-                    cookie = SimpleCookie()
-                    cookie[COOKIE_NAME] = token
-                    cookie[COOKIE_NAME]["path"] = "/"
-                    cookie[COOKIE_NAME]["secure"] = True
-                    cookie[COOKIE_NAME]["httponly"] = True
-                    cookie[COOKIE_NAME]["samesite"] = "Lax"
-                    cookie[COOKIE_NAME]["max-age"] = (
-                        self.settings.retention_days * 86400
-                    )
-                    response_headers.append(
-                        (b"set-cookie", cookie.output(header="").strip().encode())
-                    )
+                cookie = SimpleCookie()
+                cookie[COOKIE_NAME] = token
+                cookie[COOKIE_NAME]["path"] = "/"
+                cookie[COOKIE_NAME]["secure"] = True
+                cookie[COOKIE_NAME]["httponly"] = True
+                cookie[COOKIE_NAME]["samesite"] = "Lax"
+                cookie[COOKIE_NAME]["max-age"] = self.settings.retention_days * 86400
+                response_headers.append(
+                    (b"set-cookie", cookie.output(header="").strip().encode())
+                )
                 message["headers"] = response_headers
             await send(message)
 
