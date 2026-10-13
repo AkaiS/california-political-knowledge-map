@@ -41,12 +41,17 @@ Store these values in the GitHub environment named `production`:
 Dedicated credentials make rotation and revocation independent of the owner's
 local login. They do not limit authority to this application. Bottle's owner
 API credential covers the zone, and the host account has sudo access. The
-workflow uses that authority only for read-only status and SSH `true`.
-Provisioning these broad credentials requires explicit authorization under the
-approval review. Credential setup is pending that authorization. Until the
-three secrets are configured, the production preflight fails on missing
-configuration. It does not skip or report a successful deployment.
-Production authentication has not passed while that configuration is missing.
+workflow uses that authority only for read-only status and SSH `true`. The
+user explicitly approved these broad credential scopes. Both variables and
+all three secrets are configured in the `production` GitHub environment.
+
+The dedicated 90-day API token is named
+`ca-map-github-production-2026-10-13`, token ID `2`, and expires at
+`2027-01-11T19:55:25Z`. Authenticated local checks with the new token confirmed
+the expected app. The new Ed25519 key's restricted public-key entry was
+installed on the host, and SSH `true` succeeded with the verified host key.
+The hosted GitHub Actions production preflight has not run yet. Local
+credential checks do not establish a successful hosted workflow or release.
 
 Obtain the host key through an already authenticated channel or compare its
 fingerprint with the instance administrator. An unverified `ssh-keyscan`
@@ -78,6 +83,7 @@ force-killed runner may interrupt cleanup; GitHub-hosted runners are temporary.
 
 Rotate or revoke the dedicated credentials when their owner, purpose or
 expiry changes. Replace the environment secrets through a protected channel.
+Rotate the API token and update `BOTTLE_API_TOKEN` before January 11, 2027.
 Update the pinned known-host entries only after independently verifying the
 new host key. Missing, expired or denied credentials fail the preflight.
 
@@ -103,5 +109,6 @@ docker build --build-arg APP_REVISION="$(git rev-parse HEAD)" --tag ca-map-ci .
 
 These checks make steps 1 through 4 reviewable: the production branch,
 required CI policy, a success-dependent job for an exact main commit, and
-production API/SSH authentication. Automatic application deployment and its
-shutdown, health, reload and rollback behavior remain a separate phase.
+production API/SSH authentication. The user chose manual releases initially.
+Step 5, automatic application deployment and its shutdown, health, reload and
+rollback behavior, is not implemented.
