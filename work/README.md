@@ -9,6 +9,20 @@ have not yet been shaped into executable work.
 
 ## Current attention
 
+### Cloud in a Bottle portfolio deployment
+
+The maintainer selected Imbue's $20 Large space and an initial OpenRouter budget
+capped at $5/month. The [deployment plan](projects/cloud-in-a-bottle-deployment/PRD.md)
+proposes one container for the web app, Neo4j and CPU embeddings, with persistent
+corpus and Source Guide data, visitor isolation, off-server recovery and staged
+publication. The [implementation record](projects/cloud-in-a-bottle-deployment/IMPLEMENTATION.md)
+captures the running AMD64 app, visitor controls, prepared corpus and passing
+local checks. Gemini completed the full HTTPS Source Guide check, with visitor
+isolation and persistence verified. Public routing is prepared; enabling BYOK
+usage in the dedicated key's $5 monthly limit remains the final setup step.
+Backup configuration and off-server restoration are deferred at the maintainer's
+request. GitHub OAuth is unnecessary for the now-public repository.
+
 ### Consistent evaluation execution
 
 The `run-evaluation` skill routes contextual evaluation requests to the maintained

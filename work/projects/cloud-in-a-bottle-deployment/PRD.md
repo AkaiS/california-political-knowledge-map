@@ -4,6 +4,12 @@ Labels: ready-for-agent
 
 Planned October 12, 2026 against repository revision `5c00b4d`. The maintainer selected Imbue's $20 plan and OpenRouter with a $5/month cap, then authorized starting implementation using orchestration and the Cloud in a Bottle skill. Container packaging, public-service controls and safe data preparation are assigned in parallel. Provisioning and public launch still require their checks below. [Implementation record](IMPLEMENTATION.md).
 
+Scope update: the maintainer explicitly deferred backup configuration until
+later. Backup destination, scheduling and off-server restoration below are
+follow-up work, not prerequisites for this first portfolio launch. Resume with
+Bottle's installed backup service. The implementation record contains current
+deployment evidence and supersedes the original provisioning assumptions.
+
 ## Outcome and scope
 
 Publish a stable HTTPS URL where portfolio visitors can submit a California political question, receive a Source Guide, open its Source Articles and relevant section links, and return to their saved guides. Support low traffic with a fixed server bill and bounded external-service use.

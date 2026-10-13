@@ -156,8 +156,12 @@ After the parent added deployment configuration and the user reported provider
 setup, a final name-only check found `CLOUD_PUBLIC_ORIGIN`, `NEO4J_PASSWORD`,
 `OPENROUTER_MODEL`, `OPENROUTER_PROVIDERS` and `TYPESAFE_API_KEY` present.
 `OPENROUTER_API_KEY`, `LOGFIRE_TOKEN` and `LOGFIRE_PROJECT_URL` were still
-absent. Those mandatory Bottle entries must exist before first bootstrap;
-provider-side account setup alone does not populate the Bottle store.
+absent under those canonical names. This check preceded the user's clarification
+of the actual stored names. A subsequent name-only query confirmed
+`OPENROUTER_KEY`, `LOGFIRE_API_KEY` and `LOGFIRE_URL` already exist.
+The cloud manifest now grants those exact names, and bootstrap maps them to
+the canonical application environment without copying store values or creating
+duplicate entries. Missing aliases still fail closed.
 The optional `CLOUD_TRUSTED_PROXIES` entry was also absent, retaining the
 conservative peer-IP default.
 
@@ -190,6 +194,8 @@ and unchanged local defaults of 3,600 seconds, three attempts and 120 seconds.
 The prior image/source hash in the isolated rehearsal report predates this
 correction and is not the current candidate. A fresh AMD64 Bottle build and
 target rehearsal remain required.
+The subsequent three-key alias change passed 27 focused runtime/review/revision
+tests and Ruff; its independent review uses fake credentials only.
 
 The exact installed `make_data_dirs_and_env_vars` idempotently creates an
 app-specific persistent directory before the background build and automatic
