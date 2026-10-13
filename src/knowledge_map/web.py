@@ -474,7 +474,8 @@ def create_app(
             .read_text(),
             media_type=media_type,
             headers={
-                "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+                "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors "
+                + (" ".join(public.frame_ancestors) or "'none'")
             },
         )
 

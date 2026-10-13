@@ -227,6 +227,7 @@ def configure_paths(root: Path) -> None:
         CHAT_DEPLOYMENT="openrouter",
         DEPLOYMENT_ENVIRONMENT="production",
         CLOUD_PUBLIC_MODE="1",
+        CLOUD_FRAME_ANCESTORS="https://akaisenghor.com https://www.akaisenghor.com",
     )
     conf = Path(tempfile.mkdtemp(prefix="knowledge-map-neo4j-"))
     shutil.copytree(
