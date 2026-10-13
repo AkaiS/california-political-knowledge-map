@@ -7,6 +7,12 @@
       "skillPath": "skills/building-pydantic-ai-agents/SKILL.md",
       "computedHash": "5721f34beafb1f1a8ad5c82ad643addded408baa5c91d6b9d2e0bcc55dc5b46b"
     },
+    "cloud-in-a-bottle-context": {
+      "source": "cloud-in-a-bottle/cloud-in-a-bottle",
+      "sourceType": "github",
+      "skillPath": "skills/cloud-in-a-bottle-context/SKILL.md",
+      "computedHash": "954b01f49c1430e72459fa2d51abc605739e644647e2dec97c45366d40f0dd49"
+    },
     "code-review": {
       "source": "mattpocock/skills",
       "sourceType": "github",
