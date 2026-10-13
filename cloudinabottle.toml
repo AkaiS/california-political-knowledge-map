@@ -9,7 +9,7 @@ port = 8080
 
 [routing]
 health_check = "/health/ready"
-public_paths = []
+public_paths = ["/"]
 
 [resources]
 memory_mb = 5120

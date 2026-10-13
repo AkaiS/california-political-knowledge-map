@@ -41,7 +41,7 @@ def test_manifest_consumes_exact_compatible_secrets_service():
     assert [grant["key"] for grant in service["grants"]] == list(
         REQUIRED_BOTTLE_KEYS + OPTIONAL_CONFIGURATION
     )
-    assert manifest["routing"]["public_paths"] == []
+    assert manifest["routing"]["public_paths"] == ["/"]
 
 
 def bottle_secrets():
