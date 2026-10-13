@@ -3,7 +3,7 @@
 import os
 import sqlite3
 from contextlib import closing
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -38,7 +38,8 @@ class SQLiteGuideStore:
                     created_at TEXT NOT NULL,
                     latest_attempt_id TEXT NOT NULL,
                     content_json TEXT,
-                    retrieved_at TEXT
+                    retrieved_at TEXT,
+                    owner_id TEXT
                 );
                 CREATE TABLE IF NOT EXISTS source_guide_attempts (
                     attempt_id TEXT PRIMARY KEY,
@@ -50,18 +51,34 @@ class SQLiteGuideStore:
                     )),
                     outcome_json TEXT
                 );
+                CREATE TABLE IF NOT EXISTS public_daily_admissions (
+                    day TEXT PRIMARY KEY,
+                    submissions INTEGER NOT NULL
+                );
             """)
+            columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(source_guides)")
+            }
+            if "owner_id" not in columns:
+                connection.execute("ALTER TABLE source_guides ADD COLUMN owner_id TEXT")
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS source_guides_owner ON source_guides(owner_id)"
+            )
 
     def create(
-        self, question: str, search_details: GuideSearchDetails | None = None
+        self,
+        question: str,
+        search_details: GuideSearchDetails | None = None,
+        *,
+        owner_id: str | None = None,
     ) -> SavedSourceGuide:
         guide_id, attempt_id = str(uuid4()), str(uuid4())
         now = datetime.now(UTC).isoformat()
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
             connection.execute(
-                "INSERT INTO source_guides (guide_id, question, created_at, latest_attempt_id) "
-                "VALUES (?, ?, ?, ?)",
-                (guide_id, question, now, attempt_id),
+                "INSERT INTO source_guides (guide_id, question, created_at, latest_attempt_id, owner_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (guide_id, question, now, attempt_id, owner_id),
             )
             connection.execute(
                 "INSERT INTO source_guide_attempts (attempt_id, guide_id, started_at, status, outcome_json) "
@@ -79,21 +96,31 @@ class SQLiteGuideStore:
             )
         return self.get(guide_id)
 
-    def interrupt_unfinished(self) -> None:
-        for saved in self.list():
-            if saved.latest_attempt.status == "running":
-                self.finish(
-                    saved.guide_id,
-                    saved.latest_attempt.attempt_id,
-                    SourceGuide(
-                        question=saved.question,
-                        status="interrupted",
-                        message="This search was interrupted before it finished.",
-                    ),
-                )
+    def interrupt_unfinished(self, *, public_only: bool = False) -> None:
+        with closing(sqlite3.connect(self.db_path)) as connection:
+            rows = connection.execute(
+                "SELECT g.guide_id, g.question, a.attempt_id FROM source_guides g "
+                "JOIN source_guide_attempts a ON a.attempt_id = g.latest_attempt_id "
+                "WHERE a.status = 'running'"
+                + (" AND g.owner_id IS NOT NULL" if public_only else "")
+            ).fetchall()
+        for guide_id, question, attempt_id in rows:
+            self.finish(
+                guide_id,
+                attempt_id,
+                SourceGuide(
+                    question=question,
+                    status="interrupted",
+                    message="This search was interrupted before it finished.",
+                ),
+            )
 
     def start_update(
-        self, guide_id: str, search_details: GuideSearchDetails | None = None
+        self,
+        guide_id: str,
+        search_details: GuideSearchDetails | None = None,
+        *,
+        owner_id: str | None = None,
     ) -> SavedSourceGuide:
         attempt_id = str(uuid4())
         now = datetime.now(UTC).isoformat()
@@ -101,8 +128,9 @@ class SQLiteGuideStore:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT a.status, g.question FROM source_guides g JOIN source_guide_attempts a "
-                "ON a.attempt_id = g.latest_attempt_id WHERE g.guide_id = ?",
-                (guide_id,),
+                "ON a.attempt_id = g.latest_attempt_id WHERE g.guide_id = ?"
+                + (" AND g.owner_id = ?" if owner_id is not None else ""),
+                (guide_id, owner_id) if owner_id is not None else (guide_id,),
             ).fetchone()
             if row is None:
                 raise KeyError(guide_id)
@@ -127,9 +155,14 @@ class SQLiteGuideStore:
         return self.get(guide_id)
 
     def finish(
-        self, guide_id: str, attempt_id: str, result: SourceGuide
+        self,
+        guide_id: str,
+        attempt_id: str,
+        result: SourceGuide,
+        *,
+        owner_id: str | None = None,
     ) -> SavedSourceGuide:
-        saved = self.get(guide_id)
+        saved = self.get(guide_id, owner_id=owner_id)
         details = result.search_details or saved.latest_attempt.search_details
         if details is not None:
             completion = (
@@ -173,14 +206,15 @@ class SQLiteGuideStore:
                 )
         return self.get(guide_id)
 
-    def get(self, guide_id: str) -> SavedSourceGuide:
+    def get(self, guide_id: str, *, owner_id: str | None = None) -> SavedSourceGuide:
         with closing(sqlite3.connect(self.db_path)) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 "SELECT g.*, a.attempt_id, a.started_at, a.finished_at, a.status, a.outcome_json "
                 "FROM source_guides g JOIN source_guide_attempts a ON a.attempt_id = g.latest_attempt_id "
-                "WHERE g.guide_id = ?",
-                (guide_id,),
+                "WHERE g.guide_id = ?"
+                + (" AND g.owner_id = ?" if owner_id is not None else ""),
+                (guide_id, owner_id) if owner_id is not None else (guide_id,),
             ).fetchone()
         if row is None:
             raise KeyError(guide_id)
@@ -223,7 +257,7 @@ class SQLiteGuideStore:
             }
         )
 
-    def list(self) -> list[SavedGuideSummary]:
+    def list(self, *, owner_id: str | None = None) -> list[SavedGuideSummary]:
         with closing(sqlite3.connect(self.db_path)) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
@@ -234,7 +268,10 @@ class SQLiteGuideStore:
                 "NULLIF(json_extract(a.outcome_json, '$.status'), 'running') AS outcome, "
                 "json_extract(a.outcome_json, '$.assessment') AS assessment_json "
                 "FROM source_guides g JOIN source_guide_attempts a "
-                "ON a.attempt_id = g.latest_attempt_id ORDER BY g.created_at DESC, g.guide_id"
+                "ON a.attempt_id = g.latest_attempt_id "
+                + ("WHERE g.owner_id = ? " if owner_id is not None else "")
+                + "ORDER BY g.created_at DESC, g.guide_id",
+                (owner_id,) if owner_id is not None else (),
             ).fetchall()
         return [
             SavedGuideSummary.model_validate(
@@ -262,3 +299,42 @@ class SQLiteGuideStore:
             )
             for row in rows
         ]
+
+    def admit_public_question(self, daily_limit: int) -> bool:
+        """Serialize the daily spending gate and retain it across restarts."""
+        day = datetime.now(UTC).date().isoformat()
+        with closing(sqlite3.connect(self.db_path)) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                "DELETE FROM public_daily_admissions WHERE day < ?", (day,)
+            )
+            row = connection.execute(
+                "SELECT submissions FROM public_daily_admissions WHERE day = ?", (day,)
+            ).fetchone()
+            if row is not None and row[0] >= daily_limit:
+                return False
+            connection.execute(
+                "INSERT INTO public_daily_admissions (day, submissions) VALUES (?, 1) "
+                "ON CONFLICT(day) DO UPDATE SET submissions = submissions + 1",
+                (day,),
+            )
+            return True
+
+    def prune_public_guides(self, retention_days: int) -> None:
+        """Expire anonymous history without touching unowned local guides."""
+        cutoff = (datetime.now(UTC) - timedelta(days=retention_days)).isoformat()
+        with closing(sqlite3.connect(self.db_path)) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            expired = (
+                "SELECT g.guide_id FROM source_guides g JOIN source_guide_attempts a "
+                "ON a.attempt_id = g.latest_attempt_id WHERE g.owner_id IS NOT NULL "
+                "AND a.started_at < ? AND a.status != 'running'"
+            )
+            connection.execute(
+                "DELETE FROM source_guide_attempts WHERE guide_id IN (" + expired + ")",
+                (cutoff,),
+            )
+            connection.execute(
+                "DELETE FROM source_guides WHERE owner_id IS NOT NULL "
+                "AND guide_id NOT IN (SELECT guide_id FROM source_guide_attempts)"
+            )
