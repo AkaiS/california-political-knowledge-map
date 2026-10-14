@@ -17,7 +17,12 @@ REPOSITORY = "AkaiS/california-political-knowledge-map"
 GREPTILE_APP_ID = 867647
 GREPTILE_BOT_ID = 165735046
 ACTIONS_APP_ID = 15368
-DOWNSTREAM_CHECKS = {"review-gate", "container-build", "production-preflight"}
+DOWNSTREAM_CHECKS = {
+    "review-gate",
+    "container-build",
+    "production-preflight",
+    "release",
+}
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 
 

@@ -8,8 +8,10 @@ import re
 import subprocess
 import sys
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
+from typing import NamedTuple
 
 
 class PreflightError(Exception):
@@ -64,14 +66,16 @@ def private_file(path: Path, content: str) -> None:
         file.write(content)
 
 
-def run_read_only(command: list[str], environment: dict[str, str], label: str) -> str:
+def run_quiet(
+    command: list[str], environment: dict[str, str], label: str, timeout: float = 45
+) -> str:
     try:
         result = subprocess.run(
             command,
             env=environment,
             capture_output=True,
             text=True,
-            timeout=45,
+            timeout=timeout,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
@@ -82,8 +86,57 @@ def run_read_only(command: list[str], environment: dict[str, str], label: str) -
     return result.stdout
 
 
-def preflight(environment: Mapping[str, str]) -> str:
-    revision = trusted_revision(environment)
+class ProductionAccess(NamedTuple):
+    hostname: str
+    app_name: str
+    key_path: Path
+    known_hosts_path: Path
+    environment: dict[str, str]
+
+    def ssh(self, remote_command: str) -> list[str]:
+        return [
+            "ssh",
+            "-F",
+            "/dev/null",
+            "-i",
+            str(self.key_path),
+            "-o",
+            "IdentitiesOnly=yes",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=yes",
+            "-o",
+            f"UserKnownHostsFile={self.known_hosts_path}",
+            "-o",
+            "GlobalKnownHostsFile=/dev/null",
+            "-o",
+            "ConnectTimeout=15",
+            "-o",
+            "ConnectionAttempts=1",
+            "-o",
+            "ClearAllForwardings=yes",
+            "-o",
+            "ForwardAgent=no",
+            "-o",
+            "PasswordAuthentication=no",
+            "-o",
+            "KbdInteractiveAuthentication=no",
+            "-o",
+            "PermitLocalCommand=no",
+            f"host@{self.hostname}",
+            remote_command,
+        ]
+
+    def bottle(self, *arguments: str) -> list[str]:
+        return ["bottle", *arguments, "--instance", "production"]
+
+    def curl(self, *arguments: str) -> list[str]:
+        return ["bottle", "curl", "--instance", "production", "--", *arguments]
+
+
+@contextmanager
+def production_access(environment: Mapping[str, str]) -> Iterator[ProductionAccess]:
     hostname = required(environment, "BOTTLE_INSTANCE_HOSTNAME")
     if len(hostname) > 253 or not re.fullmatch(
         r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?",
@@ -101,7 +154,7 @@ def preflight(environment: Mapping[str, str]) -> str:
     # existing directory, so even a local invocation cannot replace credentials.
     config_directory = Path.home() / ".cloud_in_a_bottle_cli"
     config_path = config_directory / "compute_space_cli.toml"
-    with tempfile.TemporaryDirectory(prefix="ca-map-preflight-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="ca-map-production-") as temporary:
         credential_directory = Path(temporary)
         key_path = credential_directory / "identity"
         known_hosts_path = credential_directory / "known_hosts"
@@ -114,7 +167,6 @@ def preflight(environment: Mapping[str, str]) -> str:
             'alias = "production"\n'
             f"ssh_key = {json.dumps(str(key_path))}\n"
         )
-        child_environment = subprocess_environment(environment)
         try:
             config_directory.mkdir(mode=0o700)
         except FileExistsError:
@@ -123,61 +175,41 @@ def preflight(environment: Mapping[str, str]) -> str:
             ) from None
         try:
             private_file(config_path, config)
-            output = run_read_only(
-                ["bottle", "app", "status", app_name, "--instance", "production"],
-                child_environment,
-                "Bottle application status",
-            )
-            run_read_only(
-                [
-                    "ssh",
-                    "-F",
-                    "/dev/null",
-                    "-i",
-                    str(key_path),
-                    "-o",
-                    "IdentitiesOnly=yes",
-                    "-o",
-                    "BatchMode=yes",
-                    "-o",
-                    "StrictHostKeyChecking=yes",
-                    "-o",
-                    f"UserKnownHostsFile={known_hosts_path}",
-                    "-o",
-                    "GlobalKnownHostsFile=/dev/null",
-                    "-o",
-                    "ConnectTimeout=15",
-                    "-o",
-                    "ConnectionAttempts=1",
-                    "-o",
-                    "ClearAllForwardings=yes",
-                    "-o",
-                    "ForwardAgent=no",
-                    "-o",
-                    "PasswordAuthentication=no",
-                    "-o",
-                    "KbdInteractiveAuthentication=no",
-                    "-o",
-                    "PermitLocalCommand=no",
-                    f"host@{hostname}",
-                    "true",
-                ],
-                child_environment,
-                "SSH authentication",
+            yield ProductionAccess(
+                hostname,
+                app_name,
+                key_path,
+                known_hosts_path,
+                subprocess_environment(environment),
             )
         finally:
             config_path.unlink(missing_ok=True)
             config_directory.rmdir()
 
+
+def observed_revision(status_output: str) -> str:
     # Report only the CLI's immutable commit field, never arbitrary remote text.
     observed = re.search(
-        r"^  git commit: [^\n]+ @ ([0-9a-f]{40})(?: \(dirty\))?$", output, re.MULTILINE
+        r"^  git commit: [^\n]+ @ ([0-9a-f]{40})(?: \(dirty\))?$",
+        status_output,
+        re.MULTILINE,
     )
-    observed_revision = observed.group(1) if observed else "unavailable"
+    return observed.group(1) if observed else "unavailable"
+
+
+def preflight(environment: Mapping[str, str]) -> str:
+    revision = trusted_revision(environment)
+    with production_access(environment) as access:
+        output = run_quiet(
+            access.bottle("app", "status", access.app_name),
+            access.environment,
+            "Bottle application status",
+        )
+        run_quiet(access.ssh("true"), access.environment, "SSH authentication")
     return (
         "Production authentication preflight passed.\n\n"
         f"Candidate checkout SHA: `{revision}`.\n\n"
-        f"Observed current Bottle checkout SHA: `{observed_revision}`.\n\n"
+        f"Observed current Bottle checkout SHA: `{observed_revision(output)}`.\n\n"
         "Bottle application status and SSH authentication succeeded. "
         "The SSH command was `true`.\n\n"
         "No application was deployed, stopped, reloaded or rolled back. "

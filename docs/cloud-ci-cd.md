@@ -170,6 +170,58 @@ verify this policy. GitHub runs the image build after the gate succeeds.
 
 These checks cover the production branch, required CI policy, review before
 build, a success-dependent job for an exact main commit, and production
-API/SSH authentication. The user chose manual releases initially.
-Step 5, automatic application deployment and its shutdown, health, reload and
-rollback behavior, is not implemented.
+API/SSH authentication.
+
+## Approved release
+
+The `release` job runs after `production-preflight` on each push to `main` and
+waits in the `production-release` GitHub environment until the owner approves
+it from the run's **Review deployments** button. Merging alone never releases.
+An unapproved run can be left waiting or rejected.
+
+`scripts/production_release.py` reuses the preflight's credential handling and
+follows the manual sequence in [cloud deployment](cloud-deployment.md):
+
+1. Refuse unless the candidate SHA is still the tip of `main`. An approval that
+   arrives after a newer merge would otherwise roll production back.
+2. Read the current Bottle checkout. If it already equals the candidate,
+   change nothing and succeed only if `/health/ready` returns 200 within 15
+   minutes. Bottle reports the checkout during builds too, so a retry after a
+   readiness failure cannot pass on the SHA alone.
+3. Refuse if the root filesystem is more than 80% used.
+4. Over SSH, set the container's restart policy to `no` and shut supervisor
+   down, then poll until the container has stopped, for up to 180 seconds.
+5. Pin the app's remote to the candidate SHA through `set_app_remote`.
+6. Run `bottle app reload --update --wait`, with a 75-minute limit for a
+   llama.cpp rebuild.
+7. Require Bottle to report the candidate SHA and `/health/ready` to return 200
+   within 15 minutes.
+
+There is no automatic rollback. A failure after step 4 leaves the app stopped
+or on a partial update; the job summary names the stage reached and the
+previous SHA. Recover with the manual update in
+[cloud deployment](cloud-deployment.md). Output from Bottle and SSH stays
+withheld, as in the preflight.
+
+Configure the `production-release` environment with:
+
+- the owner as a required reviewer, with self-review allowed;
+- deployment branches limited to `main`;
+- the same two variables as `production`;
+- its own three secrets, created by `scripts/provision_release_credentials.sh`.
+
+GitHub cannot copy secrets between environments, so the release has its own
+credentials. The script runs on the owner's machine with the owner's Bottle
+and SSH logins. It creates a 90-day owner-scoped Bottle token named
+`ca-map-github-release-<date>` and a new Ed25519 key. The key is authorized with
+`restrict`, which disables forwarding and terminals but allows the release
+commands. The script confirms that the key can run `df` and that the token can
+read `/api/apps`, then passes all three values to `gh secret set` on stdin. No
+value is printed, and the temporary files are deleted on exit. Run it again to
+rotate both before the token expires, then delete the old token with
+`bottle tokens delete` and remove the old key line from `authorized_keys`.
+
+The zone's host key comes from `ssh-keyscan` and is trusted on first use. No
+authenticated channel for it is available. The script pins that key for the
+session that authorizes the new SSH key, so the stored known-hosts entry
+belongs to the host that accepted it.

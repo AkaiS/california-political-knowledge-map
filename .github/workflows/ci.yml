@@ -101,3 +101,35 @@ jobs:
           BOTTLE_INSTANCE_HOSTNAME: ${{ vars.BOTTLE_INSTANCE_HOSTNAME }}
           BOTTLE_APP_NAME: ${{ vars.BOTTLE_APP_NAME }}
         run: uv run --no-project --python 3.13.5 scripts/production_preflight.py
+
+  release:
+    # Each main push waits for the owner's approval in production-release.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [tests, review-gate, container-build, production-preflight]
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    environment: production-release
+    concurrency:
+      group: production-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.21"
+      - name: Install pinned Bottle CLI
+        run: |
+          uv tool install --python 3.13.5 'cloud-in-a-bottle-cli @ git+https://github.com/cloud-in-a-bottle/cloud-in-a-bottle.git@6ea27634d1cbfc1b29caec29b53b76d919201b97#subdirectory=compute_space_cli'
+          uv tool dir --bin >> "$GITHUB_PATH"
+      - name: Release the approved main commit
+        env:
+          BOTTLE_API_TOKEN: ${{ secrets.BOTTLE_API_TOKEN }}
+          BOTTLE_SSH_PRIVATE_KEY: ${{ secrets.BOTTLE_SSH_PRIVATE_KEY }}
+          BOTTLE_SSH_KNOWN_HOSTS: ${{ secrets.BOTTLE_SSH_KNOWN_HOSTS }}
+          BOTTLE_INSTANCE_HOSTNAME: ${{ vars.BOTTLE_INSTANCE_HOSTNAME }}
+          BOTTLE_APP_NAME: ${{ vars.BOTTLE_APP_NAME }}
+        run: uv run --no-project --python 3.13.5 scripts/production_release.py
