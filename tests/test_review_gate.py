@@ -175,6 +175,37 @@ def test_tests_required_and_only_own_downstream_checks_are_excluded():
         )
 
 
+def test_merge_commit_reuses_reviewed_tests_but_requires_other_checks():
+    skipped_tests = ci_tests_check(head_sha=MERGE, conclusion="skipped")
+    gate.other_checks_green([skipped_tests], [], MERGE, tested=False)
+    gate.other_checks_green([], [], MERGE, tested=False)
+    with pytest.raises(gate.GateError):
+        gate.other_checks_green([skipped_tests], [], MERGE)
+    with pytest.raises(gate.GateError, match="Another check"):
+        gate.other_checks_green(
+            [skipped_tests, check("security", head_sha=MERGE, conclusion="failure")],
+            [],
+            MERGE,
+            tested=False,
+        )
+    with pytest.raises(gate.GateError, match="Another check"):
+        gate.other_checks_green(
+            [
+                check(
+                    "tests",
+                    gate.ACTIONS_APP_ID,
+                    "github-actions",
+                    head_sha=MERGE,
+                    ci_workflow=False,
+                    conclusion="failure",
+                )
+            ],
+            [],
+            MERGE,
+            tested=False,
+        )
+
+
 @pytest.mark.parametrize("conclusion", ["failure", "cancelled", "neutral", "skipped"])
 def test_any_other_non_green_check_blocks(conclusion):
     with pytest.raises(gate.GateError):
@@ -399,40 +430,52 @@ def test_api_error_withholds_remote_output_and_tokens(monkeypatch):
     assert "private-token" not in str(error.value)
 
 
-def test_workflow_build_and_preflight_require_successful_review():
+def test_workflow_tests_pr_once_then_builds_and_releases_main_after_review():
     import yaml
 
     workflow = yaml.safe_load(
         (Path(__file__).parents[1] / ".github/workflows/ci.yml").read_text()
     )
     jobs = workflow["jobs"]
+    main_push = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    assert jobs["tests"]["if"] == "github.event_name == 'pull_request'"
     assert jobs["review-gate"]["needs"] == "tests"
-    assert set(jobs["container-build"]["needs"]) == {"tests", "review-gate"}
-    assert set(jobs["production-preflight"]["needs"]) == {
-        "tests",
-        "review-gate",
-        "container-build",
-    }
-    assert "if" not in jobs["container-build"]
+    gate_if = jobs["review-gate"]["if"]
+    assert "needs.tests.result == 'success'" in gate_if
+    assert "needs.tests.result == 'skipped' && github.event_name == 'push'" in gate_if
+    assert jobs["image-inputs"]["if"] == main_push
+    assert "environment" not in jobs["image-inputs"]
+    image_changed = "needs.image-inputs.outputs.changed == 'true'"
+    for name in ("container-build", "production-preflight"):
+        assert set(jobs[name]["needs"]) == {"review-gate", "image-inputs"}
+        assert "needs.review-gate.result == 'success'" in jobs[name]["if"]
+        assert image_changed in jobs[name]["if"]
+        assert main_push in jobs[name]["if"]
     assert "always()" not in jobs["production-preflight"]["if"]
     assert "environment" not in jobs["review-gate"]
     assert all(value == "read" for value in jobs["review-gate"]["permissions"].values())
     revision = "${{ github.event.pull_request.head.sha || github.sha }}"
-    for name in ("tests", "review-gate", "container-build"):
+    for name in ("tests", "review-gate"):
         assert jobs[name]["steps"][0]["with"]["ref"] == revision
         assert jobs[name]["steps"][0]["with"]["persist-credentials"] is False
-    assert jobs["container-build"]["steps"][1]["env"]["APP_REVISION"] == revision
+    for name in ("image-inputs", "container-build", "production-preflight"):
+        assert jobs[name]["steps"][0]["with"]["ref"] == "${{ github.sha }}"
+        assert jobs[name]["steps"][0]["with"]["persist-credentials"] is False
     assert (
-        jobs["production-preflight"]["steps"][0]["with"]["ref"] == "${{ github.sha }}"
+        jobs["container-build"]["steps"][1]["env"]["APP_REVISION"]
+        == "${{ github.sha }}"
     )
     release = jobs["release"]
     assert set(release["needs"]) == {
-        "tests",
         "review-gate",
+        "image-inputs",
         "container-build",
         "production-preflight",
     }
-    assert release["if"] == jobs["production-preflight"]["if"]
+    for name in ("review-gate", "container-build", "production-preflight"):
+        assert f"needs.{name}.result == 'success'" in release["if"]
+    assert image_changed in release["if"]
+    assert main_push in release["if"]
     assert release["environment"] == "production-release"
     assert release["concurrency"]["cancel-in-progress"] is False
     assert release["steps"][0]["with"]["ref"] == "${{ github.sha }}"

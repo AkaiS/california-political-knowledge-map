@@ -19,6 +19,7 @@ GREPTILE_BOT_ID = 165735046
 ACTIONS_APP_ID = 15368
 DOWNSTREAM_CHECKS = {
     "review-gate",
+    "image-inputs",
     "container-build",
     "production-preflight",
     "release",
@@ -168,8 +169,12 @@ def is_app(check: dict, app_id: int, slug: str) -> bool:
     return check.get("app", {}).get("id") == app_id and check["app"].get("slug") == slug
 
 
-def other_checks_green(checks: list[dict], statuses: list[dict], sha: str) -> None:
-    tests = False
+def other_checks_green(
+    checks: list[dict], statuses: list[dict], sha: str, *, tested: bool = True
+) -> None:
+    # A merge commit reuses the tests of its identical reviewed tree, so CI
+    # skips them there; every other check on it must still succeed.
+    tests = not tested
     pending = False
     for check in checks:
         if check.get("head_sha") != sha:
@@ -179,6 +184,8 @@ def other_checks_green(checks: list[dict], statuses: list[dict], sha: str) -> No
             and check.get("ci_workflow") is True
         )
         if actions and check.get("name") in DOWNSTREAM_CHECKS:
+            continue
+        if actions and not tested and check.get("name") == "tests":
             continue
         if (
             is_app(check, GREPTILE_APP_ID, "greptile-apps")
@@ -358,7 +365,10 @@ def wait_for_review(
             other_checks_green(checks, statuses, sha)
             if merged_sha is not None:
                 other_checks_green(
-                    api.checks(merged_sha), api.statuses(merged_sha), merged_sha
+                    api.checks(merged_sha),
+                    api.statuses(merged_sha),
+                    merged_sha,
+                    tested=False,
                 )
             current_pr(api, number, sha, merged_sha=merged_sha)
             return sha

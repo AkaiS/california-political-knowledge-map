@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   tests:
+    # The merge must carry the tested PR tree unchanged, so main reuses PR results.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,6 +35,7 @@ jobs:
 
   review-gate:
     needs: tests
+    if: ${{ !cancelled() && (needs.tests.result == 'success' || (needs.tests.result == 'skipped' && github.event_name == 'push')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -56,24 +59,50 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: uv run --no-project --python 3.13.5 scripts/review_gate.py
 
+  image-inputs:
+    # Merges that leave the image's sources unchanged skip the build and release.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.21"
+      - name: Compare image sources with the previous main commit
+        id: compare
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: uv run --no-project --python 3.13.5 scripts/image_inputs.py "$BEFORE" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
   container-build:
-    needs: [tests, review-gate]
+    # Built once per image change, before a release can stop the running application.
+    # The skipped main tests job would otherwise skip every job after the gate.
+    if: ${{ !cancelled() && needs.review-gate.result == 'success' && needs.image-inputs.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [review-gate, image-inputs]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Build production container
         env:
-          APP_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          APP_REVISION: ${{ github.sha }}
         run: docker build --build-arg APP_REVISION="$APP_REVISION" --tag ca-map-ci .
 
   production-preflight:
     # Credentials are available only after review and checks pass on trusted main.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [tests, review-gate, container-build]
+    if: ${{ !cancelled() && needs.review-gate.result == 'success' && needs.image-inputs.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [review-gate, image-inputs]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -104,8 +133,8 @@ jobs:
 
   release:
     # Each main push waits for the owner's approval in production-release.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [tests, review-gate, container-build, production-preflight]
+    if: ${{ !cancelled() && needs.review-gate.result == 'success' && needs.image-inputs.outputs.changed == 'true' && needs.container-build.result == 'success' && needs.production-preflight.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [review-gate, image-inputs, container-build, production-preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 110
     environment: production-release
