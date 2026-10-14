@@ -165,6 +165,23 @@ def test_already_released_candidate_is_left_running(monkeypatch, environment):
     assert zone.stages == ["git rev-parse", "ls-remote", "status"]
 
 
+def test_retry_after_readiness_failure_does_not_report_success(
+    monkeypatch, environment
+):
+    zone = Zone()
+    monkeypatch.setattr(release, "READY_SECONDS", -1)
+    _, go = run(monkeypatch, environment, zone, ready=lambda url: False)
+    with pytest.raises(release.PreflightError, match="did not become ready"):
+        go()
+    assert zone.running == CANDIDATE
+    zone.stages.clear()
+    progress, retry = run(monkeypatch, environment, zone, ready=lambda url: False)
+    with pytest.raises(release.PreflightError, match="did not become ready"):
+        retry()
+    assert zone.stages == ["git rev-parse", "ls-remote", "status"]
+    assert not progress.stopped
+
+
 def test_full_disk_refuses_before_stopping(monkeypatch, environment):
     zone = Zone(disk="85%")
     progress, go = run(monkeypatch, environment, zone)

@@ -184,8 +184,10 @@ follows the manual sequence in [cloud deployment](cloud-deployment.md):
 
 1. Refuse unless the candidate SHA is still the tip of `main`. An approval that
    arrives after a newer merge would otherwise roll production back.
-2. Read the current Bottle checkout. If it already equals the candidate, stop
-   without changing anything.
+2. Read the current Bottle checkout. If it already equals the candidate,
+   change nothing and succeed only if `/health/ready` returns 200 within 15
+   minutes. Bottle reports the checkout during builds too, so a retry after a
+   readiness failure cannot pass on the SHA alone.
 3. Refuse if the root filesystem is more than 80% used.
 4. Over SSH, set the container's restart policy to `no` and shut supervisor
    down, then poll until the container has stopped, for up to 180 seconds.

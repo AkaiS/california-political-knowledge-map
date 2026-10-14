@@ -97,6 +97,19 @@ def http_ready(url: str) -> bool:
         return False
 
 
+def wait_ready(
+    url: str,
+    ready: Callable[[str], bool],
+    sleep: Callable[[float], None],
+    clock: Callable[[], float],
+) -> None:
+    deadline = clock() + READY_SECONDS
+    while not ready(url):
+        if clock() > deadline:
+            raise PreflightError("The application did not become ready in time.")
+        sleep(10)
+
+
 def release(
     environment: Mapping[str, str],
     progress: Progress,
@@ -121,9 +134,14 @@ def release(
             "Bottle application status",
         )
         progress.previous = observed_revision(status)
+        ready_url = f"https://{access.app_name}.{access.hostname}/health/ready"
         if progress.previous == revision:
+            # Bottle reports the checkout during builds too, so a retry after a
+            # readiness failure must not count the checkout as a release.
+            progress.enter("verifying the existing release")
+            wait_ready(ready_url, ready, sleep, clock)
             return (
-                f"Production already runs `{revision}`.\n\n"
+                f"Production already runs `{revision}` and readiness passed.\n\n"
                 "No application was stopped or reloaded.\n"
             )
 
@@ -190,12 +208,7 @@ def release(
         )
         if observed_revision(status) != revision:
             raise PreflightError("Bottle does not report the candidate revision.")
-        url = f"https://{access.app_name}.{access.hostname}/health/ready"
-        deadline = clock() + READY_SECONDS
-        while not ready(url):
-            if clock() > deadline:
-                raise PreflightError("The application did not become ready in time.")
-            sleep(10)
+        wait_ready(ready_url, ready, sleep, clock)
     return (
         f"Released `{revision}` to production.\n\n"
         f"Previous revision: `{progress.previous}`.\n\n"
