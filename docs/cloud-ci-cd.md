@@ -170,6 +170,44 @@ verify this policy. GitHub runs the image build after the gate succeeds.
 
 These checks cover the production branch, required CI policy, review before
 build, a success-dependent job for an exact main commit, and production
-API/SSH authentication. The user chose manual releases initially.
-Step 5, automatic application deployment and its shutdown, health, reload and
-rollback behavior, is not implemented.
+API/SSH authentication.
+
+## Approved release
+
+The `release` job runs after `production-preflight` on each push to `main` and
+waits in the `production-release` GitHub environment until the owner approves
+it from the run's **Review deployments** button. Merging alone never releases.
+An unapproved run can be left waiting or rejected.
+
+`scripts/production_release.py` reuses the preflight's credential handling and
+follows the manual sequence in [cloud deployment](cloud-deployment.md):
+
+1. Refuse unless the candidate SHA is still the tip of `main`. An approval that
+   arrives after a newer merge would otherwise roll production back.
+2. Read the current Bottle checkout. If it already equals the candidate, stop
+   without changing anything.
+3. Refuse if the root filesystem is more than 80% used.
+4. Over SSH, set the container's restart policy to `no` and shut supervisor
+   down, then poll until the container has stopped, for up to 180 seconds.
+5. Pin the app's remote to the candidate SHA through `set_app_remote`.
+6. Run `bottle app reload --update --wait`, with a 75-minute limit for a
+   llama.cpp rebuild.
+7. Require Bottle to report the candidate SHA and `/health/ready` to return 200
+   within 15 minutes.
+
+There is no automatic rollback. A failure after step 4 leaves the app stopped
+or on a partial update; the job summary names the stage reached and the
+previous SHA. Recover with the manual update in
+[cloud deployment](cloud-deployment.md). Output from Bottle and SSH stays
+withheld, as in the preflight.
+
+Configure the `production-release` environment with:
+
+- the owner as a required reviewer, with self-review allowed;
+- deployment branches limited to `main`;
+- the same two variables and three secrets as `production`. GitHub cannot
+  copy secrets between environments, so they are entered again.
+
+The CI SSH key must be allowed to run the shutdown, state and disk commands,
+not only `true`. A forced-command restriction on its authorized-key entry
+makes the disk check in step 3 fail before anything is stopped.

@@ -425,3 +425,15 @@ def test_workflow_build_and_preflight_require_successful_review():
     assert (
         jobs["production-preflight"]["steps"][0]["with"]["ref"] == "${{ github.sha }}"
     )
+    release = jobs["release"]
+    assert set(release["needs"]) == {
+        "tests",
+        "review-gate",
+        "container-build",
+        "production-preflight",
+    }
+    assert release["if"] == jobs["production-preflight"]["if"]
+    assert release["environment"] == "production-release"
+    assert release["concurrency"]["cancel-in-progress"] is False
+    assert release["steps"][0]["with"]["ref"] == "${{ github.sha }}"
+    assert release["steps"][0]["with"]["persist-credentials"] is False
