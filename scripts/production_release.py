@@ -13,6 +13,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from image_inputs import ImageInputsError, image_changed
 from production_preflight import (
     PreflightError,
     ProductionAccess,
@@ -53,6 +54,24 @@ def main_tip(environment: Mapping[str, str]) -> str:
     if not re.fullmatch(r"[0-9a-f]{40}", tip):
         raise PreflightError("The main branch tip is unavailable.")
     return tip
+
+
+def newer_image_on_main(environment: Mapping[str, str], revision: str) -> bool:
+    tip = main_tip(environment)
+    if tip == revision:
+        return False
+    # Merges that leave the image's sources alone never release, so they must
+    # not block the release of the image they share with this candidate.
+    run_quiet(
+        ["git", "fetch", "--quiet", "--depth=1", REPOSITORY_URL, tip],
+        subprocess_environment(environment),
+        "Fetching the main branch tip",
+        timeout=120,
+    )
+    try:
+        return image_changed(revision, tip, subprocess_environment(environment))
+    except ImageInputsError as error:
+        raise PreflightError(str(error)) from None
 
 
 def remote(access: ProductionAccess, command: str, label: str, timeout=60) -> str:
@@ -122,9 +141,9 @@ def release(
     progress.candidate = revision
     # An approval can arrive after a newer merge; releasing it would roll back.
     progress.enter("checking the main branch tip")
-    if main_tip(environment) != revision:
+    if newer_image_on_main(environment, revision):
         raise PreflightError(
-            "A newer main commit exists; approve the release for that commit."
+            "A newer main commit changes the image; approve the release for that commit."
         )
     with production_access(environment) as access:
         progress.enter("reading the current release")

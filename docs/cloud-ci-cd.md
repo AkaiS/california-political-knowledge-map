@@ -1,28 +1,47 @@
 # Production CI and authentication preflight
 
-`main` is the production branch. Pull requests and pushes to `main` run the
-same deterministic Python and Node checks in `.github/workflows/ci.yml`.
-The test, review-gate and build jobs check out the exact reviewed PR head on
-pull requests, and the exact push SHA on `main`. PR jobs test and build that
-reviewed head. The required up-to-date branch rule supplies the integration
-baseline before merging. The image's `APP_REVISION` records the same SHA.
-Only after `tests` and `review-gate` succeed does `container-build` build the
-production Dockerfile, including its pinned llama.cpp binary, dependency
-installation and build metadata. The image stays on the temporary runner.
-A cold build has a 60-minute limit.
+`main` is the production branch. `.github/workflows/ci.yml` runs each kind of
+work once:
 
-The required branch checks are `tests`, `review-gate` and `container-build`,
-all from the GitHub Actions app, ID `15368`. Configure the
-`main` branch to require a pull request and all three successful checks, require
-the branch to be up to date, and enforce the rules for administrators without
-a bypass. The workflow alone cannot enforce repository settings.
+- On a pull request, `tests` runs the deterministic Python and Node checks on
+  the exact PR head, then `review-gate` requires review evidence for that head.
+- On a push to `main`, `tests` is skipped. `review-gate` verifies that the
+  merge commit's tree is identical to the reviewed PR head and that the head's
+  `tests` succeeded, so the merged tree has already been tested. In parallel,
+  `image-inputs` compares the push's `before` commit with its SHA over the
+  paths that `.dockerignore` re-includes, which are the only files that can
+  change the image.
+- If image sources changed, `container-build` builds the production Dockerfile
+  at that push SHA, including its pinned llama.cpp binary, dependency
+  installation and build metadata, while `production-preflight` checks
+  credentials in parallel. Otherwise the build, preflight and release are
+  skipped: changes to CI, scripts, tests, docs, work items and local-only
+  tooling leave production as it is.
 
-After all three jobs succeed on a push to `main`, `production-preflight` checks out
-that push's exact `github.sha`. It uses the `production` GitHub environment.
-That environment must allow deployments only from `main`. The job shares the
-`production` concurrency group and does not cancel an in-progress run.
-GitHub's concurrency queue can replace an older pending run with a newer one;
-it does not guarantee that every queued push runs.
+`scripts/image_inputs.py` reads the paths from `.dockerignore`, so adding a
+path to the build context also makes it trigger releases. The file must stay
+an allowlist that starts with `*`. A missing `before` commit counts as a
+change, and a failed comparison fails the job, which blocks that release.
+
+The image's `APP_REVISION` records the push SHA. The image stays on the
+temporary runner; Bottle builds its own image from source during the release.
+The CI build exists so a broken build fails before the release stops the
+running application. A cold build has a 60-minute limit.
+
+The required branch checks are `tests` and `review-gate`, both from the GitHub
+Actions app, ID `15368`. Configure the `main` branch to require a pull request
+and both successful checks, require the branch to be up to date, and enforce
+the rules for administrators without a bypass. The required up-to-date rule
+makes the reviewed head the integration baseline, which is what lets `main`
+reuse the PR's test results. The workflow alone cannot enforce repository
+settings.
+
+On a push to `main` that changes image sources, `production-preflight` runs
+after `review-gate` succeeds and checks out that push's exact `github.sha`. It uses the `production` GitHub
+environment. That environment must allow deployments only from `main`. The job
+shares the `production` concurrency group and does not cancel an in-progress
+run. GitHub's concurrency queue can replace an older pending run with a newer
+one; it does not guarantee that every queued push runs.
 
 This phase validates credentials. It runs `bottle app status` and SSH `true`.
 It has no application deploy, stop, reload, shutdown or rollback command.
@@ -48,7 +67,8 @@ that still requests changes also rejects the build. The gate reads all pages
 of comments, reviews, threads, checks and commit statuses. Every other visible
 check and status must complete successfully. Neutral, skipped, cancelled and
 failed checks do not count as green. The gate excludes only its own
-`review-gate`, `container-build` and `production-preflight` jobs after checking
+`review-gate`, `image-inputs`, `container-build`, `production-preflight` and
+`release` jobs after checking
 the Actions app identity, run repository, run head SHA and authoritative
 workflow path `.github/workflows/ci.yml`. Same-named jobs from other apps or
 workflows must succeed. A successful `tests` job from this CI workflow is
@@ -63,9 +83,11 @@ before success. A new head requires a new workflow run and review.
 A push to `main` must correspond to exactly one associated merged pull
 request whose `merge_commit_sha` equals the push SHA. GitHub commit metadata
 must show an identical tree for that merge and the reviewed PR head. The gate
-revalidates the merged PR's review and head checks, then requires green checks
-for the main commit too. This accepts the exact reviewed merge without
-waiting for a Greptile review on a merge SHA that Greptile does not review.
+revalidates the merged PR's review and head checks, including its `tests`
+job, then requires every other check on the main commit to be green. The
+skipped `tests` job on the main commit is neither required nor counted. This
+accepts the exact reviewed merge without waiting for a Greptile review on a
+merge SHA that Greptile does not review.
 Direct pushes, arbitrary reviewed ancestors, ambiguous merged PRs and merges
 that introduce a different tree fail closed. Requiring the PR to be up to date
 before merging keeps the reviewed tree equal to the merged tree.
@@ -157,6 +179,7 @@ uv run --no-sync pytest -q tests/test_production_preflight.py
 uv run --no-sync ruff check scripts/production_preflight.py tests/test_production_preflight.py
 uv run --no-sync pytest -q tests/test_review_gate.py
 uv run --no-sync ruff check scripts/review_gate.py tests/test_review_gate.py
+uv run --no-sync pytest -q tests/test_image_inputs.py tests/test_production_release.py
 uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_eval_review.test.mjs tests/chunk_eval_review.test.mjs
 uv run --no-sync pytest -q tests
 ```
@@ -166,7 +189,8 @@ missing evidence, unresolved outdated threads, requested changes, other
 checks and statuses, API pagination, workflow ownership, fork event context,
 head changes during polling, bounded timeout, merged PR provenance and the
 success-dependent workflow ordering. No local container build is needed to
-verify this policy. GitHub runs the image build after the gate succeeds.
+verify this policy. GitHub runs the image build on `main` after the gate
+succeeds.
 
 These checks cover the production branch, required CI policy, review before
 build, a success-dependent job for an exact main commit, and production
@@ -174,16 +198,19 @@ API/SSH authentication.
 
 ## Approved release
 
-The `release` job runs after `production-preflight` on each push to `main` and
-waits in the `production-release` GitHub environment until the owner approves
-it from the run's **Review deployments** button. Merging alone never releases.
-An unapproved run can be left waiting or rejected.
+The `release` job runs after `container-build` and `production-preflight`
+succeed on each push to `main` that changes image sources, and waits in the
+`production-release` GitHub environment until the owner approves it from the
+run's **Review deployments** button. Merging alone never releases. An
+unapproved run can be left waiting or rejected.
 
 `scripts/production_release.py` reuses the preflight's credential handling and
 follows the manual sequence in [cloud deployment](cloud-deployment.md):
 
-1. Refuse unless the candidate SHA is still the tip of `main`. An approval that
-   arrives after a newer merge would otherwise roll production back.
+1. Refuse if a newer commit on `main` changes image sources relative to the
+   candidate. An approval that arrives after such a merge would otherwise roll
+   production back. Newer merges that leave image sources alone never release
+   on their own, so they do not block the candidate that carries their image.
 2. Read the current Bottle checkout. If it already equals the candidate,
    change nothing and succeed only if `/health/ready` returns 200 within 15
    minutes. Bottle reports the checkout during builds too, so a retry after a

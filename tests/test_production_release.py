@@ -44,15 +44,24 @@ def environment(monkeypatch, tmp_path):
 class Zone:
     """A fake production host that records every command it receives."""
 
-    def __init__(self, *, tip=CANDIDATE, running=PREVIOUS, disk="63%", fail=None):
+    def __init__(
+        self,
+        *,
+        tip=CANDIDATE,
+        tip_changes_image=True,
+        running=PREVIOUS,
+        disk="63%",
+        fail=None,
+    ):
         self.tip, self.running, self.disk, self.fail = tip, running, disk, fail
+        self.tip_changes_image = tip_changes_image
         self.container_up = True
         self.commands: list[list[str]] = []
         self.stages: list[str] = []
 
     def label(self, command):
         if command[0] == "git":
-            return "git rev-parse" if command[1] == "rev-parse" else "ls-remote"
+            return "git rev-parse" if command[1] == "rev-parse" else command[1]
         if command[0] == "ssh":
             remote = command[-1]
             if remote.startswith("df"):
@@ -73,7 +82,17 @@ class Zone:
         label = self.label(command)
         self.stages.append(label)
         if label == self.fail:
-            return subprocess.CompletedProcess(command, 1, stdout=TOKEN, stderr="")
+            # git diff --quiet exits 1 for a difference, so its failures use 128.
+            code = 128 if label == "diff" else 1
+            return subprocess.CompletedProcess(command, code, stdout=TOKEN, stderr="")
+        if label == "fetch":
+            assert command[-2:] == [release.REPOSITORY_URL, self.tip]
+        if label == "diff":
+            assert command[3:5] == [CANDIDATE, self.tip]
+            assert "src" in command and "tests" not in command
+            return subprocess.CompletedProcess(
+                command, int(self.tip_changes_image), stdout="", stderr=""
+            )
         stdout = {
             "git rev-parse": CANDIDATE,
             "ls-remote": f"{self.tip}\trefs/heads/main\n",
@@ -147,6 +166,25 @@ def test_newer_main_commit_refuses_before_reading_credentials(monkeypatch, envir
     _, go = run(monkeypatch, environment, zone)
     with pytest.raises(release.PreflightError, match="newer main commit"):
         go()
+    assert zone.stages == ["git rev-parse", "ls-remote", "fetch", "diff"]
+
+
+def test_newer_main_commit_without_image_changes_does_not_block(
+    monkeypatch, environment
+):
+    zone = Zone(tip="c" * 40, tip_changes_image=False)
+    _, go = run(monkeypatch, environment, zone)
+    assert "Released" in go()
+    assert zone.stages[:5] == ["git rev-parse", "ls-remote", "fetch", "diff", "status"]
+    assert zone.running == CANDIDATE
+
+
+def test_unreadable_tip_comparison_refuses(monkeypatch, environment):
+    zone = Zone(tip="c" * 40, fail="diff")
+    _, go = run(monkeypatch, environment, zone)
+    with pytest.raises(release.PreflightError, match="Cannot compare"):
+        go()
+    assert "status" not in zone.stages
 
 
 def test_untrusted_event_runs_nothing(monkeypatch, environment):
