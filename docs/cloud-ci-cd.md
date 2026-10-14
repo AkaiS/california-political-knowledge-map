@@ -205,9 +205,21 @@ Configure the `production-release` environment with:
 
 - the owner as a required reviewer, with self-review allowed;
 - deployment branches limited to `main`;
-- the same two variables and three secrets as `production`. GitHub cannot
-  copy secrets between environments, so they are entered again.
+- the same two variables as `production`;
+- its own three secrets, created by `scripts/provision_release_credentials.sh`.
 
-The CI SSH key must be allowed to run the shutdown, state and disk commands,
-not only `true`. A forced-command restriction on its authorized-key entry
-makes the disk check in step 3 fail before anything is stopped.
+GitHub cannot copy secrets between environments, so the release has its own
+credentials. The script runs on the owner's machine with the owner's Bottle
+and SSH logins. It creates a 90-day owner-scoped Bottle token named
+`ca-map-github-release-<date>` and a new Ed25519 key. The key is authorized with
+`restrict`, which disables forwarding and terminals but allows the release
+commands. The script confirms that the key can run `df` and that the token can
+read `/api/apps`, then passes all three values to `gh secret set` on stdin. No
+value is printed, and the temporary files are deleted on exit. Run it again to
+rotate both before the token expires, then delete the old token with
+`bottle tokens delete` and remove the old key line from `authorized_keys`.
+
+The zone's host key comes from `ssh-keyscan` and is trusted on first use. No
+authenticated channel for it is available. The script pins that key for the
+session that authorizes the new SSH key, so the stored known-hosts entry
+belongs to the host that accepted it.
