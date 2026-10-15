@@ -98,7 +98,7 @@ chunk, embed, and extract from.
 34. As a developer, I want no Mention Span provenance written to the graph, so that the write path gains no new schema and the Source Article remains the source for quotation.
 35. As a developer, I want abbreviations and other splitter artefacts to degrade to a mis-numbered line rather than to lost text, so that a splitter weakness costs at most one Mention Span.
 36. As a maintainer, I want the deleted tag-handling helpers and their tests removed rather than left unused, so that the module does not carry two coreference mechanisms.
-37. As a maintainer, I want `CONTEXT.md` and the affected ADR updated in the same change, so that the domain vocabulary does not describe a mechanism that no longer exists.
+37. As a maintainer, I want `GLOSSARY.md` and the affected ADR updated in the same change, so that the domain vocabulary does not describe a mechanism that no longer exists.
 
 ## Implementation Decisions
 
@@ -220,7 +220,7 @@ Mention Span data is persisted to the graph.
 
 ### Documentation
 
-`CONTEXT.md` gains a **Mention Span** entry and loses or rewrites **Annotated
+`GLOSSARY.md` gains a **Mention Span** entry and loses or rewrites **Annotated
 Article**, which describes the `<ref>` tag mechanism being removed. The
 **Coreference Critic** entry is amended to describe per-Mention-Span verdicts.
 

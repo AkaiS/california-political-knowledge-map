@@ -30,7 +30,7 @@ record should say so: the two run modes cannot diverge because there is only one
 of them, so parity is not a property any test needs to assert.
 
 No glossary work is required. The terms introduced alongside the buffer never
-entered `CONTEXT.md`, and with the buffer gone they do not need to.
+entered `GLOSSARY.md`, and with the buffer gone they do not need to.
 
 ## Acceptance criteria
 
@@ -42,7 +42,7 @@ entered `CONTEXT.md`, and with the buffer gone they do not need to.
 - [x] Issue 05 records that the evidence sink protocol survives for the engine's checkpoint sink, while the two-implementations justification does not.
 - [x] Retractions state the reasoning, so a reader can see what was intended and why it was reversed.
 - [x] `work/README.md` reflects the project's current issue set.
-- [x] No new `CONTEXT.md` glossary entries are introduced.
+- [x] No new `GLOSSARY.md` glossary entries are introduced.
 
 ## Blocked by
 

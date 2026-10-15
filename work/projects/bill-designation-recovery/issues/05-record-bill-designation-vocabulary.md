@@ -8,7 +8,7 @@ Labels: completed
 
 ## What to build
 
-`CONTEXT.md` gains **Bill Designation**: the chamber and number of a California
+`GLOSSARY.md` gains **Bill Designation**: the chamber and number of a California
 bill together, normalized to the initials form — `SB 623`, `AB 1751`. It is what
 qualifies a `Bill`'s identity alongside its Bill Session Resolution, it is the
 `Bill` node's `name`, and it is supplied by resolution rather than by
@@ -36,9 +36,9 @@ history shows.
 
 ## Acceptance criteria
 
-- [x] `CONTEXT.md` defines Bill Designation, with an _Avoid_ line covering "bill
+- [x] `GLOSSARY.md` defines Bill Designation, with an _Avoid_ line covering "bill
       number" used without a chamber.
-- [x] The Bill Session Resolution entry in `CONTEXT.md` names the Bill
+- [x] The Bill Session Resolution entry in `GLOSSARY.md` names the Bill
       Designation as the value it resolves against.
 - [x] The primary ontology's `Bill` declares `name` holding the Bill
       Designation, drops `number`, and its example and primary key use the same

@@ -8,7 +8,7 @@ ordered provider policy. They are distinct deployments even when they name the
 same upstream release. An OpenRouter Evaluation Run is directional evidence
 about the local deployment, not proof that the two behave identically.
 
-The domain glossary in [`CONTEXT.md`](../CONTEXT.md) is the canonical vocabulary.
+The domain glossary in [`GLOSSARY.md`](../GLOSSARY.md) is the canonical vocabulary.
 
 The retained legacy Query Rewriter has its own deployment selection. Current
 Source Guides web requests and shared chat evaluations do not create it. Set

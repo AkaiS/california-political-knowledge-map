@@ -129,7 +129,7 @@ extracted once, from the chunk that owns it.
 17. As a pipeline developer, I want a name matching two different article-level
     Bill Designations to resolve to neither, so that ambiguity is reviewed rather
     than decided by iteration order.
-18. As a domain reader, I want **Bill Designation** defined in `CONTEXT.md`, so
+18. As a domain reader, I want **Bill Designation** defined in `GLOSSARY.md`, so
     that "number", "designation" and "name" are not used interchangeably in the
     next ticket.
 19. As a domain reader, I want the superseded `number` property gone from the
@@ -141,7 +141,7 @@ extracted once, from the chunk that owns it.
 **Bill Designation is a new domain term.** The chamber and number of a
 California bill, together, normalized to the initials form: `SB 623`, `AB 1751`.
 It is what qualifies a `Bill`'s identity alongside its session, and it replaces
-every current use of "bill number" standing alone. `CONTEXT.md` gains the entry.
+every current use of "bill number" standing alone. `GLOSSARY.md` gains the entry.
 
 **The Bill Designation is the `Bill`'s `name`.** No new property is introduced.
 `:Bill` declared `number` alone, which cannot identify a bill without its

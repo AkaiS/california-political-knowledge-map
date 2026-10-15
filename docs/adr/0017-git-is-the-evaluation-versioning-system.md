@@ -41,7 +41,7 @@ rerun instead.
 
 ## Why now
 
-The evaluation package is 9,008 of the 19,455 lines in `src/`. `store.py` alone is 3,995 lines and issues 21 `CREATE TABLE` statements, none of which exist in `document_store.db`: no Evaluation Run has ever been recorded by the system built to record them. Thirty-seven of the 91 terms in `CONTEXT.md` are evaluation terms, and 40 of 92 on `feat/evaluations`. Seventy-one commits touched `src/knowledge_map/evaluation/` between 2026-07-10 and 2026-07-31, and none since.
+The evaluation package is 9,008 of the 19,455 lines in `src/`. `store.py` alone is 3,995 lines and issues 21 `CREATE TABLE` statements, none of which exist in `document_store.db`: no Evaluation Run has ever been recorded by the system built to record them. Thirty-seven of the 91 terms in `GLOSSARY.md` are evaluation terms, and 40 of 92 on `feat/evaluations`. Seventy-one commits touched `src/knowledge_map/evaluation/` between 2026-07-10 and 2026-07-31, and none since.
 
 Over the same period the pipeline those runs were meant to measure went to 14 `COMPLETED` and 59 `FAILED_DLQ` across the 73-article corpus. The evaluation contract was specified to a depth that outran every fact available to calibrate it, while the subject of the measurement stayed unmeasured and, on four articles in five, unfinished.
 
@@ -61,7 +61,7 @@ Two properties do not survive, and both are deliberate. Automated Release Gate e
 
 Keeping the ledger and writing the first Data Set against it was rejected. The obstacle to writing a Data Set has never been a missing mechanism — it is that every attempt to author one first required deciding how the authoring itself would be versioned, and that question has consumed three weeks and produced no cases. The mechanism is what stands between the author and the work.
 
-Keeping the ledger dormant and unused, deleting nothing, was rejected. Nine thousand lines that no execution path reaches still cost every reading of `CONTEXT.md`, every schema change that must stay consistent with a table nobody writes to, and every future decision that must be checked against eight ADRs describing a system that does not run.
+Keeping the ledger dormant and unused, deleting nothing, was rejected. Nine thousand lines that no execution path reaches still cost every reading of `GLOSSARY.md`, every schema change that must stay consistent with a table nobody writes to, and every future decision that must be checked against eight ADRs describing a system that does not run.
 
 Deleting evaluation entirely, including `pydantic-evals` and the Data Set format, was rejected. The goal that motivated all of this — knowing how well each non-deterministic component performs — is correct and unmet. What failed was the persistence layer, not the intent. `engine.py` and a YAML file are enough to start measuring this week.
 
@@ -73,7 +73,7 @@ Calibrating the ledger against real runs before deciding was rejected as circula
 
 Thirteen test files covering ledger behavior are removed with the code they cover: the 11 `tests/test_evaluation_*.py` files, `tests/test_metric_observation_ownership.py`, and `tests/conftest.py`, whose only contents were Data Set construction helpers.
 
-`CONTEXT.md` loses roughly 35 evaluation terms, among them Evaluation Ledger, Evaluation Finalization, Evaluation Finalization Attempt, Frozen Aggregate Manifest, Evidence Contract Version, Evaluation Checkpoint, Schema Reference, Resolved Schema Binding, Structured Metric Observation Materialization, Evaluation Artifact, Artifact Location, and Release Gate. Evaluation Data Set, Evaluation Case, Evaluation Split, Evaluation Suite, and Evaluation Rubric survive with their definitions narrowed to what a file and a report can carry.
+`GLOSSARY.md` loses roughly 35 evaluation terms, among them Evaluation Ledger, Evaluation Finalization, Evaluation Finalization Attempt, Frozen Aggregate Manifest, Evidence Contract Version, Evaluation Checkpoint, Schema Reference, Resolved Schema Binding, Structured Metric Observation Materialization, Evaluation Artifact, Artifact Location, and Release Gate. Evaluation Data Set, Evaluation Case, Evaluation Split, Evaluation Suite, and Evaluation Rubric survive with their definitions narrowed to what a file and a report can carry.
 
 Every `work/projects/` entry specifying the removed contract is closed as superseded rather than completed, including `shared-evaluation-contract`, `unified-evaluation-execution`, `evaluation-contract-hardening`, `case-evaluation-requirements`, `report-case-evidence-contract`, `structured-metric-observation-materialization`, `renewable-evaluation-finalization-authority`, and `gold-set-construction-factory`.
 

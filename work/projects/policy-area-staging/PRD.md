@@ -97,7 +97,7 @@ Resolution, the Relevance Filter, and Entity Extraction already are.
 23. As an AI engineer, I want the extraction Silver Set's Policy Area nodes and topic edges re-annotated under the new contract, so that the extraction report stops scoring a stage that no longer owns the question.
 24. As a maintainer, I want the Policy Area open questions retired from the extraction annotation guideline, so that the guideline stops recording a question answered elsewhere.
 25. As a maintainer, I want the number of Policy Areas per article recorded from the Silver Set rather than capped by a guess, so that any future limit is set from the distribution we measured.
-26. As a maintainer, I want `CONTEXT.md` to name both stages, so that the domain vocabulary describes the pipeline that exists.
+26. As a maintainer, I want `GLOSSARY.md` to name both stages, so that the domain vocabulary describes the pipeline that exists.
 
 ## Implementation Decisions
 

@@ -1,6 +1,7 @@
 name: CI
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -54,7 +55,7 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.21"
-      - name: Require current Greptile 5/5 and resolved feedback
+      - name: Check PR review policy and resolved feedback
         env:
           GH_TOKEN: ${{ github.token }}
         run: uv run --no-project --python 3.13.5 scripts/review_gate.py
