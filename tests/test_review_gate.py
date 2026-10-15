@@ -65,6 +65,8 @@ def pr(**changes):
         "head": {"sha": HEAD, "repo": {"full_name": "fork/repository"}},
         "state": "open",
         "merged": False,
+        "title": "A normal change",
+        "body": None,
         **changes,
     }
 
@@ -415,6 +417,133 @@ def test_poll_rejects_head_change_while_fetching_review(event_environment, monke
         gate.wait_for_review(event_environment, timeout=0)
 
 
+@pytest.fixture
+def skipped_review_api(monkeypatch):
+    api = gate.GitHub({})
+    monkeypatch.setattr(gate, "GitHub", lambda environment: api)
+    monkeypatch.setattr(
+        api, "pull_request", lambda number: pr(title="Docs [skip greptile]")
+    )
+    monkeypatch.setattr(api, "checks", lambda sha: [ci_tests_check()])
+    monkeypatch.setattr(api, "threads", lambda number: [])
+    monkeypatch.setattr(api, "reviews", lambda number: [])
+    monkeypatch.setattr(api, "statuses", lambda sha: [])
+
+    def no_comments(number):
+        pytest.fail("The opt-out must not request a Greptile summary.")
+
+    monkeypatch.setattr(api, "comments", no_comments)
+    return api
+
+
+@pytest.mark.parametrize("field", ["title", "body"])
+def test_explicit_marker_passes_without_any_greptile_evidence(
+    event_environment, skipped_review_api, monkeypatch, capsys, field
+):
+    monkeypatch.setattr(
+        skipped_review_api,
+        "pull_request",
+        lambda number: pr(**{field: f"Documentation {gate.SKIP_GREPTILE_MARKER}"}),
+    )
+    assert gate.wait_for_review(event_environment, timeout=0) == HEAD
+    assert "Greptile requirement skipped" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "problem",
+    [
+        "missing_tests",
+        "failed_tests",
+        "other_check",
+        "status",
+        "thread",
+        "changes_requested",
+    ],
+)
+def test_opt_out_still_requires_tests_other_checks_and_resolved_feedback(
+    event_environment, skipped_review_api, monkeypatch, problem
+):
+    api = skipped_review_api
+    if problem == "missing_tests":
+        monkeypatch.setattr(api, "checks", lambda sha: [])
+    elif problem == "failed_tests":
+        monkeypatch.setattr(
+            api, "checks", lambda sha: [ci_tests_check(conclusion="failure")]
+        )
+    elif problem == "other_check":
+        monkeypatch.setattr(
+            api,
+            "checks",
+            lambda sha: [ci_tests_check(), check("security", conclusion="failure")],
+        )
+    elif problem == "status":
+        monkeypatch.setattr(
+            api, "statuses", lambda sha: [{"sha": sha, "state": "failure"}]
+        )
+    elif problem == "thread":
+        monkeypatch.setattr(
+            api, "threads", lambda number: [{"isResolved": False, "isOutdated": True}]
+        )
+    else:
+        monkeypatch.setattr(
+            api,
+            "reviews",
+            lambda number: [
+                {"id": 1, "user": {"id": 20}, "state": "CHANGES_REQUESTED"}
+            ],
+        )
+    with pytest.raises(gate.GateError):
+        gate.wait_for_review(event_environment, timeout=0)
+
+
+@pytest.mark.parametrize("read_number", [2, 3])
+def test_removing_opt_out_during_checks_cannot_pass_without_review(
+    event_environment, skipped_review_api, monkeypatch, read_number
+):
+    responses = iter([pr(title="Docs [skip greptile]")] * (read_number - 1) + [pr()])
+    monkeypatch.setattr(
+        skipped_review_api, "pull_request", lambda number: next(responses)
+    )
+    with pytest.raises(gate.GateError, match="Timed out"):
+        gate.wait_for_review(event_environment, timeout=0)
+
+
+def test_main_merge_honors_opt_out_and_reuses_pr_tests(
+    event_environment, skipped_review_api, monkeypatch
+):
+    event_environment.update(GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/main")
+    merged = pr(
+        title="Docs [skip greptile]",
+        merged=True,
+        merged_at=FINISH,
+        state="closed",
+        merge_commit_sha=MERGE,
+    )
+    api = skipped_review_api
+    monkeypatch.setattr(api, "pages", lambda endpoint: [merged])
+    monkeypatch.setattr(
+        api, "api", lambda endpoint: {"commit": {"tree": {"sha": TREE}}}
+    )
+    monkeypatch.setattr(api, "pull_request", lambda number: merged)
+    monkeypatch.setattr(
+        api,
+        "checks",
+        lambda sha: (
+            [ci_tests_check(head_sha=sha, conclusion="skipped")]
+            if sha == MERGE
+            else [ci_tests_check()]
+        ),
+    )
+    assert gate.wait_for_review(event_environment, timeout=0) == HEAD
+
+
+def test_greptile_config_honors_the_gate_opt_out():
+    config = json.loads(
+        (Path(__file__).parents[1] / ".greptile/config.json").read_text()
+    )
+    assert config["ignoreKeywords"].splitlines() == [gate.SKIP_GREPTILE_MARKER]
+
+
 def test_api_error_withholds_remote_output_and_tokens(monkeypatch):
     def run(command, **kwargs):
         assert "private-token" not in str(command)
@@ -437,6 +566,13 @@ def test_workflow_tests_pr_once_then_builds_and_releases_main_after_review():
         (Path(__file__).parents[1] / ".github/workflows/ci.yml").read_text()
     )
     jobs = workflow["jobs"]
+    triggers = workflow.get("on", workflow.get(True))
+    assert set(triggers["pull_request"]["types"]) == {
+        "opened",
+        "synchronize",
+        "reopened",
+        "edited",
+    }
     main_push = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
     assert jobs["tests"]["if"] == "github.event_name == 'pull_request'"
     assert jobs["review-gate"]["needs"] == "tests"
