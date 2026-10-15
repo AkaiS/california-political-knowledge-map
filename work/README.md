@@ -161,7 +161,7 @@ independent of it.
 - [02 Bill Designation parsing, four forms only](projects/bill-designation-recovery/issues/02-bill-designation-parsing.md), takeable. `SB`, `AB`, `Senate Bill`, `Assembly Bill` and nothing else; `number` leaves the News Ontology and is supplied by resolution.
 - [03 Every extracted Bill gets a resolution](projects/bill-designation-recovery/issues/03-resolution-covers-every-bill.md), blocked by 02. The map is keyed by name and covers unidentifiable bills; the adapter stops deciding.
 - [04 Recover a Bill Designation from the Source Article](projects/bill-designation-recovery/issues/04-recover-designation-from-article.md), blocked by 03. `ll 623` reaches `Senate Bill 623`'s node before any key is minted.
-- [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `CONTEXT.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
+- [05 Record the Bill Designation vocabulary](projects/bill-designation-recovery/issues/05-record-bill-designation-vocabulary.md), blocked by 04. `GLOSSARY.md` gains **Bill Designation**; the primary ontology's `SB-32` example is reconciled. No ADR.
 
 ### Retry Layering frontier
 
@@ -187,7 +187,7 @@ one before it.
 - [04 Per-Mention-Span Critic verdicts and targeted retry](projects/coreference-mention-spans/issues/04-per-mention-critic-verdicts.md), blocked by 03. One misread pronoun stops costing its neighbours.
 - [05 Zero-survivor failures and Dead Letter Queue payload](projects/coreference-mention-spans/issues/05-zero-survivor-failures-and-dlq-payload.md), blocked by 04. Three failure types, and the discard proportion that a partial-discard threshold will later be set from.
 - [06 Delete the tag machinery](projects/coreference-mention-spans/issues/06-delete-tag-machinery.md), blocked by 05. The contract step; deletion only.
-- [07 Domain vocabulary and ADR](projects/coreference-mention-spans/issues/07-context-and-adr.md), blocked by 06. `CONTEXT.md` gains **Mention Span**; a new ADR supersedes ADR 0001's markup decision.
+- [07 Domain vocabulary and ADR](projects/coreference-mention-spans/issues/07-context-and-adr.md), blocked by 06. `GLOSSARY.md` gains **Mention Span**; a new ADR supersedes ADR 0001's markup decision.
 
 ### News Ontology and Graph Population frontier
 
@@ -310,7 +310,7 @@ removed the Evaluation Ledger:
   They were built, most of them to completion, and then removed. They are not
   relabeled `completed`, because the thing they completed no longer exists.
 - The evaluation package went from 9,008 lines to 570, of which 289 are the
-  `tasks/` package added afterwards to define the relevance task. `CONTEXT.md`
+  `tasks/` package added afterwards to define the relevance task. `GLOSSARY.md`
   went from 91 terms to 60, and from 37 evaluation terms to 6.
 - The deterministic suite went from `648 passed` to `399 passed` as the 249
   ledger tests were removed with the code they covered, then to `410 passed`
@@ -436,7 +436,7 @@ On 2026-10-09, Shared fusion ranking's ticket acceptance state was reconciled:
 
 Supporting knowledge remains outside this hierarchy:
 
-- [`CONTEXT.md`](../CONTEXT.md) defines the domain language.
+- [`GLOSSARY.md`](../GLOSSARY.md) defines the domain language.
 - [`docs/adr/`](../docs/adr/) records durable architectural decisions.
 - `.scratch/` contains disposable runtime output, not project plans.
 

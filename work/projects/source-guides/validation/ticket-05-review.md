@@ -7,7 +7,7 @@ The implementation commit was `18d3570a4169f7f316708461b057b7742535e9a2`.
 Separate parallel Standards and Spec reviewers used the repository's code-review
 skill. Neither reviewer authored the implementation.
 
-The review read AGENTS.md, CONTEXT.md, tracker and domain conventions,
+The review read AGENTS.md, GLOSSARY.md, tracker and domain conventions,
 ADRs 0017, 0022, and 0023, the parent PRD, ticket 05, the implementation diff,
 and the full [implementation validation](ticket-05.md).
 

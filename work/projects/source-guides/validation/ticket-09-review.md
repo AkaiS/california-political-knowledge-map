@@ -7,7 +7,7 @@ Implementation commit: `c3f96cccfe20b2d916597a256be3b1ad2aba427f`.
 Separate parallel Standards and Spec reviewers used the repository code-review
 skill. Neither reviewer authored the implementation.
 
-The review read AGENTS.md, CONTEXT.md, tracker/domain conventions, ADRs 0017,
+The review read AGENTS.md, GLOSSARY.md, tracker/domain conventions, ADRs 0017,
 0022 and 0023, ticket 09, the parent PRD, the
 [implementation evidence](ticket-09.md), and every changed code/test hunk.
 Immutable report bodies were checked for provenance and metadata consistency.

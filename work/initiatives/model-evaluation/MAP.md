@@ -8,7 +8,7 @@ Reach a decision-ready, repository-wide evaluation strategy and implementation r
 
 ## Notes
 
-- Use `/grilling` and `/domain-modeling` when resolving decisions; read `CONTEXT.md` before exploration.
+- Use `/grilling` and `/domain-modeling` when resolving decisions; read `GLOSSARY.md` before exploration.
 - The shared standard must cover all model-backed components, with task-specific scoring on top of common contracts, provenance, run recording, artifacts, and CI integration.
 - Evaluation is for regression detection first and model comparison second. Run affected deterministic checks on pull requests; require broad non-deterministic suites before releases.
 - Human-labeled, versioned Gold Sets are authoritative. Promote reviewed production failures, ambiguous inputs, and model-disagreement cases into versioned training, calibration, or held-out test splits.

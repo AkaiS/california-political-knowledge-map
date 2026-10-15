@@ -124,7 +124,7 @@ factory does not execute anything and does not touch the Evaluation Ledger.
 - The factory does not touch the Evaluation Ledger, does not execute anything, and has no I/O.
 - `EvaluationGoldSet`'s existing validators are retained unchanged, and direct construction must keep working so stored Gold Sets can be deserialized. Those validators cover identity-level invariants only; member-versus-contract schema compatibility is no longer among them, so the factory is not merely a convenience over the model's own invariants — for schema compatibility it is the only construction-time check there is.
 - `EvaluationSplit` keeps all three members. `calibration` is documented as reservation from the agent-tuning loop so judge behaviour can be observed against those cases.
-- The `CONTEXT.md` glossary gains an Evaluation Split entry defining all three splits, and the Evaluation Gold Set entry is extended to describe construction and revisioning.
+- The `GLOSSARY.md` glossary gains an Evaluation Split entry defining all three splits, and the Evaluation Gold Set entry is extended to describe construction and revisioning.
 
 ## Testing Decisions
 

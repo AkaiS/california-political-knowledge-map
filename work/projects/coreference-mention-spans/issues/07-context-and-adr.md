@@ -3,7 +3,7 @@
 **What to build:** The written record catching up with the code, so the domain
 glossary does not describe a mechanism that no longer exists.
 
-`CONTEXT.md` gains a **Mention Span** entry. **Annotated Article** currently
+`GLOSSARY.md` gains a **Mention Span** entry. **Annotated Article** currently
 describes a Source Article marked up with `<ref>` tags — a thing this project
 deleted — and is rewritten or removed. **Coreference Critic** currently describes
 validating an Annotated Article and is amended to describe per-Mention-Span
@@ -22,7 +22,7 @@ unchanged.
 
 Labels: completed
 
-- [x] `CONTEXT.md` defines **Mention Span**, with an `_Avoid_` line following the file's existing convention.
+- [x] `GLOSSARY.md` defines **Mention Span**, with an `_Avoid_` line following the file's existing convention.
 - [x] The **Annotated Article** entry no longer describes `<ref>` tag markup.
 - [x] The **Coreference Critic** entry describes per-Mention-Span verdicts rather than validating a marked-up article.
 - [x] The **Coreference Resolution** and **Coreference Adapter** entries are checked against the shipped behaviour and corrected where they disagree.

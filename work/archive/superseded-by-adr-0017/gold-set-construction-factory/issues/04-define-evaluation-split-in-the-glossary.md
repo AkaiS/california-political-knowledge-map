@@ -7,7 +7,7 @@ the code tickets; can start immediately.
 
 ## What to build
 
-A reader of `CONTEXT.md` can learn what an Evaluation Split is and what each of
+A reader of `GLOSSARY.md` can learn what an Evaluation Split is and what each of
 the three splits means, without inferring it from the enum. Today the word
 appears only in passing inside the Evaluation Case entry, which leaves
 `calibration` entirely to interpretation.
@@ -32,7 +32,7 @@ identity.
 
 ## Acceptance criteria
 
-- [x] `CONTEXT.md` has an Evaluation Split glossary entry defining all three splits.
+- [x] `GLOSSARY.md` has an Evaluation Split glossary entry defining all three splits.
 - [x] The entry documents `calibration` as reservation from the agent-tuning loop for observing judge behaviour, and explicitly not as stored expected judgments.
 - [x] The entry records that exactly one split is assigned per Evaluation Case revision.
 - [x] The Evaluation Gold Set entry describes the construction flow and the revisioning flow, including that revisioning preserves surviving cases' splits.

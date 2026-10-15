@@ -14,10 +14,10 @@ def _read_normalized(relative_path: str) -> str:
 
 
 def test_model_deployment_glossary_distinguishes_local_and_openrouter() -> None:
-    context = _read("CONTEXT.md")
-    definition_start = context.index("**Model Deployment**:")
-    definition_end = context.index("**OpenRouter Admission Gate**:")
-    definition = context[definition_start:definition_end]
+    glossary = _read("GLOSSARY.md")
+    definition_start = glossary.index("**Model Deployment**:")
+    definition_end = glossary.index("**OpenRouter Admission Gate**:")
+    definition = glossary[definition_start:definition_end]
 
     assert "local Model Deployment" in definition
     assert "llama.cpp" in definition
@@ -114,10 +114,10 @@ def test_operator_guide_uses_canonical_rate_control_terms() -> None:
 
 
 def test_reachability_glossary_keeps_the_check_distinct_from_the_probe() -> None:
-    context = _read("CONTEXT.md")
-    definition_start = context.index("**Model Reachability Check**:")
-    definition_end = context.index("**Evaluation Run**:")
-    definition = context[definition_start:definition_end]
+    glossary = _read("GLOSSARY.md")
+    definition_start = glossary.index("**Model Reachability Check**:")
+    definition_end = glossary.index("**Evaluation Run**:")
+    definition = glossary[definition_start:definition_end]
 
     assert "before a command dispatches" in definition
     assert "transport question only" in definition
