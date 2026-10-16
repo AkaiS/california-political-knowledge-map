@@ -146,6 +146,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                         project_source_guide(
                             output.answer,
                             question=rewrite.question,
+                            search_scope=None,
                             story_db_path=document_store_path(),
                         )
                     )

@@ -6,7 +6,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-from knowledge_map.chat_presentation import StoppedAttempt, project_source_guide
+from knowledge_map.chat_presentation import (
+    StoppedAttempt,
+    attempt_state,
+    project_source_guide,
+    replaces_saved_reading,
+)
 from knowledge_map.config import document_store_path
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.source_guides import (
@@ -95,18 +100,24 @@ class SQLiteGuideStore:
     def interrupt_unfinished(self, *, public_only: bool = False) -> None:
         with closing(sqlite3.connect(self.db_path)) as connection:
             rows = connection.execute(
-                "SELECT g.guide_id, g.question, a.attempt_id FROM source_guides g "
+                "SELECT g.guide_id, g.question, a.attempt_id, a.outcome_json FROM source_guides g "
                 "JOIN source_guide_attempts a ON a.attempt_id = g.latest_attempt_id "
                 "WHERE a.status = 'running'"
                 + (" AND g.owner_id IS NOT NULL" if public_only else "")
             ).fetchall()
-        for guide_id, question, attempt_id in rows:
+        for guide_id, question, attempt_id, running_json in rows:
+            details = (
+                SourceGuide.model_validate_json(running_json).search_details
+                if running_json
+                else None
+            )
             self.finish(
                 guide_id,
                 attempt_id,
                 project_source_guide(
                     StoppedAttempt(reason="interrupted"),
                     question=question,
+                    search_scope=details.collections if details else None,
                     story_db_path=self.db_path,
                 ),
             )
@@ -158,44 +169,25 @@ class SQLiteGuideStore:
         *,
         owner_id: str | None = None,
     ) -> SavedSourceGuide:
-        saved = self.get(guide_id, owner_id=owner_id)
-        details = result.search_details or saved.latest_attempt.search_details
-        if details is not None:
-            completion = (
-                "failed"
-                if result.status.endswith("_failed")
-                else result.status
-                if result.status in {"cancelled", "interrupted"}
-                else "not_searched"
-                if result.status in {"declined", "needs_edit"}
-                else "partial"
-                if result.partial
-                else "completed"
-            )
-            result = result.model_copy(
-                update={
-                    "search_details": details.model_copy(
-                        update={"completion": completion}
-                    )
-                }
-            )
+        # A visitor may finish attempts only on a guide they own.
+        self.get(guide_id, owner_id=owner_id)
         now = datetime.now(UTC).isoformat()
         outcome = result.model_dump_json()
-        state = (
-            "failed"
-            if result.status.endswith("_failed")
-            else result.status
-            if result.status in {"empty", "cancelled", "interrupted"}
-            else "completed"
-        )
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
             updated = connection.execute(
                 "UPDATE source_guide_attempts SET status = ?, finished_at = ?, outcome_json = ? "
                 "WHERE attempt_id = ? AND guide_id = ? AND status = 'running' "
                 "AND attempt_id = (SELECT latest_attempt_id FROM source_guides WHERE guide_id = ?)",
-                (state, now, outcome, attempt_id, guide_id, guide_id),
+                (
+                    attempt_state(result.status),
+                    now,
+                    outcome,
+                    attempt_id,
+                    guide_id,
+                    guide_id,
+                ),
             )
-            if updated.rowcount and result.status in {"completed", "empty"}:
+            if updated.rowcount and replaces_saved_reading(result.status):
                 connection.execute(
                     "UPDATE source_guides SET content_json = ?, retrieved_at = ? WHERE guide_id = ?",
                     (outcome, now, guide_id),

@@ -11,11 +11,14 @@ from knowledge_map.adapters.sqlite_db import (
 from knowledge_map.chat_presentation import (
     ChatSessionStageFailure,
     StoppedAttempt,
+    attempt_state,
     project_source_guide,
     render_source_guide,
+    replaces_saved_reading,
 )
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
+from knowledge_map.schemas.source_guides import GuideCollection
 from knowledge_map.schemas.stories import Story
 
 QUESTION = "Where can I read about housing eligibility?"
@@ -155,6 +158,7 @@ def test_completed_answer_reads_publication_and_highlight_from_the_named_store(
     guide = project_source_guide(
         retrieval_answer(),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -180,6 +184,7 @@ def test_assessed_candidates_without_reading_directions_are_an_empty_guide(tmp_p
     guide = project_source_guide(
         retrieval_answer(noted=False),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -198,6 +203,7 @@ def test_search_without_candidates_discloses_no_matches(tmp_path):
     guide = project_source_guide(
         retrieval_answer(selected=False),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -215,6 +221,7 @@ def test_partly_failed_search_keeps_available_reading_with_a_partial_disclosure(
     guide = project_source_guide(
         retrieval_answer(failed=("dense",)),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -233,6 +240,7 @@ def test_search_whose_every_branch_failed_is_failed_rather_than_empty(tmp_path):
     guide = project_source_guide(
         retrieval_answer(failed=BRANCHES, selected=False),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -250,7 +258,10 @@ def test_evidence_assembly_failure_asks_the_reader_to_retry(tmp_path):
     failure = EvidenceAssemblyFailure(execution=retrieval_answer().evidence.execution)
 
     guide = project_source_guide(
-        failure, question=QUESTION, story_db_path=story_store(tmp_path)
+        failure,
+        question=QUESTION,
+        search_scope=None,
+        story_db_path=story_store(tmp_path),
     )
 
     assert guide.question == QUESTION
@@ -274,6 +285,7 @@ def test_unmatched_parts_of_the_question_are_disclosed_with_their_portion(tmp_pa
             )
         ),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -291,7 +303,10 @@ def test_declined_question_explains_why_it_was_not_searched(tmp_path):
     )
 
     guide = project_source_guide(
-        assessment, question=QUESTION, story_db_path=str(tmp_path / "unused.db")
+        assessment,
+        question=QUESTION,
+        search_scope=None,
+        story_db_path=str(tmp_path / "unused.db"),
     )
 
     assert guide.question == QUESTION
@@ -312,7 +327,10 @@ def test_question_needing_an_edit_says_what_to_change(tmp_path):
     )
 
     guide = project_source_guide(
-        assessment, question=QUESTION, story_db_path=str(tmp_path / "unused.db")
+        assessment,
+        question=QUESTION,
+        search_scope=None,
+        story_db_path=str(tmp_path / "unused.db"),
     )
 
     assert guide.status == "needs_edit"
@@ -337,6 +355,7 @@ def test_deferred_explanation_stays_visible_after_a_completed_search(tmp_path):
     guide = project_source_guide(
         retrieval_answer(assessment=DEFERRED),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -352,6 +371,7 @@ def test_deferred_explanation_follows_the_empty_search_disclosure(tmp_path):
     guide = project_source_guide(
         retrieval_answer(assessment=DEFERRED, selected=False),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -386,6 +406,7 @@ def test_failure_at_a_chat_session_stage_offers_retry(tmp_path, stage):
     guide = project_source_guide(
         ChatSessionStageFailure(stage=stage),
         question=QUESTION,
+        search_scope=None,
         story_db_path=str(tmp_path / "unused.db"),
     )
 
@@ -405,6 +426,7 @@ def test_deferred_explanation_stays_visible_after_a_stage_failure(tmp_path, stag
     guide = project_source_guide(
         ChatSessionStageFailure(stage=stage, assessment=assessment),
         question=QUESTION,
+        search_scope=None,
         story_db_path=str(tmp_path / "unused.db"),
     )
 
@@ -421,6 +443,7 @@ def test_cancelled_attempt_says_the_search_was_cancelled(tmp_path):
     guide = project_source_guide(
         StoppedAttempt(reason="cancelled"),
         question=QUESTION,
+        search_scope=None,
         story_db_path=str(tmp_path / "unused.db"),
     )
 
@@ -435,6 +458,7 @@ def test_interrupted_attempt_says_the_search_did_not_finish(tmp_path):
     guide = project_source_guide(
         StoppedAttempt(reason="interrupted"),
         question=QUESTION,
+        search_scope=None,
         story_db_path=str(tmp_path / "unused.db"),
     )
 
@@ -448,6 +472,7 @@ def test_attempt_that_exceeded_its_time_limit_offers_retry(tmp_path):
     guide = project_source_guide(
         StoppedAttempt(reason="exceeded_time_limit"),
         question=QUESTION,
+        search_scope=None,
         story_db_path=str(tmp_path / "unused.db"),
     )
 
@@ -464,6 +489,7 @@ def test_guide_shows_the_question_the_caller_submitted(tmp_path):
     guide = project_source_guide(
         retrieval_answer(),
         question="Which housing hearings covered eligibility?",
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -476,7 +502,10 @@ def test_projection_never_consults_a_store_other_than_the_named_one(tmp_path):
     init_db(elsewhere)
 
     guide = project_source_guide(
-        retrieval_answer(), question=QUESTION, story_db_path=elsewhere
+        retrieval_answer(),
+        question=QUESTION,
+        search_scope=None,
+        story_db_path=elsewhere,
     )
 
     [article] = guide.articles
@@ -488,6 +517,7 @@ def test_rendering_presents_the_projected_guide_with_its_highlights(tmp_path):
     guide = project_source_guide(
         retrieval_answer(failed=("dense",)),
         question=QUESTION,
+        search_scope=None,
         story_db_path=story_store(tmp_path),
     )
 
@@ -502,3 +532,108 @@ def test_rendering_presents_the_projected_guide_with_its_highlights(tmp_path):
         "   - [Relevant highlight 1](<https://example.com/hearing#:~:text="
         "The%20committee%20heard%20testimony%20about%20housing%20eligibility.>)"
     )
+
+
+RECORDED_SCOPE = (
+    GuideCollection(
+        name="Scope at submission",
+        date_basis="publication_date",
+        earliest_date="2020-01-01",
+        latest_date="2026-06-30",
+    ),
+)
+
+
+def terminal_outcomes():
+    declined = QuestionAssessment(status="declined", explanation="Unsupported.")
+    needs_edit = QuestionAssessment(status="needs_edit", explanation="Name the bill.")
+    return {
+        "completed": (retrieval_answer(), "completed"),
+        "partial": (retrieval_answer(failed=("dense",)), "partial"),
+        "empty": (retrieval_answer(selected=False), "completed"),
+        "all branches failed": (
+            retrieval_answer(failed=BRANCHES, selected=False),
+            "failed",
+        ),
+        "assembly_failed": (
+            EvidenceAssemblyFailure(execution=retrieval_answer().evidence.execution),
+            "failed",
+        ),
+        "declined": (declined, "not_searched"),
+        "needs_edit": (needs_edit, "not_searched"),
+        "assessment_failed": (ChatSessionStageFailure(stage="assessment"), "failed"),
+        "retrieval_failed": (ChatSessionStageFailure(stage="retrieval"), "failed"),
+        "guidance_failed": (ChatSessionStageFailure(stage="guidance"), "failed"),
+        "cancelled": (StoppedAttempt(reason="cancelled"), "cancelled"),
+        "interrupted": (StoppedAttempt(reason="interrupted"), "interrupted"),
+        "exceeded_time_limit": (
+            StoppedAttempt(reason="exceeded_time_limit"),
+            "interrupted",
+        ),
+    }
+
+
+@pytest.mark.parametrize("name", terminal_outcomes())
+def test_every_terminal_outcome_decides_its_search_completion(tmp_path, name):
+    outcome, completion = terminal_outcomes()[name]
+
+    guide = project_source_guide(
+        outcome,
+        question=QUESTION,
+        search_scope=RECORDED_SCOPE,
+        story_db_path=story_store(tmp_path),
+    )
+
+    assert guide.search_details.completion == completion
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "assembly_failed",
+        "declined",
+        "needs_edit",
+        "assessment_failed",
+        "retrieval_failed",
+        "guidance_failed",
+        "cancelled",
+        "interrupted",
+        "exceeded_time_limit",
+    ],
+)
+def test_outcomes_without_search_results_keep_the_scope_seen_at_submission(
+    tmp_path, name
+):
+    outcome, _ = terminal_outcomes()[name]
+
+    guide = project_source_guide(
+        outcome,
+        question=QUESTION,
+        search_scope=RECORDED_SCOPE,
+        story_db_path=story_store(tmp_path),
+    )
+
+    assert guide.search_details.collections == RECORDED_SCOPE
+    assert guide.search_details.included_articles == 0
+
+
+@pytest.mark.parametrize(
+    "status, state, replaces_reading",
+    [
+        ("completed", "completed", True),
+        ("empty", "empty", True),
+        ("declined", "completed", False),
+        ("needs_edit", "completed", False),
+        ("assessment_failed", "failed", False),
+        ("retrieval_failed", "failed", False),
+        ("assembly_failed", "failed", False),
+        ("guidance_failed", "failed", False),
+        ("cancelled", "cancelled", False),
+        ("interrupted", "interrupted", False),
+    ],
+)
+def test_terminal_status_decides_attempt_state_and_saved_reading_promotion(
+    status, state, replaces_reading
+):
+    assert attempt_state(status) == state
+    assert replaces_saved_reading(status) is replaces_reading

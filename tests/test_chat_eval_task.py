@@ -509,6 +509,10 @@ def test_assessment_failure_records_the_failed_guide_a_reader_would_see(
             "The question could not be assessed. Choose Retry to search again.",
         )
     ]
+    assert output.guide.search_details.completion == "failed"
+    assert [c.name for c in output.guide.search_details.collections] == [
+        entry.name for entry in output.coverage.entries
+    ]
 
 
 def test_startup_failure_stays_in_population(monkeypatch, chat_capture):

@@ -22,19 +22,19 @@ from knowledge_map.schemas.source_guides import (
     GuideArticle,
     GuideCollection,
     GuideDisclosure,
+    GuideOutcome,
     GuideSearchDetails,
     SourceGuide,
 )
 
+type SearchCompletion = Literal[
+    "completed", "partial", "failed", "not_searched", "cancelled", "interrupted"
+]
 
-def guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
-    """Keep saved search scope and question-entry coverage on the same projection."""
+
+def _guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
     return tuple(
-        GuideCollection.model_validate(
-            entry.model_dump(
-                include={"name", "date_basis", "earliest_date", "latest_date"}
-            )
-        )
+        GuideCollection.model_validate(entry, from_attributes=True)
         for entry in coverage.entries
     )
 
@@ -54,7 +54,7 @@ def _assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGu
     )
 
 
-def deferred_disclosures(
+def _deferred_disclosures(
     assessment: QuestionAssessment | None,
 ) -> tuple[GuideDisclosure, ...]:
     """Retain the same Deferred coverage explanation after success or failure."""
@@ -140,20 +140,83 @@ def project_source_guide(
     outcome: ChatSessionOutcome,
     *,
     question: str,
+    search_scope: tuple[GuideCollection, ...] | None,
     story_db_path: str,
 ) -> SourceGuide:
     """Decide the terminal Source Guide a reader sees for a Chat Session outcome.
 
-    Publications and original-section highlights come from the named story
-    document store, so every caller renders the same links.
+    The search scope is the collections recorded when the attempt started, or
+    None when the attempt recorded none. An outcome without search results keeps
+    that scope, so a failed or stopped guide shows what the reader saw at
+    submission. Publications and original-section highlights come from the
+    named story document store, so every caller renders the same links.
     """
     if isinstance(outcome, QuestionAssessment):
-        return _assessment_guide(question, outcome)
-    if isinstance(outcome, ChatSessionStageFailure):
-        return _stage_failure_guide(question, outcome)
-    if isinstance(outcome, StoppedAttempt):
-        return _stopped_guide(question, outcome)
-    return _retrieval_guide(outcome, question, story_db_path)
+        guide = _assessment_guide(question, outcome)
+    elif isinstance(outcome, ChatSessionStageFailure):
+        guide = _stage_failure_guide(question, outcome)
+    elif isinstance(outcome, StoppedAttempt):
+        guide = _stopped_guide(question, outcome)
+    else:
+        guide = _retrieval_guide(outcome, question, story_db_path)
+    details = guide.search_details
+    if details is None:
+        if search_scope is None:
+            return guide
+        details = GuideSearchDetails(collections=search_scope)
+    return guide.model_copy(
+        update={
+            "search_details": details.model_copy(
+                update={"completion": _completion(guide)}
+            )
+        }
+    )
+
+
+def _completion(guide: SourceGuide) -> SearchCompletion:
+    match guide.status:
+        case (
+            "assessment_failed"
+            | "retrieval_failed"
+            | "assembly_failed"
+            | "guidance_failed"
+        ):
+            return "failed"
+        case "cancelled" | "interrupted":
+            return guide.status
+        case "declined" | "needs_edit":
+            return "not_searched"
+        case _:
+            return "partial" if guide.partial else "completed"
+
+
+type AttemptState = Literal["completed", "empty", "failed", "cancelled", "interrupted"]
+
+_ATTEMPT_STATES: dict[GuideOutcome, AttemptState] = {
+    "completed": "completed",
+    "empty": "empty",
+    "declined": "completed",
+    "needs_edit": "completed",
+    "assessment_failed": "failed",
+    "retrieval_failed": "failed",
+    "assembly_failed": "failed",
+    "guidance_failed": "failed",
+    "cancelled": "cancelled",
+    "interrupted": "interrupted",
+}
+
+
+def attempt_state(status: GuideOutcome) -> AttemptState:
+    """The state a search attempt keeps after ending with this guide status."""
+    return _ATTEMPT_STATES[status]
+
+
+def replaces_saved_reading(status: GuideOutcome) -> bool:
+    """Only a finished search replaces the reading a guide already saved.
+
+    A failed, stopped or unsearched attempt leaves the earlier reading in place.
+    """
+    return status in {"completed", "empty"}
 
 
 def _stopped_guide(question: str, stopped: StoppedAttempt) -> SourceGuide:
@@ -167,7 +230,7 @@ def _stage_failure_guide(
     status, message = _STAGE_FAILURES[failure.stage]
     disclosures = (
         GuideDisclosure(kind=status, message=message),
-        *deferred_disclosures(failure.assessment),
+        *_deferred_disclosures(failure.assessment),
     )
     return SourceGuide(
         question=question,
@@ -318,7 +381,7 @@ def _retrieval_guide(
                 message="Part of this search failed. Available reading is retained, but this search is incomplete.",
             )
         )
-    disclosures.extend(deferred_disclosures(assessment))
+    disclosures.extend(_deferred_disclosures(assessment))
     return SourceGuide(
         question=question,
         status=(
@@ -338,12 +401,7 @@ def _retrieval_guide(
         relevance_order=relevance_order,
         partial=bool(execution.failed_branches),
         search_details=GuideSearchDetails(
-            collections=guide_collections(result.evidence.coverage),
-            completion="failed"
-            if len(execution.failed_branches) == len(execution.expected_branches)
-            else "partial"
-            if execution.failed_branches
-            else "completed",
+            collections=_guide_collections(result.evidence.coverage),
             selection_limited=bool(result.evidence.context.omitted_passages),
             included_articles=len(articles),
         )

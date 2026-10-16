@@ -43,7 +43,7 @@ from knowledge_map.schemas.retrieval import (
     EvidencePackage,
     RetrievalAnswer,
 )
-from knowledge_map.schemas.source_guides import SourceGuide
+from knowledge_map.schemas.source_guides import GuideCollection, SourceGuide
 from knowledge_map.utils.telemetry import project_url
 
 from ..data_set import LabelQuality
@@ -249,6 +249,10 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 )
                 output.chat_session_id = session.chat_session_id
                 output.as_of = session.as_of
+                search_scope = tuple(
+                    GuideCollection.model_validate(entry, from_attributes=True)
+                    for entry in dependencies.coverage.entries
+                )
                 stage = "retrieval_and_guidance"
                 try:
                     result = await session.run()
@@ -260,6 +264,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                             stage=session.stage, assessment=session.assessment
                         ),
                         question=case_input.question,
+                        search_scope=search_scope,
                         story_db_path=document_store_path(),
                     )
                     raise
@@ -273,6 +278,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 output.guide = project_source_guide(
                     result,
                     question=case_input.question,
+                    search_scope=search_scope,
                     story_db_path=document_store_path(),
                 )
                 output.rendered_text = (

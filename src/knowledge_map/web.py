@@ -19,10 +19,10 @@ from starlette.routing import Route
 
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
+    ChatSessionOutcome,
     ChatSessionStage,
     ChatSessionStageFailure,
     StoppedAttempt,
-    guide_collections,
     guide_publication_orders,
     project_source_guide,
     render_source_guide,
@@ -42,8 +42,10 @@ from knowledge_map.public_access import (
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import (
+    GuideCollection,
     GuideSearchDetails,
     SavedSourceGuide,
+    SourceGuide,
 )
 from knowledge_map.utils.agents import create_agent
 
@@ -154,7 +156,23 @@ def create_app(
 
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
-            collections=guide_collections(dependencies.coverage) if dependencies else ()
+            collections=tuple(
+                GuideCollection.model_validate(entry, from_attributes=True)
+                for entry in dependencies.coverage.entries
+            )
+            if dependencies
+            else ()
+        )
+
+    def terminal_guide(
+        saved: SavedSourceGuide, outcome: ChatSessionOutcome
+    ) -> SourceGuide:
+        details = saved.latest_attempt.search_details
+        return project_source_guide(
+            outcome,
+            question=saved.question,
+            search_scope=details.collections if details else None,
+            story_db_path=guide_store.db_path,
         )
 
     @asynccontextmanager
@@ -295,11 +313,7 @@ def create_app(
         cancelled = guide_store.finish(
             guide_id,
             attempt_id,
-            project_source_guide(
-                StoppedAttempt(reason="cancelled"),
-                question=saved.question,
-                story_db_path=guide_store.db_path,
-            ),
+            terminal_guide(saved, StoppedAttempt(reason="cancelled")),
             owner_id=owner(request),
         )
         if (
@@ -349,22 +363,14 @@ def create_app(
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                project_source_guide(
-                    StoppedAttempt(reason="exceeded_time_limit"),
-                    question=saved.question,
-                    story_db_path=guide_store.db_path,
-                ),
+                terminal_guide(saved, StoppedAttempt(reason="exceeded_time_limit")),
             )
             return
         except asyncio.CancelledError:
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                project_source_guide(
-                    StoppedAttempt(reason="interrupted"),
-                    question=saved.question,
-                    story_db_path=guide_store.db_path,
-                ),
+                terminal_guide(saved, StoppedAttempt(reason="interrupted")),
             )
             raise
         except Exception:
@@ -373,13 +379,9 @@ def create_app(
                 assessment=session.assessment if session is not None else None,
             )
             logger.exception("Source Guide %s failed", failure.stage)
-            guide = project_source_guide(
-                failure, question=saved.question, story_db_path=guide_store.db_path
-            )
+            guide = terminal_guide(saved, failure)
         else:
-            guide = project_source_guide(
-                result, question=saved.question, story_db_path=guide_store.db_path
-            )
+            guide = terminal_guide(saved, result)
             if isinstance(result, RetrievalAnswer):
                 logfire.info(
                     "chat_session.answer_prepared",
