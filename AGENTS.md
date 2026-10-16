@@ -7,7 +7,7 @@ California Political Knowledge Map is a web application that reduces voting fric
 - LLM Providers: local llama.cpp-served GGUF + OpenRouter (see `docs/model-deployments.md`)
 - Agent Framework: Pydantic AI
 - Evals Framework: pydantic-evals
-- Orchestration: synchronous Story Pipeline (`src/knowledge_map/core/pipeline.py:182`) + CLI `ca-map scrape-archive` / `ca-map update-sources` via external cron/launchd (`CONTEXT.md:48-53,170-172`)
+- Orchestration: synchronous Story Pipeline (`src/knowledge_map/core/pipeline.py:182`) + CLI `ca-map scrape-archive` / `ca-map update-sources` via external cron/launchd (`GLOSSARY.md:48-53,170-172`)
 - DB: SQLite document store (`document_store.db`, `src/knowledge_map/adapters/sqlite_db.py:15`) + Neo4j graph
 - LLM Tooling: logfire + pydantic-evals + chonkie + crawl4ai (see `pyproject.toml`)
 - CI: GitHub Actions runs the deterministic pytest suite on pull requests (see `.github/workflows/ci.yml`).
@@ -37,7 +37,7 @@ Triage roles map to default label strings (`needs-triage`, `needs-info`, `ready-
 
 ### Domain docs
 
-Uses the "single-context" layout, with a single `CONTEXT.md` and `docs/adr/` at the repository root. See [domain.md](docs/agents/domain.md).
+Uses the "single-context" layout, with a single [GLOSSARY.md](GLOSSARY.md) and `docs/adr/` at the repository root. See [domain.md](docs/agents/domain.md).
 
 For starting reviewers, annotating Evaluation Cases, or explaining evaluation metrics, use the [evaluation guide index](docs/evaluation/README.md).
 

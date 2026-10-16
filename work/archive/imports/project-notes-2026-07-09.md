@@ -248,7 +248,7 @@ flowchart TD
 - Pydantic Logfire integration was added and production trace-export issues were resolved.
 - A `ca-map janitor` diagnostics command and adapter health checks were added.
 - URL matching and CalMatters extraction targets were corrected.
-- Imports were standardized and core domain language was documented in `CONTEXT.md`.
+- Imports were standardized and core domain language was documented in `GLOSSARY.md`.
 
 ## Project observations
 
@@ -385,7 +385,7 @@ Spec: “concrete models resolved only through an explicit allowlisted registry.
 ------
 
 
-- **High — documented-standard breach:** [runner.py (line 1161)](/Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/evaluation/runner.py:1161) polls controlled stopping only inside the evaluator loop. A stop requested during the last evaluator—or with no evaluators—still permits Release Gates to begin at line 1248. This violates [CONTEXT.md (line 243)](/Users/akaisenghor/Projects/california-political-knowledge-map/CONTEXT.md:243), which requires no further evaluator or gate work after an in-flight evaluator returns.
+- **High — documented-standard breach:** [runner.py (line 1161)](/Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/evaluation/runner.py:1161) polls controlled stopping only inside the evaluator loop. A stop requested during the last evaluator—or with no evaluators—still permits Release Gates to begin at line 1248. This violates [GLOSSARY.md (line 243)](/Users/akaisenghor/Projects/california-political-knowledge-map/GLOSSARY.md:243), which requires no further evaluator or gate work after an in-flight evaluator returns.
     
 - **Low — judgement call, Duplicated Code:** [store.py (line 1145)](/Users/akaisenghor/Projects/california-political-knowledge-map/src/knowledge_map/evaluation/store.py:1145) duplicates the replay-consistency algorithm for executions and observations: look up by ID, reconstruct and compare, then check natural identity. A ledger-internal helper could prevent their replay semantics drifting apart.
     

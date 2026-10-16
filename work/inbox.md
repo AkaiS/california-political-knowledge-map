@@ -80,7 +80,7 @@ source remain intentionally omitted from this queue.
   expressible at all. That is a modelling gap rather than an annotation error:
   the vocabulary has no way to say "a law that already passed", and federal
   statutes are the case that exposes it. Surfaced while recording both topic
-  stages in `CONTEXT.md`
+  stages in `GLOSSARY.md`
   ([issue 07](projects/policy-area-staging/issues/07-record-the-two-stages.md)),
   and deliberately left out of that vocabulary ticket, which describes the
   pipeline that shipped rather than redesigning the ontology.
@@ -258,7 +258,7 @@ says it should, and whether those transitions are reported truthfully.
   and the runner's only retry loops are SQLite contention and finalization
   persistence. This does not conflict with the point-in-time Evaluation Run: the
   run has not reached terminal evidence and no new run is created, so it is not
-  the resumption CONTEXT.md reserves for Evaluation Finalization. Open question
+  the resumption GLOSSARY.md reserves for Evaluation Finalization. Open question
   before shaping: whether a case that exhausts its transient retries is `FAILED`
   with the run still completing, or leaves the run incomplete. Depends on
   truthful retryability from ER-01.

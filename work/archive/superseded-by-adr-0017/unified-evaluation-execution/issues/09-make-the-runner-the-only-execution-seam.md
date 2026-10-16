@@ -59,7 +59,7 @@ execution. Validation happens once, at preflight.
 - A retry no longer narrows to its predecessor's PENDING and CANCELLED cases; it
   executes the whole plan it is given. This corrects a defect rather than
   trading one behaviour for another. An Evaluation Run measures its whole
-  caseload at one moment, so per CONTEXT.md "incomplete case execution requires
+  caseload at one moment, so per GLOSSARY.md "incomplete case execution requires
   a distinct linked retry, while incomplete report evaluation may resume as
   Evaluation Finalization on the same run" — resumption is reserved for
   finalization, and narrowing had made a retry resume case execution instead.

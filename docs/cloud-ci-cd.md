@@ -4,7 +4,9 @@
 work once:
 
 - On a pull request, `tests` runs the deterministic Python and Node checks on
-  the exact PR head, then `review-gate` requires review evidence for that head.
+  the exact PR head, then `review-gate` checks that head's review policy.
+  Greptile is required unless the PR title or description contains
+  `[skip greptile]`.
 - On a push to `main`, `tests` is skipped. `review-gate` verifies that the
   merge commit's tree is identical to the reviewed PR head and that the head's
   `tests` succeeded, so the merged tree has already been tested. In parallel,
@@ -54,17 +56,33 @@ application health or release readiness.
 ## Build review gate
 
 `scripts/review_gate.py` reads GitHub metadata through the runner's `gh` CLI.
-It requires the external `Greptile Review` check from app ID `867647`, slug
-`greptile-apps`, to complete successfully for the exact pull request head.
+By default, it requires the external `Greptile Review` check from app ID
+`867647`, slug `greptile-apps`, to complete successfully for the exact pull
+request head.
 The latest summary must come from bot ID `165735046`, login
 `greptile-apps[bot]`, contain exactly one
 `<!-- greptile_confidence_score:5 -->` marker, and identify that full head SHA
 in its `Last reviewed commit` link. Its update must follow the check's start.
 A successful Greptile check with a score of 3/5 rejects the build.
 
+For a change that does not need Greptile, include the exact marker
+`[skip greptile]` in the PR title or description when creating it. For example,
+use the title `docs: rename domain glossary [skip greptile]`.
+The gate then requires no Greptile check, summary, or confidence score.
+`.greptile/config.json` also sets this marker as `ignoreKeywords`, which
+[Greptile documents as skipping reviews for matching PR titles or descriptions](https://www.greptile.com/docs/code-review/greptile-config-reference#filters).
+The CI gate itself only reads review evidence; it never invokes Greptile.
+Adding the marker later cannot undo a review that already started.
+
+PR title or description edits rerun CI so adding or removing the marker
+rechecks the policy. The gate reads the current PR metadata, verifies the
+policy did not change while it collected evidence, and applies the same
+opt-out when checking the merged PR on `main`. Keep the marker through merge.
+
 Every review thread must be resolved, including outdated threads. A review
 that still requests changes also rejects the build. The gate reads all pages
-of comments, reviews, threads, checks and commit statuses. Every other visible
+of reviews, threads, checks and commit statuses, plus summary comments when
+Greptile is required. Every other visible
 check and status must complete successfully. Neutral, skipped, cancelled and
 failed checks do not count as green. The gate excludes only its own
 `review-gate`, `image-inputs`, `container-build`, `production-preflight` and
@@ -78,7 +96,8 @@ Missing or stale review evidence and pending checks wait up to 30 minutes,
 with a 30-second polling interval. A definitive score below 5/5, unresolved
 feedback, failed check, malformed evidence or API failure rejects the build.
 The gate rechecks the pull request head during each poll and immediately
-before success. A new head requires a new workflow run and review.
+before success. A new head requires a new workflow run and, unless opted out,
+a new Greptile review.
 
 A push to `main` must correspond to exactly one associated merged pull
 request whose `merge_commit_sha` equals the push SHA. GitHub commit metadata
@@ -99,7 +118,7 @@ requests. API
 errors withhold raw output. The gate does not post, resolve, approve or change
 reviews. GitHub metadata can change after the last read; branch protection and
 a fresh run remain necessary when a PR head changes. Changes to the gate or
-workflow require the same external review as other pull request changes.
+workflow use the same review policy and explicit opt-out as other pull requests.
 
 ## Production environment configuration
 
@@ -184,8 +203,9 @@ uv run --no-sync node --test tests/chat_eval_review_editing.test.mjs tests/rag_e
 uv run --no-sync pytest -q tests
 ```
 
-The review-gate tests cover trusted score and commit markers, stale and
-missing evidence, unresolved outdated threads, requested changes, other
+The review-gate tests cover the explicit Greptile opt-out, retained tests and
+feedback requirements, policy changes during polling, trusted score and commit
+markers, stale and missing evidence, unresolved outdated threads, requested changes, other
 checks and statuses, API pagination, workflow ownership, fork event context,
 head changes during polling, bounded timeout, merged PR provenance and the
 success-dependent workflow ordering. No local container build is needed to

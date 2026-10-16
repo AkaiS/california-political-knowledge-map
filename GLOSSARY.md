@@ -1,4 +1,4 @@
-# California Political Knowledge Map Context
+# California Political Knowledge Map Glossary
 
 Domain model for mapping political influence networks in California from scraped news articles and other public data sources into a knowledge graph.
 

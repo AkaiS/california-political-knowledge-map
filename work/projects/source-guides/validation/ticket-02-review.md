@@ -15,7 +15,7 @@ requested independent confirmation.
 ## Standards
 
 No documented-standard violations found across the changed files. Domain
-vocabulary follows `CONTEXT.md`; validation evidence follows
+vocabulary follows `GLOSSARY.md`; validation evidence follows
 `docs/agents/issue-tracker.md`. No model-facing prose or prompt versions changed,
 so ADR 0022 is satisfied. The ADR 0023 retrieval path remains unchanged.
 

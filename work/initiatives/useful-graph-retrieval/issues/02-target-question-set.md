@@ -54,7 +54,7 @@ context. This is the read-side consequence of
 an edge asserts existence and identity only, so unless entities and
 relationships were made far richer than that ADR allows, the detail an answer
 needs lives in the Chunk. No new ADR is warranted; the trade-off is already
-recorded there. `CONTEXT.md` gains the term **Grounding Evidence**.
+recorded there. `GLOSSARY.md` gains the term **Grounding Evidence**.
 
 **Every question carries a grounding axis.** A question is either
 `evidence-grounded` — a Chunk states the answer — or `structure-derived` — the

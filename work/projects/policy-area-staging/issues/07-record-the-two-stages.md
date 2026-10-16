@@ -8,7 +8,7 @@ Labels: completed
 
 ## What to build
 
-`CONTEXT.md` describes the pipeline that exists. It gains **Policy Area
+`GLOSSARY.md` describes the pipeline that exists. It gains **Policy Area
 Classification** — the article-level choice of Policy Areas from the closed
 vocabulary, run on resolved text before chunking — and **Topic Assignment** — the
 article-level pass after extraction that connects the article's measures to its
@@ -29,7 +29,7 @@ reversal of a decision `docs/adr/` holds.
 
 ## Acceptance criteria
 
-- [x] `CONTEXT.md` defines Policy Area Classification and Topic Assignment, each
+- [x] `GLOSSARY.md` defines Policy Area Classification and Topic Assignment, each
       with an _Avoid_ line separating it from the other and from Entity
       Extraction.
 - [x] The Policy Area entry names the stage that writes the node and the level its

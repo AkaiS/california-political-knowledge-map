@@ -16,7 +16,7 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
 ## Notes
 
 - Use `/grilling` and `/domain-modeling` when resolving decisions; read
-  `CONTEXT.md` before exploration.
+  `GLOSSARY.md` before exploration.
 - **The ontology is settled.** [`ontology.md`](../../../ontology.md) is a fixed
   input to this map, not a subject of it. Retrieval is designed against the
   whole ontology, including the legislative and campaign-finance layers that
@@ -46,7 +46,7 @@ This map realizes roadmap outcome 4, [Useful graph retrieval](../../roadmap.md).
   Article Chunk embedding retrieval are routes to that evidence. A missing extracted
   relationship does not exclude a relevant source found through another route,
   as accepted during [ticket 04](issues/04-retrievable-subgraph-now.md)'s grilling.
-  See **Grounding Evidence** in `CONTEXT.md`.
+  See **Grounding Evidence** in `GLOSSARY.md`.
 - [Ticket 04](issues/04-retrievable-subgraph-now.md)'s coverage and presentation
   policies are settled. A Retrieval Answer presents sources as a librarian would,
   with explicit limits and visible disagreements. The Coverage Description

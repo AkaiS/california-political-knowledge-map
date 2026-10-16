@@ -13,7 +13,7 @@ the corrections and requested independent confirmation.
   clarification: each article appears once as an ordinary non-highlighted link,
   with any verified highlights nearby. Distinct membership directions remain
   valid; identical entries consolidate. A view reorders the complete list.
-- Standards sources: AGENTS.md, CONTEXT.md, tracker/domain conventions, relevant
+- Standards sources: AGENTS.md, GLOSSARY.md, tracker/domain conventions, relevant
   ADRs 0017, 0019, 0022, and 0023, plus the skill's Fowler smell baseline.
 
 Both reviewers and the owner read all nine implementation and review records.

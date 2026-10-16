@@ -1,4 +1,4 @@
-"""Require a current, trusted 5/5 review before any production image build."""
+"""Check the PR's review policy, feedback, and CI before an image build."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from typing import Any
 REPOSITORY = "AkaiS/california-political-knowledge-map"
 GREPTILE_APP_ID = 867647
 GREPTILE_BOT_ID = 165735046
+SKIP_GREPTILE_MARKER = "[skip greptile]"
 ACTIONS_APP_ID = 15368
 DOWNSTREAM_CHECKS = {
     "review-gate",
@@ -264,6 +265,10 @@ def review_green(
         raise PendingReview("Waiting for an unambiguous Greptile confidence score.")
     if scores != ["5"]:
         raise GateError("Greptile confidence is below the required 5/5.")
+    feedback_green(threads, reviews)
+
+
+def feedback_green(threads: list[dict], reviews: list[dict]) -> None:
     if any(thread.get("isResolved") is not True for thread in threads):
         raise GateError(
             "Review feedback remains unresolved, including outdated threads."
@@ -281,6 +286,12 @@ def review_green(
         review.get("state") == "CHANGES_REQUESTED" for review in latest_reviews.values()
     ):
         raise GateError("A reviewer still requests changes.")
+
+
+def greptile_skipped(pr: dict) -> bool:
+    return any(
+        SKIP_GREPTILE_MARKER in (pr.get(field) or "") for field in ("title", "body")
+    )
 
 
 def current_pr(
@@ -353,15 +364,21 @@ def wait_for_review(
     number, sha, merged_sha = candidate(environment, api)
     deadline = time.monotonic() + timeout
     while True:
-        current_pr(api, number, sha, merged_sha=merged_sha)
+        pr = current_pr(api, number, sha, merged_sha=merged_sha)
+        skip_greptile = greptile_skipped(pr)
         checks = api.checks(sha)
-        comments = api.comments(number)
+        comments = [] if skip_greptile else api.comments(number)
         threads = api.threads(number)
         reviews = api.reviews(number)
         statuses = api.statuses(sha)
-        current_pr(api, number, sha, merged_sha=merged_sha)
+        pr = current_pr(api, number, sha, merged_sha=merged_sha)
         try:
-            review_green(checks, comments, threads, reviews, sha)
+            if greptile_skipped(pr) != skip_greptile:
+                raise PendingReview("The PR review policy changed; checking again.")
+            if skip_greptile:
+                feedback_green(threads, reviews)
+            else:
+                review_green(checks, comments, threads, reviews, sha)
             other_checks_green(checks, statuses, sha)
             if merged_sha is not None:
                 other_checks_green(
@@ -370,7 +387,14 @@ def wait_for_review(
                     merged_sha,
                     tested=False,
                 )
-            current_pr(api, number, sha, merged_sha=merged_sha)
+            pr = current_pr(api, number, sha, merged_sha=merged_sha)
+            if greptile_skipped(pr) != skip_greptile:
+                raise PendingReview("The PR review policy changed; checking again.")
+            if skip_greptile:
+                print(
+                    f"Greptile requirement skipped by PR marker {SKIP_GREPTILE_MARKER}.",
+                    flush=True,
+                )
             return sha
         except PendingReview as pending:
             if time.monotonic() >= deadline:
@@ -393,9 +417,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print(
-        f"Review gate passed for reviewed commit {sha}: 5/5 and no unresolved feedback."
-    )
+    print(f"Review gate passed for commit {sha}: checks green and feedback resolved.")
     return 0
 
 
