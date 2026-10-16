@@ -23,11 +23,14 @@ from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
 from knowledge_map.chat_presentation import (
-    assessment_guide,
-    render_answer,
-    source_guide,
+    ChatSessionOutcome,
+    ChatSessionStageFailure,
+    guide_collections,
+    project_source_guide,
+    render_source_guide,
 )
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
+from knowledge_map.config import document_store_path
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
 from knowledge_map.core.question_preparation import model_failure_kind
 from knowledge_map.jev.prompts import JEV_PROMPTS
@@ -248,23 +251,41 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 )
                 output.chat_session_id = session.chat_session_id
                 output.as_of = session.as_of
+                search_scope = guide_collections(dependencies.coverage)
+
+                def reader_guide(outcome: ChatSessionOutcome) -> SourceGuide:
+                    return project_source_guide(
+                        outcome,
+                        question=case_input.question,
+                        search_scope=search_scope,
+                        story_db_path=document_store_path(),
+                    )
+
                 stage = "retrieval_and_guidance"
                 try:
                     result = await session.run()
+                except Exception:
+                    # Reviewers see the failed guide a reader would see for
+                    # the stage the Chat Session reached.
+                    output.guide = reader_guide(
+                        ChatSessionStageFailure(
+                            stage=session.stage, assessment=session.assessment
+                        )
+                    )
+                    raise
                 finally:
                     output.assessment = session.assessment
                     output.retrieval = session.retrieval_result
-                if isinstance(result, QuestionAssessment):
-                    output.guide = assessment_guide(case_input.question, result)
-                    output.rendered_text = result.explanation
-                else:
+                if not isinstance(result, QuestionAssessment):
                     output.answer = result
                     output.retrieval = None
                     stage = "rendering"
-                    output.guide = source_guide(output.answer)
-                    output.rendered_text = render_answer(
-                        output.answer, guide=output.guide
-                    )
+                output.guide = reader_guide(result)
+                output.rendered_text = (
+                    result.explanation
+                    if isinstance(result, QuestionAssessment)
+                    else render_source_guide(output.guide)
+                )
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Preserve a failed case for review.
             # A bad answer, unavailable dependency, or failed model request is

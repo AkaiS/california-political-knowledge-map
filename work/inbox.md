@@ -329,6 +329,15 @@ Captured from hands-on Source Guides feedback on 2026-10-09. Related project:
   on 2026-10-10. The issue owns its enhancement, `ready-for-agent` labels.
 - **UX-05:** Show articles in pro and against sections in the contrastive view.
   Labels: enhancement, needs-info
+- **Browser repeats stopped-attempt wording.** `outcomeLabels` in
+  `src/knowledge_map/resources/source-guides/guide.js` repeats the cancelled
+  and interrupted messages that the Source Guide projection owns in
+  `chat_presentation.py`, and hides `guide.message` when it equals the label.
+  A wording change in the projection would leave the browser label stale.
+  Found in the 2026-10-16 review of
+  [Source Guide projection](projects/source-guide-projection/PRD.md), which
+  excluded browser presentation. P2.
+  Labels: needs-triage
 
 ### Triage findings, 2026-10-09
 

@@ -445,6 +445,76 @@ def test_invalid_guidance_keeps_retrieved_context_in_failed_case(
     )
 
 
+def test_guidance_failure_records_the_failed_guide_a_reader_would_see(
+    monkeypatch, chat_capture
+):
+    fake_dependencies(
+        monkeypatch,
+        assessment={
+            "status": "deferred",
+            "explanation": "A complete lobbying register is not yet available.",
+            "recoverable_portion": "Reporting may still name organizations.",
+        },
+        guidance={
+            "source_notes": [
+                {"source_article_id": "invented", "note": "Unsupported source"}
+            ]
+        },
+    )
+
+    output = run_one().cases[0].output
+
+    assert output.failure.model_dump() == {
+        "stage": "retrieval_and_guidance",
+        "kind": "validation",
+        "exception_type": "ValidationError",
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+    }
+    assert output.guide.question == output.question
+    assert output.guide.status == "guidance_failed"
+    assert output.guide.assessment == output.assessment
+    assert [(d.kind, d.message) for d in output.guide.disclosures] == [
+        (
+            "guidance_failed",
+            (
+                "Reading directions could not be prepared. The retrieved articles "
+                "have not passed the relevance check. Choose Retry to search again."
+            ),
+        ),
+        (
+            "deferred",
+            (
+                "A complete lobbying register is not yet available.\n\n"
+                "Reporting may still name organizations."
+            ),
+        ),
+    ]
+    assert output.rendered_text is None
+
+
+def test_assessment_failure_records_the_failed_guide_a_reader_would_see(
+    monkeypatch, chat_capture
+):
+    fake_dependencies(monkeypatch, assessment={"status": "unknown"})
+
+    output = run_one().cases[0].output
+
+    assert output.failure.stage == "retrieval_and_guidance"
+    assert output.assessment is None
+    assert output.guide.status == "assessment_failed"
+    assert output.guide.assessment is None
+    assert [(d.kind, d.message) for d in output.guide.disclosures] == [
+        (
+            "assessment_failed",
+            "The question could not be assessed. Choose Retry to search again.",
+        )
+    ]
+    assert output.guide.search_details.completion == "failed"
+    assert [c.name for c in output.guide.search_details.collections] == [
+        entry.name for entry in output.coverage.entries
+    ]
+
+
 def test_startup_failure_stays_in_population(monkeypatch, chat_capture):
     @asynccontextmanager
     async def unavailable(**kwargs):
@@ -457,6 +527,7 @@ def test_startup_failure_stays_in_population(monkeypatch, chat_capture):
     output = report.cases[0].output
     assert output.failure.stage == "startup"
     assert output.chat_session_id is None
+    assert output.guide is None
     assert "private credential" not in output.model_dump_json()
 
 
@@ -650,4 +721,48 @@ def test_shared_evaluation_saves_typed_unmatched_request_and_safe_partial_search
     assert (
         record["guide"]["disclosures"][0]["request_portion"]
         == "transit grants <img src=x>"
+    )
+
+
+def test_evaluation_highlights_come_from_the_configured_document_store(
+    monkeypatch, tmp_path
+):
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.schemas.stories import Story
+
+    configured = str(tmp_path / "configured" / "document_store.db")
+    Path(configured).parent.mkdir()
+    init_db(configured)
+    save_story(
+        Story(
+            url="https://example.com/dense",
+            title="Support coverage",
+            content="The union supports AB 1.",
+        ),
+        configured,
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", configured)
+    working_directory = Path.cwd()
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/dense",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ]
+        },
+    )
+
+    output = run_one().cases[0].output
+
+    assert Path.cwd() == working_directory
+    assert output.failure is None
+    assert [str(link) for link in output.guide.articles[0].section_links] == [
+        "https://example.com/dense#:~:text=The%20union%20supports%20AB%201."
+    ]
+    assert (
+        "[Relevant highlight 1](<https://example.com/dense#:~:text=The%20union%20supports%20AB%201.>)"
+        in output.rendered_text
     )

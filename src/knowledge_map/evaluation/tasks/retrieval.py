@@ -12,8 +12,9 @@ from pydantic_ai.usage import RunUsage
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-from knowledge_map.chat_presentation import render_answer
+from knowledge_map.chat_presentation import project_source_guide, render_source_guide
 from knowledge_map.chat_startup import chat_dependencies
+from knowledge_map.config import document_store_path
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, generate_retrieval_answer
 from knowledge_map.core.fusion import fuse_candidates
 from knowledge_map.jev.prompts import JEV_PROMPTS
@@ -141,7 +142,14 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                         usage=usage,
                     )
                     stage = "rendering"
-                    output.rendered_text = render_answer(output.answer)
+                    output.rendered_text = render_source_guide(
+                        project_source_guide(
+                            output.answer,
+                            question=rewrite.question,
+                            search_scope=None,
+                            story_db_path=document_store_path(),
+                        )
+                    )
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Keep unavailable cases in the population.
             output.failure = ChatFailure(

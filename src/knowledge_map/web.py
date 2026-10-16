@@ -6,7 +6,7 @@ from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 from urllib.parse import urlsplit
 
 import logfire
@@ -19,12 +19,14 @@ from starlette.routing import Route
 
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
-    assessment_guide,
-    deferred_disclosures,
+    ChatSessionOutcome,
+    ChatSessionStage,
+    ChatSessionStageFailure,
+    StoppedAttempt,
     guide_collections,
     guide_publication_orders,
-    render_answer,
-    source_guide,
+    project_source_guide,
+    render_source_guide,
 )
 from knowledge_map.chat_startup import (
     ChatDependencies,
@@ -41,7 +43,6 @@ from knowledge_map.public_access import (
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import (
-    GuideDisclosure,
     GuideSearchDetails,
     SavedSourceGuide,
     SourceGuide,
@@ -67,7 +68,7 @@ class QuestionDeadlineExceeded(Exception):
 class ChatSessionProtocol(Protocol):
     chat_session_id: str
     assessment: QuestionAssessment | None
-    stage: Literal["assessment", "retrieval", "guidance"]
+    stage: ChatSessionStage
 
     async def run(
         self,
@@ -156,6 +157,17 @@ def create_app(
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
             collections=guide_collections(dependencies.coverage) if dependencies else ()
+        )
+
+    def terminal_guide(
+        saved: SavedSourceGuide, outcome: ChatSessionOutcome
+    ) -> SourceGuide:
+        details = saved.latest_attempt.search_details
+        return project_source_guide(
+            outcome,
+            question=saved.question,
+            search_scope=details.collections if details else None,
+            story_db_path=guide_store.db_path,
         )
 
     @asynccontextmanager
@@ -296,11 +308,7 @@ def create_app(
         cancelled = guide_store.finish(
             guide_id,
             attempt_id,
-            SourceGuide(
-                question=saved.question,
-                status="cancelled",
-                message="This search was cancelled.",
-            ),
+            terminal_guide(saved, StoppedAttempt(reason="cancelled")),
             owner_id=owner(request),
         )
         if (
@@ -350,87 +358,46 @@ def create_app(
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                SourceGuide(
-                    question=saved.question,
-                    status="interrupted",
-                    message="This search exceeded its time limit. Choose Retry to search again.",
-                ),
+                terminal_guide(saved, StoppedAttempt(reason="exceeded_time_limit")),
             )
             return
         except asyncio.CancelledError:
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                SourceGuide(
-                    question=saved.question,
-                    status="interrupted",
-                    message="This search was interrupted before it finished.",
-                ),
+                terminal_guide(saved, StoppedAttempt(reason="interrupted")),
             )
             raise
         except Exception:
-            stage = session.stage if session is not None else "assessment"
-            logger.exception("Source Guide %s failed", stage)
-            status = {
-                "assessment": "assessment_failed",
-                "retrieval": "retrieval_failed",
-                "guidance": "guidance_failed",
-            }[stage]
-            guide = SourceGuide.model_validate(
-                {
-                    "question": saved.question,
-                    "status": status,
-                    "assessment": session.assessment if session is not None else None,
-                    "message": {
-                        "assessment": "The question could not be assessed. Choose Retry to search again.",
-                        "retrieval": "The search could not be completed. Choose Retry to search again.",
-                        "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Choose Retry to search again.",
-                    }[stage],
-                }
+            failure = ChatSessionStageFailure(
+                stage=session.stage if session is not None else "assessment",
+                assessment=session.assessment if session is not None else None,
             )
-            guide = guide.model_copy(
-                update={
-                    "disclosures": (
-                        GuideDisclosure.model_validate(
-                            {"kind": status, "message": guide.message}
-                        ),
-                        *deferred_disclosures(guide.assessment),
-                    )
-                }
-            )
-            guide = guide.model_copy(
-                update={
-                    "message": "\n\n".join(
-                        disclosure.message for disclosure in guide.disclosures
-                    )
-                }
-            )
+            logger.exception("Source Guide %s failed", failure.stage)
+            guide = terminal_guide(saved, failure)
         else:
-            if isinstance(result, QuestionAssessment):
-                guide = assessment_guide(saved.question, result)
-            else:
-                guide = source_guide(result, story_db_path=guide_store.db_path)
-                if isinstance(result, RetrievalAnswer):
-                    logfire.info(
-                        "chat_session.answer_prepared",
-                        chat_session_id=session.chat_session_id,
-                        audit_schema_version=2,
-                        rendered_text=render_answer(result, guide=guide),
-                        selected_sources=[
-                            {
-                                "citation": source.citation.model_dump(mode="json"),
-                                "passages": [
-                                    {
-                                        "chunk_id": passage.candidate.chunk_id,
-                                        "text": passage.text,
-                                        "provenance": passage.provenance,
-                                    }
-                                    for passage in source.passages
-                                ],
-                            }
-                            for source in result.evidence.sources
-                        ],
-                    )
+            guide = terminal_guide(saved, result)
+            if isinstance(result, RetrievalAnswer):
+                logfire.info(
+                    "chat_session.answer_prepared",
+                    chat_session_id=session.chat_session_id,
+                    audit_schema_version=2,
+                    rendered_text=render_source_guide(guide),
+                    selected_sources=[
+                        {
+                            "citation": source.citation.model_dump(mode="json"),
+                            "passages": [
+                                {
+                                    "chunk_id": passage.candidate.chunk_id,
+                                    "text": passage.text,
+                                    "provenance": passage.provenance,
+                                }
+                                for passage in source.passages
+                            ],
+                        }
+                        for source in result.evidence.sources
+                    ],
+                )
         guide_store.finish(saved.guide_id, saved.latest_attempt.attempt_id, guide)
 
     async def list_guides(request: Request) -> Response:

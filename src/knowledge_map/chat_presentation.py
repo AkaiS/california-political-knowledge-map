@@ -4,9 +4,10 @@ import html
 import re
 import unicodedata
 from datetime import datetime
+from typing import Literal
 from urllib.parse import quote, urlsplit, urlunsplit
 
-from pydantic import HttpUrl, ValidationError
+from pydantic import BaseModel, ConfigDict, HttpUrl, ValidationError
 
 from knowledge_map.adapters import sqlite_db
 from knowledge_map.schemas.query_preparation import QuestionAssessment
@@ -18,10 +19,13 @@ from knowledge_map.schemas.retrieval import (
     SourceArticleEvidence,
 )
 from knowledge_map.schemas.source_guides import (
+    AttemptState,
     GuideArticle,
     GuideCollection,
     GuideDisclosure,
+    GuideOutcome,
     GuideSearchDetails,
+    SearchCompletion,
     SourceGuide,
 )
 
@@ -29,18 +33,14 @@ from knowledge_map.schemas.source_guides import (
 def guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
     """Keep saved search scope and question-entry coverage on the same projection."""
     return tuple(
-        GuideCollection.model_validate(
-            entry.model_dump(
-                include={"name", "date_basis", "earliest_date", "latest_date"}
-            )
-        )
+        GuideCollection.model_validate(entry, from_attributes=True)
         for entry in coverage.entries
     )
 
 
-def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
-    """Present a terminal assessment consistently across guide consumers."""
-    assert assessment.status == "declined" or assessment.status == "needs_edit"
+def _assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
+    if assessment.status not in {"declined", "needs_edit"}:
+        raise ValueError("only a Declined or needs-edit assessment ends a Chat Session")
     assert assessment.explanation is not None
     return SourceGuide(
         question=question,
@@ -53,7 +53,7 @@ def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGui
     )
 
 
-def deferred_disclosures(
+def _deferred_disclosures(
     assessment: QuestionAssessment | None,
 ) -> tuple[GuideDisclosure, ...]:
     """Retain the same Deferred coverage explanation after success or failure."""
@@ -67,10 +67,181 @@ def deferred_disclosures(
     )
 
 
-def source_guide(
-    result: RetrievalAnswer | EvidenceAssemblyFailure,
+type ChatSessionStage = Literal["assessment", "retrieval", "guidance"]
+
+
+class ChatSessionStageFailure(BaseModel):
+    """A Chat Session that stopped at a stage before reaching any other outcome.
+
+    The assessment is kept when the session reached one, so a Deferred
+    explanation survives the failure.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    stage: ChatSessionStage
+    assessment: QuestionAssessment | None = None
+
+
+type StopReason = Literal["cancelled", "interrupted", "exceeded_time_limit"]
+
+
+class StoppedAttempt(BaseModel):
+    """A search attempt that ended before its Chat Session produced an outcome.
+
+    The reader cancelled it, shutdown or restart interrupted it, or it ran past
+    the public execution time limit.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: StopReason
+
+
+_STOPPED_ATTEMPTS: dict[StopReason, tuple[Literal["cancelled", "interrupted"], str]] = {
+    "cancelled": ("cancelled", "This search was cancelled."),
+    "interrupted": (
+        "interrupted",
+        "This search was interrupted before it finished.",
+    ),
+    "exceeded_time_limit": (
+        "interrupted",
+        "This search exceeded its time limit. Choose Retry to search again.",
+    ),
+}
+
+
+type ChatSessionOutcome = (
+    RetrievalAnswer
+    | EvidenceAssemblyFailure
+    | QuestionAssessment
+    | ChatSessionStageFailure
+    | StoppedAttempt
+)
+
+_STAGE_FAILURES: dict[ChatSessionStage, tuple[str, str]] = {
+    "assessment": (
+        "assessment_failed",
+        "The question could not be assessed. Choose Retry to search again.",
+    ),
+    "retrieval": (
+        "retrieval_failed",
+        "The search could not be completed. Choose Retry to search again.",
+    ),
+    "guidance": (
+        "guidance_failed",
+        "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Choose Retry to search again.",
+    ),
+}
+
+
+def project_source_guide(
+    outcome: ChatSessionOutcome,
     *,
-    story_db_path: str = sqlite_db.DEFAULT_DB_PATH,
+    question: str,
+    search_scope: tuple[GuideCollection, ...] | None,
+    story_db_path: str,
+) -> SourceGuide:
+    """Decide the terminal Source Guide a reader sees for a Chat Session outcome.
+
+    The search scope is the collections recorded when the attempt started, or
+    None when the attempt recorded none. An outcome without search results keeps
+    that scope, so a failed or stopped guide shows what the reader saw at
+    submission. Publications and original-section highlights come from the
+    named story document store, so every caller renders the same links.
+    """
+    if isinstance(outcome, QuestionAssessment):
+        guide = _assessment_guide(question, outcome)
+    elif isinstance(outcome, ChatSessionStageFailure):
+        guide = _stage_failure_guide(question, outcome)
+    elif isinstance(outcome, StoppedAttempt):
+        guide = _stopped_guide(question, outcome)
+    else:
+        guide = _retrieval_guide(outcome, question, story_db_path)
+    details = guide.search_details
+    if details is None:
+        if search_scope is None:
+            return guide
+        details = GuideSearchDetails(collections=search_scope)
+    return guide.model_copy(
+        update={
+            "search_details": details.model_copy(
+                update={"completion": _completion(guide)}
+            )
+        }
+    )
+
+
+def _completion(guide: SourceGuide) -> SearchCompletion:
+    match guide.status:
+        case (
+            "assessment_failed"
+            | "retrieval_failed"
+            | "assembly_failed"
+            | "guidance_failed"
+        ):
+            return "failed"
+        case "cancelled" | "interrupted":
+            return guide.status
+        case "declined" | "needs_edit":
+            return "not_searched"
+        case _:
+            return "partial" if guide.partial else "completed"
+
+
+_ATTEMPT_STATES: dict[GuideOutcome, AttemptState] = {
+    "completed": "completed",
+    "empty": "empty",
+    "declined": "completed",
+    "needs_edit": "completed",
+    "assessment_failed": "failed",
+    "retrieval_failed": "failed",
+    "assembly_failed": "failed",
+    "guidance_failed": "failed",
+    "cancelled": "cancelled",
+    "interrupted": "interrupted",
+}
+
+
+def attempt_state(status: GuideOutcome) -> AttemptState:
+    """The state a search attempt keeps after ending with this guide status."""
+    return _ATTEMPT_STATES[status]
+
+
+def replaces_saved_reading(status: GuideOutcome) -> bool:
+    """Only a finished search replaces the reading a guide already saved.
+
+    A failed, stopped or unsearched attempt leaves the earlier reading in place.
+    """
+    return status in {"completed", "empty"}
+
+
+def _stopped_guide(question: str, stopped: StoppedAttempt) -> SourceGuide:
+    status, message = _STOPPED_ATTEMPTS[stopped.reason]
+    return SourceGuide(question=question, status=status, message=message)
+
+
+def _stage_failure_guide(
+    question: str, failure: ChatSessionStageFailure
+) -> SourceGuide:
+    status, message = _STAGE_FAILURES[failure.stage]
+    disclosures = (
+        GuideDisclosure(kind=status, message=message),
+        *_deferred_disclosures(failure.assessment),
+    )
+    return SourceGuide(
+        question=question,
+        status=status,
+        assessment=failure.assessment,
+        message="\n\n".join(disclosure.message for disclosure in disclosures),
+        disclosures=disclosures,
+    )
+
+
+def _retrieval_guide(
+    result: RetrievalAnswer | EvidenceAssemblyFailure,
+    question: str,
+    story_db_path: str,
 ) -> SourceGuide:
     execution = (
         result.evidence.execution
@@ -207,9 +378,9 @@ def source_guide(
                 message="Part of this search failed. Available reading is retained, but this search is incomplete.",
             )
         )
-    disclosures.extend(deferred_disclosures(assessment))
+    disclosures.extend(_deferred_disclosures(assessment))
     return SourceGuide(
-        question=execution.request.rewrite.question,
+        question=question,
         status=(
             "assembly_failed"
             if isinstance(result, EvidenceAssemblyFailure)
@@ -228,11 +399,6 @@ def source_guide(
         partial=bool(execution.failed_branches),
         search_details=GuideSearchDetails(
             collections=guide_collections(result.evidence.coverage),
-            completion="failed"
-            if len(execution.failed_branches) == len(execution.expected_branches)
-            else "partial"
-            if execution.failed_branches
-            else "completed",
             selection_limited=bool(result.evidence.context.omitted_passages),
             included_articles=len(articles),
         )
@@ -368,13 +534,8 @@ def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 
 
-def render_answer(
-    result: RetrievalAnswer | EvidenceAssemblyFailure,
-    *,
-    guide: SourceGuide | None = None,
-) -> str:
+def render_source_guide(guide: SourceGuide) -> str:
     """Evaluation consumers see the same reading selection as the application."""
-    guide = guide if guide is not None else source_guide(result)
     paragraphs = [_escape_markdown_text(guide.question)]
     if guide.disclosures:
         for disclosure in guide.disclosures:
