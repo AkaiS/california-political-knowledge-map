@@ -39,8 +39,10 @@ so every report recomputes and selects its own aggregates. The
 [Evaluation headline metrics PRD](projects/evaluation-headline-metrics/PRD.md)
 specifies a fixed, versioned headline table per task and Comparable Run
 baselines, following [ADR 0026](../docs/adr/0026-evaluation-reports-freeze-their-run-result.md).
-Its [skill design](projects/evaluation-headline-metrics/skill-design.md) covers a
-fixed-layout `report-evaluation` skill. The spec is ready for agent tickets.
+Its [skill design](projects/evaluation-headline-metrics/skill-design.md) parks a
+fixed-layout `report-evaluation` skill, which the maintainer deferred until
+they have seen evaluations come out once the scorecard exists. The spec is
+ready for agent tickets.
 
 ### Chat Session error follow-up
 

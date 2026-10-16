@@ -1,8 +1,10 @@
 # Skill design: report-evaluation
 
-Companion to the [Evaluation headline metrics PRD](PRD.md). Parked on 2026-10-16: the PRD builds the scorecard layout below; the skill and its agent slots are deferred. This document
-designs the skill and the scorecard it presents. The skill is not live; the
-draft below lands once the script can render the scorecard.
+Companion to the [Evaluation headline metrics PRD](PRD.md). Parked on
+2026-10-16: the PRD builds the scorecard layout below; the skill and its agent
+slots are deferred until the maintainer has seen how evaluations come out once
+the scorecard exists. This document designs the skill and the scorecard it
+presents. The skill is not live.
 
 ## Where the variance comes from
 

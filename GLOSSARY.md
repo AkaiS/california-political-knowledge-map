@@ -366,7 +366,7 @@ One of the fixed, versioned run-level measurements a task records in the Evaluat
 _Avoid_: Summary stat, average score, KPI
 
 **Comparable Run**:
-An earlier Evaluation Run that holds the measurement fixed: the same task, the same selected Evaluation Case IDs, the same Data Set revision and the same headline version. Everything else is the system under test, including the Model Deployment, prompt versions and code, and changes to it are what a comparison exists to show. A reported change in a Headline Metric is valid only against a Comparable Run.
+An earlier completed Evaluation Run that holds the measurement fixed: the same task, the same selected Evaluation Case IDs, the same Data Set revision and the same headline version. Everything else is the system under test, including the Model Deployment, prompt versions and code, and changes to it are what a comparison exists to show. A reported change in a Headline Metric is valid only against a Comparable Run.
 _Avoid_: Previous run, reference run, matching run
 
 ## Operational Constraints

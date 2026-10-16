@@ -315,7 +315,8 @@ not directly comparable. Migration provenance records the prior definition,
 source hash and backup location. Changed old values remain clearly labeled
 under `legacy_identity_budget_scores`, outside current scores. Final-context
 recall and branch completion did not change. This migration does not claim a
-new model or retrieval run.
+new model or retrieval run. The one-off migration script was removed once it
+had been applied (inbox ED-08); new runs are compacted when written.
 
 ## Reference freshness and annotation
 
