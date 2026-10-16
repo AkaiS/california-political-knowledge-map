@@ -84,11 +84,40 @@ class ChatSessionStageFailure(BaseModel):
     assessment: QuestionAssessment | None = None
 
 
+type StopReason = Literal["cancelled", "interrupted", "exceeded_time_limit"]
+
+
+class StoppedAttempt(BaseModel):
+    """A search attempt that ended before its Chat Session produced an outcome.
+
+    The reader cancelled it, shutdown or restart interrupted it, or it ran past
+    the public execution time limit.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: StopReason
+
+
+_STOPPED_ATTEMPTS: dict[StopReason, tuple[Literal["cancelled", "interrupted"], str]] = {
+    "cancelled": ("cancelled", "This search was cancelled."),
+    "interrupted": (
+        "interrupted",
+        "This search was interrupted before it finished.",
+    ),
+    "exceeded_time_limit": (
+        "interrupted",
+        "This search exceeded its time limit. Choose Retry to search again.",
+    ),
+}
+
+
 type ChatSessionOutcome = (
     RetrievalAnswer
     | EvidenceAssemblyFailure
     | QuestionAssessment
     | ChatSessionStageFailure
+    | StoppedAttempt
 )
 
 _STAGE_FAILURES: dict[ChatSessionStage, tuple[str, str]] = {
@@ -122,6 +151,9 @@ def project_source_guide(
         return _assessment_guide(question, outcome)
     if isinstance(outcome, ChatSessionStageFailure):
         return _stage_failure_guide(question, outcome)
+    if isinstance(outcome, StoppedAttempt):
+        status, message = _STOPPED_ATTEMPTS[outcome.reason]
+        return SourceGuide(question=question, status=status, message=message)
     return _retrieval_guide(outcome, question, story_db_path)
 
 

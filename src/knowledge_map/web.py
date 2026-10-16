@@ -21,6 +21,7 @@ from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuid
 from knowledge_map.chat_presentation import (
     ChatSessionStage,
     ChatSessionStageFailure,
+    StoppedAttempt,
     guide_collections,
     guide_publication_orders,
     project_source_guide,
@@ -43,7 +44,6 @@ from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAn
 from knowledge_map.schemas.source_guides import (
     GuideSearchDetails,
     SavedSourceGuide,
-    SourceGuide,
 )
 from knowledge_map.utils.agents import create_agent
 
@@ -295,10 +295,10 @@ def create_app(
         cancelled = guide_store.finish(
             guide_id,
             attempt_id,
-            SourceGuide(
+            project_source_guide(
+                StoppedAttempt(reason="cancelled"),
                 question=saved.question,
-                status="cancelled",
-                message="This search was cancelled.",
+                story_db_path=guide_store.db_path,
             ),
             owner_id=owner(request),
         )
@@ -349,10 +349,10 @@ def create_app(
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                SourceGuide(
+                project_source_guide(
+                    StoppedAttempt(reason="exceeded_time_limit"),
                     question=saved.question,
-                    status="interrupted",
-                    message="This search exceeded its time limit. Choose Retry to search again.",
+                    story_db_path=guide_store.db_path,
                 ),
             )
             return
@@ -360,10 +360,10 @@ def create_app(
             guide_store.finish(
                 saved.guide_id,
                 saved.latest_attempt.attempt_id,
-                SourceGuide(
+                project_source_guide(
+                    StoppedAttempt(reason="interrupted"),
                     question=saved.question,
-                    status="interrupted",
-                    message="This search was interrupted before it finished.",
+                    story_db_path=guide_store.db_path,
                 ),
             )
             raise

@@ -10,6 +10,7 @@ from knowledge_map.adapters.sqlite_db import (
 )
 from knowledge_map.chat_presentation import (
     ChatSessionStageFailure,
+    StoppedAttempt,
     project_source_guide,
     render_source_guide,
 )
@@ -414,6 +415,49 @@ def test_deferred_explanation_stays_visible_after_a_stage_failure(tmp_path, stag
         ("deferred", DEFERRED_MESSAGE),
     ]
     assert guide.message == f"{message}\n\n{DEFERRED_MESSAGE}"
+
+
+def test_cancelled_attempt_says_the_search_was_cancelled(tmp_path):
+    guide = project_source_guide(
+        StoppedAttempt(reason="cancelled"),
+        question=QUESTION,
+        story_db_path=str(tmp_path / "unused.db"),
+    )
+
+    assert guide.question == QUESTION
+    assert guide.status == "cancelled"
+    assert guide.message == "This search was cancelled."
+    assert guide.disclosures == ()
+    assert guide.articles == ()
+
+
+def test_interrupted_attempt_says_the_search_did_not_finish(tmp_path):
+    guide = project_source_guide(
+        StoppedAttempt(reason="interrupted"),
+        question=QUESTION,
+        story_db_path=str(tmp_path / "unused.db"),
+    )
+
+    assert guide.status == "interrupted"
+    assert guide.message == "This search was interrupted before it finished."
+    assert guide.disclosures == ()
+    assert guide.articles == ()
+
+
+def test_attempt_that_exceeded_its_time_limit_offers_retry(tmp_path):
+    guide = project_source_guide(
+        StoppedAttempt(reason="exceeded_time_limit"),
+        question=QUESTION,
+        story_db_path=str(tmp_path / "unused.db"),
+    )
+
+    assert guide.status == "interrupted"
+    assert (
+        guide.message
+        == "This search exceeded its time limit. Choose Retry to search again."
+    )
+    assert guide.disclosures == ()
+    assert guide.articles == ()
 
 
 def test_guide_shows_the_question_the_caller_submitted(tmp_path):

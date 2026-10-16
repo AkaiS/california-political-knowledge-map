@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+from knowledge_map.chat_presentation import StoppedAttempt, project_source_guide
 from knowledge_map.config import document_store_path
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.source_guides import (
@@ -103,10 +104,10 @@ class SQLiteGuideStore:
             self.finish(
                 guide_id,
                 attempt_id,
-                SourceGuide(
+                project_source_guide(
+                    StoppedAttempt(reason="interrupted"),
                     question=question,
-                    status="interrupted",
-                    message="This search was interrupted before it finished.",
+                    story_db_path=self.db_path,
                 ),
             )
 
