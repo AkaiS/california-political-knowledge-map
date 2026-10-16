@@ -65,36 +65,37 @@ short, bounded slots: Reading, Cases to inspect and Open question. The
 9. As the maintainer, I want an execution failure rate on every task, so that a run can't raise its F1 by failing its hard cases.
 10. As the maintainer, I want failed cases kept out of quality metrics, as ADR 0024 requires, so that a failure never reads as success or as zero.
 11. As the maintainer, I want a metric that can't be computed to keep its row, with a null value and a reason, so that absence is visible.
-12. As the maintainer, I want a Comparable Run to require the same task, Data Set revision, selected case IDs and headline version, so that a different population is never read as a different system.
-13. As the maintainer, I want runs on different Model Deployments or prompt versions to remain comparable, so that the changes I'm testing are exactly the ones a comparison shows.
+12. As the maintainer, I want a change reported only against a Comparable Run, so that a different population is never read as a different system.
+13. As the maintainer, I want runs on different Model Deployments, prompt versions or code to remain Comparable Runs, so that the system under test is exactly what a comparison shows.
 14. As the maintainer, I want the newest Comparable Run picked automatically as the baseline, so that I don't have to find it myself.
 15. As the maintainer, I want to name a specific baseline when I need one, so that I can compare against a run I trust.
 16. As the maintainer, I want a report with no Comparable Run to name every condition that failed, so that I know whether to rerun or to establish a new baseline.
 17. As the maintainer, I want a dirty worktree on either side flagged as a caveat rather than blocking the comparison, so that most of the existing history stays usable while the gap stays visible.
 18. As the maintainer, I want every headline definition change to produce a new, immutable headline version, so that a changed meaning can't hide behind an unchanged name.
 19. As the maintainer, I want reports written before headline metrics to say they predate them and can't be compared, so that I'm not shown numbers computed by hand.
-20. As the maintainer, I want an incomplete run to say it has no headline table, so that a partial population never becomes a baseline.
-21. As the maintainer, I want a failure in the headline computation to count as an evaluator error and give a nonzero exit, so that a missing result can't pass silently.
-22. As the maintainer, I want the summary to account for selected, scored, failed and unresolved cases, so that I can see the population behind every number.
-23. As the maintainer, I want relevance to report RELEVANT precision, recall and F1, accuracy, and the confusion-matrix counts, so that the one Gold Set gets a complete classification summary.
-24. As the maintainer, I want extraction to report pooled node and relationship precision, recall and F1, so that its long series of runs becomes comparable on raw counts.
-25. As the maintainer, I want coreference and the coreference annotator scored identically on agreement, so that the two reports subtract.
-26. As the maintainer, I want Policy Area Classification to report a macro F1 across areas, so that a common area can't hide failure on rare ones.
-27. As the maintainer, I want retrieval to lead with fused Recall@10 averaged per question, so that its headline follows the usual information-retrieval convention.
-28. As the maintainer, I want retrieval's branch completion rates in the headline, so that a failing branch is visible next to recall.
-29. As the maintainer, I want NDCG shown as unavailable, with its reason, until relevance grades exist, so that its absence is explained rather than silent.
-30. As the maintainer, I want an Unlabeled Set run to report operational counts and say plainly that it has no quality metric, so that chat numbers are never read as answer quality.
-31. As the maintainer, I want chat's completed-answer and decline rules defined once, in the headline table, so that the summary and the scorecard can't disagree on them.
-32. As the maintainer, I want chat latency reported as p50 and p95 with a case count, so that a slowdown is visible without a one-off script.
-33. As the maintainer, I want a scorecard rendered by the evaluation summary script, so that every number in a report comes from code.
-34. As the maintainer, I want several reports rendered together as one row per axis, with their label quality, so that Silver and Gold numbers are never blended.
-35. As the maintainer, I want diagnostic metrics kept in the report and in a collapsed section of the scorecard, so that the headline stays short and the detail is still there.
-36. As the maintainer, I want the RAG reviewer to show the table's value wherever it shows a headline metric, so that the reviewer and the report agree.
-37. As the maintainer, I want retrieval report compaction to keep the headline table intact, so that compaction never changes a run's result.
-38. As the maintainer, I want the historical retrieval rescoring tool to refuse reports that carry a headline table, so that a frozen result never contradicts its own case scores.
-39. As an agent, I want a fixed scorecard and three bounded slots, so that my report matches every other agent's.
-40. As an agent, I want each Reading bullet to be anchored to a scorecard row, so that my interpretation can be checked against a number.
-41. As an agent, I want the case IDs worth inspecting to come from failures, the largest drops against the baseline and the lowest scores, so that the cases I pick are chosen the same way every time.
+20. As the maintainer, I want a failed case to count as data in the run's report, so that a failure is measured rather than stopping the report.
+21. As the maintainer, I want a run whose process stopped before every case finished to keep its saved results and to say it has no Headline Metrics, so that a partial population never becomes a baseline.
+22. As the maintainer, I want a failure in the headline computation to count as an evaluator error and give a nonzero exit, so that a missing result can't pass silently.
+23. As the maintainer, I want the summary to account for selected, scored, failed and unresolved Evaluation Cases, so that I can see the population behind every number.
+24. As the maintainer, I want relevance to report RELEVANT precision, recall and F1, accuracy, and the confusion-matrix counts, so that the one Gold Set gets a complete classification summary.
+25. As the maintainer, I want extraction to report pooled node and relationship precision, recall and F1, so that its long series of runs becomes comparable on raw counts.
+26. As the maintainer, I want coreference and the coreference annotator scored identically on agreement, so that the two reports subtract.
+27. As the maintainer, I want Policy Area Classification to report a macro F1 across areas, so that a common area can't hide failure on rare ones.
+28. As the maintainer, I want retrieval to lead with fused Recall@10 averaged per question, so that its headline follows the usual information-retrieval convention.
+29. As the maintainer, I want retrieval's branch completion rates in the headline, so that a failing branch is visible next to recall.
+30. As the maintainer, I want NDCG shown as unavailable, with its reason, until relevance grades exist, so that its absence is explained rather than silent.
+31. As the maintainer, I want an Unlabeled Set run to report operational counts and say plainly that it has no quality metric, so that chat numbers are never read as answer quality.
+32. As the maintainer, I want chat to report Declined, Deferred and needs-edit questions as separate rates, so that a policy refusal is never confused with missing coverage.
+33. As the maintainer, I want chat's completed-answer and question-status rules defined once, in its headline evaluator, so that the summary and the scorecard can't disagree on them.
+34. As the maintainer, I want chat latency reported as p50 and p95 with a case count, so that a slowdown is visible without a one-off script.
+35. As the maintainer, I want a scorecard rendered by the evaluation summary script, so that every number in a report comes from code.
+36. As the maintainer, I want several reports rendered together as one row per axis, with their label quality, so that Silver and Gold numbers are never blended.
+37. As the maintainer, I want diagnostic metrics kept in the report and in a collapsed section of the scorecard, so that the headline stays short and the detail is still there.
+38. As the maintainer, I want the RAG reviewer to show the table's value wherever it shows a headline metric, so that the reviewer and the report agree.
+39. As the maintainer, I want retrieval report compaction to keep the headline table intact, so that compaction never changes a run's result.
+40. As an agent, I want a fixed scorecard and three bounded slots, so that my report matches every other agent's.
+41. As an agent, I want each Reading bullet to be anchored to a scorecard row, so that my interpretation can be checked against a number.
+42. As an agent, I want the case IDs worth inspecting to come from failures, the largest drops against the baseline and the lowest scores, so that the cases I pick are chosen the same way every time.
 
 ## Implementation Decisions
 
@@ -126,20 +127,37 @@ short, bounded slots: Reading, Cases to inspect and Open question. The
 - `ca-map eval run` passes the task's headline report evaluator to the
   evaluation engine. No other run path is added.
 
-### Population
+### Failed cases and incomplete runs
 
-- The report evaluator runs only when every selected case has reached a result
-  or a failure. Within it, selected cases are the completed cases plus the
-  failed cases, so it relies on no experiment metadata.
-- Every task carries an `execution_failure_rate` row over selected cases.
-- Unresolved cases exist only in interrupted runs, which never reach the
-  report evaluator. The summary's population block reports them.
-- An interrupted run has no headline table. It is never a Comparable Run, and
-  its summary says why.
-- A failed case contributes no value to a quality metric (ADR 0024).
+- A failed Evaluation Case is data. When a task raises, Pydantic Evals records
+  a case failure and the run continues. When a task catches its own failure,
+  the failure stays in the case output. Either way the run completes, its
+  Headline Metrics are computed, and the case counts toward
+  `execution_failure_rate`. Under ADR 0024 it adds no value to a quality
+  metric.
+- An incomplete run is one whose process stopped before every selected case
+  reached a result or a failure. Causes include an interruption, a crash, an
+  infrastructure error that escapes the engine, or a returned report whose
+  cases don't match the selection. ADR 0024 keeps its saved results and
+  unresolved case IDs. Its headline report evaluator never runs, so it has no
+  Headline Metrics and is never a Comparable Run. Its scorecard reports the
+  population block and says the run is incomplete.
 - A failure inside the headline report evaluator is recorded by Pydantic Evals
-  as a report evaluator failure. The summary counts it as an evaluator error and
-  exits nonzero, as it does today.
+  as a report evaluator failure. The summary counts it as an evaluator error
+  and exits nonzero, as it does today.
+
+### Run population and selected case IDs
+
+"Selected cases" serves two purposes, and the spec keeps them apart:
+
+- **The run population** is the denominator for every rate in one run. Inside
+  the headline report evaluator, it is the completed cases plus the failed
+  cases. It depends on no experiment metadata, so a direct `ca-map eval run`
+  and a run started by the evaluation summary script compute it the same way.
+- **The selected case IDs** decide whether two runs are Comparable Runs. The
+  report checkpoint records them before any case runs. Reports written before
+  that manifest existed have none, so they can't be shown to match and are
+  never Comparable Runs.
 
 ### Pooled counts
 
@@ -162,7 +180,7 @@ short, bounded slots: Reading, Cases to inspect and Open question. The
 | Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
 | Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
 | Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence; completion rate for each branch | each branch's Recall@1/5/10/50, reciprocal rank and complete evidence@5/10; Precision@k; NDCG@10, unavailable until relevance grades exist |
-| Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; decline rate; failure rate for each stage; p50 and p95 task duration | branch outcomes by status |
+| Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; Declined, Deferred and needs-edit rates; failure rate for each stage; p50 and p95 task duration | question-status rates by authored cohort; branch outcomes by status |
 
 Definitions that the table doesn't settle:
 
@@ -183,17 +201,23 @@ Definitions that the table doesn't settle:
   relevant against provisional labels.
 - **The retrieval headline version** changes whenever the retrieval metric
   version recorded by compaction changes.
-- **Chat's completed-answer and decline rules** are the ones the summary script
-  applies today. They move into the chat headline evaluator, and the summary
-  reads the table.
+- **Chat's completed-answer rule** is the one the summary script applies today.
+  Question status comes from the recorded question preparation or assessment
+  status: Declined, Deferred or needs edit, using the glossary's distinction
+  between Declined and Deferred. Today's summary counts only declines. Both
+  rules move into the chat headline evaluator, and the summary reads the table.
+- **Chat's question-status rates by cohort** use the cohort each case's
+  authors recorded. This shows whether declined and deferred controls were
+  handled as intended without claiming answer quality.
 - **Chat's task duration** is the duration Pydantic Evals records for each
   completed and failed case.
 
 ### Comparable Run and baseline
 
-- A Comparable Run is an earlier completed report of the same task with the
-  same Data Set hash, the same set of selected case IDs and the same headline
-  version. Model Deployment, prompt digests and commit may differ.
+- Baseline selection applies the glossary's Comparable Run. A report matches
+  on task, Data Set hash, the set of selected case IDs and headline version.
+  Model Deployment, prompt digests and commit are the system under test and may
+  differ.
 - The evaluation summary script gains `--baseline auto|PATH|none`, defaulting
   to `auto`. `auto` selects the newest Comparable Run among that task's
   committed reports.
@@ -226,8 +250,8 @@ Definitions that the table doesn't settle:
 - **The one-off chat measurement script pattern** ends. Latency becomes a chat
   headline row.
 - **Retrieval report compaction** leaves the report's analyses untouched. It
-  already avoids rescoring live runs. The historical rescoring tool refuses any
-  report that carries a headline table.
+  already avoids rescoring live runs. Inbox ED-08 removes the spent historical
+  rescoring migration, so no tool rewrites a committed report's scores.
 
 ### Reporting skill
 
@@ -237,16 +261,9 @@ Definitions that the table doesn't settle:
 - The scorecard layout, the slot rules and the draft skill text are in the
   [skill design](skill-design.md).
 
-### Glossary
+### Domain terms
 
-Add these terms:
-
-- **Headline Metric**: one of the fixed, versioned run-level measurements a task
-  records in every completed Evaluation Report. Exactly one is the task's
-  primary metric.
-- **Comparable Run**: an earlier completed Evaluation Run of the same task over
-  the same selected case IDs, Data Set revision and headline version. It is the
-  only baseline a reported change may use.
+This spec uses Headline Metric and Comparable Run as the glossary defines them.
 
 ## Testing Decisions
 
@@ -264,8 +281,8 @@ stub task and the task's real case and headline evaluators. Assertions read the
 saved report. Each task gets fixtures covering:
 
 - the expected primary, headline and diagnostic rows;
-- a case where both sides are empty, a failed case and a selection that ends up
-  partially failed;
+- a case where both sides are empty, and a failed case that completes the run
+  and appears in `execution_failure_rate`;
 - for set-agreement tasks, a population where pooled and per-case F1 disagree;
 - a headline evaluator that raises, which leaves an evaluator error in the
   final snapshot;
@@ -285,10 +302,9 @@ The script's command-line entry point runs against saved report documents.
   status). Model Deployment and prompt digests may differ.
 - **Explicit baselines** that aren't comparable produce no deltas.
 - **Dirty worktrees** produce the caveat.
-- **Reports without a headline table** summarize as predating headline metrics.
+- **Reports without a headline table** summarize as predating Headline Metrics, or as an incomplete run, whichever applies.
 - **The markdown scorecard** is snapshot-stable for one axis and for three
   axes, including a chat axis.
-- **The historical rescoring tool** refuses a report that has a headline table.
 
 Prior art: the run-evaluation tests that summarize saved and historical
 documents and drive the script's entry point without model calls.
