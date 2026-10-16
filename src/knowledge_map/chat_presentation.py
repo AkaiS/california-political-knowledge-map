@@ -68,6 +68,9 @@ def deferred_disclosures(
     )
 
 
+type ChatSessionStage = Literal["assessment", "retrieval", "guidance"]
+
+
 class ChatSessionStageFailure(BaseModel):
     """A Chat Session that stopped at a stage before reaching any other outcome.
 
@@ -77,7 +80,7 @@ class ChatSessionStageFailure(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    stage: Literal["assessment", "retrieval", "guidance"]
+    stage: ChatSessionStage
     assessment: QuestionAssessment | None = None
 
 
@@ -88,7 +91,7 @@ type ChatSessionOutcome = (
     | ChatSessionStageFailure
 )
 
-_STAGE_FAILURES = {
+_STAGE_FAILURES: dict[ChatSessionStage, tuple[str, str]] = {
     "assessment": (
         "assessment_failed",
         "The question could not be assessed. Choose Retry to search again.",

@@ -6,7 +6,7 @@ from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 from urllib.parse import urlsplit
 
 import logfire
@@ -19,6 +19,7 @@ from starlette.routing import Route
 
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
+    ChatSessionStage,
     ChatSessionStageFailure,
     guide_collections,
     guide_publication_orders,
@@ -65,7 +66,7 @@ class QuestionDeadlineExceeded(Exception):
 class ChatSessionProtocol(Protocol):
     chat_session_id: str
     assessment: QuestionAssessment | None
-    stage: Literal["assessment", "retrieval", "guidance"]
+    stage: ChatSessionStage
 
     async def run(
         self,

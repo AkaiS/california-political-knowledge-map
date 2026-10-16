@@ -1,6 +1,6 @@
 # 02 Project Chat Session stage failures
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -20,20 +20,20 @@ message, its disclosure and any Deferred explanation.
 
 ## Acceptance criteria
 
-- [ ] The Chat Session outcome includes a stage failure. It names the
+- [x] The Chat Session outcome includes a stage failure. It names the
       assessment, retrieval or guidance stage and carries the assessment when
       one exists.
-- [ ] Projection tests cover each stage, with and without a Deferred
+- [x] Projection tests cover each stage, with and without a Deferred
       assessment. They assert status, message, disclosure kinds and the
       retained Deferred explanation.
-- [ ] The web application's execution code contains no stage-to-status,
+- [x] The web application's execution code contains no stage-to-status,
       message or disclosure rules.
-- [ ] For a failure within the Chat Session, the chat evaluation task records
+- [x] For a failure within the Chat Session, the chat evaluation task records
       the Source Guide the projection produces for that stage. Its existing
       failure record keeps the same fields and stage names.
-- [ ] Failures outside the Chat Session (startup, rendering, cleanup) keep
+- [x] Failures outside the Chat Session (startup, rendering, cleanup) keep
       their current evaluation behaviour.
-- [ ] Existing HTTP failure, coverage and update tests pass unchanged.
+- [x] Existing HTTP failure, coverage and update tests pass unchanged.
 
 ## Blocked by
 
