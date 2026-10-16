@@ -48,9 +48,7 @@ that failed.
 When several axes run together, the scorecard gives one row per axis and never
 an overall score.
 
-The scorecard layout is defined in the
-[skill design](skill-design.md#scorecard-layout). A reporting skill for agents
-is deferred; see Out of Scope.
+A reporting skill for agents is deferred; see Out of Scope.
 
 ## User Stories
 
@@ -173,11 +171,14 @@ is deferred; see Out of Scope.
 | Relevance | Gold | RELEVANT F1 (pooled) | RELEVANT precision and recall; accuracy; confusion-matrix counts | none |
 | Extraction | Silver | node F1 (pooled) | node precision and recall; relationship precision, recall and F1 (pooled); node and relationship F1 (per-case mean); ontology conformance rate | sub-label, node-property, claim-property and stance-alignment accuracy |
 | Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster F1 and canonical-entity accuracy, both pooled over mention spans both sides found; mention-span F1 (per-case mean) | Coreference Critic rejection precision, rejection recall and kept-correct rate |
-| Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | none |
+| Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | the Coreference Critic rows, each null with the reason "the annotator task makes no critic decisions" |
 | Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
 | Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
 | Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence; completion rate for each branch | each branch's Recall@1/5/10/50, reciprocal rank and complete evidence@5/10; Precision@k; NDCG@10, unavailable until relevance grades exist |
 | Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; Declined, Deferred and needs-edit rates; failure rate for each stage; p50 and p95 task duration | question-status rates by authored cohort; branch outcomes by status |
+
+Every task's headline rows also include `execution_failure_rate`, which the
+table leaves out of each line to keep it readable.
 
 Definitions that the table doesn't settle:
 
@@ -187,8 +188,9 @@ Definitions that the table doesn't settle:
 - **Coreference Critic rows** are pooled over every judged critic decision
   across cases. Rejection precision is wrong spans rejected over all rejections.
   Rejection recall is wrong spans rejected over all wrong spans. The
-  kept-correct rate is correct spans kept over all correct spans. The rows are
-  unavailable on the annotator task, which makes no critic decisions.
+  kept-correct rate is correct spans kept over all correct spans. On the
+  annotator task the same rows are present with a null value and a reason,
+  following the contract's rule for metrics that can't be computed.
 - **Label-macro F1** is the mean F1 over the Policy Areas present in the
   selected cases' reference labels. Areas the model predicted but the
   reference never used appear only in pooled precision and in the per-area
@@ -212,7 +214,8 @@ Definitions that the table doesn't settle:
 ### Comparable Run and baseline
 
 - Baseline selection applies the glossary's Comparable Run. A report matches
-  on task, Data Set hash, the set of selected case IDs and headline version.
+  on task, Data Set revision (compared by its recorded hash), the set of
+  selected case IDs and headline version.
   Model Deployment, prompt digests and commit are the system under test and may
   differ.
 - The evaluation summary script gains `--baseline auto|PATH|none`, defaulting
@@ -232,9 +235,27 @@ Definitions that the table doesn't settle:
 
 - The evaluation summary script gains `--format markdown`. JSON stays the
   default.
-- Passing `--report` more than once renders a multi-axis scorecard.
-- The scorecard layout section of the skill design defines the layout. The
-  script renders every number in it.
+- Passing `--report` more than once renders a multi-axis scorecard. It opens
+  with one row per axis: axis, label quality, primary metric, value, change,
+  scored over selected cases, failure rate and comparison status. It never
+  shows an overall score. Each axis's one-axis scorecard follows, in the same
+  order. An Unlabeled axis shows "no quality metric" in place of a value.
+- The script renders every number in the scorecard. An agent or a person
+  copies it as it is.
+- A one-axis scorecard has these parts, in order:
+  - A heading naming the task, its primary metric and value, and the change
+    against the baseline, or "no comparable baseline".
+  - A population line: label quality, selection scope, and the selected,
+    scored, failed and unresolved counts.
+  - A baseline line: the baseline report and its comparison status, naming
+    any failed conditions or caveats.
+  - A table with the primary row first and then the headline rows in their
+    declared order. Its columns are metric, value, baseline value, change,
+    scored over selected cases, and aggregation.
+  - One line per unavailable headline row, giving the metric and its reason.
+  - A provenance line: commit and dirty state, Model Deployment, prompt
+    digests, Data Set hash prefix, headline version, and links to the report
+    and the trace.
 - Diagnostic rows render in a collapsed section.
 
 ### Existing readers
@@ -288,7 +309,7 @@ coreference, Policy Area Classification, Topic Assignment and retrieval.
 The script's command-line entry point runs against saved report documents.
 
 - **Baseline selection:** each non-matching condition is rejected on its own
-  (Data Set hash, selected case IDs, headline version, task and incomplete
+  (Data Set revision, selected case IDs, headline version, task and incomplete
   status). Model Deployment and prompt digests may differ.
 - **Explicit baselines** that aren't comparable produce no deltas.
 - **Dirty worktrees** produce the caveat.
