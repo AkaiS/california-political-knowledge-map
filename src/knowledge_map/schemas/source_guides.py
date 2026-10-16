@@ -29,17 +29,14 @@ class GuideCollection(RetrievalValue):
     latest_date: date | None = None
 
 
+SearchCompletion = Literal[
+    "completed", "partial", "failed", "not_searched", "cancelled", "interrupted"
+]
+
+
 class GuideSearchDetails(RetrievalValue):
     collections: tuple[GuideCollection, ...] = ()
-    completion: Literal[
-        "running",
-        "completed",
-        "partial",
-        "failed",
-        "not_searched",
-        "cancelled",
-        "interrupted",
-    ] = "running"
+    completion: Literal["running", SearchCompletion] = "running"
     bounded_selection: bool = True
     selection_limited: bool = False
     included_articles: Count = 0
@@ -76,6 +73,8 @@ GuideOutcome = Literal[
     "interrupted",
 ]
 
+AttemptState = Literal["completed", "empty", "failed", "cancelled", "interrupted"]
+
 
 class SourceGuide(RetrievalValue):
     question: NonemptyText
@@ -94,9 +93,7 @@ class GuideAttemptSummary(RetrievalValue):
     attempt_id: str
     started_at: datetime
     finished_at: datetime | None = None
-    status: Literal[
-        "running", "completed", "empty", "failed", "cancelled", "interrupted"
-    ]
+    status: Literal["running", AttemptState]
     outcome: GuideOutcome | None = None
     assessment: QuestionAssessment | None = None
 

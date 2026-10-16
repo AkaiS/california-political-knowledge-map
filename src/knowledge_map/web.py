@@ -23,6 +23,7 @@ from knowledge_map.chat_presentation import (
     ChatSessionStage,
     ChatSessionStageFailure,
     StoppedAttempt,
+    guide_collections,
     guide_publication_orders,
     project_source_guide,
     render_source_guide,
@@ -42,7 +43,6 @@ from knowledge_map.public_access import (
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import (
-    GuideCollection,
     GuideSearchDetails,
     SavedSourceGuide,
     SourceGuide,
@@ -156,12 +156,7 @@ def create_app(
 
     def search_details() -> GuideSearchDetails:
         return GuideSearchDetails(
-            collections=tuple(
-                GuideCollection.model_validate(entry, from_attributes=True)
-                for entry in dependencies.coverage.entries
-            )
-            if dependencies
-            else ()
+            collections=guide_collections(dependencies.coverage) if dependencies else ()
         )
 
     def terminal_guide(

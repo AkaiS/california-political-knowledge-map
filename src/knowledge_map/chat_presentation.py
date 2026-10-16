@@ -19,20 +19,19 @@ from knowledge_map.schemas.retrieval import (
     SourceArticleEvidence,
 )
 from knowledge_map.schemas.source_guides import (
+    AttemptState,
     GuideArticle,
     GuideCollection,
     GuideDisclosure,
     GuideOutcome,
     GuideSearchDetails,
+    SearchCompletion,
     SourceGuide,
 )
 
-type SearchCompletion = Literal[
-    "completed", "partial", "failed", "not_searched", "cancelled", "interrupted"
-]
 
-
-def _guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
+def guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, ...]:
+    """Keep saved search scope and question-entry coverage on the same projection."""
     return tuple(
         GuideCollection.model_validate(entry, from_attributes=True)
         for entry in coverage.entries
@@ -189,8 +188,6 @@ def _completion(guide: SourceGuide) -> SearchCompletion:
         case _:
             return "partial" if guide.partial else "completed"
 
-
-type AttemptState = Literal["completed", "empty", "failed", "cancelled", "interrupted"]
 
 _ATTEMPT_STATES: dict[GuideOutcome, AttemptState] = {
     "completed": "completed",
@@ -401,7 +398,7 @@ def _retrieval_guide(
         relevance_order=relevance_order,
         partial=bool(execution.failed_branches),
         search_details=GuideSearchDetails(
-            collections=_guide_collections(result.evidence.coverage),
+            collections=guide_collections(result.evidence.coverage),
             selection_limited=bool(result.evidence.context.omitted_passages),
             included_articles=len(articles),
         )
