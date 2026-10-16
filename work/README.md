@@ -44,8 +44,10 @@ fixed-layout `report-evaluation` skill, which the maintainer deferred until
 they have seen evaluations come out once the scorecard exists. The spec is
 split into eight tickets under
 [its issues directory](projects/evaluation-headline-metrics/issues/). Ticket 01
-is the frontier. After it, tickets 02, 05, 06 and 07 can run in parallel; 03
-and 04 follow 02, and 08 follows 07.
+is the frontier. After it, tickets 02, 06 and 07 can run in parallel; 03, 04
+and 05 follow 02; and 08 follows 03–07. Every ticket builds through the two
+modules in the PRD's Modules section and repeats its depth rules as
+acceptance criteria.
 
 ### Chat Session error follow-up
 

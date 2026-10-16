@@ -103,12 +103,189 @@ A reporting skill for agents is deferred; see Out of Scope.
 - **ADR 0022:** headline versions follow the same immutability as prompt
   versions.
 
+### Modules
+
+All of this feature's behaviour lives in two deep modules. Everything else is a
+caller. The shape was chosen on 2026-10-16 by a blind comparison of three
+independent interface designs. The typed-report design won, and the reviewer's
+recommended grafts from the runner-up are included. The type shapes below come
+from that comparison and fix the interface, not the implementation.
+
+#### Headline module: the shared value and the writing side
+
+```python
+class HeadlineRow(BaseModel, frozen=True):
+    metric: str; role: Role; aggregation: Aggregation
+    value: float | None; numerator: float | None; denominator: float | None
+    scored_cases: int; selected_cases: int; unavailable_reason: str | None
+
+class Headline(BaseModel, frozen=True):
+    rows: tuple[HeadlineRow, ...]
+    def to_table(self) -> TableResult                       # titled "Headline metrics"
+    @classmethod
+    def from_analyses(cls, analyses) -> Headline | None     # in-memory or serialized
+    primary: HeadlineRow                                     # property
+    def row(self, metric: str, aggregation: Aggregation) -> HeadlineRow | None
+    def by_role(self, role: Role) -> tuple[HeadlineRow, ...]
+
+class HeadlineDefinition(BaseModel, frozen=True):
+    version: str                                             # immutable, e.g. "extraction-v1"
+    measures: tuple[Measure, ...]                            # declared order is row order
+    def evaluator(self) -> ReportEvaluator
+
+class Counts(BaseModel, frozen=True):                       # one case's contribution
+    precision_numerator: float; precision_denominator: int
+    recall_numerator: float; recall_denominator: int
+
+# The closed set of measures:
+SetAgreement(prefix, counts: Callable[[ReportCase], Counts], roles)   # pooled P/R/F1
+Pooled(metric, contribution: Callable[[ReportCase], tuple[float, float] | None], role)
+PerLabel(prefix, counts: Callable[[ReportCase], Mapping[str, Counts]], reference_labels)
+CaseMean(score: str, role)            # mean of a recorded case score or assertion
+Rate.quality(metric, test, role, by=None)
+Rate.operational(metric, test, role, by=None)
+Quantile(metric, q, of, role)
+Unavailable(metric, aggregation, role, reason)
+```
+
+The interface is everything a caller must know:
+
+- **What a `Headline` guarantees.** Its validators enforce:
+  - a value is null exactly when a reason is given;
+  - a pooled row with a value has a numerator and a denominator;
+  - each pair of metric and aggregation is unique;
+  - the one primary row comes first, then the headline rows, then the
+    diagnostic rows, each in declared order;
+  - an `execution_failure_rate` row is present.
+- **How the table is read.** `from_analyses` is the only way to read the
+  table, on either side. It returns `None` when a report has no table. It
+  raises a format error on a duplicate table or on columns that differ from
+  the contract.
+- **How a definition is checked.** A `HeadlineDefinition` validates at import.
+  It needs a non-empty version and exactly one primary row, produced by its
+  first measure. It must not name `execution_failure_rate`, which it adds
+  itself.
+- **What each measure sees.**
+  - The quality measures (`SetAgreement`, `Pooled`, `PerLabel`, `CaseMean`,
+    `Rate.quality` and `Quantile`) see only cases that succeeded.
+  - `Rate.operational` sees the whole run population.
+
+  ADR 0024's exclusion is therefore part of a measure's type, and no task
+  restates it.
+- **How set agreement is counted.** One identity function,
+  `detection_counts(expected, found) -> Counts`, serves both the case
+  evaluators and the measures. `detection_scores` is rewritten on top of it,
+  and per-case score names are unchanged. The four-field `Counts` covers set
+  agreement, Relevance's single-label sets and B³ clusters, whose precision
+  and recall have different numerators.
+- **The measure set is closed.** Adding a measure requires amending this
+  spec.
+
+Hidden behind the module:
+
+- **The run population.** It is built only from the report's completed and
+  failed cases, never from experiment metadata. It is split into succeeded
+  cases and failed outcomes. Failed outcomes are framework failures plus
+  completed cases whose output records a failure. That rule moves out of
+  `ca-map eval run`, so the run's exit code and `execution_failure_rate`
+  share one definition of a failed case.
+- **The arithmetic.** Pooling, per-case means of recorded scores, rates,
+  quantiles, and per-label and per-group expansion. A zero denominator gives a
+  null value with a reason.
+- **Assembling the table.** Appending `execution_failure_rate`, ordering rows
+  by role, and encoding the `TableResult`.
+- **The one `ReportEvaluator` adapter.** It is a plain dataclass, because
+  pydantic-evals rejects a frozen subclass. Its serialization arguments are
+  only the headline version, so a recorded evaluator failure serializes the
+  same way on every run.
+
+#### Run report module: the reading side
+
+```python
+class ReportDocument:                                        # lenient over historical shapes
+    @classmethod
+    def load(cls, path: Path) -> ReportDocument              # raises on an unreadable file
+
+class Scorecard(BaseModel):
+    axes: tuple[Axis, ...]                                   # one per report, in argument order
+    @classmethod
+    def build(cls, documents: Sequence[ReportDocument],
+              baseline: Literal["auto", "none"] | Path) -> Scorecard
+    def to_json(self) -> dict
+    def to_markdown(self) -> str
+    exit_code: int                                           # property
+
+class NoHeadline(BaseModel):
+    reason: Literal["predates_headline_metrics", "incomplete_run", "headline_evaluator_failed"]
+```
+
+The interface is everything a caller must know:
+
+- **Every axis carries five things:** a `Headline` or a `NoHeadline` reason,
+  its population, its comparison, its provenance, and today's diagnostic
+  output.
+- **A comparison reports independently** on each of six conditions: task,
+  Data Set revision, selected case IDs, headline version, a completed baseline
+  with a table, and a selection manifest on both sides. Each failed condition
+  is listed. A dirty worktree on either side adds a caveat and never fails a
+  condition. Changes are computed for primary and headline rows only, and are
+  null when either value is null.
+- **`exit_code` is nonzero** when any axis is incomplete or has execution
+  failures or evaluator errors, whichever output format is chosen.
+
+Hidden behind the module:
+
+- **Reading historical documents.** It tolerates every historical document
+  shape and tells apart reports that predate Headline Metrics, incomplete
+  runs, and failed headline evaluators.
+- **Population accounting,** moved out of the summary script.
+- **Comparison.** The six conditions, the caveat and the changes.
+- **Choosing an automatic baseline.** Candidates are only reports beside the
+  current one with an earlier `ran_at`. The newest candidate that is
+  `comparable` or `comparable_with_caveat` wins, with no preference for clean
+  worktrees. With no candidate, the reason is the newest same-task report's
+  failed conditions, or "no earlier run".
+- **Output.** Assembling several axes without ever producing an overall score,
+  and both renderers.
+
+#### Callers
+
+- **`ca-map eval run`** passes `task.headline.evaluator()` to the evaluation
+  engine. It records `task.headline.version` beside the prompt digests in the
+  experiment metadata, which already reaches the report's provenance. No other
+  run path is added.
+- **The evaluation task registry** gains one field, `headline`, which holds the
+  task's `HeadlineDefinition`. The version and the evaluator come from that one
+  value, so they can't disagree. The field stays optional until every task
+  declares one, and then becomes required.
+- **The evaluation summary script** parses arguments, loads documents, builds a
+  `Scorecard`, prints JSON or markdown, and returns `exit_code`. Its existing
+  summary function for planned runs becomes a thin wrapper over a single-axis
+  `Scorecard`.
+- **The RAG reviewer** reads run-level values only through
+  `Headline.from_analyses`. The mapping from its metric names to case score
+  names moves out of the summary script and into the reviewer.
+
+#### Depth rules
+
+These rules hold the shape. Every ticket repeats them as acceptance criteria.
+
+- **Tasks declare; they don't build.** A task supplies a `HeadlineDefinition`
+  made from the closed measure set and functions over a single case. It
+  defines no `ReportEvaluator`, builds no table rows, and computes no
+  population or failure rate.
+- **Readers call; they don't compute.** Only the run report module classifies
+  reports, accounts for the population, compares or renders. The summary
+  script and the RAG reviewer hold none of that logic, and nothing outside the
+  two modules parses table rows.
+- **Tests cross the two seams.** Tests cross only the engine-run seam and the
+  summary script's entry point. Neither module gets a test seam of its own.
+
 ### Headline Metric contract
 
-- The evaluation task registry gains two fields per task: a headline report
-  evaluator and an immutable headline version string, such as `relevance-v1`.
-- The headline report evaluator returns one Pydantic Evals `TableResult` titled
-  `Headline metrics`.
+- Each task's `HeadlineDefinition` carries an immutable headline version, such
+  as `relevance-v1`. Its evaluator returns one Pydantic Evals `TableResult`
+  titled `Headline metrics`.
 - Each row has the columns `metric`, `role`, `value`, `numerator`,
   `denominator`, `aggregation`, `scored_cases`, `selected_cases` and
   `unavailable_reason`.
@@ -119,8 +296,6 @@ A reporting skill for agents is deferred; see Out of Scope.
   reason.
 - The headline version is recorded in the report's provenance beside the Data
   Set hash and the prompt digests.
-- `ca-map eval run` passes the task's headline report evaluator to the
-  evaluation engine. No other run path is added.
 
 ### Failed cases and incomplete runs
 
@@ -156,10 +331,8 @@ A reporting skill for agents is deferred; see Out of Scope.
 
 ### Pooled counts
 
-- The set-agreement scoring helpers gain a count form alongside the existing
-  ratio form. Case evaluators and headline report evaluators call the same
-  identity functions, so a pooled count and a case score always agree on what
-  matched.
+- Pooled counts come from the shared `detection_counts` described under
+  Modules, so a pooled count and a case score always agree on what matched.
 - Per-case score names in reports are unchanged.
 - A case where both sides are empty keeps each task's documented per-case pass.
   It contributes zero to every pooled count.
@@ -208,8 +381,15 @@ Definitions that the table doesn't settle:
 - **Chat's question-status rates by cohort** use the cohort each case's
   authors recorded. This shows whether declined and deferred controls were
   handled as intended without claiming answer quality.
-- **Chat's task duration** is the duration Pydantic Evals records for each
-  completed and failed case.
+- **Chat's task duration** covers only cases that completed without a recorded
+  failure. Pydantic Evals records no duration for a case whose task raised, so
+  a framework failure has none to contribute. The row's scored count, below the
+  selected count, shows the gap.
+- **Relevance's confusion-matrix counts** are four `Rate.quality` rows, one per
+  cell, with the count as the numerator. Pydantic Evals' confusion-matrix
+  evaluator isn't used, because the contract fixes a single table.
+- **Ontology conformance** reads the recorded `StayedInsideTheNewsOntology`
+  assertion instead of re-deriving it.
 
 ### Comparable Run and baseline
 
@@ -219,8 +399,9 @@ Definitions that the table doesn't settle:
   Model Deployment, prompt digests and commit are the system under test and may
   differ.
 - The evaluation summary script gains `--baseline auto|PATH|none`, defaulting
-  to `auto`. `auto` selects the newest Comparable Run among that task's
-  committed reports.
+  to `auto`. `auto` considers only that task's reports with an earlier
+  `ran_at` than the current one, and selects the newest Comparable Run among
+  them. A dirty worktree never makes an older clean run win.
 - An explicit baseline that isn't comparable is still reported, marked not
   comparable with the failed conditions. No deltas are shown for it.
 - The summary gains a comparison block with:
@@ -257,14 +438,17 @@ Definitions that the table doesn't settle:
     digests, Data Set hash prefix, headline version, and links to the report
     and the trace.
 - Diagnostic rows render in a collapsed section.
+- The script's exit code is the scorecard's `exit_code` in both formats. A
+  `--report` summary of a run with failures now exits nonzero, where today it
+  exits 0.
 
 ### Existing readers
 
-- **The evaluation summary script** reads headline rows from the report's
-  analyses. It keeps its population accounting. Its generic per-score means
-  become diagnostic output.
+- **The evaluation summary script** becomes the thin caller described under
+  Modules. Its population accounting moves into the run report module, and its
+  generic per-score means become diagnostic output.
 - **The RAG reviewer** takes its run-level metric values from the headline
-  table when the report has one. Its case-level views and its reviewer-only
+  table, through `Headline.from_analyses`, when the report has one. Its case-level views and its reviewer-only
   measurements are unchanged.
 - **The one-off chat measurement script pattern** ends. Latency becomes a chat
   headline row.
@@ -296,7 +480,7 @@ saved report. Each task gets fixtures covering:
   and appears in `execution_failure_rate`;
 - for set-agreement tasks, a population where pooled and per-case F1 disagree;
 - a headline evaluator that raises, which leaves an evaluator error in the
-  final snapshot;
+  final snapshot that serializes the same way on every run;
 - for retrieval, a table that survives compaction unchanged.
 
 Prior art: the persistence tests that run Data Sets through the engine with stub
@@ -312,7 +496,10 @@ The script's command-line entry point runs against saved report documents.
   (Data Set revision, selected case IDs, headline version, task and incomplete
   status). Model Deployment and prompt digests may differ.
 - **Explicit baselines** that aren't comparable produce no deltas.
-- **Dirty worktrees** produce the caveat.
+- **Dirty worktrees** produce the caveat, and a newer dirty Comparable Run
+  beats an older clean one.
+- **Later reports** are never chosen as the automatic baseline.
+- **The exit code** is the same in both formats.
 - **Reports without a headline table** summarize as predating Headline Metrics, or as an incomplete run, whichever applies.
 - **The markdown scorecard** is snapshot-stable for one axis and for three
   axes, including a chat axis.
@@ -328,7 +515,6 @@ come from a headline table.
 ## Out of Scope
 
 - Recomputing headline tables for historical reports.
-- Implementation tickets. Breaking this spec into tickets is a separate request.
 - The `report-evaluation` skill and its agent slots. On 2026-10-16 the
   maintainer deferred them until they have seen how evaluations they ask an
   LLM to perform come out once the scorecard exists. The parked design is in
