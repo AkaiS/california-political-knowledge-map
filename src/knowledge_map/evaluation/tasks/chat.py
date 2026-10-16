@@ -254,23 +254,20 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 finally:
                     output.assessment = session.assessment
                     output.retrieval = session.retrieval_result
-                if isinstance(result, QuestionAssessment):
-                    output.guide = project_source_guide(
-                        result,
-                        question=case_input.question,
-                        story_db_path=document_store_path(),
-                    )
-                    output.rendered_text = result.explanation
-                else:
+                if not isinstance(result, QuestionAssessment):
                     output.answer = result
                     output.retrieval = None
                     stage = "rendering"
-                    output.guide = project_source_guide(
-                        result,
-                        question=case_input.question,
-                        story_db_path=document_store_path(),
-                    )
-                    output.rendered_text = render_source_guide(output.guide)
+                output.guide = project_source_guide(
+                    result,
+                    question=case_input.question,
+                    story_db_path=document_store_path(),
+                )
+                output.rendered_text = (
+                    result.explanation
+                    if isinstance(result, QuestionAssessment)
+                    else render_source_guide(output.guide)
+                )
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Preserve a failed case for review.
             # A bad answer, unavailable dependency, or failed model request is

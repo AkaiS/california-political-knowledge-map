@@ -4,7 +4,6 @@ import html
 import re
 import unicodedata
 from datetime import datetime
-from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from pydantic import HttpUrl, ValidationError
@@ -75,7 +74,7 @@ def project_source_guide(
     outcome: ChatSessionOutcome,
     *,
     question: str,
-    story_db_path: str | Path,
+    story_db_path: str,
 ) -> SourceGuide:
     """Decide the terminal Source Guide a reader sees for a Chat Session outcome.
 
@@ -84,7 +83,7 @@ def project_source_guide(
     """
     if isinstance(outcome, QuestionAssessment):
         return _assessment_guide(question, outcome)
-    return _retrieval_guide(outcome, question, str(story_db_path))
+    return _retrieval_guide(outcome, question, story_db_path)
 
 
 def _retrieval_guide(

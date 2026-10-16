@@ -284,7 +284,7 @@ def test_declined_question_explains_why_it_was_not_searched(tmp_path):
     )
 
     guide = project_source_guide(
-        assessment, question=QUESTION, story_db_path=tmp_path / "unused.db"
+        assessment, question=QUESTION, story_db_path=str(tmp_path / "unused.db")
     )
 
     assert guide.question == QUESTION
@@ -305,7 +305,7 @@ def test_question_needing_an_edit_says_what_to_change(tmp_path):
     )
 
     guide = project_source_guide(
-        assessment, question=QUESTION, story_db_path=tmp_path / "unused.db"
+        assessment, question=QUESTION, story_db_path=str(tmp_path / "unused.db")
     )
 
     assert guide.status == "needs_edit"
@@ -353,10 +353,20 @@ def test_deferred_explanation_follows_the_empty_search_disclosure(tmp_path):
     assert guide.message.endswith(DEFERRED_MESSAGE)
 
 
+def test_guide_shows_the_question_the_caller_submitted(tmp_path):
+    guide = project_source_guide(
+        retrieval_answer(),
+        question="Which housing hearings covered eligibility?",
+        story_db_path=story_store(tmp_path),
+    )
+
+    assert guide.question == "Which housing hearings covered eligibility?"
+
+
 def test_projection_never_consults_a_store_other_than_the_named_one(tmp_path):
     story_store(tmp_path, "document_store.db")
-    elsewhere = tmp_path / "other.db"
-    init_db(str(elsewhere))
+    elsewhere = str(tmp_path / "other.db")
+    init_db(elsewhere)
 
     guide = project_source_guide(
         retrieval_answer(), question=QUESTION, story_db_path=elsewhere

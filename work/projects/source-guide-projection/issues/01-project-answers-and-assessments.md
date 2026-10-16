@@ -1,6 +1,6 @@
 # 01 Project Retrieval Answers and assessments through one outcome interface
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -32,27 +32,27 @@ store.
 
 ## Acceptance criteria
 
-- [ ] The projection accepts a typed Chat Session outcome. It covers a
+- [x] The projection accepts a typed Chat Session outcome. It covers a
       Retrieval Answer, an evidence assembly failure and a terminal assessment;
       the stage-failure and stopped variants are added by later tickets. It
       returns the terminal Source Guide.
-- [ ] The projection requires the story document store whenever publication or
+- [x] The projection requires the story document store whenever publication or
       highlight lookup is needed; there is no working-directory default.
-- [ ] The web application projects successful outcomes through this interface
+- [x] The web application projects successful outcomes through this interface
       with its configured store. The answer-prepared audit observation still
       renders from the saved guide.
-- [ ] The chat and retrieval evaluation tasks project through this interface
+- [x] The chat and retrieval evaluation tasks project through this interface
       with the store resolved from the application's configuration. Rendered
       text for assessments keeps its current value.
-- [ ] Rendering requires a projected Source Guide and no longer projects
+- [x] Rendering requires a projected Source Guide and no longer projects
       implicitly.
-- [ ] New tests at the projection interface use a temporary story SQLite file.
+- [x] New tests at the projection interface use a temporary story SQLite file.
       They cover completed, empty with irrelevant candidates, empty with no
       matches, partial, all branches failed, assembly failure, Declined, needs
       edit, Deferred, unmatched requests, publications and highlights.
-- [ ] A chat evaluation task test shows highlights come from the configured
+- [x] A chat evaluation task test shows highlights come from the configured
       document store without changing the working directory.
-- [ ] Existing HTTP Source Guide tests and evaluation task tests pass unchanged.
+- [x] Existing HTTP Source Guide tests and evaluation task tests pass unchanged.
 
 ## Blocked by
 
