@@ -46,3 +46,17 @@ failed or stopped attempts keep the scope the reader saw at submission.
 
 - [02 Project Chat Session stage failures](02-project-stage-failures.md)
 - [03 Project stopped attempts](03-project-stopped-attempts.md)
+
+## Comments
+
+- 2026-10-16, whole-sequence review of tickets 01-04: `guide_collections`
+  stays public. The PRD named it among helpers that become internal, but after
+  this sequence no caller uses it to hand-build a guide. The web application
+  and the chat evaluation task call it only to record the search scope at
+  submission, which the projection receives as an argument. The helpers
+  criterion above holds for that reason.
+- 2026-10-16, same review: chat evaluation guides for Declined and needs-edit
+  assessments now carry `search_details` with the submission scope and
+  `not_searched`, matching the guide the web application saves (user story 28).
+  Reports recorded before this change have `null` there. The report fields and
+  their meaning are unchanged.

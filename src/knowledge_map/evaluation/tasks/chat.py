@@ -23,6 +23,7 @@ from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
 from knowledge_map.chat_presentation import (
+    ChatSessionOutcome,
     ChatSessionStageFailure,
     guide_collections,
     project_source_guide,
@@ -251,19 +252,25 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 output.chat_session_id = session.chat_session_id
                 output.as_of = session.as_of
                 search_scope = guide_collections(dependencies.coverage)
+
+                def reader_guide(outcome: ChatSessionOutcome) -> SourceGuide:
+                    return project_source_guide(
+                        outcome,
+                        question=case_input.question,
+                        search_scope=search_scope,
+                        story_db_path=document_store_path(),
+                    )
+
                 stage = "retrieval_and_guidance"
                 try:
                     result = await session.run()
                 except Exception:
                     # Reviewers see the failed guide a reader would see for
                     # the stage the Chat Session reached.
-                    output.guide = project_source_guide(
+                    output.guide = reader_guide(
                         ChatSessionStageFailure(
                             stage=session.stage, assessment=session.assessment
-                        ),
-                        question=case_input.question,
-                        search_scope=search_scope,
-                        story_db_path=document_store_path(),
+                        )
                     )
                     raise
                 finally:
@@ -273,12 +280,7 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     output.answer = result
                     output.retrieval = None
                     stage = "rendering"
-                output.guide = project_source_guide(
-                    result,
-                    question=case_input.question,
-                    search_scope=search_scope,
-                    story_db_path=document_store_path(),
-                )
+                output.guide = reader_guide(result)
                 output.rendered_text = (
                     result.explanation
                     if isinstance(result, QuestionAssessment)
