@@ -23,11 +23,11 @@ from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
 from knowledge_map.chat_presentation import (
-    assessment_guide,
-    render_answer,
-    source_guide,
+    project_source_guide,
+    render_source_guide,
 )
 from knowledge_map.chat_startup import chat_dependencies, new_chat_session
+from knowledge_map.config import document_store_path
 from knowledge_map.core.chat import CHAT_INSTRUCTIONS, QUESTION_POLICY
 from knowledge_map.core.question_preparation import model_failure_kind
 from knowledge_map.jev.prompts import JEV_PROMPTS
@@ -255,16 +255,22 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                     output.assessment = session.assessment
                     output.retrieval = session.retrieval_result
                 if isinstance(result, QuestionAssessment):
-                    output.guide = assessment_guide(case_input.question, result)
+                    output.guide = project_source_guide(
+                        result,
+                        question=case_input.question,
+                        story_db_path=document_store_path(),
+                    )
                     output.rendered_text = result.explanation
                 else:
                     output.answer = result
                     output.retrieval = None
                     stage = "rendering"
-                    output.guide = source_guide(output.answer)
-                    output.rendered_text = render_answer(
-                        output.answer, guide=output.guide
+                    output.guide = project_source_guide(
+                        result,
+                        question=case_input.question,
+                        story_db_path=document_store_path(),
                     )
+                    output.rendered_text = render_source_guide(output.guide)
                 stage = "cleanup"
         except Exception as error:  # noqa: BLE001 - Preserve a failed case for review.
             # A bad answer, unavailable dependency, or failed model request is

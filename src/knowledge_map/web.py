@@ -19,12 +19,11 @@ from starlette.routing import Route
 
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
-    assessment_guide,
     deferred_disclosures,
     guide_collections,
     guide_publication_orders,
-    render_answer,
-    source_guide,
+    project_source_guide,
+    render_source_guide,
 )
 from knowledge_map.chat_startup import (
     ChatDependencies,
@@ -406,31 +405,30 @@ def create_app(
                 }
             )
         else:
-            if isinstance(result, QuestionAssessment):
-                guide = assessment_guide(saved.question, result)
-            else:
-                guide = source_guide(result, story_db_path=guide_store.db_path)
-                if isinstance(result, RetrievalAnswer):
-                    logfire.info(
-                        "chat_session.answer_prepared",
-                        chat_session_id=session.chat_session_id,
-                        audit_schema_version=2,
-                        rendered_text=render_answer(result, guide=guide),
-                        selected_sources=[
-                            {
-                                "citation": source.citation.model_dump(mode="json"),
-                                "passages": [
-                                    {
-                                        "chunk_id": passage.candidate.chunk_id,
-                                        "text": passage.text,
-                                        "provenance": passage.provenance,
-                                    }
-                                    for passage in source.passages
-                                ],
-                            }
-                            for source in result.evidence.sources
-                        ],
-                    )
+            guide = project_source_guide(
+                result, question=saved.question, story_db_path=guide_store.db_path
+            )
+            if isinstance(result, RetrievalAnswer):
+                logfire.info(
+                    "chat_session.answer_prepared",
+                    chat_session_id=session.chat_session_id,
+                    audit_schema_version=2,
+                    rendered_text=render_source_guide(guide),
+                    selected_sources=[
+                        {
+                            "citation": source.citation.model_dump(mode="json"),
+                            "passages": [
+                                {
+                                    "chunk_id": passage.candidate.chunk_id,
+                                    "text": passage.text,
+                                    "provenance": passage.provenance,
+                                }
+                                for passage in source.passages
+                            ],
+                        }
+                        for source in result.evidence.sources
+                    ],
+                )
         guide_store.finish(saved.guide_id, saved.latest_attempt.attempt_id, guide)
 
     async def list_guides(request: Request) -> Response:

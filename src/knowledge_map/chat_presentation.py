@@ -4,6 +4,7 @@ import html
 import re
 import unicodedata
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from pydantic import HttpUrl, ValidationError
@@ -38,9 +39,9 @@ def guide_collections(coverage: CoverageDescription) -> tuple[GuideCollection, .
     )
 
 
-def assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
-    """Present a terminal assessment consistently across guide consumers."""
-    assert assessment.status == "declined" or assessment.status == "needs_edit"
+def _assessment_guide(question: str, assessment: QuestionAssessment) -> SourceGuide:
+    if assessment.status not in {"declined", "needs_edit"}:
+        raise ValueError("only a Declined or needs-edit assessment ends a Chat Session")
     assert assessment.explanation is not None
     return SourceGuide(
         question=question,
@@ -67,10 +68,29 @@ def deferred_disclosures(
     )
 
 
-def source_guide(
-    result: RetrievalAnswer | EvidenceAssemblyFailure,
+type ChatSessionOutcome = RetrievalAnswer | EvidenceAssemblyFailure | QuestionAssessment
+
+
+def project_source_guide(
+    outcome: ChatSessionOutcome,
     *,
-    story_db_path: str = sqlite_db.DEFAULT_DB_PATH,
+    question: str,
+    story_db_path: str | Path,
+) -> SourceGuide:
+    """Decide the terminal Source Guide a reader sees for a Chat Session outcome.
+
+    Publications and original-section highlights come from the named story
+    document store, so every caller renders the same links.
+    """
+    if isinstance(outcome, QuestionAssessment):
+        return _assessment_guide(question, outcome)
+    return _retrieval_guide(outcome, question, str(story_db_path))
+
+
+def _retrieval_guide(
+    result: RetrievalAnswer | EvidenceAssemblyFailure,
+    question: str,
+    story_db_path: str,
 ) -> SourceGuide:
     execution = (
         result.evidence.execution
@@ -209,7 +229,7 @@ def source_guide(
         )
     disclosures.extend(deferred_disclosures(assessment))
     return SourceGuide(
-        question=execution.request.rewrite.question,
+        question=question,
         status=(
             "assembly_failed"
             if isinstance(result, EvidenceAssemblyFailure)
@@ -368,13 +388,8 @@ def _escape_markdown_text(text: str) -> str:
     return re.sub(r"([\\`*_\[\]{}])", r"\\\1", html.escape(text, quote=False))
 
 
-def render_answer(
-    result: RetrievalAnswer | EvidenceAssemblyFailure,
-    *,
-    guide: SourceGuide | None = None,
-) -> str:
+def render_source_guide(guide: SourceGuide) -> str:
     """Evaluation consumers see the same reading selection as the application."""
-    guide = guide if guide is not None else source_guide(result)
     paragraphs = [_escape_markdown_text(guide.question)]
     if guide.disclosures:
         for disclosure in guide.disclosures:

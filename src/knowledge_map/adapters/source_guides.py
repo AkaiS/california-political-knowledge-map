@@ -1,13 +1,12 @@
 """Durable reader content and search attempts in the SQLite document store."""
 
-import os
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-from knowledge_map.config import settings
+from knowledge_map.config import document_store_path
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.source_guides import (
     GuideAttempt,
@@ -25,11 +24,7 @@ class GuideAlreadyRunning(Exception):
 
 class SQLiteGuideStore:
     def __init__(self, db_path: str | Path | None = None):
-        self.db_path = str(
-            db_path
-            if db_path is not None
-            else os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
-        )
+        self.db_path = str(db_path if db_path is not None else document_store_path())
         with closing(sqlite3.connect(self.db_path)) as connection, connection:
             connection.executescript("""
                 CREATE TABLE IF NOT EXISTS source_guides (

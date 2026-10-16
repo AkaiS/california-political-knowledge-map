@@ -166,6 +166,15 @@ class Settings(BaseModel):
 settings = Settings()
 
 
+def document_store_path() -> str:
+    """Locate the SQLite document store the application is configured to use.
+
+    The environment is read at call time so a process configured after import
+    still reaches the same store as the application.
+    """
+    return os.environ.get("SQLITE_DB_PATH", settings.batch_ingestion.db_path)
+
+
 POLITICAL_RELEVANCE_KEYWORDS = [
     "california", "sacramento", "newsom", "legislature", "assembly", "senate",
     "lobbyist", "lobbying", "election", "ballot", "veto", "governor", "democrat",

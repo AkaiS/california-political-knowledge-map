@@ -651,3 +651,47 @@ def test_shared_evaluation_saves_typed_unmatched_request_and_safe_partial_search
         record["guide"]["disclosures"][0]["request_portion"]
         == "transit grants <img src=x>"
     )
+
+
+def test_evaluation_highlights_come_from_the_configured_document_store(
+    monkeypatch, tmp_path
+):
+    from knowledge_map.adapters.sqlite_db import init_db, save_story
+    from knowledge_map.schemas.stories import Story
+
+    configured = str(tmp_path / "configured" / "document_store.db")
+    Path(configured).parent.mkdir()
+    init_db(configured)
+    save_story(
+        Story(
+            url="https://example.com/dense",
+            title="Support coverage",
+            content="The union supports AB 1.",
+        ),
+        configured,
+    )
+    monkeypatch.setenv("SQLITE_DB_PATH", configured)
+    working_directory = Path.cwd()
+    fake_dependencies(
+        monkeypatch,
+        guidance={
+            "source_notes": [
+                {
+                    "source_article_id": "https://example.com/dense",
+                    "note": "Read the section on organizations involved with AB 1.",
+                }
+            ]
+        },
+    )
+
+    output = run_one().cases[0].output
+
+    assert Path.cwd() == working_directory
+    assert output.failure is None
+    assert [str(link) for link in output.guide.articles[0].section_links] == [
+        "https://example.com/dense#:~:text=The%20union%20supports%20AB%201."
+    ]
+    assert (
+        "[Relevant highlight 1](<https://example.com/dense#:~:text=The%20union%20supports%20AB%201.>)"
+        in output.rendered_text
+    )
