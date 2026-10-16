@@ -70,6 +70,8 @@ implemented; the reported navigation experience remains unverified.
 - [Source Guide projection](projects/source-guide-projection/PRD.md), spec
   `ready-for-agent` as of 2026-10-15. One module turns every Chat Session outcome
   into the terminal Source Guide for the web application and chat evaluations.
+  Four [tickets](projects/source-guide-projection/issues/) start with 01; 02 and
+  03 can proceed in parallel, then 04.
 - [Make Source Guide search completion evident](issues/08-source-guide-completion-notice.md),
   UX-01, `ready-for-agent` as of 2026-10-10.
 - [Move confirmed question submissions into the Source Guide search view](issues/09-source-guide-submission-transition.md),
