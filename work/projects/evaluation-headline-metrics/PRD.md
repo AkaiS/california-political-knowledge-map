@@ -48,9 +48,9 @@ that failed.
 When several axes run together, the scorecard gives one row per axis and never
 an overall score.
 
-An agent reporting an evaluation copies the rendered scorecard and adds three
-short, bounded slots: Reading, Cases to inspect and Open question. The
-[skill design](skill-design.md) defines that layout and those slots.
+The scorecard layout is defined in the
+[skill design](skill-design.md#scorecard-layout). A reporting skill for agents
+is deferred; see Out of Scope.
 
 ## User Stories
 
@@ -93,9 +93,6 @@ short, bounded slots: Reading, Cases to inspect and Open question. The
 37. As the maintainer, I want diagnostic metrics kept in the report and in a collapsed section of the scorecard, so that the headline stays short and the detail is still there.
 38. As the maintainer, I want the RAG reviewer to show the table's value wherever it shows a headline metric, so that the reviewer and the report agree.
 39. As the maintainer, I want retrieval report compaction to keep the headline table intact, so that compaction never changes a run's result.
-40. As an agent, I want a fixed scorecard and three bounded slots, so that my report matches every other agent's.
-41. As an agent, I want each Reading bullet to be anchored to a scorecard row, so that my interpretation can be checked against a number.
-42. As an agent, I want the case IDs worth inspecting to come from failures, the largest drops against the baseline and the lowest scores, so that the cases I pick are chosen the same way every time.
 
 ## Implementation Decisions
 
@@ -236,7 +233,8 @@ Definitions that the table doesn't settle:
 - The evaluation summary script gains `--format markdown`. JSON stays the
   default.
 - Passing `--report` more than once renders a multi-axis scorecard.
-- The skill design defines the layout. The script renders every number in it.
+- The scorecard layout section of the skill design defines the layout. The
+  script renders every number in it.
 - Diagnostic rows render in a collapsed section.
 
 ### Existing readers
@@ -250,16 +248,8 @@ Definitions that the table doesn't settle:
 - **The one-off chat measurement script pattern** ends. Latency becomes a chat
   headline row.
 - **Retrieval report compaction** leaves the report's analyses untouched. It
-  already avoids rescoring live runs. Inbox ED-08 removes the spent historical
+  already avoids rescoring live runs. Inbox ED-08 removed the spent historical
   rescoring migration, so no tool rewrites a committed report's scores.
-
-### Reporting skill
-
-- A model-invoked `report-evaluation` skill owns every reporting request.
-- `run-evaluation` drops its "summarize saved attempts" trigger and hands off to
-  `report-evaluation` when a run finishes.
-- The scorecard layout, the slot rules and the draft skill text are in the
-  [skill design](skill-design.md).
 
 ### Domain terms
 
@@ -318,6 +308,10 @@ come from a headline table.
 
 - Recomputing headline tables for historical reports.
 - Implementation tickets. Breaking this spec into tickets is a separate request.
+- The `report-evaluation` skill and its agent slots. On 2026-10-16 the
+  maintainer deferred them until they have seen how evaluations they ask an
+  LLM to perform come out once the scorecard exists. The parked design is in
+  the [skill design](skill-design.md). The `run-evaluation` skill is unchanged.
 - Re-baseline runs for each task. They make model calls and follow
   implementation.
 - First runs of Policy Area Classification and Topic Assignment, beyond their
