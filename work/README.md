@@ -37,9 +37,10 @@ cases alongside evidence-backed relevance and faithfulness judgments.
 An audit on 2026-10-16 found that no Evaluation Run records a run-level result,
 so every report recomputes and selects its own aggregates. The
 [Evaluation headline metrics PRD](projects/evaluation-headline-metrics/PRD.md)
-proposes a fixed, versioned headline table per task and Comparable Run
-baselines. Its [skill design](projects/evaluation-headline-metrics/skill-design.md)
-covers a fixed-layout `report-evaluation` skill. Both await triage.
+specifies a fixed, versioned headline table per task and Comparable Run
+baselines, following [ADR 0026](../docs/adr/0026-evaluation-reports-freeze-their-run-result.md).
+Its [skill design](projects/evaluation-headline-metrics/skill-design.md) covers a
+fixed-layout `report-evaluation` skill. The spec is ready for agent tickets.
 
 ### Chat Session error follow-up
 
@@ -258,8 +259,7 @@ it, not how the run is persisted.
 
 | Triage state | Projects |
 | --- | --- |
-| `needs-triage` | [Evaluation headline metrics](projects/evaluation-headline-metrics/PRD.md) |
-| `ready-for-agent` | [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
+| `ready-for-agent` | [Evaluation headline metrics](projects/evaluation-headline-metrics/PRD.md); [Bill Designation Recovery](projects/bill-designation-recovery/PRD.md); [News Ontology and Graph Population](projects/news-ontology-graph-population/PRD.md); [Retry Layering and a Deps-Driven Coreference Resolver](projects/coreference-retry-layering/PRD.md) |
 | `ready-for-human` | [Scraping Pipeline](projects/scraping-pipeline/PRD.md) |
 | `completed` | [Article Chunking and Coreference Resolution](projects/article-chunking-coreference/PRD.md); [Batch Ingestion Orchestration](projects/batch-ingestion-orchestration/PRD.md); [Coreference Reliability](projects/coreference-reliability/PRD.md); [Evaluation Case review editing](projects/evaluation-case-review-editing/PRD.md); [Flexible Category Filtering](projects/flexible-category-filtering/PRD.md); [Graph-Prioritized Retrieval](projects/graph-prioritized-retrieval/PRD.md); [Influence Graph Playground](projects/influence-graph-playground/PRD.md); [Local Retrieval Chat](projects/local-retrieval-chat/PRD.md); [Logfire Chat Session Audit Trail](projects/logfire-chat-session-audit-trail/PRD.md); [OpenRouter Model Deployments](projects/openrouter-model-deployments/PRD.md); [Pipeline Stage Ownership](projects/pipeline-stage-ownership/PRD.md); [Policy Area Staging](projects/policy-area-staging/PRD.md); [Pydantic-Native Evaluation Routing](projects/pydantic-native-evaluation-routing/PRD.md); [Relevance Classification](projects/relevance-classification/PRD.md); [Shared fusion ranking](projects/shared-fusion-ranking/PRD.md); [Source Guide projection](projects/source-guide-projection/PRD.md); [Source Guides](projects/source-guides/PRD.md); [Story Pipeline Coordinator](projects/story-pipeline-coordinator/PRD.md) |
 | `superseded` | Eight evaluation-contract projects, moved to [work/archive/superseded-by-adr-0017/](archive/superseded-by-adr-0017/README.md) |

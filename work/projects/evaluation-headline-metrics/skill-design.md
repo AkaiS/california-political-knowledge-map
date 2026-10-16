@@ -126,9 +126,9 @@ slots around it.
    prose appears in the scorecard and every case line comes from reading that
    case's output.
 
-When a report has no headline table (`headline_version: none`), say that it
-predates headline metrics and is not comparable. Offer a full rerun with
-`run-evaluation` instead of computing numbers by hand.
+When a report has no headline table, the scorecard says why: it either predates
+headline metrics or comes from an incomplete run. Pass that reason on, report
+the population block, and offer a full rerun with `run-evaluation`.
 ```
 
 The slot rules live in this design until the skill lands. Then they move into

@@ -1,241 +1,327 @@
 # Product requirements: Evaluation headline metrics
 
-Labels: needs-triage
+Labels: ready-for-agent
 
 ## Problem Statement
 
-No Evaluation Run records a run-level result. All 42 committed reports under
-`evals/reports/` hold per-case scores only; the `analyses` field Pydantic Evals
-reserves for experiment-wide results is empty in every one, because no task
-registers a `ReportEvaluator` and `ca-map eval run` passes none to
-`run_data_set`.
+The maintainer runs an evaluation, asks an agent for a report, and gets a
+different set of numbers each time. Two runs of the same task can't be read side
+by side, because nothing fixes what a run's result is.
 
-Every aggregate the maintainer has read was therefore computed after the run by
-one of five routes:
+No Evaluation Run records a run-level result. All 42 committed Evaluation
+Reports hold per-case scores only. Every aggregate the maintainer has read was
+computed afterwards by one of five readers: the console table, the evaluation
+summary script, the RAG reviewer, a one-off script committed beside one chat
+report, and hand-written tables in the retrieval guide. Each reader picks its
+own population, denominator and metric subset. A retrieval run produces 60
+score names and no reader marks any of them as the headline, so each agent
+highlights a different selection.
 
-1. Pydantic Evals' console table, printed by `ca-map eval run` and not saved.
-2. `summarize_report` in `scripts/run_evaluation.py`: an unweighted mean of
-   recorded case scores, printed and not saved.
-3. `project_report` in `rag_review.py`, which overrides route 2 for retrieval
-   and chat with the reviewer's own rules.
-4. A one-off `measure.py` and `metrics.json` committed beside one chat report.
-5. Hand-written tables in `docs/evaluation/retrieval.md`.
+The saved scores also can't support the aggregates the maintainer expects. Set
+agreement is stored as per-case precision, recall and F1 ratios without the
+counts behind them, so a pooled F1 can't be recovered from a saved report.
+Populations drift between runs: chat runs range from 1 to 100 cases, only the
+newest retrieval report records its selected case IDs, and 24 of 42 reports
+ran from a dirty worktree. Nothing stops a report from presenting a change in
+population as a change in the system.
 
-Each route chooses its own population, denominator and metric subset. A
-retrieval run produces 60 score names, and the `run-evaluation` skill names no
-headline among them, so each agent asked for "a report" highlights a different
-selection. Two runs of the same task cannot be compared without re-deriving the
-comparison by hand.
+Coverage is uneven:
 
-The per-case scores also cannot support the aggregates people expect.
-`detection_scores` records precision, recall and F1 ratios but not the matched,
-expected and found counts, so a pooled (micro) F1 cannot be recovered from a
-saved report. Population drift compounds this: only the latest retrieval report
-records its selected case IDs, chat runs range from 1 to 100 cases, and 24 of
-42 reports ran from a dirty worktree.
-
-Coverage is uneven. Chat registers no evaluators. Relevance, the only Gold Set,
-records agreement and RELEVANT-recall as booleans, with no precision, F1 or
-confusion matrix. Policy Area Classification and Topic Assignment have
-evaluators and Silver Sets but no committed report.
+- **Chat:** has no evaluators.
+- **Relevance:** the only Gold Set, but it records agreement and RELEVANT recall
+  without precision, F1 or a confusion matrix.
+- **Policy Area Classification and Topic Assignment:** have evaluators and
+  Silver Sets but no report.
 
 ## Solution
 
-Each Evaluation Task declares a fixed, versioned set of Headline Metrics. A
-`ReportEvaluator` computes them at the end of the run from the in-memory
-Pydantic Evals report and returns them as one `TableResult` titled
-`Headline metrics`. The existing checkpoint already serializes the whole report,
-so the table lands in the committed report file with no new storage.
+Every completed Evaluation Run records its task's Headline Metrics in its
+Evaluation Report. They form one fixed, versioned table, and one row in it is
+the primary metric. The table is frozen when the run completes, as ADR 0026
+decides. Every reader takes its numbers from the table.
 
-The headline table is the single source of truth for a run's result. The
-summary script, the reviewer and the reporting skill read it; none re-averages
-case scores for a metric the table already carries.
+When the maintainer asks for a summary, they get a scorecard rendered from that
+table. It shows the run's population and provenance. It shows a change only
+against a Comparable Run. When none exists, the scorecard names the condition
+that failed.
 
-A Comparable Run is defined in code: same task, same Data Set hash, same
-selected case IDs, same headline metric version. The summary script finds the
-most recent Comparable Run as the baseline and reports deltas only against it.
-When no Comparable Run exists it says why.
+When several axes run together, the scorecard gives one row per axis and never
+an overall score.
 
-A model-invoked `report-evaluation` skill turns one or more reports into a
-fixed-layout report. The script renders every number; the agent fills only
-bounded interpretation slots. See [skill-design.md](skill-design.md).
+An agent reporting an evaluation copies the rendered scorecard and adds three
+short, bounded slots: Reading, Cases to inspect and Open question. The
+[skill design](skill-design.md) defines that layout and those slots.
 
 ## User Stories
 
-1. As the maintainer, I want every Evaluation Run to record the same headline
-   numbers for its task, so that two runs differ only where the system did.
-2. As the maintainer, I want one primary metric per task, so that a task's
-   trend reads as one line.
-3. As the maintainer, I want pooled and per-case aggregates reported side by
-   side with their names saying which is which, so that a few large cases cannot
-   silently dominate or vanish.
-4. As the maintainer, I want the failure rate reported as a headline metric on
-   every task, so that a run cannot raise its F1 by failing its hard cases.
-5. As the maintainer, I want a delta shown only against a run over the same
-   cases, Data Set revision and metric version, so that a changed population is
-   never read as a changed system.
-6. As the maintainer, I want a run with no comparable baseline to say which
-   condition failed, so that I know whether to rerun or re-baseline.
-7. As the maintainer, I want a metric that cannot be computed to appear with its
-   reason rather than disappear, so that absence is visible.
-8. As the maintainer, I want every agent-written evaluation report to follow
-   one layout, so that I read results rather than re-learn a format.
-9. As the maintainer, I want several axes evaluated together shown as one row
-   per axis, never averaged across axes, so that a Silver Set number is never
-   blended with a Gold Set number.
-10. As the maintainer, I want Unlabeled Set runs to report operational counts
-    and state plainly that they carry no quality score.
+1. As the maintainer, I want every completed Evaluation Run to record its run-level result in its Evaluation Report, so that I don't depend on whoever reads it next.
+2. As the maintainer, I want each task to report the same Headline Metrics on every run, so that two runs differ only where the system did.
+3. As the maintainer, I want exactly one primary metric per task, so that a task's trend reads as one line.
+4. As the maintainer, I want F1 as the primary metric for relevance and coreference, with recall beside it, so that the evaluators' "read recall first" guidance stays visible without changing the headline.
+5. As the maintainer, I want each headline row to say how it was aggregated, so that I can tell a pooled number from a per-case mean.
+6. As the maintainer, I want pooled and per-case F1 reported side by side for set-agreement tasks, so that a few large cases can't silently dominate or vanish.
+7. As the maintainer, I want each pooled metric to show its numerator and denominator, so that I can judge how much evidence a rate rests on.
+8. As the maintainer, I want articles where both sides agree on nothing to count as a pass in the per-case mean and to add nothing to pooled counts, so that both conventions stay visible and neither is hidden inside one number.
+9. As the maintainer, I want an execution failure rate on every task, so that a run can't raise its F1 by failing its hard cases.
+10. As the maintainer, I want failed cases kept out of quality metrics, as ADR 0024 requires, so that a failure never reads as success or as zero.
+11. As the maintainer, I want a metric that can't be computed to keep its row, with a null value and a reason, so that absence is visible.
+12. As the maintainer, I want a Comparable Run to require the same task, Data Set revision, selected case IDs and headline version, so that a different population is never read as a different system.
+13. As the maintainer, I want runs on different Model Deployments or prompt versions to remain comparable, so that the changes I'm testing are exactly the ones a comparison shows.
+14. As the maintainer, I want the newest Comparable Run picked automatically as the baseline, so that I don't have to find it myself.
+15. As the maintainer, I want to name a specific baseline when I need one, so that I can compare against a run I trust.
+16. As the maintainer, I want a report with no Comparable Run to name every condition that failed, so that I know whether to rerun or to establish a new baseline.
+17. As the maintainer, I want a dirty worktree on either side flagged as a caveat rather than blocking the comparison, so that most of the existing history stays usable while the gap stays visible.
+18. As the maintainer, I want every headline definition change to produce a new, immutable headline version, so that a changed meaning can't hide behind an unchanged name.
+19. As the maintainer, I want reports written before headline metrics to say they predate them and can't be compared, so that I'm not shown numbers computed by hand.
+20. As the maintainer, I want an incomplete run to say it has no headline table, so that a partial population never becomes a baseline.
+21. As the maintainer, I want a failure in the headline computation to count as an evaluator error and give a nonzero exit, so that a missing result can't pass silently.
+22. As the maintainer, I want the summary to account for selected, scored, failed and unresolved cases, so that I can see the population behind every number.
+23. As the maintainer, I want relevance to report RELEVANT precision, recall and F1, accuracy, and the confusion-matrix counts, so that the one Gold Set gets a complete classification summary.
+24. As the maintainer, I want extraction to report pooled node and relationship precision, recall and F1, so that its long series of runs becomes comparable on raw counts.
+25. As the maintainer, I want coreference and the coreference annotator scored identically on agreement, so that the two reports subtract.
+26. As the maintainer, I want Policy Area Classification to report a macro F1 across areas, so that a common area can't hide failure on rare ones.
+27. As the maintainer, I want retrieval to lead with fused Recall@10 averaged per question, so that its headline follows the usual information-retrieval convention.
+28. As the maintainer, I want retrieval's branch completion rates in the headline, so that a failing branch is visible next to recall.
+29. As the maintainer, I want NDCG shown as unavailable, with its reason, until relevance grades exist, so that its absence is explained rather than silent.
+30. As the maintainer, I want an Unlabeled Set run to report operational counts and say plainly that it has no quality metric, so that chat numbers are never read as answer quality.
+31. As the maintainer, I want chat's completed-answer and decline rules defined once, in the headline table, so that the summary and the scorecard can't disagree on them.
+32. As the maintainer, I want chat latency reported as p50 and p95 with a case count, so that a slowdown is visible without a one-off script.
+33. As the maintainer, I want a scorecard rendered by the evaluation summary script, so that every number in a report comes from code.
+34. As the maintainer, I want several reports rendered together as one row per axis, with their label quality, so that Silver and Gold numbers are never blended.
+35. As the maintainer, I want diagnostic metrics kept in the report and in a collapsed section of the scorecard, so that the headline stays short and the detail is still there.
+36. As the maintainer, I want the RAG reviewer to show the table's value wherever it shows a headline metric, so that the reviewer and the report agree.
+37. As the maintainer, I want retrieval report compaction to keep the headline table intact, so that compaction never changes a run's result.
+38. As the maintainer, I want the historical retrieval rescoring tool to refuse reports that carry a headline table, so that a frozen result never contradicts its own case scores.
+39. As an agent, I want a fixed scorecard and three bounded slots, so that my report matches every other agent's.
+40. As an agent, I want each Reading bullet to be anchored to a scorecard row, so that my interpretation can be checked against a number.
+41. As an agent, I want the case IDs worth inspecting to come from failures, the largest drops against the baseline and the lowest scores, so that the cases I pick are chosen the same way every time.
 
 ## Implementation Decisions
 
+### Decided elsewhere
+
+- **ADR 0026:** the run result is frozen in the report, computed by the task's
+  `ReportEvaluator`, and a change is stated only against a Comparable Run.
+- **ADR 0024:** this spec keeps its population accounting, progressive
+  snapshots and failure handling.
+- **ADR 0022:** headline versions follow the same immutability as prompt
+  versions.
+
 ### Headline Metric contract
 
-Each `EvaluationTask` gains:
-
-- `headline`: a `ReportEvaluator` returning one `TableResult` titled
+- The evaluation task registry gains two fields per task: a headline report
+  evaluator and an immutable headline version string, such as `relevance-v1`.
+- The headline report evaluator returns one Pydantic Evals `TableResult` titled
   `Headline metrics`.
-- `headline_version`: a string such as `relevance-v1`. Any change to a
-  definition, aggregation or population rule creates a new version. Versions
-  are immutable, following the prompt-version rule in ADR 0022.
+- Each row has the columns `metric`, `role`, `value`, `numerator`,
+  `denominator`, `aggregation`, `scored_cases`, `selected_cases` and
+  `unavailable_reason`.
+- `role` is `primary`, `headline` or `diagnostic`. Each task has exactly one
+  `primary` row.
+- `aggregation` is `pooled`, `per_case_mean`, `rate` or `quantile`.
+- A metric that can't be computed keeps its row, with a null `value` and a
+  reason.
+- The headline version is recorded in the report's provenance beside the Data
+  Set hash and the prompt digests.
+- `ca-map eval run` passes the task's headline report evaluator to the
+  evaluation engine. No other run path is added.
 
-Every row has the columns `metric`, `role` (`primary`, `headline` or
-`diagnostic`), `value`, `numerator`, `denominator`, `aggregation`
-(`pooled`, `per_case_mean`, `rate`, `count`), `scored_cases`,
-`selected_cases` and `unavailable_reason`. A metric that cannot be computed
-keeps its row with `value` null and a reason.
+### Population
 
-Each task has exactly one `primary` row. `headline` rows appear in every
-report. `diagnostic` rows appear in the report file and in the detailed section
-of a rendered report, never in its scorecard.
-
-`ca-map eval run` passes `report_evaluators=(task.headline,)` to
-`run_data_set`.
-
-### Population rule
-
-ADR 0024 stands: a failed or unresolved case contributes no value to a quality
-metric and is never counted as success or zero. Every task therefore carries
-two `rate` headline rows: `execution_failure_rate` and `unresolved_rate`, both
-over selected cases. The selection manifest already reaches the report
-evaluator through `experiment_metadata["selection"]`.
+- The report evaluator runs only when every selected case has reached a result
+  or a failure. Within it, selected cases are the completed cases plus the
+  failed cases, so it relies on no experiment metadata.
+- Every task carries an `execution_failure_rate` row over selected cases.
+- Unresolved cases exist only in interrupted runs, which never reach the
+  report evaluator. The summary's population block reports them.
+- An interrupted run has no headline table. It is never a Comparable Run, and
+  its summary says why.
+- A failed case contributes no value to a quality metric (ADR 0024).
+- A failure inside the headline report evaluator is recorded by Pydantic Evals
+  as a report evaluator failure. The summary counts it as an evaluator error and
+  exits nonzero, as it does today.
 
 ### Pooled counts
 
-The report evaluator pools counts from `case.output` and
-`case.expected_output`, using the same identity functions the case evaluators
-use. `detection_scores` gains a sibling that returns the counts, and both case
-and report evaluators call the shared identity helper. Committed per-case score
-names stay unchanged.
+- The set-agreement scoring helpers gain a count form alongside the existing
+  ratio form. Case evaluators and headline report evaluators call the same
+  identity functions, so a pooled count and a case score always agree on what
+  matched.
+- Per-case score names in reports are unchanged.
+- A case where both sides are empty keeps each task's documented per-case pass.
+  It contributes zero to every pooled count.
 
-A case where both sides are empty remains a per-case pass, as each task's
-evaluator already documents. In pooled metrics it contributes no counts. The
-two aggregates are reported side by side, so that convention is visible rather
-than hidden in one number.
+### Version 1 headline sets
 
-### Per-task headline sets (version 1)
-
-| Task | Label quality | Primary | Headline | Diagnostic |
+| Task | Label quality | Primary | Headline rows | Diagnostic rows |
 | --- | --- | --- | --- | --- |
-| `relevance` | Gold | RELEVANT F1 (pooled) | RELEVANT precision, recall; accuracy; confusion-matrix counts | none |
-| `extraction` | Silver | node F1 (pooled) | node P/R; relationship P/R/F1 (pooled); node F1 and relationship F1 (per-case mean); ontology conformance rate | sub-label, node-property, claim-property and stance-alignment accuracy |
-| `coreference` | Silver | span F1 (pooled) | span P/R; B³ cluster F1 and entity accuracy, both mention-weighted over shared mentions; span F1 (per-case mean) | critic rejection precision and recall; critic kept-correct rate |
-| `coreference_annotator` | Silver | span F1 (pooled) | as `coreference`, without critic rows | none |
-| `policy_area_classification` | Silver | Policy Area F1 (pooled) | Policy Area P/R (pooled); label-macro F1 over areas with support; per-case mean F1 | per-area P/R/F1 |
-| `topic_assignment` | Silver | assignment F1 (pooled) | assignment P/R (pooled); per-case mean F1 | none |
-| `retrieval` | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused MRR; fused complete-evidence@10; context recall; context complete evidence; branch completion rate for each branch | each branch's Recall@{1,5,10,50}, MRR and complete-evidence@{5,10}; Precision@k; NDCG@10 with reason until relevance grades exist |
-| `chat` | Unlabeled | none | completed-answer rate; decline rate; failure rate by stage; p50 and p95 case latency | branch outcomes by status |
+| Relevance | Gold | RELEVANT F1 (pooled) | RELEVANT precision and recall; accuracy; confusion-matrix counts | none |
+| Extraction | Silver | node F1 (pooled) | node precision and recall; relationship precision, recall and F1 (pooled); node and relationship F1 (per-case mean); ontology conformance rate | sub-label, node-property, claim-property and stance-alignment accuracy |
+| Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster F1 and canonical-entity accuracy, both pooled over mention spans both sides found; mention-span F1 (per-case mean) | Coreference Critic rejection precision, rejection recall and kept-correct rate |
+| Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | none |
+| Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
+| Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
+| Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence; completion rate for each branch | each branch's Recall@1/5/10/50, reciprocal rank and complete evidence@5/10; Precision@k; NDCG@10, unavailable until relevance grades exist |
+| Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; decline rate; failure rate for each stage; p50 and p95 task duration | branch outcomes by status |
 
-Retrieval keeps the per-case mean, the standard IR convention, because each
-question is one information need. Precision@k stays diagnostic because unlisted
-chunks may be relevant against provisional labels.
+Definitions that the table doesn't settle:
 
-Chat's primary row is `null`, with the reason "Unlabeled Set: no quality
-metric". Its headline rows are operational and never presented as quality.
+- **B³ cluster scores and canonical-entity accuracy** are pooled over every
+  mention span both sides found, across all cases. That weights each mention
+  equally.
+- **Coreference Critic rows** are pooled over every judged critic decision
+  across cases. Rejection precision is wrong spans rejected over all rejections.
+  Rejection recall is wrong spans rejected over all wrong spans. The
+  kept-correct rate is correct spans kept over all correct spans. The rows are
+  unavailable on the annotator task, which makes no critic decisions.
+- **Label-macro F1** is the mean F1 over the Policy Areas present in the
+  selected cases' reference labels. Areas the model predicted but the
+  reference never used appear only in pooled precision and in the per-area
+  diagnostic rows.
+- **Retrieval** keeps the per-question mean because each question is one
+  information need. Precision@k stays diagnostic because unlisted chunks may be
+  relevant against provisional labels.
+- **The retrieval headline version** changes whenever the retrieval metric
+  version recorded by compaction changes.
+- **Chat's completed-answer and decline rules** are the ones the summary script
+  applies today. They move into the chat headline evaluator, and the summary
+  reads the table.
+- **Chat's task duration** is the duration Pydantic Evals records for each
+  completed and failed case.
 
 ### Comparable Run and baseline
 
-`scripts/run_evaluation.py` gains:
+- A Comparable Run is an earlier completed report of the same task with the
+  same Data Set hash, the same set of selected case IDs and the same headline
+  version. Model Deployment, prompt digests and commit may differ.
+- The evaluation summary script gains `--baseline auto|PATH|none`, defaulting
+  to `auto`. `auto` selects the newest Comparable Run among that task's
+  committed reports.
+- An explicit baseline that isn't comparable is still reported, marked not
+  comparable with the failed conditions. No deltas are shown for it.
+- The summary gains a comparison block with:
+  - the baseline path;
+  - one of `comparable`, `comparable_with_caveat` or `not_comparable`;
+  - each failed condition;
+  - a delta for each primary and headline row.
+- A dirty worktree on either side produces `comparable_with_caveat` and names
+  which side is dirty.
 
-- `--baseline auto|PATH|none`, defaulting to `auto`. `auto` scans
-  `evals/reports/<task>/` for the most recent report that matches on task, Data
-  Set hash, sorted selected case IDs and `headline_version`.
-- A `comparison` block in the summary: the baseline path, a `comparable`
-  boolean, each failed condition, and a per-row delta for `primary` and
-  `headline` rows.
-- A dirty worktree on either side sets `comparable_with_caveat` and names the
-  dirty side. It does not block the comparison.
-- `--format markdown` renders the fixed scorecard defined in
-  [skill-design.md](skill-design.md). JSON stays the default.
-- Repeated `--report` renders one multi-axis scorecard.
+### Scorecard
 
-### Existing aggregation routes
+- The evaluation summary script gains `--format markdown`. JSON stays the
+  default.
+- Passing `--report` more than once renders a multi-axis scorecard.
+- The skill design defines the layout. The script renders every number in it.
+- Diagnostic rows render in a collapsed section.
 
-- `summarize_report` reads headline rows from `report.analyses` and keeps its
-  population accounting. Its generic per-score means move under `diagnostic`
-  in the summary.
-- `project_report` keeps reviewer-only measurements. Where it computes a
-  metric the headline table also carries, the reviewer displays the table's
-  value. A test pins the two to agree on a fixture report.
-- The per-report `measure.py` pattern ends. Latency becomes a chat headline row.
+### Existing readers
 
-### Historical reports
+- **The evaluation summary script** reads headline rows from the report's
+  analyses. It keeps its population accounting. Its generic per-score means
+  become diagnostic output.
+- **The RAG reviewer** takes its run-level metric values from the headline
+  table when the report has one. Its case-level views and its reviewer-only
+  measurements are unchanged.
+- **The one-off chat measurement script pattern** ends. Latency becomes a chat
+  headline row.
+- **Retrieval report compaction** leaves the report's analyses untouched. It
+  already avoids rescoring live runs. The historical rescoring tool refuses any
+  report that carries a headline table.
 
-Committed reports stay unchanged (ADR 0024). A report without a headline table
-summarizes as `headline_version: none` and is never a Comparable Run. Each task
-is re-baselined with one full run after this lands.
+### Reporting skill
+
+- A model-invoked `report-evaluation` skill owns every reporting request.
+- `run-evaluation` drops its "summarize saved attempts" trigger and hands off to
+  `report-evaluation` when a run finishes.
+- The scorecard layout, the slot rules and the draft skill text are in the
+  [skill design](skill-design.md).
 
 ### Glossary
 
 Add these terms:
 
 - **Headline Metric**: one of the fixed, versioned run-level measurements a task
-  records in every Evaluation Report, one of which is its primary metric.
-- **Comparable Run**: an earlier Evaluation Run of the same task over the same
-  selected case IDs, Data Set revision and headline version. It is the only
-  baseline a reported delta may use.
-
-### ADR
-
-Record ADR 0026: an Evaluation Report carries its task's versioned headline
-table, computed by a Pydantic Evals `ReportEvaluator`, and deltas are reported
-only against a Comparable Run. It refines ADR 0024. The archived
-metric-canonicalization ticket under `superseded-by-adr-0017` gave metric
-identity a database ledger; this decision keeps identity in code and the
-report file.
+  records in every completed Evaluation Report. Exactly one is the task's
+  primary metric.
+- **Comparable Run**: an earlier completed Evaluation Run of the same task over
+  the same selected case IDs, Data Set revision and headline version. It is the
+  only baseline a reported change may use.
 
 ## Testing Decisions
 
-- For each task, a fixture report with known outputs yields the expected
-  headline rows. Include an empty-versus-empty case, a failed case and an
-  unresolved case, so the pooled, per-case and rate rows each prove their
-  population rule.
-- Pooled and per-case aggregates disagree on a fixture built to make them
-  disagree.
-- Baseline selection rejects each non-matching condition in isolation: Data
-  Set hash, case IDs, headline version and task.
-- The markdown renderer produces a snapshot-stable scorecard for one axis and
-  for three axes.
-- The reviewer and the headline table agree on fused Recall@10 for a fixture
-  retrieval report.
-- No test calls a model. The report evaluator runs over a constructed
-  `EvaluationReport`.
+### What a good test is
+
+A good test drives a seam with authored inputs and asserts only on what the
+seam produces: a saved report document or the summary script's output. It
+never asserts on helper functions or intermediate structures. No test calls a
+model; task callables are stubs that return authored outputs.
+
+### Seam 1: the engine run
+
+A Data Set runs through the evaluation engine and the report checkpoint, with a
+stub task and the task's real case and headline evaluators. Assertions read the
+saved report. Each task gets fixtures covering:
+
+- the expected primary, headline and diagnostic rows;
+- a case where both sides are empty, a failed case and a selection that ends up
+  partially failed;
+- for set-agreement tasks, a population where pooled and per-case F1 disagree;
+- a headline evaluator that raises, which leaves an evaluator error in the
+  final snapshot;
+- for retrieval, a table that survives compaction unchanged.
+
+Prior art: the persistence tests that run Data Sets through the engine with stub
+tasks and checkpoints, including their preservation of report evaluator errors.
+Prior art for fixtures: the per-task evaluation tests for extraction,
+coreference, Policy Area Classification, Topic Assignment and retrieval.
+
+### Seam 2: the evaluation summary script
+
+The script's command-line entry point runs against saved report documents.
+
+- **Baseline selection:** each non-matching condition is rejected on its own
+  (Data Set hash, selected case IDs, headline version, task and incomplete
+  status). Model Deployment and prompt digests may differ.
+- **Explicit baselines** that aren't comparable produce no deltas.
+- **Dirty worktrees** produce the caveat.
+- **Reports without a headline table** summarize as predating headline metrics.
+- **The markdown scorecard** is snapshot-stable for one axis and for three
+  axes, including a chat axis.
+- **The historical rescoring tool** refuses a report that has a headline table.
+
+Prior art: the run-evaluation tests that summarize saved and historical
+documents and drive the script's entry point without model calls.
+
+### Reviewer agreement
+
+The reviewer's existing JavaScript tests gain a fixture whose run-level metrics
+come from a headline table.
 
 ## Out of Scope
 
 - Recomputing headline tables for historical reports.
+- Implementation tickets. Breaking this spec into tickets is a separate request.
+- Re-baseline runs for each task. They make model calls and follow
+  implementation.
+- First runs of Policy Area Classification and Topic Assignment, beyond their
+  re-baseline.
 - Graded relevance labels, and therefore NDCG values.
-- A quality metric for chat. That needs reference answers or a validated judge
-  (`validate-evaluator`), and belongs in its own project.
-- Running Policy Area Classification and Topic Assignment for the first time.
-  Their first runs are the re-baseline, not part of this build.
-- Statistical significance testing. With 18 to 73 cases per set, the scorecard
-  reports counts beside each rate so the reader can judge the size of a change.
-  Confidence intervals are a later version.
-- Any persistence beyond the report file.
+- A quality metric for chat. That needs reference answers or a validated judge,
+  and belongs in its own project.
+- Confidence intervals and significance testing. Until then, the scorecard
+  shows numerators and denominators beside every rate.
+- Any persistence beyond the Evaluation Report file.
 
 ## Further Notes
 
-The audit behind this PRD was run on 2026-10-16 at `42041c0f`. Extraction's 16
-reports are the strongest existing series, with a consistent metric set across
-15 of them. Even so, their pooled F1 cannot be recovered without rerunning
-them.
+- The audit behind this spec was run on 2026-10-16 at `42041c0f`.
+- Extraction's 16 reports are the strongest existing series. Even so, their
+  pooled F1 can't be recovered without rerunning them.
+- The archived metric-canonicalization ticket under the ADR 0017 archive gave
+  metric identity a database ledger. ADR 0026 keeps identity in code and the
+  report file instead.
+- The maintainer confirmed three choices on 2026-10-16:
+  - F1 is primary for relevance and coreference.
+  - Retrieval uses the per-case mean.
+  - A dirty worktree is a caveat, not a block.
