@@ -1,12 +1,18 @@
 """Chat Session outcomes become terminal Source Guides through one projection."""
 
+import pytest
+
 from knowledge_map.adapters.sqlite_db import (
     cache_scraped_html,
     init_db,
     register_publication,
     save_story,
 )
-from knowledge_map.chat_presentation import project_source_guide, render_source_guide
+from knowledge_map.chat_presentation import (
+    ChatSessionStageFailure,
+    project_source_guide,
+    render_source_guide,
+)
 from knowledge_map.schemas.query_preparation import QuestionAssessment
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.stories import Story
@@ -351,6 +357,63 @@ def test_deferred_explanation_follows_the_empty_search_disclosure(tmp_path):
     assert guide.status == "empty"
     assert [d.kind for d in guide.disclosures] == ["no_matches", "deferred"]
     assert guide.message.endswith(DEFERRED_MESSAGE)
+
+
+STAGE_FAILURES = {
+    "assessment": (
+        "assessment_failed",
+        "The question could not be assessed. Choose Retry to search again.",
+    ),
+    "retrieval": (
+        "retrieval_failed",
+        "The search could not be completed. Choose Retry to search again.",
+    ),
+    "guidance": (
+        "guidance_failed",
+        (
+            "Reading directions could not be prepared. The retrieved articles have "
+            "not passed the relevance check. Choose Retry to search again."
+        ),
+    ),
+}
+
+
+@pytest.mark.parametrize("stage", STAGE_FAILURES)
+def test_failure_at_a_chat_session_stage_offers_retry(tmp_path, stage):
+    status, message = STAGE_FAILURES[stage]
+
+    guide = project_source_guide(
+        ChatSessionStageFailure(stage=stage),
+        question=QUESTION,
+        story_db_path=str(tmp_path / "unused.db"),
+    )
+
+    assert guide.question == QUESTION
+    assert guide.status == status
+    assert guide.assessment is None
+    assert guide.message == message
+    assert [(d.kind, d.message) for d in guide.disclosures] == [(status, message)]
+    assert guide.articles == ()
+
+
+@pytest.mark.parametrize("stage", STAGE_FAILURES)
+def test_deferred_explanation_stays_visible_after_a_stage_failure(tmp_path, stage):
+    status, message = STAGE_FAILURES[stage]
+    assessment = QuestionAssessment.model_validate(DEFERRED)
+
+    guide = project_source_guide(
+        ChatSessionStageFailure(stage=stage, assessment=assessment),
+        question=QUESTION,
+        story_db_path=str(tmp_path / "unused.db"),
+    )
+
+    assert guide.status == status
+    assert guide.assessment == assessment
+    assert [(d.kind, d.message) for d in guide.disclosures] == [
+        (status, message),
+        ("deferred", DEFERRED_MESSAGE),
+    ]
+    assert guide.message == f"{message}\n\n{DEFERRED_MESSAGE}"
 
 
 def test_guide_shows_the_question_the_caller_submitted(tmp_path):

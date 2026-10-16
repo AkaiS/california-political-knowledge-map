@@ -4,9 +4,10 @@ import html
 import re
 import unicodedata
 from datetime import datetime
+from typing import Literal
 from urllib.parse import quote, urlsplit, urlunsplit
 
-from pydantic import HttpUrl, ValidationError
+from pydantic import BaseModel, ConfigDict, HttpUrl, ValidationError
 
 from knowledge_map.adapters import sqlite_db
 from knowledge_map.schemas.query_preparation import QuestionAssessment
@@ -67,7 +68,40 @@ def deferred_disclosures(
     )
 
 
-type ChatSessionOutcome = RetrievalAnswer | EvidenceAssemblyFailure | QuestionAssessment
+class ChatSessionStageFailure(BaseModel):
+    """A Chat Session that stopped at a stage before reaching any other outcome.
+
+    The assessment is kept when the session reached one, so a Deferred
+    explanation survives the failure.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    stage: Literal["assessment", "retrieval", "guidance"]
+    assessment: QuestionAssessment | None = None
+
+
+type ChatSessionOutcome = (
+    RetrievalAnswer
+    | EvidenceAssemblyFailure
+    | QuestionAssessment
+    | ChatSessionStageFailure
+)
+
+_STAGE_FAILURES = {
+    "assessment": (
+        "assessment_failed",
+        "The question could not be assessed. Choose Retry to search again.",
+    ),
+    "retrieval": (
+        "retrieval_failed",
+        "The search could not be completed. Choose Retry to search again.",
+    ),
+    "guidance": (
+        "guidance_failed",
+        "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Choose Retry to search again.",
+    ),
+}
 
 
 def project_source_guide(
@@ -83,7 +117,26 @@ def project_source_guide(
     """
     if isinstance(outcome, QuestionAssessment):
         return _assessment_guide(question, outcome)
+    if isinstance(outcome, ChatSessionStageFailure):
+        return _stage_failure_guide(question, outcome)
     return _retrieval_guide(outcome, question, story_db_path)
+
+
+def _stage_failure_guide(
+    question: str, failure: ChatSessionStageFailure
+) -> SourceGuide:
+    status, message = _STAGE_FAILURES[failure.stage]
+    disclosures = (
+        GuideDisclosure(kind=status, message=message),
+        *deferred_disclosures(failure.assessment),
+    )
+    return SourceGuide(
+        question=question,
+        status=status,
+        assessment=failure.assessment,
+        message="\n\n".join(disclosure.message for disclosure in disclosures),
+        disclosures=disclosures,
+    )
 
 
 def _retrieval_guide(

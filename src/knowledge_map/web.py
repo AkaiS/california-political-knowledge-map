@@ -19,7 +19,7 @@ from starlette.routing import Route
 
 from knowledge_map.adapters.source_guides import GuideAlreadyRunning, SQLiteGuideStore
 from knowledge_map.chat_presentation import (
-    deferred_disclosures,
+    ChatSessionStageFailure,
     guide_collections,
     guide_publication_orders,
     project_source_guide,
@@ -40,7 +40,6 @@ from knowledge_map.public_access import (
 from knowledge_map.schemas.query_preparation import QuestionAssessment, QuestionText
 from knowledge_map.schemas.retrieval import EvidenceAssemblyFailure, RetrievalAnswer
 from knowledge_map.schemas.source_guides import (
-    GuideDisclosure,
     GuideSearchDetails,
     SavedSourceGuide,
     SourceGuide,
@@ -368,41 +367,13 @@ def create_app(
             )
             raise
         except Exception:
-            stage = session.stage if session is not None else "assessment"
-            logger.exception("Source Guide %s failed", stage)
-            status = {
-                "assessment": "assessment_failed",
-                "retrieval": "retrieval_failed",
-                "guidance": "guidance_failed",
-            }[stage]
-            guide = SourceGuide.model_validate(
-                {
-                    "question": saved.question,
-                    "status": status,
-                    "assessment": session.assessment if session is not None else None,
-                    "message": {
-                        "assessment": "The question could not be assessed. Choose Retry to search again.",
-                        "retrieval": "The search could not be completed. Choose Retry to search again.",
-                        "guidance": "Reading directions could not be prepared. The retrieved articles have not passed the relevance check. Choose Retry to search again.",
-                    }[stage],
-                }
+            failure = ChatSessionStageFailure(
+                stage=session.stage if session is not None else "assessment",
+                assessment=session.assessment if session is not None else None,
             )
-            guide = guide.model_copy(
-                update={
-                    "disclosures": (
-                        GuideDisclosure.model_validate(
-                            {"kind": status, "message": guide.message}
-                        ),
-                        *deferred_disclosures(guide.assessment),
-                    )
-                }
-            )
-            guide = guide.model_copy(
-                update={
-                    "message": "\n\n".join(
-                        disclosure.message for disclosure in guide.disclosures
-                    )
-                }
+            logger.exception("Source Guide %s failed", failure.stage)
+            guide = project_source_guide(
+                failure, question=saved.question, story_db_path=guide_store.db_path
             )
         else:
             guide = project_source_guide(

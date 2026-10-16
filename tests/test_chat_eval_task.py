@@ -445,6 +445,72 @@ def test_invalid_guidance_keeps_retrieved_context_in_failed_case(
     )
 
 
+def test_guidance_failure_records_the_failed_guide_a_reader_would_see(
+    monkeypatch, chat_capture
+):
+    fake_dependencies(
+        monkeypatch,
+        assessment={
+            "status": "deferred",
+            "explanation": "A complete lobbying register is not yet available.",
+            "recoverable_portion": "Reporting may still name organizations.",
+        },
+        guidance={
+            "source_notes": [
+                {"source_article_id": "invented", "note": "Unsupported source"}
+            ]
+        },
+    )
+
+    output = run_one().cases[0].output
+
+    assert output.failure.model_dump() == {
+        "stage": "retrieval_and_guidance",
+        "kind": "validation",
+        "exception_type": "ValidationError",
+        "diagnostic": "Chat evaluation could not complete retrieval_and_guidance.",
+    }
+    assert output.guide.question == output.question
+    assert output.guide.status == "guidance_failed"
+    assert output.guide.assessment == output.assessment
+    assert [(d.kind, d.message) for d in output.guide.disclosures] == [
+        (
+            "guidance_failed",
+            (
+                "Reading directions could not be prepared. The retrieved articles "
+                "have not passed the relevance check. Choose Retry to search again."
+            ),
+        ),
+        (
+            "deferred",
+            (
+                "A complete lobbying register is not yet available.\n\n"
+                "Reporting may still name organizations."
+            ),
+        ),
+    ]
+    assert output.rendered_text is None
+
+
+def test_assessment_failure_records_the_failed_guide_a_reader_would_see(
+    monkeypatch, chat_capture
+):
+    fake_dependencies(monkeypatch, assessment={"status": "unknown"})
+
+    output = run_one().cases[0].output
+
+    assert output.failure.stage == "retrieval_and_guidance"
+    assert output.assessment is None
+    assert output.guide.status == "assessment_failed"
+    assert output.guide.assessment is None
+    assert [(d.kind, d.message) for d in output.guide.disclosures] == [
+        (
+            "assessment_failed",
+            "The question could not be assessed. Choose Retry to search again.",
+        )
+    ]
+
+
 def test_startup_failure_stays_in_population(monkeypatch, chat_capture):
     @asynccontextmanager
     async def unavailable(**kwargs):
@@ -457,6 +523,7 @@ def test_startup_failure_stays_in_population(monkeypatch, chat_capture):
     output = report.cases[0].output
     assert output.failure.stage == "startup"
     assert output.chat_session_id is None
+    assert output.guide is None
     assert "private credential" not in output.model_dump_json()
 
 

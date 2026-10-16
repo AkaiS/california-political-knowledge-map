@@ -23,6 +23,7 @@ from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
 
 from knowledge_map.chat_presentation import (
+    ChatSessionStageFailure,
     project_source_guide,
     render_source_guide,
 )
@@ -251,6 +252,17 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
                 stage = "retrieval_and_guidance"
                 try:
                     result = await session.run()
+                except Exception:
+                    # Reviewers see the failed guide a reader would see for
+                    # the stage the Chat Session reached.
+                    output.guide = project_source_guide(
+                        ChatSessionStageFailure(
+                            stage=session.stage, assessment=session.assessment
+                        ),
+                        question=case_input.question,
+                        story_db_path=document_store_path(),
+                    )
+                    raise
                 finally:
                     output.assessment = session.assessment
                     output.retrieval = session.retrieval_result
