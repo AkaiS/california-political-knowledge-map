@@ -1,6 +1,6 @@
 # 03 Project stopped attempts
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Parent
 
@@ -21,13 +21,13 @@ is currently duplicated between the web application and the Source Guide store.
 
 ## Acceptance criteria
 
-- [ ] The Chat Session outcome includes stopped attempts: cancelled,
+- [x] The Chat Session outcome includes stopped attempts: cancelled,
       interrupted and exceeded time limit.
-- [ ] Projection tests assert the status and message for each stopped outcome.
-- [ ] The cancel route, deadline handling, shutdown cancellation and startup
+- [x] Projection tests assert the status and message for each stopped outcome.
+- [x] The cancel route, deadline handling, shutdown cancellation and startup
       recovery build their guides only through the projection.
-- [ ] The interrupted message has one definition.
-- [ ] Existing cancellation, recovery, execution and public deployment HTTP
+- [x] The interrupted message has one definition.
+- [x] Existing cancellation, recovery, execution and public deployment HTTP
       tests pass unchanged.
 
 ## Blocked by

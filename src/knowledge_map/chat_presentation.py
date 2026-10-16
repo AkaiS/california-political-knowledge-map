@@ -152,9 +152,13 @@ def project_source_guide(
     if isinstance(outcome, ChatSessionStageFailure):
         return _stage_failure_guide(question, outcome)
     if isinstance(outcome, StoppedAttempt):
-        status, message = _STOPPED_ATTEMPTS[outcome.reason]
-        return SourceGuide(question=question, status=status, message=message)
+        return _stopped_guide(question, outcome)
     return _retrieval_guide(outcome, question, story_db_path)
+
+
+def _stopped_guide(question: str, stopped: StoppedAttempt) -> SourceGuide:
+    status, message = _STOPPED_ATTEMPTS[stopped.reason]
+    return SourceGuide(question=question, status=status, message=message)
 
 
 def _stage_failure_guide(
