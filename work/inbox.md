@@ -282,15 +282,22 @@ interruption without losing or corrupting evidence.
   atomic checkpoint as that case.
 - **ED-07 · P2:** Consolidate duplicated replay-consistency algorithms for
   evaluator executions and observations.
-- **ED-08 · P2:** Remove the one-off retrieval report migration, along with
+- **ED-08 · P2:** ~~Remove the one-off retrieval report migration, along with
   the rescoring path it alone uses and its test. Then update the retrieval
-  guide's instruction to run it. The migration has already been applied: every
+  guide's instruction to run it.~~ The migration has already been applied: every
   committed retrieval report carries a compact `retrieval_report` block, and new
   runs are compacted when written. It rewrites committed reports in place,
   which conflicts with ADR 0024's unchanged historical reports and with
   ADR 0026's frozen run result. Captured 2026-10-16 during the
   [Evaluation headline metrics](projects/evaluation-headline-metrics/PRD.md)
-  spec.
+  spec. Resolved 2026-10-16 by the commit "Remove the spent retrieval report
+  migration". It deleted `scripts/compact_retrieval_reports.py`, the `rescore`
+  keyword of `compact_retrieval_report` and `recompute_case_scores`, which
+  only that keyword used. It also deleted the migration test, the rescoring
+  assertions in
+  `test_article_recall_and_reciprocal_rank_use_the_unique_chunk_budget`, and
+  the retrieval guide's instruction to run the script. Committed reports under
+  `evals/reports/retrieval/` are unchanged.
 
 ## Retrieval and product exploration
 

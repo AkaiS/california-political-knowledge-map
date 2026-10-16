@@ -317,9 +317,6 @@ under `legacy_identity_budget_scores`, outside current scores. Final-context
 recall and branch completion did not change. This migration does not claim a
 new model or retrieval run.
 
-For older retrieval reports, run `uv run python scripts/compact_retrieval_reports.py`.
-It preserves originals before rewriting and leaves already compact reports alone.
-
 ## Reference freshness and annotation
 
 The checked graph snapshot is dated September 8, 2026. Git versions the labels

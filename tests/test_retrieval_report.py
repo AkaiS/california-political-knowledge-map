@@ -3,7 +3,6 @@
 import asyncio
 import copy
 import json
-import runpy
 from types import SimpleNamespace
 
 import pytest
@@ -202,11 +201,6 @@ def test_article_recall_and_reciprocal_rank_use_the_unique_chunk_budget():
     scores = evaluate(output, expectation(("target",), grain="source_article"))
     assert scores["full_text_reciprocal_rank"] == 0
     assert scores["fused_reciprocal_rank"] == 0
-    document = raw_document(result, expectation(("target",), grain="source_article"))
-    compact_retrieval_report(document, rescore=True)
-    saved = document["report"]["cases"][0]["scores"]
-    assert saved["full_text_recall_at_50"]["value"] == 0
-    assert saved["full_text_reciprocal_rank"]["value"] == 0
 
 
 def test_live_and_saved_scores_match_and_configuration_is_stored_once():
@@ -349,45 +343,6 @@ def test_selected_text_citations_and_specific_corrections_survive_without_catalo
         for d in case["attributes"]["retrieval_diagnostics"]
     )
     assert "discard" not in json.dumps(document)
-
-
-def test_migration_rescores_preserves_original_and_is_idempotent(tmp_path):
-    result = execution(
-        tuple(
-            candidate(RetrievalBranch.FULL_TEXT, chunk=f"c-{i}", rank=i).model_copy(
-                update={"source_article_id": "same" if i <= 50 else "target"}
-            )
-            for i in range(1, 52)
-        )
-    )
-    document = raw_document(
-        result, expectation(("same", "target"), grain="source_article")
-    )
-    document["report"]["cases"][0]["scores"]["full_text_recall_at_50"] = {
-        "value": 1,
-        "reason": "old",
-        "source": "RetrievedReferenceEvidence",
-    }
-    path = tmp_path / "report.json"
-    original = json.dumps(document).encode()
-    path.write_bytes(original)
-    compact_file = runpy.run_path("scripts/compact_retrieval_reports.py")[
-        "compact_file"
-    ]
-    compact_file(path, backup_dir=tmp_path / "backups")
-    assert (tmp_path / "backups" / path.name).read_bytes() == original
-    saved = json.loads(path.read_text())
-    case = saved["report"]["cases"][0]
-    assert case["scores"]["full_text_recall_at_50"]["value"] == 0.5
-    assert (
-        case["attributes"]["legacy_identity_budget_scores"]["full_text_recall_at_50"]
-        == 1
-    )
-    assert saved["retrieval_report"]["migration"]["rescored"]
-    compacted = path.read_bytes()
-    compact_file(path, backup_dir=tmp_path / "backups")
-    assert path.read_bytes() == compacted
-    assert (tmp_path / "backups" / path.name).read_bytes() == original
 
 
 def test_missing_recorded_configuration_cannot_claim_exact_fusion_replay():
