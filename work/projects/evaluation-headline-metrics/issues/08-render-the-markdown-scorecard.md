@@ -34,8 +34,10 @@ Labels: ready-for-agent
   `NoHeadline` reason.
 - [ ] The registry's `headline` field becomes required. Every registered task
   declares one.
-- [ ] Snapshot tests through the summary script's entry point cover one axis,
-  three axes including chat, and a report without a headline.
+- [ ] Snapshot tests of `Scorecard.to_markdown` cover one axis, three axes
+  including chat, and a report without a headline.
+- [ ] The summary script's single smoke test also runs `--format markdown`.
+  It stays one test.
 - [ ] Depth rule, tasks declare: every task touched supplies only a
   `HeadlineDefinition` built from the closed measure set and functions over a
   single case. No task defines a `ReportEvaluator`, builds table rows, or
@@ -44,6 +46,8 @@ Labels: ready-for-agent
   accounts for the population, compares or renders. The summary script and
   the RAG reviewer gain none of that logic, and nothing outside the headline
   and run report modules parses table rows.
-- [ ] Depth rule, two seams: tests cross only the engine-run seam and the
-  summary script's entry point. No test imports a measure's internals or adds
-  a module-level test seam.
+- [ ] Depth rule, two seams: tests cross only the engine-run seam and the run
+  report module's interface (`ReportDocument.load` and `Scorecard.build`). The
+  summary script's command line keeps its single smoke test and gains no other
+  test. No test imports a measure's internals or adds a module-level test
+  seam.

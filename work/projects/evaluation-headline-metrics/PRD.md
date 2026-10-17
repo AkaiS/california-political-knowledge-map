@@ -259,7 +259,8 @@ Hidden behind the module:
   value, so they can't disagree. The field stays optional until every task
   declares one, and then becomes required.
 - **The evaluation summary script** parses arguments, loads documents, builds a
-  `Scorecard`, prints JSON or markdown, and returns `exit_code`. Its existing
+  `Scorecard`, prints JSON or markdown, and returns `exit_code`. One smoke test
+  covers it. Its existing
   summary function for planned runs becomes a thin wrapper over a single-axis
   `Scorecard`.
 - **The RAG reviewer** reads run-level values only through
@@ -279,7 +280,9 @@ These rules hold the shape. Every ticket repeats them as acceptance criteria.
   script and the RAG reviewer hold none of that logic, and nothing outside the
   two modules parses table rows.
 - **Tests cross the two seams.** Tests cross only the engine-run seam and the
-  summary script's entry point. Neither module gets a test seam of its own.
+  run report module's interface (`ReportDocument.load` and `Scorecard.build`
+  with their outputs). The summary script's command line is a caller, not a
+  seam, and gets one smoke test. Neither module gets an internal test seam.
 
 ### Headline Metric contract
 
@@ -465,7 +468,8 @@ This spec uses Headline Metric and Comparable Run as the glossary defines them.
 ### What a good test is
 
 A good test drives a seam with authored inputs and asserts only on what the
-seam produces: a saved report document or the summary script's output. It
+seam produces: a saved report document, or a `Scorecard`'s JSON, markdown and
+exit code. It
 never asserts on helper functions or intermediate structures. No test calls a
 model; task callables are stubs that return authored outputs.
 
@@ -488,9 +492,13 @@ tasks and checkpoints, including their preservation of report evaluator errors.
 Prior art for fixtures: the per-task evaluation tests for extraction,
 coreference, Policy Area Classification, Topic Assignment and retrieval.
 
-### Seam 2: the evaluation summary script
+### Seam 2: the run report module's interface
 
-The script's command-line entry point runs against saved report documents.
+The summary script is one of the readers this spec replaces, so its command
+line is not a test seam. Tests load saved report documents written to a
+temporary directory with `ReportDocument.load`, build a `Scorecard` with
+`Scorecard.build`, and assert only on `to_json()`, `to_markdown()` and
+`exit_code`.
 
 - **Baseline selection:** each non-matching condition is rejected on its own
   (Data Set revision, selected case IDs, headline version, task and incomplete
@@ -504,8 +512,14 @@ The script's command-line entry point runs against saved report documents.
 - **The markdown scorecard** is snapshot-stable for one axis and for three
   axes, including a chat axis.
 
+The summary script gets one smoke test. It runs `--report` against a saved
+document and checks that the output and exit code come from the `Scorecard`.
+The existing run-evaluation tests that summarize saved and historical
+documents move to this seam. The script's plan and execute tests stay where
+they are.
+
 Prior art: the run-evaluation tests that summarize saved and historical
-documents and drive the script's entry point without model calls.
+documents without model calls.
 
 ### Reviewer agreement
 

@@ -46,8 +46,11 @@ Labels: ready-for-agent
 - [ ] Planned runs keep working through a thin wrapper over a single-axis
   `Scorecard`.
 - [ ] Engine-run tests cover a stub Relevance task with authored outputs,
-  including failed, both-negative and evaluator-error cases. Summary-script
-  tests run over saved documents for each `NoHeadline` reason.
+  including failed, both-negative and evaluator-error cases. `Scorecard` tests
+  load saved documents for each `NoHeadline` reason. The existing tests that
+  summarize saved and historical documents move to the `Scorecard` interface.
+- [ ] The summary script gets its one smoke test. `--report` on a saved
+  document prints the `Scorecard`'s JSON and exits with its `exit_code`.
 - [ ] Depth rule, tasks declare: every task touched supplies only a
   `HeadlineDefinition` built from the closed measure set and functions over a
   single case. No task defines a `ReportEvaluator`, builds table rows, or
@@ -56,6 +59,8 @@ Labels: ready-for-agent
   accounts for the population, compares or renders. The summary script and
   the RAG reviewer gain none of that logic, and nothing outside the headline
   and run report modules parses table rows.
-- [ ] Depth rule, two seams: tests cross only the engine-run seam and the
-  summary script's entry point. No test imports a measure's internals or adds
-  a module-level test seam.
+- [ ] Depth rule, two seams: tests cross only the engine-run seam and the run
+  report module's interface (`ReportDocument.load` and `Scorecard.build`). The
+  summary script's command line keeps its single smoke test and gains no other
+  test. No test imports a measure's internals or adds a module-level test
+  seam.

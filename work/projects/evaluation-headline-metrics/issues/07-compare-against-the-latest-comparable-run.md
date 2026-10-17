@@ -33,7 +33,7 @@ Labels: ready-for-agent
   when either value is null.
 - [ ] An explicit baseline that isn't comparable keeps its failed conditions
   and gets no changes.
-- [ ] Summary-script tests over saved documents:
+- [ ] `Scorecard` tests over saved documents in a temporary directory:
   - reject each condition on its own;
   - accept a different Model Deployment and different prompt digests;
   - prefer a newer dirty Comparable Run over an older clean one;
@@ -46,6 +46,8 @@ Labels: ready-for-agent
   accounts for the population, compares or renders. The summary script and
   the RAG reviewer gain none of that logic, and nothing outside the headline
   and run report modules parses table rows.
-- [ ] Depth rule, two seams: tests cross only the engine-run seam and the
-  summary script's entry point. No test imports a measure's internals or adds
-  a module-level test seam.
+- [ ] Depth rule, two seams: tests cross only the engine-run seam and the run
+  report module's interface (`ReportDocument.load` and `Scorecard.build`). The
+  summary script's command line keeps its single smoke test and gains no other
+  test. No test imports a measure's internals or adds a module-level test
+  seam.
