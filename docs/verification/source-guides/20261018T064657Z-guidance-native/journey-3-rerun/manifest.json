@@ -1,0 +1,27 @@
+{
+  "feature": "question-assessment",
+  "entry_point": "HTTP POST /api/questions",
+  "question": "What should I read about Assembly Bill 1751 in California's 2025-2026 legislative session?",
+  "expected": "completed",
+  "state": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985/.scratch/verify-source-guides-18dh_bq8",
+  "source_sqlite": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/document_store.db",
+  "command": [
+    "uv",
+    "run",
+    "--frozen",
+    "--no-sync",
+    "--project",
+    "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985",
+    "ca-map",
+    "chat",
+    "--port",
+    "8135"
+  ],
+  "deployment": "openrouter",
+  "untraced": false,
+  "shared_dependencies": "Existing Neo4j and model services; never stopped or migrated by this run",
+  "unverified": [
+    "Browser rendering, focus, navigation and screenshots",
+    "Other feature-map journeys"
+  ]
+}
