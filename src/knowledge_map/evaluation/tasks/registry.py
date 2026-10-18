@@ -17,6 +17,7 @@ from pydantic_evals.lifecycle import CaseLifecycle
 from knowledge_map.schemas import ModelDeployment
 
 from ..data_set import LabelQuality
+from ..headline import HeadlineDefinition
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,12 @@ class EvaluationTask:
     """
     case_lifecycle: type[CaseLifecycle] | None = None
     """Optional case evidence capture through Pydantic Evals' lifecycle."""
+    headline: HeadlineDefinition | None = None
+    """The Headline Metrics a completed run records, under their version.
+
+    The run's report evaluator and the version recorded beside the prompt
+    digests both come from this one value, so they cannot disagree.
+    """
 
     @property
     def data_set_stem(self) -> str:

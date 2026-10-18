@@ -10,23 +10,22 @@ import argparse
 import hashlib
 import json
 import random
-import shlex
-from collections import Counter, defaultdict
 from pathlib import Path
-from statistics import fmean
 from typing import Any
-from urllib.parse import quote
 
 import yaml
 
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation.data_set import data_set_path, load_data_set
-from knowledge_map.evaluation.rag_review import project_report
+from knowledge_map.evaluation.run_report import (
+    DEFAULT_REVIEWER_PORT,
+    ReportDocument,
+    Scorecard,
+)
 from knowledge_map.evaluation.tasks import task_named, task_names
 
 REFERENCE_DIR = Path("work/initiatives/useful-graph-retrieval/query-construction")
 RAG_CASE_COUNT = 25
-BRANCHES = ("full_text", "dense", "structural")
 
 
 def _sha256(path: Path) -> str:
@@ -80,7 +79,7 @@ def resolve_plan(
     deployment: str = "local",
     model: str | None = None,
     max_concurrency: int = 1,
-    reviewer_port: int = 8766,
+    reviewer_port: int = DEFAULT_REVIEWER_PORT,
 ) -> dict[str, Any]:
     if not 1 <= reviewer_port <= 65535:
         raise ValueError("Reviewer port must be between 1 and 65535")
@@ -148,271 +147,18 @@ def resolve_plan(
     }
 
 
-def _metric_names(document: dict[str, Any], selected: list[dict]) -> set[str]:
-    names = {
-        name
-        for case in document["report"].get("cases", [])
-        for name in case.get("scores", {})
-    }
-    if document.get("task") == "retrieval":
-        from knowledge_map.evaluation.tasks.retrieval import (
-            RetrievalExpectation,
-            retrieval_scores,
-        )
-
-        expected = next(
-            (
-                case.get("expected_output")
-                for case in selected
-                if case.get("expected_output")
-            ),
-            None,
-        )
-        if expected:
-            labels = RetrievalExpectation.model_validate(expected)
-            for branch in (*BRANCHES, "fused"):
-                names.update(
-                    retrieval_scores((), labels, prefix=branch, ks=(1, 5, 10, 50))
-                )
-            names.update(("context_recall", "context_complete_evidence"))
-        for branch in (*BRANCHES, "fused"):
-            names.update(f"{branch}_ndcg_at_{k}" for k in (1, 5, 10, 50))
-    return names
-
-
 def summarize_report(
-    path: Path, *, expected_ids: list[str] | None = None, reviewer_port: int = 8766
-) -> dict[str, Any]:
-    """Keep missing measurements visible instead of shrinking their populations."""
-    if not 1 <= reviewer_port <= 65535:
-        raise ValueError("Reviewer port must be between 1 and 65535")
-    document = json.loads(path.read_text())
-    report = document["report"]
-    run = document.get("evaluation_run", {})
-    cases = report.get("cases", [])
-    failures = report.get("failures", [])
-    selected = run.get("selected_cases", [])
-    recorded_ids = run.get("selected_case_ids")
-    selected_ids = expected_ids if expected_ids is not None else recorded_ids
-    if selected_ids is None:
-        # Historical reports have no selection manifest; the reported cases
-        # are known outcomes, not evidence that the entire file was selected.
-        selected_ids = [case["name"] for case in cases + failures]
-    outcomes = cases + failures
-    counts = Counter(case["name"] for case in outcomes)
-    expected_set = set(selected_ids)
-    extra = sorted(set(counts) - expected_set)
-    duplicate = sorted(name for name, count in counts.items() if count != 1)
-    mismatch = (
-        recorded_ids is not None
-        and expected_ids is not None
-        and set(recorded_ids) != expected_set
+    path: Path,
+    *,
+    expected_ids: list[str] | None = None,
+    reviewer_port: int = DEFAULT_REVIEWER_PORT,
+) -> Scorecard:
+    """A planned run's single-axis Scorecard."""
+    return Scorecard.build(
+        [ReportDocument.load(path, expected_case_ids=expected_ids)],
+        baseline="none",
+        reviewer_port=reviewer_port,
     )
-    unresolved = [case_id for case_id in selected_ids if case_id not in counts]
-    completed_answers = 0
-    declined = 0
-    stage_failures: Counter[str] = Counter()
-    branches: dict[str, Counter] = {name: Counter() for name in BRANCHES}
-    for case in cases:
-        output = case.get("output")
-        output = output if isinstance(output, dict) else {}
-        failure = output.get("failure")
-        if failure:
-            stage_failures[failure.get("stage", "unknown")] += 1
-        elif output.get("failure_type"):
-            stage_failures[f"task:{output['failure_type']}"] += 1
-        answer = output.get("answer") or {}
-        if output.get("rendered_text") and answer and "introduction" in answer:
-            completed_answers += 1
-        decision = output.get("assessment") or output.get("preparation") or {}
-        if decision.get("status") == "declined":
-            declined += 1
-        outcomes = output.get("branches")
-        if outcomes is None:
-            evidence = (
-                answer.get("evidence")
-                or output.get("retrieval")
-                or output.get("result")
-                or {}
-            )
-            outcomes = evidence.get("execution", {}).get("outcomes", [])
-        for branch in outcomes:
-            if branch.get("branch") in branches:
-                branches[branch["branch"]][branch.get("status", "unknown")] += 1
-    if failures:
-        stage_failures["framework"] = len(failures)
-    metric_values: dict[str, list[float]] = defaultdict(list)
-    metric_reasons: dict[str, set[str]] = defaultdict(set)
-    for case in cases:
-        for name, score in case.get("scores", {}).items():
-            value = score.get("value") if isinstance(score, dict) else score
-            if isinstance(value, (float, int)):
-                metric_values[name].append(float(value))
-            elif isinstance(score, dict) and score.get("reason"):
-                metric_reasons[name].add(score["reason"])
-    metrics = {}
-    for name in sorted(_metric_names(document, selected or cases)):
-        values = metric_values[name]
-        reason = None
-        if not values:
-            if "ndcg" in name:
-                reason = "NDCG is not computed by the established evaluator; the RAG references have no relevance grades."
-            elif document.get("label_quality") == "unlabeled":
-                reason = "This Data Set has no reference judgments."
-            else:
-                reason = (
-                    "; ".join(sorted(metric_reasons[name]))
-                    or "No selected case recorded this measurement; inspect failures and evaluator errors."
-                )
-        metrics[name] = {
-            "mean": fmean(values) if values else None,
-            "scored_cases": len(values),
-            "selected_cases": len(selected_ids),
-            "missing_cases": max(0, len(selected_ids) - len(values)),
-            "inclusion_policy": "Unweighted mean of recorded numeric case scores. Unscored failures and unresolved cases are missing, never silently counted as successes or zero.",
-            "unavailable_reason": reason,
-        }
-    if document["task"] in ("retrieval", "chat"):
-        projection = project_report(document)
-        for row in projection["metrics"]:
-            name = (
-                row["metric"]
-                if row["branch"] == "context"
-                else f"{row['branch']}_{row['metric']}"
-                + (f"_at_{row['k']}" if row["k"] is not None else "")
-            )
-            existing = metrics.get(name, {})
-            metrics[name] = {
-                **existing,
-                "mean": row["value"],
-                "scored_cases": row["scored_cases"],
-                "applicable_cases": row["applicable_cases"],
-                "selected_cases": len(selected_ids),
-                "missing_cases": max(0, len(selected_ids) - row["scored_cases"]),
-                "inclusion_policy": "Existing RAG reviewer measurement rules; unweighted mean of recorded or exactly replayed case scores. Failures and unresolved measurements remain missing.",
-                "unavailable_reason": row["reason"] if row["value"] is None else None,
-            }
-    experiment = (
-        document.get("experiment_metadata") or report.get("experiment_metadata") or {}
-    )
-    selection = experiment.get("selection", {})
-    integrity_errors = {
-        "unexpected_case_ids": extra,
-        "duplicate_case_ids": duplicate,
-        "selection_manifest_mismatch": mismatch,
-    }
-    status = run.get("status", "historical_selection_unknown")
-    if extra or duplicate or mismatch or unresolved:
-        status = "incomplete"
-    started = run.get("started_case_ids", [])
-    assertions = {}
-    assertion_names = {name for case in cases for name in case.get("assertions", {})}
-    for name in sorted(assertion_names):
-        values = [
-            case["assertions"][name]["value"]
-            for case in cases
-            if isinstance(case.get("assertions", {}).get(name), dict)
-            and isinstance(case["assertions"][name].get("value"), bool)
-        ]
-        assertions[name] = {
-            "passed": sum(values),
-            "failed": len(values) - sum(values),
-            "scored_cases": len(values),
-            "selected_cases": len(selected_ids),
-            "missing_cases": max(0, len(selected_ids) - len(values)),
-            "pass_rate": fmean(values) if values else None,
-            "inclusion_policy": "Recorded boolean evaluator assertions only; missing, failed execution, and unresolved measurements remain explicit.",
-        }
-    reports_dir = (
-        path.resolve().parent.parent if path.parent.name == document["task"] else None
-    )
-    reviewable = document["task"] in ("retrieval", "chat") and reports_dir is not None
-    reviewer_command = (
-        shlex.join(
-            [
-                "uv",
-                "run",
-                str(Path(__file__).resolve().with_name("review_chat_eval.py")),
-                "--mode",
-                "rag",
-                "--reports-dir",
-                str(reports_dir),
-                "--port",
-                str(reviewer_port),
-            ]
-        )
-        if reviewable
-        else None
-    )
-    summary = {
-        "task": document["task"],
-        "scope": selection.get("scope", "unknown"),
-        "status": status,
-        "recorded_status": run.get("status"),
-        "interruption_reason": run.get("interruption_reason"),
-        "counts": {
-            "selected": len(selected_ids),
-            "attempted": len(set(started) | set(counts)),
-            "terminal": len(expected_set & set(counts)),
-            "completed_answers": completed_answers,
-            "declined": declined,
-            "execution_failures": sum(stage_failures.values()),
-            "unresolved": len(unresolved),
-            "evaluator_errors": sum(len(c.get("evaluator_failures", [])) for c in cases)
-            + len(report.get("report_evaluator_failures", [])),
-        },
-        "failures_by_stage": dict(sorted(stage_failures.items())),
-        "unresolved_case_ids": unresolved,
-        "integrity": integrity_errors,
-        "case_ids": selected_ids,
-        "branch_completion": {
-            name: {
-                **dict(sorted(count.items())),
-                "selected_cases": len(selected_ids),
-                "unrecorded": len(selected_ids) - sum(count.values()),
-                "inclusion_policy": "Recorded branch outcomes / selected cases; declines and earlier failures have unrecorded branches.",
-            }
-            for name, count in branches.items()
-        }
-        if document["task"] in ("retrieval", "chat")
-        else {},
-        "metrics": metrics,
-        "assertions": assertions,
-        "metric_population_note": "Scores use the existing evaluator's reference and slot denominators; this summary reports the case population used in each mean.",
-        "metrics_unavailable_reason": "This Data Set has no reference judgments."
-        if all(metric["mean"] is None for metric in metrics.values())
-        and document.get("label_quality") == "unlabeled"
-        else None,
-        "provenance": {
-            key: document.get(key)
-            for key in (
-                "data_set",
-                "data_set_sha256",
-                "deployment",
-                "commit",
-                "dirty",
-                "label_quality",
-                "ran_at",
-            )
-        }
-        | {
-            "experiment_metadata": experiment,
-            "retrieval_settings": document.get("retrieval_report", {}).get(
-                "configurations"
-            ),
-        },
-        "report_path": str(path.resolve()),
-        "reviewer_url": f"http://127.0.0.1:{reviewer_port}/runs/{quote(document['task'] + '--' + path.stem)}"
-        if reviewable
-        else None,
-        "reviewer_command": reviewer_command,
-        "reviewer_reports_dir": str(reports_dir) if reviewable else None,
-        "reviewer_status": "unverified; run the reviewer command or verify the existing server serves this exact reports directory"
-        if reviewable
-        else "unavailable; reviewer supports chat/retrieval reports in TASK/*.json layout",
-        "trace_url": document.get("trace_url"),
-    }
-    return summary
 
 
 def execute_plan(plan: dict[str, Any]) -> tuple[dict[str, Any] | None, int]:
@@ -462,18 +208,12 @@ def execute_plan(plan: dict[str, Any]) -> tuple[dict[str, Any] | None, int]:
         exit_code = 1
     if not written:
         return None, exit_code or 1
-    summary = summarize_report(
+    scorecard = summarize_report(
         written[-1],
         expected_ids=plan["selection"]["case_ids"],
         reviewer_port=plan["reviewer_port"],
     )
-    if (
-        summary["status"] != "completed"
-        or summary["counts"]["execution_failures"]
-        or summary["counts"]["evaluator_errors"]
-    ):
-        exit_code = exit_code or 1
-    return summary, exit_code
+    return scorecard.to_json(), exit_code or scorecard.exit_code
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -497,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--reviewer-port",
         type=int,
-        default=8766,
+        default=DEFAULT_REVIEWER_PORT,
         help="Port for the exact report reviewer link and command (server status is unverified)",
     )
     parser.add_argument("--max-concurrency", type=int, default=1)
@@ -516,11 +256,11 @@ def main(argv: list[str] | None = None) -> int:
                 "--report summarizes a saved attempt; provide no selection arguments"
             )
         try:
-            summary = summarize_report(args.report, reviewer_port=args.reviewer_port)
+            scorecard = summarize_report(args.report, reviewer_port=args.reviewer_port)
         except ValueError as error:
             parser.error(str(error))
-        print(json.dumps(summary, indent=2, sort_keys=True))
-        return 0
+        print(json.dumps(scorecard.to_json(), indent=2, sort_keys=True))
+        return scorecard.exit_code
     if not args.target:
         parser.error("Choose the evaluation task established by context")
     try:
