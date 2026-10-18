@@ -24,6 +24,7 @@ from .scoring import Counts, detection_counts
 
 __all__ = [
     "Aggregation",
+    "CaseMean",
     "Counts",
     "Headline",
     "HeadlineDefinition",
@@ -332,6 +333,40 @@ class SetAgreement(Measure, frozen=True):
                 population=population,
             )
             for metric, role in self._declared()
+        )
+
+
+class CaseMean(Measure, frozen=True):
+    """The mean of one score or assertion each succeeded case recorded.
+
+    Reads what the case evaluators recorded rather than recomputing it, so a
+    case's own convention -- a chunk both sides left empty passes -- carries
+    into the mean.  A case that recorded no such score adds nothing to it.
+    """
+
+    score: str
+    role: Role
+
+    def _declared(self) -> tuple[tuple[str, Role], ...]:
+        return ((self.score, self.role),)
+
+    def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
+        recorded = [
+            results[self.score].value
+            for case in population.succeeded
+            for results in (case.scores, case.assertions)
+            if self.score in results
+        ]
+        return (
+            _ratio(
+                self.score,
+                self.role,
+                Aggregation.PER_CASE_MEAN,
+                float(sum(recorded)),
+                len(recorded),
+                scored_cases=len(recorded),
+                population=population,
+            ),
         )
 
 
