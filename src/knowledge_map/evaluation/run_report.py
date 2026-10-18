@@ -19,7 +19,7 @@ from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from .headline import Headline
+from .headline import Headline, is_failed_outcome
 from .rag_review import project_report
 
 BRANCHES = ("full_text", "dense", "structural")
@@ -228,11 +228,13 @@ def _summary(
     for case in cases:
         output = case.get("output")
         output = output if isinstance(output, dict) else {}
-        failure = output.get("failure")
-        if failure:
-            stage_failures[failure.get("stage", "unknown")] += 1
-        elif output.get("failure_type"):
-            stage_failures[f"task:{output['failure_type']}"] += 1
+        if is_failed_outcome(case):
+            failure = output.get("failure")
+            stage_failures[
+                failure.get("stage", "unknown")
+                if isinstance(failure, dict)
+                else f"task:{output.get('failure_type')}"
+            ] += 1
         answer = output.get("answer") or {}
         if output.get("rendered_text") and answer and "introduction" in answer:
             completed_answers += 1

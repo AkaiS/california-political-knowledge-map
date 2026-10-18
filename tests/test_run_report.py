@@ -346,26 +346,25 @@ def test_historical_chat_answers_and_branches_use_real_schema():
     assert summary["headline"]["no_headline_reason"] == "predates_headline_metrics"
 
 
-def test_historical_rag_metrics_match_reviewer_projection():
+def test_historical_rag_metrics_follow_the_reviewer_measurement_rules():
     path = (
         ROOT
         / "evals/reports/retrieval/20261002T233848Z-e237389-local-gemma4-26b-1499ceec2201.json"
     )
-    document = json.loads(path.read_text())
-    from knowledge_map.evaluation.rag_review import project_report
-
-    projection = project_report(document)
     summary = scorecard(path).to_json()
-    for metric in ("precision", "two_hop_recall", "recall"):
-        row = next(
-            row
-            for row in projection["metrics"]
-            if row["branch"] == "fused" and row["metric"] == metric and row["k"] == 10
-        )
+    expected = {
+        "precision": (0.256, 25, 25),
+        "two_hop_recall": (0.75, 8, 25),
+        "recall": (pytest.approx(0.7042786635619782), 25, 25),
+    }
+    for metric, (mean, scored, applicable) in expected.items():
         reported = summary["metrics"][f"fused_{metric}_at_10"]
-        assert reported["mean"] == row["value"]
-        assert reported["scored_cases"] == row["scored_cases"]
-        assert reported["applicable_cases"] == row["applicable_cases"]
+        assert reported["mean"] == mean
+        assert reported["scored_cases"] == scored
+        assert reported["applicable_cases"] == applicable
+        assert reported["inclusion_policy"].startswith(
+            "Existing RAG reviewer measurement rules"
+        )
 
 
 def test_component_caught_failures_and_boolean_evaluators_are_retained(tmp_path):

@@ -193,16 +193,19 @@ class Headline(BaseModel, frozen=True):
         )
 
 
-def is_failed_outcome(case: ReportCase | ReportCaseFailure) -> bool:
+def is_failed_outcome(
+    case: ReportCase | ReportCaseFailure | Mapping[str, Any],
+) -> bool:
     """A framework failure, or a completed case whose output records a failure.
 
-    Shared by a run's exit status and its ``execution_failure_rate`` so the two
-    cannot disagree on which cases failed.
+    Shared by a run's exit status, its ``execution_failure_rate`` and the
+    summary of a saved report, in memory or as a saved completed case, so none
+    of them can disagree on which cases failed.
     """
 
     if isinstance(case, ReportCaseFailure):
         return True
-    output = case.output
+    output = case.get("output") if isinstance(case, Mapping) else case.output
     return any(
         (
             output.get(name)
