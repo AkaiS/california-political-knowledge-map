@@ -31,6 +31,7 @@ __all__ = [
     "HeadlineFormatError",
     "HeadlineRow",
     "Measure",
+    "PerLabel",
     "Pooled",
     "Rate",
     "Role",
@@ -268,6 +269,41 @@ def _ratio(
     )
 
 
+_SET_AGREEMENT = ("precision", "recall", "f1")
+
+
+def _pooled_fractions(
+    cases: Iterable[Counts],
+) -> dict[str, tuple[float, float]]:
+    """Pooled precision, recall and F1, each as its numerator and denominator.
+
+    A case that agrees on nothing contributes zero to every count.
+    """
+
+    cases = list(cases)
+    precision_numerator = sum(c.precision_numerator for c in cases)
+    precision_denominator = sum(c.precision_denominator for c in cases)
+    recall_numerator = sum(c.recall_numerator for c in cases)
+    recall_denominator = sum(c.recall_denominator for c in cases)
+    # F1 as one fraction: 2PR / (P + R) with P and R written over their
+    # own counts, which is 2·matched / (found + expected) when precision
+    # and recall share a numerator.
+    if precision_numerator == recall_numerator:
+        f1_numerator = 2 * precision_numerator
+        f1_denominator = precision_denominator + recall_denominator
+    else:
+        f1_numerator = 2 * precision_numerator * recall_numerator
+        f1_denominator = (
+            precision_numerator * recall_denominator
+            + recall_numerator * precision_denominator
+        )
+    return {
+        "precision": (precision_numerator, precision_denominator),
+        "recall": (recall_numerator, recall_denominator),
+        "f1": (f1_numerator, f1_denominator),
+    }
+
+
 class Measure(BaseModel, frozen=True):
     """One member of the closed measure set a ``HeadlineDefinition`` is built from."""
 
@@ -297,33 +333,13 @@ class SetAgreement(Measure, frozen=True):
 
     def _declared(self) -> tuple[tuple[str, Role], ...]:
         return tuple(
-            (f"{self.prefix}_{name}", self.roles[name])
-            for name in ("precision", "recall", "f1")
+            (f"{self.prefix}_{name}", self.roles[name]) for name in _SET_AGREEMENT
         )
 
     def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
-        cases = [self.counts(case) for case in population.succeeded]
-        precision_numerator = sum(c.precision_numerator for c in cases)
-        precision_denominator = sum(c.precision_denominator for c in cases)
-        recall_numerator = sum(c.recall_numerator for c in cases)
-        recall_denominator = sum(c.recall_denominator for c in cases)
-        # F1 as one fraction: 2PR / (P + R) with P and R written over their
-        # own counts, which is 2·matched / (found + expected) when precision
-        # and recall share a numerator.
-        if precision_numerator == recall_numerator:
-            f1_numerator = 2 * precision_numerator
-            f1_denominator = precision_denominator + recall_denominator
-        else:
-            f1_numerator = 2 * precision_numerator * recall_numerator
-            f1_denominator = (
-                precision_numerator * recall_denominator
-                + recall_numerator * precision_denominator
-            )
-        fractions = {
-            "precision": (precision_numerator, precision_denominator),
-            "recall": (recall_numerator, recall_denominator),
-            "f1": (f1_numerator, f1_denominator),
-        }
+        fractions = _pooled_fractions(
+            self.counts(case) for case in population.succeeded
+        )
         return tuple(
             _ratio(
                 metric,
@@ -369,6 +385,75 @@ class Pooled(Measure, frozen=True):
                 population=population,
             ),
         )
+
+
+class PerLabel(Measure, frozen=True):
+    """A label-macro F1 over the reference labels, with each label's agreement.
+
+    ``counts`` gives a succeeded case's ``Counts`` for each label either side
+    named.  The macro F1 is the mean of each label's pooled F1 over the labels
+    the succeeded cases' references used, so a common label cannot hide
+    failure on a rare one.  Every label either side named, including one only
+    predicted, gets pooled precision, recall and F1 as diagnostic rows.
+    """
+
+    prefix: str
+    counts: Callable[[ReportCase], Mapping[str, Counts]]
+    reference_labels: Callable[[ReportCase], Iterable[str]]
+
+    @property
+    def _macro_metric(self) -> str:
+        return f"{self.prefix}_macro_f1"
+
+    def _declared(self) -> tuple[tuple[str, Role], ...]:
+        # The per-label diagnostic rows depend on which labels a run met.
+        return ((self._macro_metric, Role.HEADLINE),)
+
+    def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
+        by_label: dict[str, list[Counts]] = {}
+        for case in population.succeeded:
+            for label, counts in self.counts(case).items():
+                by_label.setdefault(label, []).append(counts)
+        fractions = {
+            label: _pooled_fractions(cases) for label, cases in by_label.items()
+        }
+        referenced = sorted(
+            {
+                label
+                for case in population.succeeded
+                for label in self.reference_labels(case)
+            }
+        )
+        scored = len(population.succeeded)
+        macro = _ratio(
+            self._macro_metric,
+            Role.HEADLINE,
+            Aggregation.POOLED,
+            float(sum(_fraction_value(fractions[label]["f1"]) for label in referenced)),
+            len(referenced),
+            scored_cases=scored,
+            population=population,
+        )
+        return (
+            macro,
+            *(
+                _ratio(
+                    f"{self.prefix}_{name}[{label}]",
+                    Role.DIAGNOSTIC,
+                    Aggregation.POOLED,
+                    *fractions[label][name],
+                    scored_cases=scored,
+                    population=population,
+                )
+                for label in sorted(fractions)
+                for name in _SET_AGREEMENT
+            ),
+        )
+
+
+def _fraction_value(fraction: tuple[float, float]) -> float:
+    numerator, denominator = fraction
+    return numerator / denominator if denominator else 0.0
 
 
 class CaseMean(Measure, frozen=True):
