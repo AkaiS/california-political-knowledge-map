@@ -1,0 +1,357 @@
+"""Completed Coreference and Coreference annotator runs record Headline Metrics.
+
+Each test runs authored outputs through the evaluation engine and the report
+checkpoint with the task's own case evaluators and headline definition, then
+reads the saved Evaluation Report. Both tasks run the same fixtures, so their
+agreement rows can be read side by side. No model is called.
+"""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+from engine_runs import headline_table, run_task
+
+from knowledge_map.evaluation import LabelQuality
+from knowledge_map.evaluation.tasks.coreference import (
+    CoreferenceExpectation,
+    CoreferenceInput,
+    CoreferenceOutput,
+)
+from knowledge_map.schemas import MentionSpan, MentionSpanOutcome
+
+TASKS = ("coreference", "coreference_annotator")
+
+
+@pytest.fixture(autouse=True)
+def disable_telemetry(monkeypatch):
+    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
+
+
+def span(label, text, entity):
+    return MentionSpan(
+        sentence_label=label, mention_text=text, canonical_entity_name=entity
+    )
+
+
+def critic(outcome, mention_span):
+    return MentionSpanOutcome(
+        mention_span=mention_span,
+        stage="critic",
+        outcome=outcome,
+        reason=None if outcome == "accepted" else "not supported",
+    )
+
+
+def silver(*spans):
+    return CoreferenceExpectation(mention_spans=list(spans))
+
+
+def resolved(spans, outcomes=()):
+    return CoreferenceOutput(mention_spans=list(spans), outcomes=list(outcomes))
+
+
+def saved_run(directory, task_name, cases):
+    path = run_task(
+        directory,
+        task_name,
+        cases,
+        task_input=lambda case_id: CoreferenceInput(
+            url=case_id, title=case_id, content=case_id
+        ),
+        label_quality=LabelQuality.SILVER,
+    )
+    return json.loads(path.read_text())
+
+
+# Merged: the model found three of silver's four mentions and one spurious
+# one, and put Atkins in Newsom's cluster.  Over the three shared mentions B³
+# precision is (2/3 + 1/3 + 2/3) / 3 and recall is (1 + 1 + 1) / 3.  The
+# Critic kept two correct spans and the wrong "she", and rejected the wrong
+# "it"; its verdict on the spurious "they" is not judged.
+HE = span("1", "he", "Gavin Newsom")
+SHE = span("2", "she", "Toni Atkins")
+GOVERNOR = span("3", "the governor", "Gavin Newsom")
+IT = span("4", "it", "SB 1")
+THEY = span("5", "they", "Senate")
+MERGED = (
+    "merged",
+    silver(HE, SHE, GOVERNOR, IT),
+    resolved(
+        [HE, span("2", "she", "Gavin Newsom"), GOVERNOR, THEY],
+        [
+            critic("accepted", HE),
+            critic("accepted", span("2", "she", "Gavin Newsom")),
+            critic("accepted", GOVERNOR),
+            critic("accepted", THEY),
+            critic("rejected", span("4", "it", "SB 2")),
+            MentionSpanOutcome(
+                mention_span=span("6", "its", "Senate"),
+                stage="validation",
+                outcome="discarded",
+                reason="mention not found",
+            ),
+        ],
+    ),
+)
+# Split: the model found both mentions of SB 1 but named the second
+# "Senate Bill 1", splitting one cluster in two, and the Critic rejected a
+# correct "he".  B³ precision is (1 + 1) / 2 and recall (1/2 + 1/2) / 2.
+BILL = span("2", "the bill", "SB 1")
+SPLIT = (
+    "split",
+    silver(span("1", "it", "SB 1"), BILL, span("3", "he", "Gavin Newsom")),
+    resolved(
+        [span("1", "it", "SB 1"), span("2", "the bill", "Senate Bill 1")],
+        [
+            critic("accepted", span("1", "it", "SB 1")),
+            critic("accepted", span("2", "the bill", "Senate Bill 1")),
+            critic("rejected", span("3", "he", "Gavin Newsom")),
+        ],
+    ),
+)
+# Nothing shared: the model's one mention is one silver never annotated.
+NOTHING_SHARED = (
+    "nothing-shared",
+    silver(SHE),
+    resolved([THEY], [critic("accepted", THEY)]),
+)
+
+# Mentions: merged matched 3 of 4 found and 4 expected (F1 3/4); split 2 of 2
+# and 3 (F1 4/5); nothing-shared 0 of 1 and 1 (F1 0).  Pooled: 5 matched, 7
+# found, 8 expected.  B³ pools 11/3 precision credit and 4 recall credit over
+# 5 shared mentions.  Canonical entity: 2 of 3 shared in merged, 1 of 2 in
+# split; nothing-shared shares nothing and contributes nothing.
+AGREEMENT_ROWS = [
+    ["span_f1", "primary", 10 / 15, 10.0, 15.0, "pooled", 3, 3, None],
+    ["span_precision", "headline", 5 / 7, 5.0, 7.0, "pooled", 3, 3, None],
+    ["span_recall", "headline", 5 / 8, 5.0, 8.0, "pooled", 3, 3, None],
+    [
+        "cluster_precision",
+        "headline",
+        pytest.approx(11 / 15),
+        pytest.approx(11 / 3),
+        5.0,
+        "pooled",
+        3,
+        3,
+        None,
+    ],
+    ["cluster_recall", "headline", 4 / 5, 4.0, 5.0, "pooled", 3, 3, None],
+    [
+        "cluster_f1",
+        "headline",
+        pytest.approx(88 / 115),
+        pytest.approx(88 / 3),
+        pytest.approx(115 / 3),
+        "pooled",
+        3,
+        3,
+        None,
+    ],
+    ["entity_accuracy", "headline", 3 / 5, 3.0, 5.0, "pooled", 2, 3, None],
+    [
+        "span_f1",
+        "headline",
+        pytest.approx((3 / 4 + 4 / 5 + 0) / 3),
+        pytest.approx(3 / 4 + 4 / 5),
+        3.0,
+        "per_case_mean",
+        3,
+        3,
+        None,
+    ],
+    ["execution_failure_rate", "headline", 0.0, 0.0, 3.0, "rate", 3, 3, None],
+]
+
+
+def test_completed_coreference_run_records_pooled_span_f1_first_and_the_critic_rows(
+    tmp_path,
+):
+    document = saved_run(tmp_path, "coreference", [MERGED, SPLIT, NOTHING_SHARED])
+
+    # Critic, over the decisions on mentions silver annotated: merged rejected
+    # one wrong span, kept one wrong and two correct; split rejected one
+    # correct span, kept one wrong and one correct.
+    assert headline_table(document) == [
+        *AGREEMENT_ROWS,
+        [
+            "critic_rejection_precision",
+            "diagnostic",
+            1 / 2,
+            1.0,
+            2.0,
+            "pooled",
+            2,
+            3,
+            None,
+        ],
+        [
+            "critic_rejection_recall",
+            "diagnostic",
+            1 / 3,
+            1.0,
+            3.0,
+            "pooled",
+            2,
+            3,
+            None,
+        ],
+        [
+            "critic_kept_correct_spans",
+            "diagnostic",
+            3 / 4,
+            3.0,
+            4.0,
+            "pooled",
+            2,
+            3,
+            None,
+        ],
+    ]
+    assert document["experiment_metadata"]["headline_version"] == "coreference-v1"
+
+
+def test_annotator_run_records_the_same_agreement_rows_and_no_critic_values(
+    tmp_path,
+):
+    document = saved_run(
+        tmp_path, "coreference_annotator", [MERGED, SPLIT, NOTHING_SHARED]
+    )
+
+    assert headline_table(document) == [
+        *AGREEMENT_ROWS,
+        *(
+            [
+                metric,
+                "diagnostic",
+                None,
+                None,
+                None,
+                "pooled",
+                0,
+                3,
+                "the annotator task makes no critic decisions",
+            ]
+            for metric in (
+                "critic_rejection_precision",
+                "critic_rejection_recall",
+                "critic_kept_correct_spans",
+            )
+        ),
+    ]
+    assert (
+        document["experiment_metadata"]["headline_version"]
+        == "coreference_annotator-v1"
+    )
+
+
+NO_DENOMINATOR = "no case contributed to the denominator"
+# The model resolved nothing, so it shares no mention with silver either.
+MISSED_EVERYTHING = ("missed-everything", silver(HE, GOVERNOR), resolved([]))
+
+
+@pytest.mark.parametrize("task_name", TASKS)
+def test_cases_sharing_no_mention_leave_clusters_and_entities_without_a_value(
+    tmp_path, task_name
+):
+    rows = headline_table(
+        saved_run(tmp_path, task_name, [NOTHING_SHARED, MISSED_EVERYTHING])
+    )
+
+    # Mentions: 0 matched of 1 found and 3 expected.
+    assert rows[:3] == [
+        ["span_f1", "primary", 0.0, 0.0, 4.0, "pooled", 2, 2, None],
+        ["span_precision", "headline", 0.0, 0.0, 1.0, "pooled", 2, 2, None],
+        ["span_recall", "headline", 0.0, 0.0, 3.0, "pooled", 2, 2, None],
+    ]
+    assert rows[3:7] == [
+        [metric, "headline", None, 0.0, 0.0, "pooled", 2, 2, NO_DENOMINATOR]
+        for metric in ("cluster_precision", "cluster_recall", "cluster_f1")
+    ] + [
+        ["entity_accuracy", "headline", None, 0.0, 0.0, "pooled", 0, 2, NO_DENOMINATOR]
+    ]
+    assert rows[7] == [
+        "span_f1",
+        "headline",
+        0.0,
+        0.0,
+        2.0,
+        "per_case_mean",
+        2,
+        2,
+        None,
+    ]
+
+
+@pytest.mark.parametrize("task_name", TASKS)
+def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
+    tmp_path, task_name
+):
+    clean = headline_table(
+        saved_run(tmp_path / "clean", task_name, [MERGED, SPLIT, NOTHING_SHARED])
+    )
+    document = saved_run(
+        tmp_path / "with-failures",
+        task_name,
+        [
+            MERGED,
+            SPLIT,
+            NOTHING_SHARED,
+            ("raised", MERGED[1], RuntimeError("transport exhausted")),
+            # A run the Critic emptied keeps its rejections in its output.
+            (
+                "recorded",
+                MERGED[1],
+                CoreferenceOutput(
+                    outcomes=[critic("rejected", HE), critic("rejected", SHE)],
+                    failure_type="zero_survivors",
+                ),
+            ),
+        ],
+    )
+
+    assert document["evaluation_run"]["status"] == "completed"
+    rows = headline_table(document)
+    assert rows.pop(8) == [
+        "execution_failure_rate",
+        "headline",
+        2 / 5,
+        2.0,
+        5.0,
+        "rate",
+        5,
+        5,
+        None,
+    ]
+    del clean[8]
+    # Every quality row reads exactly as it did without the failures, over
+    # the larger run population; the emptied run's rejections add nothing to
+    # the Critic rows.
+    assert [[*row[:7], 5, row[8]] for row in clean] == rows
+
+
+@pytest.mark.parametrize(
+    ("task_name", "version"),
+    [
+        ("coreference", "coreference-v1"),
+        ("coreference_annotator", "coreference_annotator-v1"),
+    ],
+)
+def test_unreadable_output_records_evaluator_errors_the_same_way_on_every_run(
+    tmp_path, task_name, version
+):
+    cases = [MERGED, SPLIT, ("unreadable", MERGED[1], None)]
+    first = saved_run(tmp_path / "first", task_name, cases)
+    second = saved_run(tmp_path / "second", task_name, cases)
+
+    for document in (first, second):
+        assert document["evaluation_run"]["status"] == "completed"
+        assert document["report"]["analyses"] == []
+    (failure,) = first["report"]["report_evaluator_failures"]
+    assert failure["source"] == {"name": "HeadlineMetrics", "arguments": [version]}
+    assert (
+        first["report"]["report_evaluator_failures"]
+        == second["report"]["report_evaluator_failures"]
+    )

@@ -31,6 +31,7 @@ __all__ = [
     "HeadlineFormatError",
     "HeadlineRow",
     "Measure",
+    "Pooled",
     "Rate",
     "Role",
     "SetAgreement",
@@ -333,6 +334,40 @@ class SetAgreement(Measure, frozen=True):
                 population=population,
             )
             for metric, role in self._declared()
+        )
+
+
+class Pooled(Measure, frozen=True):
+    """One ratio pooled over what each succeeded case contributes.
+
+    ``contribution`` gives a case's numerator and denominator, or ``None``
+    when the case has nothing to contribute; only contributing cases are
+    scored.
+    """
+
+    metric: str
+    contribution: Callable[[ReportCase], tuple[float, float] | None]
+    role: Role
+
+    def _declared(self) -> tuple[tuple[str, Role], ...]:
+        return ((self.metric, self.role),)
+
+    def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
+        parts = [
+            part
+            for part in (self.contribution(case) for case in population.succeeded)
+            if part is not None
+        ]
+        return (
+            _ratio(
+                self.metric,
+                self.role,
+                Aggregation.POOLED,
+                float(sum(numerator for numerator, _ in parts)),
+                float(sum(denominator for _, denominator in parts)),
+                scored_cases=len(parts),
+                population=population,
+            ),
         )
 
 

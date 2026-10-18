@@ -12,11 +12,12 @@ see what the Critic rounds are worth.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.reporting import ReportCase
 
 from knowledge_map.adapters.coreference import (
     ANNOTATOR_INSTRUCTIONS,
@@ -38,6 +39,18 @@ from knowledge_map.schemas import (
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
+from ..headline import (
+    Aggregation,
+    CaseMean,
+    Counts,
+    HeadlineDefinition,
+    Measure,
+    Pooled,
+    Role,
+    SetAgreement,
+    Unavailable,
+    detection_counts,
+)
 from ..scoring import UNSCORED, detection_scores, f1
 from .registry import EvaluationTask, register
 
@@ -218,9 +231,15 @@ class FoundTheSilverMentionSpans(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = set(entity_by_identity(ctx.expected_output.mention_spans))
-        found = set(entity_by_identity(ctx.output.mention_spans))
-        return detection_scores(expected, found, "span")
+        return detection_scores(
+            _locations(ctx.expected_output), _locations(ctx.output), "span"
+        )
+
+
+def _locations(
+    answer: CoreferenceExpectation | CoreferenceOutput,
+) -> set[MentionSpanIdentity]:
+    return set(entity_by_identity(answer.mention_spans))
 
 
 class AgreedOnTheCanonicalEntity(Evaluator):
@@ -232,13 +251,28 @@ class AgreedOnTheCanonicalEntity(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = entity_by_identity(ctx.expected_output.mention_spans)
-        found = entity_by_identity(ctx.output.mention_spans)
-        shared = expected.keys() & found.keys()
-        if not shared:
+        agreement = entity_agreement(ctx.expected_output, ctx.output)
+        if agreement is None:
             return UNSCORED
-        agreed = sum(expected[key] == found[key] for key in shared)
-        return {"entity_accuracy": agreed / len(shared)}
+        agreed, shared = agreement
+        return {"entity_accuracy": agreed / shared}
+
+
+def entity_agreement(
+    expected: CoreferenceExpectation, found: CoreferenceOutput
+) -> tuple[int, int] | None:
+    """Mentions both sides found that carry the same entity name, of all shared.
+
+    ``None`` when the two share no location, so there is nothing to agree on.
+    """
+
+    expected_entities = entity_by_identity(expected.mention_spans)
+    found_entities = entity_by_identity(found.mention_spans)
+    shared = expected_entities.keys() & found_entities.keys()
+    if not shared:
+        return None
+    agreed = sum(expected_entities[key] == found_entities[key] for key in shared)
+    return agreed, len(shared)
 
 
 class MatchedTheSilverClustering(Evaluator):
@@ -251,34 +285,52 @@ class MatchedTheSilverClustering(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = entity_by_identity(ctx.expected_output.mention_spans)
-        found = entity_by_identity(ctx.output.mention_spans)
-        shared = sorted(
-            expected.keys() & found.keys(),
-            key=lambda key: (key.sentence_label, key.mention_text, key.occurrence),
-        )
-        if not shared:
+        counts = cluster_counts(ctx.expected_output, ctx.output)
+        if not counts.precision_denominator:
             return UNSCORED
-
-        expected_clusters = _clusters(shared, expected)
-        found_clusters = _clusters(shared, found)
-
-        precision = 0.0
-        recall = 0.0
-        for key in shared:
-            expected_cluster = expected_clusters[expected[key]]
-            predicted = found_clusters[found[key]]
-            overlap = len(expected_cluster & predicted)
-            precision += overlap / len(predicted)
-            recall += overlap / len(expected_cluster)
-        precision /= len(shared)
-        recall /= len(shared)
-
+        precision = counts.precision_numerator / counts.precision_denominator
+        recall = counts.recall_numerator / counts.recall_denominator
         return {
             "cluster_precision": precision,
             "cluster_recall": recall,
             "cluster_f1": f1(precision, recall),
         }
+
+
+def cluster_counts(
+    expected: CoreferenceExpectation, found: CoreferenceOutput
+) -> Counts:
+    """B-cubed credit over the locations both sides found.
+
+    Each shared mention earns precision credit for the share of its found
+    cluster that silver also groups with it, and recall credit for the share
+    of its silver cluster the model also grouped with it; both are counted
+    over the shared mentions.  No shared location contributes zero.
+    """
+
+    expected_entities = entity_by_identity(expected.mention_spans)
+    found_entities = entity_by_identity(found.mention_spans)
+    shared = sorted(
+        expected_entities.keys() & found_entities.keys(),
+        key=lambda key: (key.sentence_label, key.mention_text, key.occurrence),
+    )
+    expected_clusters = _clusters(shared, expected_entities)
+    found_clusters = _clusters(shared, found_entities)
+
+    precision = 0.0
+    recall = 0.0
+    for key in shared:
+        expected_cluster = expected_clusters[expected_entities[key]]
+        predicted = found_clusters[found_entities[key]]
+        overlap = len(expected_cluster & predicted)
+        precision += overlap / len(predicted)
+        recall += overlap / len(expected_cluster)
+    return Counts(
+        precision_numerator=precision,
+        precision_denominator=len(shared),
+        recall_numerator=recall,
+        recall_denominator=len(shared),
+    )
 
 
 def _clusters(
@@ -318,50 +370,146 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        silver = entity_by_identity(ctx.expected_output.mention_spans)
+        decisions = critic_decisions(ctx.expected_output, ctx.output)
+        return {
+            name: numerator / denominator
+            for name, (numerator, denominator) in decisions.items()
+        } or UNSCORED
 
-        # (the span was correct, the Critic rejected it)
-        judged: list[tuple[bool, bool]] = []
-        for outcome in ctx.output.outcomes:
-            if outcome.stage != "critic":
-                continue
-            expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
-            if expected_entity is None:
-                continue
-            judged.append(
-                (
-                    expected_entity
-                    == normalize_entity_name(
-                        outcome.mention_span.canonical_entity_name
-                    ),
-                    outcome.outcome == "rejected",
-                )
+
+def critic_decisions(
+    expected: CoreferenceExpectation, found: CoreferenceOutput
+) -> dict[str, tuple[int, int]]:
+    """Each Critic score's numerator and denominator over the judged decisions.
+
+    A score is absent when the case had no decision it could be judged on.
+    """
+
+    silver = entity_by_identity(expected.mention_spans)
+
+    # (the span was correct, the Critic rejected it)
+    judged: list[tuple[bool, bool]] = []
+    for outcome in found.outcomes:
+        if outcome.stage != "critic":
+            continue
+        expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
+        if expected_entity is None:
+            continue
+        judged.append(
+            (
+                expected_entity
+                == normalize_entity_name(outcome.mention_span.canonical_entity_name),
+                outcome.outcome == "rejected",
             )
+        )
 
-        if not judged:
-            return UNSCORED
+    rejected = [correct for correct, was_rejected in judged if was_rejected]
+    wrong = [was_rejected for correct, was_rejected in judged if not correct]
+    right = [was_rejected for correct, was_rejected in judged if correct]
 
-        rejected = [correct for correct, was_rejected in judged if was_rejected]
-        wrong = [was_rejected for correct, was_rejected in judged if not correct]
-        right = [was_rejected for correct, was_rejected in judged if correct]
+    fractions: dict[str, tuple[int, int]] = {}
+    if rejected:
+        # Of what it threw away, how much deserved it.
+        fractions["critic_rejection_precision"] = (
+            sum(not correct for correct in rejected),
+            len(rejected),
+        )
+    if wrong:
+        # Of the mistakes it was shown, how many it caught.
+        fractions["critic_rejection_recall"] = (sum(wrong), len(wrong))
+    if right:
+        # Of the correct spans it was shown, how many it left alone.
+        # The complement of a false-rejection rate, so that higher is
+        # better here as everywhere else in the report.
+        fractions["critic_kept_correct_spans"] = (
+            sum(not was_rejected for was_rejected in right),
+            len(right),
+        )
+    return fractions
 
-        scores: dict[str, float] = {}
-        if rejected:
-            # Of what it threw away, how much deserved it.
-            scores["critic_rejection_precision"] = sum(
-                not correct for correct in rejected
-            ) / len(rejected)
-        if wrong:
-            # Of the mistakes it was shown, how many it caught.
-            scores["critic_rejection_recall"] = sum(wrong) / len(wrong)
-        if right:
-            # Of the correct spans it was shown, how many it left alone.
-            # The complement of a false-rejection rate, so that higher is
-            # better here as everywhere else in the report.
-            scores["critic_kept_correct_spans"] = sum(
-                not was_rejected for was_rejected in right
-            ) / len(right)
-        return scores or UNSCORED
+
+def _span_counts(case: ReportCase) -> Counts:
+    return detection_counts(_locations(case.expected_output), _locations(case.output))
+
+
+def _cluster_counts(case: ReportCase) -> Counts:
+    return cluster_counts(case.expected_output, case.output)
+
+
+def _entity_agreement(case: ReportCase) -> tuple[int, int] | None:
+    return entity_agreement(case.expected_output, case.output)
+
+
+def _critic_decision(name: str) -> Callable[[ReportCase], tuple[int, int] | None]:
+    def contribution(case: ReportCase) -> tuple[int, int] | None:
+        return critic_decisions(case.expected_output, case.output).get(name)
+
+    return contribution
+
+
+#: Agreement is recorded the same way for the annotator alone and for the
+#: whole loop, so the two reports subtract.  B³ and canonical-entity accuracy
+#: pool over every mention both sides found, so each mention weighs the same;
+#: the per-case mean of span F1 sits beside the pooled one so a Story weighs
+#: once.
+AGREEMENT_MEASURES: tuple[Measure, ...] = (
+    SetAgreement(
+        prefix="span",
+        counts=_span_counts,
+        roles={"f1": Role.PRIMARY, "precision": Role.HEADLINE, "recall": Role.HEADLINE},
+    ),
+    SetAgreement(
+        prefix="cluster",
+        counts=_cluster_counts,
+        roles={
+            "precision": Role.HEADLINE,
+            "recall": Role.HEADLINE,
+            "f1": Role.HEADLINE,
+        },
+    ),
+    Pooled(
+        metric="entity_accuracy", contribution=_entity_agreement, role=Role.HEADLINE
+    ),
+    CaseMean(score="span_f1", role=Role.HEADLINE),
+)
+
+CRITIC_SCORES = (
+    "critic_rejection_precision",
+    "critic_rejection_recall",
+    "critic_kept_correct_spans",
+)
+
+#: The Critic rows pool every judged decision across cases.
+COREFERENCE_HEADLINE = HeadlineDefinition(
+    version="coreference-v1",
+    measures=(
+        *AGREEMENT_MEASURES,
+        *(
+            Pooled(
+                metric=name,
+                contribution=_critic_decision(name),
+                role=Role.DIAGNOSTIC,
+            )
+            for name in CRITIC_SCORES
+        ),
+    ),
+)
+
+COREFERENCE_ANNOTATOR_HEADLINE = HeadlineDefinition(
+    version="coreference_annotator-v1",
+    measures=(
+        *AGREEMENT_MEASURES,
+        *(
+            Unavailable(
+                metric=name,
+                aggregation=Aggregation.POOLED,
+                role=Role.DIAGNOSTIC,
+                reason="the annotator task makes no critic decisions",
+            )
+            for name in CRITIC_SCORES
+        ),
+    ),
+)
 
 
 #: Scored the same way for the annotator alone and for the whole loop, so
@@ -392,6 +540,7 @@ COREFERENCE_TASK = register(
             "critic": CRITIC_INSTRUCTIONS,
         },
         collect=None,
+        headline=COREFERENCE_HEADLINE,
     )
 )
 
@@ -409,6 +558,7 @@ COREFERENCE_ANNOTATOR_TASK = register(
         default_model=default_model(),
         prompts=lambda: {"annotator": ANNOTATOR_INSTRUCTIONS},
         collect=None,
+        headline=COREFERENCE_ANNOTATOR_HEADLINE,
     )
 )
 """The annotator without the Critic, over the same cases as `coreference`.
