@@ -339,9 +339,10 @@ class SetAgreement(Measure, frozen=True):
 class CaseMean(Measure, frozen=True):
     """The mean of one score or assertion each succeeded case recorded.
 
-    Reads what the case evaluators recorded rather than recomputing it, so a
-    case's own convention -- a chunk both sides left empty passes -- carries
-    into the mean.  A case that recorded no such score adds nothing to it.
+    Reads what the case evaluators recorded rather than recomputing it, so
+    each case's own pass convention carries into the mean.  A case that
+    recorded no such score adds nothing to it, and a case contributes one
+    value even if a score and an assertion share the name.
     """
 
     score: str
@@ -351,12 +352,11 @@ class CaseMean(Measure, frozen=True):
         return ((self.score, self.role),)
 
     def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
-        recorded = [
-            results[self.score].value
+        results = (
+            case.scores.get(self.score) or case.assertions.get(self.score)
             for case in population.succeeded
-            for results in (case.scores, case.assertions)
-            if self.score in results
-        ]
+        )
+        recorded = [result.value for result in results if result is not None]
         return (
             _ratio(
                 self.score,

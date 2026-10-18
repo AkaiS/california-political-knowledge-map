@@ -10,19 +10,8 @@ from __future__ import annotations
 import json
 
 import pytest
+from engine_runs import headline_table
 from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
-
-COLUMNS = [
-    "metric",
-    "role",
-    "value",
-    "numerator",
-    "denominator",
-    "aggregation",
-    "scored_cases",
-    "selected_cases",
-    "unavailable_reason",
-]
 
 
 @pytest.fixture(autouse=True)
@@ -32,18 +21,6 @@ def disable_telemetry(monkeypatch):
 
 def saved_run(directory, cases):
     return json.loads(run_relevance(directory, cases).read_text())
-
-
-def headline_table(document):
-    tables = [
-        analysis
-        for analysis in document["report"]["analyses"]
-        if analysis.get("title") == "Headline metrics"
-    ]
-    assert len(tables) == 1
-    assert tables[0]["type"] == "table"
-    assert tables[0]["columns"] == COLUMNS
-    return tables[0]["rows"]
 
 
 def test_completed_run_records_pooled_relevant_f1_first_with_its_headline_rows(

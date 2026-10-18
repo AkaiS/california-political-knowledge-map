@@ -10,34 +10,16 @@ from __future__ import annotations
 import json
 
 import pytest
-from pydantic_evals.lifecycle import CaseLifecycle
+from engine_runs import headline_rows, headline_table, run_task
 
-from knowledge_map.evaluation import (
-    EvaluationCase,
-    EvaluationDataSet,
-    LabelQuality,
-    run_data_set,
-)
-from knowledge_map.evaluation.persistence import ReportCheckpoint
-from knowledge_map.evaluation.tasks import task_named
+from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.tasks.extraction import (
     ExtractionExpectation,
     ExtractionInput,
     ExtractionOutput,
 )
-from knowledge_map.schemas import DeploymentKind, ModelDeployment, Node, Relationship
+from knowledge_map.schemas import Node, Relationship
 
-COLUMNS = [
-    "metric",
-    "role",
-    "value",
-    "numerator",
-    "denominator",
-    "aggregation",
-    "scored_cases",
-    "selected_cases",
-    "unavailable_reason",
-]
 NO_DENOMINATOR = "no case contributed to the denominator"
 
 
@@ -60,69 +42,16 @@ def claim(source, relationship_type, target, **properties):
 
 
 def saved_run(directory, cases):
-    """Run ``cases`` -- (id, expectation, authored output) -- and read the report.
-
-    An authored output that is an exception is raised by the stub task.
-    """
-
-    task = task_named("extraction")
-    data_set = EvaluationDataSet(
-        task="extraction",
-        description="headline fixtures",
-        cases=tuple(
-            EvaluationCase(
-                id=case_id,
-                description=case_id,
-                task_input=ExtractionInput(
-                    url=case_id, title=case_id, chunk_index=0, text=case_id
-                ),
-                expected_output=expected,
-            )
-            for case_id, expected, _ in cases
+    path = run_task(
+        directory,
+        "extraction",
+        cases,
+        task_input=lambda case_id: ExtractionInput(
+            url=case_id, title=case_id, chunk_index=0, text=case_id
         ),
-    )
-    outputs = {case_id: output for case_id, _, output in cases}
-
-    def stub(case_input: ExtractionInput):
-        output = outputs[case_input.url]
-        if isinstance(output, BaseException):
-            raise output
-        return output
-
-    directory.mkdir(parents=True, exist_ok=True)
-    source = directory / "extraction.yaml"
-    source.write_text("authored fixtures")
-    checkpoint = ReportCheckpoint(
-        task="extraction",
-        cases=data_set.cases,
-        deployment=ModelDeployment(kind=DeploymentKind.LOCAL, model="stub"),
-        data_set_path=source,
         label_quality=LabelQuality.SILVER,
-        experiment_metadata={"headline_version": task.headline.version},
-        root=directory / "reports",
     )
-    report = run_data_set(
-        data_set,
-        task=stub,
-        evaluators=task.evaluators,
-        report_evaluators=(task.headline.evaluator(),),
-        case_lifecycle=CaseLifecycle,
-        checkpoint=checkpoint,
-    )
-    checkpoint.finish(report)
-    return json.loads(checkpoint.path.read_text())
-
-
-def headline_table(document):
-    tables = [
-        analysis
-        for analysis in document["report"]["analyses"]
-        if analysis.get("title") == "Headline metrics"
-    ]
-    assert len(tables) == 1
-    assert tables[0]["type"] == "table"
-    assert tables[0]["columns"] == COLUMNS
-    return tables[0]["rows"]
+    return json.loads(path.read_text())
 
 
 # One large chunk the model mostly got right, one small chunk it got wrong,
@@ -279,34 +208,41 @@ def test_completed_run_records_pooled_node_f1_first_with_its_headline_rows(tmp_p
 def test_a_chunk_both_sides_left_empty_adds_nothing_pooled_but_passes_per_case(
     tmp_path,
 ):
-    rows = {
-        (row[0], row[5]): row
-        for row in headline_table(saved_run(tmp_path, [BOTH_EMPTY]))
-    }
+    rows = headline_rows(saved_run(tmp_path, [BOTH_EMPTY]))
 
     for metric in ("node_f1", "node_precision", "relationship_recall"):
-        assert rows[(metric, "pooled")][2:5] == [None, 0.0, 0.0]
-        assert rows[(metric, "pooled")][8] == NO_DENOMINATOR
-    assert rows[("node_f1", "per_case_mean")][2:5] == [1.0, 1.0, 1.0]
-    assert rows[("relationship_f1", "per_case_mean")][2:5] == [1.0, 1.0, 1.0]
+        pooled = rows[(metric, "pooled")]
+        assert (pooled["value"], pooled["numerator"], pooled["denominator"]) == (
+            None,
+            0.0,
+            0.0,
+        )
+        assert pooled["unavailable_reason"] == NO_DENOMINATOR
+    for metric in ("node_f1", "relationship_f1"):
+        per_case = rows[(metric, "per_case_mean")]
+        assert (per_case["value"], per_case["numerator"], per_case["denominator"]) == (
+            1.0,
+            1.0,
+            1.0,
+        )
     # Nothing was shared, so no detail was scored.
-    assert rows[("sub_label_accuracy", "per_case_mean")] == [
-        "sub_label_accuracy",
-        "diagnostic",
-        None,
-        0.0,
-        0.0,
-        "per_case_mean",
-        0,
-        1,
-        NO_DENOMINATOR,
-    ]
+    assert rows[("sub_label_accuracy", "per_case_mean")] == {
+        "metric": "sub_label_accuracy",
+        "role": "diagnostic",
+        "value": None,
+        "numerator": 0.0,
+        "denominator": 0.0,
+        "aggregation": "per_case_mean",
+        "scored_cases": 0,
+        "selected_cases": 1,
+        "unavailable_reason": NO_DENOMINATOR,
+    }
 
 
 def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     tmp_path,
 ):
-    clean = headline_table(saved_run(tmp_path / "clean", [LARGE, SMALL, BOTH_EMPTY]))
+    clean = headline_rows(saved_run(tmp_path / "clean", [LARGE, SMALL, BOTH_EMPTY]))
     document = saved_run(
         tmp_path / "with-failures",
         [
@@ -319,22 +255,40 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     )
 
     assert document["evaluation_run"]["status"] == "completed"
-    rows = headline_table(document)
-    assert rows[-5] == [
-        "execution_failure_rate",
-        "headline",
-        2 / 5,
-        2.0,
-        5.0,
-        "rate",
-        5,
-        5,
-        None,
-    ]
+    rows = headline_rows(document)
+    assert rows.pop(("execution_failure_rate", "rate")) == {
+        "metric": "execution_failure_rate",
+        "role": "headline",
+        "value": 2 / 5,
+        "numerator": 2.0,
+        "denominator": 5.0,
+        "aggregation": "rate",
+        "scored_cases": 5,
+        "selected_cases": 5,
+        "unavailable_reason": None,
+    }
+    del clean[("execution_failure_rate", "rate")]
     # Every quality row reads exactly as it did without the failures, over
     # the larger run population.
-    quality = [row for row in rows if row[0] != "execution_failure_rate"]
-    assert [row[:7] for row in quality] == [
-        row[:7] for row in clean if row[0] != "execution_failure_rate"
-    ]
-    assert {row[7] for row in quality} == {5}
+    assert {key: {**row, "selected_cases": 5} for key, row in clean.items()} == rows
+
+
+def test_unreadable_output_records_evaluator_errors_the_same_way_on_every_run(
+    tmp_path,
+):
+    cases = [LARGE, SMALL, BOTH_EMPTY, ("unreadable", LARGE[1], None)]
+    first = saved_run(tmp_path / "first", cases)
+    second = saved_run(tmp_path / "second", cases)
+
+    for document in (first, second):
+        assert document["evaluation_run"]["status"] == "completed"
+        assert document["report"]["analyses"] == []
+    (failure,) = first["report"]["report_evaluator_failures"]
+    assert failure["source"] == {
+        "name": "HeadlineMetrics",
+        "arguments": ["extraction-v1"],
+    }
+    assert (
+        first["report"]["report_evaluator_failures"]
+        == second["report"]["report_evaluator_failures"]
+    )
