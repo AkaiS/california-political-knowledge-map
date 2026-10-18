@@ -274,7 +274,13 @@ async def generate_retrieval_answer(
                         ),
                         ModelRequest(parts=[UserPromptPart(original_question)]),
                     ],
-                    output_type=RetrievalGuidance,
+                    # An unconstrained output tool lets hosted Gemma answer in
+                    # prose, so guidance keeps the agent's strict native JSON.
+                    output_type=(
+                        NativeOutput(RetrievalGuidance, strict=True)
+                        if isinstance(agent.output_type, NativeOutput)
+                        else RetrievalGuidance
+                    ),
                     usage=usage,
                 )
             guidance = _publication_bounded_guidance(result.output, package)

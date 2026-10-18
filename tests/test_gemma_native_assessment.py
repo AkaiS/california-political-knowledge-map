@@ -9,11 +9,15 @@ import httpx
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 from pydantic_ai.exceptions import UnexpectedModelBehavior
+from test_chat_evidence_trail import complete_chat
+from test_chat_preparation_trail import scripted_model
+from test_chat_web import no_dependencies
+from test_query_preparation import rewriter_agent
+from test_retrieval import COVERAGE, coordinator
 
 from knowledge_map.core.chat import (
     QUESTION_POLICY,
     ChatSession,
-    RetrievalGuidance,
     get_chat_agent,
 )
 from knowledge_map.core.retrieval import RetrievalCoordinator
@@ -29,6 +33,7 @@ from knowledge_map.schemas.query_preparation import (
 )
 from knowledge_map.schemas.retrieval import CoverageDescription
 from knowledge_map.utils.models import get_chat_model
+from knowledge_map.web import create_app
 
 QUESTIONS = (
     "What should I read about AB 1751, the proposed $28 construction wage, and the disagreement between carpenters and other construction unions in California in 2026?",
@@ -219,36 +224,54 @@ def test_other_and_local_assessment_modes_are_unchanged(
     assert count == len(requests) == 1
 
 
-def test_runtime_guidance_override_retains_original_tool_mode(monkeypatch):
+def test_gemma_session_guidance_requests_strict_native_schema(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-native-assessment-key")
     requests = []
 
     def respond(request):
         body = json.loads(request.content)
         requests.append(body)
-        assert body.get("response_format", {}).get("type") != "json_schema"
-        assert body.get("tools")
-        return httpx.Response(
-            200, json=completion(body, RetrievalGuidance().model_dump(mode="json"))
+        assert body.get("response_format", {}).get("type") == "json_schema"
+        assert body["response_format"]["json_schema"]["strict"] is True
+        assert not body.get("tools")
+        output = (
+            valid_assessment()
+            if len(requests) == 1
+            else {
+                "introduction": "Read the available reporting.",
+                "source_notes": [],
+                "disagreements": [],
+                "groups": [],
+                "unmatched_requests": [],
+            }
+        )
+        return httpx.Response(200, json=completion(body, output))
+
+    target = deployment()
+    agent = get_chat_agent(target, cache_model=False)
+    agent.model = get_chat_model(
+        target, cache=False, transport=httpx.MockTransport(respond)
+    )
+    rewriter = rewriter_agent()
+    rewriter.model = scripted_model(
+        [{"question": "Which articles discuss AB 1?", "relational": False}]
+    )
+
+    def session_factory(question, dependencies):
+        return ChatSession(
+            question,
+            chat_agent=agent,
+            rewriter=rewriter,
+            retrieval=coordinator(),
+            coverage=COVERAGE,
+            relevant_collection_ids=("reporting",),
         )
 
-    async def run():
-        target = deployment()
-        model = get_chat_model(
-            target, cache=False, transport=httpx.MockTransport(respond)
-        )
-        agent = get_chat_agent(target, cache_model=False)
-        original = agent.model
-        try:
-            with agent.override(model=model):
-                output = await agent.run(
-                    "Verified source evidence", output_type=RetrievalGuidance
-                )
-            assert isinstance(output.output, RetrievalGuidance)
-            assert output.usage.requests == 1
-        finally:
-            await model.client.close()
-            await original.client.close()
-
-    asyncio.run(run())
-    assert len(requests) == 1
+    completed = complete_chat(
+        create_app(startup=no_dependencies, session_factory=session_factory)
+    )
+    assert completed["status"] == "empty"
+    assert len(requests) == 2
+    guidance_schema = requests[1]["response_format"]["json_schema"]["schema"]
+    assert set(guidance_schema["required"]) == set(guidance_schema["properties"])
+    assert "source_notes" in guidance_schema["properties"]
