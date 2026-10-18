@@ -1,0 +1,101 @@
+{
+  "question": "What should I read about Assembly Bill 1751 in California's 2025-2026 legislative session?",
+  "status": "completed",
+  "assessment": {
+    "status": "allowed",
+    "reading_order": "relevance"
+  },
+  "articles": [
+    {
+      "citation": {
+        "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "title": "A California housing bill would raise wages to $28. Why do some unions hate it?",
+        "url": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "published_date": "2026-06-04T12:00:00Z"
+      },
+      "reading_direction": "Read this article to investigate the bill's provisions, its legislative history, and the debate between construction unions.",
+      "publication": "CalMatters",
+      "section_links": []
+    }
+  ],
+  "groups": [
+    {
+      "kind": "contrast",
+      "label": "Investigate the debate over wage requirements",
+      "members": [
+        {
+          "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "reading_direction": "Read the article to explore the arguments regarding the proposed $28 per hour wage requirement and how it affects different construction unions."
+        }
+      ],
+      "order": "relevance"
+    },
+    {
+      "kind": "aspect",
+      "label": "Investigate bill provisions and legislative process",
+      "members": [
+        {
+          "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "reading_direction": "Read the sections on townhouse regulations and the bill's progression through committee hearings and the Assembly vote."
+        }
+      ],
+      "order": "relevance"
+    }
+  ],
+  "relevance_order": [
+    "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+  ],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ],
+    "completion": "completed",
+    "bounded_selection": true,
+    "selection_limited": true,
+    "included_articles": 1
+  },
+  "disclosures": [],
+  "guide_id": "caf90699-77d0-445c-80b9-093f588d2e10",
+  "created_at": "2026-10-18T18:31:01.041484Z",
+  "latest_attempt": {
+    "attempt_id": "ccaefcf0-4808-4fb1-964b-7038bc95904b",
+    "started_at": "2026-10-18T18:31:01.041484Z",
+    "finished_at": "2026-10-18T18:31:21.653164Z",
+    "status": "completed",
+    "outcome": "completed",
+    "assessment": {
+      "status": "allowed",
+      "reading_order": "relevance"
+    },
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-10-12"
+        }
+      ],
+      "completion": "completed",
+      "bounded_selection": true,
+      "selection_limited": true,
+      "included_articles": 1
+    },
+    "disclosures": []
+  },
+  "last_retrieved_at": "2026-10-18T18:31:21.653164Z",
+  "publication_orders": {
+    "publication_asc": [
+      "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+    ],
+    "publication_desc": [
+      "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+    ]
+  }
+}

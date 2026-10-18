@@ -1,0 +1,49 @@
+{
+  "question": "What should I read about Assembly Bill 1751 in California's 2025-2026 legislative session?",
+  "status": "running",
+  "articles": [],
+  "groups": [],
+  "relevance_order": [],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ],
+    "completion": "running",
+    "bounded_selection": true,
+    "selection_limited": false,
+    "included_articles": 0
+  },
+  "disclosures": [],
+  "guide_id": "caf90699-77d0-445c-80b9-093f588d2e10",
+  "created_at": "2026-10-18T18:31:01.041484Z",
+  "latest_attempt": {
+    "attempt_id": "ccaefcf0-4808-4fb1-964b-7038bc95904b",
+    "started_at": "2026-10-18T18:31:01.041484Z",
+    "status": "running",
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-10-12"
+        }
+      ],
+      "completion": "running",
+      "bounded_selection": true,
+      "selection_limited": false,
+      "included_articles": 0
+    },
+    "disclosures": []
+  },
+  "publication_orders": {
+    "publication_asc": [],
+    "publication_desc": []
+  }
+}
