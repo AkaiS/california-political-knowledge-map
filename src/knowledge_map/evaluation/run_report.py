@@ -287,7 +287,7 @@ def _summary(
                 "applicable_cases": row["applicable_cases"],
                 "selected_cases": len(selected_ids),
                 "missing_cases": max(0, len(selected_ids) - row["scored_cases"]),
-                "inclusion_policy": "Existing RAG reviewer measurement rules; unweighted mean of recorded or exactly replayed case scores. Failures and unresolved measurements remain missing.",
+                "inclusion_policy": "Existing RAG reviewer measurement rules; the headline table's per-case mean, which leaves out failed cases, where the table holds the measurement, otherwise the unweighted mean of recorded or exactly replayed case scores. Unresolved measurements remain missing.",
                 "unavailable_reason": row["reason"] if row["value"] is None else None,
             }
     integrity_errors = {

@@ -354,7 +354,7 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                         "value": recorded.value,
                         "reason": recorded.unavailable_reason or rows[0]["reason"],
                         "scored_cases": recorded.scored_cases,
-                        "applicable_cases": recorded.selected_cases,
+                        "applicable_cases": len(rows),
                     }
                 )
                 continue

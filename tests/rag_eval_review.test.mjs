@@ -149,7 +149,7 @@ test('run metrics show the report headline table value, not a mean the reviewer 
  const scored=value=>({fused_recall_at_10:{name:'fused_recall_at_10',value,reason:'1 reference ID'}});
  const fixture={task:'retrieval',label_quality:'silver',data_set:'evals/silver/retrieval.yaml',ran_at:'2026-10-18',
   experiment_metadata:{headline_version:'retrieval-v1'},
-  evaluation_run:{status:'completed',selected_count:2,terminal_count:2,failure_count:0,unresolved_case_ids:[],selected_cases:[{name:'found'},{name:'failed'}]},
+  evaluation_run:{status:'completed',selected_count:2,terminal_count:2,failure_count:1,unresolved_case_ids:[],selected_cases:[{name:'found'},{name:'failed'}]},
   retrieval_report:{metric_version:'unique-chunk-budget-v2',chunk_budget:50,configurations:[]},
   report:{
    cases:[
@@ -162,7 +162,7 @@ test('run metrics show the report headline table value, not a mean the reviewer 
   }};
  const path=join(mkdtempSync(join(tmpdir(),'rag-headline-')),'report.json');writeFileSync(path,JSON.stringify(fixture));
  // The reviewer's own projection, as its server serves it to the page.
- const run=JSON.parse(execFileSync('python',['-c','import json,sys\nfrom knowledge_map.evaluation.rag_review import project_report\nprint(json.dumps(project_report(json.load(open(sys.argv[1])))))',path],{encoding:'utf8'}));
+ const run=JSON.parse(execFileSync('uv',['run','--no-sync','python','-c','import json,sys\nfrom knowledge_map.evaluation.rag_review import project_report\nprint(json.dumps(project_report(json.load(open(sys.argv[1])))))',path],{encoding:'utf8',cwd:new URL('..',import.meta.url)}));
  const elements=new Map(),requests=[];
  function element(tag='div'){const el={tagName:tag.toUpperCase(),dataset:{},value:'',textContent:'',children:[],disabled:false,hidden:false,classList:{toggle(){},add(){}},append(child){this.children.push(child);},replaceChildren(...children){this.children=children;},remove(){},setAttribute(key,value){this[key]=value;}};Object.defineProperty(el,'id',{set(value){elements.set(value,el);},get(){return [...elements].find(([,node])=>node===el)?.[0];}});return el;}
  function get(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}

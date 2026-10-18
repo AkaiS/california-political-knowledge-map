@@ -108,10 +108,10 @@ at run level; a single case shows reciprocal rank. Hover a run value for its
 scored population. Skipped structural branches are not counted as zero.
 
 When the report records Headline Metrics, a run value the headline table holds
-is the table's value, with the table's scored and selected case counts. Those
-means leave out failed cases. Measurements the table doesn't hold, such as
-two-hop recall, keep the reviewer's own case means. So does every measurement
-of a report without a table.
+is the table's value, with the table's scored case count. Those means leave out
+failed cases. The candidate count stays the reviewer's own. Measurements the
+table doesn't hold, such as two-hop recall, keep the reviewer's own case means.
+So does every measurement of a report without a table.
 
 Two-hop Recall@k is calculated when the reference defines two evidence groups
 per answer and the report has replayable ranks. It measures the fraction of
