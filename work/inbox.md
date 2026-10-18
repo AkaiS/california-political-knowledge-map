@@ -103,6 +103,16 @@ source remain intentionally omitted from this queue.
   conditions. A required data source not yet ingested is a coverage condition,
   distinct from retrieval failing to return relevant evidence that is available.
   Captured on 2026-09-30 during synthetic Evaluation Case planning.
+- **ME-07 · P2:** A free-form `dict` output field can only come back empty from
+  an OpenRouter Model Deployment. Strict native structured output
+  ([ADR 0026](../docs/adr/0026-openrouter-chat-uses-strict-native-structured-output.md))
+  forces `additionalProperties: false` on every object, so
+  `OntologySelection.filter_properties` (`src/knowledge_map/schemas/structural.py`)
+  would be emitted as `{}` and every ontology filter dropped. Nothing runs
+  `get_structural_agents` on OpenRouter today, so there is no current failure;
+  it breaks if structural selection is routed to OpenRouter. Reshape the field
+  as a list of label/properties pairs, or keep that agent off strict mode,
+  before doing so. Captured on 2026-10-18 during the PR #48 code review.
 
 This category covers whether the models themselves are good and dependable.
 Whether the evaluation framework that measures them is itself correct is a
