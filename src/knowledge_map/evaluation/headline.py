@@ -304,6 +304,17 @@ def _pooled_fractions(
     }
 
 
+def _fraction_value(fraction: tuple[float, float]) -> float:
+    """A fraction's value inside a mean, where an undefined value counts as zero.
+
+    Unlike a row's value, which is null with a reason, a label whose F1
+    can't be computed still weighs in a mean over labels, as a miss.
+    """
+
+    numerator, denominator = fraction
+    return numerator / denominator if denominator else 0.0
+
+
 class Measure(BaseModel, frozen=True):
     """One member of the closed measure set a ``HeadlineDefinition`` is built from."""
 
@@ -449,11 +460,6 @@ class PerLabel(Measure, frozen=True):
                 for name in _SET_AGREEMENT
             ),
         )
-
-
-def _fraction_value(fraction: tuple[float, float]) -> float:
-    numerator, denominator = fraction
-    return numerator / denominator if denominator else 0.0
 
 
 class CaseMean(Measure, frozen=True):
